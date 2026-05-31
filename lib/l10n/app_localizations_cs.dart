@@ -708,7 +708,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Data o rozvrhu a související nastavení jsou uložena v lokálním souboru s názvem Sked_data.json uvnitř adresáře dokumentů aplikace. Upravitelná konfigurace školního webu je uložena samostatně v Sked_school_sites.json. Vlastní nastavení parseru časového rozvrhu, včetně jakékoli vlastní základní adresy URL, klíče API a vybraného modelu, jsou také uloženy lokálně ve stejných datech aplikace a nejsou chráněny trezorem systémových přihlášení. Při použití v prohlížeči jsou stejné druhy dat uloženy v úložišti prohlížeče. Aplikace tyto lokální data automaticky nenahrává na server řízený vývojářem.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import a export';
@@ -743,7 +743,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Když používáte k analýze import nebo vložení HTML webové stránky školy, aplikace nejprve komprimuje obsah lokálně a pak odešle odeslaný obsah stránky, volitelný název stránky a adresu URL, aktuální jazyk aplikace a obsah výzvy k analýze vybranému koncovému bodu analýzy. Používáte-li oficiální parser, požadavek přejde na konfigurovaný oficiální backend aplikace. Pokud povolíte vlastní parser kompatibilní s OpenAI, stejný obsah je odeslán přímo na nakonfigurovaný koncový bod třetí strany a načítání seznamu modelů také vyžaduje stejný koncový bod. Vlastní koncový bod může předat žádost jiným službám AI podle vlastního návrhu tohoto poskytovatele. Nasazený oficiální backend v současné době omezuje každou odeslanou užitečnou zátěž na 300 KB, používá nakonfigurovaný časový limit a umožňuje maximálně 5 požadavků na analýzu na IP denně.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Aktualizace zásad';
@@ -913,7 +913,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Web import backend API zatím není nakonfigurováno.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -962,28 +962,17 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Vyberte si oficiální parser nebo vlastní koncový bod kompatibilní s OpenAI.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Zdroj parseru';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Oficiální parser';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Použijte vestavěnou oficiální službu analýzy nakonfigurovanou aplikací.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Oficiální parser používá konfigurovaný parsovací backend aplikace a udržuje aktuální tok importu nezměněný.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'Kompatibilní s OpenAI';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Odešlete obsah stránky přímo na svůj vlastní koncový bod kompatibilní s OpenAI.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1029,14 +1018,11 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Vlastní klíč API je uložen v místním nastavení aplikace v plaintextu v současné implementaci. Používejte ji pouze na zařízení nebo prohlížeči, kterému důvěřujete.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Konfigurace vlastního parseru je neúplná. Nejprve vyplňte základní adresu URL, klíč API a model.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: Oficiální';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

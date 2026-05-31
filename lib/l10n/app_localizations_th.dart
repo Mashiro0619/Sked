@@ -701,7 +701,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'ข้อมูลตารางและการตั้งค่าที่เกี่ยวข้องจะถูกเก็บไว้ในไฟล์ท้องถิ่นที่ชื่อ Sked_data.json ภายในไดเรคเตอรี่เอกสารแอป การตั้งค่าเว็บไซต์โรงเรียนที่แก้ไขได้ถูกเก็บไว้แยกต่างหากใน Sked_school_sites.json การตั้งค่าเครื่องวิเคราะห์ตารางเวลาที่กำหนดเอง รวมถึง URL ฐาน, คีย์ API และรุ่นที่เลือกที่กำหนดเอง ยังจะถูกเก็บไว้ในท้องถิ่นในข้อมูลแอพเดียวกันและไม่ได้รับการค เมื่อใช้ในเบราว์เซอร์ ข้อมูลประเภทเดียวกันจะถูกเก็บไว้ในที่เก็บเบราว์เซอร์ แอพไม่อัพโหลดข้อมูลท้องถิ่นนี้ไปยังเซิร์ฟเวอร์ที่ควบคุมโดยนักพัฒนาโดยอัตโนมัติ';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'นำเข้าและส่งออก';
@@ -736,7 +736,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'เมื่อคุณใช้เว็บไซต์โรงเรียนนำเข้าหรือวาง HTML เพื่อการวิเคราะห์ แอพก่อนจะบีบอัดเนื้อหาในท้องถิ่น จากนั้นส่งเนื้อหาหน้าที่ส่ง ชื่อหน้าและ URL ที่เลือก ภาษาแอพปัจจุบัน และเนื้อ ถ้าคุณใช้เครื่องวิเคราะห์อย่างเป็นทางการ คำขอจะไปยังแอพที่กำหนดค่าอย่างเป็นทางการ ถ้าคุณเปิดใช้งานเครื่องวิเคราะห์ที่เข้ากันได้กับ OpenAI ที่กำหนดเอง เนื้อหาเดียวกันจะถูกส่งไปยังจุดท้ายของบุคคลที่สามที่คุณกำหนดค่า และการเรี จุดท้ายที่กำหนดเองอาจส่งคำขอไปยังบริการ AI อื่น ๆ ตามการออกแบบของผู้ให้บริการนั้นเอง ปัจจุบัน backend ที่ใช้อย่างเป็นทางการ จํากัด payload ที่ส่งไปแต่ละ 300KB ใช้ timeout ที่กำหนดค่า และอนุญาตให้มีการขอวิเคราะห์สูงสุด 5 ครั้งต่อ IP ต';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'การปรับปรุงนโยบาย';
@@ -903,7 +903,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'API การนำเข้าเว็บยังไม่ได้รับการตั้งค่า';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -953,22 +953,10 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'เลือกเครื่องวิเคราะห์อย่างเป็นทางการหรือจุดปลายที่เข้ากันได้กับ OpenAI ที่กำหนดเอง';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'แหล่ง Parser';
-
-  @override
-  String get schoolImportParserSourceOfficial =>
-      'เครื่องวิเคราะห์อย่างเป็นทางการ';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'ใช้บริการวิเคราะห์อย่างเป็นทางการในตัวที่กำหนดค่าโดยแอป';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'เครื่องวิเคราะห์อย่างเป็นทางการใช้แบกเอนด์วิเคราะห์ที่กำหนดค่าของแอพพลิเคชัน และรักษากระแสการนําเข้าปัจจุบันไม่เปลี่';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -976,7 +964,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'ส่งเนื้อหาหน้าโดยตรงไปยังปลายทางที่เข้ากันได้ OpenAI ของคุณเอง';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1022,14 +1010,11 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'คีย์ API ที่กำหนดเองถูกเก็บไว้ในการตั้งค่าท้องถิ่นของแอพในข้อความธรรมดาภายใต้การดําเนินการปัจจุบัน ใช้มันในอุปกรณ์หรือสภาพแวดล้อมเบราว์เซอร์ที่คุณไว้วางใจเท่านั้น';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'การตั้งค่า parser ที่กำหนดเองไม่สมบูรณ์ กรอก URL ฐาน คีย์ API และรูปแบบก่อน';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: เป็นทางการ';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

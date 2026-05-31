@@ -37,12 +37,34 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     try {
       final fileData = await _repository.load();
       if (fileData != null) {
-        final normalized = _importExportService.normalizeAppData(
+        var normalized = _importExportService.normalizeAppData(
           fileData,
           localeCode: fileData.localeCode,
         );
+        final legacyApiKey =
+            normalized.studentMode.schoolImportParserSettings.customApiKey;
+        final secureApiKey = await _readSecureCustomSchoolImportApiKey();
+        final runtimeApiKey = secureApiKey.isNotEmpty
+            ? secureApiKey
+            : legacyApiKey;
+        final migratedLegacyApiKey =
+            secureApiKey.isEmpty &&
+            legacyApiKey.isNotEmpty &&
+            await _writeSecureCustomSchoolImportApiKey(legacyApiKey);
+        normalized = _withRuntimeCustomSchoolImportApiKey(
+          normalized,
+          runtimeApiKey,
+        );
         _appData = normalized;
-        if (normalized.encode() != fileData.encode()) {
+        final canDropLegacyApiKey =
+            legacyApiKey.isEmpty ||
+            secureApiKey.isNotEmpty ||
+            migratedLegacyApiKey;
+        final shouldWriteBack =
+            canDropLegacyApiKey &&
+            (normalized.encode() != fileData.encode() ||
+                legacyApiKey.isNotEmpty);
+        if (shouldWriteBack) {
           try {
             await _repository.save(normalized);
           } catch (e, st) {
@@ -53,6 +75,10 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         }
       } else {
         _appData = await _buildDefaultAppData();
+        _appData = _withRuntimeCustomSchoolImportApiKey(
+          _appData,
+          await _readSecureCustomSchoolImportApiKey(),
+        );
         if (_repository.lastRecoveryStatus !=
             RecoveryStatus.failedBackupRestore) {
           await _save();

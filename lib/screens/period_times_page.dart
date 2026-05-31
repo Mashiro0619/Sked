@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
+import '../services/text_file_picker.dart';
 import '../widgets/text_transfer_widgets.dart';
 
 enum _PeriodTimesMenuAction {
@@ -353,23 +351,17 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   Future<void> _importTemplate() async {
     final provider = context.read<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
+    final source = await TextFilePicker.pickText(
       allowedExtensions: const ['json'],
-      withData: true,
     );
     if (!mounted) {
       return;
     }
-    final files = result?.files ?? const <PlatformFile>[];
-    final file = files.isEmpty ? null : files.first;
-    final bytes = file?.bytes;
-    if (file == null || bytes == null) {
+    if (source == null) {
       return;
     }
     try {
-      final decoded = utf8.decode(bytes);
-      final imported = provider.importPeriodTimesJson(decoded);
+      final imported = provider.importPeriodTimesJson(source);
       final count = imported.length;
       if (count == 0) {
         throw FormatException(

@@ -710,7 +710,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Podatki o urniku in sorodnih nastavitvah so shranjeni v lokalni datoteki z imenom Sked_data.json znotraj imenika dokumentov aplikacije. Urejljiva konfiguracija šolskega mesta je shranjena ločeno v Sked_school_sites.json. Nastavitve razčlenjevalnika urnika po meri, vključno s katerim koli osnovnim URL-jem po meri, ključem API in izbranim modelom, so prav tako lokalno shranjene v istih podatkih aplikacije in niso zaščitene s sistemskim trezorjem poverilnic. Kadar se uporabljajo v brskalniku, se enake vrste podatkov shranijo v shranjevanju brskalnika. Aplikacija ne nalaga samodejno teh lokalnih podatkov v strežnik, ki ga nadzoruje razvijalec.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Uvoz in izvoz';
@@ -745,7 +745,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Ko za razčlenitev uporabljate šolsko spletno stran uvoz ali lepljenje HTML, aplikacija najprej stisne vsebino lokalno, nato pa pošlje vsebino poslane strani, neobvezni naslov strani in URL, trenutni jezik aplikacije in vsebino poziva za razčlenitev na izbrano končno točko razčlenitve. Če uporabljate uradni razčlenjevalnik, zahteva gre na konfigurirano uradno hrbtenico aplikacije. Če omogočite razčlenjevalnik, združljiv z OpenAI, po meri, bo ista vsebina poslana neposredno končni točki tretje osebe, ki ste jo konfigurirali, pridobivanje seznama modelov pa zahteva tudi to končno točko. Končna točka po meri lahko zahtevo posreduje drugim storitvam umetne inteligence v skladu z lastno zasnovo tega ponudnika. Uvedena uradna hrbtenica trenutno omejuje vsako poslano koristno obremenitev na 300 KB, uporablja konfigurirano časovno omejitev in omogoča največ 5 zahtev za razčlenitev na IP na dan.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Posodobitve pravilnika';
@@ -915,7 +915,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'API za spletni uvoz hrbtenice še ni konfiguriran.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -965,21 +965,10 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Izberite uradni razčlenjevalnik ali končno točko po meri, združljivo z OpenAI.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Vir razčlenjevanja';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Uradni razčlenjevalnik';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Uporabite vgrajeno uradno storitev razčlenitve, ki jo konfigurira aplikacija.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Uradni razčlenjevalnik uporablja konfigurirano razčlenjevalno hrbtenico aplikacije in ohranja trenutni uvozni tok nespremenjen.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -987,7 +976,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Pošljite vsebino strani neposredno na svojo končno točko, združljivo z OpenAI.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1033,14 +1022,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Ključ API po meri je shranjen v lokalnih nastavitvah aplikacije v navadnem besedilu pod trenutno implementacijo. Uporabljajte ga samo v napravi ali brskalniku, ki mu zaupate.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Nastavitev razčlenjevalnika po meri je nepopolna. Najprej izpolnite osnovni URL, API ključ in model.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Razdeljevalec: Uradni';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

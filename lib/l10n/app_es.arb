@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "es",
   "appTitle": "Sked",
   "@appTitle": {},
@@ -510,7 +510,7 @@
   "@privacyPolicyIntro": {},
   "privacyPolicyLocalStorageTitle": "Almacenamiento local",
   "@privacyPolicyLocalStorageTitle": {},
-  "privacyPolicyLocalStorageBody": "Los datos del horario y los ajustes relacionados se almacenan en un archivo local llamado Sked_data.json dentro del directorio de documentos de la app. La configuración editable de sitios escolares se almacena por separado en Sked_school_sites.json. Los ajustes personalizados del analizador de horarios, incluidos cualquier Base URL personalizada, API key y modelo seleccionado, también se almacenan localmente en los mismos datos de la app y no están protegidos por un almacén de credenciales del sistema. Cuando se usa en un navegador, el mismo tipo de datos se almacena en el almacenamiento del navegador. La app no sube automáticamente estos datos locales a un servidor controlado por el desarrollador.",
+  "privacyPolicyLocalStorageBody": "Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.",
   "@privacyPolicyLocalStorageBody": {},
   "privacyPolicyImportExportTitle": "Importación y exportación",
   "@privacyPolicyImportExportTitle": {},
@@ -530,7 +530,7 @@
   "@privacyPolicyNoCollectionBody": {},
   "privacyPolicyFutureFeatureTitle": "Análisis de páginas web",
   "@privacyPolicyFutureFeatureTitle": {},
-  "privacyPolicyFutureFeatureBody": "Cuando usas la importación desde páginas web escolares o pegas HTML para analizarlo, la app primero comprime el contenido localmente y luego envía el contenido de la página enviada, el título y la URL opcionales, el idioma actual de la app y el contenido del prompt del analizador al endpoint de análisis seleccionado. Si usas el analizador oficial, la solicitud va al backend oficial configurado por la app. Si habilitas un analizador personalizado compatible con OpenAI, el mismo contenido se envía directamente al endpoint de terceros que configuraste, y obtener la lista de modelos también solicita ese mismo endpoint. Un endpoint personalizado puede reenviar la solicitud a otros servicios de IA según el diseño propio de ese proveedor. El backend oficial desplegado actualmente limita cada carga enviada a 300KB, usa su tiempo de espera configurado y permite como máximo 5 solicitudes de análisis por IP al día.",
+  "privacyPolicyFutureFeatureBody": "When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.",
   "@privacyPolicyFutureFeatureBody": {},
   "privacyPolicyUpdatesTitle": "Actualizaciones de la política",
   "@privacyPolicyUpdatesTitle": {},
@@ -648,7 +648,7 @@
   "@schoolWebImportWarnings": {},
   "schoolWebImportOpenPageHint": "Inicia sesión en el sitio escolar dentro de la app y luego navega manualmente a la página del horario.",
   "@schoolWebImportOpenPageHint": {},
-  "schoolWebImportConfigMissing": "La API del backend de importación web aún no está configurada.",
+  "schoolWebImportConfigMissing": "Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.",
   "@schoolWebImportConfigMissing": {},
   "schoolWebImportUnsupportedPlatform": "Esta plataforma aún no admite el inicio de sesión web incrustado. Usa una plataforma con compatibilidad con WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
@@ -676,19 +676,13 @@
   "@schoolWebImportSuccess": {},
   "schoolImportParserSettingsTitle": "Ajustes del analizador de horarios",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Elige el analizador oficial o un endpoint personalizado compatible con OpenAI.",
+  "schoolImportParserSettingsDesc": "Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "Fuente del analizador",
   "@schoolImportParserSourceTitle": {},
-  "schoolImportParserSourceOfficial": "Analizador oficial",
-  "@schoolImportParserSourceOfficial": {},
-  "schoolImportParserSourceOfficialDesc": "Usa el servicio de análisis oficial integrado configurado por la app.",
-  "@schoolImportParserSourceOfficialDesc": {},
-  "schoolImportParserSourceOfficialInfo": "El analizador oficial usa el backend de análisis configurado por la app y mantiene sin cambios el flujo de importación actual.",
-  "@schoolImportParserSourceOfficialInfo": {},
   "schoolImportParserSourceCustomOpenAi": "Compatible con OpenAI personalizado",
   "@schoolImportParserSourceCustomOpenAi": {},
-  "schoolImportParserSourceCustomOpenAiDesc": "Envía el contenido de la página directamente a tu propio endpoint compatible con OpenAI.",
+  "schoolImportParserSourceCustomOpenAiDesc": "Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.",
   "@schoolImportParserSourceCustomOpenAiDesc": {},
   "schoolImportParserCustomOpenAi": "Analizador personalizado compatible con OpenAI",
   "@schoolImportParserCustomOpenAi": {},
@@ -720,12 +714,10 @@
       }
     }
   },
-  "schoolImportParserPlaintextWarning": "La API key personalizada se almacena en texto plano en la configuración local de la app con la implementación actual. Úsala solo en un dispositivo o entorno de navegador en el que confíes.",
+  "schoolImportParserPlaintextWarning": "The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.",
   "@schoolImportParserPlaintextWarning": {},
   "schoolImportParserCustomConfigIncomplete": "La configuración del analizador personalizado está incompleta. Primero completa Base URL, API key y modelo.",
   "@schoolImportParserCustomConfigIncomplete": {},
-  "schoolImportParserCurrentSourceOfficial": "Analizador: Oficial",
-  "@schoolImportParserCurrentSourceOfficial": {},
   "schoolImportParserCurrentSourceCustom": "Analizador: Personalizado ({model})",
   "@schoolImportParserCurrentSourceCustom": {
     "placeholders": {
@@ -871,13 +863,31 @@
   "allColors": "All colors",
   "@allColors": {},
   "upcomingEventsCount": "Upcoming {count}",
-  "@upcomingEventsCount": {"placeholders":{"count":{"type":"int"}}},
+  "@upcomingEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "overdueEventsCount": "Overdue {count}",
-  "@overdueEventsCount": {"placeholders":{"count":{"type":"int"}}},
+  "@overdueEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "allDay": "All-day",
   "@allDay": {},
   "moreEvents": "+{count} more",
-  "@moreEvents": {"placeholders":{"count":{"type":"int"}}},
+  "@moreEvents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noMatchingEvents": "No matching events",
   "@noMatchingEvents": {},
   "noUpcomingEvents": "No upcoming events",
@@ -899,7 +909,11 @@
   "deleteCalendar": "Delete calendar",
   "@deleteCalendar": {},
   "deleteCalendarMessage": "Delete \"{name}\"?",
-  "@deleteCalendarMessage": {"placeholders":{"name":{}}},
+  "@deleteCalendarMessage": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "deleteThisOccurrence": "Delete this",
   "@deleteThisOccurrence": {},
   "deleteFutureOccurrences": "Delete future",
@@ -913,9 +927,22 @@
   "repeatsMonthly": "Repeats monthly",
   "@repeatsMonthly": {},
   "repeatsEvery": "Repeats every {interval} {unit}",
-  "@repeatsEvery": {"placeholders":{"interval":{"type":"int"},"unit":{}}},
+  "@repeatsEvery": {
+    "placeholders": {
+      "interval": {
+        "type": "int"
+      },
+      "unit": {}
+    }
+  },
   "recurrenceCountTimes": "{count} times",
-  "@recurrenceCountTimes": {"placeholders":{"count":{"type":"int"}}},
+  "@recurrenceCountTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "recurrenceDaily": "Daily",
   "@recurrenceDaily": {},
   "recurrenceMonthly": "Monthly",
@@ -949,7 +976,13 @@
   "reminderAtStart": "At start",
   "@reminderAtStart": {},
   "reminderMinutesBefore": "{minutes} min before",
-  "@reminderMinutesBefore": {"placeholders":{"minutes":{"type":"int"}}},
+  "@reminderMinutesBefore": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "reminderHourBefore": "1 hour before",
   "@reminderHourBefore": {},
   "reminderDayBefore": "1 day before",
@@ -999,7 +1032,13 @@
   "pasteIcsContentHint": "Paste BEGIN:VCALENDAR content here",
   "@pasteIcsContentHint": {},
   "importIcsPreviewPrompt": "Found {count} events. Import as a new calendar or replace the active calendar?",
-  "@importIcsPreviewPrompt": {"placeholders":{"count":{"type":"int"}}},
+  "@importIcsPreviewPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectCalendarsToCopyIcs": "Select calendars to copy as ICS",
   "@selectCalendarsToCopyIcs": {},
   "selectCalendarsToExportIcs": "Select calendars to export as ICS",
@@ -1059,7 +1098,11 @@
   "repeatsWeekly": "Repeats weekly",
   "@repeatsWeekly": {},
   "recurrenceUntil": "Until {date}",
-  "@recurrenceUntil": {"placeholders":{"date":{}}},
+  "@recurrenceUntil": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "switchToGeneralSchedule": "Switch to General schedule",
   "@switchToGeneralSchedule": {},
   "generalDisplaySettings": "General display settings",
@@ -1070,7 +1113,7 @@
   "@closePopupOnOutsideTap": {},
   "showGridLines": "Show grid lines",
   "@showGridLines": {},
-  "generalScheduleImportExport": "Schedule import \u0026 export",
+  "generalScheduleImportExport": "Schedule import & export",
   "@generalScheduleImportExport": {},
   "generalScheduleImportExportDesc": "Import or share general schedules",
   "@generalScheduleImportExportDesc": {},
@@ -1091,9 +1134,21 @@
   "selectSchedulesToImport": "Select schedules to import",
   "@selectSchedulesToImport": {},
   "generalScheduleEventCount": "Events: {count}",
-  "@generalScheduleEventCount": {"placeholders":{"count":{"type":"int"}}},
+  "@generalScheduleEventCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importedSchedulesCount": "Imported {count} schedules",
-  "@importedSchedulesCount": {"placeholders":{"count":{"type":"int"}}},
+  "@importedSchedulesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "replaceActiveSchedulePrompt": "Replace current schedule with the imported one?",
   "@replaceActiveSchedulePrompt": {},
   "addAsNewSchedule": "Add as new",
@@ -1121,7 +1176,16 @@
   "reminderOverdue": "Overdue",
   "@reminderOverdue": {},
   "importedSchedulesWithWarnings": "Imported {count} schedules with {warningCount} warnings",
-  "@importedSchedulesWithWarnings": {"placeholders":{"count":{"type":"int"},"warningCount":{"type":"int"}}},
+  "@importedSchedulesWithWarnings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "warningCount": {
+        "type": "int"
+      }
+    }
+  },
   "importWarningSkippedMissingStart": "Skipped an event without a start time.",
   "@importWarningSkippedMissingStart": {},
   "importWarningSkippedUnsupportedStart": "Skipped an event with an unsupported start time.",
@@ -1129,13 +1193,35 @@
   "importWarningAdjustedEnd": "Adjusted an event whose end time was not after its start.",
   "@importWarningAdjustedEnd": {},
   "importWarningUnsupportedFields": "Unsupported ICS fields were added to notes: {fields}",
-  "@importWarningUnsupportedFields": {"placeholders":{"fields":{}}},
+  "@importWarningUnsupportedFields": {
+    "placeholders": {
+      "fields": {}
+    }
+  },
   "importWarningUnsupportedRRuleFrequency": "Ignored unsupported repeat frequency: {frequency}",
-  "@importWarningUnsupportedRRuleFrequency": {"placeholders":{"frequency":{}}}
-,
+  "@importWarningUnsupportedRRuleFrequency": {
+    "placeholders": {
+      "frequency": {}
+    }
+  },
   "dataRestoredFromBackupNotice": "App data was restored from the previous backup because the main file failed to load.",
   "@dataRestoredFromBackupNotice": {},
   "dataBackupRestoreFailedNotice": "Both the main data file and its backup are damaged. The app is now using a fresh state.",
-  "@dataBackupRestoreFailedNotice": {}
-
+  "@dataBackupRestoreFailedNotice": {},
+  "previousMonth": "Previous month",
+  "@previousMonth": {},
+  "nextMonth": "Next month",
+  "@nextMonth": {},
+  "timeGridMinutes": "{minutes} min",
+  "@timeGridMinutes": {"placeholders":{"minutes":{"type":"int"}}},
+  "reminderInProgress": "In progress",
+  "@reminderInProgress": {},
+  "deleteCourseTitle": "Delete course",
+  "@deleteCourseTitle": {},
+  "deleteCourseMessage": "Delete this course?",
+  "@deleteCourseMessage": {},
+  "showLunarCalendar": "Show lunar calendar",
+  "@showLunarCalendar": {},
+  "monthDayEvents": "{day}, {count} events",
+  "@monthDayEvents": {"placeholders":{"day":{"type":"int"},"count":{"type":"int"}}}
 }

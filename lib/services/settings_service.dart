@@ -101,19 +101,6 @@ class SettingsService {
     );
   }
 
-  AppData updateSchoolImportParserSource(AppData data, String source) {
-    final normalized = normalizeSchoolImportParserSource(source);
-    if (data.studentMode.schoolImportParserSettings.source == normalized) {
-      return data;
-    }
-    return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: data.studentMode.schoolImportParserSettings
-            .copyWith(source: normalized),
-      ),
-    );
-  }
-
   AppData updateCustomSchoolImportBaseUrl(AppData data, String value) {
     final normalized = value.trim();
     if (data.studentMode.schoolImportParserSettings.customBaseUrl ==

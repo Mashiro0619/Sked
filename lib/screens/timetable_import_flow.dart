@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../services/text_file_picker.dart';
 import '../services/timetable_json_import_service.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import 'school_sites_page.dart';
@@ -365,18 +363,7 @@ class TimetableImportFlow {
   }
 
   static Future<String?> _pickJsonSource() async {
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['json'],
-      withData: true,
-    );
-    final files = result?.files ?? const <PlatformFile>[];
-    final file = files.isEmpty ? null : files.first;
-    final bytes = file?.bytes;
-    if (file == null || bytes == null) {
-      return null;
-    }
-    return utf8.decode(bytes);
+    return TextFilePicker.pickText(allowedExtensions: const ['json']);
   }
 
   static void _showMessage(BuildContext context, String message) {

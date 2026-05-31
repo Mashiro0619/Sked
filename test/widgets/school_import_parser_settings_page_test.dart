@@ -10,6 +10,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/services/secret_store.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -43,7 +44,38 @@ class _BlockingSchoolImportApi extends SchoolImportApi {
   }
 }
 
-Future<TimetableProvider> _createProvider() async {
+class _MemorySecretStore implements SecretStore {
+  _MemorySecretStore([this.value = '']);
+
+  String value;
+  final writes = <String>[];
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    final normalized = value.trim();
+    writes.add(normalized);
+    this.value = normalized;
+  }
+}
+
+class _FailingSecretStore implements SecretStore {
+  _FailingSecretStore([this.value = '']);
+
+  final String value;
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    throw StateError('secure storage unavailable');
+  }
+}
+
+Future<TimetableProvider> _createProvider({SecretStore? secretStore}) async {
   final periodTimes = buildDefaultPeriodTimes();
   final data = buildInitialAppData(periodTimes, localeCode: defaultLocaleCode)
       .copyWith(
@@ -71,13 +103,14 @@ Future<TimetableProvider> _createProvider() async {
           schoolImportParserSettings: const SchoolImportParserSettings(
             source: schoolImportParserSourceCustomOpenAi,
             customBaseUrl: 'https://api.example.com/v1',
-            customApiKey: 'sk-test',
+            customApiKey: '',
           ),
         ),
       );
   final provider = TimetableProvider(
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
+    secretStore: secretStore ?? _MemorySecretStore('sk-test'),
   );
   await provider.load();
   return provider;
@@ -100,6 +133,13 @@ Future<void> _pumpPage(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+Finder _apiKeyTextField() {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.labelText == 'API key',
+  );
 }
 
 void main() {
@@ -126,5 +166,53 @@ void main() {
 
     expect(api.callCount, 1);
     expect(find.text('model-a'), findsOneWidget);
+  });
+
+  testWidgets('API key edits are debounced before secure storage writes', (
+    tester,
+  ) async {
+    final secrets = _MemorySecretStore('sk-old');
+    final provider = await _createProvider(secretStore: secrets);
+    final api = _BlockingSchoolImportApi();
+    await _pumpPage(tester, provider, api);
+
+    final apiKeyField = _apiKeyTextField();
+    expect(apiKeyField, findsOneWidget);
+    await tester.enterText(apiKeyField, 'sk-new');
+    await tester.pump();
+
+    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(secrets.writes, isEmpty);
+    await tester.tap(find.text('Fetch model list'), warnIfMissed: false);
+    expect(api.callCount, 0);
+
+    await tester.pump(const Duration(milliseconds: 499));
+    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(secrets.writes, isEmpty);
+
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+
+    expect(provider.customSchoolImportApiKey, 'sk-new');
+    expect(secrets.writes, ['sk-new']);
+    await tester.tap(find.text('Fetch model list'));
+    expect(api.callCount, 1);
+  });
+
+  testWidgets('API key save failures are shown to the user', (tester) async {
+    final provider = await _createProvider(
+      secretStore: _FailingSecretStore('sk-old'),
+    );
+    await _pumpPage(tester, provider, const SchoolImportApi());
+
+    await tester.enterText(_apiKeyTextField(), 'sk-new');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(
+      find.text('Unable to save custom school import API key.'),
+      findsOneWidget,
+    );
   });
 }

@@ -1410,7 +1410,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyLocalStorageBody.
   ///
   /// In en, this message translates to:
-  /// **'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings, including any custom Base URL, API key, and selected model, are also stored locally in the same app data and are not protected by a system credential vault. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.'**
+  /// **'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.'**
   String get privacyPolicyLocalStorageBody;
 
   /// No description provided for @privacyPolicyImportExportTitle.
@@ -1470,7 +1470,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyFutureFeatureBody.
   ///
   /// In en, this message translates to:
-  /// **'When you use school webpage import or paste HTML for parsing, the app first compresses the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the selected parsing endpoint. If you use the official parser, the request goes to the app\'s configured official backend. If you enable a custom OpenAI-compatible parser, the same content is sent directly to the third-party endpoint you configured, and fetching the model list also requests that same endpoint. A custom endpoint may forward the request to other AI services according to that provider\'s own design. The deployed official backend currently limits each submitted payload to 300KB, uses its configured timeout, and allows at most 5 parsing requests per IP per day.'**
+  /// **'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.'**
   String get privacyPolicyFutureFeatureBody;
 
   /// No description provided for @privacyPolicyUpdatesTitle.
@@ -1764,7 +1764,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolWebImportConfigMissing.
   ///
   /// In en, this message translates to:
-  /// **'Web import backend API is not configured yet.'**
+  /// **'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.'**
   String get schoolWebImportConfigMissing;
 
   /// No description provided for @schoolWebImportUnsupportedPlatform.
@@ -1848,7 +1848,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportParserSettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Choose the official parser or a custom OpenAI-compatible endpoint.'**
+  /// **'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.'**
   String get schoolImportParserSettingsDesc;
 
   /// No description provided for @schoolImportParserSourceTitle.
@@ -1856,24 +1856,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Parser source'**
   String get schoolImportParserSourceTitle;
-
-  /// No description provided for @schoolImportParserSourceOfficial.
-  ///
-  /// In en, this message translates to:
-  /// **'Official parser'**
-  String get schoolImportParserSourceOfficial;
-
-  /// No description provided for @schoolImportParserSourceOfficialDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Use the built-in official parsing service configured by the app.'**
-  String get schoolImportParserSourceOfficialDesc;
-
-  /// No description provided for @schoolImportParserSourceOfficialInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'The official parser uses the app\'s configured parsing backend and keeps the current import flow unchanged.'**
-  String get schoolImportParserSourceOfficialInfo;
 
   /// No description provided for @schoolImportParserSourceCustomOpenAi.
   ///
@@ -1884,7 +1866,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportParserSourceCustomOpenAiDesc.
   ///
   /// In en, this message translates to:
-  /// **'Send the page content directly to your own OpenAI-compatible endpoint.'**
+  /// **'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.'**
   String get schoolImportParserSourceCustomOpenAiDesc;
 
   /// No description provided for @schoolImportParserCustomOpenAi.
@@ -1962,7 +1944,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportParserPlaintextWarning.
   ///
   /// In en, this message translates to:
-  /// **'The custom API key is stored in the app\'s local settings in plaintext under the current implementation. Only use it on a device or browser environment you trust.'**
+  /// **'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.'**
   String get schoolImportParserPlaintextWarning;
 
   /// No description provided for @schoolImportParserCustomConfigIncomplete.
@@ -1970,12 +1952,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.'**
   String get schoolImportParserCustomConfigIncomplete;
-
-  /// No description provided for @schoolImportParserCurrentSourceOfficial.
-  ///
-  /// In en, this message translates to:
-  /// **'Parser: Official'**
-  String get schoolImportParserCurrentSourceOfficial;
 
   /// No description provided for @schoolImportParserCurrentSourceCustom.
   ///

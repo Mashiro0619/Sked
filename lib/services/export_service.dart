@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ExportPayload {
@@ -48,6 +48,8 @@ class ExportSaveResult {
 class ExportService {
   const ExportService();
 
+  static const _androidChannel = MethodChannel('com.mashiro.sked/export_file');
+
   Future<void> shareFile(ExportPayload payload) async {
     await SharePlus.instance.share(
       ShareParams(
@@ -70,16 +72,29 @@ class ExportService {
 
     if (isAndroid) {
       try {
-        final path = await FilePicker.saveFile(
-          fileName: payload.fileName,
-          type: FileType.custom,
-          allowedExtensions: payload.allowedExtensions,
-          bytes: Uint8List.fromList(utf8.encode(payload.content)),
-        );
-        if (path == null) {
+        final savedName = await _androidChannel
+            .invokeMethod<String>('saveTextFile', {
+              'fileName': payload.fileName,
+              'content': payload.content,
+              'mimeType': payload.mimeType,
+            });
+        if (savedName == null) {
           return const ExportSaveResult(status: ExportSaveStatus.cancelled);
         }
-        return ExportSaveResult(status: ExportSaveStatus.saved, path: path);
+        return ExportSaveResult(
+          status: ExportSaveStatus.saved,
+          path: savedName,
+        );
+      } on PlatformException catch (error) {
+        return switch (error.code) {
+          'permissionDenied' => const ExportSaveResult(
+            status: ExportSaveStatus.permissionDenied,
+          ),
+          'unsupported' => const ExportSaveResult(
+            status: ExportSaveStatus.unsupported,
+          ),
+          _ => const ExportSaveResult(status: ExportSaveStatus.failed),
+        };
       } catch (_) {
         return const ExportSaveResult(status: ExportSaveStatus.failed);
       }

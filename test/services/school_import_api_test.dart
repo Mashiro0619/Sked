@@ -40,8 +40,15 @@ Map<String, dynamic> _minimalCourseJson([String name = 'Imported Course']) {
   };
 }
 
+const _customParserSettings = SchoolImportParserSettings(
+  source: schoolImportParserSourceCustomOpenAi,
+  customBaseUrl: 'https://api.example.com/v1',
+  customApiKey: 'sk-test',
+  customModel: 'gpt-4.1-mini',
+);
+
 void main() {
-  group('SchoolImportApi.buildResponseFromPhpDone', () {
+  group('SchoolImportApi.buildResponseFromDoneEvent', () {
     Map<String, dynamic> timetableJson() {
       return {
         'name': 'Spring Timetable',
@@ -72,42 +79,36 @@ void main() {
       };
     }
 
-    test(
-      'preserves timetable fields from an official streaming done event',
-      () {
-        final response = SchoolImportApi.buildResponseFromPhpDone({
-          'done': true,
-          'ok': true,
-          'meta': {
-            'sourceUrl': 'https://example.test/timetable',
-            'pageTitle': 'Timetable',
-            'parser': 'official',
-            'warnings': ['trimmed navigation'],
-          },
-          'timetable': timetableJson(),
-        });
+    test('preserves timetable fields from a streaming done event', () {
+      final response = SchoolImportApi.buildResponseFromDoneEvent({
+        'done': true,
+        'ok': true,
+        'meta': {
+          'sourceUrl': 'https://example.test/timetable',
+          'pageTitle': 'Timetable',
+          'parser': 'custom-openai:gpt-4.1-mini',
+          'warnings': ['trimmed navigation'],
+        },
+        'timetable': timetableJson(),
+      });
 
-        expect(response.meta.sourceUrl, 'https://example.test/timetable');
-        expect(response.meta.parser, 'official');
-        expect(response.meta.warnings, ['trimmed navigation']);
-        expect(response.timetable.name, 'Spring Timetable');
-        expect(response.timetable.startDate, DateTime(2026, 2, 23));
-        expect(response.timetable.totalWeeks, 20);
-        expect(response.timetable.periodTimeSet.name, 'Imported periods');
-        expect(response.timetable.periodTimeSet.periodTimes, hasLength(2));
-        expect(response.timetable.periodTimeSet.periodTimes.first.index, 1);
-        expect(response.timetable.courses.single.name, 'Algebra');
-        expect(response.timetable.courses.single.teacher, 'Lin');
-        expect(response.timetable.courses.single.periods, [1, 2]);
-        expect(
-          response.timetable.courses.single.customFields['campus'],
-          'North',
-        );
-      },
-    );
+      expect(response.meta.sourceUrl, 'https://example.test/timetable');
+      expect(response.meta.parser, 'custom-openai:gpt-4.1-mini');
+      expect(response.meta.warnings, ['trimmed navigation']);
+      expect(response.timetable.name, 'Spring Timetable');
+      expect(response.timetable.startDate, DateTime(2026, 2, 23));
+      expect(response.timetable.totalWeeks, 20);
+      expect(response.timetable.periodTimeSet.name, 'Imported periods');
+      expect(response.timetable.periodTimeSet.periodTimes, hasLength(2));
+      expect(response.timetable.periodTimeSet.periodTimes.first.index, 1);
+      expect(response.timetable.courses.single.name, 'Algebra');
+      expect(response.timetable.courses.single.teacher, 'Lin');
+      expect(response.timetable.courses.single.periods, [1, 2]);
+      expect(response.timetable.courses.single.customFields['campus'], 'North');
+    });
 
     test('accepts a bare timetable object from manual stream editing', () {
-      final response = SchoolImportApi.buildResponseFromPhpDone(
+      final response = SchoolImportApi.buildResponseFromDoneEvent(
         timetableJson(),
       );
 
@@ -118,7 +119,7 @@ void main() {
     });
 
     test('does not invent missing class or period times', () {
-      final response = SchoolImportApi.buildResponseFromPhpDone({
+      final response = SchoolImportApi.buildResponseFromDoneEvent({
         'done': true,
         'ok': true,
         'timetable': {
@@ -148,7 +149,7 @@ void main() {
 
     test('preserves error messages from failed done events', () {
       expect(
-        () => SchoolImportApi.buildResponseFromPhpDone({
+        () => SchoolImportApi.buildResponseFromDoneEvent({
           'done': true,
           'ok': false,
           'message': 'No timetable found.',
@@ -165,7 +166,7 @@ void main() {
 
     test('rejects wrapped done events with malformed timetable objects', () {
       expect(
-        () => SchoolImportApi.buildResponseFromPhpDone({
+        () => SchoolImportApi.buildResponseFromDoneEvent({
           'done': true,
           'ok': true,
           'timetable': [
@@ -184,10 +185,10 @@ void main() {
 
     test('rejects done events without any timetable payload', () {
       expect(
-        () => SchoolImportApi.buildResponseFromPhpDone({
+        () => SchoolImportApi.buildResponseFromDoneEvent({
           'done': true,
           'ok': true,
-          'meta': {'parser': 'official'},
+          'meta': {'parser': 'custom-openai:gpt-4.1-mini'},
         }),
         throwsA(
           isA<FormatException>().having(
@@ -201,7 +202,7 @@ void main() {
 
     test('rejects explicit empty-course timetable payloads', () {
       expect(
-        () => SchoolImportApi.buildResponseFromPhpDone({
+        () => SchoolImportApi.buildResponseFromDoneEvent({
           'done': true,
           'ok': true,
           'timetable': {
@@ -396,7 +397,7 @@ void main() {
       );
     });
 
-    test('official stream reports connection timeout clearly', () async {
+    test('custom stream reports connection timeout clearly', () async {
       final api = const SchoolImportApi(
         requestTimeout: Duration(milliseconds: 1),
       );
@@ -409,7 +410,9 @@ void main() {
               title: 'Example page',
               html: '<table>demo</table>',
               locale: 'zh',
+              sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
+            parserSettings: _customParserSettings,
             client: client,
           )
           .toList();
@@ -422,7 +425,7 @@ void main() {
       );
     });
 
-    test('official stream reports idle stream timeout clearly', () async {
+    test('custom stream reports idle stream timeout clearly', () async {
       final api = const SchoolImportApi(
         streamIdleTimeout: Duration(milliseconds: 1),
       );
@@ -443,7 +446,9 @@ void main() {
               title: 'Example page',
               html: '<table>demo</table>',
               locale: 'zh',
+              sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
+            parserSettings: _customParserSettings,
             client: client,
           )
           .toList();
@@ -454,7 +459,7 @@ void main() {
     });
 
     test(
-      'official stream times out while reading non-2xx error bodies',
+      'custom stream times out while reading non-2xx error bodies',
       () async {
         final api = const SchoolImportApi(
           streamIdleTimeout: Duration(milliseconds: 1),
@@ -476,7 +481,9 @@ void main() {
                 title: 'Example page',
                 html: '<table>demo</table>',
                 locale: 'zh',
+                sourceHint: schoolImportParserSourceCustomOpenAi,
               ),
+              parserSettings: _customParserSettings,
               client: client,
             )
             .toList();
@@ -490,7 +497,7 @@ void main() {
       },
     );
 
-    test('official stream truncates oversized non-2xx error bodies', () async {
+    test('custom stream truncates oversized non-2xx error bodies', () async {
       final oversizedBody = 'x' * (40 * 1024);
       final client = _StreamingClient((request) async {
         return http.StreamedResponse(
@@ -506,7 +513,9 @@ void main() {
               title: 'Example page',
               html: '<table>demo</table>',
               locale: 'zh',
+              sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
+            parserSettings: _customParserSettings,
             client: client,
           )
           .toList();
@@ -517,13 +526,19 @@ void main() {
       expect(message.length, lessThan(34 * 1024));
     });
 
-    test('official stream handles non-string delta and error values', () async {
-      final ndjson =
-          '${jsonEncode({'delta': 42})}\n'
-          '${jsonEncode({'error': 42})}\n';
+    test('custom stream ignores non-string delta values', () async {
+      final sseBody =
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': 42},
+              },
+            ],
+          })}\n\n'
+          'data: [DONE]\n\n';
       final client = _StreamingClient((request) async {
         return http.StreamedResponse(
-          Stream<List<int>>.fromIterable([utf8.encode(ndjson)]),
+          Stream<List<int>>.fromIterable([utf8.encode(sseBody)]),
           200,
         );
       });
@@ -535,13 +550,18 @@ void main() {
               title: 'Example page',
               html: '<table>demo</table>',
               locale: 'zh',
+              sourceHint: schoolImportParserSourceCustomOpenAi,
             ),
+            parserSettings: _customParserSettings,
             client: client,
           )
           .toList();
 
-      expect(events.whereType<ParseDelta>().single.text, '');
-      expect(events.whereType<ParseError>().single.message, 'Unknown error');
+      expect(events.whereType<ParseDelta>(), isEmpty);
+      expect(
+        events.whereType<ParseError>().single.message,
+        'AI returned empty content.',
+      );
     });
 
     test('requests JSON mode and parses fenced streamed JSON', () async {
@@ -758,6 +778,132 @@ void main() {
       expect(done.response.meta.parser, 'custom-openai:gpt-4.1-mini');
       expect(done.response.timetable.name, 'Segmented Stream Timetable');
     });
+
+    test(
+      'custom stream accepts data lines without a space after colon',
+      () async {
+        final responseJson = {
+          'ok': true,
+          'meta': {
+            'sourceUrl': '',
+            'pageTitle': '',
+            'parser': '',
+            'warnings': [],
+          },
+          'timetable': {
+            'name': 'No Space SSE Timetable',
+            'startDate': '2026-02-23',
+            'totalWeeks': 18,
+            'periodTimeSet': {'name': '', 'periodTimes': []},
+            'courses': [_minimalCourseJson('No Space SSE Course')],
+          },
+        };
+        final encodedResponse = jsonEncode(responseJson);
+        final sseBody =
+            'data:${jsonEncode({
+              'choices': [
+                {
+                  'delta': {'content': encodedResponse},
+                },
+              ],
+            })}\n\n'
+            'data:[DONE]\n\n';
+
+        final client = _StreamingClient((request) async {
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([utf8.encode(sseBody)]),
+            200,
+          );
+        });
+
+        final events = await const SchoolImportApi()
+            .importCurrentPageStream(
+              const SchoolImportPagePayload(
+                url: 'https://example.test/page',
+                title: 'Example page',
+                html: '<table>demo</table>',
+                locale: 'zh',
+                sourceHint: schoolImportParserSourceCustomOpenAi,
+              ),
+              parserSettings: _customParserSettings,
+              client: client,
+            )
+            .toList();
+
+        expect(events.whereType<ParseError>(), isEmpty);
+        expect(
+          events.whereType<ParseDelta>().map((event) => event.text).join(),
+          encodedResponse,
+        );
+        expect(
+          events.whereType<ParseDone>().single.response.timetable.name,
+          'No Space SSE Timetable',
+        );
+      },
+    );
+
+    test(
+      'custom stream accepts message content chunks with finish reason',
+      () async {
+        final responseJson = {
+          'ok': true,
+          'meta': {
+            'sourceUrl': '',
+            'pageTitle': '',
+            'parser': '',
+            'warnings': [],
+          },
+          'timetable': {
+            'name': 'Message Chunk Timetable',
+            'startDate': '2026-02-23',
+            'totalWeeks': 18,
+            'periodTimeSet': {'name': '', 'periodTimes': []},
+            'courses': [_minimalCourseJson('Message Chunk Course')],
+          },
+        };
+        final encodedResponse = jsonEncode(responseJson);
+        final sseBody =
+            'data: ${jsonEncode({
+              'choices': [
+                {
+                  'message': {'content': encodedResponse},
+                  'finish_reason': 'stop',
+                },
+              ],
+            })}\n\n';
+
+        final client = _StreamingClient((request) async {
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([utf8.encode(sseBody)]),
+            200,
+          );
+        });
+
+        final events = await const SchoolImportApi()
+            .importCurrentPageStream(
+              const SchoolImportPagePayload(
+                url: 'https://example.test/page',
+                title: 'Example page',
+                html: '<table>demo</table>',
+                locale: 'zh',
+                sourceHint: schoolImportParserSourceCustomOpenAi,
+              ),
+              parserSettings: _customParserSettings,
+              client: client,
+            )
+            .toList();
+
+        expect(events.whereType<ParseError>(), isEmpty);
+        expect(
+          events.whereType<ParseDelta>().map((event) => event.text).join(),
+          encodedResponse,
+        );
+        expect(
+          events.whereType<ParseDone>().single.response.timetable.name,
+          'Message Chunk Timetable',
+        );
+      },
+    );
 
     test('falls back when custom stream meta fields are malformed', () async {
       final responseJson = {

@@ -710,7 +710,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Dữ liệu lịch trình và các cài đặt liên quan được lưu trữ trong một tệp cục bộ có tên Sked_data.json bên trong thư mục tài liệu ứng dụng. Cấu hình trang web trường có thể chỉnh sửa được lưu trữ riêng biệt trong Sked_school_sites.json. Cài đặt phân tích lịch trình tùy chỉnh, bao gồm bất kỳ URL cơ sở tùy chỉnh nào, khóa API và mô hình được chọn, cũng được lưu trữ tại địa phương trong cùng dữ liệu ứng dụng và không được bảo vệ bởi kho thông tin hệ thống. Khi được sử dụng trong trình duyệt, cùng một loại dữ liệu được lưu trữ trong lưu trữ trình duyệt. Ứng dụng không tự động tải dữ liệu cục bộ này lên máy chủ do nhà phát triển kiểm soát.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Nhập khẩu và xuất khẩu';
@@ -746,7 +746,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Khi bạn sử dụng trang web trường nhập hoặc dán HTML để phân tích, ứng dụng trước tiên nén nội dung cục bộ, sau đó gửi nội dung trang được gửi, tiêu đề trang tùy chọn và URL, ngôn ngữ ứng dụng hiện tại và nội dung nhắc phân tích đến điểm cuối phân tích được chọn. Nếu bạn sử dụng trình phân tích chính thức, yêu cầu sẽ đến phần sau chính thức được cấu hình của ứng dụng. Nếu bạn kích hoạt một trình phân tích tương thích OpenAI tùy chỉnh, cùng nội dung được gửi trực tiếp đến điểm cuối của bên thứ ba mà bạn cấu hình, và lấy danh sách mô hình cũng yêu cầu cùng điểm cuối đó. Một điểm cuối tùy chỉnh có thể chuyển yêu cầu đến các dịch vụ AI khác theo thiết kế của riêng nhà cung cấp đó. Phần sau chính thức được triển khai hiện giới hạn mỗi tải trọng được gửi lên 300KB, sử dụng thời gian hết cấu hình của nó và cho phép tối đa 5 yêu cầu phân tích mỗi IP mỗi ngày.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Cập nhật chính sách';
@@ -916,7 +916,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Web import backend API chưa được cấu hình.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -966,21 +966,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Chọn trình phân tích chính thức hoặc một điểm cuối tương thích OpenAI tùy chỉnh.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Nguồn parser';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Phân tích chính thức';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Sử dụng dịch vụ phân tích chính thức tích hợp được cấu hình bởi ứng dụng.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Phân tích chính thức sử dụng phần sau phân tích được cấu hình của ứng dụng và giữ cho dòng chảy nhập khẩu hiện tại không thay đổi.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -988,7 +977,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Gửi nội dung trang trực tiếp đến điểm cuối tương thích OpenAI của riêng bạn.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1035,14 +1024,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Khóa API tùy chỉnh được lưu trữ trong cài đặt địa phương của ứng dụng bằng văn bản đơn giản dưới triển khai hiện tại. Chỉ sử dụng nó trên thiết bị hoặc môi trường trình duyệt mà bạn tin tưởng.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Cấu hình parser tùy chỉnh không hoàn chỉnh. Điền vào URL cơ sở, khóa API và mô hình trước.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: Chính thức';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

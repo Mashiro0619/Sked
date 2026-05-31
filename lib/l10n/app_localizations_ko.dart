@@ -692,7 +692,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '시간표 데이터와 관련 설정은 앱 문서 디렉터리 안의 Sked_data.json이라는 로컬 파일에 저장됩니다. 수정 가능한 학교 사이트 설정은 Sked_school_sites.json에 별도로 저장됩니다. 사용자 지정 시간표 파서 설정(사용자 지정 Base URL, API key, 선택한 모델 포함)도 같은 앱 데이터에 로컬로 저장되며 시스템 자격 증명 저장소로 보호되지 않습니다. 브라우저에서 사용할 경우 동일한 종류의 데이터가 브라우저 저장소에 저장됩니다. 앱은 이 로컬 데이터를 개발자가 제어하는 서버로 자동 업로드하지 않습니다.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => '가져오기 및 내보내기';
@@ -727,7 +727,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '학교 웹페이지 가져오기를 사용하거나 파싱을 위해 HTML을 붙여넣으면, 앱은 먼저 내용을 로컬에서 압축한 다음 제출된 페이지 내용, 선택적 페이지 제목과 URL, 현재 앱 언어, 파서 프롬프트 내용을 선택된 파싱 엔드포인트로 전송합니다. 공식 파서를 사용하는 경우 요청은 앱에 설정된 공식 백엔드로 전송됩니다. 사용자 지정 OpenAI 호환 파서를 활성화하면 동일한 내용이 사용자가 설정한 제3자 엔드포인트로 직접 전송되며, 모델 목록 가져오기도 같은 엔드포인트로 요청됩니다. 사용자 지정 엔드포인트는 해당 제공자의 설계에 따라 다른 AI 서비스로 요청을 전달할 수 있습니다. 현재 배포된 공식 백엔드는 제출 페이로드를 300KB로 제한하고, 설정된 타임아웃을 사용하며, IP당 하루 최대 5회의 파싱 요청만 허용합니다.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => '정책 업데이트';
@@ -891,7 +891,8 @@ class AppLocalizationsKo extends AppLocalizations {
       '앱 내에서 학교 사이트에 로그인한 뒤, 시간표 페이지로 직접 이동하세요.';
 
   @override
-  String get schoolWebImportConfigMissing => '웹 가져오기 백엔드 API가 아직 설정되지 않았습니다.';
+  String get schoolWebImportConfigMissing =>
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -939,28 +940,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      '공식 파서 또는 사용자 지정 OpenAI 호환 엔드포인트를 선택하세요.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => '파서 소스';
-
-  @override
-  String get schoolImportParserSourceOfficial => '공식 파서';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      '앱에 설정된 내장 공식 파싱 서비스를 사용합니다.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      '공식 파서는 앱에 설정된 파싱 백엔드를 사용하며 현재 가져오기 흐름을 그대로 유지합니다.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => '사용자 지정 OpenAI 호환';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      '페이지 내용을 자신의 OpenAI 호환 엔드포인트로 직접 보냅니다.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi => '사용자 지정 OpenAI 호환 파서';
@@ -1004,14 +994,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      '현재 구현에서는 사용자 지정 API key가 앱의 로컬 설정에 평문으로 저장됩니다. 신뢰할 수 있는 기기나 브라우저 환경에서만 사용하세요.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       '사용자 지정 파서 설정이 완전하지 않습니다. 먼저 Base URL, API key, 모델을 입력하세요.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => '파서: 공식';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

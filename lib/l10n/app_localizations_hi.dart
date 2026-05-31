@@ -711,7 +711,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'टाइमटेबल डेटा और संबंधित सेटिंग्स ऐप दस्तावेज़ निर्देशिका में Sked_data.json नामक स्थानीय फ़ाइल में संग्रहीत होती हैं। संपादन योग्य स्कूल-साइट कॉन्फ़िगरेशन अलग से Sked_school_sites.json में संग्रहीत होती है। कस्टम टाइमटेबल पार्सर सेटिंग्स, जिनमें कोई भी कस्टम Base URL, API key और चयनित मॉडल शामिल हैं, उसी ऐप डेटा में स्थानीय रूप से संग्रहीत रहती हैं और सिस्टम क्रेडेंशियल वॉल्ट से सुरक्षित नहीं होतीं। ब्राउज़र में उपयोग होने पर, इसी प्रकार का डेटा ब्राउज़र स्टोरेज में सहेजा जाता है। ऐप इस स्थानीय डेटा को अपने-आप किसी डेवलपर-नियंत्रित सर्वर पर अपलोड नहीं करता।';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'आयात और निर्यात';
@@ -746,7 +746,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'जब आप स्कूल वेबपेज आयात का उपयोग करते हैं या पार्सिंग के लिए HTML पेस्ट करते हैं, तो ऐप पहले सामग्री को स्थानीय रूप से संपीड़ित करता है, फिर जमा की गई पेज सामग्री, वैकल्पिक पेज शीर्षक और URL, वर्तमान ऐप भाषा और पार्सर प्रॉम्प्ट सामग्री को चयनित पार्सिंग एंडपॉइंट पर भेजता है। यदि आप आधिकारिक पार्सर का उपयोग करते हैं, तो अनुरोध ऐप के कॉन्फ़िगर किए गए आधिकारिक बैकएंड पर जाता है। यदि आप कस्टम OpenAI-compatible पार्सर सक्षम करते हैं, तो वही सामग्री सीधे आपके कॉन्फ़िगर किए गए तृतीय-पक्ष एंडपॉइंट पर भेजी जाती है, और मॉडल सूची प्राप्त करना भी उसी एंडपॉइंट को अनुरोध भेजता है। कस्टम एंडपॉइंट अपने प्रदाता की डिज़ाइन के अनुसार अनुरोध को अन्य AI सेवाओं तक अग्रेषित कर सकता है। वर्तमान में डिप्लॉय किया गया आधिकारिक बैकएंड प्रत्येक सबमिट किए गए payload को 300KB तक सीमित करता है, अपने कॉन्फ़िगर किए गए timeout का उपयोग करता है, और प्रति IP प्रति दिन अधिकतम 5 पार्सिंग अनुरोधों की अनुमति देता है।';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'नीति अपडेट';
@@ -914,7 +914,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'वेब आयात बैकएंड API अभी कॉन्फ़िगर नहीं है।';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -963,28 +963,17 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'आधिकारिक पार्सर या कस्टम OpenAI-compatible एंडपॉइंट चुनें।';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'पार्सर स्रोत';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'आधिकारिक पार्सर';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'ऐप द्वारा कॉन्फ़िगर की गई अंतर्निहित आधिकारिक पार्सिंग सेवा का उपयोग करें।';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'आधिकारिक पार्सर ऐप के कॉन्फ़िगर किए गए पार्सिंग बैकएंड का उपयोग करता है और वर्तमान आयात प्रवाह को अपरिवर्तित रखता है।';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'कस्टम OpenAI-compatible';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'पेज सामग्री सीधे अपने OpenAI-compatible एंडपॉइंट पर भेजें।';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi => 'कस्टम OpenAI-compatible पार्सर';
@@ -1031,14 +1020,11 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'वर्तमान कार्यान्वयन में कस्टम API key ऐप की स्थानीय सेटिंग्स में साधारण पाठ में संग्रहीत होती है। इसे केवल ऐसे डिवाइस या ब्राउज़र वातावरण में उपयोग करें जिस पर आप भरोसा करते हों।';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'कस्टम पार्सर कॉन्फ़िगरेशन अधूरी है। पहले Base URL, API key और मॉडल भरें।';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'पार्सर: आधिकारिक';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

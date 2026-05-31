@@ -723,7 +723,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Τα δεδομένα του προγράμματος και οι σχετικές ρυθμίσεις αποθηκεύονται σε ένα τοπικό αρχείο που ονομάζεται Sked_data.json μέσα στον κατάλογο εγγράφων της εφαρμογής. Η επεξεργαζόμενη διαμόρφωση της τοποθεσίας σχολείου αποθηκεύεται ξεχωριστά στο Sked_school_sites.json. Οι προσαρμοσμένες ρυθμίσεις αναλύτη χρονοδιαγράμματος, συμπεριλαμβανομένης οποιασδήποτε προσαρμοσμένης διεύθυνσης URL Base, κλειδιού API και επιλεγμένου μοντέλου, αποθηκεύονται επίσης τοπικά στα ίδια δεδομένα εφαρμογής και δεν προστατεύονται από ένα θυρίδα διαπιστευτηρίων συστήματος. Όταν χρησιμοποιούνται σε ένα πρόγραμμα περιήγησης, τα ίδια είδη δεδομένων αποθηκεύονται στην αποθήκευση του προγράμματος περιήγησης. Η εφαρμογή δεν ανεβάζει αυτόματα αυτά τα τοπικά δεδομένα σε έναν διακομιστή που ελέγχεται από τον προγραμματιστή.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Εισαγωγή και εξαγωγή';
@@ -758,7 +758,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Όταν χρησιμοποιείτε την εισαγωγή ή την επικόλληση HTML ιστοσελίδας σχολείου για ανάλυση, η εφαρμογή πρώτα συμπιέζει το περιεχόμενο τοπικά, στη συνέχεια στέλνει το περιεχόμενο της υποβληθείσας σελίδας, τον προαιρετικό τίτλο σελίδας και τη διεύθυνση URL, την τρέχουσα γλώσσα της εφαρμογής και το περιεχόμενο prompt ανάλυσης στο επιλεγμένο τελικό Εάν χρησιμοποιήσετε τον επίσημο αναλυτή, το αίτημα πηγαίνει στο διαμορφωμένο επίσημο backend της εφαρμογής. Εάν ενεργοποιήσετε έναν προσαρμοσμένο αναλυτή συμβατό με το OpenAI, το ίδιο περιεχόμενο αποστέλλεται απευθείας στο τελικό σημείο τρίτου μέρους που έχετε ρυθμίσει ρυθμίσεις και η λήψη της λίστας μοντέλων ζητά επίσης το ίδιο τελικό σημείο. Ένα προσαρμοσμένο τελικό σημείο μπορεί να προωθήσει το αίτημα σε άλλες υπηρεσίες AI σύμφωνα με τον ίδιο τον σχεδιασμό του παρόχου. Το αναπτυγμένο επίσημο backend περιορίζει σήμερα κάθε υποβληθένο ωφέλιμο φορτίο στα 300KB, χρησιμοποιεί το ρυθμισμένο χρονικό διάστημα και επιτρέπει το πολύ 5 αιτήματα ανάλυσης ανά IP την ημέρα.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Ενημερώσεις πολιτικής';
@@ -928,7 +928,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Το API backend εισαγωγής ιστού δεν έχει ρυθμιστεί ακόμα.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -978,21 +978,10 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Επιλέξτε τον επίσημο αναλυτή ή ένα προσαρμοσμένο τελικό σημείο συμβατό με OpenAI.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Πηγή αναλύτη';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Επίσημος αναλυτής';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Χρησιμοποιήστε την ενσωματωμένη επίσημη υπηρεσία ανάλυσης που έχει ρυθμιστεί από την εφαρμογή.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Ο επίσημος αναλυτής χρησιμοποιεί το ρυθμισμένο backend ανάλυσης της εφαρμογής και διατηρεί την τρέχουσα ροή εισαγωγής αμετάβλητη.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -1000,7 +989,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Στείλτε το περιεχόμενο της σελίδας απευθείας στο δικό σας τελικό σημείο συμβατό με OpenAI.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1048,14 +1037,11 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Το προσαρμοσμένο κλειδί API αποθηκεύεται στις τοπικές ρυθμίσεις της εφαρμογής σε απλό κείμενο υπό την τρέχουσα υλοποίηση. Χρησιμοποιήστε το μόνο σε μια συσκευή ή περιβάλλον περιήγησης που εμπιστεύεστε.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Η προσαρμοσμένη διαμόρφωση του αναλυτή είναι ελλιπής. Συμπληρώστε πρώτα την URL βάσης, το κλειδί API και το μοντέλο.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: Επίσημος';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

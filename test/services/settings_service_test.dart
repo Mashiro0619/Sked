@@ -65,7 +65,7 @@ void main() {
       );
 
       final settings = updated.studentMode.schoolImportParserSettings;
-      expect(settings.source, schoolImportParserSourceOfficial);
+      expect(settings.source, schoolImportParserSourceCustomOpenAi);
       expect(settings.customBaseUrl, 'https://api.example.com/v1');
       expect(settings.customApiKey, 'sk-secret');
       expect(settings.customModel, 'gpt-mini');

@@ -23,9 +23,7 @@ Future<void> main() async {
 void _registerLicenses() {
   LicenseRegistry.addLicense(() async* {
     final notice = await rootBundle.loadString('NOTICE');
-    yield LicenseEntryWithLineBreaks([
-      'App icon assets',
-    ], notice);
+    yield LicenseEntryWithLineBreaks(['App icon assets'], notice);
   });
 }
 
@@ -40,9 +38,6 @@ ThemeMode _themeModeFromValue(String value) {
       return ThemeMode.light;
   }
 }
-
-
-
 
 ThemeData _buildTheme({
   required Color seedColor,
@@ -90,8 +85,7 @@ class MyApp extends StatelessWidget {
         builder: (context, timetableProvider, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            onGenerateTitle: (context) =>
-                AppLocalizations.of(context).appTitle,
+            onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
             locale: appLocaleFromCode(timetableProvider.localeCode),
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,

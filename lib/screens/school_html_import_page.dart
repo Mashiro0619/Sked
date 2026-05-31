@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
-import '../config/app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
-import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_apply_service.dart';
@@ -46,38 +44,26 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   bool _returnToWebPagePopped = false;
 
   bool _isConfigured(TimetableProvider provider) {
-    if (provider.schoolImportParserSource ==
-        schoolImportParserSourceCustomOpenAi) {
-      return provider.customSchoolImportBaseUrl.trim().isNotEmpty &&
-          provider.customSchoolImportApiKey.trim().isNotEmpty &&
-          provider.customSchoolImportModel.trim().isNotEmpty;
-    }
-    return AppConfig.hasSchoolImportApiBaseUrl;
+    return provider.customSchoolImportBaseUrl.trim().isNotEmpty &&
+        provider.customSchoolImportApiKey.trim().isNotEmpty &&
+        provider.customSchoolImportModel.trim().isNotEmpty;
   }
 
   String _buildParserSummary(
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    if (provider.schoolImportParserSource ==
-        schoolImportParserSourceCustomOpenAi) {
-      final model = provider.customSchoolImportModel.trim();
-      return model.isEmpty
-          ? l10n.schoolImportParserSourceCustomOpenAi
-          : l10n.schoolImportParserCurrentSourceCustom(model);
-    }
-    return l10n.schoolImportParserCurrentSourceOfficial;
+    final model = provider.customSchoolImportModel.trim();
+    return model.isEmpty
+        ? l10n.schoolImportParserSourceCustomOpenAi
+        : l10n.schoolImportParserCurrentSourceCustom(model);
   }
 
   String _buildConfigMessage(
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    if (provider.schoolImportParserSource ==
-        schoolImportParserSourceCustomOpenAi) {
-      return l10n.schoolImportParserCustomConfigIncomplete;
-    }
-    return l10n.schoolWebImportConfigMissing;
+    return l10n.schoolImportParserCustomConfigIncomplete;
   }
 
   @override
@@ -184,9 +170,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    final isCustom =
-        provider.schoolImportParserSource ==
-        schoolImportParserSourceCustomOpenAi;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -197,16 +180,14 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
               _buildConfigMessage(provider, l10n),
               textAlign: TextAlign.center,
             ),
-            if (isCustom) ...[
-              const SizedBox(height: 16),
-              FilledButton.tonalIcon(
-                onPressed: _parserSettingsPageOpen
-                    ? null
-                    : _openParserSettingsPage,
-                icon: const Icon(Icons.tune_outlined),
-                label: Text(l10n.schoolImportParserSettingsTitle),
-              ),
-            ],
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: _parserSettingsPageOpen
+                  ? null
+                  : _openParserSettingsPage,
+              icon: const Icon(Icons.tune_outlined),
+              label: Text(l10n.schoolImportParserSettingsTitle),
+            ),
           ],
         ),
       ),

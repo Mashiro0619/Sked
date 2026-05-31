@@ -70,6 +70,48 @@ void main() {
       expect(result.hasUpdate, isTrue);
     });
 
+    test('uses custom update feed when configured', () async {
+      final service = UpdateService(
+        updateVersionUrl: 'https://updates.example.test/sked.json',
+        client: MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://updates.example.test/sked.json',
+          );
+          return http.Response(
+            jsonEncode({
+              'version': 'v2.0.0+7',
+              'releaseUrl': 'https://updates.example.test/releases/2.0.0',
+              'updateContent': 'custom notes',
+            }),
+            200,
+          );
+        }),
+      );
+
+      final result = await service.checkForUpdates();
+
+      expect(result.remoteVersion, '2.0.0');
+      expect(result.releaseUrl, 'https://updates.example.test/releases/2.0.0');
+      expect(result.updateContent, 'custom notes');
+      expect(result.hasUpdate, isTrue);
+    });
+
+    test('rejects insecure custom update URLs', () async {
+      final service = UpdateService(updateVersionUrl: 'http://example.test/v');
+
+      expect(
+        service.checkForUpdates,
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Invalid custom update URL.',
+          ),
+        ),
+      );
+    });
+
     test('throws when GitHub latest release request fails', () async {
       final service = UpdateService(
         client: MockClient((request) async => http.Response('not found', 404)),

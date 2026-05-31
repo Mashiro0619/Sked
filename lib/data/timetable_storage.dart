@@ -18,10 +18,7 @@ enum RecoveryStatus {
 }
 
 class StorageLoadResult {
-  const StorageLoadResult({
-    required this.data,
-    required this.recoveryStatus,
-  });
+  const StorageLoadResult({required this.data, required this.recoveryStatus});
 
   const StorageLoadResult.empty()
     : data = null,

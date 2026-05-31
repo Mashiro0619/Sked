@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -17,6 +14,7 @@ import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
+import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import 'general_display_settings_page.dart';
@@ -1684,21 +1682,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }) async {
     final l10n = AppLocalizations.of(context);
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
+      final source = await TextFilePicker.pickText(
         allowedExtensions: allowedExtensions,
-        withData: true,
       );
       if (!mounted) {
         return null;
       }
-      final files = result?.files ?? const <PlatformFile>[];
-      final file = files.isEmpty ? null : files.first;
-      final bytes = file?.bytes;
-      if (file == null || bytes == null) {
-        return null;
-      }
-      return utf8.decode(bytes);
+      return source;
     } catch (_) {
       if (mounted) {
         _showMessage(l10n.importFailedCheckContent);

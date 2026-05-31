@@ -704,7 +704,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'يتم تخزين بيانات الجدول الزمني والإعدادات ذات الصلة في ملف محلي اسمه Sked_data.json داخل دليل وثائق التطبيق. يتم تخزين تكوين موقع المدرسة القابل للتحرير بشكل منفصل في Sked_school_sites.json. يتم تخزين إعدادات تحليل الجدول الزمني المخصصة ، بما في ذلك أي عنوان URL قاعدة مخصص ، ومفتاح واجهة برمجة التطبيقات ، والنموذج المحدد ، أيضًا محليًا في نفس بيانات التطبيق ولا يتم حمايتها بواسطة خزنة اعتمادات النظام. عند استخدامها في متصفح، يتم تخزين نفس أنواع البيانات في تخزين المتصفح. لا يرفع التطبيق هذه البيانات المحلية تلقائياً إلى خادم يسيطر عليه المطور.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'الاستيراد والتصدير';
@@ -739,7 +739,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'عند استخدام استيراد صفحة ويب مدرسة أو لصق HTML للتحليل، يضغط التطبيق المحتوى أولاً محلياً، ثم يرسل محتوى الصفحة المقدمة، وعنوان الصفحة الاختياري وعنوان URL، ولغة التطبيق الحالية، ومحتوى طلب التحليل إلى نقطة نهاية التحليل المحددة. إذا استخدمت المحلل الرسمي، فإن الطلب يذهب إلى النهاية الخلفية الرسمية المكونة للتطبيق. إذا قمت بتشغيل محلل مخصص متوافق مع OpenAI، يتم إرسال نفس المحتوى مباشرة إلى نقطة نهاية الطرف الثالث التي قمت بتكوينها، ويطلب الحصول على قائمة النماذج أيضًا نفس نقطة النهاية. قد ترسل نقطة نهاية مخصصة الطلب إلى خدمات الذكاء الاصطناعي الأخرى وفقًا للتصميم الخاص بهذا المزود. يحد النهاية الخلفية الرسمية المنتشرة حاليًا من كل حمولة مفيدة مقدمة إلى 300 كيلوبايت ، ويستخدم توقيت انتهاء التكوين ، ويسمح بأكثر من 5 طلبات تحليل لكل IP يوميًا.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'تحديثات السياسة';
@@ -907,7 +907,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'لم يتم تكوين واجهة برمجة التطبيقات الخلفية لاستيراد الويب بعد.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -956,28 +956,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'اختر المحلل الرسمي أو نقطة نهاية مخصصة متوافقة مع OpenAI.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'مصدر المحلل';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'المحلل الرسمي';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'استخدم خدمة التحليل الرسمية المدمجة التي تكوينها التطبيق.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'يستخدم المحلل الرسمي واجهة التحليل الخلفية المكونة للتطبيق ويحافظ على تدفق الاستيراد الحالي دون تغيير.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'مخصص OpenAI متوافق';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'ارسل محتوى الصفحة مباشرة إلى نقطة النهاية الخاصة بك المتوافقة مع OpenAI.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi => 'تحليل متوافق مع OpenAI مخصص';
@@ -1023,14 +1012,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'يتم تخزين مفتاح واجهة برمجة التطبيقات المخصصة في الإعدادات المحلية للتطبيق في النص العادي تحت التنفيذ الحالي. استخدمه فقط على جهاز أو بيئة متصفح تثق بها.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'تكوين المحلل المخصص غير كامل. املأ عنوان العنوان الأساسي ومفتاح واجهة برمجة التطبيقات والنموذج أولاً.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'تحليل: رسمي';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

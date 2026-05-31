@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:provider/provider.dart';
 
-import '../config/app_config.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
+import '../providers/timetable_provider.dart';
 import '../screens/school_html_import_page.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
@@ -42,7 +43,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   SchoolSite? _selectedSite;
   String? _schoolLoadError;
 
-  bool get _isConfigured => AppConfig.hasSchoolImportApiBaseUrl;
   bool get _supportsWebView => supportsInAppWebView;
 
   @override
@@ -63,6 +63,12 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final provider = context.watch<TimetableProvider?>();
+    final isConfigured =
+        provider != null &&
+        provider.customSchoolImportBaseUrl.trim().isNotEmpty &&
+        provider.customSchoolImportApiKey.trim().isNotEmpty &&
+        provider.customSchoolImportModel.trim().isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         title: Text(_selectedSite?.name ?? widget.site.name),
@@ -90,8 +96,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
           ),
         ],
       ),
-      body: !_isConfigured
-          ? _buildMessage(l10n.schoolWebImportConfigMissing)
+      body: !isConfigured
+          ? _buildMessage(l10n.schoolImportParserCustomConfigIncomplete)
           : !_supportsWebView
           ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
           : _schoolLoadError != null

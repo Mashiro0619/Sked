@@ -118,9 +118,9 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
 
     try {
       if (json.containsKey('timetable')) {
-        _response = SchoolImportApi.buildResponseFromPhpDone(json);
+        _response = SchoolImportApi.buildResponseFromDoneEvent(json);
       } else if (json.containsKey('name') || json.containsKey('courses')) {
-        _response = SchoolImportApi.buildResponseFromPhpDone(json);
+        _response = SchoolImportApi.buildResponseFromDoneEvent(json);
       } else {
         setState(() => _error = '无法识别的课表格式。');
         return;

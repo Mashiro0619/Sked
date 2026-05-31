@@ -17,6 +17,7 @@ import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_service.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
@@ -66,7 +67,9 @@ class TestTimetableStorage implements TimetableStorage {
 /// 内存存储用于 widget 测试，避免依赖真实文件系统。
 class MemoryTimetableStorage implements TimetableStorage {
   MemoryTimetableStorage({AppData? initialData})
-    : _content = initialData?.encode();
+    : _content = _encodeInitialMemoryData(initialData);
+
+  MemoryTimetableStorage.raw(String content) : _content = content;
 
   String? _content;
 
@@ -88,6 +91,40 @@ class MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<String?> filePath() async => 'memory://Sked-test';
+}
+
+String? _encodeInitialMemoryData(AppData? data) {
+  if (data == null) {
+    return null;
+  }
+  final encoded = data.encode();
+  final apiKey = data.studentMode.schoolImportParserSettings.customApiKey;
+  if (apiKey.trim().isEmpty) {
+    return encoded;
+  }
+  final json = jsonDecode(encoded) as Map<String, dynamic>;
+  final studentMode = json['studentMode'];
+  if (studentMode is Map<String, dynamic>) {
+    final parserSettings = studentMode['schoolImportParserSettings'];
+    if (parserSettings is Map<String, dynamic>) {
+      parserSettings['customApiKey'] = apiKey.trim();
+    }
+  }
+  return jsonEncode(json);
+}
+
+class MemorySecretStore implements SecretStore {
+  MemorySecretStore([String initialValue = '']) : value = initialValue.trim();
+
+  String value;
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    this.value = value.trim();
+  }
 }
 
 class FakeSuccessUpdateService extends UpdateService {
@@ -257,7 +294,7 @@ AppData _buildTestAppData() {
 }
 
 Map<String, dynamic> _buildSchoolImportSuccessJson({
-  String parser = 'official',
+  String parser = 'custom-openai:gpt-4.1-mini',
   String timetableName = 'Imported timetable',
   String startDate = '2026-02-23T00:00:00.000',
   String periodTimeSetName = 'Imported periods',
@@ -304,7 +341,7 @@ Map<String, dynamic> _buildSchoolImportSuccessJson({
 }
 
 SchoolImportResponse _buildSchoolImportResponse({
-  String parser = 'official',
+  String parser = 'custom-openai:gpt-4.1-mini',
   String timetableName = 'Imported timetable',
   String startDate = '2026-02-23T00:00:00.000',
   String periodTimeSetName = 'Imported periods',
@@ -1074,7 +1111,11 @@ void main() {
 
     test('provider 更新描边模式后会持久化', () async {
       final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
-      final provider = TimetableProvider(storage: storage);
+      final secrets = MemorySecretStore();
+      final provider = TimetableProvider(
+        storage: storage,
+        secretStore: secrets,
+      );
       await provider.load();
 
       await provider.updateLiveCourseOutlineSettings(
@@ -1453,7 +1494,7 @@ void main() {
       );
       expect(
         decodedCustomized.studentMode.schoolImportParserSettings.customApiKey,
-        'sk-test',
+        isEmpty,
       );
       expect(
         decodedCustomized.studentMode.schoolImportParserSettings.customModel,
@@ -1482,7 +1523,7 @@ void main() {
 
       expect(
         legacy.studentMode.schoolImportParserSettings.source,
-        schoolImportParserSourceOfficial,
+        schoolImportParserSourceCustomOpenAi,
       );
       expect(
         legacy.studentMode.schoolImportParserSettings.customBaseUrl,
@@ -1503,14 +1544,15 @@ void main() {
       expect(legacy.activeMode, AppMode.general);
     });
 
-    test('provider 更新课表解析设置后会持久化且切回官方不清空自定义配置', () async {
+    test('provider 更新自定义课表解析设置后会持久化', () async {
       final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
-      final provider = TimetableProvider(storage: storage);
+      final secrets = MemorySecretStore();
+      final provider = TimetableProvider(
+        storage: storage,
+        secretStore: secrets,
+      );
       await provider.load();
 
-      await provider.updateSchoolImportParserSource(
-        schoolImportParserSourceCustomOpenAi,
-      );
       await provider.updateCustomSchoolImportBaseUrl(
         'https://api.example.com/v1',
       );
@@ -1519,13 +1561,10 @@ void main() {
       await provider.updateCustomSchoolImportPrompt(
         'Prefer preserving original location text.',
       );
-      await provider.updateSchoolImportParserSource(
-        schoolImportParserSourceOfficial,
-      );
 
       expect(
         provider.schoolImportParserSource,
-        schoolImportParserSourceOfficial,
+        schoolImportParserSourceCustomOpenAi,
       );
       expect(provider.customSchoolImportBaseUrl, 'https://api.example.com/v1');
       expect(provider.customSchoolImportApiKey, 'sk-test');
@@ -1534,12 +1573,18 @@ void main() {
         provider.customSchoolImportPrompt,
         'Prefer preserving original location text.',
       );
+      expect(secrets.value, 'sk-test');
+      expect(storage._content, isNot(contains('customApiKey')));
+      expect(storage._content, isNot(contains('sk-test')));
 
-      final reloaded = TimetableProvider(storage: storage);
+      final reloaded = TimetableProvider(
+        storage: storage,
+        secretStore: secrets,
+      );
       await reloaded.load();
       expect(
         reloaded.schoolImportParserSource,
-        schoolImportParserSourceOfficial,
+        schoolImportParserSourceCustomOpenAi,
       );
       expect(reloaded.customSchoolImportBaseUrl, 'https://api.example.com/v1');
       expect(reloaded.customSchoolImportApiKey, 'sk-test');
@@ -1550,15 +1595,53 @@ void main() {
       );
     });
 
-    test('SchoolImportApi 官方分支继续请求旧接口地址', () async {
+    test(
+      'provider migrates legacy plaintext parser API key to secure storage',
+      () async {
+        final storage = MemoryTimetableStorage(
+          initialData: _withSchoolImportSettings(
+            const SchoolImportParserSettings(
+              source: schoolImportParserSourceCustomOpenAi,
+              customBaseUrl: 'https://api.example.com/v1',
+              customApiKey: ' sk-test ',
+              customModel: 'gpt-4.1-mini',
+            ),
+          ),
+        );
+        final secrets = MemorySecretStore();
+        final provider = TimetableProvider(
+          storage: storage,
+          secretStore: secrets,
+        );
+
+        await provider.load();
+
+        expect(provider.customSchoolImportApiKey, 'sk-test');
+        expect(secrets.value, 'sk-test');
+        expect(storage._content, isNot(contains('customApiKey')));
+        expect(storage._content, isNot(contains('sk-test')));
+      },
+    );
+
+    test('SchoolImportApi 始终请求用户配置的 OpenAI 兼容接口', () async {
       late Uri capturedUri;
       late Map<String, dynamic> capturedBody;
+      late Map<String, String> capturedHeaders;
       final api = SchoolImportApi(
         client: MockClient((request) async {
           capturedUri = request.url;
           capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+          capturedHeaders = request.headers;
           return http.Response(
-            jsonEncode(_buildSchoolImportSuccessJson()),
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'content': jsonEncode(_buildSchoolImportSuccessJson()),
+                  },
+                },
+              ],
+            }),
             200,
           );
         }),
@@ -1570,15 +1653,26 @@ void main() {
           title: 'Import page',
           html: '<html></html>',
           locale: 'zh',
-          sourceHint: 'official',
+          sourceHint: 'legacy',
+        ),
+        parserSettings: const SchoolImportParserSettings(
+          source: 'legacy',
+          customBaseUrl: 'http://api.example.com/v1',
+          customApiKey: 'sk-test',
+          customModel: 'gpt-4.1-mini',
         ),
       );
 
-      expect(capturedUri.path, endsWith('/api.php'));
-      expect(capturedUri.queryParameters['action'], 'import_timetable');
-      expect(capturedBody['sourceHint'], 'official');
-      expect(capturedBody.containsKey('customPrompt'), isFalse);
-      expect(result.response.meta.parser, 'official');
+      expect(capturedUri.scheme, 'http');
+      expect(capturedUri.path, '/v1/chat/completions');
+      expect(capturedHeaders['authorization'], 'Bearer sk-test');
+      expect(capturedBody['model'], 'gpt-4.1-mini');
+      expect(capturedBody['response_format']['type'], 'json_object');
+      final messages = capturedBody['messages'] as List<dynamic>;
+      final userPrompt =
+          (messages.last as Map<String, dynamic>)['content'] as String;
+      expect(jsonDecode(userPrompt)['sourceHint'], 'legacy');
+      expect(result.response.meta.parser, 'custom-openai:gpt-4.1-mini');
       expect(
         result.response.timetable.courses.first.customFields['qqGroup'],
         '123456',
@@ -1764,7 +1858,7 @@ void main() {
       expect(systemPrompt, SchoolImportApi.defaultCustomOpenAiSystemPrompt);
     });
 
-    testWidgets('官方模式不显示自定义提示词编辑器', (tester) async {
+    testWidgets('默认自定义模式显示自定义提示词编辑器', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
@@ -1788,7 +1882,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('自定义提示词'), findsNothing);
+      expect(find.text('自定义提示词'), findsOneWidget);
     });
 
     testWidgets('自定义提示词可重置为默认提示词', (tester) async {
@@ -3102,8 +3196,7 @@ void main() {
           UpdateCheckResult(
             localVersion: '1.0.0',
             remoteVersion: '1.1.0',
-            releaseUrl:
-                'https://github.com/Mashiro0619/Sked/releases/latest',
+            releaseUrl: 'https://github.com/Mashiro0619/Sked/releases/latest',
             updateContent: '更新说明',
             hasUpdate: true,
           ),

@@ -56,7 +56,7 @@ Everyone is welcome to submit PRs to expand `assets/school_sites.json` with more
 
 ```text
 lib/
-├─ config/       # App configuration and endpoint settings
+├─ config/       # App configuration
 ├─ data/         # Platform-specific storage implementations
 ├─ l10n/         # Localization resources, language metadata, and generated code
 ├─ models/       # Timetable, course, school-site, and import response models
@@ -70,7 +70,9 @@ assets/
 └─ school_sites.json
 
 web/
-└─ api.php
+├─ index.html
+├─ manifest.json
+└─ privacy.html
 ```
 
 ## Privacy policy
@@ -80,31 +82,27 @@ Only when you actively use features such as import, export, sharing, external li
 
 A privacy policy consent dialog is shown on first launch. The full privacy policy is available at [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html).
 
-## School import backend
+## School webpage / HTML parsing
 
-The project includes a self-hostable PHP relay endpoint: [web/api.php](web/api.php). By default, the app reads the school webpage import endpoint and update feed URL from [lib/config/app_config.dart](lib/config/app_config.dart), and both can be overridden with `--dart-define`.
+School webpage import and pasted HTML parsing only use the OpenAI-compatible endpoint, API key, and model that the user enters in `Timetable parser settings`.
 
-- `SCHOOL_IMPORT_API_BASE_URL`: school webpage / HTML import endpoint
-- `Sked_UPDATE_VERSION_URL`: custom update feed URL
+Custom endpoints may use either `https://` or `http://` Base URLs. If you use `http://`, make sure you trust the current network and endpoint service because submitted content and API keys may not be protected by transport encryption.
 
-### Backend configuration
+### Parser configuration
 
-You need to edit the configuration block at the top of `web/api.php`:
+- `Base URL`: OpenAI-compatible API base URL, such as `https://api.example.com/v1` or a local-network `http://192.168.1.10:8000/v1`
+- `API key`: Bearer token sent to that endpoint; the app stores it with platform secure storage where available
+- `Model`: chat completion model name, entered manually or fetched from the custom endpoint with `Fetch model list`
+- `Custom prompt`: optional; when empty, the built-in timetable extraction prompt is used
 
-- `$relayUrl`: upstream AI API endpoint
-- `$relayToken`: your API key
-- `$model`: model name to use
-- `$timeoutSeconds`: request timeout, currently 120 seconds by default
-- `$sourceByteLimit`: max submitted content size, currently 300KB by default
-- `$maxParsesPerIpPerDay`: max parsing requests per IP per day, currently 5 by default
+### Request behavior
 
-### Backend behavior
+- Fetching the model list requests `/models` under the configured `Base URL`
+- Parsing a timetable requests `/chat/completions` under the configured `Base URL`
+- Requests include page content, optional page title, page URL, current app language, and parser prompt content
+- How the custom endpoint and any upstream services store, forward, or process data depends on the service provider you choose
 
-- Forwards parsing requests through your own PHP service instead of exposing the upstream key in the client
-- Returns a unified JSON response so the client can show parsed results and error messages directly
-- Enforces submitted-content size limits and per-IP daily parsing limits
-- Supports both school webpage import and pasted HTML import
-- Submits page content, optional page title, page URL, and the current app language to the parsing endpoint
+The app still supports `--dart-define=SKED_UPDATE_VERSION_URL=...` for overriding the update feed URL. This setting only affects update checks and is not used for timetable parsing.
 
 ## Open-source license and third-party notices
 

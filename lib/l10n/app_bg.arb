@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "bg",
   "appTitle": "Съученик",
   "@appTitle": {},
@@ -510,7 +510,7 @@
   "@privacyPolicyIntro": {},
   "privacyPolicyLocalStorageTitle": "Местно съхранение",
   "@privacyPolicyLocalStorageTitle": {},
-  "privacyPolicyLocalStorageBody": "Данните за графика и свързаните с тях настройки се съхраняват в локален файл на име Sked_data.json в директорията документи на приложението. Редактируемата конфигурация на училището се съхранява отделно в Sked_school_sites.json. Персонализираните настройки на анализатора на графика, включително всеки персонализиран базов URL адрес, API ключ и избран модел, също се съхраняват локално в същите данни на приложението и не са защитени от трезор за системни данни. Когато се използват в браузър, същите видове данни се съхраняват в съхранението на браузъра. Приложението не качва автоматично тези локални данни на сървър, контролиран от разработчика.",
+  "privacyPolicyLocalStorageBody": "Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.",
   "@privacyPolicyLocalStorageBody": {},
   "privacyPolicyImportExportTitle": "Внос и износ",
   "@privacyPolicyImportExportTitle": {},
@@ -530,7 +530,7 @@
   "@privacyPolicyNoCollectionBody": {},
   "privacyPolicyFutureFeatureTitle": "Парсиране на уеб страници",
   "@privacyPolicyFutureFeatureTitle": {},
-  "privacyPolicyFutureFeatureBody": "Когато използвате импортиране или поставяне на HTML на училищна уеб страница за анализиране, приложението първо компресира съдържанието локално, след което изпраща предоставеното съдържание на страницата, незадължителното заглавие на страницата и URL адреса, текущия език на приложението и съдържанието на инструкцията за анализиране към избраната крайна точка за анализиране. Ако използвате официалния анализатор, заявката отива в конфигурирания официален бъкенд на приложението. Ако активирате персонализиран анализатор, съвместим с OpenAI, същото съдържание се изпраща директно към крайната точка на трета страна, която сте конфигурирали, а извличането на списъка с модели също изисква същата крайна точка. Персонализирана крайна точка може да препрати заявката на други услуги за изкуствен интелект в съответствие със собствения дизайн на този доставчик. Разположеният официален бъкенд в момента ограничава всеки подаден полезен товар до 300 KB, използва конфигурирания си таймаут и позволява най-много 5 заявки за анализиране на IP на ден.",
+  "privacyPolicyFutureFeatureBody": "When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.",
   "@privacyPolicyFutureFeatureBody": {},
   "privacyPolicyUpdatesTitle": "Актуализации на политиката",
   "@privacyPolicyUpdatesTitle": {},
@@ -648,7 +648,7 @@
   "@schoolWebImportWarnings": {},
   "schoolWebImportOpenPageHint": "Влезте в сайта на училището в приложението, след което навигирайте ръчно към страницата с график.",
   "@schoolWebImportOpenPageHint": {},
-  "schoolWebImportConfigMissing": "API за импортиране на уеб все още не е конфигуриран.",
+  "schoolWebImportConfigMissing": "Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.",
   "@schoolWebImportConfigMissing": {},
   "schoolWebImportUnsupportedPlatform": "Тази платформа все още не поддържа вградено уеб влизане. Моля, използвайте платформа с поддръжка на WebView.",
   "@schoolWebImportUnsupportedPlatform": {},
@@ -676,19 +676,13 @@
   "@schoolWebImportSuccess": {},
   "schoolImportParserSettingsTitle": "Настройки на анализатора на графика",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Изберете официалния анализатор или персонализирана OpenAI-съвместима крайна точка.",
+  "schoolImportParserSettingsDesc": "Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "Източник на анализатора",
   "@schoolImportParserSourceTitle": {},
-  "schoolImportParserSourceOfficial": "Официален анализатор",
-  "@schoolImportParserSourceOfficial": {},
-  "schoolImportParserSourceOfficialDesc": "Използвайте вградената официална услуга за анализиране, конфигурирана от приложението.",
-  "@schoolImportParserSourceOfficialDesc": {},
-  "schoolImportParserSourceOfficialInfo": "Официалният анализатор използва конфигурирания анализиращ бъкенд на приложението и поддържа текущия поток от импорт непроменен.",
-  "@schoolImportParserSourceOfficialInfo": {},
   "schoolImportParserSourceCustomOpenAi": "Персонализиран OpenAI-съвместим",
   "@schoolImportParserSourceCustomOpenAi": {},
-  "schoolImportParserSourceCustomOpenAiDesc": "Изпратете съдържанието на страницата директно на вашата собствена OpenAI-съвместима крайна точка.",
+  "schoolImportParserSourceCustomOpenAiDesc": "Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.",
   "@schoolImportParserSourceCustomOpenAiDesc": {},
   "schoolImportParserCustomOpenAi": "Персонализиран OpenAI-съвместим анализатор",
   "@schoolImportParserCustomOpenAi": {},
@@ -720,12 +714,10 @@
       }
     }
   },
-  "schoolImportParserPlaintextWarning": "Персонализираният API ключ се съхранява в локалните настройки на приложението в обикновен текст при текущата реализация. Използвайте го само на устройство или среда за браузър, на която имате доверие.",
+  "schoolImportParserPlaintextWarning": "The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.",
   "@schoolImportParserPlaintextWarning": {},
   "schoolImportParserCustomConfigIncomplete": "Персонализираната конфигурация на анализатора е непълна. Първо попълнете базовия URL, API ключа и модела.",
   "@schoolImportParserCustomConfigIncomplete": {},
-  "schoolImportParserCurrentSourceOfficial": "Парсер: Официален",
-  "@schoolImportParserCurrentSourceOfficial": {},
   "schoolImportParserCurrentSourceCustom": "Парсер: Персонализиран ({model})",
   "@schoolImportParserCurrentSourceCustom": {
     "placeholders": {
@@ -871,13 +863,31 @@
   "allColors": "All colors",
   "@allColors": {},
   "upcomingEventsCount": "Upcoming {count}",
-  "@upcomingEventsCount": {"placeholders":{"count":{"type":"int"}}},
+  "@upcomingEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "overdueEventsCount": "Overdue {count}",
-  "@overdueEventsCount": {"placeholders":{"count":{"type":"int"}}},
+  "@overdueEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "allDay": "All-day",
   "@allDay": {},
   "moreEvents": "+{count} more",
-  "@moreEvents": {"placeholders":{"count":{"type":"int"}}},
+  "@moreEvents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noMatchingEvents": "No matching events",
   "@noMatchingEvents": {},
   "noUpcomingEvents": "No upcoming events",
@@ -899,7 +909,11 @@
   "deleteCalendar": "Delete calendar",
   "@deleteCalendar": {},
   "deleteCalendarMessage": "Delete \"{name}\"?",
-  "@deleteCalendarMessage": {"placeholders":{"name":{}}},
+  "@deleteCalendarMessage": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "deleteThisOccurrence": "Delete this",
   "@deleteThisOccurrence": {},
   "deleteFutureOccurrences": "Delete future",
@@ -913,9 +927,22 @@
   "repeatsMonthly": "Repeats monthly",
   "@repeatsMonthly": {},
   "repeatsEvery": "Repeats every {interval} {unit}",
-  "@repeatsEvery": {"placeholders":{"interval":{"type":"int"},"unit":{}}},
+  "@repeatsEvery": {
+    "placeholders": {
+      "interval": {
+        "type": "int"
+      },
+      "unit": {}
+    }
+  },
   "recurrenceCountTimes": "{count} times",
-  "@recurrenceCountTimes": {"placeholders":{"count":{"type":"int"}}},
+  "@recurrenceCountTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "recurrenceDaily": "Daily",
   "@recurrenceDaily": {},
   "recurrenceMonthly": "Monthly",
@@ -949,7 +976,13 @@
   "reminderAtStart": "At start",
   "@reminderAtStart": {},
   "reminderMinutesBefore": "{minutes} min before",
-  "@reminderMinutesBefore": {"placeholders":{"minutes":{"type":"int"}}},
+  "@reminderMinutesBefore": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "reminderHourBefore": "1 hour before",
   "@reminderHourBefore": {},
   "reminderDayBefore": "1 day before",
@@ -999,7 +1032,13 @@
   "pasteIcsContentHint": "Paste BEGIN:VCALENDAR content here",
   "@pasteIcsContentHint": {},
   "importIcsPreviewPrompt": "Found {count} events. Import as a new calendar or replace the active calendar?",
-  "@importIcsPreviewPrompt": {"placeholders":{"count":{"type":"int"}}},
+  "@importIcsPreviewPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectCalendarsToCopyIcs": "Select calendars to copy as ICS",
   "@selectCalendarsToCopyIcs": {},
   "selectCalendarsToExportIcs": "Select calendars to export as ICS",
@@ -1059,7 +1098,11 @@
   "repeatsWeekly": "Repeats weekly",
   "@repeatsWeekly": {},
   "recurrenceUntil": "Until {date}",
-  "@recurrenceUntil": {"placeholders":{"date":{}}},
+  "@recurrenceUntil": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "switchToGeneralSchedule": "Switch to General schedule",
   "@switchToGeneralSchedule": {},
   "generalDisplaySettings": "General display settings",
@@ -1070,7 +1113,7 @@
   "@closePopupOnOutsideTap": {},
   "showGridLines": "Show grid lines",
   "@showGridLines": {},
-  "generalScheduleImportExport": "Schedule import \u0026 export",
+  "generalScheduleImportExport": "Schedule import & export",
   "@generalScheduleImportExport": {},
   "generalScheduleImportExportDesc": "Import or share general schedules",
   "@generalScheduleImportExportDesc": {},
@@ -1091,9 +1134,21 @@
   "selectSchedulesToImport": "Select schedules to import",
   "@selectSchedulesToImport": {},
   "generalScheduleEventCount": "Events: {count}",
-  "@generalScheduleEventCount": {"placeholders":{"count":{"type":"int"}}},
+  "@generalScheduleEventCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importedSchedulesCount": "Imported {count} schedules",
-  "@importedSchedulesCount": {"placeholders":{"count":{"type":"int"}}},
+  "@importedSchedulesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "replaceActiveSchedulePrompt": "Replace current schedule with the imported one?",
   "@replaceActiveSchedulePrompt": {},
   "addAsNewSchedule": "Add as new",
@@ -1121,7 +1176,16 @@
   "reminderOverdue": "Overdue",
   "@reminderOverdue": {},
   "importedSchedulesWithWarnings": "Imported {count} schedules with {warningCount} warnings",
-  "@importedSchedulesWithWarnings": {"placeholders":{"count":{"type":"int"},"warningCount":{"type":"int"}}},
+  "@importedSchedulesWithWarnings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "warningCount": {
+        "type": "int"
+      }
+    }
+  },
   "importWarningSkippedMissingStart": "Skipped an event without a start time.",
   "@importWarningSkippedMissingStart": {},
   "importWarningSkippedUnsupportedStart": "Skipped an event with an unsupported start time.",
@@ -1129,13 +1193,35 @@
   "importWarningAdjustedEnd": "Adjusted an event whose end time was not after its start.",
   "@importWarningAdjustedEnd": {},
   "importWarningUnsupportedFields": "Unsupported ICS fields were added to notes: {fields}",
-  "@importWarningUnsupportedFields": {"placeholders":{"fields":{}}},
+  "@importWarningUnsupportedFields": {
+    "placeholders": {
+      "fields": {}
+    }
+  },
   "importWarningUnsupportedRRuleFrequency": "Ignored unsupported repeat frequency: {frequency}",
-  "@importWarningUnsupportedRRuleFrequency": {"placeholders":{"frequency":{}}}
-,
+  "@importWarningUnsupportedRRuleFrequency": {
+    "placeholders": {
+      "frequency": {}
+    }
+  },
   "dataRestoredFromBackupNotice": "App data was restored from the previous backup because the main file failed to load.",
   "@dataRestoredFromBackupNotice": {},
   "dataBackupRestoreFailedNotice": "Both the main data file and its backup are damaged. The app is now using a fresh state.",
-  "@dataBackupRestoreFailedNotice": {}
-
+  "@dataBackupRestoreFailedNotice": {},
+  "previousMonth": "Previous month",
+  "@previousMonth": {},
+  "nextMonth": "Next month",
+  "@nextMonth": {},
+  "timeGridMinutes": "{minutes} min",
+  "@timeGridMinutes": {"placeholders":{"minutes":{"type":"int"}}},
+  "reminderInProgress": "In progress",
+  "@reminderInProgress": {},
+  "deleteCourseTitle": "Delete course",
+  "@deleteCourseTitle": {},
+  "deleteCourseMessage": "Delete this course?",
+  "@deleteCourseMessage": {},
+  "showLunarCalendar": "Show lunar calendar",
+  "@showLunarCalendar": {},
+  "monthDayEvents": "{day}, {count} events",
+  "@monthDayEvents": {"placeholders":{"day":{"type":"int"},"count":{"type":"int"}}}
 }

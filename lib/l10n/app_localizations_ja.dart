@@ -688,7 +688,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '時間割データと関連設定は、アプリのドキュメントディレクトリ内の Sked_data.json というローカルファイルに保存されます。編集可能な学校サイト設定は Sked_school_sites.json に別保存されます。カスタム時間割パーサー設定（カスタム Base URL、API key、選択したモデルを含む）も同じアプリデータ内にローカル保存され、システムの資格情報保管庫では保護されません。ブラウザで使用する場合も、同種のデータはブラウザストレージに保存されます。アプリがこのローカルデータを開発者管理のサーバーへ自動アップロードすることはありません。';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'インポートとエクスポート';
@@ -723,7 +723,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '学校Webページからのインポート、またはHTMLを貼り付けて解析する場合、アプリはまず内容をローカルで圧縮し、その後、送信したページ内容、任意のページタイトルとURL、現在のアプリ言語、パーサープロンプト内容を選択中の解析エンドポイントへ送信します。公式パーサーを使う場合、リクエストはアプリで設定された公式バックエンドへ送られます。カスタムの OpenAI 互換パーサーを有効にすると、同じ内容が設定したサードパーティ製エンドポイントへ直接送信され、モデル一覧の取得も同じエンドポイントに対して行われます。カスタムエンドポイントは、その提供元の設計に応じて他のAIサービスへ転送する場合があります。現在デプロイされている公式バックエンドでは、送信ペイロードは 300KB まで、設定されたタイムアウトを使用し、IPごとに1日最大5回まで解析リクエストを許可しています。';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'ポリシーの更新';
@@ -887,7 +887,8 @@ class AppLocalizationsJa extends AppLocalizations {
       'アプリ内で学校サイトにログインし、その後手動で時間割ページへ移動してください。';
 
   @override
-  String get schoolWebImportConfigMissing => 'Webインポート用バックエンドAPIがまだ設定されていません。';
+  String get schoolWebImportConfigMissing =>
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -934,28 +935,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      '公式パーサー、またはカスタムの OpenAI 互換エンドポイントを選択します。';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'パーサーの提供元';
-
-  @override
-  String get schoolImportParserSourceOfficial => '公式パーサー';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'アプリで設定された組み込みの公式解析サービスを使用します。';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      '公式パーサーはアプリで設定された解析バックエンドを使い、現在のインポートフローを変更しません。';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => 'カスタム OpenAI 互換';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'ページ内容を自分の OpenAI 互換エンドポイントへ直接送信します。';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi => 'カスタム OpenAI 互換パーサー';
@@ -999,14 +989,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      '現在の実装では、カスタム API key はアプリのローカル設定に平文で保存されます。信頼できる端末またはブラウザ環境でのみ使用してください。';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'カスタムパーサー設定が未完了です。先に Base URL、API key、モデルを入力してください。';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'パーサー: 公式';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

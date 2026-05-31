@@ -161,10 +161,8 @@ String normalizeThemeColorMode(String? themeColorMode) {
 String normalizeSchoolImportParserSource(String? source) {
   switch (source) {
     case schoolImportParserSourceCustomOpenAi:
-      return schoolImportParserSourceCustomOpenAi;
-    case schoolImportParserSourceOfficial:
     default:
-      return schoolImportParserSourceOfficial;
+      return schoolImportParserSourceCustomOpenAi;
   }
 }
 

@@ -99,15 +99,15 @@ void main() {
   testWidgets('file import ignores concurrent duplicate calls', (tester) async {
     final provider = await _createProvider();
     const channel = MethodChannel(
-      'miguelruivo.flutter.plugins.filepicker',
+      'plugins.flutter.io/file_selector',
       StandardMethodCodec(),
     );
     final pickerStarted = Completer<void>();
-    final pickerResult = Completer<Object?>();
+    final pickerResult = Completer<List<String>?>();
     var pickCalls = 0;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-          if (call.method == 'custom') {
+          if (call.method == 'openFile') {
             pickCalls += 1;
             if (!pickerStarted.isCompleted) {
               pickerStarted.complete();

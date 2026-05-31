@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../config/app_config.dart';
+
 class UpdateCheckResult {
   const UpdateCheckResult({
     required this.localVersion,
@@ -88,8 +90,10 @@ class UpdateService {
   const UpdateService({
     http.Client? client,
     Duration requestTimeout = const Duration(seconds: 10),
+    String? updateVersionUrl,
   }) : _client = client,
-       _requestTimeout = requestTimeout;
+       _requestTimeout = requestTimeout,
+       _updateVersionUrl = updateVersionUrl;
 
   static const _githubLatestApi =
       'https://api.github.com/repos/Mashiro0619/Sked/releases/latest';
@@ -98,10 +102,11 @@ class UpdateService {
 
   final http.Client? _client;
   final Duration _requestTimeout;
+  final String? _updateVersionUrl;
 
   Future<UpdateCheckResult> checkForUpdates() async {
     final localVersion = await _getLocalVersion();
-    final remoteInfo = await _getGithubLatestReleaseInfo();
+    final remoteInfo = await _getRemoteUpdateInfo();
     return UpdateCheckResult(
       localVersion: localVersion,
       remoteVersion: remoteInfo.version,
@@ -114,6 +119,15 @@ class UpdateService {
   Future<String> _getLocalVersion() async {
     final info = await PackageInfo.fromPlatform();
     return info.version;
+  }
+
+  Future<_RemoteUpdateInfo> _getRemoteUpdateInfo() {
+    final configuredUrl = (_updateVersionUrl ?? AppConfig.updateVersionUrl)
+        .trim();
+    if (configuredUrl.isEmpty) {
+      return _getGithubLatestReleaseInfo();
+    }
+    return _getCustomUpdateInfo(configuredUrl);
   }
 
   Future<_RemoteUpdateInfo> _getGithubLatestReleaseInfo() async {
@@ -153,6 +167,76 @@ class UpdateService {
       }
     }
   }
+
+  Future<_RemoteUpdateInfo> _getCustomUpdateInfo(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.scheme != 'https' || uri.host.trim().isEmpty) {
+      throw const FormatException('Invalid custom update URL.');
+    }
+    final client = _client ?? http.Client();
+    final ownsClient = _client == null;
+    try {
+      final response = await client
+          .get(uri, headers: const {'Accept': 'application/json'})
+          .timeout(_requestTimeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw const FormatException('Unable to fetch custom update version.');
+      }
+      final decoded = jsonDecode(
+        utf8.decode(response.bodyBytes, allowMalformed: true),
+      );
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('Invalid custom update response.');
+      }
+      final version = _readFirstRemoteVersionField(
+        decoded,
+        const ['version', 'tag_name'],
+        invalidMessage: 'Invalid custom update response.',
+        emptyMessage: 'Custom update version is empty.',
+      );
+      return _RemoteUpdateInfo(
+        version: version,
+        releaseUrl: _safeHttpsUrlOrFallback(
+          _optionalFirstStringField(decoded, const [
+            'releaseUrl',
+            'release_url',
+            'html_url',
+            'url',
+          ]),
+        ),
+        updateContent: _optionalFirstStringField(decoded, const [
+          'updateContent',
+          'update_content',
+          'body',
+          'notes',
+          'changelog',
+        ]),
+      );
+    } finally {
+      if (ownsClient) {
+        client.close();
+      }
+    }
+  }
+}
+
+String _readFirstRemoteVersionField(
+  Map<String, dynamic> json,
+  List<String> keys, {
+  required String invalidMessage,
+  required String emptyMessage,
+}) {
+  for (final key in keys) {
+    if (json.containsKey(key)) {
+      return _readRemoteVersionField(
+        json,
+        key,
+        invalidMessage: invalidMessage,
+        emptyMessage: emptyMessage,
+      );
+    }
+  }
+  throw FormatException(invalidMessage);
 }
 
 String _readRemoteVersionField(
@@ -178,6 +262,24 @@ String _readRemoteVersionField(
 String _optionalStringField(Map<String, dynamic> json, String key) {
   final raw = json[key];
   return raw is String ? raw.trim() : '';
+}
+
+String _optionalFirstStringField(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = _optionalStringField(json, key);
+    if (value.isNotEmpty) {
+      return value;
+    }
+  }
+  return '';
+}
+
+String _safeHttpsUrlOrFallback(String value) {
+  final uri = Uri.tryParse(value.trim());
+  if (uri == null || uri.scheme != 'https' || uri.host.trim().isEmpty) {
+    return UpdateService.latestReleaseUrl;
+  }
+  return uri.toString();
 }
 
 String _githubReleaseUrlOrFallback(String value) {

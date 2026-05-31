@@ -13,6 +13,7 @@ import '../services/general_calendar_ics_service.dart';
 import '../services/general_occurrence_service.dart';
 import '../services/import_export_service.dart';
 import '../services/privacy_service.dart';
+import '../services/secret_store.dart';
 import '../services/settings_service.dart';
 import '../services/student_timetable_service.dart' as student_timetable;
 
@@ -59,6 +60,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   String Function() get _systemLocaleCodeResolver;
   SettingsService get _settings;
   PrivacyService get _privacy;
+  SecretStore get _secrets;
 
   GeneralSchedule? get activeGeneralScheduleOrNull;
   TimetableData? get activeTimetableOrNull;
@@ -70,6 +72,38 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<AppData> _buildDefaultAppData();
   Future<void> _saveAndNotify();
   Future<void> _save();
+
+  AppData _withRuntimeCustomSchoolImportApiKey(AppData data, String value) {
+    final normalized = value.trim();
+    final settings = data.studentMode.schoolImportParserSettings;
+    if (settings.customApiKey == normalized) {
+      return data;
+    }
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(
+        schoolImportParserSettings: settings.copyWith(customApiKey: normalized),
+      ),
+    );
+  }
+
+  Future<String> _readSecureCustomSchoolImportApiKey() async {
+    try {
+      return await _secrets.readCustomSchoolImportApiKey();
+    } catch (e, st) {
+      debugPrint('Secure API key read failed: $e\n$st');
+      return '';
+    }
+  }
+
+  Future<bool> _writeSecureCustomSchoolImportApiKey(String value) async {
+    try {
+      await _secrets.writeCustomSchoolImportApiKey(value);
+      return true;
+    } catch (e, st) {
+      debugPrint('Secure API key write failed: $e\n$st');
+      return false;
+    }
+  }
 }
 
 class TimetableProvider extends _TimetableProviderBase
@@ -85,12 +119,14 @@ class TimetableProvider extends _TimetableProviderBase
     String Function()? systemLocaleCodeResolver,
     SettingsService? settingsService,
     PrivacyService? privacyService,
+    SecretStore? secretStore,
   }) : _repository =
            repository ?? AppRepository(storage: storage ?? TimetableStorage()),
        _systemLocaleCodeResolver =
            systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver,
        _settings = settingsService ?? const SettingsService(),
-       _privacy = privacyService ?? const PrivacyService();
+       _privacy = privacyService ?? const PrivacyService(),
+       _secrets = secretStore ?? SecretStore();
 
   @override
   final AppRepository _repository;
@@ -100,6 +136,8 @@ class TimetableProvider extends _TimetableProviderBase
   final SettingsService _settings;
   @override
   final PrivacyService _privacy;
+  @override
+  final SecretStore _secrets;
 
   @override
   AppData _appData = buildInitialAppData(buildDefaultPeriodTimes());

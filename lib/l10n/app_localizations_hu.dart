@@ -717,7 +717,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Az ütemtervadatok és a kapcsolódó beállítások egy Sked_data.json nevű helyi fájlban tárolódnak az alkalmazás dokumentumai könyvtárán belül. A szerkeszthető iskola-hely konfigurációja külön tárolható a Sked_school_sites.json-ban. Az egyéni ütemterv-elemző beállításai, beleértve az egyéni Bázis URL-t, API-kulcsot és a kiválasztott modellt, szintén helyileg ugyanazokban az alkalmazás adataiban tárolódnak, és nem vannak védettek a rendszerhitelesítő szekrény által. Ha böngészőben használják, ugyanazokat az adatokat tárolják a böngésző tárolójában. Az alkalmazás nem tölti fel automatikusan ezeket a helyi adatokat a fejlesztő által ellenőrzött kiszolgálóra.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import és export';
@@ -753,7 +753,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Amikor az iskolai weboldal importálását vagy HTML beillesztését használja az elemzéshez, az alkalmazás először helyileg tömöríti a tartalmat, majd elküldi a benyújtott oldal tartalmát, az opcionális oldalcímet és URL-t, az aktuális alkalmazási nyelvet és az elemzőhívó tartalmát a kiválasztott elemzési végpontra. Ha a hivatalos feldolgozót használja, a kérés az alkalmazás konfigurált hivatalos backendjére megy. Ha engedélyez egy egyéni OpenAI-kompatibilis elemzőt, ugyanaz a tartalom közvetlenül elküldődik az Ön által konfigurált harmadik fél végpontjához, és a modelllista beszerzése ugyanazt a végpontot kéri. Egy egyéni végpont továbbíthatja a kérést más AI szolgáltatásoknak a szolgáltató saját tervezésének megfelelően. A telepített hivatalos háttér jelenleg 300 KB-ra korlátozza az egyes benyújtott hasznos terhelést, használja a konfigurált időpontot, és naponta legfeljebb 5 elemzési kérést engedélyez IP-enként.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Politikai frissítések';
@@ -923,7 +923,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'A webes import hátsó API még nem konfigurált.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -973,21 +973,10 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Válassza ki a hivatalos elemzőt vagy egy egyedi OpenAI-kompatibilis végpontot.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser forrás';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Hivatalos parser';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Használja az alkalmazás által konfigurált beépített hivatalos elemző szolgáltatást.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'A hivatalos elemző az alkalmazás konfigurált elemző hátoldalát használja, és változatlanul tartja a jelenlegi importáramlást.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -995,7 +984,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Küldje el az oldal tartalmát közvetlenül a saját OpenAI-kompatibilis végpontjára.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1042,14 +1031,11 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Az egyéni API kulcs az alkalmazás helyi beállításaiban egyszerű szövegben tárolódik az aktuális implementáció alatt. Csak olyan eszközön vagy böngészőkörnyezetben használja, amelyben megbízik.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Az egyéni elemző konfigurációja nem teljes. Töltse ki először az alap URL-t, az API kulcsot és a modellt.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: Hivatalos';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

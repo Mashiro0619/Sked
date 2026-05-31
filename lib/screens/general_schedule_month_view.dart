@@ -1,6 +1,6 @@
 part of 'general_schedule_home_screen.dart';
 
-class _MonthCalendarView extends StatelessWidget {
+class _MonthCalendarView extends StatefulWidget {
   const _MonthCalendarView({
     required this.date,
     required this.provider,
@@ -17,15 +17,25 @@ class _MonthCalendarView extends StatelessWidget {
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
+  @override
+  State<_MonthCalendarView> createState() => _MonthCalendarViewState();
+}
+
+class _MonthCalendarViewState extends State<_MonthCalendarView> {
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
 
   DateTime _visibleDayForDate(DateTime date) {
     final normalized = normalizeDateOnly(date);
-    if (provider.generalShowWeekends || normalized.weekday <= DateTime.friday) {
+    if (widget.provider.generalShowWeekends ||
+        normalized.weekday <= DateTime.friday) {
       return normalized;
     }
     return normalized.add(Duration(days: 8 - normalized.weekday));
+  }
+
+  void _selectDay(DateTime nextDate) {
+    widget.onDaySelected(_visibleDayForDate(nextDate));
   }
 
   DateTime _monthWithDay(DateTime baseDate, int year, int month) {
@@ -38,35 +48,39 @@ class _MonthCalendarView extends StatelessWidget {
   }
 
   void _goToPreviousMonth() {
-    final selectedDate = _visibleDayForDate(date);
-    final prevMonth = date.month == 1 ? 12 : date.month - 1;
-    final prevYear = date.month == 1 ? date.year - 1 : date.year;
-    onDaySelected(_monthWithDay(selectedDate, prevYear, prevMonth));
+    final selectedDate = _visibleDayForDate(widget.date);
+    final prevMonth = widget.date.month == 1 ? 12 : widget.date.month - 1;
+    final prevYear = widget.date.month == 1
+        ? widget.date.year - 1
+        : widget.date.year;
+    _selectDay(_monthWithDay(selectedDate, prevYear, prevMonth));
   }
 
   void _goToNextMonth() {
-    final selectedDate = _visibleDayForDate(date);
-    final nextMonth = date.month == 12 ? 1 : date.month + 1;
-    final nextYear = date.month == 12 ? date.year + 1 : date.year;
-    onDaySelected(_monthWithDay(selectedDate, nextYear, nextMonth));
+    final selectedDate = _visibleDayForDate(widget.date);
+    final nextMonth = widget.date.month == 12 ? 1 : widget.date.month + 1;
+    final nextYear = widget.date.month == 12
+        ? widget.date.year + 1
+        : widget.date.year;
+    _selectDay(_monthWithDay(selectedDate, nextYear, nextMonth));
   }
 
   @override
   Widget build(BuildContext context) {
     final today = normalizeDateOnly(DateTime.now());
-    final requestedDate = normalizeDateOnly(date);
+    final requestedDate = normalizeDateOnly(widget.date);
     final selectedDate = _visibleDayForDate(requestedDate);
     if (!_sameDay(selectedDate, requestedDate)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        onDaySelected(selectedDate);
+        widget.onDaySelected(selectedDate);
       });
     }
     final model = _MonthGridModel.build(
       monthDate: selectedDate,
-      showWeekends: provider.generalShowWeekends,
+      showWeekends: widget.provider.generalShowWeekends,
     );
-    final occurrences = provider.generalOccurrencesForQuery(
-      filter.toQuery(
+    final occurrences = widget.provider.generalOccurrencesForQuery(
+      widget.filter.toQuery(
         startInclusive: model.queryStart,
         endExclusive: model.queryEndExclusive,
       ),
@@ -84,18 +98,19 @@ class _MonthCalendarView extends StatelessWidget {
           selectedDate: selectedDate,
           today: today,
           occurrencesByDay: occurrencesByDay,
-          provider: provider,
+          provider: widget.provider,
+          filter: widget.filter,
           onPreviousMonth: _goToPreviousMonth,
           onNextMonth: _goToNextMonth,
-          onToday: () => onDaySelected(_visibleDayForDate(today)),
-          onDaySelected: onDaySelected,
+          onToday: () => _selectDay(today),
+          onDaySelected: _selectDay,
         );
         final agenda = _MonthAgendaPanel(
           date: selectedDate,
           occurrences: selectedOccurrences,
-          filtered: filter.isActive,
-          onAddEvent: () => onEmptySlotTap(selectedDate),
-          onOccurrenceTap: onOccurrenceTap,
+          filtered: widget.filter.isActive,
+          onAddEvent: () => widget.onEmptySlotTap(selectedDate),
+          onOccurrenceTap: widget.onOccurrenceTap,
         );
 
         if (sideBySide) {
@@ -106,7 +121,10 @@ class _MonthCalendarView extends StatelessWidget {
               children: [
                 Expanded(flex: 3, child: calendar),
                 const SizedBox(width: 16),
-                SizedBox(width: 320, child: agenda),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 72),
+                  child: SizedBox(width: 320, child: agenda),
+                ),
               ],
             ),
           );
@@ -175,13 +193,14 @@ class _MonthGridModel {
   }
 }
 
-class _MonthCalendarPanel extends StatelessWidget {
+class _MonthCalendarPanel extends StatefulWidget {
   const _MonthCalendarPanel({
     required this.model,
     required this.selectedDate,
     required this.today,
     required this.occurrencesByDay,
     required this.provider,
+    required this.filter,
     required this.onPreviousMonth,
     required this.onNextMonth,
     required this.onToday,
@@ -193,10 +212,251 @@ class _MonthCalendarPanel extends StatelessWidget {
   final DateTime today;
   final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
   final TimetableProvider provider;
+  final _GeneralOccurrenceFilter filter;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
   final VoidCallback onToday;
   final ValueChanged<DateTime> onDaySelected;
+
+  @override
+  State<_MonthCalendarPanel> createState() => _MonthCalendarPanelState();
+}
+
+class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
+    with SingleTickerProviderStateMixin {
+  static const _pageAnimationDuration = Duration(milliseconds: 260);
+
+  late final AnimationController _dragController;
+  late Animation<double> _dragAnimation;
+  late _MonthGridPageData _previousPage;
+  late _MonthGridPageData _nextPage;
+  double _dragOffset = 0;
+  bool _isDragging = false;
+  int _settleDirection = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _dragController =
+        AnimationController(vsync: this, duration: _pageAnimationDuration)
+          ..addListener(() {
+            setState(() => _dragOffset = _dragAnimation.value);
+          });
+    _dragAnimation = AlwaysStoppedAnimation(_dragOffset);
+    _refreshAdjacentPages();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MonthCalendarPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_shouldRefreshAdjacentPages(oldWidget)) {
+      _refreshAdjacentPages();
+    }
+
+    final monthChanged = !_sameMonth(
+      widget.selectedDate,
+      oldWidget.selectedDate,
+    );
+    if (!monthChanged) return;
+
+    if (_settleDirection != 0) {
+      _dragController.stop();
+      _dragOffset = 0;
+      _isDragging = false;
+      _settleDirection = 0;
+      return;
+    }
+
+    if (!_isDragging) {
+      final direction = _compareMonth(
+        widget.selectedDate,
+        oldWidget.selectedDate,
+      );
+      _animateExternalMonthChange(direction);
+    }
+  }
+
+  @override
+  void dispose() {
+    _dragController.dispose();
+    super.dispose();
+  }
+
+  int _compareMonth(DateTime a, DateTime b) {
+    final aMonth = a.year * 12 + a.month;
+    final bMonth = b.year * 12 + b.month;
+    if (aMonth == bMonth) return 0;
+    return aMonth > bMonth ? 1 : -1;
+  }
+
+  bool _sameMonth(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month;
+  }
+
+  bool _sameModel(_MonthGridModel a, _MonthGridModel b) {
+    return a.columnCount == b.columnCount &&
+        a.rowCount == b.rowCount &&
+        _sameDay(a.queryStart, b.queryStart) &&
+        _sameDay(a.queryEndExclusive, b.queryEndExclusive);
+  }
+
+  bool _sameFilter(_GeneralOccurrenceFilter a, _GeneralOccurrenceFilter b) {
+    return a.query == b.query && a.colorValue == b.colorValue;
+  }
+
+  bool _shouldRefreshAdjacentPages(_MonthCalendarPanel oldWidget) {
+    return !identical(widget.provider, oldWidget.provider) ||
+        !identical(widget.occurrencesByDay, oldWidget.occurrencesByDay) ||
+        !_sameDay(widget.selectedDate, oldWidget.selectedDate) ||
+        !_sameModel(widget.model, oldWidget.model) ||
+        !_sameFilter(widget.filter, oldWidget.filter);
+  }
+
+  DateTime _visibleDayForDate(DateTime date) {
+    final normalized = normalizeDateOnly(date);
+    if (widget.provider.generalShowWeekends ||
+        normalized.weekday <= DateTime.friday) {
+      return normalized;
+    }
+    return normalized.add(Duration(days: 8 - normalized.weekday));
+  }
+
+  DateTime _adjacentMonthDate(int monthOffset) {
+    final baseDate = widget.selectedDate;
+    final monthStart = DateTime(baseDate.year, baseDate.month + monthOffset);
+    final daysInMonth = DateTime(monthStart.year, monthStart.month + 1, 0).day;
+    return _visibleDayForDate(
+      DateTime(
+        monthStart.year,
+        monthStart.month,
+        baseDate.day.clamp(1, daysInMonth),
+      ),
+    );
+  }
+
+  Map<String, List<GeneralEventOccurrence>> _occurrencesByDayForModel(
+    _MonthGridModel model,
+  ) {
+    final occurrences = widget.provider.generalOccurrencesForQuery(
+      widget.filter.toQuery(
+        startInclusive: model.queryStart,
+        endExclusive: model.queryEndExclusive,
+      ),
+    );
+    return _groupOccurrencesByDay(occurrences, model.days);
+  }
+
+  _MonthGridPageData _pageDataForAdjacentMonth(int monthOffset) {
+    final date = _adjacentMonthDate(monthOffset);
+    final model = _MonthGridModel.build(
+      monthDate: date,
+      showWeekends: widget.provider.generalShowWeekends,
+    );
+    return _MonthGridPageData(
+      date: date,
+      model: model,
+      occurrencesByDay: _occurrencesByDayForModel(model),
+    );
+  }
+
+  void _refreshAdjacentPages() {
+    _previousPage = _pageDataForAdjacentMonth(-1);
+    _nextPage = _pageDataForAdjacentMonth(1);
+  }
+
+  void _animateToOffset(
+    double target, {
+    VoidCallback? onCompleted,
+    Duration duration = _pageAnimationDuration,
+  }) {
+    _dragController.stop();
+    _dragController.duration = duration;
+    _dragAnimation = Tween<double>(begin: _dragOffset, end: target).animate(
+      CurvedAnimation(parent: _dragController, curve: Curves.easeOutCubic),
+    );
+    _dragController.forward(from: 0).whenComplete(() {
+      if (!mounted) return;
+      onCompleted?.call();
+    });
+  }
+
+  void _animateExternalMonthChange(int direction) {
+    if (direction == 0) {
+      _dragOffset = 0;
+      return;
+    }
+    _dragController.stop();
+    _dragOffset = direction.toDouble();
+    _animateToOffset(0, duration: const Duration(milliseconds: 240));
+  }
+
+  void _handleDragStart(DragStartDetails details) {
+    _dragController.stop();
+    setState(() {
+      _isDragging = true;
+      _settleDirection = 0;
+    });
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details, double width) {
+    final delta = details.primaryDelta;
+    if (delta == null || width <= 0) return;
+    setState(() {
+      _dragOffset = (_dragOffset + delta / width).clamp(-1.0, 1.0);
+    });
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    const velocityThreshold = 520.0;
+    const distanceThreshold = 0.22;
+    final goNext =
+        velocity < -velocityThreshold || _dragOffset < -distanceThreshold;
+    final goPrevious =
+        velocity > velocityThreshold || _dragOffset > distanceThreshold;
+
+    if (goNext) {
+      _settleDirection = 1;
+      _animateToOffset(
+        -1,
+        onCompleted: () {
+          if (!mounted) return;
+          _isDragging = false;
+          widget.onNextMonth();
+        },
+      );
+    } else if (goPrevious) {
+      _settleDirection = -1;
+      _animateToOffset(
+        1,
+        onCompleted: () {
+          if (!mounted) return;
+          _isDragging = false;
+          widget.onPreviousMonth();
+        },
+      );
+    } else {
+      _settleDirection = 0;
+      _animateToOffset(
+        0,
+        onCompleted: () {
+          if (!mounted) return;
+          setState(() => _isDragging = false);
+        },
+      );
+    }
+  }
+
+  void _handleDragCancel() {
+    _settleDirection = 0;
+    _animateToOffset(
+      0,
+      onCompleted: () {
+        if (!mounted) return;
+        setState(() => _isDragging = false);
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -205,32 +465,28 @@ class _MonthCalendarPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final monthLabel = MaterialLocalizations.of(
       context,
-    ).formatMonthYear(selectedDate);
+    ).formatMonthYear(widget.selectedDate);
     final compact = MediaQuery.sizeOf(context).width < 600;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final fillsHeight =
             constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
-        final grid = GestureDetector(
-          onHorizontalDragEnd: (details) {
-            final velocity = details.primaryVelocity;
-            if (velocity == null) return;
-            if (velocity < -100) {
-              onNextMonth();
-            } else if (velocity > 100) {
-              onPreviousMonth();
-            }
-          },
-          child: _MonthDateGrid(
-            model: model,
-            selectedDate: selectedDate,
-            today: today,
-            occurrencesByDay: occurrencesByDay,
-            provider: provider,
-            compact: compact,
-            onDaySelected: onDaySelected,
-          ),
+        final grid = _DraggableMonthGrid(
+          model: widget.model,
+          selectedDate: widget.selectedDate,
+          today: widget.today,
+          occurrencesByDay: widget.occurrencesByDay,
+          provider: widget.provider,
+          compact: compact,
+          dragOffset: _dragOffset,
+          previousPage: _previousPage,
+          nextPage: _nextPage,
+          onDaySelected: widget.onDaySelected,
+          onDragStart: _handleDragStart,
+          onDragUpdate: _handleDragUpdate,
+          onDragEnd: _handleDragEnd,
+          onDragCancel: _handleDragCancel,
         );
 
         return Material(
@@ -250,7 +506,7 @@ class _MonthCalendarPanel extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.chevron_left),
                       tooltip: l10n.previousMonth,
-                      onPressed: onPreviousMonth,
+                      onPressed: widget.onPreviousMonth,
                     ),
                     Expanded(
                       child: Text(
@@ -262,33 +518,193 @@ class _MonthCalendarPanel extends StatelessWidget {
                       ),
                     ),
                     if (!_sameDay(
-                      DateTime(selectedDate.year, selectedDate.month),
-                      DateTime(today.year, today.month),
+                      DateTime(
+                        widget.selectedDate.year,
+                        widget.selectedDate.month,
+                      ),
+                      DateTime(widget.today.year, widget.today.month),
                     ))
                       TextButton(
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
-                        onPressed: onToday,
+                        onPressed: widget.onToday,
                         child: Text(l10n.today),
                       ),
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
                       tooltip: l10n.nextMonth,
-                      onPressed: onNextMonth,
+                      onPressed: widget.onNextMonth,
                     ),
                   ],
                 ),
               ),
               _MonthWeekdayHeaderRow(
-                showWeekends: provider.generalShowWeekends,
+                showWeekends: widget.provider.generalShowWeekends,
               ),
               if (fillsHeight)
                 Flexible(fit: FlexFit.loose, child: grid)
               else
                 grid,
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MonthGridPageData {
+  const _MonthGridPageData({
+    required this.date,
+    required this.model,
+    required this.occurrencesByDay,
+  });
+
+  final DateTime date;
+  final _MonthGridModel model;
+  final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
+}
+
+class _DraggableMonthGrid extends StatelessWidget {
+  const _DraggableMonthGrid({
+    required this.model,
+    required this.selectedDate,
+    required this.today,
+    required this.occurrencesByDay,
+    required this.provider,
+    required this.compact,
+    required this.dragOffset,
+    required this.previousPage,
+    required this.nextPage,
+    required this.onDaySelected,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onDragCancel,
+  });
+
+  final _MonthGridModel model;
+  final DateTime selectedDate;
+  final DateTime today;
+  final Map<String, List<GeneralEventOccurrence>> occurrencesByDay;
+  final TimetableProvider provider;
+  final bool compact;
+  final double dragOffset;
+  final _MonthGridPageData previousPage;
+  final _MonthGridPageData nextPage;
+  final ValueChanged<DateTime> onDaySelected;
+  final GestureDragStartCallback onDragStart;
+  final void Function(DragUpdateDetails details, double width) onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
+  final GestureDragCancelCallback onDragCancel;
+
+  double _gridHeight(
+    _MonthGridModel model,
+    BoxConstraints constraints,
+    double width,
+  ) {
+    const spacing = 1.0;
+    final cellWidth = width / model.columnCount;
+    final preferredCellHeight = (cellWidth * (compact ? 0.58 : 0.68))
+        .clamp(compact ? 48.0 : 72.0, compact ? 64.0 : 92.0)
+        .toDouble();
+    final totalSpacing = (model.rowCount - 1) * spacing;
+    final preferredGridHeight =
+        model.rowCount * preferredCellHeight + totalSpacing;
+    if (constraints.hasBoundedHeight && constraints.maxHeight.isFinite) {
+      return math.min(preferredGridHeight, constraints.maxHeight);
+    }
+    return preferredGridHeight;
+  }
+
+  Widget _page({
+    required double position,
+    required double width,
+    required double height,
+    required DateTime date,
+    required _MonthGridModel model,
+    required Map<String, List<GeneralEventOccurrence>> occurrences,
+    required bool active,
+  }) {
+    return Transform.translate(
+      offset: Offset((position + dragOffset) * width, 0),
+      child: IgnorePointer(
+        ignoring: !active,
+        child: ExcludeSemantics(
+          excluding: !active,
+          child: active
+              ? SizedBox(
+                  width: width,
+                  height: height,
+                  child: _MonthDateGrid(
+                    model: model,
+                    selectedDate: date,
+                    today: today,
+                    occurrencesByDay: occurrences,
+                    provider: provider,
+                    compact: compact,
+                    onDaySelected: onDaySelected,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = math.max(1.0, constraints.maxWidth);
+        final height = _gridHeight(model, constraints, width);
+        final showPreviousPage = dragOffset > 0;
+        final showNextPage = dragOffset < 0;
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: onDragStart,
+          onHorizontalDragUpdate: (details) => onDragUpdate(details, width),
+          onHorizontalDragEnd: onDragEnd,
+          onHorizontalDragCancel: onDragCancel,
+          child: ClipRect(
+            child: SizedBox(
+              width: double.infinity,
+              height: height,
+              child: Stack(
+                children: [
+                  _page(
+                    position: -1,
+                    width: width,
+                    height: height,
+                    date: previousPage.date,
+                    model: previousPage.model,
+                    occurrences: previousPage.occurrencesByDay,
+                    active: showPreviousPage,
+                  ),
+                  _page(
+                    position: 1,
+                    width: width,
+                    height: height,
+                    date: nextPage.date,
+                    model: nextPage.model,
+                    occurrences: nextPage.occurrencesByDay,
+                    active: showNextPage,
+                  ),
+                  _page(
+                    position: 0,
+                    width: width,
+                    height: height,
+                    date: selectedDate,
+                    model: model,
+                    occurrences: occurrencesByDay,
+                    active: true,
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -365,13 +781,8 @@ class _MonthDateGrid extends StatelessWidget {
                     occurrences: dayOccurrences.sortedForAgenda(),
                     localeCode: provider.localeCode,
                     showLunarCalendar: provider.generalShowLunarCalendar,
-                    maxPreviewItems: cellCompact
-                        ? 0
-                        : cellConstraints.maxHeight < 84
-                        ? 0
-                        : cellConstraints.maxHeight < 96
-                        ? 1
-                        : 2,
+                    cellWidth: cellWidth,
+                    cellHeight: cellConstraints.maxHeight,
                     compact: cellCompact,
                     onTap: () => onDaySelected(day),
                   );
@@ -470,7 +881,8 @@ class _MonthDayCell extends StatelessWidget {
     required this.occurrences,
     required this.localeCode,
     required this.showLunarCalendar,
-    required this.maxPreviewItems,
+    required this.cellWidth,
+    required this.cellHeight,
     required this.compact,
     required this.onTap,
   });
@@ -482,7 +894,8 @@ class _MonthDayCell extends StatelessWidget {
   final List<GeneralEventOccurrence> occurrences;
   final String localeCode;
   final bool showLunarCalendar;
-  final int maxPreviewItems;
+  final double cellWidth;
+  final double cellHeight;
   final bool compact;
   final VoidCallback onTap;
 
@@ -494,31 +907,83 @@ class _MonthDayCell extends StatelessWidget {
     final baseColor = isCurrentMonth
         ? colorScheme.onSurface
         : colorScheme.onSurfaceVariant.withAlpha(130);
+    final hasEventMarker = occurrences.isNotEmpty;
     final dayFillColor = isToday ? colorScheme.primary : Colors.transparent;
-    final bgColor = isSelected
+    final standardTextColor = isToday ? colorScheme.onPrimary : baseColor;
+    final standardBackgroundColor = !compact && isSelected
         ? colorScheme.primaryContainer
-        : isToday
-        ? colorScheme.secondaryContainer.withAlpha(150)
-        : colorScheme.surface;
-    final borderColor = isSelected
+        : Colors.transparent;
+    final standardBorderColor = !compact && isSelected
         ? colorScheme.primary
+        : Colors.transparent;
+    final compactTextColor = isSelected
+        ? colorScheme.onSecondaryContainer
         : isToday
-        ? colorScheme.secondary
-        : colorScheme.outlineVariant.withAlpha(160);
-    final visibleOccurrences = occurrences.take(maxPreviewItems).toList();
-    final hiddenCount = occurrences.length - visibleOccurrences.length;
-    final showHiddenCount = !compact && hiddenCount > 0;
-    final hasAgendaPreview = visibleOccurrences.isNotEmpty || showHiddenCount;
-    final dateContent = SizedBox(
+        ? colorScheme.primary
+        : baseColor;
+    final compactTileSize = math.max(
+      34.0,
+      math.min(math.min(cellWidth, cellHeight) - 4, 56.0),
+    );
+    final compactDateStyle = theme.textTheme.titleLarge?.copyWith(
+      height: 1.0,
+      color: compactTextColor,
+      fontWeight: FontWeight.w700,
+      fontSize: math.max(17.0, math.min(22.0, compactTileSize * 0.48)),
+    );
+    final compactLunarWidget = showLunarCalendar
+        ? _LunarDateLabel(
+            date: date,
+            colorScheme: colorScheme,
+            localeCode: localeCode,
+            enabled: showLunarCalendar,
+            overrideColor: compactTextColor,
+          )
+        : const SizedBox.shrink();
+    final hasCompactEventMarker = hasEventMarker;
+    final compactEventMarker = AnimatedOpacity(
+      opacity: hasCompactEventMarker ? 1 : 0,
+      duration: const Duration(milliseconds: 160),
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: colorScheme.primary,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+    final selectedCompactTileSize = hasCompactEventMarker
+        ? math.max(28.0, compactTileSize - 10)
+        : compactTileSize;
+    final selectedCompactDateStyle = theme.textTheme.titleLarge?.copyWith(
+      height: 1.0,
+      color: compactTextColor,
+      fontWeight: FontWeight.w700,
+      fontSize: math.max(15.0, math.min(22.0, selectedCompactTileSize * 0.48)),
+    );
+    final standardEventMarker = AnimatedOpacity(
+      opacity: hasEventMarker ? 1 : 0,
+      duration: const Duration(milliseconds: 160),
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: colorScheme.primary,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+    final standardDateContent = SizedBox(
       width: double.infinity,
-      height: compact ? 34 : 38,
+      height: 38,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: compact ? 20 : 22,
-            height: compact ? 19 : 21,
+            width: 22,
+            height: 21,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: dayFillColor,
@@ -528,7 +993,7 @@ class _MonthDayCell extends StatelessWidget {
               date.day.toString(),
               style: theme.textTheme.labelLarge?.copyWith(
                 height: 1.0,
-                color: isToday ? colorScheme.onPrimary : baseColor,
+                color: standardTextColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -546,6 +1011,90 @@ class _MonthDayCell extends StatelessWidget {
         ],
       ),
     );
+    final standardDateStack = Center(
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            standardDateContent,
+            if (hasEventMarker) const SizedBox(height: 4),
+            if (hasEventMarker) standardEventMarker,
+          ],
+        ),
+      ),
+    );
+    final compactDateContent = isSelected
+        ? Center(
+            child: SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    width: selectedCompactTileSize,
+                    height: selectedCompactTileSize,
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          date.day.toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: selectedCompactDateStyle,
+                        ),
+                        if (showLunarCalendar) const SizedBox(height: 1),
+                        if (showLunarCalendar) compactLunarWidget,
+                      ],
+                    ),
+                  ),
+                  if (hasCompactEventMarker) const SizedBox(height: 2),
+                  if (hasCompactEventMarker) compactEventMarker,
+                ],
+              ),
+            ),
+          )
+        : Center(
+            child: SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        date.day.toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: compactDateStyle,
+                      ),
+                      if (showLunarCalendar) const SizedBox(height: 1),
+                      if (showLunarCalendar) compactLunarWidget,
+                    ],
+                  ),
+                  Positioned(bottom: 4, child: compactEventMarker),
+                ],
+              ),
+            ),
+          );
 
     return Semantics(
       button: true,
@@ -556,84 +1105,27 @@ class _MonthDayCell extends StatelessWidget {
             ).monthDayEvents(date.day, occurrences.length)
           : '${date.day}',
       child: Material(
-        color: bgColor,
+        color: standardBackgroundColor,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: borderColor, width: isSelected ? 1.4 : 0.8),
+          borderRadius: BorderRadius.circular(
+            compact ? compactTileSize / 2 : 6,
+          ),
+          side: BorderSide(
+            color: standardBorderColor,
+            width: isSelected && !compact ? 1.4 : 0,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
+          borderRadius: BorderRadius.circular(
+            compact ? compactTileSize / 2 : 6,
+          ),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.all(compact ? 4 : 5),
-            child: hasAgendaPreview
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      dateContent,
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!compact) const SizedBox(height: 2),
-                            for (final occurrence in visibleOccurrences)
-                              _MonthEventChip(occurrence: occurrence),
-                            if (showHiddenCount)
-                              Text(
-                                '+$hiddenCount',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  height: 1.0,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : Center(child: dateContent),
+            padding: EdgeInsets.all(compact ? 2 : 5),
+            child: compact ? compactDateContent : standardDateStack,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MonthEventChip extends StatelessWidget {
-  const _MonthEventChip({required this.occurrence});
-
-  final GeneralEventOccurrence occurrence;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Color(
-      occurrence.event.colorValue ?? occurrence.calendar.colorValue,
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 3),
-          Expanded(
-            child: Text(
-              occurrence.event.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                height: 1.0,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -834,12 +1326,14 @@ class _LunarDateLabel extends StatelessWidget {
     required this.colorScheme,
     required this.localeCode,
     required this.enabled,
+    this.overrideColor,
   });
 
   final DateTime date;
   final ColorScheme colorScheme;
   final String localeCode;
   final bool enabled;
+  final Color? overrideColor;
 
   @override
   Widget build(BuildContext context) {
@@ -849,15 +1343,21 @@ class _LunarDateLabel extends StatelessWidget {
     final lunar = Lunar.fromDate(date);
     final festivals = lunar.getFestivals();
     if (festivals.isNotEmpty) {
-      return _LunarText(text: festivals.first, color: colorScheme.primary);
+      return _LunarText(
+        text: festivals.first,
+        color: overrideColor ?? colorScheme.primary,
+      );
     }
     final jieQi = lunar.getJieQi();
     if (jieQi.isNotEmpty) {
-      return _LunarText(text: jieQi, color: colorScheme.tertiary);
+      return _LunarText(
+        text: jieQi,
+        color: overrideColor ?? colorScheme.tertiary,
+      );
     }
     return _LunarText(
       text: lunar.getDayInChinese(),
-      color: colorScheme.onSurfaceVariant,
+      color: overrideColor ?? colorScheme.onSurfaceVariant,
     );
   }
 }

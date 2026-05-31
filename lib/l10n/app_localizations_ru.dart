@@ -715,7 +715,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Данные расписания и связанные настройки хранятся в локальном файле Sked_data.json в каталоге документов приложения. Редактируемая конфигурация школьных сайтов хранится отдельно в Sked_school_sites.json. Пользовательские настройки парсера расписания, включая Base URL, API key и выбранную модель, также хранятся локально в тех же данных приложения и не защищены системным хранилищем учётных данных. При использовании в браузере данные того же типа сохраняются в хранилище браузера. Приложение не загружает эти локальные данные автоматически на сервер, контролируемый разработчиком.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Импорт и экспорт';
@@ -750,7 +750,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Когда вы используете импорт с веб-страницы школы или вставляете HTML для разбора, приложение сначала локально сжимает содержимое, а затем отправляет на выбранную конечную точку разбора содержимое страницы, необязательные заголовок и URL страницы, текущий язык приложения и содержимое подсказки парсера. Если вы используете официальный парсер, запрос отправляется на настроенный официальный backend приложения. Если вы включаете пользовательский OpenAI-совместимый парсер, то это же содержимое отправляется напрямую на стороннюю конечную точку, которую вы настроили, а получение списка моделей также обращается к этой же точке. Пользовательская конечная точка может перенаправлять запрос другим ИИ-сервисам в соответствии с архитектурой её провайдера. Развёрнутый официальный backend в настоящее время ограничивает каждый отправляемый payload размером 300 КБ, использует свой настроенный тайм-аут и допускает не более 5 запросов на разбор с одного IP-адреса в день.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Обновления политики';
@@ -921,7 +921,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Backend API для веб-импорта ещё не настроен.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -971,21 +971,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Выберите официальный парсер или пользовательскую OpenAI-совместимую конечную точку.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Источник парсера';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Официальный парсер';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Использовать встроенный официальный сервис разбора, настроенный приложением.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Официальный парсер использует настроенный backend разбора приложения и сохраняет текущий процесс импорта без изменений.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -993,7 +982,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Отправлять содержимое страницы напрямую на вашу OpenAI-совместимую конечную точку.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1041,14 +1030,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'В текущей реализации пользовательский API key хранится в локальных настройках приложения в открытом виде. Используйте его только на устройстве или в браузере, которым доверяете.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Конфигурация пользовательского парсера неполная. Сначала заполните Base URL, API key и модель.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Парсер: официальный';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

@@ -720,7 +720,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Данните за графика и свързаните с тях настройки се съхраняват в локален файл на име Sked_data.json в директорията документи на приложението. Редактируемата конфигурация на училището се съхранява отделно в Sked_school_sites.json. Персонализираните настройки на анализатора на графика, включително всеки персонализиран базов URL адрес, API ключ и избран модел, също се съхраняват локално в същите данни на приложението и не са защитени от трезор за системни данни. Когато се използват в браузър, същите видове данни се съхраняват в съхранението на браузъра. Приложението не качва автоматично тези локални данни на сървър, контролиран от разработчика.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Внос и износ';
@@ -755,7 +755,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Когато използвате импортиране или поставяне на HTML на училищна уеб страница за анализиране, приложението първо компресира съдържанието локално, след което изпраща предоставеното съдържание на страницата, незадължителното заглавие на страницата и URL адреса, текущия език на приложението и съдържанието на инструкцията за анализиране към избраната крайна точка за анализиране. Ако използвате официалния анализатор, заявката отива в конфигурирания официален бъкенд на приложението. Ако активирате персонализиран анализатор, съвместим с OpenAI, същото съдържание се изпраща директно към крайната точка на трета страна, която сте конфигурирали, а извличането на списъка с модели също изисква същата крайна точка. Персонализирана крайна точка може да препрати заявката на други услуги за изкуствен интелект в съответствие със собствения дизайн на този доставчик. Разположеният официален бъкенд в момента ограничава всеки подаден полезен товар до 300 KB, използва конфигурирания си таймаут и позволява най-много 5 заявки за анализиране на IP на ден.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Актуализации на политиката';
@@ -927,7 +927,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'API за импортиране на уеб все още не е конфигуриран.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -978,21 +978,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Изберете официалния анализатор или персонализирана OpenAI-съвместима крайна точка.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Източник на анализатора';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Официален анализатор';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Използвайте вградената официална услуга за анализиране, конфигурирана от приложението.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Официалният анализатор използва конфигурирания анализиращ бъкенд на приложението и поддържа текущия поток от импорт непроменен.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -1000,7 +989,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Изпратете съдържанието на страницата директно на вашата собствена OpenAI-съвместима крайна точка.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1048,14 +1037,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Персонализираният API ключ се съхранява в локалните настройки на приложението в обикновен текст при текущата реализация. Използвайте го само на устройство или среда за браузър, на която имате доверие.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Персонализираната конфигурация на анализатора е непълна. Първо попълнете базовия URL, API ключа и модела.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Парсер: Официален';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

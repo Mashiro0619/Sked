@@ -20,7 +20,9 @@ class AppLanguageMetadata {
 
   String localizedNameFor(String uiLocaleCode) {
     final normalizedCode = normalizeLocaleCode(uiLocaleCode);
-    final languageCode = _parseLocaleCode(normalizedCode).languageCode.toLowerCase();
+    final languageCode = _parseLocaleCode(
+      normalizedCode,
+    ).languageCode.toLowerCase();
     return localizedNames[normalizedCode] ??
         localizedNames[languageCode] ??
         localizedNames[defaultLocaleCode] ??
@@ -719,9 +721,9 @@ List<AppLanguageOption> supportedLanguageOptions(AppLocalizations l10n) {
     );
   }).toList();
   options.sort((a, b) {
-    final priorityCompare = _languageSortPriority(a.code).compareTo(
-      _languageSortPriority(b.code),
-    );
+    final priorityCompare = _languageSortPriority(
+      a.code,
+    ).compareTo(_languageSortPriority(b.code));
     if (priorityCompare != 0) {
       return priorityCompare;
     }
@@ -741,10 +743,7 @@ AppLanguageMetadata languageMetadataForLocaleCode(String localeCode) {
       );
 }
 
-String languageLabelForLocaleCode(
-  String localeCode, {
-  AppLocalizations? l10n,
-}) {
+String languageLabelForLocaleCode(String localeCode, {AppLocalizations? l10n}) {
   final metadata = languageMetadataForLocaleCode(localeCode);
   if (l10n == null) {
     return metadata.nativeName;
@@ -760,7 +759,8 @@ bool isSupportedLocaleCode(String localeCode) {
 }
 
 int _languageSortPriority(String localeCode) {
-  return normalizeLocaleCode(localeCode) == normalizeLocaleCode(defaultLocaleCode)
+  return normalizeLocaleCode(localeCode) ==
+          normalizeLocaleCode(defaultLocaleCode)
       ? 0
       : 1;
 }
@@ -831,10 +831,12 @@ Locale _canonicalizeChineseLocale(Locale locale) {
     return locale;
   }
 
-  final normalizedScriptCode = locale.scriptCode == null || locale.scriptCode!.isEmpty
+  final normalizedScriptCode =
+      locale.scriptCode == null || locale.scriptCode!.isEmpty
       ? null
       : _normalizeScriptCode(locale.scriptCode!);
-  final normalizedCountryCode = locale.countryCode == null || locale.countryCode!.isEmpty
+  final normalizedCountryCode =
+      locale.countryCode == null || locale.countryCode!.isEmpty
       ? null
       : locale.countryCode!.toUpperCase();
 

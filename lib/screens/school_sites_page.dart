@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +6,7 @@ import '../models/school_site_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../services/school_site_service.dart';
+import '../services/text_file_picker.dart';
 import '../utils/platform_capabilities.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
@@ -470,22 +468,17 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     _setJsonImportInProgress(true);
     final l10n = AppLocalizations.of(context);
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
+      final source = await TextFilePicker.pickText(
         allowedExtensions: const ['json'],
-        withData: true,
       );
       if (!mounted) {
         return;
       }
-      final files = result?.files ?? const <PlatformFile>[];
-      final file = files.isEmpty ? null : files.first;
-      final bytes = file?.bytes;
-      if (file == null || bytes == null) {
+      if (source == null) {
         return;
       }
       try {
-        final imported = await _siteService.importSites(utf8.decode(bytes));
+        final imported = await _siteService.importSites(source);
         if (!mounted) {
           return;
         }

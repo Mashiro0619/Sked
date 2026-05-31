@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "zh_Hant",
   "appTitle": "Sked",
   "@appTitle": {},
@@ -512,7 +512,7 @@
   "@privacyPolicyIntro": {},
   "privacyPolicyLocalStorageTitle": "本機儲存",
   "@privacyPolicyLocalStorageTitle": {},
-  "privacyPolicyLocalStorageBody": "課表資料和相關設定會儲存在應用文件目錄中的本機檔案 Sked_data.json，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定中填寫的 Base URL、API 金鑰和所選模型也會隨同應用資料儲存在本機，目前實作不會使用系統安全憑證庫進行保護。若在瀏覽器中使用，同類資料會儲存在瀏覽器本機儲存中。應用不會自動把這些本機資料上傳到開發者控制的伺服器。",
+  "privacyPolicyLocalStorageBody": "課表資料和相關設定會儲存在應用文件目錄中的本機檔案 Sked_data.json，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。若在瀏覽器中使用，同類資料會儲存在瀏覽器本機儲存中。應用不會自動把這些本機資料上傳到開發者控制的伺服器。",
   "@privacyPolicyLocalStorageBody": {},
   "privacyPolicyImportExportTitle": "匯入與匯出",
   "@privacyPolicyImportExportTitle": {},
@@ -532,7 +532,7 @@
   "@privacyPolicyNoCollectionBody": {},
   "privacyPolicyFutureFeatureTitle": "網頁解析",
   "@privacyPolicyFutureFeatureTitle": {},
-  "privacyPolicyFutureFeatureBody": "當你使用學校網頁匯入或貼上 HTML 進行解析時，應用會先在本機壓縮內容，再把你提交的頁面內容、可選的頁面標題與 URL、當前應用語言以及解析提示詞發送到當前選擇的解析介面。如果你使用官方解析，請求會發往應用設定的官方後端；如果你啟用自訂 OpenAI 相容解析，同樣的內容會直接發送到你填寫的第三方介面，取得模型清單時也會請求該第三方介面。自訂介面還可能按照其自身設計繼續把請求轉發給其他 AI 服務。目前官方後端會限制單次提交內容不得大於 300KB，使用其設定的請求逾時時間，並按 IP 每天最多解析 5 次。",
+  "privacyPolicyFutureFeatureBody": "當你使用學校網頁匯入或貼上 HTML 進行解析時，應用會先在本機壓縮並清理內容，再把你提交的頁面內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，提交內容和 API 金鑰可能不會受到傳輸層加密保護。",
   "@privacyPolicyFutureFeatureBody": {},
   "privacyPolicyUpdatesTitle": "政策更新",
   "@privacyPolicyUpdatesTitle": {},
@@ -650,7 +650,7 @@
   "@schoolWebImportWarnings": {},
   "schoolWebImportOpenPageHint": "請在應用內登入學校網站，並手動切換到課表頁。",
   "@schoolWebImportOpenPageHint": {},
-  "schoolWebImportConfigMissing": "尚未設定網頁匯入後端介面地址。",
+  "schoolWebImportConfigMissing": "自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。",
   "@schoolWebImportConfigMissing": {},
   "schoolWebImportUnsupportedPlatform": "當前平台暫不支援內嵌網頁登入，請在支援 WebView 的平台上使用。",
   "@schoolWebImportUnsupportedPlatform": {},
@@ -678,19 +678,13 @@
   "@schoolWebImportSuccess": {},
   "schoolImportParserSettingsTitle": "課表解析設定",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "選擇官方解析，或改用自訂 OpenAI 相容介面。",
+  "schoolImportParserSettingsDesc": "設定你自己的 OpenAI 相容介面。支援 HTTP 和 HTTPS Base URL。",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "解析來源",
   "@schoolImportParserSourceTitle": {},
-  "schoolImportParserSourceOfficial": "官方解析",
-  "@schoolImportParserSourceOfficial": {},
-  "schoolImportParserSourceOfficialDesc": "使用應用內設定的官方解析服務。",
-  "@schoolImportParserSourceOfficialDesc": {},
-  "schoolImportParserSourceOfficialInfo": "官方解析會繼續使用應用當前設定的解析後端，並保持現有匯入流程不變。",
-  "@schoolImportParserSourceOfficialInfo": {},
   "schoolImportParserSourceCustomOpenAi": "自訂 OpenAI 相容介面",
   "@schoolImportParserSourceCustomOpenAi": {},
-  "schoolImportParserSourceCustomOpenAiDesc": "把頁面內容直接發送到你自己的 OpenAI 相容端點。",
+  "schoolImportParserSourceCustomOpenAiDesc": "把頁面內容直接發送到你自己的 OpenAI 相容端點。HTTP 端點僅建議在可信網路中使用。",
   "@schoolImportParserSourceCustomOpenAiDesc": {},
   "schoolImportParserCustomOpenAi": "自訂 OpenAI 相容解析",
   "@schoolImportParserCustomOpenAi": {},
@@ -722,12 +716,10 @@
       }
     }
   },
-  "schoolImportParserPlaintextWarning": "目前實作下，自訂 API 金鑰會以明文形式儲存在應用本機設定中。請僅在你信任的裝置或瀏覽器環境中使用。",
+  "schoolImportParserPlaintextWarning": "自訂 API 金鑰會在可用時透過平台安全儲存層保存。請僅在你信任的裝置、瀏覽器和網路中使用自訂解析憑據與 HTTP 端點。",
   "@schoolImportParserPlaintextWarning": {},
   "schoolImportParserCustomConfigIncomplete": "自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。",
   "@schoolImportParserCustomConfigIncomplete": {},
-  "schoolImportParserCurrentSourceOfficial": "解析器：官方",
-  "@schoolImportParserCurrentSourceOfficial": {},
   "schoolImportParserCurrentSourceCustom": "解析器：自訂（{model}）",
   "@schoolImportParserCurrentSourceCustom": {
     "placeholders": {
@@ -1149,7 +1141,11 @@
   "repeatsWeekly": "每週重複",
   "@repeatsWeekly": {},
   "recurrenceUntil": "截止 {date}",
-  "@recurrenceUntil": {"placeholders":{"date":{}}},
+  "@recurrenceUntil": {
+    "placeholders": {
+      "date": {}
+    }
+  },
   "switchToGeneralSchedule": "切換到通用日程",
   "@switchToGeneralSchedule": {},
   "generalDisplaySettings": "通用顯示設定",
@@ -1181,9 +1177,21 @@
   "selectSchedulesToImport": "選擇要匯入的日程",
   "@selectSchedulesToImport": {},
   "generalScheduleEventCount": "事件 {count}",
-  "@generalScheduleEventCount": {"placeholders":{"count":{"type":"int"}}},
+  "@generalScheduleEventCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importedSchedulesCount": "已匯入 {count} 個日程",
-  "@importedSchedulesCount": {"placeholders":{"count":{"type":"int"}}},
+  "@importedSchedulesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "replaceActiveSchedulePrompt": "用匯入的日程取代目前日程？",
   "@replaceActiveSchedulePrompt": {},
   "addAsNewSchedule": "新增",
@@ -1197,8 +1205,7 @@
   "replaceActiveRequiresSingleScheduleMessage": "取代目前日程時只能選擇一個日程。",
   "@replaceActiveRequiresSingleScheduleMessage": {},
   "noActiveScheduleToReplaceMessage": "目前沒有可取代的日程。",
-  "@noActiveScheduleToReplaceMessage": {}
-,
+  "@noActiveScheduleToReplaceMessage": {},
   "dataRestoredFromBackupNotice": "App data was restored from the previous backup because the main file failed to load.",
   "@dataRestoredFromBackupNotice": {},
   "dataBackupRestoreFailedNotice": "主資料檔案和備份檔案均已損壞。應用程式已使用全新狀態啟動。",
@@ -1234,5 +1241,4 @@
       }
     }
   }
-
 }

@@ -678,7 +678,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '课表数据和相关设置会保存在应用文档目录中的本地文件 Sked_data.json，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置中填写的 Base URL、API 密钥和所选模型也会随同应用数据保存在本地，当前实现不会使用系统安全凭据库进行保护。若在浏览器中使用，同类数据会保存在浏览器本地存储中。应用不会自动把这些本地数据上传到开发者控制的服务器。';
+      '课表数据和相关设置会保存在应用文档目录中的本地文件 Sked_data.json，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。若在浏览器中使用，同类数据会保存在浏览器本地存储中。应用不会自动把这些本地数据上传到开发者控制的服务器。';
 
   @override
   String get privacyPolicyImportExportTitle => '导入与导出';
@@ -713,7 +713,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩内容，再把你提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到当前选择的解析接口。如果你使用官方解析，请求会发往应用配置的官方后端；如果你启用自定义 OpenAI 兼容解析，同样的内容会直接发送到你填写的第三方接口，获取模型列表时也会请求该第三方接口。自定义接口还可能按照其自身设计继续把请求转发给其他 AI 服务。当前官方后端会限制单次提交内容不得大于 300KB，使用其配置的请求超时时间，并按 IP 每天最多解析 5 次。';
+      '当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩并清理内容，再把你提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，提交内容和 API 密钥可能不会受到传输层加密保护。';
 
   @override
   String get privacyPolicyUpdatesTitle => '政策更新';
@@ -871,7 +871,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportOpenPageHint => '请在应用内登录学校网站，并手动切换到课表页。';
 
   @override
-  String get schoolWebImportConfigMissing => '尚未配置网页导入后端接口地址。';
+  String get schoolWebImportConfigMissing =>
+      '自定义解析配置不完整，请先填写 Base URL、API 密钥和模型名称。';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -914,27 +915,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolImportParserSettingsTitle => '课表解析设置';
 
   @override
-  String get schoolImportParserSettingsDesc => '选择官方解析，或改用自定义 OpenAI 兼容接口。';
+  String get schoolImportParserSettingsDesc =>
+      '配置你自己的 OpenAI 兼容接口。支持 HTTP 和 HTTPS Base URL。';
 
   @override
   String get schoolImportParserSourceTitle => '解析来源';
-
-  @override
-  String get schoolImportParserSourceOfficial => '官方解析';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc => '使用应用内配置的官方解析服务。';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      '官方解析会继续使用应用当前配置的解析后端，并保持现有导入流程不变。';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => '自定义 OpenAI 兼容接口';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      '把页面内容直接发送到你自己的 OpenAI 兼容端点。';
+      '把页面内容直接发送到你自己的 OpenAI 兼容端点。HTTP 端点仅建议在可信网络中使用。';
 
   @override
   String get schoolImportParserCustomOpenAi => '自定义 OpenAI 兼容解析';
@@ -977,14 +969,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      '当前实现下，自定义 API 密钥会以明文形式保存在应用本地配置中。请仅在你信任的设备或浏览器环境中使用。';
+      '自定义 API 密钥会在可用时通过平台安全存储层保存。请仅在你信任的设备、浏览器和网络中使用自定义解析凭据与 HTTP 端点。';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       '自定义解析配置不完整，请先填写 Base URL、API 密钥和模型名称。';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => '解析器：官方';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -2307,7 +2296,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '課表資料和相關設定會儲存在應用文件目錄中的本機檔案 Sked_data.json，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定中填寫的 Base URL、API 金鑰和所選模型也會隨同應用資料儲存在本機，目前實作不會使用系統安全憑證庫進行保護。若在瀏覽器中使用，同類資料會儲存在瀏覽器本機儲存中。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
+      '課表資料和相關設定會儲存在應用文件目錄中的本機檔案 Sked_data.json，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。若在瀏覽器中使用，同類資料會儲存在瀏覽器本機儲存中。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
 
   @override
   String get privacyPolicyImportExportTitle => '匯入與匯出';
@@ -2342,7 +2331,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '當你使用學校網頁匯入或貼上 HTML 進行解析時，應用會先在本機壓縮內容，再把你提交的頁面內容、可選的頁面標題與 URL、當前應用語言以及解析提示詞發送到當前選擇的解析介面。如果你使用官方解析，請求會發往應用設定的官方後端；如果你啟用自訂 OpenAI 相容解析，同樣的內容會直接發送到你填寫的第三方介面，取得模型清單時也會請求該第三方介面。自訂介面還可能按照其自身設計繼續把請求轉發給其他 AI 服務。目前官方後端會限制單次提交內容不得大於 300KB，使用其設定的請求逾時時間，並按 IP 每天最多解析 5 次。';
+      '當你使用學校網頁匯入或貼上 HTML 進行解析時，應用會先在本機壓縮並清理內容，再把你提交的頁面內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，提交內容和 API 金鑰可能不會受到傳輸層加密保護。';
 
   @override
   String get privacyPolicyUpdatesTitle => '政策更新';
@@ -2500,7 +2489,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportOpenPageHint => '請在應用內登入學校網站，並手動切換到課表頁。';
 
   @override
-  String get schoolWebImportConfigMissing => '尚未設定網頁匯入後端介面地址。';
+  String get schoolWebImportConfigMissing =>
+      '自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -2543,27 +2533,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolImportParserSettingsTitle => '課表解析設定';
 
   @override
-  String get schoolImportParserSettingsDesc => '選擇官方解析，或改用自訂 OpenAI 相容介面。';
+  String get schoolImportParserSettingsDesc =>
+      '設定你自己的 OpenAI 相容介面。支援 HTTP 和 HTTPS Base URL。';
 
   @override
   String get schoolImportParserSourceTitle => '解析來源';
-
-  @override
-  String get schoolImportParserSourceOfficial => '官方解析';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc => '使用應用內設定的官方解析服務。';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      '官方解析會繼續使用應用當前設定的解析後端，並保持現有匯入流程不變。';
 
   @override
   String get schoolImportParserSourceCustomOpenAi => '自訂 OpenAI 相容介面';
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      '把頁面內容直接發送到你自己的 OpenAI 相容端點。';
+      '把頁面內容直接發送到你自己的 OpenAI 相容端點。HTTP 端點僅建議在可信網路中使用。';
 
   @override
   String get schoolImportParserCustomOpenAi => '自訂 OpenAI 相容解析';
@@ -2606,14 +2587,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      '目前實作下，自訂 API 金鑰會以明文形式儲存在應用本機設定中。請僅在你信任的裝置或瀏覽器環境中使用。';
+      '自訂 API 金鑰會在可用時透過平台安全儲存層保存。請僅在你信任的裝置、瀏覽器和網路中使用自訂解析憑據與 HTTP 端點。';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       '自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => '解析器：官方';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

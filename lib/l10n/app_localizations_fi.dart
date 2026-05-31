@@ -710,7 +710,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Aikataulutiedot ja niihin liittyvät asetukset tallennetaan paikalliseen tiedostoon nimeltä Sked_data.json sovelluksen asiakirjat hakemiston sisällä. Muokkattava koulusivuston kokoonpano tallennetaan erikseen Sked_school_sites.jsoniin. Mukautetut aikataulun analysoijan asetukset, mukaan lukien kaikki mukautetut Base URL:t, API-avaimet ja valittu malli, tallennetaan myös paikallisesti samoihin sovelluksen tietoihin eikä niitä suojaa järjestelmän tunnistustietojen holvi. Kun sitä käytetään selaimessa, samat tiedot tallennetaan selaimen tallennukseen. Sovellus ei lataa näitä paikallisia tietoja automaattisesti kehittäjän hallitsemaan palvelimeen.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Tuonti ja vienti';
@@ -745,7 +745,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Kun käytät koulun verkkosivujen tuontia tai liittämistä HTML-tekstiä analysointiin, sovellus pakottaa ensin sisällön paikallisesti ja lähettää sitten toimitetun sivun sisällön, valinnaisen sivun otsikon ja URL-osoitteen, nykyisen sovelluksen kielen ja analysointipyynnön sisällön valittuun analysointipäätepisteeseen. Jos käytät virallista analysoijaa, pyyntö menee sovelluksen määritettyyn viralliseen takaosaan. Jos käytät mukautetun OpenAI-yhteensopivan analysoinnin, sama sisältö lähetetään suoraan määrittämällesi kolmannen osapuolen päätepisteelle, ja malliluettelon hakeminen pyytää myös samaa päätepisteetä. Mukautettu päätepiste voi lähettää pyynnön muille tekoälypalveluille kyseisen palveluntarjoajan oman suunnittelun mukaisesti. Käytetty virallinen backend rajoittaa tällä hetkellä jokaista lähetettyä hyötykuormitusta 300 KB:een, käyttää sen määritettyä aikataulua ja sallii enintään 5 analysointipyyntöä IP:tä kohti päivässä.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Käytännön päivitykset';
@@ -915,7 +915,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'Web import backend API ei ole vielä määritetty.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -965,21 +965,10 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Valitse virallinen analysoija tai mukautettu OpenAI-yhteensopiva päätepiste.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parserin lähde';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Virallinen analysoija';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Käytä sovelluksen määrittämää sisäänrakennettua virallista analysointipalvelua.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Virallinen analysoija käyttää sovelluksen määritettyä analysointi-taustaa ja pitää nykyisen tuontivirran muuttumattomana.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -987,7 +976,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Lähetä sivun sisältö suoraan omaan OpenAI-yhteensopivaan päätepisteeseen.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1033,14 +1022,11 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Mukautettu API-avain tallennetaan sovelluksen paikallisiin asetuksiin yksinkertaisena tekstinä nykyisessä toteutuksessa. Käytä sitä vain laitteessa tai selaimiympäristössä, johon luotat.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Mukautettu analysoinnin konfigurointi on epätäydellinen. Täytä ensin perus-URL, API-avain ja malli.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: Virallinen';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

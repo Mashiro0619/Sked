@@ -44,7 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Sensitive config and privacy page (served separately)
-lib/config/app_config.dart
+# Sensitive privacy page (served separately)
 web/privacy.html
 .claude/

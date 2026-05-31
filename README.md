@@ -59,7 +59,7 @@
 
 ```text
 lib/
-├─ config/       # 应用配置与接口地址
+├─ config/       # 应用配置
 ├─ data/         # 平台相关的数据存储实现
 ├─ l10n/         # 本地化资源、语言元数据与生成代码
 ├─ models/       # 课表、课程、学校站点、导入响应等数据模型
@@ -73,7 +73,9 @@ assets/
 └─ school_sites.json
 
 web/
-└─ api.php
+├─ index.html
+├─ manifest.json
+└─ privacy.html
 ```
 
 ## 隐私政策
@@ -84,31 +86,27 @@ web/
 首次进入应用时会显示隐私政策确认；隐私政策全文可在 [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html) 查看。
 
 
-## 学校网页导入后端
+## 学校网页 / HTML 解析
 
-项目提供了一个可自部署的 PHP 中转接口：[web/api.php](web/api.php)。应用默认会从 [lib/config/app_config.dart](lib/config/app_config.dart) 读取学校网页导入接口地址和更新源地址，也可以通过 `--dart-define` 覆盖。
+学校网页导入和手动粘贴 HTML 解析只会使用用户在应用内“课表解析设置”中填写的 OpenAI 兼容接口、API 密钥和模型。
 
-- `SCHOOL_IMPORT_API_BASE_URL`：学校网页 / HTML 导入接口地址
-- `Sked_UPDATE_VERSION_URL`：自定义更新信息地址
+自定义接口支持 `https://` 和 `http://` Base URL。使用 `http://` 时，请确认你信任当前网络和接口服务，因为请求内容和 API 密钥可能无法获得传输层加密保护。
 
-### 后端配置
+### 解析配置
 
-你需要修改 `web/api.php` 顶部配置区：
+- `Base URL`：OpenAI 兼容接口地址，例如 `https://api.example.com/v1` 或内网 `http://192.168.1.10:8000/v1`
+- `API 密钥`：发送到该接口的 Bearer Token，应用会尽可能使用系统安全存储保存
+- `模型名称`：聊天补全模型名称，可手动输入，也可通过“获取模型列表”从自定义接口读取
+- `自定义提示词`：可选；留空时使用应用内置课表解析提示词
 
-- `$relayUrl`：上游 AI 接口地址
-- `$relayToken`：你的 API Key
-- `$model`：使用的模型
-- `$timeoutSeconds`：请求超时时间，当前默认 120 秒
-- `$sourceByteLimit`：单次提交内容大小上限，当前默认 300KB
-- `$maxParsesPerIpPerDay`：同一 IP 每日最大解析次数，当前默认 5 次
+### 请求行为
 
-### 后端行为
+- 获取模型列表时，应用会请求你填写的 `Base URL` 下的 `/models`
+- 解析课表时，应用会请求你填写的 `Base URL` 下的 `/chat/completions`
+- 请求会携带页面内容、可选页面标题、页面 URL、当前应用语言和解析提示词
+- 自定义接口及其上游服务如何存储、转发或处理数据，取决于你选择的服务提供方
 
-- 通过你自己的 PHP 服务转发解析请求，不直接在客户端暴露上游密钥
-- 返回统一 JSON 响应，便于客户端展示解析结果和错误信息
-- 对提交内容执行大小限制与按 IP 的每日解析次数限制
-- 支持学校网页导入和手动粘贴 HTML 导入场景
-- 会把页面内容、可选页面标题、页面 URL 和当前应用语言一并提交到解析接口
+应用仍支持通过 `--dart-define=SKED_UPDATE_VERSION_URL=...` 覆盖更新信息地址；该配置只影响应用更新检查，不用于课表解析。
 
 
 ## 开源协议与第三方说明

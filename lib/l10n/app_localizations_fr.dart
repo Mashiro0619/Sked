@@ -725,7 +725,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Les données d\'emploi du temps et les paramètres associés sont stockés dans un fichier local nommé Sked_data.json dans le répertoire de documents de l\'application. La configuration modifiable des sites scolaires est stockée séparément dans Sked_school_sites.json. Les paramètres personnalisés de l\'analyseur d\'emploi du temps, y compris toute Base URL personnalisée, API key et le modèle sélectionné, sont également stockés localement dans les mêmes données d\'application et ne sont pas protégés par un coffre-fort d\'identifiants système. Dans un navigateur, le même type de données est stocké dans le stockage du navigateur. L\'application ne téléverse pas automatiquement ces données locales vers un serveur contrôlé par le développeur.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Importation et exportation';
@@ -761,7 +761,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Lorsque vous utilisez l\'importation depuis une page web scolaire ou collez du HTML à analyser, l\'application compresse d\'abord le contenu localement, puis envoie le contenu de page soumis, le titre et l\'URL facultatifs, la langue actuelle de l\'application et le contenu du prompt de l\'analyseur au point de terminaison d\'analyse sélectionné. Si vous utilisez l\'analyseur officiel, la requête est envoyée au backend officiel configuré par l\'application. Si vous activez un analyseur personnalisé compatible OpenAI, le même contenu est envoyé directement au point de terminaison tiers que vous avez configuré, et la récupération de la liste des modèles interroge aussi ce même point de terminaison. Un point de terminaison personnalisé peut transférer la requête à d\'autres services d\'IA selon la conception propre à ce fournisseur. Le backend officiel déployé limite actuellement chaque charge utile envoyée à 300KB, utilise son délai d\'attente configuré et autorise au maximum 5 requêtes d\'analyse par IP et par jour.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Mises à jour de la politique';
@@ -934,7 +934,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'L\'API backend d\'importation web n\'est pas encore configurée.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -984,21 +984,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Choisissez l\'analyseur officiel ou un point de terminaison personnalisé compatible OpenAI.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Source de l\'analyseur';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Analyseur officiel';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Utiliser le service d\'analyse officiel intégré configuré par l\'application.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'L\'analyseur officiel utilise le backend d\'analyse configuré par l\'application et conserve le flux d\'importation actuel inchangé.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -1006,7 +995,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Envoyez directement le contenu de la page vers votre propre point de terminaison compatible OpenAI.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1053,14 +1042,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'L\'API key personnalisée est stockée en clair dans les paramètres locaux de l\'application dans l\'implémentation actuelle. Utilisez-la uniquement sur un appareil ou dans un navigateur de confiance.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'La configuration de l\'analyseur personnalisé est incomplète. Renseignez d\'abord la Base URL, l\'API key et le modèle.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Analyseur : Officiel';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

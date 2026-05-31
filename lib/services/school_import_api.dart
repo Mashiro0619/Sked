@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../config/app_config.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 
@@ -161,9 +160,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     SchoolImportParserSettings? parserSettings,
   }) async {
     final settings = parserSettings ?? const SchoolImportParserSettings();
-    return settings.source == schoolImportParserSourceCustomOpenAi
-        ? _importWithCustomOpenAi(payload, settings)
-        : _importWithOfficialApi(payload);
+    return _importWithCustomOpenAi(payload, settings);
   }
 
   Future<List<String>> fetchCustomModels({
@@ -231,81 +228,6 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       rethrow;
     } catch (error) {
       throw FormatException('Unable to fetch the model list.\n\n$error');
-    } finally {
-      if (ownsClient) {
-        client.close();
-      }
-    }
-  }
-
-  Future<SchoolImportApiResult> _importWithOfficialApi(
-    SchoolImportPagePayload payload,
-  ) async {
-    if (!AppConfig.hasSchoolImportApiBaseUrl) {
-      throw const FormatException(
-        'School import API base URL is not configured.',
-      );
-    }
-
-    final client = _client ?? http.Client();
-    final ownsClient = _client == null;
-    try {
-      final baseUri = Uri.parse(AppConfig.schoolImportApiBaseUrl);
-      final path = baseUri.path.trim().toLowerCase().endsWith('.php')
-          ? baseUri.path
-          : _joinPath(baseUri.path, 'api.php');
-      final uri = baseUri.replace(
-        path: path,
-        queryParameters: const {'action': 'import_timetable'},
-      );
-      final response = await client
-          .post(
-            uri,
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode(payload.toJson()),
-          )
-          .timeout(_requestTimeout);
-      final rawBody = _decodeBody(response);
-      final decoded = _tryDecodeJson(rawBody);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        final message = _extractErrorMessage(decoded);
-        throw FormatException(
-          message ??
-              'Import request failed (${response.statusCode}).\n\n$rawBody',
-        );
-      }
-      if (decoded is! Map<String, dynamic>) {
-        throw FormatException('Import response format is invalid.\n\n$rawBody');
-      }
-      if (decoded['ok'] == false) {
-        throw FormatException(
-          _extractErrorMessage(decoded) ?? 'Import failed.',
-        );
-      }
-      try {
-        return SchoolImportApiResult(
-          response: buildResponseFromPhpDone(decoded),
-          rawBody: rawBody,
-          statusCode: response.statusCode,
-        );
-      } on FormatException {
-        rethrow;
-      } catch (error) {
-        throw FormatException(
-          'Import response parse failed.\n\n$rawBody\n\n$error',
-        );
-      }
-    } on TimeoutException {
-      throw const FormatException('Import request timed out.');
-    } on FormatException {
-      rethrow;
-    } catch (error) {
-      throw FormatException(
-        'Unable to connect to the import service.\n\n$error',
-      );
     } finally {
       if (ownsClient) {
         client.close();
@@ -505,6 +427,47 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     return '';
   }
 
+  String _extractOpenAiStreamTextContent(Map<String, dynamic> json) {
+    final choices = json['choices'];
+    final firstChoice = choices is List && choices.isNotEmpty
+        ? choices.first
+        : null;
+    if (firstChoice is! Map) {
+      return '';
+    }
+    final deltaJson = firstChoice['delta'];
+    final delta = deltaJson is Map
+        ? _extractOpenAiTextContent(deltaJson['content'])
+        : '';
+    if (delta.isNotEmpty) {
+      return delta;
+    }
+    final messageJson = firstChoice['message'];
+    final message = messageJson is Map
+        ? _extractOpenAiTextContent(messageJson['content'])
+        : '';
+    if (message.isNotEmpty) {
+      return message;
+    }
+    return _extractOpenAiTextContent(firstChoice['text']);
+  }
+
+  bool _hasOpenAiFinishReason(Map<String, dynamic> json) {
+    final choices = json['choices'];
+    final firstChoice = choices is List && choices.isNotEmpty
+        ? choices.first
+        : null;
+    return firstChoice is Map && firstChoice['finish_reason'] != null;
+  }
+
+  String? _extractSseData(String line) {
+    final trimmed = line.trimLeft();
+    if (!trimmed.startsWith('data:')) {
+      return null;
+    }
+    return trimmed.substring(5).trim();
+  }
+
   Uri _buildOpenAiChatUri(String baseUrl) {
     final baseUri = Uri.parse(baseUrl.trim());
     final path = baseUri.path.trim().toLowerCase().endsWith('/chat/completions')
@@ -626,106 +589,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     http.Client? client,
   }) async* {
     final settings = parserSettings ?? const SchoolImportParserSettings();
-    if (settings.source == schoolImportParserSourceCustomOpenAi) {
-      yield* _importStreamWithCustomOpenAi(payload, settings, client: client);
-      return;
-    }
-    yield* _importStreamWithOfficialApi(payload, client: client);
-  }
-
-  Stream<SchoolImportStreamEvent> _importStreamWithOfficialApi(
-    SchoolImportPagePayload payload, {
-    http.Client? client,
-  }) async* {
-    if (!AppConfig.hasSchoolImportApiBaseUrl) {
-      yield const ParseError('School import API base URL is not configured.');
-      return;
-    }
-
-    final effectiveClient = client ?? _client ?? http.Client();
-    final ownsClient = client == null && _client == null;
-    try {
-      final baseUri = Uri.parse(AppConfig.schoolImportApiBaseUrl);
-      final path = baseUri.path.trim().toLowerCase().endsWith('.php')
-          ? baseUri.path
-          : _joinPath(baseUri.path, 'api.php');
-      final uri = baseUri.replace(
-        path: path,
-        queryParameters: const {'action': 'import_timetable'},
-      );
-
-      final body = jsonEncode({...payload.toJson(), 'stream': true});
-
-      final request = http.Request('POST', uri)
-        ..headers.addAll(const {
-          'Content-Type': 'application/json',
-          'Accept': 'application/x-ndjson',
-        })
-        ..body = body;
-
-      final response = await effectiveClient
-          .send(request)
-          .timeout(_requestTimeout);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        final rawBody = await _readStreamErrorBody(response.stream);
-        yield ParseError(
-          'Import request failed (${response.statusCode}).\n\n$rawBody',
-        );
-        return;
-      }
-
-      final stream = response.stream
-          .timeout(
-            _streamIdleTimeout,
-            onTimeout: (sink) {
-              sink.addError(
-                TimeoutException(
-                  'Import stream timed out.',
-                  _streamIdleTimeout,
-                ),
-              );
-            },
-          )
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-
-      bool terminalEventReceived = false;
-
-      await for (final line in stream) {
-        if (line.trim().isEmpty) continue;
-        final json = _tryDecodeJson(line);
-        if (json == null) continue;
-        if (json.containsKey('delta')) {
-          yield ParseDelta(_stringValue(json['delta']));
-        } else if (json.containsKey('done')) {
-          terminalEventReceived = true;
-          try {
-            yield ParseDone(response: buildResponseFromPhpDone(json));
-          } catch (e) {
-            yield ParseError('Import response parse failed.\n\n$line\n\n$e');
-          }
-          return;
-        } else if (json.containsKey('error')) {
-          terminalEventReceived = true;
-          yield ParseError(_stringValue(json['error'], 'Unknown error'));
-          return;
-        }
-      }
-
-      if (!terminalEventReceived) {
-        yield const ParseError('Connection closed unexpectedly.');
-      }
-    } on TimeoutException catch (e) {
-      yield ParseError(
-        _timeoutMessage(e, fallback: 'Import request timed out.'),
-      );
-    } catch (e) {
-      yield ParseError('Unable to connect to the import service.\n\n$e');
-    } finally {
-      if (ownsClient) {
-        effectiveClient.close();
-      }
-    }
+    yield* _importStreamWithCustomOpenAi(payload, settings, client: client);
   }
 
   Stream<SchoolImportStreamEvent> _importStreamWithCustomOpenAi(
@@ -798,9 +662,8 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       String accumulatedContent = '';
       bool doneReceived = false;
       await for (final line in stream) {
-        final trimmed = line.trim();
-        if (trimmed.isEmpty || !trimmed.startsWith('data: ')) continue;
-        final jsonStr = trimmed.substring(6).trim();
+        final jsonStr = _extractSseData(line);
+        if (jsonStr == null || jsonStr.isEmpty) continue;
         if (jsonStr == '[DONE]') {
           doneReceived = true;
           continue;
@@ -808,17 +671,13 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         try {
           final json = _tryDecodeJson(jsonStr);
           if (json == null) continue;
-          final choices = json['choices'];
-          final firstChoice = choices is List && choices.isNotEmpty
-              ? choices.first
-              : null;
-          final deltaJson = firstChoice is Map ? firstChoice['delta'] : null;
-          final delta = deltaJson is Map
-              ? _extractOpenAiTextContent(deltaJson['content'])
-              : '';
+          final delta = _extractOpenAiStreamTextContent(json);
           if (delta.isNotEmpty) {
             accumulatedContent += delta;
             yield ParseDelta(delta);
+          }
+          if (_hasOpenAiFinishReason(json)) {
+            doneReceived = true;
           }
         } catch (_) {}
       }
@@ -868,7 +727,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     }
   }
 
-  static SchoolImportResponse buildResponseFromPhpDone(
+  static SchoolImportResponse buildResponseFromDoneEvent(
     Map<String, dynamic> json,
   ) {
     if (json['ok'] == false) {

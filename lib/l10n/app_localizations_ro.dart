@@ -718,7 +718,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Datele de orar și setările conexe sunt stocate într-un fișier local numit Sked_data.json în directorul documentelor aplicației. Configurația editabilă a site-ului școlii este stocată separat în Sked_school_sites.json. Setările parserului de orar personalizate, inclusiv orice URL de bază personalizat, cheia API și modelul selectat, sunt, de asemenea, stocate local în aceleași date ale aplicației și nu sunt protejate de un seif de acreditare a sistemului. Când sunt utilizate într-un browser, aceleași tipuri de date sunt stocate în stocarea browserului. Aplicația nu încărcă automat aceste date locale pe un server controlat de dezvoltator.';
+      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import și export';
@@ -753,7 +753,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'Când utilizați importarea sau lipirea HTML a paginilor web ale școlii pentru analizare, aplicația comprimă mai întâi conținutul local, apoi trimite conținutul paginii trimise, titlul și adresa URL a paginii opționale, limba curentă a aplicației și conținutul promptului de analizare la punctul final de analizare selectat. Dacă utilizați analizatorul oficial, cererea merge la backend-ul oficial configurat al aplicației. Dacă activați un analizator compatibil cu OpenAI personalizat, același conținut este trimis direct la endpoint-ul terț pe care l-ați configurat, iar preluarea listei de modele solicită, de asemenea, același endpoint. Un endpoint personalizat poate transmite cererea către alte servicii AI în conformitate cu propriul design al furnizorului respectiv. Backend-ul oficial implementat limitează în prezent fiecare sarcină utilă trimisă la 300KB, utilizează timeout-ul său configurat și permite cel mult 5 solicitări de analizare pe IP pe zi.';
+      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Actualizări ale politicii';
@@ -925,7 +925,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolWebImportConfigMissing =>
-      'API-ul de import web nu este încă configurat.';
+      'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.';
 
   @override
   String get schoolWebImportUnsupportedPlatform =>
@@ -975,21 +975,10 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Alegeți analizatorul oficial sau un endpoint compatibil cu OpenAI personalizat.';
+      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
 
   @override
   String get schoolImportParserSourceTitle => 'Sursa analizatorului';
-
-  @override
-  String get schoolImportParserSourceOfficial => 'Analizator oficial';
-
-  @override
-  String get schoolImportParserSourceOfficialDesc =>
-      'Utilizați serviciul oficial de analizare încorporat configurat de aplicație.';
-
-  @override
-  String get schoolImportParserSourceOfficialInfo =>
-      'Analizatorul oficial utilizează backend-ul de analizare configurat al aplicației și păstrează fluxul de import curent neschimbat.';
 
   @override
   String get schoolImportParserSourceCustomOpenAi =>
@@ -997,7 +986,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      'Trimiteți conținutul paginii direct la propriul dvs. endpoint compatibil cu OpenAI.';
+      'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.';
 
   @override
   String get schoolImportParserCustomOpenAi =>
@@ -1044,14 +1033,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolImportParserPlaintextWarning =>
-      'Cheia API personalizată este stocată în setările locale ale aplicației în text simplu în cadrul implementării curente. Utilizați-l numai pe un dispozitiv sau un mediu de browser în care aveți încredere.';
+      'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'Configurarea parserului personalizat este incompletă. Completați mai întâi URL-ul de bază, cheia API și modelul.';
-
-  @override
-  String get schoolImportParserCurrentSourceOfficial => 'Parser: Oficial';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

@@ -76,7 +76,6 @@ class SchoolImportParserSettings {
   Map<String, dynamic> toJson() => {
     'source': normalizeSchoolImportParserSource(source),
     'customBaseUrl': customBaseUrl.trim(),
-    'customApiKey': customApiKey.trim(),
     'customModel': customModel.trim(),
     'customPrompt': customPrompt.trim(),
   };

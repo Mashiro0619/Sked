@@ -170,62 +170,57 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     _openDetails(context, provider, occurrence),
               ),
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: view == generalViewMonth ? 72 : 0,
-                ),
-                child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.trackpad,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.invertedStylus,
-                    },
-                  ),
-                  child: switch (view) {
-                    generalViewDay => _DayCalendarView(
-                      date: selectedDate,
-                      provider: provider,
-                      filter: filter,
-                      onDaySelected: provider.setSelectedGeneralDate,
-                      onEmptySlotTap: (date) =>
-                          _openEditor(context, provider, initialDate: date),
-                      onOccurrenceTap: (occurrence) =>
-                          _openDetails(context, provider, occurrence),
-                    ),
-                    generalViewList => _ListCalendarView(
-                      date: selectedDate,
-                      provider: provider,
-                      filter: filter,
-                      onToday: () => _goToToday(provider),
-                      onPickDate: () => _pickDate(context, provider),
-                      onOccurrenceTap: (occurrence) =>
-                          _openDetails(context, provider, occurrence),
-                    ),
-                    generalViewMonth => _MonthCalendarView(
-                      date: selectedDate,
-                      provider: provider,
-                      filter: filter,
-                      onDaySelected: provider.setSelectedGeneralDate,
-                      onEmptySlotTap: (date) =>
-                          _openEditor(context, provider, initialDate: date),
-                      onOccurrenceTap: (occurrence) =>
-                          _openDetails(context, provider, occurrence),
-                    ),
-                    _ => _WeekCalendarView(
-                      date: selectedDate,
-                      provider: provider,
-                      filter: filter,
-                      onDaySelected: provider.setSelectedGeneralDate,
-                      onEmptySlotTap: (date) =>
-                          _openEditor(context, provider, initialDate: date),
-                      onOccurrenceTap: (occurrence) =>
-                          _openDetails(context, provider, occurrence),
-                    ),
+              child: ScrollConfiguration(
+                behavior: const MaterialScrollBehavior().copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.trackpad,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.invertedStylus,
                   },
                 ),
+                child: switch (view) {
+                  generalViewDay => _DayCalendarView(
+                    date: selectedDate,
+                    provider: provider,
+                    filter: filter,
+                    onDaySelected: provider.setSelectedGeneralDate,
+                    onEmptySlotTap: (date) =>
+                        _openEditor(context, provider, initialDate: date),
+                    onOccurrenceTap: (occurrence) =>
+                        _openDetails(context, provider, occurrence),
+                  ),
+                  generalViewList => _ListCalendarView(
+                    date: selectedDate,
+                    provider: provider,
+                    filter: filter,
+                    onToday: () => _goToToday(provider),
+                    onPickDate: () => _pickDate(context, provider),
+                    onOccurrenceTap: (occurrence) =>
+                        _openDetails(context, provider, occurrence),
+                  ),
+                  generalViewMonth => _MonthCalendarView(
+                    date: selectedDate,
+                    provider: provider,
+                    filter: filter,
+                    onDaySelected: provider.setSelectedGeneralDate,
+                    onEmptySlotTap: (date) =>
+                        _openEditor(context, provider, initialDate: date),
+                    onOccurrenceTap: (occurrence) =>
+                        _openDetails(context, provider, occurrence),
+                  ),
+                  _ => _WeekCalendarView(
+                    date: selectedDate,
+                    provider: provider,
+                    filter: filter,
+                    onDaySelected: provider.setSelectedGeneralDate,
+                    onEmptySlotTap: (date) =>
+                        _openEditor(context, provider, initialDate: date),
+                    onOccurrenceTap: (occurrence) =>
+                        _openDetails(context, provider, occurrence),
+                  ),
+                },
               ),
             ),
           ],

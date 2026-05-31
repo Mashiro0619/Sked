@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "zh",
   "appTitle": "Sked",
   "@appTitle": {},
@@ -510,7 +510,7 @@
   "@privacyPolicyIntro": {},
   "privacyPolicyLocalStorageTitle": "本地存储",
   "@privacyPolicyLocalStorageTitle": {},
-  "privacyPolicyLocalStorageBody": "课表数据和相关设置会保存在应用文档目录中的本地文件 Sked_data.json，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置中填写的 Base URL、API 密钥和所选模型也会随同应用数据保存在本地，当前实现不会使用系统安全凭据库进行保护。若在浏览器中使用，同类数据会保存在浏览器本地存储中。应用不会自动把这些本地数据上传到开发者控制的服务器。",
+  "privacyPolicyLocalStorageBody": "课表数据和相关设置会保存在应用文档目录中的本地文件 Sked_data.json，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。若在浏览器中使用，同类数据会保存在浏览器本地存储中。应用不会自动把这些本地数据上传到开发者控制的服务器。",
   "@privacyPolicyLocalStorageBody": {},
   "privacyPolicyImportExportTitle": "导入与导出",
   "@privacyPolicyImportExportTitle": {},
@@ -530,7 +530,7 @@
   "@privacyPolicyNoCollectionBody": {},
   "privacyPolicyFutureFeatureTitle": "网页解析",
   "@privacyPolicyFutureFeatureTitle": {},
-  "privacyPolicyFutureFeatureBody": "当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩内容，再把你提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到当前选择的解析接口。如果你使用官方解析，请求会发往应用配置的官方后端；如果你启用自定义 OpenAI 兼容解析，同样的内容会直接发送到你填写的第三方接口，获取模型列表时也会请求该第三方接口。自定义接口还可能按照其自身设计继续把请求转发给其他 AI 服务。当前官方后端会限制单次提交内容不得大于 300KB，使用其配置的请求超时时间，并按 IP 每天最多解析 5 次。",
+  "privacyPolicyFutureFeatureBody": "当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩并清理内容，再把你提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，提交内容和 API 密钥可能不会受到传输层加密保护。",
   "@privacyPolicyFutureFeatureBody": {},
   "privacyPolicyUpdatesTitle": "政策更新",
   "@privacyPolicyUpdatesTitle": {},
@@ -648,7 +648,7 @@
   "@schoolWebImportWarnings": {},
   "schoolWebImportOpenPageHint": "请在应用内登录学校网站，并手动切换到课表页。",
   "@schoolWebImportOpenPageHint": {},
-  "schoolWebImportConfigMissing": "尚未配置网页导入后端接口地址。",
+  "schoolWebImportConfigMissing": "自定义解析配置不完整，请先填写 Base URL、API 密钥和模型名称。",
   "@schoolWebImportConfigMissing": {},
   "schoolWebImportUnsupportedPlatform": "当前平台暂不支持内嵌网页登录，请在支持 WebView 的平台上使用。",
   "@schoolWebImportUnsupportedPlatform": {},
@@ -676,19 +676,13 @@
   "@schoolWebImportSuccess": {},
   "schoolImportParserSettingsTitle": "课表解析设置",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "选择官方解析，或改用自定义 OpenAI 兼容接口。",
+  "schoolImportParserSettingsDesc": "配置你自己的 OpenAI 兼容接口。支持 HTTP 和 HTTPS Base URL。",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "解析来源",
   "@schoolImportParserSourceTitle": {},
-  "schoolImportParserSourceOfficial": "官方解析",
-  "@schoolImportParserSourceOfficial": {},
-  "schoolImportParserSourceOfficialDesc": "使用应用内配置的官方解析服务。",
-  "@schoolImportParserSourceOfficialDesc": {},
-  "schoolImportParserSourceOfficialInfo": "官方解析会继续使用应用当前配置的解析后端，并保持现有导入流程不变。",
-  "@schoolImportParserSourceOfficialInfo": {},
   "schoolImportParserSourceCustomOpenAi": "自定义 OpenAI 兼容接口",
   "@schoolImportParserSourceCustomOpenAi": {},
-  "schoolImportParserSourceCustomOpenAiDesc": "把页面内容直接发送到你自己的 OpenAI 兼容端点。",
+  "schoolImportParserSourceCustomOpenAiDesc": "把页面内容直接发送到你自己的 OpenAI 兼容端点。HTTP 端点仅建议在可信网络中使用。",
   "@schoolImportParserSourceCustomOpenAiDesc": {},
   "schoolImportParserCustomOpenAi": "自定义 OpenAI 兼容解析",
   "@schoolImportParserCustomOpenAi": {},
@@ -720,12 +714,10 @@
       }
     }
   },
-  "schoolImportParserPlaintextWarning": "当前实现下，自定义 API 密钥会以明文形式保存在应用本地配置中。请仅在你信任的设备或浏览器环境中使用。",
+  "schoolImportParserPlaintextWarning": "自定义 API 密钥会在可用时通过平台安全存储层保存。请仅在你信任的设备、浏览器和网络中使用自定义解析凭据与 HTTP 端点。",
   "@schoolImportParserPlaintextWarning": {},
   "schoolImportParserCustomConfigIncomplete": "自定义解析配置不完整，请先填写 Base URL、API 密钥和模型名称。",
   "@schoolImportParserCustomConfigIncomplete": {},
-  "schoolImportParserCurrentSourceOfficial": "解析器：官方",
-  "@schoolImportParserCurrentSourceOfficial": {},
   "schoolImportParserCurrentSourceCustom": "解析器：自定义（{model}）",
   "@schoolImportParserCurrentSourceCustom": {
     "placeholders": {
@@ -1211,8 +1203,7 @@
   "exportIcsText": "导出 ICS 文本",
   "@exportIcsText": {},
   "exportJsonText": "导出 JSON 文本",
-  "@exportJsonText": {}
-,
+  "@exportJsonText": {},
   "dataRestoredFromBackupNotice": "App data was restored from the previous backup because the main file failed to load.",
   "@dataRestoredFromBackupNotice": {},
   "dataBackupRestoreFailedNotice": "主数据文件和备份文件均已损坏。应用已使用全新状态启动。",
@@ -1248,5 +1239,4 @@
       }
     }
   }
-
 }

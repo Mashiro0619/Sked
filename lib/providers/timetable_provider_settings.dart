@@ -68,22 +68,6 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> updateSchoolImportParserSource(String source) async {
-    final normalized = normalizeSchoolImportParserSource(source);
-    if (_appData.studentMode.schoolImportParserSettings.source == normalized) {
-      return;
-    }
-    _appData = _appData.copyWith(
-      studentMode: _appData.studentMode.copyWith(
-        schoolImportParserSettings: _appData
-            .studentMode
-            .schoolImportParserSettings
-            .copyWith(source: normalized),
-      ),
-    );
-    await _saveAndNotify();
-  }
-
   Future<void> updateCustomSchoolImportBaseUrl(String value) async {
     final normalized = value.trim();
     if (_appData.studentMode.schoolImportParserSettings.customBaseUrl ==
@@ -103,19 +87,21 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateCustomSchoolImportApiKey(String value) async {
     final normalized = value.trim();
-    if (_appData.studentMode.schoolImportParserSettings.customApiKey ==
-        normalized) {
+    final previous =
+        _appData.studentMode.schoolImportParserSettings.customApiKey;
+    if (previous == normalized) {
       return;
     }
-    _appData = _appData.copyWith(
-      studentMode: _appData.studentMode.copyWith(
-        schoolImportParserSettings: _appData
-            .studentMode
-            .schoolImportParserSettings
-            .copyWith(customApiKey: normalized),
-      ),
-    );
-    await _saveAndNotify();
+    if (!await _writeSecureCustomSchoolImportApiKey(normalized)) {
+      throw StateError('Unable to save custom school import API key.');
+    }
+    _appData = _withRuntimeCustomSchoolImportApiKey(_appData, normalized);
+    try {
+      await _saveAndNotify();
+    } catch (_) {
+      await _writeSecureCustomSchoolImportApiKey(previous);
+      rethrow;
+    }
   }
 
   Future<void> updateCustomSchoolImportModel(String value) async {
@@ -155,8 +141,24 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   Future<void> updateSchoolImportParserSettings(
     SchoolImportParserSettings settings,
   ) async {
+    final normalizedApiKey = settings.customApiKey.trim();
+    final previousApiKey =
+        _appData.studentMode.schoolImportParserSettings.customApiKey;
+    final apiKeyChanged = previousApiKey != normalizedApiKey;
+    if (apiKeyChanged) {
+      if (!await _writeSecureCustomSchoolImportApiKey(normalizedApiKey)) {
+        throw StateError('Unable to save custom school import API key.');
+      }
+    }
     _appData = _settings.updateSchoolImportParserSettings(_appData, settings);
-    await _saveAndNotify();
+    try {
+      await _saveAndNotify();
+    } catch (_) {
+      if (apiKeyChanged) {
+        await _writeSecureCustomSchoolImportApiKey(previousApiKey);
+      }
+      rethrow;
+    }
   }
 
   Future<void> updateLiveCourseOutlineColorValue(int colorValue) async {
