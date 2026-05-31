@@ -1213,7 +1213,13 @@
   "nextMonth": "Next month",
   "@nextMonth": {},
   "timeGridMinutes": "{minutes} min",
-  "@timeGridMinutes": {"placeholders":{"minutes":{"type":"int"}}},
+  "@timeGridMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "reminderInProgress": "In progress",
   "@reminderInProgress": {},
   "deleteCourseTitle": "Delete course",
@@ -1223,5 +1229,24 @@
   "showLunarCalendar": "Show lunar calendar",
   "@showLunarCalendar": {},
   "monthDayEvents": "{day}, {count} events",
-  "@monthDayEvents": {"placeholders":{"day":{"type":"int"},"count":{"type":"int"}}}
+  "@monthDayEvents": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultView": "Default view",
+  "@defaultView": {},
+  "generalDefaultViewSection": "Startup",
+  "@generalDefaultViewSection": {},
+  "generalScheduleDisplaySection": "Schedule display",
+  "@generalScheduleDisplaySection": {},
+  "generalTimeGridSection": "Time grid",
+  "@generalTimeGridSection": {},
+  "generalPopupSection": "Popup behavior",
+  "@generalPopupSection": {}
 }

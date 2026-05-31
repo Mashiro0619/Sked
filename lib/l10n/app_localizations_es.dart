@@ -1705,4 +1705,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String monthDayEvents(int day, int count) {
     return '$day, $count events';
   }
+
+  @override
+  String get defaultView => 'Default view';
+
+  @override
+  String get generalDefaultViewSection => 'Startup';
+
+  @override
+  String get generalScheduleDisplaySection => 'Schedule display';
+
+  @override
+  String get generalTimeGridSection => 'Time grid';
+
+  @override
+  String get generalPopupSection => 'Popup behavior';
 }

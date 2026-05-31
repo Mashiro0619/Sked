@@ -1240,5 +1240,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "defaultView": "預設視圖",
+  "@defaultView": {},
+  "generalDefaultViewSection": "啟動",
+  "@generalDefaultViewSection": {},
+  "generalScheduleDisplaySection": "日程顯示",
+  "@generalScheduleDisplaySection": {},
+  "generalTimeGridSection": "時間格線",
+  "@generalTimeGridSection": {},
+  "generalPopupSection": "彈窗行為",
+  "@generalPopupSection": {}
 }

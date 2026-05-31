@@ -3158,6 +3158,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{day}, {count} events'**
   String monthDayEvents(int day, int count);
+
+  /// No description provided for @defaultView.
+  ///
+  /// In en, this message translates to:
+  /// **'Default view'**
+  String get defaultView;
+
+  /// No description provided for @generalDefaultViewSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Startup'**
+  String get generalDefaultViewSection;
+
+  /// No description provided for @generalScheduleDisplaySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule display'**
+  String get generalScheduleDisplaySection;
+
+  /// No description provided for @generalTimeGridSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Time grid'**
+  String get generalTimeGridSection;
+
+  /// No description provided for @generalPopupSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Popup behavior'**
+  String get generalPopupSection;
 }
 
 class _AppLocalizationsDelegate

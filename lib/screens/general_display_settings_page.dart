@@ -20,41 +20,40 @@ class GeneralDisplaySettingsPage extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(
+              _SettingsSectionHeader(title: l10n.generalDefaultViewSection),
+              ListTile(
+                leading: const Icon(Icons.space_dashboard_outlined),
+                title: Text(l10n.defaultView),
+                trailing: DropdownButton<String>(
+                  value: provider.generalDefaultView,
+                  items: [
+                    DropdownMenuItem(
                       value: generalViewWeek,
-                      icon: const Icon(Icons.view_week_outlined),
-                      label: Text(l10n.viewWeek),
+                      child: Text(l10n.viewWeek),
                     ),
-                    ButtonSegment(
+                    DropdownMenuItem(
                       value: generalViewDay,
-                      icon: const Icon(Icons.view_day_outlined),
-                      label: Text(l10n.viewDay),
+                      child: Text(l10n.viewDay),
                     ),
-                    ButtonSegment(
+                    DropdownMenuItem(
                       value: generalViewList,
-                      icon: const Icon(Icons.list_alt_outlined),
-                      label: Text(l10n.viewList),
+                      child: Text(l10n.viewList),
                     ),
-                    ButtonSegment(
+                    DropdownMenuItem(
                       value: generalViewMonth,
-                      icon: const Icon(Icons.calendar_view_month_outlined),
-                      label: Text(l10n.viewMonth),
+                      child: Text(l10n.viewMonth),
                     ),
                   ],
-                  selected: {provider.generalDefaultView},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (selection) {
-                    provider.updateGeneralDisplaySettings(
-                      defaultView: selection.first,
-                    );
+                  onChanged: (value) {
+                    if (value != null) {
+                      provider.updateGeneralDisplaySettings(defaultView: value);
+                    }
                   },
                 ),
               ),
+              _SettingsSectionHeader(title: l10n.generalScheduleDisplaySection),
               SwitchListTile(
+                secondary: const Icon(Icons.weekend_outlined),
                 title: Text(l10n.showWeekends),
                 value: provider.generalShowWeekends,
                 onChanged: (value) =>
@@ -62,12 +61,14 @@ class GeneralDisplaySettingsPage extends StatelessWidget {
               ),
               if (localeCode == 'zh' || localeCode == 'zh-Hant')
                 SwitchListTile(
+                  secondary: const Icon(Icons.brightness_2_outlined),
                   title: Text(l10n.showLunarCalendar),
                   value: provider.generalShowLunarCalendar,
                   onChanged: (value) => provider.updateGeneralDisplaySettings(
                     showLunarCalendar: value,
                   ),
                 ),
+              _SettingsSectionHeader(title: l10n.generalTimeGridSection),
               _HourTile(
                 title: l10n.startHour,
                 value: provider.generalDayStartHour,
@@ -112,8 +113,9 @@ class GeneralDisplaySettingsPage extends StatelessWidget {
                   },
                 ),
               ),
-              const Divider(height: 24),
+              _SettingsSectionHeader(title: l10n.generalPopupSection),
               SwitchListTile(
+                secondary: const Icon(Icons.open_in_full_outlined),
                 title: Text(l10n.closePopupOnOutsideTap),
                 value: provider.closeGeneralEventPopupOnOutsideTap,
                 onChanged: (value) => provider.updateGeneralDisplaySettings(
@@ -124,6 +126,25 @@ class GeneralDisplaySettingsPage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _SettingsSectionHeader extends StatelessWidget {
+  const _SettingsSectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 6),
+      child: Text(
+        title,
+        style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+      ),
     );
   }
 }

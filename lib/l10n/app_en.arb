@@ -1238,5 +1238,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "defaultView": "Default view",
+  "@defaultView": {},
+  "generalDefaultViewSection": "Startup",
+  "@generalDefaultViewSection": {},
+  "generalScheduleDisplaySection": "Schedule display",
+  "@generalScheduleDisplaySection": {},
+  "generalTimeGridSection": "Time grid",
+  "@generalTimeGridSection": {},
+  "generalPopupSection": "Popup behavior",
+  "@generalPopupSection": {}
 }

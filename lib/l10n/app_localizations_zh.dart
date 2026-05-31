@@ -1620,6 +1620,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String monthDayEvents(int day, int count) {
     return '$day日，$count 个事件';
   }
+
+  @override
+  String get defaultView => '默认视图';
+
+  @override
+  String get generalDefaultViewSection => '启动';
+
+  @override
+  String get generalScheduleDisplaySection => '日程显示';
+
+  @override
+  String get generalTimeGridSection => '时间网格';
+
+  @override
+  String get generalPopupSection => '弹窗行为';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3238,4 +3253,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String monthDayEvents(int day, int count) {
     return '$day日，$count 個事件';
   }
+
+  @override
+  String get defaultView => '預設視圖';
+
+  @override
+  String get generalDefaultViewSection => '啟動';
+
+  @override
+  String get generalScheduleDisplaySection => '日程顯示';
+
+  @override
+  String get generalTimeGridSection => '時間格線';
+
+  @override
+  String get generalPopupSection => '彈窗行為';
 }

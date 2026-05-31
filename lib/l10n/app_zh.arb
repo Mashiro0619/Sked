@@ -1238,5 +1238,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "defaultView": "默认视图",
+  "@defaultView": {},
+  "generalDefaultViewSection": "启动",
+  "@generalDefaultViewSection": {},
+  "generalScheduleDisplaySection": "日程显示",
+  "@generalScheduleDisplaySection": {},
+  "generalTimeGridSection": "时间网格",
+  "@generalTimeGridSection": {},
+  "generalPopupSection": "弹窗行为",
+  "@generalPopupSection": {}
 }
