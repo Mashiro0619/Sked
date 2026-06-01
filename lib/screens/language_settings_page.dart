@@ -13,8 +13,6 @@ class LanguageSettingsPage extends StatefulWidget {
 }
 
 class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
-  String _query = '';
-  bool _isSearchVisible = false;
   bool _isSelectingLanguage = false;
   bool _languageSelectionPopped = false;
 
@@ -23,120 +21,88 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
         final l10n = AppLocalizations.of(context);
-        final colorScheme = Theme.of(context).colorScheme;
         final languageOptions = supportedLanguageOptions(l10n);
         final currentCode = normalizeLocaleCode(provider.localeCode);
-        final normalizedQuery = _query.trim().toLowerCase();
-        final filteredOptions = languageOptions.where((option) {
-          if (normalizedQuery.isEmpty) {
-            return true;
-          }
-          return option.nativeName.toLowerCase().contains(normalizedQuery) ||
-              option.localizedName.toLowerCase().contains(normalizedQuery) ||
-              option.englishName.toLowerCase().contains(normalizedQuery) ||
-              option.code.toLowerCase().contains(normalizedQuery);
-        }).toList();
+        final searchViewMinWidth = MediaQuery.sizeOf(
+          context,
+        ).width.clamp(0.0, 320.0).toDouble();
         return Scaffold(
           appBar: AppBar(
             title: Text(l10n.language),
             actions: [
-              IconButton(
-                tooltip: _isSearchVisible
-                    ? MaterialLocalizations.of(context).closeButtonTooltip
-                    : MaterialLocalizations.of(context).searchFieldLabel,
-                onPressed: () {
-                  setState(() {
-                    _isSearchVisible = !_isSearchVisible;
-                    if (!_isSearchVisible) {
-                      _query = '';
-                    }
-                  });
+              SearchAnchor(
+                viewHintText: l10n.language,
+                shrinkWrap: false,
+                viewConstraints: BoxConstraints(
+                  minWidth: searchViewMinWidth,
+                  maxWidth: 520,
+                ),
+                viewBuilder: (suggestions) {
+                  return Builder(
+                    builder: (context) {
+                      return MediaQuery.removePadding(
+                        context: context,
+                        removeTop: true,
+                        child: ListView(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.viewInsetsOf(context).bottom,
+                          ),
+                          children: suggestions.toList(),
+                        ),
+                      );
+                    },
+                  );
                 },
-                icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+                builder: (context, controller) {
+                  return IconButton(
+                    tooltip: MaterialLocalizations.of(context).searchFieldLabel,
+                    onPressed: controller.openView,
+                    icon: const Icon(Icons.search),
+                  );
+                },
+                suggestionsBuilder: (context, controller) {
+                  final results = _filterLanguageOptions(
+                    languageOptions,
+                    controller.text,
+                  );
+                  return [
+                    for (final option in results)
+                      _LanguageOptionTile(
+                        key: ValueKey('language-search-option-${option.code}'),
+                        option: option,
+                        selected: option.code == currentCode,
+                        onTap: _isSelectingLanguage || _languageSelectionPopped
+                            ? null
+                            : () {
+                                controller.closeView(option.nativeName);
+                                _selectLanguage(context, provider, option.code);
+                              },
+                      ),
+                  ];
+                },
               ),
             ],
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              if (_isSearchVisible) ...[
-                Theme(
-                  data: Theme.of(context).copyWith(
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    hoverColor: Colors.transparent,
-                  ),
-                  child: SearchBar(
-                    hintText: l10n.language,
-                    leading: Icon(
-                      Icons.search,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    trailing: _query.isEmpty
-                        ? null
-                        : [
-                            IconButton(
-                              tooltip: MaterialLocalizations.of(
-                                context,
-                              ).clearButtonTooltip,
-                              onPressed: () => setState(() => _query = ''),
-                              icon: Icon(
-                                Icons.close,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                    backgroundColor: const WidgetStatePropertyAll(
-                      Colors.transparent,
-                    ),
-                    overlayColor: const WidgetStatePropertyAll(
-                      Colors.transparent,
-                    ),
-                    shadowColor: const WidgetStatePropertyAll(
-                      Colors.transparent,
-                    ),
-                    surfaceTintColor: const WidgetStatePropertyAll(
-                      Colors.transparent,
-                    ),
-                    shape: const WidgetStatePropertyAll(
-                      RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                    ),
-                    side: const WidgetStatePropertyAll(BorderSide.none),
-                    elevation: const WidgetStatePropertyAll(0),
-                    textStyle: WidgetStatePropertyAll(
-                      TextStyle(color: colorScheme.onSurface),
-                    ),
-                    hintStyle: WidgetStatePropertyAll(
-                      TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                    onChanged: (value) => setState(() => _query = value),
-                    textInputAction: TextInputAction.search,
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              Card.outlined(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    for (
-                      var index = 0;
-                      index < filteredOptions.length;
-                      index++
-                    ) ...[
+                    for (final option in languageOptions)
                       _LanguageOptionTile(
-                        option: filteredOptions[index],
-                        selected: filteredOptions[index].code == currentCode,
+                        key: ValueKey('language-option-${option.code}'),
+                        option: option,
+                        selected: option.code == currentCode,
                         onTap: _isSelectingLanguage || _languageSelectionPopped
                             ? null
                             : () => _selectLanguage(
                                 context,
                                 provider,
-                                filteredOptions[index].code,
+                                option.code,
                               ),
                       ),
-                      if (index != filteredOptions.length - 1)
-                        const Divider(height: 1),
-                    ],
                   ],
                 ),
               ),
@@ -145,6 +111,22 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         );
       },
     );
+  }
+
+  List<AppLanguageOption> _filterLanguageOptions(
+    List<AppLanguageOption> options,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) {
+      return options;
+    }
+    return options.where((option) {
+      return option.nativeName.toLowerCase().contains(normalizedQuery) ||
+          option.localizedName.toLowerCase().contains(normalizedQuery) ||
+          option.englishName.toLowerCase().contains(normalizedQuery) ||
+          option.code.toLowerCase().contains(normalizedQuery);
+    }).toList();
   }
 
   Future<void> _selectLanguage(
@@ -182,6 +164,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
 
 class _LanguageOptionTile extends StatelessWidget {
   const _LanguageOptionTile({
+    super.key,
     required this.option,
     required this.selected,
     required this.onTap,
@@ -193,15 +176,66 @@ class _LanguageOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      title: Text(option.nativeName),
-      subtitle: option.localizedName == option.nativeName
-          ? null
-          : Text(option.localizedName),
-      trailing: selected ? Icon(Icons.check, color: colorScheme.primary) : null,
-      onTap: onTap,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final foreground = selected ? colorScheme.primary : colorScheme.onSurface;
+    final subtitleColor = selected
+        ? colorScheme.primary
+        : colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Material(
+        color: selected
+            ? colorScheme.primary.withValues(alpha: 0.12)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        option.nativeName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: foreground,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      if (option.localizedName != option.nativeName) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          option.localizedName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: subtitleColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (selected) ...[
+                  const SizedBox(width: 12),
+                  Icon(Icons.check, color: colorScheme.primary),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ import '../screens/school_html_import_page.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
 import '../utils/platform_capabilities.dart';
+import '../widgets/expressive_empty_state.dart';
 
 class SchoolWebImportPage extends StatefulWidget {
   const SchoolWebImportPage({super.key, required this.site});
@@ -213,12 +214,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   }
 
   Widget _buildMessage(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(message, textAlign: TextAlign.center),
-      ),
-    );
+    return ExpressiveEmptyState(icon: Icons.language_outlined, title: message);
   }
 
   Future<void> _loadSchools() async {

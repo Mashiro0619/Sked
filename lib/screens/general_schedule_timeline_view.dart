@@ -616,7 +616,7 @@ class _DayWeekPickerRow extends StatelessWidget {
                         ? _generalDayPickerSelectionIndicatorKey
                         : null,
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
+                      color: colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
@@ -678,12 +678,10 @@ class _DayPickerItem extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isToday = _sameDay(date, DateTime.now());
-    final foreground = selected
-        ? colorScheme.onPrimaryContainer
-        : colorScheme.onSurface;
+    final foreground = selected ? colorScheme.primary : colorScheme.onSurface;
     return Material(
       color: isToday && !selected
-          ? colorScheme.secondaryContainer.withAlpha(130)
+          ? colorScheme.primary.withValues(alpha: 0.08)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,
@@ -1126,30 +1124,37 @@ class _DayHeader extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: selected
-                  ? theme.colorScheme.primaryContainer
+                  ? theme.colorScheme.primary.withValues(alpha: 0.12)
                   : isToday
-                  ? theme.colorScheme.secondaryContainer.withAlpha(120)
+                  ? theme.colorScheme.primary.withValues(alpha: 0.08)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _weekdayLabel(context, date),
-                    style: theme.textTheme.labelMedium,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    date.day.toString(),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: selected || isToday
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _weekdayLabel(context, date),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      date.day.toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: selected || isToday
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

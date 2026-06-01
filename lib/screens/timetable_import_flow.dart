@@ -7,6 +7,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/text_file_picker.dart';
 import '../services/timetable_json_import_service.dart';
+import '../widgets/expressive_dialog.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import 'school_sites_page.dart';
 
@@ -88,7 +89,7 @@ class TimetableImportFlow {
 
     var mode = TimetableImportMode.addAsNew;
     if (selectedIds.length == 1 && provider.activeTimetableOrNull != null) {
-      final pickedMode = await showDialog<TimetableImportMode>(
+      final pickedMode = await showExpressiveDialog<TimetableImportMode>(
         context: context,
         builder: (context) {
           final l10n = AppLocalizations.of(context);
@@ -191,7 +192,7 @@ class TimetableImportFlow {
     final dialogBody = canDiscardBundledSets
         ? l10n.importPeriodTimeSetDialogBody
         : '${l10n.importPeriodTimeSetDialogBody}\n\n${l10n.importDiscardPeriodTimeSetUnavailable}';
-    final result = await showDialog<bool>(
+    final result = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -257,7 +258,7 @@ class TimetableImportFlow {
     if (draft.isEmpty && timetables.isNotEmpty) {
       draft.add(timetables.first.id);
     }
-    return showDialog<List<String>>(
+    return showExpressiveDialog<List<String>>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -272,8 +273,8 @@ class TimetableImportFlow {
 
             return AlertDialog(
               title: Text(title),
-              content: SizedBox(
-                width: 360,
+              content: ExpressiveDialogContent(
+                maxWidth: 420,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -306,22 +307,15 @@ class TimetableImportFlow {
                         itemBuilder: (context, index) {
                           final timetable = timetables[index];
                           final selected = draft.contains(timetable.id);
-                          return ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            tileColor: selected
-                                ? Theme.of(
-                                    context,
-                                  ).colorScheme.secondaryContainer
-                                : null,
+                          return ExpressiveDialogOption(
+                            selected: selected,
+                            leading: const Icon(Icons.table_chart_outlined),
                             title: Text(timetable.config.name),
                             subtitle: Text(
                               l10n.timetableCourseCount(
                                 timetable.courses.length,
                               ),
                             ),
-                            trailing: selected ? const Icon(Icons.check) : null,
                             onTap: () {
                               setState(() {
                                 if (selected) {

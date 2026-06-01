@@ -180,6 +180,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTitle => 'Настройки';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'Для настройки сейчас нет доступного расписания.';
 

@@ -26,22 +26,27 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://sheet-test';
 }
 
-SchoolImportResponse _buildResponse({bool withCourses = true}) {
+SchoolImportResponse _buildResponse({
+  bool withCourses = true,
+  String name = 'Sample',
+  SchoolImportMeta meta = const SchoolImportMeta(
+    sourceUrl: '',
+    pageTitle: '',
+    parser: '',
+    warnings: [],
+  ),
+  ImportedPeriodTimeSetDraft periodTimeSet = const ImportedPeriodTimeSetDraft(
+    name: '',
+    periodTimes: [],
+  ),
+}) {
   return SchoolImportResponse(
-    meta: const SchoolImportMeta(
-      sourceUrl: '',
-      pageTitle: '',
-      parser: '',
-      warnings: [],
-    ),
+    meta: meta,
     timetable: SchoolImportTimetableDraft(
-      name: 'Sample',
+      name: name,
       startDate: DateTime(2026, 5, 25),
       totalWeeks: 18,
-      periodTimeSet: const ImportedPeriodTimeSetDraft(
-        name: '',
-        periodTimes: [],
-      ),
+      periodTimeSet: periodTimeSet,
       courses: withCourses
           ? const [
               ImportedCourseDraft(
@@ -75,6 +80,66 @@ Future<TimetableProvider> _createProvider() async {
 }
 
 void main() {
+  testWidgets('preview cards fit compact phone width with long text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider();
+    final periodTimeSets = provider.periodTimeSets;
+    final response = _buildResponse(
+      name:
+          'Imported timetable with a very long academic program name and cohort',
+      meta: const SchoolImportMeta(
+        sourceUrl: '',
+        pageTitle:
+            'Very long school portal page title for preview layout verification',
+        parser:
+            'Custom parser configuration with a verbose model and provider name',
+        warnings: [
+          'One imported row had an unusually long note and was normalized.',
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () async {
+                  await showModalBottomSheet<SchoolImportApplyRequest>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => SchoolWebImportResultSheet(
+                      response: response,
+                      canReplaceCurrent: true,
+                      periodTimeSets: periodTimeSets,
+                      initialPeriodTimeSetId: periodTimeSets.first.id,
+                      provider: provider,
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('double-tap on import only emits a single apply request', (
     tester,
   ) async {
@@ -326,7 +391,9 @@ void main() {
     final l10n = AppLocalizations.of(
       tester.element(find.byType(SchoolWebImportResultSheet)),
     );
-    final startDateTile = find.widgetWithText(ListTile, l10n.semesterStartDate);
+    final startDateTile = find.byKey(
+      const ValueKey('school-import-start-date-tile'),
+    );
     expect(startDateTile, findsOneWidget);
 
     await tester.tap(startDateTile);

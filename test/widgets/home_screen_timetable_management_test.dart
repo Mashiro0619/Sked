@@ -147,6 +147,57 @@ AppData _buildMultiTimetableStudentData() {
   );
 }
 
+AppData _buildLongCourseStudentData() {
+  final periodTimes = buildDefaultPeriodTimes();
+  final timetable = TimetableData(
+    id: 'table-long',
+    config: TimetableConfig(
+      name: 'A very long timetable name that should stay inside the app bar',
+      startDate: DateTime(2026, 5, 25),
+      totalWeeks: 18,
+      periodTimeSetId: defaultPeriodTimeSetId,
+    ),
+    courses: [
+      CourseItem(
+        id: 'course-long',
+        name:
+            'Advanced interdisciplinary seminar with an extremely long course name',
+        teacher: 'Professor With A Very Long Display Name',
+        location: 'Building Alpha Room 123 With Additional Location Notes',
+        dayOfWeek: 1,
+        semesterWeeks: buildAllSemesterWeeks(18),
+        periods: const [1, 2],
+        startMinutes: periodTimes[0].startMinutes,
+        endMinutes: periodTimes[1].endMinutes,
+        timeRange: buildTimeRange(
+          periodTimes[0].startMinutes,
+          periodTimes[1].endMinutes,
+        ),
+        credit: 0,
+        remarks: '',
+        customFields: const {},
+      ),
+    ],
+  );
+  return buildInitialAppData(
+    periodTimes,
+    localeCode: defaultLocaleCode,
+  ).copyWith(
+    activeMode: AppMode.student,
+    studentMode: StudentModeData(
+      activeTimetableId: timetable.id,
+      timetables: [timetable],
+      periodTimeSets: [
+        PeriodTimeSet(
+          id: defaultPeriodTimeSetId,
+          name: 'Default',
+          periodTimes: periodTimes,
+        ),
+      ],
+    ),
+  );
+}
+
 Future<TimetableProvider> _createProvider() async {
   final data = _buildPopulatedStudentData();
   final provider = TimetableProvider(
@@ -243,6 +294,10 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 }
 
+String _selectedWeekTitle(TimetableProvider provider) {
+  return 'Week ${provider.selectedWeek}';
+}
+
 void main() {
   testWidgets('privacy consent waits for save before closing', (tester) async {
     final storage = _BlockingTimetableStorage(
@@ -305,7 +360,7 @@ void main() {
     await tester.tap(find.byTooltip('Edit timetable'));
     await tester.pumpAndSettle();
 
-    final startDateTile = find.widgetWithText(ListTile, 'Semester start date');
+    final startDateTile = find.text('Semester start date');
     expect(startDateTile, findsOneWidget);
 
     await tester.tap(startDateTile);
@@ -340,10 +395,35 @@ void main() {
     expect(find.text('Add course'), findsWidgets);
   });
 
-  testWidgets('week picker ignores rapid duplicate title taps', (tester) async {
-    await _pumpHomeScreen(tester);
+  testWidgets('student timetable fits narrow width with long course text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final weekTitle = find.text('Week 1');
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildLongCourseStudentData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+    );
+    await provider.load();
+
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(
+      find.text(
+        'Advanced interdisciplinary seminar with an extremely long course name',
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('week picker ignores rapid duplicate title taps', (tester) async {
+    final provider = await _pumpHomeScreen(tester);
+
+    final weekTitle = find.text(_selectedWeekTitle(provider));
     expect(weekTitle, findsOneWidget);
 
     await tester.tap(weekTitle);
@@ -380,7 +460,7 @@ void main() {
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(1));
-    expect(find.text('Week 1'), findsOneWidget);
+    expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
   });
 
   testWidgets('drawer new timetable ignores rapid duplicate taps', (
@@ -467,7 +547,7 @@ void main() {
     await tester.tap(find.text('Open home host'));
     await _pumpRouteTransition(tester);
 
-    expect(find.text('Week 1'), findsOneWidget);
+    expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
 
     final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
     scaffoldState.openDrawer();
@@ -482,7 +562,7 @@ void main() {
 
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(Drawer), findsNothing);
-    expect(find.text('Week 1'), findsOneWidget);
+    expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
     expect(find.text('Open home host'), findsNothing);
     expect(find.text('Open home host', skipOffstage: false), findsOneWidget);
   });

@@ -4,13 +4,14 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/period_times_page.dart';
+import 'expressive_dialog.dart';
 
 Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
   required TimetableProvider provider,
   required String selectedPeriodTimeSetId,
 }) {
-  return showDialog<String>(
+  return showExpressiveDialog<String>(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) {
@@ -54,27 +55,32 @@ Future<String?> showPeriodTimeSetPickerDialog(
           return PopScope(
             canPop: !busy && !popped,
             child: AlertDialog(
-              title: Row(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(child: Text(l10n.selectPeriodTimeSet)),
-                  TextButton.icon(
-                    onPressed: (busy || popped)
-                        ? null
-                        : () => runBusy(() async {
-                            final created = await provider.addPeriodTimeSet();
-                            if (!dialogContext.mounted || popped) {
-                              return;
-                            }
-                            currentSelectedId = created.id;
-                            await openPeriodTimePage(created.id);
-                          }),
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.newItem),
+                  Text(l10n.selectPeriodTimeSet),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton.icon(
+                      onPressed: (busy || popped)
+                          ? null
+                          : () => runBusy(() async {
+                              final created = await provider.addPeriodTimeSet();
+                              if (!dialogContext.mounted || popped) {
+                                return;
+                              }
+                              currentSelectedId = created.id;
+                              await openPeriodTimePage(created.id);
+                            }),
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.newItem),
+                    ),
                   ),
                 ],
               ),
-              content: SizedBox(
-                width: 420,
+              content: ExpressiveDialogContent(
+                maxWidth: 420,
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: provider.periodTimeSets.length,
@@ -82,13 +88,9 @@ Future<String?> showPeriodTimeSetPickerDialog(
                   itemBuilder: (context, index) {
                     final item = provider.periodTimeSets[index];
                     final selected = item.id == currentSelectedId;
-                    return ListTile(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      tileColor: selected
-                          ? Theme.of(context).colorScheme.secondaryContainer
-                          : null,
+                    return ExpressiveDialogOption(
+                      selected: selected,
+                      leading: const Icon(Icons.schedule_outlined),
                       title: Text(item.name),
                       subtitle: Text(
                         l10n.periodTimeSetSummary(
@@ -114,7 +116,8 @@ Future<String?> showPeriodTimeSetPickerDialog(
                               }),
                         icon: const Icon(Icons.edit_outlined),
                       ),
-                      onTap: (busy || popped) ? null : () => popOnce(item.id),
+                      onTap: () => popOnce(item.id),
+                      enabled: !(busy || popped),
                     );
                   },
                 ),

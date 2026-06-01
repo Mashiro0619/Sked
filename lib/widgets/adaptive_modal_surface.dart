@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_motion.dart';
 import 'app_layout_tokens.dart';
 
 class AdaptiveModalSurface extends StatefulWidget {
@@ -53,18 +54,46 @@ class _AdaptiveModalSurfaceState extends State<AdaptiveModalSurface> {
               constraints: BoxConstraints(
                 maxWidth: isDesktopLike ? widget.maxWidth : width,
               ),
-              child: Material(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadii.sheet),
+              child: _AdaptiveModalMotion(
+                child: Material(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppRadii.sheet),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: widget.child,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: widget.child,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AdaptiveModalMotion extends StatelessWidget {
+  const _AdaptiveModalMotion({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return child;
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.985, end: 1),
+      duration: AppMotion.medium,
+      curve: AppMotion.enter,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          alignment: Alignment.bottomCenter,
+          child: child,
+        );
+      },
+      child: child,
     );
   }
 }

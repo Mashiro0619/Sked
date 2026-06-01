@@ -184,43 +184,38 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                     ),
                     const SizedBox(height: 8),
                     for (final item in otherConflictCourses)
-                      Card.outlined(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          title: Text(item.name),
-                          subtitle: Text(
-                            '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${item.timeRange}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
-                          ),
-                          trailing: Wrap(
-                            spacing: 4,
-                            children: [
-                              if (widget.onSelectDisplayedCourse != null)
-                                IconButton(
-                                  tooltip: l10n.setAsDisplayed,
-                                  onPressed: _actionInProgress
-                                      ? null
-                                      : () => _runAction(
-                                          () => widget.onSelectDisplayedCourse!(
-                                            item,
-                                          ),
-                                          resetOnSuccess: false,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _ConflictCourseCard(
+                          title: item.name,
+                          subtitle:
+                              '${item.location.isEmpty ? l10n.locationNotFilled : item.location} · ${item.timeRange}${item.periods.isEmpty ? '' : ' · ${_formatPeriodsLabel(l10n, item.periods)}'}',
+                          actions: [
+                            if (widget.onSelectDisplayedCourse != null)
+                              IconButton(
+                                tooltip: l10n.setAsDisplayed,
+                                onPressed: _actionInProgress
+                                    ? null
+                                    : () => _runAction(
+                                        () => widget.onSelectDisplayedCourse!(
+                                          item,
                                         ),
-                                  icon: const Icon(Icons.visibility_outlined),
-                                ),
-                              if (widget.onEditConflictCourse != null)
-                                IconButton(
-                                  tooltip: l10n.editThisCourse,
-                                  onPressed: _actionInProgress
-                                      ? null
-                                      : () => _runAction(
-                                          () => widget.onEditConflictCourse!(
-                                            item,
-                                          ),
-                                        ),
-                                  icon: const Icon(Icons.edit_outlined),
-                                ),
-                            ],
-                          ),
+                                        resetOnSuccess: false,
+                                      ),
+                                icon: const Icon(Icons.visibility_outlined),
+                              ),
+                            if (widget.onEditConflictCourse != null)
+                              IconButton(
+                                tooltip: l10n.editThisCourse,
+                                onPressed: _actionInProgress
+                                    ? null
+                                    : () => _runAction(
+                                        () =>
+                                            widget.onEditConflictCourse!(item),
+                                      ),
+                                icon: const Icon(Icons.edit_outlined),
+                              ),
+                          ],
                         ),
                       ),
                   ],
@@ -362,13 +357,13 @@ class _PrimaryInfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withValues(alpha: 0.65),
+        color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: colorScheme.onSecondaryContainer),
+          Icon(icon, color: colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -381,6 +376,85 @@ class _PrimaryInfoCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ConflictCourseCard extends StatelessWidget {
+  const _ConflictCourseCard({
+    required this.title,
+    required this.subtitle,
+    required this.actions,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final textBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+    final actionWrap = Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      alignment: WrapAlignment.end,
+      children: actions,
+    );
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (actions.isEmpty) {
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8),
+                child: textBlock,
+              );
+            }
+            if (constraints.maxWidth < 360) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: textBlock,
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: actionWrap,
+                  ),
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: textBlock),
+                const SizedBox(width: 8),
+                actionWrap,
+              ],
+            );
+          },
+        ),
       ),
     );
   }

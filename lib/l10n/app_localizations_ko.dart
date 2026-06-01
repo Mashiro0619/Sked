@@ -178,6 +178,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsTitle => '설정';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings => '설정할 수 있는 시간표가 현재 없습니다.';
 
   @override

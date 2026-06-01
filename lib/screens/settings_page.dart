@@ -16,7 +16,11 @@ import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
+import '../theme/app_motion.dart';
+import '../widgets/expressive_dialog.dart';
+import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
+import '../widgets/settings_list.dart';
 import 'general_display_settings_page.dart';
 import 'language_settings_page.dart';
 import 'school_html_import_page.dart';
@@ -146,7 +150,7 @@ class AppUpdateCoordinator {
   }) {
     final l10n = AppLocalizations.of(context);
     final updateContent = result.updateContent.trim();
-    return showDialog<_UpdateAction>(
+    return showExpressiveDialog<_UpdateAction>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -199,7 +203,7 @@ class AppUpdateCoordinator {
     required bool showIgnoreButton,
   }) {
     final l10n = AppLocalizations.of(context);
-    return showDialog<_UpdateAction>(
+    return showExpressiveDialog<_UpdateAction>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -357,186 +361,141 @@ class _SettingsPageState extends State<SettingsPage> {
         return Scaffold(
           appBar: AppBar(title: Text(l10n.settingsTitle)),
           body: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
               if (provider.lastRecoveryStatus != RecoveryStatus.none) ...[
                 _RecoveryNoticeTile(status: provider.lastRecoveryStatus),
-                Divider(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withValues(alpha: 0.35),
-                ),
+                const SizedBox(height: 8),
               ],
               if (provider.isStudentMode) ...[
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                SettingsSectionHeader(title: l10n.settingsSectionTimetable),
+                SettingsListTile(
                   leading: const Icon(Icons.schedule_outlined),
-                  title: Text(l10n.periodTimeSets),
-                  subtitle: Text(
-                    selectedSet == null
-                        ? l10n.noPeriodTimeAvailable
-                        : l10n.periodTimeSetSummary(
-                            selectedSet.name,
-                            selectedSet.periodTimes.length,
-                          ),
-                  ),
+                  title: l10n.periodTimeSets,
+                  subtitle: selectedSet == null
+                      ? l10n.noPeriodTimeAvailable
+                      : l10n.periodTimeSetSummary(
+                          selectedSet.name,
+                          selectedSet.periodTimes.length,
+                        ),
                   trailing: const Icon(Icons.keyboard_arrow_down),
                   onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
                       ? null
                       : () => _pickPeriodTimeSet(provider, timetable!.config),
                 ),
-                Divider(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withValues(alpha: 0.35),
-                ),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                SettingsListTile(
                   leading: const Icon(Icons.language_outlined),
-                  title: Text(l10n.schoolWebImportEntry),
-                  subtitle: Text(l10n.schoolWebImportEntryDesc),
+                  title: l10n.schoolWebImportEntry,
+                  subtitle: l10n.schoolWebImportEntryDesc,
+                  trailing: const Icon(Icons.keyboard_arrow_right),
                   onTap: _isFlowOpen(_SettingsFlow.schoolSitesPage)
                       ? null
                       : () => _openSchoolSitesPage(provider),
                 ),
-                Divider(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withValues(alpha: 0.35),
-                ),
               ],
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                leading: const Icon(Icons.palette_outlined),
-                title: Text(l10n.theme),
-                subtitle: Text(
-                  '${switch (provider.themeMode) {
-                    'dark' => l10n.themeDark,
-                    'system' => l10n.themeFollowSystem,
-                    _ => l10n.themeLight,
-                  }} · ${provider.themeColorMode == themeColorModeColorful ? l10n.themeColorModeColorful : l10n.themeColorModeSingle}',
-                ),
-                trailing: const Icon(Icons.keyboard_arrow_right),
-                onTap: _isFlowOpen(_SettingsFlow.themeSettingsPage)
-                    ? null
-                    : () => _openThemeSettingsPage(provider),
-              ),
-              Divider(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outlineVariant.withValues(alpha: 0.35),
-              ),
               if (provider.isStudentMode) ...[
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                SettingsListTile(
                   leading: const Icon(Icons.grid_view_outlined),
-                  title: Text(l10n.timetableDisplaySettings),
-                  subtitle: Text(l10n.timetableDisplaySettingsDesc),
+                  title: l10n.timetableDisplaySettings,
+                  subtitle: l10n.timetableDisplaySettingsDesc,
                   trailing: const Icon(Icons.keyboard_arrow_right),
                   onTap: _isFlowOpen(_SettingsFlow.timetableDisplaySettingsPage)
                       ? null
                       : () => _openTimetableDisplaySettingsPage(provider),
                 ),
-                Divider(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withValues(alpha: 0.35),
+                SettingsListTile(
+                  leading: const Icon(Icons.import_export),
+                  title: l10n.dataImportExport,
+                  subtitle: l10n.dataImportExportDesc,
+                  trailing: const Icon(Icons.keyboard_arrow_up),
+                  onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
+                      ? null
+                      : () => _showDataActions(provider),
                 ),
               ],
               if (provider.isGeneralMode) ...[
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                SettingsSectionHeader(
+                  title: l10n.settingsSectionGeneralSchedule,
+                ),
+                SettingsListTile(
                   leading: const Icon(Icons.grid_view_outlined),
-                  title: Text(l10n.generalDisplaySettings),
-                  subtitle: Text(l10n.generalDisplaySettingsDesc),
+                  title: l10n.generalDisplaySettings,
+                  subtitle: l10n.generalDisplaySettingsDesc,
                   trailing: const Icon(Icons.keyboard_arrow_right),
                   onTap: _isFlowOpen(_SettingsFlow.generalDisplaySettingsPage)
                       ? null
                       : () => _openGeneralDisplaySettingsPage(provider),
                 ),
-                Divider(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outlineVariant.withValues(alpha: 0.35),
-                ),
-              ],
-              if (provider.isStudentMode)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                SettingsListTile(
                   leading: const Icon(Icons.import_export),
-                  title: Text(l10n.dataImportExport),
-                  subtitle: Text(l10n.dataImportExportDesc),
-                  onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
-                      ? null
-                      : () => _showDataActions(provider),
-                ),
-              if (provider.isGeneralMode)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  leading: const Icon(Icons.import_export),
-                  title: Text(l10n.generalScheduleImportExport),
-                  subtitle: Text(l10n.generalScheduleImportExportDesc),
+                  title: l10n.generalScheduleImportExport,
+                  subtitle: l10n.generalScheduleImportExportDesc,
+                  trailing: const Icon(Icons.keyboard_arrow_up),
                   onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
                       ? null
                       : () => _showGeneralDataActions(provider),
                 ),
-              Divider(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outlineVariant.withValues(alpha: 0.35),
+              ],
+              SettingsSectionHeader(title: l10n.settingsSectionAppearance),
+              SettingsListTile(
+                leading: const Icon(Icons.palette_outlined),
+                title: l10n.theme,
+                subtitle: _themeSettingsSummary(provider, l10n),
+                trailing: const Icon(Icons.keyboard_arrow_right),
+                onTap: _isFlowOpen(_SettingsFlow.themeSettingsPage)
+                    ? null
+                    : () => _openThemeSettingsPage(provider),
               ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              SettingsListTile(
                 leading: const Icon(Icons.translate_outlined),
-                title: Text(l10n.language),
-                subtitle: Text(currentLanguageLabel),
+                title: l10n.language,
+                subtitle: currentLanguageLabel,
                 trailing: const Icon(Icons.keyboard_arrow_right),
                 onTap: _isFlowOpen(_SettingsFlow.languageSettingsPage)
                     ? null
                     : () => _openLanguageSettingsPage(provider),
               ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              SettingsSectionHeader(title: l10n.settingsSectionApp),
+              SettingsListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
-                title: Text(l10n.privacyPolicyTitle),
-                subtitle: Text(
-                  provider.acceptedPrivacyPolicyVersion == null
-                      ? l10n.privacyPolicyEntryDesc
-                      : l10n.privacyPolicyAcceptedVersionLabel(
-                          provider.acceptedPrivacyPolicyVersion!,
-                        ),
-                ),
+                title: l10n.privacyPolicyTitle,
+                subtitle: provider.acceptedPrivacyPolicyVersion == null
+                    ? l10n.privacyPolicyEntryDesc
+                    : l10n.privacyPolicyAcceptedVersionLabel(
+                        provider.acceptedPrivacyPolicyVersion!,
+                      ),
+                trailing: const Icon(Icons.keyboard_arrow_right),
                 onTap: _isFlowOpen(_SettingsFlow.privacyPolicy)
                     ? null
                     : _openPrivacyPolicyPage,
               ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              SettingsListTile(
                 leading: const Icon(Icons.description_outlined),
-                title: Text(l10n.openSourceLicenses),
-                subtitle: Text(l10n.openSourceLicensesDesc),
+                title: l10n.openSourceLicenses,
+                subtitle: l10n.openSourceLicensesDesc,
+                trailing: const Icon(Icons.keyboard_arrow_right),
                 onTap: _isFlowOpen(_SettingsFlow.licensesPage)
                     ? null
                     : _openLicensesPage,
               ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              SettingsListTile(
                 leading: const Icon(Icons.update_outlined),
-                title: Text(l10n.checkForUpdates),
-                subtitle: Text(_buildUpdateSubtitle(provider, l10n)),
+                title: l10n.checkForUpdates,
+                subtitle: _buildUpdateSubtitle(provider, l10n),
                 onTap: _isFlowOpen(_SettingsFlow.updateCheck)
                     ? null
                     : _checkForUpdates,
               ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              SettingsListTile(
                 leading: const FaIcon(FontAwesomeIcons.github),
-                title: Text(l10n.githubRepository),
-                subtitle: Text(l10n.githubRepositoryUrl),
+                title: l10n.githubRepository,
+                subtitle: l10n.githubRepositoryUrl,
+                trailing: const Icon(Icons.open_in_new),
                 onTap: _isFlowOpen(_SettingsFlow.githubRepo)
                     ? null
                     : _openGithubRepo,
               ),
+              const SizedBox(height: 16),
             ],
           ),
         );
@@ -545,6 +504,21 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool _isFlowOpen(_SettingsFlow flow) => _openFlows.contains(flow);
+
+  String _themeSettingsSummary(
+    TimetableProvider provider,
+    AppLocalizations l10n,
+  ) {
+    final mode = switch (provider.themeMode) {
+      'dark' => l10n.themeDark,
+      'system' => l10n.themeFollowSystem,
+      _ => l10n.themeLight,
+    };
+    final colorMode = provider.themeColorMode == themeColorModeColorful
+        ? l10n.themeColorModeColorful
+        : l10n.themeColorModeSingle;
+    return '$mode / $colorMode';
+  }
 
   void _setFlowOpen(_SettingsFlow flow, bool value) {
     final changed = value ? _openFlows.add(flow) : _openFlows.remove(flow);
@@ -765,6 +739,7 @@ class _SettingsPageState extends State<SettingsPage> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) {
           final l10n = AppLocalizations.of(sheetContext);
           var popped = false;
@@ -779,47 +754,60 @@ class _SettingsPageState extends State<SettingsPage> {
             maxWidth: 680,
             child: SafeArea(
               top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.file_download_outlined),
-                    title: Text(l10n.importTimetableFiles),
-                    subtitle: Text(l10n.importTimetableFilesDesc),
-                    onTap: () => popWith(_DataAction.importTimetables),
+                  _ActionSheetHeader(
+                    icon: Icons.import_export,
+                    title: l10n.dataImportExport,
+                    subtitle: l10n.dataImportExportDesc,
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.paste_outlined),
-                    title: Text(l10n.importTimetableText),
-                    subtitle: Text(l10n.importTimetableTextDesc),
-                    onTap: () => popWith(_DataAction.importTimetablesText),
+                  const SizedBox(height: 12),
+                  _ActionSheetGroup(
+                    children: [
+                      _ActionSheetTile(
+                        icon: Icons.file_download_outlined,
+                        title: l10n.importTimetableFiles,
+                        subtitle: l10n.importTimetableFilesDesc,
+                        onTap: () => popWith(_DataAction.importTimetables),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.paste_outlined,
+                        title: l10n.importTimetableText,
+                        subtitle: l10n.importTimetableTextDesc,
+                        onTap: () => popWith(_DataAction.importTimetablesText),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.html_outlined,
+                        title: l10n.schoolHtmlImportEntry,
+                        subtitle: l10n.schoolHtmlImportEntryDesc,
+                        onTap: () => popWith(_DataAction.importSchoolHtml),
+                      ),
+                    ],
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.html_outlined),
-                    title: Text(l10n.schoolHtmlImportEntry),
-                    subtitle: Text(l10n.schoolHtmlImportEntryDesc),
-                    onTap: () => popWith(_DataAction.importSchoolHtml),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.share_outlined),
-                    title: Text(l10n.shareTimetableFiles),
-                    subtitle: Text(l10n.shareTimetableFilesDesc),
-                    onTap: () => popWith(_DataAction.exportTimetablesShare),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.save_alt_outlined),
-                    title: Text(l10n.saveTimetableFiles),
-                    subtitle: Text(l10n.saveTimetableFilesDesc),
-                    onTap: () => popWith(_DataAction.exportTimetablesSave),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.text_snippet_outlined),
-                    title: Text(l10n.exportTimetableText),
-                    subtitle: Text(l10n.exportTimetableTextDesc),
-                    onTap: () => popWith(_DataAction.exportTimetablesText),
+                  const SizedBox(height: 12),
+                  _ActionSheetGroup(
+                    children: [
+                      _ActionSheetTile(
+                        icon: Icons.share_outlined,
+                        title: l10n.shareTimetableFiles,
+                        subtitle: l10n.shareTimetableFilesDesc,
+                        onTap: () => popWith(_DataAction.exportTimetablesShare),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.save_alt_outlined,
+                        title: l10n.saveTimetableFiles,
+                        subtitle: l10n.saveTimetableFilesDesc,
+                        onTap: () => popWith(_DataAction.exportTimetablesSave),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.text_snippet_outlined,
+                        title: l10n.exportTimetableText,
+                        subtitle: l10n.exportTimetableTextDesc,
+                        onTap: () => popWith(_DataAction.exportTimetablesText),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -966,7 +954,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (draft.isEmpty && timetables.isNotEmpty) {
       draft.add(timetables.first.id);
     }
-    return showDialog<List<String>>(
+    return showExpressiveDialog<List<String>>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -981,30 +969,21 @@ class _SettingsPageState extends State<SettingsPage> {
 
             return AlertDialog(
               title: Text(title),
-              content: SizedBox(
-                width: 360,
+              content: ExpressiveDialogContent(
+                maxWidth: 420,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Wrap(
-                        spacing: 8,
-                        children: [
-                          TextButton(
-                            onPressed: () => setState(() {
-                              draft
-                                ..clear()
-                                ..addAll(timetables.map((item) => item.id));
-                            }),
-                            child: Text(l10n.selectAll),
-                          ),
-                          TextButton(
-                            onPressed: () => setState(draft.clear),
-                            child: Text(l10n.clear),
-                          ),
-                        ],
-                      ),
+                    _SelectionToolbar(
+                      selectedCount: draft.length,
+                      totalCount: timetables.length,
+                      onSelectAll: () => setState(() {
+                        draft
+                          ..clear()
+                          ..addAll(timetables.map((item) => item.id));
+                      }),
+                      onClear: () => setState(draft.clear),
                     ),
                     const SizedBox(height: 8),
                     Flexible(
@@ -1015,22 +994,15 @@ class _SettingsPageState extends State<SettingsPage> {
                         itemBuilder: (context, index) {
                           final timetable = timetables[index];
                           final selected = draft.contains(timetable.id);
-                          return ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            tileColor: selected
-                                ? Theme.of(
-                                    context,
-                                  ).colorScheme.secondaryContainer
-                                : null,
+                          return _SelectableExportTile(
+                            selected: selected,
+                            leading: const Icon(Icons.table_chart_outlined),
                             title: Text(timetable.config.name),
                             subtitle: Text(
                               l10n.timetableCourseCount(
                                 timetable.courses.length,
                               ),
                             ),
-                            trailing: selected ? const Icon(Icons.check) : null,
                             onTap: () {
                               setState(() {
                                 if (selected) {
@@ -1155,7 +1127,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required String message,
     required String confirmText,
   }) {
-    return showDialog<bool>(
+    return showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -1187,7 +1159,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required String title,
     required String message,
   }) {
-    return showDialog<bool>(
+    return showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -1231,6 +1203,7 @@ class _SettingsPageState extends State<SettingsPage> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) {
           final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
           var popped = false;
@@ -1249,78 +1222,102 @@ class _SettingsPageState extends State<SettingsPage> {
                 constraints: BoxConstraints(maxHeight: maxHeight),
                 child: ListView(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.file_download_outlined),
-                      title: Text(l10n.importJsonFile),
-                      subtitle: Text(l10n.importGeneralSchedulesDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.importSchedulesJsonFile),
+                    _ActionSheetHeader(
+                      icon: Icons.event_note_outlined,
+                      title: l10n.generalScheduleImportExport,
+                      subtitle: l10n.generalScheduleImportExportDesc,
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.paste_outlined),
-                      title: Text(l10n.pasteJson),
-                      subtitle: Text(l10n.importGeneralSchedulesJsonTextDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.importSchedulesJsonText),
+                    const SizedBox(height: 12),
+                    _ActionSheetGroup(
+                      children: [
+                        _ActionSheetTile(
+                          icon: Icons.file_download_outlined,
+                          title: l10n.importJsonFile,
+                          subtitle: l10n.importGeneralSchedulesDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.importSchedulesJsonFile,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.paste_outlined,
+                          title: l10n.pasteJson,
+                          subtitle: l10n.importGeneralSchedulesJsonTextDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.importSchedulesJsonText,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.calendar_month_outlined,
+                          title: l10n.importIcsFile,
+                          subtitle: l10n.importIcsFileDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.importSchedulesIcsFile,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.event_note_outlined,
+                          title: l10n.pasteIcs,
+                          subtitle: l10n.pasteIcsDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.importSchedulesIcsText,
+                          ),
+                        ),
+                      ],
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.calendar_month_outlined),
-                      title: Text(l10n.importIcsFile),
-                      subtitle: Text(l10n.importIcsFileDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.importSchedulesIcsFile),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.event_note_outlined),
-                      title: Text(l10n.pasteIcs),
-                      subtitle: Text(l10n.pasteIcsDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.importSchedulesIcsText),
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.share_outlined),
-                      title: Text('${l10n.shareGeneralSchedules} JSON'),
-                      subtitle: Text(l10n.shareGeneralSchedulesDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.exportSchedulesJsonShare),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.save_alt_outlined),
-                      title: Text('${l10n.saveGeneralSchedules} JSON'),
-                      subtitle: Text(l10n.saveGeneralSchedulesDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.exportSchedulesJsonSave),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.text_snippet_outlined),
-                      title: Text(l10n.copyJson),
-                      subtitle: Text(l10n.copyJsonDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.exportSchedulesJsonText),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.ios_share_outlined),
-                      title: Text(l10n.shareIcs),
-                      subtitle: Text(l10n.shareIcsDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.exportSchedulesIcsShare),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.event_available_outlined),
-                      title: Text(l10n.saveIcs),
-                      subtitle: Text(l10n.saveIcsDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.exportSchedulesIcsSave),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.event_note_outlined),
-                      title: Text(l10n.copyIcs),
-                      subtitle: Text(l10n.copyIcsDesc),
-                      onTap: () =>
-                          popWith(_GeneralDataAction.exportSchedulesIcsText),
+                    const SizedBox(height: 12),
+                    _ActionSheetGroup(
+                      children: [
+                        _ActionSheetTile(
+                          icon: Icons.share_outlined,
+                          title: '${l10n.shareGeneralSchedules} JSON',
+                          subtitle: l10n.shareGeneralSchedulesDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.exportSchedulesJsonShare,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.save_alt_outlined,
+                          title: '${l10n.saveGeneralSchedules} JSON',
+                          subtitle: l10n.saveGeneralSchedulesDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.exportSchedulesJsonSave,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.text_snippet_outlined,
+                          title: l10n.copyJson,
+                          subtitle: l10n.copyJsonDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.exportSchedulesJsonText,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.ios_share_outlined,
+                          title: l10n.shareIcs,
+                          subtitle: l10n.shareIcsDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.exportSchedulesIcsShare,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.event_available_outlined,
+                          title: l10n.saveIcs,
+                          subtitle: l10n.saveIcsDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.exportSchedulesIcsSave,
+                          ),
+                        ),
+                        _ActionSheetTile(
+                          icon: Icons.event_note_outlined,
+                          title: l10n.copyIcs,
+                          subtitle: l10n.copyIcsDesc,
+                          onTap: () => popWith(
+                            _GeneralDataAction.exportSchedulesIcsText,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1373,7 +1370,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (draft.isEmpty && schedules.isNotEmpty) {
       draft.add(schedules.first.id);
     }
-    return showDialog<List<String>>(
+    return showExpressiveDialog<List<String>>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -1388,30 +1385,21 @@ class _SettingsPageState extends State<SettingsPage> {
 
             return AlertDialog(
               title: Text(title),
-              content: SizedBox(
-                width: 360,
+              content: ExpressiveDialogContent(
+                maxWidth: 420,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Wrap(
-                        spacing: 8,
-                        children: [
-                          TextButton(
-                            onPressed: () => setState(() {
-                              draft
-                                ..clear()
-                                ..addAll(schedules.map((s) => s.id));
-                            }),
-                            child: Text(l10n.selectAll),
-                          ),
-                          TextButton(
-                            onPressed: () => setState(draft.clear),
-                            child: Text(l10n.clear),
-                          ),
-                        ],
-                      ),
+                    _SelectionToolbar(
+                      selectedCount: draft.length,
+                      totalCount: schedules.length,
+                      onSelectAll: () => setState(() {
+                        draft
+                          ..clear()
+                          ..addAll(schedules.map((s) => s.id));
+                      }),
+                      onClear: () => setState(draft.clear),
                     ),
                     const SizedBox(height: 8),
                     Flexible(
@@ -1422,22 +1410,15 @@ class _SettingsPageState extends State<SettingsPage> {
                         itemBuilder: (context, index) {
                           final schedule = schedules[index];
                           final selected = draft.contains(schedule.id);
-                          return ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            tileColor: selected
-                                ? Theme.of(
-                                    context,
-                                  ).colorScheme.secondaryContainer
-                                : null,
+                          return _SelectableExportTile(
+                            selected: selected,
+                            leading: const Icon(Icons.event_note_outlined),
                             title: Text(schedule.name),
                             subtitle: Text(
                               l10n.generalScheduleEventCount(
                                 schedule.events.length,
                               ),
                             ),
-                            trailing: selected ? const Icon(Icons.check) : null,
                             onTap: () {
                               setState(() {
                                 if (selected) {
@@ -1526,7 +1507,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (selectedIds.length == 1 &&
           provider.activeGeneralScheduleOrNull != null &&
           feedbackContext.mounted) {
-        final choice = await showDialog<String>(
+        final choice = await showExpressiveDialog<String>(
           context: feedbackContext,
           builder: (ctx) {
             var popped = false;
@@ -1620,7 +1601,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (preview.schedules.length == 1 &&
           provider.activeGeneralScheduleOrNull != null &&
           feedbackContext.mounted) {
-        final choice = await showDialog<String>(
+        final choice = await showExpressiveDialog<String>(
           context: feedbackContext,
           builder: (ctx) {
             var popped = false;
@@ -1866,24 +1847,323 @@ class _RecoveryNoticeTile extends StatelessWidget {
     final isFailure = status == RecoveryStatus.failedBackupRestore;
     final tone = isFailure
         ? theme.colorScheme.errorContainer
-        : theme.colorScheme.tertiaryContainer;
+        : theme.colorScheme.primary.withValues(alpha: 0.12);
     final foreground = isFailure
         ? theme.colorScheme.onErrorContainer
-        : theme.colorScheme.onTertiaryContainer;
+        : theme.colorScheme.primary;
     final message = isFailure
         ? l10n.dataBackupRestoreFailedNotice
         : l10n.dataRestoredFromBackupNotice;
-    return Container(
+    return Material(
       color: tone,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        leading: Icon(
-          isFailure ? Icons.error_outline : Icons.history_toggle_off,
-          color: foreground,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              isFailure ? Icons.error_outline : Icons.history_toggle_off,
+              color: foreground,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
-        title: Text(
-          message,
-          style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+class _ActionSheetHeader extends StatelessWidget {
+  const _ActionSheetHeader({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionSheetGroup extends StatelessWidget {
+  const _ActionSheetGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      color: colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: children),
+    );
+  }
+}
+
+class _ActionSheetTile extends StatelessWidget {
+  const _ActionSheetTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return ExpressiveTap(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final leading = Icon(icon, color: colorScheme.onSurfaceVariant);
+            final text = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            );
+            final trailing = Icon(
+              Icons.chevron_right,
+              color: colorScheme.onSurfaceVariant,
+            );
+
+            if (constraints.maxWidth < 300) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Center(child: leading),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: text),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: trailing,
+                  ),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                SizedBox(width: 40, height: 40, child: Center(child: leading)),
+                const SizedBox(width: 12),
+                Expanded(child: text),
+                const SizedBox(width: 8),
+                trailing,
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectionToolbar extends StatelessWidget {
+  const _SelectionToolbar({
+    required this.selectedCount,
+    required this.totalCount,
+    required this.onSelectAll,
+    required this.onClear,
+  });
+
+  final int selectedCount;
+  final int totalCount;
+  final VoidCallback onSelectAll;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            '$selectedCount / $totalCount',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        TextButton(onPressed: onClear, child: Text(l10n.clear)),
+        const SizedBox(width: 4),
+        TextButton(onPressed: onSelectAll, child: Text(l10n.selectAll)),
+      ],
+    );
+  }
+}
+
+class _SelectableExportTile extends StatelessWidget {
+  const _SelectableExportTile({
+    required this.selected,
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final Widget leading;
+  final Widget title;
+  final Widget subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return ExpressiveTap(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Material(
+        color: selected
+            ? colorScheme.primary.withValues(alpha: 0.12)
+            : colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final icon = Icon(
+                selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: selected ? colorScheme.primary : colorScheme.outline,
+              );
+              final content = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DefaultTextStyle.merge(
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    child: title,
+                  ),
+                  const SizedBox(height: 2),
+                  DefaultTextStyle.merge(
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    child: subtitle,
+                  ),
+                ],
+              );
+
+              if (constraints.maxWidth < 300) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Center(child: leading),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: content),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: icon,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Center(child: leading),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: content),
+                  const SizedBox(width: 10),
+                  icon,
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

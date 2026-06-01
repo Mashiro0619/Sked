@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import 'expressive_dialog.dart';
 
 /// delete 单独保留成一个标记，避免和“只是点了取消”共用同一种空值语义。
 class CourseEditorResult {
@@ -121,6 +122,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final linkedPeriods = _selectedPeriods;
     final linkedPeriodsLabel = _formatPeriodsLabel(linkedPeriods, l10n);
@@ -147,144 +150,122 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                         widget.initialCourse == null
                             ? l10n.addCourseTitle
                             : l10n.editCourseTitle,
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
+                      _ResponsiveFormRow(
+                        flexes: const [2, 1],
                         children: [
-                          Expanded(
-                            flex: 2,
-                            child: TextField(
-                              controller: _nameController,
-                              decoration: InputDecoration(
-                                labelText: l10n.courseName,
-                              ),
+                          TextField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: l10n.courseName,
+                              prefixIcon: const Icon(Icons.book_outlined),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 1,
-                            child: TextField(
-                              controller: _locationController,
-                              decoration: InputDecoration(
-                                labelText: l10n.location,
+                          TextField(
+                            controller: _locationController,
+                            decoration: InputDecoration(
+                              labelText: l10n.location,
+                              prefixIcon: const Icon(
+                                Icons.location_on_outlined,
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Row(
+                      _ResponsiveFormRow(
+                        breakpoint: 520,
                         children: [
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(l10n.dayOfWeek),
-                              subtitle: Text(
-                                formatDayOfWeekLabel(
-                                  _selectedDayOfWeek,
-                                  localeCode: app_locale.localeCodeFromLocale(
-                                    Localizations.localeOf(context),
-                                  ),
-                                ),
+                          _SelectionTile(
+                            title: l10n.dayOfWeek,
+                            subtitle: formatDayOfWeekLabel(
+                              _selectedDayOfWeek,
+                              localeCode: app_locale.localeCodeFromLocale(
+                                Localizations.localeOf(context),
                               ),
-                              trailing: const Icon(Icons.today_outlined),
-                              enabled: !_pickerOpen && !_hasPopped,
-                              onTap: (_pickerOpen || _hasPopped)
-                                  ? null
-                                  : _pickDayOfWeek,
                             ),
+                            icon: Icons.today_outlined,
+                            enabled: !_pickerOpen && !_hasPopped,
+                            onTap: (_pickerOpen || _hasPopped)
+                                ? null
+                                : _pickDayOfWeek,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(l10n.semesterWeeks),
-                              subtitle: Text(
-                                formatSemesterWeeksLabel(
-                                  _selectedSemesterWeeks,
-                                  totalWeeks: widget.totalWeeks,
-                                  localeCode: app_locale.localeCodeFromLocale(
-                                    Localizations.localeOf(context),
-                                  ),
-                                ),
+                          _SelectionTile(
+                            title: l10n.semesterWeeks,
+                            subtitle: formatSemesterWeeksLabel(
+                              _selectedSemesterWeeks,
+                              totalWeeks: widget.totalWeeks,
+                              localeCode: app_locale.localeCodeFromLocale(
+                                Localizations.localeOf(context),
                               ),
-                              trailing: const Icon(Icons.edit_calendar),
-                              enabled: !_pickerOpen && !_hasPopped,
-                              onTap: (_pickerOpen || _hasPopped)
-                                  ? null
-                                  : _pickSemesterWeeks,
                             ),
+                            icon: Icons.edit_calendar,
+                            enabled: !_pickerOpen && !_hasPopped,
+                            onTap: (_pickerOpen || _hasPopped)
+                                ? null
+                                : _pickSemesterWeeks,
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      _ResponsiveFormRow(
+                        breakpoint: 520,
                         children: [
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(l10n.startTime),
-                              subtitle: Text(_formatTimeOfDay(_startTime)),
-                              trailing: const Icon(Icons.schedule),
-                              enabled: !_pickerOpen && !_hasPopped,
-                              onTap: (_pickerOpen || _hasPopped)
-                                  ? null
-                                  : () => _pickTime(isStart: true),
-                            ),
+                          _SelectionTile(
+                            title: l10n.startTime,
+                            subtitle: _formatTimeOfDay(_startTime),
+                            icon: Icons.schedule,
+                            enabled: !_pickerOpen && !_hasPopped,
+                            onTap: (_pickerOpen || _hasPopped)
+                                ? null
+                                : () => _pickTime(isStart: true),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(l10n.endTime),
-                              subtitle: Text(_formatTimeOfDay(_endTime)),
-                              trailing: const Icon(Icons.schedule),
-                              enabled: !_pickerOpen && !_hasPopped,
-                              onTap: (_pickerOpen || _hasPopped)
-                                  ? null
-                                  : () => _pickTime(isStart: false),
-                            ),
+                          _SelectionTile(
+                            title: l10n.endTime,
+                            subtitle: _formatTimeOfDay(_endTime),
+                            icon: Icons.schedule,
+                            enabled: !_pickerOpen && !_hasPopped,
+                            onTap: (_pickerOpen || _hasPopped)
+                                ? null
+                                : () => _pickTime(isStart: false),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.linkedPeriods),
-                        subtitle: Text(
-                          linkedPeriods.isEmpty
-                              ? l10n.linkedPeriodsUnmatched
-                              : linkedPeriodsLabel,
-                        ),
-                        trailing: const Icon(Icons.tune),
+                      _SelectionTile(
+                        title: l10n.linkedPeriods,
+                        subtitle: linkedPeriods.isEmpty
+                            ? l10n.linkedPeriodsUnmatched
+                            : linkedPeriodsLabel,
+                        icon: Icons.tune,
                         enabled: !_pickerOpen && !_hasPopped,
                         onTap: (_pickerOpen || _hasPopped)
                             ? null
                             : _pickPeriods,
                       ),
                       const SizedBox(height: 12),
-                      Row(
+                      _ResponsiveFormRow(
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _teacherController,
-                              decoration: InputDecoration(
-                                labelText: l10n.teacherName,
-                              ),
+                          TextField(
+                            controller: _teacherController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teacherName,
+                              prefixIcon: const Icon(Icons.badge_outlined),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: _creditController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: InputDecoration(
-                                labelText: l10n.credits,
-                              ),
+                          TextField(
+                            controller: _creditController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: l10n.credits,
+                              prefixIcon: const Icon(Icons.payments_outlined),
                             ),
                           ),
                         ],
@@ -292,7 +273,10 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: _remarksController,
-                        decoration: InputDecoration(labelText: l10n.remarks),
+                        decoration: InputDecoration(
+                          labelText: l10n.remarks,
+                          prefixIcon: const Icon(Icons.notes_outlined),
+                        ),
                         maxLines: 2,
                       ),
                       const SizedBox(height: 12),
@@ -301,6 +285,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                         decoration: InputDecoration(
                           labelText: l10n.customFields,
                           hintText: l10n.customFieldsHint,
+                          prefixIcon: const Icon(Icons.data_object_outlined),
                         ),
                         maxLines: 3,
                       ),
@@ -310,21 +295,20 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (widget.initialCourse != null)
-                    TextButton(
-                      onPressed: _hasPopped
-                          ? null
-                          : () => _confirmDelete(context),
-                      child: Text(l10n.delete),
-                    ),
-                  const Spacer(),
+              ExpressiveActionArea(
+                leading: widget.initialCourse == null
+                    ? null
+                    : TextButton(
+                        onPressed: _hasPopped
+                            ? null
+                            : () => _confirmDelete(context),
+                        child: Text(l10n.delete),
+                      ),
+                actions: [
                   TextButton(
                     onPressed: _hasPopped ? null : () => _popOnce(),
                     child: Text(l10n.cancel),
                   ),
-                  const SizedBox(width: 8),
                   FilledButton(
                     onPressed: _hasPopped ? null : _submit,
                     child: Text(l10n.save),
@@ -363,7 +347,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     _setPickerOpen(true);
     _dismissActiveInputFocus();
     try {
-      final result = await showDialog<int>(
+      final result = await showExpressiveDialog<int>(
         context: context,
         builder: (context) {
           var popped = false;
@@ -375,26 +359,26 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
 
           return AlertDialog(
             title: Text(AppLocalizations.of(context).selectDayOfWeek),
-            content: SizedBox(
-              width: 320,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: List.generate(7, (index) {
-                  final day = index + 1;
-                  return ChoiceChip(
-                    label: Text(
-                      formatDayOfWeekLabel(
-                        day,
-                        localeCode: app_locale.localeCodeFromLocale(
-                          Localizations.localeOf(context),
+            content: ExpressiveDialogContent(
+              maxWidth: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var index = 0; index < 7; index++)
+                    ExpressiveDialogOption(
+                      title: Text(
+                        formatDayOfWeekLabel(
+                          index + 1,
+                          localeCode: app_locale.localeCodeFromLocale(
+                            Localizations.localeOf(context),
+                          ),
                         ),
                       ),
+                      leading: const Icon(Icons.calendar_today_outlined),
+                      selected: index + 1 == _selectedDayOfWeek,
+                      onTap: () => popWith(index + 1),
                     ),
-                    selected: day == _selectedDayOfWeek,
-                    onSelected: (_) => popWith(day),
-                  );
-                }),
+                ],
               ),
             ),
           );
@@ -417,7 +401,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     _dismissActiveInputFocus();
     final draft = {..._selectedSemesterWeeks};
     try {
-      final result = await showDialog<List<int>>(
+      final result = await showExpressiveDialog<List<int>>(
         context: context,
         builder: (context) {
           var popped = false;
@@ -432,8 +416,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
 
               return AlertDialog(
                 title: Text(l10n.selectSemesterWeeks),
-                content: SizedBox(
-                  width: 360,
+                content: ExpressiveDialogContent(
+                  maxWidth: 360,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -477,8 +461,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                             final colorScheme = Theme.of(context).colorScheme;
                             return Material(
                               color: selected
-                                  ? colorScheme.primaryContainer
-                                  : Colors.grey.shade300,
+                                  ? colorScheme.primary.withValues(alpha: 0.12)
+                                  : colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
@@ -500,7 +484,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                                         .labelLarge
                                         ?.copyWith(
                                           color: selected
-                                              ? colorScheme.onSecondaryContainer
+                                              ? colorScheme.primary
                                               : colorScheme.onSurfaceVariant,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -585,7 +569,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     _dismissActiveInputFocus();
     final draft = List<int>.from(_selectedPeriods);
     try {
-      final result = await showDialog<List<int>>(
+      final result = await showExpressiveDialog<List<int>>(
         context: context,
         builder: (context) {
           var popped = false;
@@ -600,8 +584,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
 
               return AlertDialog(
                 title: Text(l10n.selectLinkedPeriods),
-                content: SizedBox(
-                  width: 360,
+                content: ExpressiveDialogContent(
+                  maxWidth: 360,
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -711,7 +695,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
 
   Future<void> _confirmDelete(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteCourseTitle),
@@ -820,5 +804,141 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
       result[key] = content;
     }
     return result;
+  }
+}
+
+class _ResponsiveFormRow extends StatelessWidget {
+  const _ResponsiveFormRow({
+    required this.children,
+    this.flexes,
+    this.breakpoint = 480,
+  });
+
+  static const double _spacing = 12;
+
+  final List<Widget> children;
+  final List<int>? flexes;
+  final double breakpoint;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < breakpoint) {
+          return Column(
+            children: [
+              for (var index = 0; index < children.length; index++) ...[
+                if (index > 0) const SizedBox(height: _spacing),
+                children[index],
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              if (index > 0) const SizedBox(width: _spacing),
+              Expanded(
+                flex: flexes == null || index >= flexes!.length
+                    ? 1
+                    : flexes![index],
+                child: children[index],
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SelectionTile extends StatelessWidget {
+  const _SelectionTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final contentColor = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: ShapeDecoration(
+                  color: colors.primary.withValues(
+                    alpha: enabled ? 0.10 : 0.05,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: enabled ? colors.primary : secondaryColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: contentColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: secondaryColor),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

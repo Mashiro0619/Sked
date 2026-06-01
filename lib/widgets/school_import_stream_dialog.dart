@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../services/school_import_api.dart';
+import 'expressive_dialog.dart';
 
 Map<String, dynamic>? _tryDecodeJsonObject(String source) {
   try {
@@ -104,15 +106,16 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   }
 
   void _confirmEdit() {
+    final l10n = AppLocalizations.of(context);
     final rawText = _editController.text.trim();
     if (rawText.isEmpty) {
-      setState(() => _error = '内容不能为空。');
+      setState(() => _error = l10n.jsonContentEmpty);
       return;
     }
 
     final json = _tryDecodeJsonObject(rawText);
     if (json == null) {
-      setState(() => _error = 'JSON 格式无效');
+      setState(() => _error = l10n.importFailedCheckContent);
       return;
     }
 
@@ -122,16 +125,24 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
       } else if (json.containsKey('name') || json.containsKey('courses')) {
         _response = SchoolImportApi.buildResponseFromDoneEvent(json);
       } else {
-        setState(() => _error = '无法识别的课表格式。');
+        setState(() => _error = l10n.noImportableTimetables);
         return;
       }
     } catch (e) {
-      setState(() => _error = '解析失败: $e');
+      setState(() => _error = '${l10n.importFailedCheckContent}\n\n$e');
       return;
     }
 
     _error = null;
     _popOnce(_response);
+  }
+
+  void _cancelEdit() {
+    _editController.text = _textBuffer.toString();
+    setState(() {
+      _isEditing = false;
+      _error = null;
+    });
   }
 
   void _popOnce([SchoolImportResponse? result]) {
@@ -145,6 +156,10 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final title = _isEditing
+        ? '${l10n.schoolWebImportParsing} - ${l10n.editTimetable}'
+        : l10n.schoolWebImportParsing;
 
     return PopScope(
       canPop: false,
@@ -152,17 +167,14 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
         title: Row(
           children: [
             if (_isEditing) ...[
-              const Icon(Icons.edit, color: Colors.orange, size: 20),
+              Icon(Icons.edit_outlined, color: theme.colorScheme.tertiary),
               const SizedBox(width: 8),
-              const Text('解析课表 - 编辑中'),
             ] else if (_error != null) ...[
-              const Icon(Icons.error_outline, color: Colors.red),
+              Icon(Icons.error_outline, color: theme.colorScheme.error),
               const SizedBox(width: 8),
-              const Text('解析课表'),
             ] else if (_isDone) ...[
-              const Icon(Icons.check_circle_outline, color: Colors.green),
+              Icon(Icons.check_circle_outline, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              const Text('解析课表'),
             ] else ...[
               const SizedBox(
                 width: 20,
@@ -170,12 +182,11 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               const SizedBox(width: 12),
-              const Text('解析课表'),
             ],
+            Expanded(child: Text(title)),
           ],
         ),
-        content: SizedBox(
-          width: 520,
+        content: ExpressiveDialogContent(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,7 +224,9 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                         child: SelectableText(
                           _textBuffer.isNotEmpty
                               ? _textBuffer.toString()
-                              : (_error != null ? '解析失败' : '正在连接...'),
+                              : (_error != null
+                                    ? l10n.importFailedCheckContent
+                                    : l10n.schoolWebImportParsing),
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontFamily: 'monospace',
                             height: 1.5,
@@ -222,43 +235,32 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                       ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              ExpressiveDialogActions(
                 children: [
                   TextButton(
                     onPressed: () {
                       _subscription?.cancel();
                       _popOnce();
                     },
-                    child: const Text('取消'),
+                    child: Text(l10n.cancel),
                   ),
                   if (_isEditing) ...[
-                    const SizedBox(width: 8),
                     OutlinedButton(
-                      onPressed: () {
-                        _editController.text = _textBuffer.toString();
-                        setState(() {
-                          _isEditing = false;
-                          _error = null;
-                        });
-                      },
-                      child: const Text('重置'),
+                      onPressed: _cancelEdit,
+                      child: Text(l10n.cancel),
                     ),
-                    const SizedBox(width: 8),
                     FilledButton(
                       onPressed: _confirmEdit,
-                      child: const Text('确定'),
+                      child: Text(l10n.confirm),
                     ),
                   ] else ...[
-                    const SizedBox(width: 8),
                     OutlinedButton(
                       onPressed: _isDone ? _enterEditMode : null,
-                      child: const Text('修改'),
+                      child: Text(l10n.editTimetable),
                     ),
-                    const SizedBox(width: 8),
                     FilledButton(
                       onPressed: _isDone ? () => _popOnce(_response) : null,
-                      child: const Text('确定'),
+                      child: Text(l10n.confirm),
                     ),
                   ],
                 ],

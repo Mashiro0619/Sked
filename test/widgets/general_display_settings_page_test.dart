@@ -69,9 +69,9 @@ void main() {
     expect(find.text('Time grid'), findsOneWidget);
     expect(find.text('Popup behavior'), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
-    expect(find.byType(DropdownButton<String>), findsOneWidget);
+    expect(find.byType(DropdownMenu<String>), findsOneWidget);
 
-    await tester.tap(find.byType(DropdownButton<String>));
+    await tester.tap(find.byType(DropdownMenu<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Month').last);
     await tester.pumpAndSettle();

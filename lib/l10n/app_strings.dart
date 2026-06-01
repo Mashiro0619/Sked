@@ -1,4 +1,4 @@
-import 'app_localizations.dart';
+﻿import 'app_localizations.dart';
 import 'app_locale.dart';
 
 abstract class AppStrings {
@@ -197,6 +197,6 @@ class _GeneratedAppStrings implements AppStrings {
   }
 
   String get _semesterWeeksSeparator {
-    return _l10n.localeName.startsWith('zh') ? '、' : ', ';
+    return _l10n.localeName.startsWith('zh') ? '\u3001' : ', ';
   }
 }

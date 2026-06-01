@@ -180,6 +180,18 @@ class AppLocalizationsEt extends AppLocalizations {
   String get settingsTitle => 'Seaded';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'Praegu ei ole seadete jaoks ajakava saadaval.';
 

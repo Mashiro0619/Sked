@@ -6,6 +6,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
+import '../widgets/expressive_dialog.dart';
 import '../widgets/text_transfer_widgets.dart';
 
 enum _PeriodTimesMenuAction {
@@ -119,24 +120,25 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           TextField(
             controller: _nameController,
             decoration: InputDecoration(
               labelText: l10n.periodTimeSetName,
-              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.schedule_outlined),
             ),
           ),
           const SizedBox(height: 16),
-          for (var index = 0; index < _periodTimes.length; index++)
+          for (var index = 0; index < _periodTimes.length; index++) ...[
             _buildPeriodCard(index),
-          OutlinedButton.icon(
+            const SizedBox(height: 12),
+          ],
+          FilledButton.icon(
             onPressed: _addPeriod,
             icon: const Icon(Icons.add),
             label: Text(l10n.addOnePeriod),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -152,30 +154,50 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
         : period.startMinutes - previous.endMinutes;
     final invalid = duration <= 0 || (previous != null && gap! < 0);
 
-    return Card.outlined(
-      margin: const EdgeInsets.only(bottom: 10),
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: colors.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Text(
-                  l10n.periodNumberLabel(period.index),
-                  style: Theme.of(context).textTheme.titleMedium,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: ShapeDecoration(
+                    color: colors.primary.withValues(alpha: 0.12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.periodNumberLabel(period.index),
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 if (_periodTimes.length > 1)
                   IconButton(
-                    visualDensity: VisualDensity.compact,
                     tooltip: l10n.deleteThisPeriod,
                     onPressed: () => _removePeriod(index),
                     icon: const Icon(Icons.delete_outline),
                   ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -199,16 +221,22 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 _MetaChip(
                   label: l10n.durationMinutes(duration > 0 ? duration : 0),
+                  backgroundColor: colors.surfaceContainerHighest,
+                  foregroundColor: colors.onSurfaceVariant,
                 ),
                 if (gap != null)
-                  _MetaChip(label: l10n.gapFromPrevious(gap > 0 ? gap : 0)),
+                  _MetaChip(
+                    label: l10n.gapFromPrevious(gap > 0 ? gap : 0),
+                    backgroundColor: colors.surfaceContainerHighest,
+                    foregroundColor: colors.onSurfaceVariant,
+                  ),
               ],
             ),
             if (invalid) ...[
@@ -217,7 +245,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
                 duration <= 0
                     ? l10n.endTimeMustBeLater
                     : l10n.periodOverlapPrevious,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: TextStyle(color: colors.error),
               ),
             ],
           ],
@@ -305,7 +333,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   Future<void> _deleteSet() async {
     final provider = context.read<TimetableProvider>();
     final navigator = Navigator.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context);
@@ -519,7 +547,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
     required String message,
     required String confirmText,
   }) {
-    return showDialog<bool>(
+    return showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -551,7 +579,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
     required String title,
     required String message,
   }) {
-    return showDialog<bool>(
+    return showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -639,22 +667,34 @@ class _TimeCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       onTap: onTap,
       child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerHighest.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(12),
+          color: colors.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(value, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              value,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),
@@ -663,19 +703,32 @@ class _TimeCell extends StatelessWidget {
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label});
+  const _MetaChip({
+    required this.label,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
 
   final String label;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: backgroundColor ?? colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: foregroundColor ?? colors.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

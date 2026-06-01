@@ -180,6 +180,18 @@ class AppLocalizationsHu extends AppLocalizations {
   String get settingsTitle => 'Beállítások';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'Jelenleg nincs rendelkezésre álló menetrend a beállításokhoz.';
 

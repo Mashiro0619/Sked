@@ -180,6 +180,18 @@ class AppLocalizationsSv extends AppLocalizations {
   String get settingsTitle => 'Inställningar';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'Ingen tidsplan finns för närvarande tillgänglig för inställningar.';
 

@@ -465,6 +465,30 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
+  /// No description provided for @settingsSectionTimetable.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable'**
+  String get settingsSectionTimetable;
+
+  /// No description provided for @settingsSectionGeneralSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'General schedule'**
+  String get settingsSectionGeneralSchedule;
+
+  /// No description provided for @settingsSectionAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsSectionAppearance;
+
+  /// No description provided for @settingsSectionApp.
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get settingsSectionApp;
+
   /// No description provided for @noTimetableSettings.
   ///
   /// In en, this message translates to:

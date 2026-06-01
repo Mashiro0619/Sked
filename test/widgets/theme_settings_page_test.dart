@@ -9,6 +9,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/theme_settings_page.dart';
+import 'package:sked/theme/app_theme.dart';
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -56,7 +57,162 @@ Future<TimetableProvider> _createProvider(
   return provider;
 }
 
+class _ThemeSettingsHost extends StatelessWidget {
+  const _ThemeSettingsHost({required this.provider});
+
+  final TimetableProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<TimetableProvider>.value(
+      value: provider,
+      child: Consumer<TimetableProvider>(
+        builder: (context, provider, child) {
+          return MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: buildAppTheme(
+              seedColor: Color(provider.themeSeedColorValue),
+              brightness: Brightness.light,
+              themeColorMode: provider.themeColorMode,
+              colorfulUiColorValues: provider.colorfulUiColorValues,
+            ),
+            home: const ThemeSettingsPage(),
+          );
+        },
+      ),
+    );
+  }
+}
+
 void main() {
+  testWidgets('theme settings page fits compact phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('theme-brightness-mode-segmented')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('theme-color-mode-segmented')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('custom color dialog fits compact phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    final customColor = find.text('Custom color').last;
+    await tester.scrollUntilVisible(customColor, 200);
+    await tester.pumpAndSettle();
+    await tester.tap(customColor);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Apply color'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('course outline dialog fits compact phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    final outlineCard = find.byKey(
+      const ValueKey('theme-outline-settings-card'),
+    );
+    await tester.scrollUntilVisible(outlineCard, 200);
+    await tester.pumpAndSettle();
+    expect(outlineCard, findsOneWidget);
+    await tester.tap(outlineCard);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Apply settings'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('preset seed color updates the app theme immediately', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+        themeColorMode: themeColorModeSingle,
+        themeSeedColorValue: 0xFF6750A4,
+      ),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    var materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.theme!.colorScheme.primary, const Color(0xFF6750A4));
+
+    await tester.tap(find.byKey(const ValueKey('theme-seed-color-#00897B')));
+    await tester.pumpAndSettle();
+
+    materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(provider.themeSeedColorValue, 0xFF00897B);
+    expect(materialApp.theme!.colorScheme.primary, const Color(0xFF00897B));
+    expect(
+      materialApp.theme!.navigationBarTheme.indicatorColor,
+      const Color(0xFF00897B).withValues(alpha: 0.12),
+    );
+  });
+
+  testWidgets('colorful primary setting controls the app primary color', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+        themeColorMode: themeColorModeColorful,
+        colorfulUiColorValues: const {colorfulUiPrimaryKey: 0xFF112233},
+      ),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.theme!.colorScheme.primary, const Color(0xFF112233));
+
+    final primaryTile = find.byKey(const ValueKey('theme-ui-color-primary'));
+    expect(primaryTile, findsOneWidget);
+    expect(
+      find.descendant(of: primaryTile, matching: find.text('#112233')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('custom color apply is disabled while save is in progress', (
     tester,
   ) async {

@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'theme/app_theme.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_localizations.dart';
-import 'models/timetable_models.dart';
 import 'providers/timetable_provider.dart';
 import 'screens/app_home_screen.dart';
 
@@ -27,51 +27,6 @@ void _registerLicenses() {
   });
 }
 
-ThemeMode _themeModeFromValue(String value) {
-  switch (value) {
-    case 'dark':
-      return ThemeMode.dark;
-    case 'system':
-      return ThemeMode.system;
-    case 'light':
-    default:
-      return ThemeMode.light;
-  }
-}
-
-ThemeData _buildTheme({
-  required Color seedColor,
-  required Brightness brightness,
-  required String themeColorMode,
-  required Map<String, int> colorfulUiColorValues,
-}) {
-  final baseScheme = ColorScheme.fromSeed(
-    seedColor: seedColor,
-    brightness: brightness,
-  );
-  final colorScheme = themeColorMode == themeColorModeColorful
-      ? baseScheme.copyWith(
-          primary: Color(
-            colorfulUiColorValues[colorfulUiPrimaryKey] ??
-                baseScheme.primary.toARGB32(),
-          ),
-          secondary: Color(
-            colorfulUiColorValues[colorfulUiSecondaryKey] ??
-                baseScheme.secondary.toARGB32(),
-          ),
-          tertiary: Color(
-            colorfulUiColorValues[colorfulUiTertiaryKey] ??
-                baseScheme.tertiary.toARGB32(),
-          ),
-        )
-      : baseScheme;
-  return ThemeData(
-    useMaterial3: true,
-    colorScheme: colorScheme,
-    cardTheme: const CardThemeData(margin: EdgeInsets.zero),
-  );
-}
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key, required this.provider});
 
@@ -89,14 +44,15 @@ class MyApp extends StatelessWidget {
             locale: appLocaleFromCode(timetableProvider.localeCode),
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
-            themeMode: _themeModeFromValue(timetableProvider.themeMode),
-            theme: _buildTheme(
+            themeMode: themeModeFromValue(timetableProvider.themeMode),
+            themeAnimationStyle: appThemeAnimationStyle,
+            theme: buildAppTheme(
               seedColor: Color(timetableProvider.themeSeedColorValue),
               brightness: Brightness.light,
               themeColorMode: timetableProvider.themeColorMode,
               colorfulUiColorValues: timetableProvider.colorfulUiColorValues,
             ),
-            darkTheme: _buildTheme(
+            darkTheme: buildAppTheme(
               seedColor: Color(timetableProvider.themeSeedColorValue),
               brightness: Brightness.dark,
               themeColorMode: timetableProvider.themeColorMode,

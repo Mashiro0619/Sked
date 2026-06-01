@@ -123,7 +123,13 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                 const SizedBox(width: 16),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 72),
-                  child: SizedBox(width: 320, child: agenda),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 280,
+                      maxWidth: 320,
+                    ),
+                    child: agenda,
+                  ),
                 ),
               ],
             ),
@@ -911,13 +917,13 @@ class _MonthDayCell extends StatelessWidget {
     final dayFillColor = isToday ? colorScheme.primary : Colors.transparent;
     final standardTextColor = isToday ? colorScheme.onPrimary : baseColor;
     final standardBackgroundColor = !compact && isSelected
-        ? colorScheme.primaryContainer
+        ? colorScheme.primary.withValues(alpha: 0.10)
         : Colors.transparent;
     final standardBorderColor = !compact && isSelected
         ? colorScheme.primary
         : Colors.transparent;
     final compactTextColor = isSelected
-        ? colorScheme.onSecondaryContainer
+        ? colorScheme.primary
         : isToday
         ? colorScheme.primary
         : baseColor;
@@ -1042,7 +1048,7 @@ class _MonthDayCell extends StatelessWidget {
                     height: selectedCompactTileSize,
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: colorScheme.secondaryContainer,
+                      color: colorScheme.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -1283,39 +1289,71 @@ class _MonthAgendaTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final color = Color(
       occurrence.event.colorValue ?? occurrence.calendar.colorValue,
     );
-    return ListTile(
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      leading: Container(
-        width: 8,
-        height: 38,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(6),
+    final subtitle = [
+      _formatOccurrenceTime(context, occurrence),
+      if (occurrence.event.location.isNotEmpty) occurrence.event.location,
+      occurrence.calendar.name,
+    ].join('  |  ');
+    final repeatIcon = occurrence.event.recurrenceRule.isRepeating
+        ? Icon(Icons.repeat, color: colors.primary, size: 18)
+        : null;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 8,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      occurrence.event.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (repeatIcon != null) ...[const SizedBox(width: 6), repeatIcon],
+            ],
+          ),
         ),
       ),
-      title: Text(
-        occurrence.event.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        [
-          _formatOccurrenceTime(context, occurrence),
-          if (occurrence.event.location.isNotEmpty) occurrence.event.location,
-          occurrence.calendar.name,
-        ].join('  |  '),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: occurrence.event.recurrenceRule.isRepeating
-          ? Icon(Icons.repeat, color: theme.colorScheme.primary)
-          : null,
-      onTap: onTap,
     );
   }
 }

@@ -18,6 +18,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) => AdaptiveModalSurface(
           maxWidth: 860,
           dismissOnOutsideTap: canDismiss,
@@ -79,6 +80,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) => AdaptiveModalSurface(
           maxWidth: 920,
           dismissOnOutsideTap: canDismiss,

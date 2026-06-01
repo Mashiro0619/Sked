@@ -90,36 +90,43 @@ class _TimetableDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
     return Drawer(
       child: SafeArea(
         child: Column(
           children: [
-            ListTile(title: Text(l10n.multiTimetableSwitch)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  l10n.multiTimetableSwitch,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
             Expanded(
               child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   for (final item in provider.timetables)
-                    ListTile(
+                    _TimetableDrawerItem(
+                      timetable: item,
                       selected: item.id == activeTimetable.id,
-                      leading: Icon(
-                        item.id == activeTimetable.id
-                            ? Icons.check_circle
-                            : Icons.calendar_view_week,
-                      ),
-                      title: Text(item.config.name),
-                      subtitle: Text(
-                        item.id == activeTimetable.id
-                            ? l10n.currentTimetableWeeks(item.config.totalWeeks)
-                            : l10n.tapToSwitchWeeks(item.config.totalWeeks),
-                      ),
-                      trailing: IconButton(
-                        tooltip: l10n.editTimetable,
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: onEditTimetable == null || switchingTimetable
-                            ? null
-                            : () => onEditTimetable!(item),
-                      ),
                       enabled: !switchingTimetable,
+                      currentLabel: l10n.currentTimetableWeeks(
+                        item.config.totalWeeks,
+                      ),
+                      switchLabel: l10n.tapToSwitchWeeks(
+                        item.config.totalWeeks,
+                      ),
+                      editTooltip: l10n.editTimetable,
+                      onEdit: onEditTimetable == null || switchingTimetable
+                          ? null
+                          : () => onEditTimetable!(item),
                       onTap: switchingTimetable || onSwitchTimetable == null
                           ? null
                           : () => onSwitchTimetable!(context, item),
@@ -136,6 +143,101 @@ class _TimetableDrawer extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimetableDrawerItem extends StatelessWidget {
+  const _TimetableDrawerItem({
+    required this.timetable,
+    required this.selected,
+    required this.enabled,
+    required this.currentLabel,
+    required this.switchLabel,
+    required this.editTooltip,
+    required this.onTap,
+    required this.onEdit,
+  });
+
+  final TimetableData timetable;
+  final bool selected;
+  final bool enabled;
+  final String currentLabel;
+  final String switchLabel;
+  final String editTooltip;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final contentColor = enabled
+        ? (selected ? colors.primary : colors.onSurface)
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? (selected ? colors.primary : colors.onSurfaceVariant)
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: selected
+            ? colors.primary.withValues(alpha: 0.12)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+            child: Row(
+              children: [
+                Icon(
+                  selected ? Icons.check_circle : Icons.calendar_view_week,
+                  color: secondaryColor,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        timetable.config.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: contentColor,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        selected ? currentLabel : switchLabel,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: secondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: editTooltip,
+                  icon: const Icon(Icons.edit_outlined),
+                  color: secondaryColor,
+                  onPressed: onEdit,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -260,51 +362,32 @@ class _EmptyTimetableState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.event_busy, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              l10n.noTimetableTitle,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.noTimetableMessage, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
-              children: [
-                FilledButton.icon(
-                  onPressed: onCreate,
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.createTimetable),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onImport,
-                  icon: const Icon(Icons.file_download_outlined),
-                  label: Text(l10n.importTimetable),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onImportFromText,
-                  icon: const Icon(Icons.paste_outlined),
-                  label: Text(l10n.importTimetableText),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onImportFromWeb,
-                  icon: const Icon(Icons.language_outlined),
-                  label: Text(l10n.schoolWebImportEntry),
-                ),
-              ],
-            ),
-          ],
+    return ExpressiveEmptyState(
+      icon: Icons.event_busy_outlined,
+      title: l10n.noTimetableTitle,
+      message: l10n.noTimetableMessage,
+      actions: [
+        FilledButton.icon(
+          onPressed: onCreate,
+          icon: const Icon(Icons.add),
+          label: Text(l10n.createTimetable),
         ),
-      ),
+        OutlinedButton.icon(
+          onPressed: onImport,
+          icon: const Icon(Icons.file_download_outlined),
+          label: Text(l10n.importTimetable),
+        ),
+        OutlinedButton.icon(
+          onPressed: onImportFromText,
+          icon: const Icon(Icons.paste_outlined),
+          label: Text(l10n.importTimetableText),
+        ),
+        OutlinedButton.icon(
+          onPressed: onImportFromWeb,
+          icon: const Icon(Icons.language_outlined),
+          label: Text(l10n.schoolWebImportEntry),
+        ),
+      ],
     );
   }
 }

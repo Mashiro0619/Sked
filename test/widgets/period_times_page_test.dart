@@ -80,6 +80,18 @@ Future<void> _pumpPeriodTimesPage(
 }
 
 void main() {
+  testWidgets('period time cards fit narrow phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider();
+    await _pumpPeriodTimesPage(tester, provider);
+
+    expect(find.byType(PeriodTimesPage), findsOneWidget);
+    expect(find.text('Start time'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('time picker ignores rapid duplicate taps', (tester) async {
     final provider = await _createProvider();
     await _pumpPeriodTimesPage(tester, provider);

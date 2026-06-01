@@ -8,6 +8,8 @@ import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_apply_service.dart';
 import '../services/school_import_content_sanitizer.dart';
+import '../theme/app_motion.dart';
+import '../widgets/expressive_empty_state.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
 import 'school_import_parser_settings_page.dart';
@@ -102,12 +104,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.tune_outlined),
-                  title: Text(l10n.schoolImportParserSettingsTitle),
-                  subtitle: Text(_buildParserSummary(provider, l10n)),
-                  trailing: const Icon(Icons.chevron_right),
+                _ParserSettingsTile(
+                  summary: _buildParserSummary(provider, l10n),
+                  enabled: !_parserSettingsPageOpen,
                   onTap: _parserSettingsPageOpen
                       ? null
                       : _openParserSettingsPage,
@@ -126,7 +125,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
                   decoration: InputDecoration(
                     labelText: l10n.schoolHtmlImportHtmlLabel,
                     hintText: l10n.schoolHtmlImportHtmlHint,
-                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.code),
                     alignLabelWithHint: true,
                   ),
                 ),
@@ -170,27 +169,17 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _buildConfigMessage(provider, l10n),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: _parserSettingsPageOpen
-                  ? null
-                  : _openParserSettingsPage,
-              icon: const Icon(Icons.tune_outlined),
-              label: Text(l10n.schoolImportParserSettingsTitle),
-            ),
-          ],
+    return ExpressiveEmptyState(
+      icon: Icons.tune_outlined,
+      title: l10n.schoolImportParserSettingsTitle,
+      message: _buildConfigMessage(provider, l10n),
+      actions: [
+        FilledButton.icon(
+          onPressed: _parserSettingsPageOpen ? null : _openParserSettingsPage,
+          icon: const Icon(Icons.tune_outlined),
+          label: Text(l10n.schoolImportParserSettingsTitle),
         ),
-      ),
+      ],
     );
   }
 
@@ -326,6 +315,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      sheetAnimationStyle: AppMotion.sheetAnimationStyle,
       builder: (_) => SchoolWebImportResultSheet(
         response: finalResponse,
         canReplaceCurrent: canReplaceCurrent,
@@ -372,4 +362,90 @@ String mapSchoolImportApplyError(Object error, AppLocalizations l10n) {
     return error.message;
   }
   return l10n.importFailedCheckContent;
+}
+
+class _ParserSettingsTile extends StatelessWidget {
+  const _ParserSettingsTile({
+    required this.summary,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String summary;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final contentColor = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: ShapeDecoration(
+                  color: colors.primary.withValues(
+                    alpha: enabled ? 0.10 : 0.05,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Icon(
+                  Icons.tune_outlined,
+                  color: enabled ? colors.primary : secondaryColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.schoolImportParserSettingsTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: contentColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      summary,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: secondaryColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

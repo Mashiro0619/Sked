@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
+import '../widgets/settings_list.dart';
 
 class SchoolImportParserSettingsPage extends StatefulWidget {
   const SchoolImportParserSettingsPage({
@@ -83,198 +84,155 @@ class _SchoolImportParserSettingsPageState
         return Scaffold(
           appBar: AppBar(title: Text(l10n.schoolImportParserSettingsTitle)),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              Card.outlined(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              SettingsSectionHeader(title: l10n.schoolImportParserCustomOpenAi),
+              Text(
+                l10n.schoolImportParserSettingsDesc,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _baseUrlController,
+                decoration: InputDecoration(
+                  labelText: l10n.schoolImportParserBaseUrl,
+                  hintText: 'https://api.example.com/v1',
+                  prefixIcon: const Icon(Icons.link),
+                ),
+                keyboardType: TextInputType.url,
+                onChanged: provider.updateCustomSchoolImportBaseUrl,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _apiKeyController,
+                focusNode: _apiKeyFocusNode,
+                obscureText: !_showApiKey,
+                decoration: InputDecoration(
+                  labelText: l10n.schoolImportParserApiKey,
+                  prefixIcon: const Icon(Icons.key_outlined),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        l10n.schoolImportParserCustomOpenAi,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.schoolImportParserSettingsDesc,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _baseUrlController,
-                        decoration: InputDecoration(
-                          labelText: l10n.schoolImportParserBaseUrl,
-                          hintText: 'https://api.example.com/v1',
-                          border: const OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.url,
-                        onChanged: provider.updateCustomSchoolImportBaseUrl,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _apiKeyController,
-                        focusNode: _apiKeyFocusNode,
-                        obscureText: !_showApiKey,
-                        decoration: InputDecoration(
-                          labelText: l10n.schoolImportParserApiKey,
-                          border: const OutlineInputBorder(),
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_isSavingApiKey)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 4),
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              IconButton(
-                                onPressed: () {
-                                  setState(() => _showApiKey = !_showApiKey);
-                                },
-                                icon: Icon(
-                                  _showApiKey
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                ),
-                              ),
-                            ],
+                      if (_isSavingApiKey)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
-                        onChanged: (value) =>
-                            _scheduleApiKeyUpdate(provider, value),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _modelController,
-                        decoration: InputDecoration(
-                          labelText: l10n.schoolImportParserModel,
-                          border: const OutlineInputBorder(),
-                        ),
-                        onChanged: provider.updateCustomSchoolImportModel,
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton.tonalIcon(
-                        onPressed:
-                            _isFetchingModels ||
-                                _pendingApiKeyValue != null ||
-                                _isSavingApiKey ||
-                                provider.customSchoolImportBaseUrl.isEmpty ||
-                                provider.customSchoolImportApiKey.isEmpty
-                            ? null
-                            : () => _fetchModels(provider),
-                        icon: _isFetchingModels
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.refresh_outlined),
-                        label: Text(
-                          _isFetchingModels
-                              ? l10n.schoolImportParserFetchingModels
-                              : l10n.schoolImportParserFetchModels,
-                        ),
-                      ),
-                      if (_availableModels.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final model in _availableModels)
-                              ChoiceChip(
-                                label: Text(model),
-                                selected:
-                                    provider.customSchoolImportModel == model,
-                                onSelected: (_) async {
-                                  _modelController.text = model;
-                                  _modelController.selection =
-                                      TextSelection.collapsed(
-                                        offset: model.length,
-                                      );
-                                  await provider.updateCustomSchoolImportModel(
-                                    model,
-                                  );
-                                },
-                              ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Theme(
-                        data: Theme.of(
-                          context,
-                        ).copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          tilePadding: EdgeInsets.zero,
-                          childrenPadding: EdgeInsets.zero,
-                          initiallyExpanded: false,
-                          title: Text(l10n.schoolImportParserCustomPromptTitle),
-                          subtitle: Text(
-                            l10n.schoolImportParserCustomPromptDescription,
-                          ),
-                          children: [
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _customPromptController,
-                              minLines: 4,
-                              maxLines: 8,
-                              decoration: InputDecoration(
-                                labelText:
-                                    l10n.schoolImportParserCustomPromptTitle,
-                                hintText:
-                                    l10n.schoolImportParserCustomPromptHint,
-                                border: const OutlineInputBorder(),
-                                alignLabelWithHint: true,
-                              ),
-                              onChanged:
-                                  provider.updateCustomSchoolImportPrompt,
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed: () async {
-                                  _syncController(
-                                    _customPromptController,
-                                    SchoolImportApi
-                                        .defaultCustomOpenAiSystemPrompt,
-                                  );
-                                  await provider.updateCustomSchoolImportPrompt(
-                                    '',
-                                  );
-                                },
-                                icon: const Icon(Icons.restart_alt_outlined),
-                                label: Text(
-                                  l10n.schoolImportParserResetDefaultPrompt,
-                                ),
-                              ),
-                            ),
-                          ],
+                      IconButton(
+                        onPressed: () {
+                          setState(() => _showApiKey = !_showApiKey);
+                        },
+                        icon: Icon(
+                          _showApiKey
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                         ),
                       ),
                     ],
                   ),
                 ),
+                onChanged: (value) => _scheduleApiKeyUpdate(provider, value),
               ),
               const SizedBox(height: 12),
-              Card.outlined(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    l10n.schoolImportParserPlaintextWarning,
-                    style: Theme.of(context).textTheme.bodyMedium,
+              TextField(
+                controller: _modelController,
+                decoration: InputDecoration(
+                  labelText: l10n.schoolImportParserModel,
+                  prefixIcon: const Icon(Icons.model_training_outlined),
+                ),
+                onChanged: provider.updateCustomSchoolImportModel,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                onPressed:
+                    _isFetchingModels ||
+                        _pendingApiKeyValue != null ||
+                        _isSavingApiKey ||
+                        provider.customSchoolImportBaseUrl.isEmpty ||
+                        provider.customSchoolImportApiKey.isEmpty
+                    ? null
+                    : () => _fetchModels(provider),
+                icon: _isFetchingModels
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_outlined),
+                label: Text(
+                  _isFetchingModels
+                      ? l10n.schoolImportParserFetchingModels
+                      : l10n.schoolImportParserFetchModels,
+                ),
+              ),
+              if (_availableModels.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final model in _availableModels)
+                      ChoiceChip(
+                        label: Text(model),
+                        selected: provider.customSchoolImportModel == model,
+                        onSelected: (_) async {
+                          _modelController.text = model;
+                          _modelController.selection = TextSelection.collapsed(
+                            offset: model.length,
+                          );
+                          await provider.updateCustomSchoolImportModel(model);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(top: 8),
+                initiallyExpanded: false,
+                title: Text(l10n.schoolImportParserCustomPromptTitle),
+                subtitle: Text(l10n.schoolImportParserCustomPromptDescription),
+                children: [
+                  TextField(
+                    controller: _customPromptController,
+                    minLines: 4,
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      labelText: l10n.schoolImportParserCustomPromptTitle,
+                      hintText: l10n.schoolImportParserCustomPromptHint,
+                      alignLabelWithHint: true,
+                    ),
+                    onChanged: provider.updateCustomSchoolImportPrompt,
                   ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        _syncController(
+                          _customPromptController,
+                          SchoolImportApi.defaultCustomOpenAiSystemPrompt,
+                        );
+                        await provider.updateCustomSchoolImportPrompt('');
+                      },
+                      icon: const Icon(Icons.restart_alt_outlined),
+                      label: Text(l10n.schoolImportParserResetDefaultPrompt),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.schoolImportParserPlaintextWarning,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],

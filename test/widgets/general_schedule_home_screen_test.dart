@@ -202,6 +202,56 @@ void main() {
     expect(provider.generalSchedules, hasLength(2));
   });
 
+  testWidgets('calendar manager fits narrow phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendars = [
+      const GeneralSchedule(
+        id: 'cal1',
+        name: 'Primary planning calendar with a very long name',
+        colorValue: 0xFF6750A4,
+        events: [],
+      ),
+      const GeneralSchedule(
+        id: 'cal2',
+        name: 'Hidden shared family errands and reminders',
+        colorValue: 0xFF386A20,
+        isVisible: false,
+        events: [],
+      ),
+      const GeneralSchedule(
+        id: 'cal3',
+        name: 'Work travel and appointments',
+        colorValue: 0xFFB3261E,
+        events: [],
+      ),
+    ];
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: calendars,
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byTooltip('Calendars'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendars'), findsWidgets);
+    expect(find.byTooltip('Add calendar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('week view swipes horizontally to change week', (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -423,6 +473,51 @@ void main() {
 
     expect(find.text('Search events'), findsNothing);
     expect(find.byTooltip('Filter by color'), findsNothing);
+  });
+
+  testWidgets('list view event cards fit narrow phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar with a long display name',
+      events: [
+        GeneralEvent(
+          id: 'evt1',
+          calendarId: 'cal1',
+          title:
+              'Planning session with a very long event title that should wrap safely',
+          startDateTimeIso: '2026-06-16T09:00:00.000',
+          endDateTimeIso: '2026-06-16T10:00:00.000',
+          location:
+              'Conference room with a very long location name and extra notes',
+          recurrenceRule: GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.weekly,
+          ),
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewList,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(find.text('Today'), findsWidgets);
+    expect(find.text('Pick date'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('day view selects a day from the week strip', (tester) async {
@@ -933,6 +1028,53 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('June 2026'), findsWidgets);
     expect(find.text('No upcoming events'), findsWidgets);
+  });
+
+  testWidgets('month view agenda cards fit compact phone width', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar with a very long display name',
+      events: [
+        GeneralEvent(
+          id: 'evt1',
+          calendarId: 'cal1',
+          title:
+              'Recurring project review with a very long event title for agenda',
+          startDateTimeIso: '2026-06-16T09:00:00.000',
+          endDateTimeIso: '2026-06-16T10:00:00.000',
+          location:
+              'Conference room with a very long location name and extra notes',
+          recurrenceRule: GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.weekly,
+          ),
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewMonth,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('June 2026'), findsWidgets);
+    expect(find.textContaining('Recurring project review'), findsWidgets);
   });
 
   testWidgets('month view fits wide short height without overflow', (

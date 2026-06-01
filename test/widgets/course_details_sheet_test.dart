@@ -46,7 +46,10 @@ CourseItem _course({required String id, required String name}) {
   );
 }
 
-Future<TimetableProvider> _createProvider() async {
+Future<TimetableProvider> _createProvider({
+  String courseAName = 'Course A',
+  String courseBName = 'Course B',
+}) async {
   final periodTimes = buildDefaultPeriodTimes();
   final timetable = TimetableData(
     id: 'table-1',
@@ -57,8 +60,8 @@ Future<TimetableProvider> _createProvider() async {
       periodTimeSetId: defaultPeriodTimeSetId,
     ),
     courses: [
-      _course(id: 'course-a', name: 'Course A'),
-      _course(id: 'course-b', name: 'Course B'),
+      _course(id: 'course-a', name: courseAName),
+      _course(id: 'course-b', name: courseBName),
     ],
   );
   final data = buildInitialAppData(periodTimes, localeCode: defaultLocaleCode)
@@ -85,6 +88,42 @@ Future<TimetableProvider> _createProvider() async {
 }
 
 void main() {
+  testWidgets('conflict course cards fit compact phone width', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider(
+      courseAName: 'Advanced interaction design and scheduling studio',
+      courseBName: 'Very long overlapping laboratory practicum section',
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<TimetableProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: CourseDetailsSheet(
+              courseId: 'course-a',
+              weekday: 1,
+              conflictKey: null,
+              isFullConflict: true,
+              onEdit: () {},
+              onSelectDisplayedCourse: (_) {},
+              onEditConflictCourse: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CourseDetailsSheet), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('conflict action buttons ignore rapid duplicate taps', (
     tester,
   ) async {

@@ -80,14 +80,15 @@ class _ListJumpBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 2),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
           OutlinedButton.icon(
             onPressed: onToday,
             icon: const Icon(Icons.today_outlined),
             label: Text(l10n.today),
           ),
-          const SizedBox(width: 8),
           OutlinedButton.icon(
             onPressed: onPickDate,
             icon: const Icon(Icons.event_outlined),
@@ -111,33 +112,77 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final color = Color(
       occurrence.event.colorValue ?? occurrence.calendar.colorValue,
     );
-    return ListTile(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      leading: Container(
-        width: 10,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
+    final subtitle = [
+      _formatOccurrenceTime(context, occurrence),
+      if (occurrence.event.location.isNotEmpty) occurrence.event.location,
+      occurrence.calendar.name,
+    ].join('  |  ');
+    final repeatIcon = occurrence.event.recurrenceRule.isRepeating
+        ? Icon(Icons.repeat, color: colors.primary, size: 20)
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 10,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        occurrence.event.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (repeatIcon != null) ...[
+                  const SizedBox(width: 8),
+                  repeatIcon,
+                ],
+              ],
+            ),
+          ),
         ),
       ),
-      title: Text(occurrence.event.title),
-      subtitle: Text(
-        [
-          _formatOccurrenceTime(context, occurrence),
-          if (occurrence.event.location.isNotEmpty) occurrence.event.location,
-          occurrence.calendar.name,
-        ].join('  |  '),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: occurrence.event.recurrenceRule.isRepeating
-          ? Icon(Icons.repeat, color: theme.colorScheme.primary)
-          : null,
-      onTap: onTap,
     );
   }
 }
@@ -150,33 +195,17 @@ class _GeneralEmptyListState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.event_available_outlined,
-              size: 48,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              filtered ? l10n.noMatchingEvents : l10n.noUpcomingEvents,
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: onToday,
-              icon: const Icon(Icons.today_outlined),
-              label: Text(l10n.today),
-            ),
-          ],
+    return ExpressiveEmptyState(
+      icon: Icons.event_available_outlined,
+      title: filtered ? l10n.noMatchingEvents : l10n.noUpcomingEvents,
+      actions: [
+        OutlinedButton.icon(
+          onPressed: onToday,
+          icon: const Icon(Icons.today_outlined),
+          label: Text(l10n.today),
         ),
-      ),
+      ],
     );
   }
 }

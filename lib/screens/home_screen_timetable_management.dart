@@ -12,7 +12,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     }
     _setWeekPickerOpen(true);
     try {
-      final week = await showDialog<int>(
+      final week = await showExpressiveDialog<int>(
         context: context,
         builder: (context) {
           final theme = Theme.of(context);
@@ -71,7 +71,9 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                 final isRealCurrentWeek =
                                     weekNumber == realCurrentWeek;
                                 final backgroundColor = isSelected
-                                    ? theme.colorScheme.secondaryContainer
+                                    ? theme.colorScheme.primary.withValues(
+                                        alpha: 0.12,
+                                      )
                                     : isRealCurrentWeek
                                     ? theme.colorScheme.surfaceContainerHighest
                                     : theme.colorScheme.surface;
@@ -91,7 +93,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                           ),
                                           border: Border.all(
                                             color: isSelected
-                                                ? theme.colorScheme.secondary
+                                                ? theme.colorScheme.primary
                                                 : theme
                                                       .colorScheme
                                                       .outlineVariant,
@@ -145,7 +147,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     var selectedStartDate = timetable.config.startDate;
     var startDatePickerOpen = false;
     try {
-      final result = await showDialog<String>(
+      final result = await showExpressiveDialog<String>(
         context: context,
         builder: (context) {
           final l10n = AppLocalizations.of(context);
@@ -248,16 +250,9 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              leading: const Icon(
-                                Icons.calendar_month_outlined,
-                              ),
-                              title: Text(l10n.semesterStartDate),
-                              subtitle: Text(formatDate(selectedStartDate)),
-                              trailing: const Icon(Icons.calendar_month),
+                            _TimetableStartDateTile(
+                              title: l10n.semesterStartDate,
+                              dateLabel: formatDate(selectedStartDate),
                               enabled: !startDatePickerOpen,
                               onTap: startDatePickerOpen
                                   ? null
@@ -306,18 +301,16 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                 24,
                                 24,
                               ),
-                              child: Row(
-                                children: [
-                                  TextButton(
-                                    onPressed: () => popWith('delete'),
-                                    child: Text(l10n.delete),
-                                  ),
-                                  const Spacer(),
+                              child: ExpressiveActionArea(
+                                leading: TextButton(
+                                  onPressed: () => popWith('delete'),
+                                  child: Text(l10n.delete),
+                                ),
+                                actions: [
                                   TextButton(
                                     onPressed: () => popWith(null),
                                     child: Text(l10n.cancel),
                                   ),
-                                  const SizedBox(width: 8),
                                   FilledButton(
                                     onPressed: () => popWith('save'),
                                     child: Text(l10n.save),
@@ -362,7 +355,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
         if (!mounted) {
           return;
         }
-        final confirmed = await showDialog<bool>(
+        final confirmed = await showExpressiveDialog<bool>(
           context: this.context,
           builder: (context) {
             final l10n = AppLocalizations.of(context);
@@ -398,5 +391,80 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       weeksController.dispose();
       _setTimetableItemDialogOpen(false);
     }
+  }
+}
+
+class _TimetableStartDateTile extends StatelessWidget {
+  const _TimetableStartDateTile({
+    required this.title,
+    required this.dateLabel,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String title;
+  final String dateLabel;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final contentColor = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_month_outlined, color: secondaryColor),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: contentColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        dateLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: secondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.calendar_month, color: secondaryColor),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -19,6 +19,7 @@ import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_service.dart';
+import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
@@ -26,7 +27,6 @@ import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/timetable_entry.dart';
 import 'package:sked/widgets/timetable_grid.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -2032,7 +2032,12 @@ void main() {
 
       expect(find.byType(SearchBar), findsOneWidget);
 
-      final simplifiedChineseOption = find.text('简体中文').last;
+      await tester.enterText(find.byType(SearchBar), '简体');
+      await tester.pumpAndSettle();
+
+      final simplifiedChineseOption = find.byKey(
+        const ValueKey('language-search-option-zh'),
+      );
       await tester.ensureVisible(simplifiedChineseOption);
       await tester.pumpAndSettle();
       await tester.tap(simplifiedChineseOption);
@@ -2720,7 +2725,9 @@ void main() {
       expect(provider.liveCourseOutlineFollowTheme, isTrue);
       expect(provider.liveCourseOutlineCustomColorInitialized, isFalse);
 
-      await tester.tap(find.widgetWithText(SwitchListTile, '跟随主题色'));
+      await tester.tap(
+        find.byKey(const ValueKey('live-course-outline-follow-theme-row')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
@@ -2762,7 +2769,9 @@ void main() {
       await tester.scrollUntilVisible(find.text('课程描边'), 200);
       await tester.tap(find.text('课程描边'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(SwitchListTile, '开启课程描边'));
+      await tester.tap(
+        find.byKey(const ValueKey('live-course-outline-enabled-row')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
@@ -2958,7 +2967,7 @@ void main() {
       await tester.tap(find.text('课程描边'));
       await tester.pumpAndSettle();
 
-      expect(find.text('描边目标'), findsNWidgets(2));
+      expect(find.byType(SegmentedButton<String>), findsWidgets);
       await tester.tap(find.text('当前页全部课程').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用设置'));
@@ -2996,7 +3005,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final courseTextTile = find.widgetWithText(ListTile, '课程文字色');
+      final courseTextTile = find.byKey(
+        const ValueKey('theme-ui-color-course_text'),
+      );
       await tester.ensureVisible(courseTextTile);
       await tester.pumpAndSettle();
       await tester.tap(courseTextTile);
@@ -3006,12 +3017,11 @@ void main() {
       expect(find.text('自定义颜色'), findsWidgets);
       await tester.tap(find.text('自定义颜色').last);
       await tester.pumpAndSettle();
-      expect(find.byType(ColorPickerInput), findsOneWidget);
-
-      final colorInput = tester.widget<ColorPickerInput>(
-        find.byType(ColorPickerInput),
+      final hexField = find.byKey(
+        const ValueKey('compact-color-picker-hex-field'),
       );
-      colorInput.onColorChanged(const Color(0xFF123456));
+      expect(hexField, findsOneWidget);
+      await tester.enterText(hexField, '#123456');
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
@@ -4058,13 +4068,107 @@ void main() {
       final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       final lightTheme = materialApp.theme!;
       final darkTheme = materialApp.darkTheme!;
+      final secondaryLight = ColorScheme.fromSeed(
+        seedColor: const Color(0xFF223344),
+        brightness: Brightness.light,
+        dynamicSchemeVariant: DynamicSchemeVariant.expressive,
+      );
+      final tertiaryLight = ColorScheme.fromSeed(
+        seedColor: const Color(0xFF334455),
+        brightness: Brightness.light,
+        dynamicSchemeVariant: DynamicSchemeVariant.expressive,
+      );
 
       expect(lightTheme.colorScheme.primary, const Color(0xFF112233));
       expect(lightTheme.colorScheme.secondary, const Color(0xFF223344));
       expect(lightTheme.colorScheme.tertiary, const Color(0xFF334455));
+      expect(
+        lightTheme.colorScheme.secondaryContainer,
+        secondaryLight.secondaryContainer,
+      );
+      expect(
+        lightTheme.colorScheme.secondaryFixed,
+        secondaryLight.secondaryFixed,
+      );
+      expect(
+        lightTheme.colorScheme.tertiaryContainer,
+        tertiaryLight.tertiaryContainer,
+      );
+      expect(lightTheme.colorScheme.tertiaryFixed, tertiaryLight.tertiaryFixed);
       expect(darkTheme.colorScheme.primary, const Color(0xFF112233));
       expect(darkTheme.colorScheme.secondary, const Color(0xFF223344));
       expect(darkTheme.colorScheme.tertiary, const Color(0xFF334455));
+    });
+
+    testWidgets(
+      'MyApp uses Material 3 while respecting the selected seed color',
+      (tester) async {
+        final provider = TimetableProvider(
+          storage: MemoryTimetableStorage(
+            initialData: _buildTestAppData().copyWith(
+              themeColorMode: themeColorModeSingle,
+              themeSeedColorValue: 0xFF6750A4,
+              privacyPolicyAcceptedVersion: '2026-04-20',
+            ),
+          ),
+        );
+        await provider.load();
+
+        await tester.pumpWidget(MyApp(provider: provider));
+        await tester.pumpAndSettle();
+
+        final materialApp = tester.widget<MaterialApp>(
+          find.byType(MaterialApp),
+        );
+        final expressiveLight = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: Brightness.light,
+          dynamicSchemeVariant: DynamicSchemeVariant.expressive,
+        );
+
+        expect(materialApp.theme!.useMaterial3, isTrue);
+        expect(materialApp.theme!.colorScheme.primary, const Color(0xFF6750A4));
+        expect(
+          materialApp.theme!.colorScheme.primaryContainer,
+          expressiveLight.primaryContainer,
+        );
+        expect(
+          materialApp.theme!.navigationBarTheme.indicatorColor,
+          const Color(0xFF6750A4).withValues(alpha: 0.12),
+        );
+        expect(materialApp.theme!.bottomSheetTheme.showDragHandle, isTrue);
+      },
+    );
+
+    test(
+      'buildAppTheme normalizes transparent seed colors to opaque colors',
+      () {
+        final theme = buildAppTheme(
+          seedColor: const Color(0x806750A4),
+          brightness: Brightness.light,
+          themeColorMode: themeColorModeSingle,
+          colorfulUiColorValues: const {},
+        );
+
+        expect(theme.colorScheme.primary, const Color(0xFF6750A4));
+      },
+    );
+
+    test('buildAppTheme picks readable on-colors for custom colors', () {
+      final theme = buildAppTheme(
+        seedColor: const Color(0xFF777777),
+        brightness: Brightness.light,
+        themeColorMode: themeColorModeColorful,
+        colorfulUiColorValues: const {
+          colorfulUiPrimaryKey: 0xFF777777,
+          colorfulUiSecondaryKey: 0xFF777777,
+          colorfulUiTertiaryKey: 0xFF777777,
+        },
+      );
+
+      expect(theme.colorScheme.onPrimary, Colors.black);
+      expect(theme.colorScheme.onSecondary, Colors.black);
+      expect(theme.colorScheme.onTertiary, Colors.black);
     });
   });
 

@@ -8,6 +8,9 @@ import '../services/export_service.dart';
 import '../services/school_site_service.dart';
 import '../services/text_file_picker.dart';
 import '../utils/platform_capabilities.dart';
+import '../widgets/expressive_dialog.dart';
+import '../widgets/expressive_empty_state.dart';
+import '../widgets/expressive_motion.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
 
@@ -102,57 +105,48 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _sites.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(l10n.schoolSitesEmpty, textAlign: TextAlign.center),
-              ),
+          ? _SchoolSitesEmptyState(
+              onAdd: (_editorDialogOpen || _siteMutationInProgress)
+                  ? null
+                  : _addSite,
+              onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
             )
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               itemCount: _sites.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final site = _sites[index];
-                return Card.outlined(
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-                    leading: const Icon(Icons.school_outlined),
-                    title: Text(site.name),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(site.loginUrl),
-                    ),
-                    isThreeLine: false,
-                    enabled: _supportsWebImport && !_webImportOpen,
-                    onTap: _supportsWebImport && !_webImportOpen
-                        ? () => _openWebImportForSite(site)
-                        : null,
-                    trailing: _isEditMode
-                        ? PopupMenuButton<_SchoolSiteItemAction>(
-                            onSelected: (action) async {
-                              switch (action) {
-                                case _SchoolSiteItemAction.edit:
-                                  await _editSite(index);
-                                  return;
-                                case _SchoolSiteItemAction.delete:
-                                  await _deleteSite(index);
-                                  return;
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: _SchoolSiteItemAction.edit,
-                                child: Text(l10n.schoolSitesEdit),
-                              ),
-                              PopupMenuItem(
-                                value: _SchoolSiteItemAction.delete,
-                                child: Text(l10n.delete),
-                              ),
-                            ],
-                          )
-                        : null,
-                  ),
+                return _SchoolSiteRow(
+                  site: site,
+                  enabled: _supportsWebImport && !_webImportOpen,
+                  onTap: _supportsWebImport && !_webImportOpen
+                      ? () => _openWebImportForSite(site)
+                      : null,
+                  trailing: _isEditMode
+                      ? PopupMenuButton<_SchoolSiteItemAction>(
+                          onSelected: (action) async {
+                            switch (action) {
+                              case _SchoolSiteItemAction.edit:
+                                await _editSite(index);
+                                return;
+                              case _SchoolSiteItemAction.delete:
+                                await _deleteSite(index);
+                                return;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: _SchoolSiteItemAction.edit,
+                              child: Text(l10n.schoolSitesEdit),
+                            ),
+                            PopupMenuItem(
+                              value: _SchoolSiteItemAction.delete,
+                              child: Text(l10n.delete),
+                            ),
+                          ],
+                        )
+                      : null,
                 );
               },
             ),
@@ -329,7 +323,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     }
     final l10n = AppLocalizations.of(context);
     final site = _sites[index];
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -369,7 +363,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
       text: initialSite?.loginUrl ?? '',
     );
 
-    final future = showDialog<SchoolSite>(
+    final future = showExpressiveDialog<SchoolSite>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -383,8 +377,8 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
           title: Text(
             initialSite == null ? l10n.schoolSitesAdd : l10n.schoolSitesEdit,
           ),
-          content: SizedBox(
-            width: 420,
+          content: ExpressiveDialogContent(
+            maxWidth: 420,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -392,15 +386,16 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                   controller: nameController,
                   decoration: InputDecoration(
                     labelText: l10n.schoolSitesNameLabel,
-                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.school_outlined),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: urlController,
+                  keyboardType: TextInputType.url,
                   decoration: InputDecoration(
                     labelText: l10n.schoolSitesLoginUrlLabel,
-                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.link),
                   ),
                 ),
               ],
@@ -607,7 +602,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     required String message,
     required String confirmText,
   }) {
-    return showDialog<bool>(
+    return showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -639,7 +634,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     required String title,
     required String message,
   }) {
-    return showDialog<bool>(
+    return showExpressiveDialog<bool>(
       context: context,
       builder: (context) {
         var popped = false;
@@ -674,5 +669,167 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _SchoolSitesEmptyState extends StatelessWidget {
+  const _SchoolSitesEmptyState({
+    required this.onAdd,
+    required this.onHtmlImport,
+  });
+
+  final VoidCallback? onAdd;
+  final VoidCallback? onHtmlImport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ExpressiveEmptyState(
+      icon: Icons.school_outlined,
+      title: l10n.schoolSitesPageTitle,
+      message: l10n.schoolSitesEmpty,
+      actions: [
+        FilledButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add),
+          label: Text(l10n.schoolSitesAdd),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: onHtmlImport,
+          icon: const Icon(Icons.code),
+          label: Text(l10n.schoolHtmlImportEntry),
+        ),
+      ],
+    );
+  }
+}
+
+class _SchoolSiteRow extends StatelessWidget {
+  const _SchoolSiteRow({
+    required this.site,
+    required this.enabled,
+    required this.onTap,
+    required this.trailing,
+  });
+
+  final SchoolSite site;
+  final bool enabled;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final contentColor = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+
+    return ExpressiveTap(
+      onTap: onTap,
+      enabled: enabled,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: ShapeDecoration(
+          color: enabled
+              ? colors.surfaceContainerLow
+              : colors.surfaceContainerLow.withValues(alpha: 0.66),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final leading = Container(
+                width: 44,
+                height: 44,
+                decoration: ShapeDecoration(
+                  color: colors.primary.withValues(
+                    alpha: enabled ? 0.10 : 0.05,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Icon(
+                  Icons.school_outlined,
+                  color: enabled ? colors.primary : secondaryColor,
+                ),
+              );
+              final content = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    site.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: contentColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    site.loginUrl,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: secondaryColor,
+                    ),
+                  ),
+                ],
+              );
+              final trailingWidget = trailing == null
+                  ? null
+                  : IconTheme.merge(
+                      data: IconThemeData(color: secondaryColor),
+                      child: trailing!,
+                    );
+
+              if (constraints.maxWidth < 320 && trailingWidget != null) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        leading,
+                        const SizedBox(width: 14),
+                        Expanded(child: content),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: trailingWidget,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  leading,
+                  const SizedBox(width: 14),
+                  Expanded(child: content),
+                  if (trailingWidget != null) ...[
+                    const SizedBox(width: 8),
+                    trailingWidget,
+                  ],
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 }

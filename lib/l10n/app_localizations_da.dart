@@ -180,6 +180,18 @@ class AppLocalizationsDa extends AppLocalizations {
   String get settingsTitle => 'Indstillinger';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'Der er i øjeblikket ingen tidsplan tilgængelig for indstillinger.';
 

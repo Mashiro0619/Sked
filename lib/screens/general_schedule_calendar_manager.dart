@@ -15,16 +15,23 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
     final provider = context.watch<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return SafeArea(
       top: false,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 12, 8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
             child: Row(
               children: [
-                Text(l10n.calendars, style: theme.textTheme.titleLarge),
+                Text(
+                  l10n.calendars,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const Spacer(),
                 IconButton(
                   tooltip: l10n.addCalendar,
@@ -48,62 +55,28 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
               itemCount: provider.generalSchedules.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 4),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final schedule = provider.generalSchedules[index];
                 final active = schedule.id == provider.activeGeneralSchedule.id;
-                return ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                return _CalendarManagerTile(
+                  schedule: schedule,
+                  active: active,
+                  eventCountLabel: l10n.generalScheduleEventCount(
+                    schedule.events.length,
                   ),
-                  selected: active,
-                  leading: _ColorDot(color: Color(schedule.colorValue)),
-                  title: Text(schedule.name),
-                  subtitle: Text(
-                    l10n.generalScheduleEventCount(schedule.events.length),
+                  disabled: _actionInProgress,
+                  onSelect: () => _runCalendarAction(
+                    () => provider.switchGeneralSchedule(schedule.id),
                   ),
-                  trailing: Wrap(
-                    spacing: 2,
-                    children: [
-                      IconButton(
-                        tooltip: schedule.isVisible
-                            ? l10n.hideCalendar
-                            : l10n.showCalendar,
-                        icon: Icon(
-                          schedule.isVisible
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                        ),
-                        onPressed: _actionInProgress
-                            ? null
-                            : () => _runCalendarAction(
-                                () => provider.updateGeneralScheduleVisibility(
-                                  schedule.id,
-                                  !schedule.isVisible,
-                                ),
-                              ),
-                      ),
-                      IconButton(
-                        tooltip: l10n.rename,
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: _actionInProgress
-                            ? null
-                            : () => _renameCalendar(context, schedule),
-                      ),
-                      IconButton(
-                        tooltip: l10n.delete,
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: _actionInProgress
-                            ? null
-                            : () => _deleteCalendar(context, schedule),
-                      ),
-                    ],
+                  onToggleVisibility: () => _runCalendarAction(
+                    () => provider.updateGeneralScheduleVisibility(
+                      schedule.id,
+                      !schedule.isVisible,
+                    ),
                   ),
-                  onTap: _actionInProgress
-                      ? null
-                      : () => _runCalendarAction(
-                          () => provider.switchGeneralSchedule(schedule.id),
-                        ),
+                  onRename: () => _renameCalendar(context, schedule),
+                  onDelete: () => _deleteCalendar(context, schedule),
                 );
               },
             ),
@@ -136,7 +109,7 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
     await _runCalendarAction(() async {
       final provider = context.read<TimetableProvider>();
       final controller = TextEditingController(text: schedule.name);
-      final name = await showDialog<String>(
+      final name = await showExpressiveDialog<String>(
         context: context,
         builder: (dialogContext) {
           final l10n = AppLocalizations.of(dialogContext);
@@ -154,7 +127,7 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
               autofocus: true,
               decoration: InputDecoration(
                 labelText: l10n.name,
-                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.edit_outlined),
               ),
             ),
             actions: [
@@ -184,7 +157,7 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
     await _runCalendarAction(() async {
       final provider = context.read<TimetableProvider>();
       final l10n = AppLocalizations.of(context);
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showExpressiveDialog<bool>(
         context: context,
         builder: (dialogContext) {
           var popped = false;
@@ -217,5 +190,210 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
         await provider.deleteGeneralSchedule(schedule.id);
       }
     });
+  }
+}
+
+class _CalendarManagerTile extends StatelessWidget {
+  const _CalendarManagerTile({
+    required this.schedule,
+    required this.active,
+    required this.eventCountLabel,
+    required this.disabled,
+    required this.onSelect,
+    required this.onToggleVisibility,
+    required this.onRename,
+    required this.onDelete,
+  });
+
+  final GeneralSchedule schedule;
+  final bool active;
+  final String eventCountLabel;
+  final bool disabled;
+  final VoidCallback onSelect;
+  final VoidCallback onToggleVisibility;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final borderColor = active
+        ? colors.primary.withValues(alpha: 0.44)
+        : colors.outlineVariant.withValues(alpha: 0.7);
+
+    return Material(
+      color: active
+          ? colors.primary.withValues(alpha: 0.10)
+          : colors.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: borderColor),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: disabled ? null : onSelect,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 360;
+              final titleBlock = _CalendarManagerTileTitle(
+                schedule: schedule,
+                active: active,
+                eventCountLabel: eventCountLabel,
+              );
+              final actions = _CalendarManagerTileActions(
+                visible: schedule.isVisible,
+                disabled: disabled,
+                showTooltip: l10n.showCalendar,
+                hideTooltip: l10n.hideCalendar,
+                renameTooltip: l10n.rename,
+                deleteTooltip: l10n.delete,
+                onToggleVisibility: onToggleVisibility,
+                onRename: onRename,
+                onDelete: onDelete,
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _ColorDot(color: Color(schedule.colorValue)),
+                        const SizedBox(width: 12),
+                        Expanded(child: titleBlock),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: actions,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _ColorDot(color: Color(schedule.colorValue)),
+                  const SizedBox(width: 12),
+                  Expanded(child: titleBlock),
+                  const SizedBox(width: 8),
+                  actions,
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CalendarManagerTileTitle extends StatelessWidget {
+  const _CalendarManagerTileTitle({
+    required this.schedule,
+    required this.active,
+    required this.eventCountLabel,
+  });
+
+  final GeneralSchedule schedule;
+  final bool active;
+  final String eventCountLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                schedule.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: active ? colors.primary : colors.onSurface,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+            ),
+            if (active) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.check_circle, size: 18, color: colors.primary),
+            ],
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          eventCountLabel,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: active ? colors.primary : colors.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CalendarManagerTileActions extends StatelessWidget {
+  const _CalendarManagerTileActions({
+    required this.visible,
+    required this.disabled,
+    required this.showTooltip,
+    required this.hideTooltip,
+    required this.renameTooltip,
+    required this.deleteTooltip,
+    required this.onToggleVisibility,
+    required this.onRename,
+    required this.onDelete,
+  });
+
+  final bool visible;
+  final bool disabled;
+  final String showTooltip;
+  final String hideTooltip;
+  final String renameTooltip;
+  final String deleteTooltip;
+  final VoidCallback onToggleVisibility;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 2,
+      runSpacing: 2,
+      alignment: WrapAlignment.end,
+      children: [
+        IconButton(
+          tooltip: visible ? hideTooltip : showTooltip,
+          icon: Icon(
+            visible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          ),
+          onPressed: disabled ? null : onToggleVisibility,
+        ),
+        IconButton(
+          tooltip: renameTooltip,
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: disabled ? null : onRename,
+        ),
+        IconButton(
+          tooltip: deleteTooltip,
+          icon: const Icon(Icons.delete_outline),
+          onPressed: disabled ? null : onDelete,
+        ),
+      ],
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/timetable_provider.dart';
+import '../widgets/expressive_motion.dart';
 import 'general_schedule_home_screen.dart';
 import 'home_screen.dart';
 
@@ -23,11 +24,11 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           );
         }
 
-        if (provider.isStudentMode) {
-          return const HomeScreen();
-        }
-
-        return const GeneralScheduleHomeScreen();
+        return ExpressiveSwitcher(
+          child: provider.isStudentMode
+              ? const HomeScreen(key: ValueKey('student-home'))
+              : const GeneralScheduleHomeScreen(key: ValueKey('general-home')),
+        );
       },
     );
   }

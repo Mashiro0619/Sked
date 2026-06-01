@@ -13,6 +13,39 @@ Widget _localizedApp(Widget child) {
 }
 
 void main() {
+  testWidgets('lays out on narrow screens', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work calendar', events: []),
+          ],
+          activeCalendarId: 'work',
+          initialEvent: GeneralEvent(
+            id: 'event',
+            calendarId: 'work',
+            title: 'Long planning session',
+            startDateTimeIso: '2026-05-25T09:00:00.000',
+            endDateTimeIso: '2026-05-25T10:00:00.000',
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.custom,
+              interval: 2,
+              unit: GeneralEventRecurrenceUnit.week,
+              count: 4,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('builds with an empty calendar list', (tester) async {
     await tester.pumpWidget(
       _localizedApp(const GeneralEventEditorSheet(calendars: [])),
@@ -21,6 +54,27 @@ void main() {
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('all-day switch tap changes once', (tester) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Pick time'), findsNWidgets(2));
+
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+
+    expect(find.byTooltip('Pick time'), findsNothing);
   });
 
   testWidgets('trims the initial event calendar id', (tester) async {

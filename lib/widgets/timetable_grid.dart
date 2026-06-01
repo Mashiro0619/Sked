@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/timetable_models.dart';
+import 'expressive_motion.dart';
 import 'timetable_entry.dart';
 
 const _minuteHeight = 1.4;
@@ -148,7 +149,7 @@ class TimetableGrid extends StatelessWidget {
                   layouts: dayLayoutsByWeekday.values.expand((items) => items),
                   courseNameColorValues: courseNameColorValues,
                   surfaceColor: colors.surface,
-                  fallbackColor: colors.onSecondaryContainer,
+                  fallbackColor: colors.onSurface,
                 )
         : null;
 
@@ -481,7 +482,7 @@ class _DayHeader extends StatelessWidget {
             ),
             decoration: isToday
                 ? BoxDecoration(
-                    color: colorScheme.primaryContainer,
+                    color: colorScheme.primary.withValues(alpha: 0.10),
                     border: Border.all(
                       color: colorScheme.primary.withValues(alpha: 0.65),
                     ),
@@ -496,7 +497,7 @@ class _DayHeader extends StatelessWidget {
                           ? Theme.of(context).textTheme.labelSmall
                           : Theme.of(context).textTheme.bodySmall)
                       ?.copyWith(
-                        color: isToday ? colorScheme.onPrimaryContainer : null,
+                        color: isToday ? colorScheme.primary : null,
                         fontWeight: isToday ? FontWeight.w700 : null,
                       ),
             ),
@@ -685,11 +686,11 @@ class _CourseCard extends StatelessWidget {
         : themeColorMode == themeColorModeColorful && colorfulCourseBase != null
         ? Color(colorfulCourseBase)
         : Color.lerp(
-                colorScheme.secondaryContainer,
-                colorScheme.primaryContainer,
-                0.18 + (layout.priorityDepth * 0.18),
+                colorScheme.surfaceContainerHighest,
+                colorScheme.primary,
+                0.20 + (layout.priorityDepth * 0.06),
               ) ??
-              colorScheme.secondaryContainer;
+              colorScheme.surfaceContainerHighest;
     final futureInactiveColor = themeColorMode == themeColorModeColorful
         ? Color.lerp(activeBaseColor, colorScheme.surface, 0.58) ??
               colorScheme.surfaceContainerHighest
@@ -737,34 +738,35 @@ class _CourseCard extends StatelessWidget {
       left: metrics.courseGap,
       width: width,
       height: height,
-      child: Card.filled(
-        color: color,
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(compact ? 8 : 10),
-          side: layout.isLiveHighlighted
-              ? BorderSide(
-                  color: outlineColor,
-                  width: layout.isPrimaryLiveTarget
-                      ? effectivePrimaryOutlineWidth
-                      : effectiveOutlineWidth,
-                )
-              : BorderSide.none,
-        ),
-        child: InkWell(
-          onTap: onTap,
+      child: ExpressiveTap(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(compact ? 8 : 10),
+        scale: 0.97,
+        child: Card.filled(
+          color: color,
+          clipBehavior: Clip.antiAlias,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(compact ? 8 : 10),
+            side: layout.isLiveHighlighted
+                ? BorderSide(
+                    color: outlineColor,
+                    width: layout.isPrimaryLiveTarget
+                        ? effectivePrimaryOutlineWidth
+                        : effectiveOutlineWidth,
+                  )
+                : BorderSide.none,
+          ),
           child: Padding(
             padding: EdgeInsets.all(metrics.cardPadding),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final textColor =
                     (themeColorMode == themeColorModeColorful
-                            ? (colorfulTextColor ??
-                                  colorScheme.onSecondaryContainer)
+                            ? (colorfulTextColor ?? colorScheme.onSurface)
                             : (_isInactiveForCurrentWeek
                                   ? colorScheme.onSurfaceVariant
-                                  : colorScheme.onSecondaryContainer))
+                                  : colorScheme.onSurface))
                         .withValues(
                           alpha: _isInactiveForCurrentWeek
                               ? 0.9
@@ -789,6 +791,18 @@ class _CourseCard extends StatelessWidget {
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         );
+                final availableHeight = constraints.maxHeight.isFinite
+                    ? constraints.maxHeight
+                    : height;
+                final showLocation =
+                    _location.isNotEmpty &&
+                    availableHeight >= (layout.isFullConflict ? 58 : 52);
+                final showTeacher =
+                    _teacher.isNotEmpty &&
+                    availableHeight >= (layout.isFullConflict ? 78 : 68);
+                final titleMaxLines = compact
+                    ? (showLocation || showTeacher ? 2 : 3)
+                    : 3;
 
                 return Stack(
                   children: [
@@ -805,22 +819,22 @@ class _CourseCard extends StatelessWidget {
                           children: [
                             Text(
                               _title,
-                              softWrap: true,
-                              overflow: TextOverflow.visible,
+                              maxLines: titleMaxLines,
+                              overflow: TextOverflow.ellipsis,
                               style: titleStyle,
                             ),
-                            if (_location.isNotEmpty)
+                            if (showLocation)
                               Text(
                                 _location,
-                                softWrap: true,
-                                overflow: TextOverflow.visible,
+                                maxLines: compact ? 1 : 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: bodyStyle,
                               ),
-                            if (_teacher.isNotEmpty)
+                            if (showTeacher)
                               Text(
                                 _teacher,
-                                softWrap: true,
-                                overflow: TextOverflow.visible,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: teacherStyle,
                               ),
                           ],

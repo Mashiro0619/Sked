@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
+import 'expressive_dialog.dart';
 
 typedef TextImportSubmit =
     Future<bool> Function(BuildContext context, String content);
@@ -60,7 +61,6 @@ class _TextImportPageState extends State<TextImportPage> {
             decoration: InputDecoration(
               labelText: widget.labelText ?? l10n.jsonContent,
               hintText: widget.hintText ?? l10n.pasteJsonContentHint,
-              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
           ),
@@ -122,7 +122,7 @@ Future<void> showTextExportDialog(
   required String title,
   required String content,
 }) {
-  return showDialog<void>(
+  return showExpressiveDialog<void>(
     context: context,
     builder: (dialogContext) {
       final l10n = AppLocalizations.of(dialogContext);
@@ -135,9 +135,17 @@ Future<void> showTextExportDialog(
 
       return AlertDialog(
         title: Text(title),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(child: SelectableText(content)),
+        content: ExpressiveDialogContent(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Theme.of(dialogContext).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: SelectableText(content),
+            ),
+          ),
         ),
         actions: [
           TextButton(onPressed: popOnce, child: Text(l10n.cancel)),

@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import 'expressive_motion.dart';
 import 'period_time_set_picker_dialog.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
@@ -111,28 +112,31 @@ class _SchoolWebImportResultSheetState
                   const SizedBox(height: 16),
                   Text(
                     l10n.schoolWebImportPreview,
-                    style: theme.textTheme.titleLarge,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _nameController,
                     decoration: InputDecoration(
                       labelText: l10n.timetableName,
-                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.table_chart_outlined),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
+                  _PreviewListTile(
+                    key: const ValueKey('school-import-start-date-tile'),
                     title: Text(l10n.semesterStartDate),
                     subtitle: Text(_formatDate(_startDate)),
-                    trailing: const Icon(Icons.calendar_today_outlined),
+                    leadingIcon: Icons.calendar_today_outlined,
+                    trailingIcon: Icons.chevron_right,
                     enabled: !_pickerOpen && !_hasPopped,
                     onTap: (_pickerOpen || _hasPopped) ? null : _pickStartDate,
                   ),
                   const SizedBox(height: 4),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
+                  _PreviewListTile(
                     title: Text(
                       _nameController.text.trim().isEmpty
                           ? l10n.none
@@ -142,12 +146,16 @@ class _SchoolWebImportResultSheetState
                       '${l10n.schoolWebImportCourseCount(timetable.courses.length)} · '
                       '${_buildActivePeriodTimeSetSummary(l10n, selectedPeriodTimeSet)}',
                     ),
+                    leadingIcon: Icons.preview_outlined,
                   ),
                   if (_hasBundledPeriodTimeSet) ...[
                     const SizedBox(height: 8),
                     Text(
                       l10n.importPeriodTimeSetDialogTitle,
-                      style: theme.textTheme.titleMedium,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     _ImportChoiceTile(
@@ -184,8 +192,7 @@ class _SchoolWebImportResultSheetState
                   ],
                   if (!_importBundledPeriodTimeSet) ...[
                     const SizedBox(height: 8),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
+                    _PreviewListTile(
                       title: Text(l10n.selectPeriodTimeSet),
                       subtitle: Text(
                         selectedPeriodTimeSet == null
@@ -195,7 +202,8 @@ class _SchoolWebImportResultSheetState
                                 selectedPeriodTimeSet.periodTimes.length,
                               ),
                       ),
-                      trailing: const Icon(Icons.keyboard_arrow_down),
+                      leadingIcon: Icons.schedule_outlined,
+                      trailingIcon: Icons.keyboard_arrow_down,
                       enabled:
                           widget.periodTimeSets.isNotEmpty &&
                           !_pickerOpen &&
@@ -222,22 +230,25 @@ class _SchoolWebImportResultSheetState
                     ),
                   ],
                   if (widget.response.meta.pageTitle.trim().isNotEmpty)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
+                    _PreviewListTile(
                       title: Text(l10n.schoolWebImportPageTitleLabel),
                       subtitle: Text(widget.response.meta.pageTitle),
+                      leadingIcon: Icons.title,
                     ),
                   if (widget.response.meta.parser.trim().isNotEmpty)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
+                    _PreviewListTile(
                       title: Text(l10n.schoolImportParserSourceTitle),
                       subtitle: Text(widget.response.meta.parser),
+                      leadingIcon: Icons.smart_toy_outlined,
                     ),
                   if (warnings.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
                       l10n.schoolWebImportWarnings,
-                      style: theme.textTheme.titleMedium,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     ...warnings.map(
@@ -432,13 +443,13 @@ class _ImportChoiceTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final effectiveColor = selected
-        ? colorScheme.primaryContainer
+        ? colorScheme.primary.withValues(alpha: 0.12)
         : colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
-    return Material(
-      color: effectiveColor,
+    return ExpressiveTap(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
+      child: Material(
+        color: effectiveColor,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -451,9 +462,7 @@ class _ImportChoiceTile extends StatelessWidget {
                     : Icons.radio_button_unchecked_outlined,
                 color: onTap == null
                     ? colorScheme.onSurfaceVariant
-                    : (selected
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.primary),
+                    : colorScheme.primary,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -475,6 +484,101 @@ class _ImportChoiceTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PreviewListTile extends StatelessWidget {
+  const _PreviewListTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.leadingIcon,
+    this.trailingIcon,
+    this.enabled = true,
+    this.onTap,
+  });
+
+  final Widget title;
+  final Widget subtitle;
+  final IconData leadingIcon;
+  final IconData? trailingIcon;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final active = enabled && onTap != null;
+    final iconColor = enabled
+        ? colors.primary
+        : colors.onSurface.withValues(alpha: 0.38);
+    final titleStyle = theme.textTheme.titleSmall?.copyWith(
+      color: enabled
+          ? colors.onSurface
+          : colors.onSurface.withValues(alpha: 0.38),
+    );
+    final subtitleStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: enabled
+          ? colors.onSurfaceVariant
+          : colors.onSurface.withValues(alpha: 0.38),
+    );
+    final content = Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: ShapeDecoration(
+                color: enabled
+                    ? colors.primary.withValues(alpha: 0.10)
+                    : colors.onSurface.withValues(alpha: 0.06),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Icon(leadingIcon, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: DefaultTextStyle.merge(
+                style: titleStyle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    title,
+                    const SizedBox(height: 3),
+                    DefaultTextStyle.merge(
+                      style: subtitleStyle,
+                      child: subtitle,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (trailingIcon != null) ...[
+              const SizedBox(width: 8),
+              Icon(
+                trailingIcon,
+                color: enabled ? colors.onSurfaceVariant : iconColor,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    return ExpressiveTap(
+      enabled: active,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: content,
     );
   }
 }

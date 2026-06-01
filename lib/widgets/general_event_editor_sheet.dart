@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import 'expressive_dialog.dart';
 
 class GeneralEventEditorResult {
   const GeneralEventEditorResult({this.event, this.delete = false});
@@ -250,6 +251,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Form(
@@ -259,21 +261,23 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
         children: [
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     _isEditing ? l10n.editEvent : l10n.addEvent,
-                    style: theme.textTheme.titleLarge,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _titleController,
                     decoration: InputDecoration(
                       labelText: l10n.eventTitle,
-                      border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.title),
                     ),
                     validator: (value) {
@@ -284,29 +288,29 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _calendarId,
-                    decoration: InputDecoration(
-                      labelText: l10n.calendar,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.calendar_month_outlined),
-                    ),
-                    items: [
+                  DropdownMenu<String>(
+                    initialSelection: _calendarId,
+                    label: Text(l10n.calendar),
+                    leadingIcon: const Icon(Icons.calendar_month_outlined),
+                    expandedInsets: EdgeInsets.zero,
+                    dropdownMenuEntries: [
                       for (final calendar in _calendarOptions)
-                        DropdownMenuItem(
+                        DropdownMenuEntry(
                           value: calendar.id,
-                          child: _CalendarDropdownItem(calendar: calendar),
+                          label: calendar.name,
+                          labelWidget: _CalendarDropdownItem(
+                            calendar: calendar,
+                          ),
                         ),
                     ],
-                    onChanged: (value) {
+                    onSelected: (value) {
                       if (value != null) setState(() => _calendarId = value);
                     },
                   ),
                   const SizedBox(height: 8),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    secondary: const Icon(Icons.event_available_outlined),
-                    title: Text(l10n.allDay),
+                  _EventSwitchRow(
+                    icon: Icons.event_available_outlined,
+                    title: l10n.allDay,
                     value: _isAllDay,
                     onChanged: (value) => setState(() {
                       _isAllDay = value;
@@ -379,36 +383,34 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                           },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<GeneralEventRecurrence>(
-                    initialValue: _recurrence,
-                    decoration: InputDecoration(
-                      labelText: l10n.eventRecurrence,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.repeat),
-                    ),
-                    items: [
-                      DropdownMenuItem(
+                  DropdownMenu<GeneralEventRecurrence>(
+                    initialSelection: _recurrence,
+                    label: Text(l10n.eventRecurrence),
+                    leadingIcon: const Icon(Icons.repeat),
+                    expandedInsets: EdgeInsets.zero,
+                    dropdownMenuEntries: [
+                      DropdownMenuEntry(
                         value: GeneralEventRecurrence.none,
-                        child: Text(l10n.recurrenceNone),
+                        label: l10n.recurrenceNone,
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: GeneralEventRecurrence.daily,
-                        child: Text(l10n.recurrenceDaily),
+                        label: l10n.recurrenceDaily,
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: GeneralEventRecurrence.weekly,
-                        child: Text(l10n.recurrenceWeekly),
+                        label: l10n.recurrenceWeekly,
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: GeneralEventRecurrence.monthly,
-                        child: Text(l10n.recurrenceMonthly),
+                        label: l10n.recurrenceMonthly,
                       ),
-                      DropdownMenuItem(
+                      DropdownMenuEntry(
                         value: GeneralEventRecurrence.custom,
-                        child: Text(l10n.recurrenceCustom),
+                        label: l10n.recurrenceCustom,
                       ),
                     ],
-                    onChanged: (value) {
+                    onSelected: (value) {
                       if (value != null) setState(() => _recurrence = value);
                     },
                   ),
@@ -452,7 +454,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                     controller: _locationController,
                     decoration: InputDecoration(
                       labelText: l10n.location,
-                      border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.location_on_outlined),
                     ),
                   ),
@@ -461,7 +462,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                     controller: _notesController,
                     decoration: InputDecoration(
                       labelText: l10n.eventNotes,
-                      border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.notes_outlined),
                     ),
                     minLines: 3,
@@ -491,28 +491,27 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, bottomPadding + 16),
-            child: Row(
-              children: [
-                if (_isEditing)
-                  OutlinedButton.icon(
-                    onPressed: _hasPopped
-                        ? null
-                        : () => _popOnce(
-                            const GeneralEventEditorResult(delete: true),
-                          ),
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(l10n.delete),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: theme.colorScheme.error,
-                    ),
-                  ),
-                const Spacer(),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 16),
+            child: ExpressiveActionArea(
+              leading: _isEditing
+                  ? OutlinedButton.icon(
+                      onPressed: _hasPopped
+                          ? null
+                          : () => _popOnce(
+                              const GeneralEventEditorResult(delete: true),
+                            ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(l10n.delete),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                      ),
+                    )
+                  : null,
+              actions: [
                 TextButton(
                   onPressed: _hasPopped ? null : () => _popOnce(),
                   child: Text(l10n.cancel),
                 ),
-                const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: _hasPopped ? null : _save,
                   icon: const Icon(Icons.check),
@@ -564,27 +563,166 @@ class _DateTimeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon),
-      title: Text(label),
-      subtitle: Text(
-        showTime ? '${_fmtDate(date)} ${time.format(context)}' : _fmtDate(date),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final value = showTime
+        ? '${_fmtDate(date)} ${time.format(context)}'
+        : _fmtDate(date);
+    final actionButtons = [
+      IconButton(
+        tooltip: l10n.pickDate,
+        onPressed: onPickDate,
+        icon: const Icon(Icons.calendar_today_outlined),
       ),
-      trailing: Wrap(
-        children: [
-          IconButton(
-            tooltip: AppLocalizations.of(context).pickDate,
-            onPressed: onPickDate,
-            icon: const Icon(Icons.calendar_today_outlined),
+      if (showTime)
+        IconButton(
+          tooltip: l10n.pickTime,
+          onPressed: onPickTime,
+          icon: const Icon(Icons.access_time),
+        ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final leading = Container(
+                width: 42,
+                height: 42,
+                decoration: ShapeDecoration(
+                  color: colors.primary.withValues(alpha: 0.10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Icon(icon, color: colors.primary),
+              );
+              final text = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              );
+              final actions = Wrap(
+                spacing: 2,
+                runSpacing: 2,
+                children: actionButtons,
+              );
+
+              if (constraints.maxWidth < 340 && actionButtons.length > 1) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        leading,
+                        const SizedBox(width: 16),
+                        Expanded(child: text),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: actions,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  leading,
+                  const SizedBox(width: 16),
+                  Expanded(child: text),
+                  const SizedBox(width: 8),
+                  actions,
+                ],
+              );
+            },
           ),
-          if (showTime)
-            IconButton(
-              tooltip: AppLocalizations.of(context).pickTime,
-              onPressed: onPickTime,
-              icon: const Icon(Icons.access_time),
+        ),
+      ),
+    );
+  }
+}
+
+class _EventSwitchRow extends StatelessWidget {
+  const _EventSwitchRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => onChanged(!value),
+        child: Ink(
+          decoration: ShapeDecoration(
+            color: colors.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-        ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(icon, color: colors.onSurfaceVariant),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Switch(value: value, onChanged: onChanged),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -616,99 +754,94 @@ class _RepeatOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final endDateButton = Row(
+      children: [
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: onPickUntil,
+            icon: const Icon(Icons.event_repeat_outlined),
+            label: Text(
+              untilDate == null ? l10n.recurrenceEndDate : _fmtDate(untilDate!),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        if (untilDate != null) ...[
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: l10n.clearEndDate,
+            onPressed: onClearUntil,
+            icon: const Icon(Icons.clear),
+          ),
+        ],
+      ],
+    );
     return Column(
       children: [
         if (recurrence == GeneralEventRecurrence.custom)
-          Row(
+          _ResponsiveFormRow(
+            breakpoint: 420,
             children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: interval.clamp(1, 30).toInt(),
-                  decoration: InputDecoration(
-                    labelText: l10n.recurrenceEvery,
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: [
-                    for (var value = 1; value <= 30; value++)
-                      DropdownMenuItem(value: value, child: Text('$value')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) onIntervalChanged(value);
-                  },
-                ),
+              DropdownMenu<int>(
+                initialSelection: interval.clamp(1, 30).toInt(),
+                label: Text(l10n.recurrenceEvery),
+                expandedInsets: EdgeInsets.zero,
+                dropdownMenuEntries: [
+                  for (var value = 1; value <= 30; value++)
+                    DropdownMenuEntry(value: value, label: '$value'),
+                ],
+                onSelected: (value) {
+                  if (value != null) onIntervalChanged(value);
+                },
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<GeneralEventRecurrenceUnit>(
-                  initialValue: customUnit,
-                  decoration: InputDecoration(
-                    labelText: l10n.recurrenceUnit,
-                    border: const OutlineInputBorder(),
+              DropdownMenu<GeneralEventRecurrenceUnit>(
+                initialSelection: customUnit,
+                label: Text(l10n.recurrenceUnit),
+                expandedInsets: EdgeInsets.zero,
+                dropdownMenuEntries: [
+                  DropdownMenuEntry(
+                    value: GeneralEventRecurrenceUnit.day,
+                    label: l10n.recurrenceDays,
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: GeneralEventRecurrenceUnit.day,
-                      child: Text(l10n.recurrenceDays),
-                    ),
-                    DropdownMenuItem(
-                      value: GeneralEventRecurrenceUnit.week,
-                      child: Text(l10n.recurrenceWeeks),
-                    ),
-                    DropdownMenuItem(
-                      value: GeneralEventRecurrenceUnit.month,
-                      child: Text(l10n.recurrenceMonths),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) onUnitChanged(value);
-                  },
-                ),
+                  DropdownMenuEntry(
+                    value: GeneralEventRecurrenceUnit.week,
+                    label: l10n.recurrenceWeeks,
+                  ),
+                  DropdownMenuEntry(
+                    value: GeneralEventRecurrenceUnit.month,
+                    label: l10n.recurrenceMonths,
+                  ),
+                ],
+                onSelected: (value) {
+                  if (value != null) onUnitChanged(value);
+                },
               ),
             ],
           ),
         if (recurrence == GeneralEventRecurrence.custom)
           const SizedBox(height: 12),
-        Row(
+        _ResponsiveFormRow(
+          breakpoint: 420,
           children: [
-            Expanded(
-              child: TextFormField(
-                controller: repeatCountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: l10n.recurrenceRepeatCount,
-                  hintText: l10n.recurrenceNoLimit,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) return null;
-                  final parsed = int.tryParse(text);
-                  if (parsed == null || parsed < 1) {
-                    return l10n.recurrencePositiveNumber;
-                  }
-                  return null;
-                },
+            TextFormField(
+              controller: repeatCountController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.recurrenceRepeatCount,
+                hintText: l10n.recurrenceNoLimit,
+                prefixIcon: const Icon(Icons.numbers),
               ),
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) return null;
+                final parsed = int.tryParse(text);
+                if (parsed == null || parsed < 1) {
+                  return l10n.recurrencePositiveNumber;
+                }
+                return null;
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onPickUntil,
-                icon: const Icon(Icons.event_repeat_outlined),
-                label: Text(
-                  untilDate == null
-                      ? l10n.recurrenceEndDate
-                      : _fmtDate(untilDate!),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-            if (untilDate != null)
-              IconButton(
-                tooltip: l10n.clearEndDate,
-                onPressed: onClearUntil,
-                icon: const Icon(Icons.clear),
-              ),
+            endDateButton,
           ],
         ),
       ],
@@ -728,7 +861,6 @@ class _ReminderPicker extends StatelessWidget {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: l10n.reminder,
-        border: const OutlineInputBorder(),
         prefixIcon: const Icon(Icons.notifications_outlined),
       ),
       child: Wrap(
@@ -792,6 +924,43 @@ class _ColorOption extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ResponsiveFormRow extends StatelessWidget {
+  const _ResponsiveFormRow({required this.children, this.breakpoint = 480});
+
+  static const double _spacing = 12;
+
+  final List<Widget> children;
+  final double breakpoint;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < breakpoint) {
+          return Column(
+            children: [
+              for (var index = 0; index < children.length; index++) ...[
+                if (index > 0) const SizedBox(height: _spacing),
+                children[index],
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              if (index > 0) const SizedBox(width: _spacing),
+              Expanded(child: children[index]),
+            ],
+          ],
+        );
+      },
     );
   }
 }

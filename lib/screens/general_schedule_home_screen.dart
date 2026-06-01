@@ -8,7 +8,11 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../theme/app_motion.dart';
 import '../widgets/adaptive_modal_surface.dart';
+import '../widgets/expressive_empty_state.dart';
+import '../widgets/expressive_dialog.dart';
+import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/mode_switch_action.dart';
@@ -130,35 +134,51 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-              child: SegmentedButton<String>(
-                segments: [
-                  ButtonSegment(
-                    value: generalViewWeek,
-                    icon: const Icon(Icons.view_week_outlined),
-                    label: Text(l10n.viewWeek),
-                  ),
-                  ButtonSegment(
-                    value: generalViewDay,
-                    icon: const Icon(Icons.view_day_outlined),
-                    label: Text(l10n.viewDay),
-                  ),
-                  ButtonSegment(
-                    value: generalViewList,
-                    icon: const Icon(Icons.list_alt_outlined),
-                    label: Text(l10n.viewList),
-                  ),
-                  ButtonSegment(
-                    value: generalViewMonth,
-                    icon: const Icon(Icons.calendar_view_month_outlined),
-                    label: Text(l10n.viewMonth),
-                  ),
-                ],
-                selected: {view},
-                showSelectedIcon: false,
-                onSelectionChanged: (selection) {
-                  setState(() {
-                    _view = selection.first;
-                  });
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 420;
+                  Widget? label(String text) => compact ? null : Text(text);
+                  return SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment(
+                        value: generalViewWeek,
+                        icon: const Icon(Icons.view_week_outlined),
+                        label: label(l10n.viewWeek),
+                        tooltip: l10n.viewWeek,
+                      ),
+                      ButtonSegment(
+                        value: generalViewDay,
+                        icon: const Icon(Icons.view_day_outlined),
+                        label: label(l10n.viewDay),
+                        tooltip: l10n.viewDay,
+                      ),
+                      ButtonSegment(
+                        value: generalViewList,
+                        icon: const Icon(Icons.list_alt_outlined),
+                        label: label(l10n.viewList),
+                        tooltip: l10n.viewList,
+                      ),
+                      ButtonSegment(
+                        value: generalViewMonth,
+                        icon: const Icon(Icons.calendar_view_month_outlined),
+                        label: label(l10n.viewMonth),
+                        tooltip: l10n.viewMonth,
+                      ),
+                    ],
+                    selected: {view},
+                    showSelectedIcon: false,
+                    style: compact
+                        ? SegmentedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                          )
+                        : null,
+                    onSelectionChanged: (selection) {
+                      setState(() {
+                        _view = selection.first;
+                      });
+                    },
+                  );
                 },
               ),
             ),
@@ -180,47 +200,52 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     PointerDeviceKind.invertedStylus,
                   },
                 ),
-                child: switch (view) {
-                  generalViewDay => _DayCalendarView(
-                    date: selectedDate,
-                    provider: provider,
-                    filter: filter,
-                    onDaySelected: provider.setSelectedGeneralDate,
-                    onEmptySlotTap: (date) =>
-                        _openEditor(context, provider, initialDate: date),
-                    onOccurrenceTap: (occurrence) =>
-                        _openDetails(context, provider, occurrence),
+                child: ExpressiveSwitcher(
+                  child: KeyedSubtree(
+                    key: ValueKey(view),
+                    child: switch (view) {
+                      generalViewDay => _DayCalendarView(
+                        date: selectedDate,
+                        provider: provider,
+                        filter: filter,
+                        onDaySelected: provider.setSelectedGeneralDate,
+                        onEmptySlotTap: (date) =>
+                            _openEditor(context, provider, initialDate: date),
+                        onOccurrenceTap: (occurrence) =>
+                            _openDetails(context, provider, occurrence),
+                      ),
+                      generalViewList => _ListCalendarView(
+                        date: selectedDate,
+                        provider: provider,
+                        filter: filter,
+                        onToday: () => _goToToday(provider),
+                        onPickDate: () => _pickDate(context, provider),
+                        onOccurrenceTap: (occurrence) =>
+                            _openDetails(context, provider, occurrence),
+                      ),
+                      generalViewMonth => _MonthCalendarView(
+                        date: selectedDate,
+                        provider: provider,
+                        filter: filter,
+                        onDaySelected: provider.setSelectedGeneralDate,
+                        onEmptySlotTap: (date) =>
+                            _openEditor(context, provider, initialDate: date),
+                        onOccurrenceTap: (occurrence) =>
+                            _openDetails(context, provider, occurrence),
+                      ),
+                      _ => _WeekCalendarView(
+                        date: selectedDate,
+                        provider: provider,
+                        filter: filter,
+                        onDaySelected: provider.setSelectedGeneralDate,
+                        onEmptySlotTap: (date) =>
+                            _openEditor(context, provider, initialDate: date),
+                        onOccurrenceTap: (occurrence) =>
+                            _openDetails(context, provider, occurrence),
+                      ),
+                    },
                   ),
-                  generalViewList => _ListCalendarView(
-                    date: selectedDate,
-                    provider: provider,
-                    filter: filter,
-                    onToday: () => _goToToday(provider),
-                    onPickDate: () => _pickDate(context, provider),
-                    onOccurrenceTap: (occurrence) =>
-                        _openDetails(context, provider, occurrence),
-                  ),
-                  generalViewMonth => _MonthCalendarView(
-                    date: selectedDate,
-                    provider: provider,
-                    filter: filter,
-                    onDaySelected: provider.setSelectedGeneralDate,
-                    onEmptySlotTap: (date) =>
-                        _openEditor(context, provider, initialDate: date),
-                    onOccurrenceTap: (occurrence) =>
-                        _openDetails(context, provider, occurrence),
-                  ),
-                  _ => _WeekCalendarView(
-                    date: selectedDate,
-                    provider: provider,
-                    filter: filter,
-                    onDaySelected: provider.setSelectedGeneralDate,
-                    onEmptySlotTap: (date) =>
-                        _openEditor(context, provider, initialDate: date),
-                    onOccurrenceTap: (occurrence) =>
-                        _openDetails(context, provider, occurrence),
-                  ),
-                },
+                ),
               ),
             ),
           ],
@@ -289,6 +314,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) => AdaptiveModalSurface(
           maxWidth: 680,
           dismissOnOutsideTap: canDismiss,
@@ -348,6 +374,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) => AdaptiveModalSurface(
           maxWidth: 560,
           dismissOnOutsideTap: canDismiss,
@@ -423,6 +450,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         backgroundColor: Colors.transparent,
+        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) => AdaptiveModalSurface(
           maxWidth: 620,
           dismissOnOutsideTap: canDismiss,

@@ -178,6 +178,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTitle => '设置';
 
   @override
+  String get settingsSectionTimetable => '课表';
+
+  @override
+  String get settingsSectionGeneralSchedule => '通用日程';
+
+  @override
+  String get settingsSectionAppearance => '外观';
+
+  @override
+  String get settingsSectionApp => '应用';
+
+  @override
   String get noTimetableSettings => '当前没有可设置的课表';
 
   @override
@@ -1809,6 +1821,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsTitle => '設定';
+
+  @override
+  String get settingsSectionTimetable => '課表';
+
+  @override
+  String get settingsSectionGeneralSchedule => '通用日程';
+
+  @override
+  String get settingsSectionAppearance => '外觀';
+
+  @override
+  String get settingsSectionApp => '應用';
 
   @override
   String get noTimetableSettings => '當前沒有可設定的課表';

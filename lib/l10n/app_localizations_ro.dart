@@ -180,6 +180,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsTitle => 'Setări';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'În prezent nu este disponibil niciun orar pentru setări.';
 

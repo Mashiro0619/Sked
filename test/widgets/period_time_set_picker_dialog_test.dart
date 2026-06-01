@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/widgets/expressive_dialog.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -46,6 +47,45 @@ Future<TimetableProvider> _createProvider({
 }
 
 void main() {
+  testWidgets('dialog lays out on narrow screens', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  unawaited(
+                    showPeriodTimeSetPickerDialog(
+                      context,
+                      provider: provider,
+                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('cancel button cannot pop twice when tapped rapidly', (
     tester,
   ) async {
@@ -135,7 +175,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    final tileFinder = find.byType(ListTile).first;
+    final tileFinder = find.byType(ExpressiveDialogOption).first;
     await tester.tap(tileFinder);
     await tester.tap(tileFinder, warnIfMissed: false);
     await tester.pumpAndSettle();

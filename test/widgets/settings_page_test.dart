@@ -162,6 +162,39 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('student settings page groups entries into sections', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(tester, provider);
+
+    expect(find.text('Timetable'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('General schedule'), findsNothing);
+    expect(find.text('Period time set'), findsOneWidget);
+    expect(find.text('Timetable display and interaction'), findsOneWidget);
+    expect(find.text('Import and export data'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('App'), 120);
+    expect(find.text('App'), findsOneWidget);
+  });
+
+  testWidgets('general settings page groups entries into sections', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildGeneralData());
+    await _pumpSettingsPage(tester, provider);
+
+    expect(find.text('General schedule'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Timetable'), findsNothing);
+    expect(find.text('General display settings'), findsOneWidget);
+    expect(find.text('Schedule import & export'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('App'), 120);
+    expect(find.text('App'), findsOneWidget);
+  });
+
   testWidgets('theme settings entry ignores rapid duplicate taps', (
     tester,
   ) async {

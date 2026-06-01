@@ -16,7 +16,7 @@ extension _HomeScreenPrivacy on _HomeScreenState {
             provider.hasAcceptedCurrentPrivacyPolicy) {
           return;
         }
-        await showDialog<void>(
+        await showExpressiveDialog<void>(
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) {

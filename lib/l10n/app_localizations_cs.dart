@@ -180,6 +180,18 @@ class AppLocalizationsCs extends AppLocalizations {
   String get settingsTitle => 'Nastavení';
 
   @override
+  String get settingsSectionTimetable => 'Timetable';
+
+  @override
+  String get settingsSectionGeneralSchedule => 'General schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionApp => 'App';
+
+  @override
   String get noTimetableSettings =>
       'V současné době není k dispozici žádný časový rozvrh pro nastavení.';
 
