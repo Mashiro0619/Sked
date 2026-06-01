@@ -4,6 +4,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/services/secret_store.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(
@@ -31,6 +32,20 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<String?> filePath() async => 'memory://provider-student-test';
+}
+
+class _MemorySecretStore implements SecretStore {
+  _MemorySecretStore([String initialValue = '']) : value = initialValue.trim();
+
+  String value;
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    this.value = value.trim();
+  }
 }
 
 void main() {
@@ -99,6 +114,8 @@ void main() {
     List<PeriodTimeSet>? periodTimeSets,
     Map<String, String> conflictDisplayCourseIds = const {},
     Map<String, int> courseNameColorValues = const {},
+    SchoolImportParserSettings schoolImportParserSettings =
+        const SchoolImportParserSettings(),
     AppMode activeMode = AppMode.student,
   }) {
     return buildInitialAppData(
@@ -112,14 +129,16 @@ void main() {
         periodTimeSets: periodTimeSets ?? [periodSet()],
         conflictDisplayCourseIds: conflictDisplayCourseIds,
         courseNameColorValues: courseNameColorValues,
+        schoolImportParserSettings: schoolImportParserSettings,
       ),
     );
   }
 
-  TimetableProvider providerWith(AppData data) {
+  TimetableProvider providerWith(AppData data, {SecretStore? secretStore}) {
     return TimetableProvider(
       storage: _MemoryTimetableStorage(data),
       systemLocaleCodeResolver: () => defaultLocaleCode,
+      secretStore: secretStore,
     );
   }
 
@@ -467,6 +486,83 @@ void main() {
         );
 
         expect(provider.timetables.map((item) => item.id), beforeTimetableIds);
+        expect(provider.activeTimetable.id, 'table1');
+      },
+    );
+
+    test(
+      'full app restore clears parser API key excluded from backup',
+      () async {
+        final secrets = _MemorySecretStore('sk-old');
+        final provider = providerWith(
+          appData(
+            schoolImportParserSettings: const SchoolImportParserSettings(
+              customBaseUrl: 'https://api.example.com/v1',
+              customModel: 'gpt-4.1-mini',
+            ),
+          ),
+          secretStore: secrets,
+        );
+        final backup = encodeAppDataEnvelope(
+          appData(
+            activeTimetableId: 'restored',
+            timetables: [timetable(id: 'restored', name: 'Restored')],
+            schoolImportParserSettings: const SchoolImportParserSettings(
+              customBaseUrl: 'https://api.example.com/v1',
+              customModel: 'gpt-4.1-mini',
+            ),
+          ),
+        );
+
+        await provider.load();
+        expect(provider.customSchoolImportApiKey, 'sk-old');
+        expect(backup, isNot(contains('customApiKey')));
+
+        await provider.importAppDataJson(
+          backup,
+          mode: AppImportMode.replaceAll,
+        );
+
+        expect(secrets.value, isEmpty);
+        expect(provider.customSchoolImportApiKey, isEmpty);
+        expect(provider.activeTimetable.config.name, 'Restored');
+      },
+    );
+
+    test(
+      'full app restore rolls parser API key back when save fails',
+      () async {
+        final secrets = _MemorySecretStore('sk-old');
+        final original = appData(
+          schoolImportParserSettings: const SchoolImportParserSettings(
+            customBaseUrl: 'https://api.example.com/v1',
+            customModel: 'gpt-4.1-mini',
+          ),
+        );
+        final storage = _MemoryTimetableStorage(original);
+        final provider = TimetableProvider(
+          storage: storage,
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+          secretStore: secrets,
+        );
+        final backup = encodeAppDataEnvelope(
+          appData(
+            activeTimetableId: 'restored',
+            timetables: [timetable(id: 'restored', name: 'Restored')],
+          ),
+        );
+
+        await provider.load();
+        expect(provider.customSchoolImportApiKey, 'sk-old');
+        storage.saveFailures.add(Exception('disk full'));
+
+        await expectLater(
+          provider.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+          throwsException,
+        );
+
+        expect(secrets.value, 'sk-old');
+        expect(provider.customSchoolImportApiKey, 'sk-old');
         expect(provider.activeTimetable.id, 'table1');
       },
     );

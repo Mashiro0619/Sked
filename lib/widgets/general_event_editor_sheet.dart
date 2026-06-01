@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
-import 'expressive_dialog.dart';
+import 'app_modal_sheet.dart';
 
 class GeneralEventEditorResult {
   const GeneralEventEditorResult({this.event, this.delete = false});
@@ -251,276 +251,251 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Form(
       key: _formKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _isEditing ? l10n.editEvent : l10n.addEvent,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: l10n.eventTitle,
-                      prefixIcon: const Icon(Icons.title),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return l10n.eventTitleRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownMenu<String>(
-                    initialSelection: _calendarId,
-                    label: Text(l10n.calendar),
-                    leadingIcon: const Icon(Icons.calendar_month_outlined),
-                    expandedInsets: EdgeInsets.zero,
-                    dropdownMenuEntries: [
-                      for (final calendar in _calendarOptions)
-                        DropdownMenuEntry(
-                          value: calendar.id,
-                          label: calendar.name,
-                          labelWidget: _CalendarDropdownItem(
-                            calendar: calendar,
-                          ),
-                        ),
-                    ],
-                    onSelected: (value) {
-                      if (value != null) setState(() => _calendarId = value);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _EventSwitchRow(
-                    icon: Icons.event_available_outlined,
-                    title: l10n.allDay,
-                    value: _isAllDay,
-                    onChanged: (value) => setState(() {
-                      _isAllDay = value;
-                      if (value && _endDate.isBefore(_startDate)) {
-                        _endDate = _startDate;
-                      }
-                    }),
-                  ),
-                  _DateTimeRow(
-                    icon: Icons.play_arrow_outlined,
-                    label: l10n.eventStartTime,
-                    date: _startDate,
-                    time: _startTime,
-                    showTime: !_isAllDay,
-                    onPickDate: (_pickerOpen || _hasPopped)
-                        ? null
-                        : () async {
-                            final picked = await _runPicker(
-                              () => _pickDate(context, _startDate),
-                            );
-                            if (!mounted || picked == null) {
-                              return;
-                            }
-                            setState(() {
-                              _startDate = picked;
-                              if (_endDate.isBefore(_startDate)) {
-                                _endDate = _startDate;
-                              }
-                            });
-                          },
-                    onPickTime: (_pickerOpen || _hasPopped)
-                        ? null
-                        : () async {
-                            final picked = await _runPicker(
-                              () => _pickTime(context, _startTime),
-                            );
-                            if (!mounted || picked == null) {
-                              return;
-                            }
-                            setState(() => _startTime = picked);
-                          },
-                  ),
-                  _DateTimeRow(
-                    icon: Icons.stop_outlined,
-                    label: l10n.eventEndTime,
-                    date: _endDate,
-                    time: _endTime,
-                    showTime: !_isAllDay,
-                    onPickDate: (_pickerOpen || _hasPopped)
-                        ? null
-                        : () async {
-                            final picked = await _runPicker(
-                              () => _pickDate(context, _endDate),
-                            );
-                            if (!mounted || picked == null) {
-                              return;
-                            }
-                            setState(() => _endDate = picked);
-                          },
-                    onPickTime: (_pickerOpen || _hasPopped)
-                        ? null
-                        : () async {
-                            final picked = await _runPicker(
-                              () => _pickTime(context, _endTime),
-                            );
-                            if (!mounted || picked == null) {
-                              return;
-                            }
-                            setState(() => _endTime = picked);
-                          },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownMenu<GeneralEventRecurrence>(
-                    initialSelection: _recurrence,
-                    label: Text(l10n.eventRecurrence),
-                    leadingIcon: const Icon(Icons.repeat),
-                    expandedInsets: EdgeInsets.zero,
-                    dropdownMenuEntries: [
-                      DropdownMenuEntry(
-                        value: GeneralEventRecurrence.none,
-                        label: l10n.recurrenceNone,
+      child: AppSheetScaffold(
+        heightFactor: 0.84,
+        title: Text(_isEditing ? l10n.editEvent : l10n.addEvent),
+        leading: _isEditing
+            ? OutlinedButton.icon(
+                onPressed: _hasPopped
+                    ? null
+                    : () => _popOnce(
+                        const GeneralEventEditorResult(delete: true),
                       ),
-                      DropdownMenuEntry(
-                        value: GeneralEventRecurrence.daily,
-                        label: l10n.recurrenceDaily,
-                      ),
-                      DropdownMenuEntry(
-                        value: GeneralEventRecurrence.weekly,
-                        label: l10n.recurrenceWeekly,
-                      ),
-                      DropdownMenuEntry(
-                        value: GeneralEventRecurrence.monthly,
-                        label: l10n.recurrenceMonthly,
-                      ),
-                      DropdownMenuEntry(
-                        value: GeneralEventRecurrence.custom,
-                        label: l10n.recurrenceCustom,
-                      ),
-                    ],
-                    onSelected: (value) {
-                      if (value != null) setState(() => _recurrence = value);
-                    },
-                  ),
-                  if (_recurrence != GeneralEventRecurrence.none) ...[
-                    const SizedBox(height: 12),
-                    _RepeatOptions(
-                      recurrence: _recurrence,
-                      interval: _interval,
-                      customUnit: _customUnit,
-                      untilDate: _untilDate,
-                      repeatCountController: _repeatCountController,
-                      onIntervalChanged: (value) =>
-                          setState(() => _interval = value),
-                      onUnitChanged: (value) =>
-                          setState(() => _customUnit = value),
-                      onPickUntil: (_pickerOpen || _hasPopped)
-                          ? null
-                          : () async {
-                              final picked = await _runPicker(
-                                () => _pickDate(
-                                  context,
-                                  _untilDate ??
-                                      _startDate.add(const Duration(days: 90)),
-                                ),
-                              );
-                              if (!mounted || picked == null) {
-                                return;
-                              }
-                              setState(() => _untilDate = picked);
-                            },
-                      onClearUntil: () => setState(() => _untilDate = null),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  _ReminderPicker(
-                    reminders: _reminders,
-                    onChanged: (values) => setState(() => _reminders = values),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _locationController,
-                    decoration: InputDecoration(
-                      labelText: l10n.location,
-                      prefixIcon: const Icon(Icons.location_on_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _notesController,
-                    decoration: InputDecoration(
-                      labelText: l10n.eventNotes,
-                      prefixIcon: const Icon(Icons.notes_outlined),
-                    ),
-                    minLines: 3,
-                    maxLines: 5,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(l10n.eventColor, style: theme.textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final colorValue in _colorOptions)
-                        _ColorOption(
-                          colorValue: colorValue,
-                          selected: _colorValue == colorValue,
-                          onTap: () => setState(() {
-                            _colorValue = _colorValue == colorValue
-                                ? null
-                                : colorValue;
-                          }),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.delete),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                ),
+              )
+            : null,
+        actions: [
+          TextButton(
+            onPressed: _hasPopped ? null : () => _popOnce(),
+            child: Text(l10n.cancel),
           ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 16),
-            child: ExpressiveActionArea(
-              leading: _isEditing
-                  ? OutlinedButton.icon(
-                      onPressed: _hasPopped
-                          ? null
-                          : () => _popOnce(
-                              const GeneralEventEditorResult(delete: true),
-                            ),
-                      icon: const Icon(Icons.delete_outline),
-                      label: Text(l10n.delete),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                      ),
-                    )
-                  : null,
-              actions: [
-                TextButton(
-                  onPressed: _hasPopped ? null : () => _popOnce(),
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton.icon(
-                  onPressed: _hasPopped ? null : _save,
-                  icon: const Icon(Icons.check),
-                  label: Text(l10n.save),
-                ),
-              ],
-            ),
+          FilledButton.icon(
+            onPressed: _hasPopped ? null : _save,
+            icon: const Icon(Icons.check),
+            label: Text(l10n.save),
           ),
         ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                labelText: l10n.eventTitle,
+                prefixIcon: const Icon(Icons.title),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return l10n.eventTitleRequired;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownMenu<String>(
+              initialSelection: _calendarId,
+              label: Text(l10n.calendar),
+              leadingIcon: const Icon(Icons.calendar_month_outlined),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final calendar in _calendarOptions)
+                  DropdownMenuEntry(
+                    value: calendar.id,
+                    label: calendar.name,
+                    labelWidget: _CalendarDropdownItem(calendar: calendar),
+                  ),
+              ],
+              onSelected: (value) {
+                if (value != null) setState(() => _calendarId = value);
+              },
+            ),
+            const SizedBox(height: 8),
+            _EventSwitchRow(
+              icon: Icons.event_available_outlined,
+              title: l10n.allDay,
+              value: _isAllDay,
+              onChanged: (value) => setState(() {
+                _isAllDay = value;
+                if (value && _endDate.isBefore(_startDate)) {
+                  _endDate = _startDate;
+                }
+              }),
+            ),
+            _DateTimeRow(
+              icon: Icons.play_arrow_outlined,
+              label: l10n.eventStartTime,
+              date: _startDate,
+              time: _startTime,
+              showTime: !_isAllDay,
+              onPickDate: (_pickerOpen || _hasPopped)
+                  ? null
+                  : () async {
+                      final picked = await _runPicker(
+                        () => _pickDate(context, _startDate),
+                      );
+                      if (!mounted || picked == null) {
+                        return;
+                      }
+                      setState(() {
+                        _startDate = picked;
+                        if (_endDate.isBefore(_startDate)) {
+                          _endDate = _startDate;
+                        }
+                      });
+                    },
+              onPickTime: (_pickerOpen || _hasPopped)
+                  ? null
+                  : () async {
+                      final picked = await _runPicker(
+                        () => _pickTime(context, _startTime),
+                      );
+                      if (!mounted || picked == null) {
+                        return;
+                      }
+                      setState(() => _startTime = picked);
+                    },
+            ),
+            _DateTimeRow(
+              icon: Icons.stop_outlined,
+              label: l10n.eventEndTime,
+              date: _endDate,
+              time: _endTime,
+              showTime: !_isAllDay,
+              onPickDate: (_pickerOpen || _hasPopped)
+                  ? null
+                  : () async {
+                      final picked = await _runPicker(
+                        () => _pickDate(context, _endDate),
+                      );
+                      if (!mounted || picked == null) {
+                        return;
+                      }
+                      setState(() => _endDate = picked);
+                    },
+              onPickTime: (_pickerOpen || _hasPopped)
+                  ? null
+                  : () async {
+                      final picked = await _runPicker(
+                        () => _pickTime(context, _endTime),
+                      );
+                      if (!mounted || picked == null) {
+                        return;
+                      }
+                      setState(() => _endTime = picked);
+                    },
+            ),
+            const SizedBox(height: 12),
+            DropdownMenu<GeneralEventRecurrence>(
+              initialSelection: _recurrence,
+              label: Text(l10n.eventRecurrence),
+              leadingIcon: const Icon(Icons.repeat),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                DropdownMenuEntry(
+                  value: GeneralEventRecurrence.none,
+                  label: l10n.recurrenceNone,
+                ),
+                DropdownMenuEntry(
+                  value: GeneralEventRecurrence.daily,
+                  label: l10n.recurrenceDaily,
+                ),
+                DropdownMenuEntry(
+                  value: GeneralEventRecurrence.weekly,
+                  label: l10n.recurrenceWeekly,
+                ),
+                DropdownMenuEntry(
+                  value: GeneralEventRecurrence.monthly,
+                  label: l10n.recurrenceMonthly,
+                ),
+                DropdownMenuEntry(
+                  value: GeneralEventRecurrence.custom,
+                  label: l10n.recurrenceCustom,
+                ),
+              ],
+              onSelected: (value) {
+                if (value != null) setState(() => _recurrence = value);
+              },
+            ),
+            if (_recurrence != GeneralEventRecurrence.none) ...[
+              const SizedBox(height: 12),
+              _RepeatOptions(
+                recurrence: _recurrence,
+                interval: _interval,
+                customUnit: _customUnit,
+                untilDate: _untilDate,
+                repeatCountController: _repeatCountController,
+                onIntervalChanged: (value) => setState(() => _interval = value),
+                onUnitChanged: (value) => setState(() => _customUnit = value),
+                onPickUntil: (_pickerOpen || _hasPopped)
+                    ? null
+                    : () async {
+                        final picked = await _runPicker(
+                          () => _pickDate(
+                            context,
+                            _untilDate ??
+                                _startDate.add(const Duration(days: 90)),
+                          ),
+                        );
+                        if (!mounted || picked == null) {
+                          return;
+                        }
+                        setState(() => _untilDate = picked);
+                      },
+                onClearUntil: () => setState(() => _untilDate = null),
+              ),
+            ],
+            const SizedBox(height: 12),
+            _ReminderPicker(
+              reminders: _reminders,
+              onChanged: (values) => setState(() => _reminders = values),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _locationController,
+              decoration: InputDecoration(
+                labelText: l10n.location,
+                prefixIcon: const Icon(Icons.location_on_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _notesController,
+              decoration: InputDecoration(
+                labelText: l10n.eventNotes,
+                prefixIcon: const Icon(Icons.notes_outlined),
+              ),
+              minLines: 3,
+              maxLines: 5,
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.eventColor, style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final colorValue in _colorOptions)
+                  _ColorOption(
+                    colorValue: colorValue,
+                    selected: _colorValue == colorValue,
+                    onTap: () => setState(() {
+                      _colorValue = _colorValue == colorValue
+                          ? null
+                          : colorValue;
+                    }),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

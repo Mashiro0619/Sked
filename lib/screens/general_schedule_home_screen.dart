@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
-import '../theme/app_motion.dart';
+import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
@@ -302,14 +302,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     _setUiBusyFlag(() => _editorSheetOpen = true);
     final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
     try {
-      final result = await showModalBottomSheet<GeneralEventEditorResult>(
+      final result = await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
-        isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 680),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: appSheetWidthMedium,
         builder: (sheetContext) => GeneralEventEditorSheet(
           initialEvent: event,
           initialDate: initialDate ?? provider.selectedGeneralDate,
@@ -359,14 +356,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     _setUiBusyFlag(() => _detailsSheetOpen = true);
     final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
     try {
-      await showModalBottomSheet<void>(
+      await showAppModalSheet<void>(
         context: context,
-        isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 560),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: appSheetWidthCompact,
         builder: (sheetContext) => GeneralEventDetailsSheet(
           occurrence: occurrence,
           isReminderHandled: provider.isGeneralReminderHandled(occurrence),
@@ -432,14 +426,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     _setUiBusyFlag(() => _calendarManagerOpen = true);
     final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
     try {
-      await showModalBottomSheet<void>(
+      await showAppModalSheet<void>(
         context: context,
-        isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 620),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: 620,
         builder: (sheetContext) =>
             ChangeNotifierProvider<TimetableProvider>.value(
               value: provider,

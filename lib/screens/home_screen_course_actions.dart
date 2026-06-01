@@ -12,14 +12,11 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     _setCourseDetailsOpen(true);
     try {
       final canDismiss = provider.closeCoursePopupOnOutsideTap;
-      await showModalBottomSheet<void>(
+      await showAppModalSheet<void>(
         context: context,
-        isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 860),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: 860,
         builder: (sheetContext) => CourseDetailsSheet(
           courseId: info.course.id,
           weekday: info.course.dayOfWeek,
@@ -71,14 +68,11 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       final totalWeeks =
           provider.activeTimetableOrNull?.config.totalWeeks ?? 18;
       final canDismiss = provider.closeCoursePopupOnOutsideTap;
-      final result = await showModalBottomSheet<CourseEditorResult>(
+      final result = await showAppModalSheet<CourseEditorResult>(
         context: context,
-        isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 920),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: appSheetWidthExpanded,
         builder: (sheetContext) => CourseEditorSheet(
           periodTimes: periodTimes,
           totalWeeks: totalWeeks,

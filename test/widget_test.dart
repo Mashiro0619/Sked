@@ -10,6 +10,7 @@ import 'package:sked/main.dart' hide main;
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/school_html_import_page.dart';
@@ -3088,7 +3089,7 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const HomeScreen(),
+            home: const AppHomeScreen(),
           ),
         ),
       );

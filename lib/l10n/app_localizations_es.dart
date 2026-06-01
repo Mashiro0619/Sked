@@ -382,6 +382,69 @@ class AppLocalizationsEs extends AppLocalizations {
       'Importa todos los datos o un solo horario, o exporta el horario actual/todos.';
 
   @override
+  String get appBackupTitle => 'App backup and restore';
+
+  @override
+  String get appBackupSubtitle =>
+      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+
+  @override
+  String get appBackupSheetSubtitle =>
+      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+
+  @override
+  String get restoreBackupFileTitle => 'Restore from JSON file';
+
+  @override
+  String get restoreBackupFileSubtitle =>
+      'Choose a full Sked backup file. You will confirm before restoring.';
+
+  @override
+  String get restoreBackupTextTitle => 'Paste backup JSON';
+
+  @override
+  String get restoreBackupTextSubtitle =>
+      'Paste a full backup and restore current app data.';
+
+  @override
+  String get shareBackupTitle => 'Share backup file';
+
+  @override
+  String get shareBackupSubtitle =>
+      'Export full app data as JSON. API keys are excluded.';
+
+  @override
+  String get saveBackupTitle => 'Save backup file';
+
+  @override
+  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+
+  @override
+  String get copyBackupTitle => 'Copy backup text';
+
+  @override
+  String get copyBackupSubtitle =>
+      'Show the full backup JSON so you can copy or store it temporarily.';
+
+  @override
+  String get restoreBackupConfirmTitle => 'Restore full backup?';
+
+  @override
+  String get restoreBackupConfirmMessage =>
+      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+
+  @override
+  String get restoreBackupConfirmAction => 'Restore backup';
+
+  @override
+  String get restoreBackupSuccessMessage =>
+      'Full app backup restored. Parser API keys must be re-entered.';
+
+  @override
+  String get restoreBackupFailureMessage =>
+      'Restore failed. Please check the backup content and try again.';
+
+  @override
   String get openSourceLicenses => 'Licencias de código abierto';
 
   @override

@@ -30,6 +30,9 @@ Sked uses Material 3 Expressive as the base interaction language. These notes ca
 - Dialogs should have a short title, focused content, and actions ordered from low to high emphasis.
 - Bottom sheets should be task-focused and should not duplicate full-page settings screens.
 - Long option sets should use scrollable sheet content, not oversized dialogs.
+- Use `showAppModalSheet` for modal sheets so width, drag handles, safe-area behavior, and M3 motion stay consistent.
+- Use `AppSheetScaffold` for form/editor sheets with title, optional subtitle, scrollable content, and sticky actions.
+- Keep destructive full-data actions behind an explicit confirmation dialog; never put replace-all behavior behind a single sheet tap.
 
 ## States
 

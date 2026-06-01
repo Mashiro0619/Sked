@@ -16,7 +16,7 @@ import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
-import '../theme/app_motion.dart';
+import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
@@ -50,6 +50,14 @@ enum _GeneralDataAction {
   exportSchedulesIcsText,
 }
 
+enum _AppDataAction {
+  restoreBackupFile,
+  restoreBackupText,
+  shareBackupFile,
+  saveBackupFile,
+  copyBackupText,
+}
+
 enum _ExportFormat { json, ics }
 
 enum _SettingsFlow {
@@ -61,6 +69,7 @@ enum _SettingsFlow {
   languageSettingsPage,
   studentDataActions,
   generalDataActions,
+  appDataActions,
   privacyPolicy,
   licensesPage,
   updateCheck,
@@ -457,6 +466,15 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               SettingsSectionHeader(title: l10n.settingsSectionApp),
               SettingsListTile(
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: l10n.appBackupTitle,
+                subtitle: l10n.appBackupSubtitle,
+                trailing: const Icon(Icons.keyboard_arrow_up),
+                onTap: _isFlowOpen(_SettingsFlow.appDataActions)
+                    ? null
+                    : () => _showAppDataActions(provider),
+              ),
+              SettingsListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
                 title: l10n.privacyPolicyTitle,
                 subtitle: provider.acceptedPrivacyPolicyVersion == null
@@ -668,6 +686,8 @@ class _SettingsPageState extends State<SettingsPage> {
     return '$versionLabel · ${l10n.newVersionAvailable}';
   }
 
+  String _backupFileName() => 'Sked_backup.json';
+
   Future<void> _loadCurrentVersion() async {
     final info = await PackageInfo.fromPlatform();
     if (!mounted) {
@@ -735,12 +755,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _showDataActions(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.studentDataActions, () async {
-      final action = await showModalBottomSheet<_DataAction>(
+      final action = await showAppModalSheet<_DataAction>(
         context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 680),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: appSheetWidthMedium,
         builder: (sheetContext) {
           final l10n = AppLocalizations.of(sheetContext);
           var popped = false;
@@ -836,6 +853,214 @@ class _SettingsPageState extends State<SettingsPage> {
           return;
       }
     });
+  }
+
+  Future<void> _showAppDataActions(TimetableProvider provider) async {
+    await _guardFlow(_SettingsFlow.appDataActions, () async {
+      final action = await showAppModalSheet<_AppDataAction>(
+        context: context,
+        maxWidth: appSheetWidthMedium,
+        builder: (sheetContext) {
+          final l10n = AppLocalizations.of(sheetContext);
+          final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
+          var popped = false;
+          void popWith(_AppDataAction action) {
+            if (popped) return;
+            popped = true;
+            Navigator.of(sheetContext).pop(action);
+          }
+
+          return SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                children: [
+                  _ActionSheetHeader(
+                    icon: Icons.inventory_2_outlined,
+                    title: l10n.appBackupTitle,
+                    subtitle: l10n.appBackupSheetSubtitle,
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionSheetGroup(
+                    children: [
+                      _ActionSheetTile(
+                        icon: Icons.restore_page_outlined,
+                        title: l10n.restoreBackupFileTitle,
+                        subtitle: l10n.restoreBackupFileSubtitle,
+                        onTap: () => popWith(_AppDataAction.restoreBackupFile),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.content_paste_go_outlined,
+                        title: l10n.restoreBackupTextTitle,
+                        subtitle: l10n.restoreBackupTextSubtitle,
+                        onTap: () => popWith(_AppDataAction.restoreBackupText),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionSheetGroup(
+                    children: [
+                      _ActionSheetTile(
+                        icon: Icons.share_outlined,
+                        title: l10n.shareBackupTitle,
+                        subtitle: l10n.shareBackupSubtitle,
+                        onTap: () => popWith(_AppDataAction.shareBackupFile),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.save_alt_outlined,
+                        title: l10n.saveBackupTitle,
+                        subtitle: l10n.saveBackupSubtitle,
+                        onTap: () => popWith(_AppDataAction.saveBackupFile),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.text_snippet_outlined,
+                        title: l10n.copyBackupTitle,
+                        subtitle: l10n.copyBackupSubtitle,
+                        onTap: () => popWith(_AppDataAction.copyBackupText),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      if (action == null || !mounted) return;
+      switch (action) {
+        case _AppDataAction.restoreBackupFile:
+          await _restoreAppDataFromFile(provider);
+        case _AppDataAction.restoreBackupText:
+          await _restoreAppDataFromText(provider);
+        case _AppDataAction.shareBackupFile:
+          await _exportAppDataBackup(provider, share: true);
+        case _AppDataAction.saveBackupFile:
+          await _exportAppDataBackup(provider, share: false);
+        case _AppDataAction.copyBackupText:
+          await _exportAppDataBackupAsText(provider);
+      }
+    });
+  }
+
+  Future<void> _restoreAppDataFromFile(TimetableProvider provider) async {
+    final source = await _pickTextFile(allowedExtensions: const ['json']);
+    if (source == null || !mounted) return;
+    await _restoreAppDataSource(provider, source, context);
+  }
+
+  Future<void> _restoreAppDataFromText(TimetableProvider provider) async {
+    final l10n = AppLocalizations.of(context);
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TextImportPage(
+          title: l10n.restoreBackupTextTitle,
+          submitText: l10n.restoreBackupConfirmAction,
+          onSubmit: (context, content) {
+            return _restoreAppDataSource(provider, content, context);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _restoreAppDataSource(
+    TimetableProvider provider,
+    String source,
+    BuildContext feedbackContext,
+  ) async {
+    final confirmed = await showExpressiveDialog<bool>(
+      context: feedbackContext,
+      builder: (dialogContext) {
+        var popped = false;
+        void popWith(bool value) {
+          if (popped) return;
+          popped = true;
+          Navigator.of(dialogContext).pop(value);
+        }
+
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.restoreBackupConfirmTitle),
+          content: Text(l10n.restoreBackupConfirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => popWith(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => popWith(true),
+              child: Text(l10n.restoreBackupConfirmAction),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !feedbackContext.mounted) return false;
+    final l10n = AppLocalizations.of(feedbackContext);
+    final successMessage = l10n.restoreBackupSuccessMessage;
+    final failureMessage = l10n.restoreBackupFailureMessage;
+    try {
+      await provider.importAppDataJson(source, mode: AppImportMode.replaceAll);
+      if (feedbackContext.mounted) {
+        ScaffoldMessenger.of(
+          feedbackContext,
+        ).showSnackBar(SnackBar(content: Text(successMessage)));
+      }
+      return true;
+    } on FormatException catch (error) {
+      if (feedbackContext.mounted) {
+        ScaffoldMessenger.of(
+          feedbackContext,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      return false;
+    } catch (_) {
+      if (feedbackContext.mounted) {
+        ScaffoldMessenger.of(
+          feedbackContext,
+        ).showSnackBar(SnackBar(content: Text(failureMessage)));
+      }
+      return false;
+    }
+  }
+
+  Future<void> _exportAppDataBackup(
+    TimetableProvider provider, {
+    required bool share,
+  }) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      final content = provider.exportAppDataJson();
+      final fileName = _backupFileName();
+      if (share) {
+        await _shareJson(fileName, content);
+      } else {
+        await _saveJsonToFile(fileName, content);
+      }
+    } on FormatException catch (e) {
+      if (mounted) _showMessage(e.message);
+    } catch (_) {
+      if (mounted) _showMessage(l10n.saveFailedRetry);
+    }
+  }
+
+  Future<void> _exportAppDataBackupAsText(TimetableProvider provider) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      final content = provider.exportAppDataJson();
+      await showTextExportDialog(
+        context,
+        title: l10n.copyBackupTitle,
+        content: content,
+      );
+    } on FormatException catch (e) {
+      if (mounted) _showMessage(e.message);
+    } catch (_) {
+      if (mounted) _showMessage(l10n.saveFailedRetry);
+    }
   }
 
   Future<void> _openSchoolSitesPage(TimetableProvider provider) async {
@@ -1196,12 +1421,9 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _showGeneralDataActions(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.generalDataActions, () async {
       final l10n = AppLocalizations.of(context);
-      final action = await showModalBottomSheet<_GeneralDataAction>(
+      final action = await showAppModalSheet<_GeneralDataAction>(
         context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        constraints: const BoxConstraints(maxWidth: 680),
-        sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+        maxWidth: appSheetWidthMedium,
         builder: (sheetContext) {
           final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
           var popped = false;

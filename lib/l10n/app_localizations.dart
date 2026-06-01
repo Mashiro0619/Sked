@@ -831,6 +831,114 @@ abstract class AppLocalizations {
   /// **'Import full data or single timetables, or export current/all timetables.'**
   String get dataImportExportDesc;
 
+  /// No description provided for @appBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App backup and restore'**
+  String get appBackupTitle;
+
+  /// No description provided for @appBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.'**
+  String get appBackupSubtitle;
+
+  /// No description provided for @appBackupSheetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.'**
+  String get appBackupSheetSubtitle;
+
+  /// No description provided for @restoreBackupFileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from JSON file'**
+  String get restoreBackupFileTitle;
+
+  /// No description provided for @restoreBackupFileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a full Sked backup file. You will confirm before restoring.'**
+  String get restoreBackupFileSubtitle;
+
+  /// No description provided for @restoreBackupTextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste backup JSON'**
+  String get restoreBackupTextTitle;
+
+  /// No description provided for @restoreBackupTextSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a full backup and restore current app data.'**
+  String get restoreBackupTextSubtitle;
+
+  /// No description provided for @shareBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share backup file'**
+  String get shareBackupTitle;
+
+  /// No description provided for @shareBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export full app data as JSON. API keys are excluded.'**
+  String get shareBackupSubtitle;
+
+  /// No description provided for @saveBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save backup file'**
+  String get saveBackupTitle;
+
+  /// No description provided for @saveBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a full app backup to a local file.'**
+  String get saveBackupSubtitle;
+
+  /// No description provided for @copyBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy backup text'**
+  String get copyBackupTitle;
+
+  /// No description provided for @copyBackupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the full backup JSON so you can copy or store it temporarily.'**
+  String get copyBackupSubtitle;
+
+  /// No description provided for @restoreBackupConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore full backup?'**
+  String get restoreBackupConfirmTitle;
+
+  /// No description provided for @restoreBackupConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.'**
+  String get restoreBackupConfirmMessage;
+
+  /// No description provided for @restoreBackupConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore backup'**
+  String get restoreBackupConfirmAction;
+
+  /// No description provided for @restoreBackupSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Full app backup restored. Parser API keys must be re-entered.'**
+  String get restoreBackupSuccessMessage;
+
+  /// No description provided for @restoreBackupFailureMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore failed. Please check the backup content and try again.'**
+  String get restoreBackupFailureMessage;
+
   /// No description provided for @openSourceLicenses.
   ///
   /// In en, this message translates to:
@@ -1422,7 +1530,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyIntro.
   ///
   /// In en, this message translates to:
-  /// **'Sked is a local-first timetable tool. Timetables, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, webpage parsing, sharing, or opening external links. The full privacy policy is available online.'**
+  /// **'Sked is a local-first timetable tool. Timetables, general schedules, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, webpage parsing, sharing, or opening external links. The full privacy policy is available online.'**
   String get privacyPolicyIntro;
 
   /// No description provided for @privacyPolicyLocalStorageTitle.
@@ -1434,7 +1542,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyLocalStorageBody.
   ///
   /// In en, this message translates to:
-  /// **'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.'**
+  /// **'Timetable data, general schedules, related settings, and full app backup content are stored locally on your device or in browser storage. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.'**
   String get privacyPolicyLocalStorageBody;
 
   /// No description provided for @privacyPolicyImportExportTitle.
@@ -1446,7 +1554,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyImportExportBody.
   ///
   /// In en, this message translates to:
-  /// **'The app reads or writes timetable JSON files, school-site JSON files, and period-template files only when you explicitly choose a file or start an export action. Importing these files is a local operation unless you also choose webpage parsing. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.'**
+  /// **'The app reads or writes timetable JSON files, general schedule JSON / ICS files, full app backup JSON files, school-site JSON files, and period-template files only when you explicitly choose a file or start an export action. Importing these files is a local operation unless you also choose webpage parsing. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.'**
   String get privacyPolicyImportExportBody;
 
   /// No description provided for @privacyPolicySharingTitle.
@@ -1518,13 +1626,13 @@ abstract class AppLocalizations {
   /// No description provided for @privacyGateSummaryStorage.
   ///
   /// In en, this message translates to:
-  /// **'Timetables, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.'**
+  /// **'Timetables, general schedules, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.'**
   String get privacyGateSummaryStorage;
 
   /// No description provided for @privacyGateSummaryImportExport.
   ///
   /// In en, this message translates to:
-  /// **'Import, export, and sharing only happen when you explicitly start them; webpage parsing sends only the compressed content you submit to your configured parsing endpoint, and you can review the parsed timetable before saving.'**
+  /// **'Import, export, full backups, and sharing only happen when you explicitly start them; full app backups exclude custom API keys, and webpage parsing only sends submitted content to your configured parser endpoint.'**
   String get privacyGateSummaryImportExport;
 
   /// No description provided for @privacyGateSummaryUpdates.

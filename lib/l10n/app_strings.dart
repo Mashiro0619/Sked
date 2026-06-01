@@ -1,4 +1,4 @@
-﻿import 'app_localizations.dart';
+import 'app_localizations.dart';
 import 'app_locale.dart';
 
 abstract class AppStrings {

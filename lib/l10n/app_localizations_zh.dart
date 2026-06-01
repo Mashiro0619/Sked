@@ -364,6 +364,62 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dataImportExportDesc => '导入整包/单课表，或导出当前课表与全部课表';
 
   @override
+  String get appBackupTitle => '完整应用备份与恢复';
+
+  @override
+  String get appBackupSubtitle => '备份或恢复课表、通用日程、设置和学校站点；不包含 API 密钥。';
+
+  @override
+  String get appBackupSheetSubtitle =>
+      '完整备份会覆盖当前应用数据。自定义解析 API 密钥存放在系统安全存储中，不会写入备份文件。';
+
+  @override
+  String get restoreBackupFileTitle => '从 JSON 文件恢复';
+
+  @override
+  String get restoreBackupFileSubtitle => '选择 Sked 完整备份文件，恢复前会再次确认。';
+
+  @override
+  String get restoreBackupTextTitle => '粘贴备份 JSON';
+
+  @override
+  String get restoreBackupTextSubtitle => '粘贴完整备份内容并恢复当前应用数据。';
+
+  @override
+  String get shareBackupTitle => '分享备份文件';
+
+  @override
+  String get shareBackupSubtitle => '导出完整应用数据为 JSON；不包含 API 密钥。';
+
+  @override
+  String get saveBackupTitle => '保存备份文件';
+
+  @override
+  String get saveBackupSubtitle => '保存完整应用备份到本机文件。';
+
+  @override
+  String get copyBackupTitle => '复制备份文本';
+
+  @override
+  String get copyBackupSubtitle => '显示完整备份 JSON，便于复制或临时保存。';
+
+  @override
+  String get restoreBackupConfirmTitle => '恢复完整备份？';
+
+  @override
+  String get restoreBackupConfirmMessage =>
+      '这会替换当前所有课表、通用日程、设置和学校站点。备份文件中的 API 密钥不会被导入；恢复后如需解析课表，请重新填写密钥。';
+
+  @override
+  String get restoreBackupConfirmAction => '恢复备份';
+
+  @override
+  String get restoreBackupSuccessMessage => '完整应用备份已恢复。解析 API 密钥需要重新填写。';
+
+  @override
+  String get restoreBackupFailureMessage => '恢复失败，请检查备份内容后重试。';
+
+  @override
   String get openSourceLicenses => '开源许可';
 
   @override
@@ -683,21 +739,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked 为本地优先的课程表工具。课表数据、节次时间集和学校站点配置仅保存在你的设备或浏览器本地，不会自动上传。应用仅在你主动触发导入、网页解析、分享或打开外部链接等操作时才会处理对应内容。完整隐私政策可在线查看。';
+      'Sked 为本地优先的课程表工具。课表数据、通用日程、节次时间集和学校站点配置仅保存在你的设备或浏览器本地，不会自动上传。应用仅在你主动触发导入、网页解析、分享或打开外部链接等操作时才会处理对应内容。完整隐私政策可在线查看。';
 
   @override
   String get privacyPolicyLocalStorageTitle => '本地存储';
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '课表数据和相关设置会保存在应用文档目录中的本地文件 Sked_data.json，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。若在浏览器中使用，同类数据会保存在浏览器本地存储中。应用不会自动把这些本地数据上传到开发者控制的服务器。';
+      '课表数据、通用日程、相关设置和完整应用备份内容会保存在你的设备本地或浏览器本地存储中，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。';
 
   @override
   String get privacyPolicyImportExportTitle => '导入与导出';
 
   @override
   String get privacyPolicyImportExportBody =>
-      '只有在你主动选择文件或主动执行导出时，应用才会读取或写出 JSON 课表文件、学校站点 JSON 文件和节次模板文件。这些文件的导入导出本身属于本地操作；只有当你进一步选择网页解析时，相关页面内容才会被发送到你配置的解析接口。获取自定义模型列表同样属于你主动触发的联网操作，并且只会请求你填写的自定义接口。';
+      '只有在你主动选择文件或主动执行导出时，应用才会读取或写出 JSON 课表文件、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点 JSON 文件和节次模板文件。这些文件的导入导出本身属于本地操作；只有当你进一步选择网页解析时，相关页面内容才会被发送到你配置的解析接口。获取自定义模型列表同样属于你主动触发的联网操作，并且只会请求你填写的自定义接口。';
 
   @override
   String get privacyPolicySharingTitle => '分享功能';
@@ -740,11 +796,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      '课表、节次时间集和学校站点配置只会保存在本地，不会自动上传到开发者服务器。';
+      '课表、通用日程、节次时间集和学校站点配置只会保存在本地，不会自动上传到开发者服务器。';
 
   @override
   String get privacyGateSummaryImportExport =>
-      '导入、导出和分享仅在你主动操作时触发；网页解析只会发送你主动提交的压缩后内容，并在保存前让你预览解析结果。';
+      '导入、导出、完整备份和分享仅在你主动操作时触发；完整应用备份不包含自定义 API 密钥，网页解析只会把你提交的内容发送到你配置的解析接口。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -2009,6 +2065,62 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get dataImportExportDesc => '匯入整包／單課表，或匯出當前課表與全部課表';
 
   @override
+  String get appBackupTitle => '完整應用備份與恢復';
+
+  @override
+  String get appBackupSubtitle => '備份或恢復課表、通用日程、設定和學校站點；不包含 API 金鑰。';
+
+  @override
+  String get appBackupSheetSubtitle =>
+      '完整備份會覆蓋目前應用資料。自訂解析 API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
+
+  @override
+  String get restoreBackupFileTitle => '從 JSON 檔案恢復';
+
+  @override
+  String get restoreBackupFileSubtitle => '選擇 Sked 完整備份檔案，恢復前會再次確認。';
+
+  @override
+  String get restoreBackupTextTitle => '貼上備份 JSON';
+
+  @override
+  String get restoreBackupTextSubtitle => '貼上完整備份內容並恢復目前應用資料。';
+
+  @override
+  String get shareBackupTitle => '分享備份檔案';
+
+  @override
+  String get shareBackupSubtitle => '匯出完整應用資料為 JSON；不包含 API 金鑰。';
+
+  @override
+  String get saveBackupTitle => '儲存備份檔案';
+
+  @override
+  String get saveBackupSubtitle => '儲存完整應用備份到本機檔案。';
+
+  @override
+  String get copyBackupTitle => '複製備份文字';
+
+  @override
+  String get copyBackupSubtitle => '顯示完整備份 JSON，便於複製或暫時保存。';
+
+  @override
+  String get restoreBackupConfirmTitle => '恢復完整備份？';
+
+  @override
+  String get restoreBackupConfirmMessage =>
+      '這會替換目前所有課表、通用日程、設定和學校站點。備份檔案中的 API 金鑰不會被匯入；恢復後如需解析課表，請重新填寫金鑰。';
+
+  @override
+  String get restoreBackupConfirmAction => '恢復備份';
+
+  @override
+  String get restoreBackupSuccessMessage => '完整應用備份已恢復。解析 API 金鑰需要重新填寫。';
+
+  @override
+  String get restoreBackupFailureMessage => '恢復失敗，請檢查備份內容後重試。';
+
+  @override
   String get openSourceLicenses => '開源授權';
 
   @override
@@ -2328,21 +2440,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked 為本地優先的課程表工具。課表資料、節次時間集和學校站點設定僅保存在你的裝置或瀏覽器本機，不會自動上傳。應用僅在你主動觸發匯入、網頁解析、分享或開啟外部連結等操作時才會處理對應內容。完整隱私政策可於線上查看。';
+      'Sked 為本地優先的課程表工具。課表資料、通用日程、節次時間集和學校站點設定僅保存在你的裝置或瀏覽器本機，不會自動上傳。應用僅在你主動觸發匯入、網頁解析、分享或開啟外部連結等操作時才會處理對應內容。完整隱私政策可於線上查看。';
 
   @override
   String get privacyPolicyLocalStorageTitle => '本機儲存';
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '課表資料和相關設定會儲存在應用文件目錄中的本機檔案 Sked_data.json，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。若在瀏覽器中使用，同類資料會儲存在瀏覽器本機儲存中。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
+      '課表資料、通用日程、相關設定和完整應用備份內容會儲存在你的裝置本機或瀏覽器本機儲存中，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
 
   @override
   String get privacyPolicyImportExportTitle => '匯入與匯出';
 
   @override
   String get privacyPolicyImportExportBody =>
-      '只有在你主動選擇檔案或主動執行匯出時，應用才會讀取或寫出 JSON 課表檔案、學校站點 JSON 檔案和節次範本檔案。這些檔案的匯入匯出本身屬於本機操作；只有當你進一步選擇網頁解析時，相關頁面內容才會被發送到你設定的解析介面。取得自訂模型清單同樣屬於你主動觸發的連網操作，並且只會請求你填寫的自訂介面。';
+      '只有在你主動選擇檔案或主動執行匯出時，應用才會讀取或寫出 JSON 課表檔案、通用日程 JSON / ICS 檔案、完整應用備份 JSON 檔案、學校站點 JSON 檔案和節次範本檔案。這些檔案的匯入匯出本身屬於本機操作；只有當你進一步選擇網頁解析時，相關頁面內容才會被發送到你設定的解析介面。取得自訂模型清單同樣屬於你主動觸發的連網操作，並且只會請求你填寫的自訂介面。';
 
   @override
   String get privacyPolicySharingTitle => '分享功能';
@@ -2385,11 +2497,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyGateSummaryStorage =>
-      '課表、節次時間集和學校站點設定只會儲存在本機，不會自動上傳到開發者伺服器。';
+      '課表、通用日程、節次時間集和學校站點設定只會儲存在本機，不會自動上傳到開發者伺服器。';
 
   @override
   String get privacyGateSummaryImportExport =>
-      '匯入、匯出和分享僅在你主動操作時觸發；網頁解析只會發送你主動提交的壓縮後內容，並在儲存前讓你預覽解析結果。';
+      '匯入、匯出、完整備份和分享僅在你主動操作時觸發；完整應用備份不包含自訂 API 金鑰，網頁解析只會把你提交的內容發送到你設定的解析介面。';
 
   @override
   String get privacyGateSummaryUpdates =>

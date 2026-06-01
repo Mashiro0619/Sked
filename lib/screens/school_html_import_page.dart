@@ -8,7 +8,7 @@ import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_apply_service.dart';
 import '../services/school_import_content_sanitizer.dart';
-import '../theme/app_motion.dart';
+import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
@@ -311,12 +311,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     final selectedPeriodTimeSetId =
         provider.activePeriodTimeSetOrNull?.id ??
         (periodTimeSets.isEmpty ? '' : periodTimeSets.first.id);
-    final importResult = await showModalBottomSheet<SchoolImportApplyRequest>(
+    final importResult = await showAppModalSheet<SchoolImportApplyRequest>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      constraints: const BoxConstraints(maxWidth: 680),
-      sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+      maxWidth: appSheetWidthMedium,
       builder: (_) => SchoolWebImportResultSheet(
         response: finalResponse,
         canReplaceCurrent: canReplaceCurrent,

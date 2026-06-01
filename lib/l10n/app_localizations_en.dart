@@ -378,6 +378,69 @@ class AppLocalizationsEn extends AppLocalizations {
       'Import full data or single timetables, or export current/all timetables.';
 
   @override
+  String get appBackupTitle => 'App backup and restore';
+
+  @override
+  String get appBackupSubtitle =>
+      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+
+  @override
+  String get appBackupSheetSubtitle =>
+      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+
+  @override
+  String get restoreBackupFileTitle => 'Restore from JSON file';
+
+  @override
+  String get restoreBackupFileSubtitle =>
+      'Choose a full Sked backup file. You will confirm before restoring.';
+
+  @override
+  String get restoreBackupTextTitle => 'Paste backup JSON';
+
+  @override
+  String get restoreBackupTextSubtitle =>
+      'Paste a full backup and restore current app data.';
+
+  @override
+  String get shareBackupTitle => 'Share backup file';
+
+  @override
+  String get shareBackupSubtitle =>
+      'Export full app data as JSON. API keys are excluded.';
+
+  @override
+  String get saveBackupTitle => 'Save backup file';
+
+  @override
+  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+
+  @override
+  String get copyBackupTitle => 'Copy backup text';
+
+  @override
+  String get copyBackupSubtitle =>
+      'Show the full backup JSON so you can copy or store it temporarily.';
+
+  @override
+  String get restoreBackupConfirmTitle => 'Restore full backup?';
+
+  @override
+  String get restoreBackupConfirmMessage =>
+      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+
+  @override
+  String get restoreBackupConfirmAction => 'Restore backup';
+
+  @override
+  String get restoreBackupSuccessMessage =>
+      'Full app backup restored. Parser API keys must be re-entered.';
+
+  @override
+  String get restoreBackupFailureMessage =>
+      'Restore failed. Please check the backup content and try again.';
+
+  @override
   String get openSourceLicenses => 'Open-source licenses';
 
   @override
@@ -711,21 +774,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked is a local-first timetable tool. Timetables, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, webpage parsing, sharing, or opening external links. The full privacy policy is available online.';
+      'Sked is a local-first timetable tool. Timetables, general schedules, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, webpage parsing, sharing, or opening external links. The full privacy policy is available online.';
 
   @override
   String get privacyPolicyLocalStorageTitle => 'Local storage';
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'Timetable data and related settings are stored in a local file named Sked_data.json inside the app documents directory. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. When used in a browser, the same kinds of data are stored in browser storage. The app does not automatically upload this local data to a developer-controlled server.';
+      'Timetable data, general schedules, related settings, and full app backup content are stored locally on your device or in browser storage. Editable school-site configuration is stored separately in Sked_school_sites.json. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Import and export';
 
   @override
   String get privacyPolicyImportExportBody =>
-      'The app reads or writes timetable JSON files, school-site JSON files, and period-template files only when you explicitly choose a file or start an export action. Importing these files is a local operation unless you also choose webpage parsing. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.';
+      'The app reads or writes timetable JSON files, general schedule JSON / ICS files, full app backup JSON files, school-site JSON files, and period-template files only when you explicitly choose a file or start an export action. Importing these files is a local operation unless you also choose webpage parsing. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.';
 
   @override
   String get privacyPolicySharingTitle => 'Sharing';
@@ -769,11 +832,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyGateSummaryStorage =>
-      'Timetables, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.';
+      'Timetables, general schedules, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.';
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, export, and sharing only happen when you explicitly start them; webpage parsing sends only the compressed content you submit to your configured parsing endpoint, and you can review the parsed timetable before saving.';
+      'Import, export, full backups, and sharing only happen when you explicitly start them; full app backups exclude custom API keys, and webpage parsing only sends submitted content to your configured parser endpoint.';
 
   @override
   String get privacyGateSummaryUpdates =>

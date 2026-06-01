@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 
 /// delete 单独保留成一个标记，避免和“只是点了取消”共用同一种空值语义。
@@ -122,202 +123,168 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final linkedPeriods = _selectedPeriods;
     final linkedPeriodsLabel = _formatPeriodsLabel(linkedPeriods, l10n);
 
-    return SafeArea(
-      child: FractionallySizedBox(
-        heightFactor: 0.66,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-          ),
-          child: Column(
+    return AppSheetScaffold(
+      heightFactor: 0.72,
+      title: Text(
+        widget.initialCourse == null
+            ? l10n.addCourseTitle
+            : l10n.editCourseTitle,
+      ),
+      leading: widget.initialCourse == null
+          ? null
+          : TextButton.icon(
+              onPressed: _hasPopped ? null : () => _confirmDelete(context),
+              icon: const Icon(Icons.delete_outline),
+              label: Text(l10n.delete),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+            ),
+      actions: [
+        TextButton(
+          onPressed: _hasPopped ? null : () => _popOnce(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton.icon(
+          onPressed: _hasPopped ? null : _submit,
+          icon: const Icon(Icons.check),
+          label: Text(l10n.save),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ResponsiveFormRow(
+            flexes: const [2, 1],
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.initialCourse == null
-                            ? l10n.addCourseTitle
-                            : l10n.editCourseTitle,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _ResponsiveFormRow(
-                        flexes: const [2, 1],
-                        children: [
-                          TextField(
-                            controller: _nameController,
-                            decoration: InputDecoration(
-                              labelText: l10n.courseName,
-                              prefixIcon: const Icon(Icons.book_outlined),
-                            ),
-                          ),
-                          TextField(
-                            controller: _locationController,
-                            decoration: InputDecoration(
-                              labelText: l10n.location,
-                              prefixIcon: const Icon(
-                                Icons.location_on_outlined,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _ResponsiveFormRow(
-                        breakpoint: 520,
-                        children: [
-                          _SelectionTile(
-                            title: l10n.dayOfWeek,
-                            subtitle: formatDayOfWeekLabel(
-                              _selectedDayOfWeek,
-                              localeCode: app_locale.localeCodeFromLocale(
-                                Localizations.localeOf(context),
-                              ),
-                            ),
-                            icon: Icons.today_outlined,
-                            enabled: !_pickerOpen && !_hasPopped,
-                            onTap: (_pickerOpen || _hasPopped)
-                                ? null
-                                : _pickDayOfWeek,
-                          ),
-                          _SelectionTile(
-                            title: l10n.semesterWeeks,
-                            subtitle: formatSemesterWeeksLabel(
-                              _selectedSemesterWeeks,
-                              totalWeeks: widget.totalWeeks,
-                              localeCode: app_locale.localeCodeFromLocale(
-                                Localizations.localeOf(context),
-                              ),
-                            ),
-                            icon: Icons.edit_calendar,
-                            enabled: !_pickerOpen && !_hasPopped,
-                            onTap: (_pickerOpen || _hasPopped)
-                                ? null
-                                : _pickSemesterWeeks,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _ResponsiveFormRow(
-                        breakpoint: 520,
-                        children: [
-                          _SelectionTile(
-                            title: l10n.startTime,
-                            subtitle: _formatTimeOfDay(_startTime),
-                            icon: Icons.schedule,
-                            enabled: !_pickerOpen && !_hasPopped,
-                            onTap: (_pickerOpen || _hasPopped)
-                                ? null
-                                : () => _pickTime(isStart: true),
-                          ),
-                          _SelectionTile(
-                            title: l10n.endTime,
-                            subtitle: _formatTimeOfDay(_endTime),
-                            icon: Icons.schedule,
-                            enabled: !_pickerOpen && !_hasPopped,
-                            onTap: (_pickerOpen || _hasPopped)
-                                ? null
-                                : () => _pickTime(isStart: false),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _SelectionTile(
-                        title: l10n.linkedPeriods,
-                        subtitle: linkedPeriods.isEmpty
-                            ? l10n.linkedPeriodsUnmatched
-                            : linkedPeriodsLabel,
-                        icon: Icons.tune,
-                        enabled: !_pickerOpen && !_hasPopped,
-                        onTap: (_pickerOpen || _hasPopped)
-                            ? null
-                            : _pickPeriods,
-                      ),
-                      const SizedBox(height: 12),
-                      _ResponsiveFormRow(
-                        children: [
-                          TextField(
-                            controller: _teacherController,
-                            decoration: InputDecoration(
-                              labelText: l10n.teacherName,
-                              prefixIcon: const Icon(Icons.badge_outlined),
-                            ),
-                          ),
-                          TextField(
-                            controller: _creditController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: l10n.credits,
-                              prefixIcon: const Icon(Icons.payments_outlined),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _remarksController,
-                        decoration: InputDecoration(
-                          labelText: l10n.remarks,
-                          prefixIcon: const Icon(Icons.notes_outlined),
-                        ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _customFieldsController,
-                        decoration: InputDecoration(
-                          labelText: l10n.customFields,
-                          hintText: l10n.customFieldsHint,
-                          prefixIcon: const Icon(Icons.data_object_outlined),
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: l10n.courseName,
+                  prefixIcon: const Icon(Icons.book_outlined),
                 ),
               ),
-              const SizedBox(height: 12),
-              ExpressiveActionArea(
-                leading: widget.initialCourse == null
-                    ? null
-                    : TextButton(
-                        onPressed: _hasPopped
-                            ? null
-                            : () => _confirmDelete(context),
-                        child: Text(l10n.delete),
-                      ),
-                actions: [
-                  TextButton(
-                    onPressed: _hasPopped ? null : () => _popOnce(),
-                    child: Text(l10n.cancel),
-                  ),
-                  FilledButton(
-                    onPressed: _hasPopped ? null : _submit,
-                    child: Text(l10n.save),
-                  ),
-                ],
+              TextField(
+                controller: _locationController,
+                decoration: InputDecoration(
+                  labelText: l10n.location,
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          _ResponsiveFormRow(
+            breakpoint: 520,
+            children: [
+              _SelectionTile(
+                title: l10n.dayOfWeek,
+                subtitle: formatDayOfWeekLabel(
+                  _selectedDayOfWeek,
+                  localeCode: app_locale.localeCodeFromLocale(
+                    Localizations.localeOf(context),
+                  ),
+                ),
+                icon: Icons.today_outlined,
+                enabled: !_pickerOpen && !_hasPopped,
+                onTap: (_pickerOpen || _hasPopped) ? null : _pickDayOfWeek,
+              ),
+              _SelectionTile(
+                title: l10n.semesterWeeks,
+                subtitle: formatSemesterWeeksLabel(
+                  _selectedSemesterWeeks,
+                  totalWeeks: widget.totalWeeks,
+                  localeCode: app_locale.localeCodeFromLocale(
+                    Localizations.localeOf(context),
+                  ),
+                ),
+                icon: Icons.edit_calendar,
+                enabled: !_pickerOpen && !_hasPopped,
+                onTap: (_pickerOpen || _hasPopped) ? null : _pickSemesterWeeks,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _ResponsiveFormRow(
+            breakpoint: 520,
+            children: [
+              _SelectionTile(
+                title: l10n.startTime,
+                subtitle: _formatTimeOfDay(_startTime),
+                icon: Icons.schedule,
+                enabled: !_pickerOpen && !_hasPopped,
+                onTap: (_pickerOpen || _hasPopped)
+                    ? null
+                    : () => _pickTime(isStart: true),
+              ),
+              _SelectionTile(
+                title: l10n.endTime,
+                subtitle: _formatTimeOfDay(_endTime),
+                icon: Icons.schedule,
+                enabled: !_pickerOpen && !_hasPopped,
+                onTap: (_pickerOpen || _hasPopped)
+                    ? null
+                    : () => _pickTime(isStart: false),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _SelectionTile(
+            title: l10n.linkedPeriods,
+            subtitle: linkedPeriods.isEmpty
+                ? l10n.linkedPeriodsUnmatched
+                : linkedPeriodsLabel,
+            icon: Icons.tune,
+            enabled: !_pickerOpen && !_hasPopped,
+            onTap: (_pickerOpen || _hasPopped) ? null : _pickPeriods,
+          ),
+          const SizedBox(height: 12),
+          _ResponsiveFormRow(
+            children: [
+              TextField(
+                controller: _teacherController,
+                decoration: InputDecoration(
+                  labelText: l10n.teacherName,
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                ),
+              ),
+              TextField(
+                controller: _creditController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: l10n.credits,
+                  prefixIcon: const Icon(Icons.payments_outlined),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _remarksController,
+            decoration: InputDecoration(
+              labelText: l10n.remarks,
+              prefixIcon: const Icon(Icons.notes_outlined),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _customFieldsController,
+            decoration: InputDecoration(
+              labelText: l10n.customFields,
+              hintText: l10n.customFieldsHint,
+              prefixIcon: const Icon(Icons.data_object_outlined),
+            ),
+            maxLines: 3,
+          ),
+        ],
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
@@ -244,6 +245,24 @@ Future<void> _pumpHomeScreenWithProvider(
   await tester.pumpAndSettle();
 }
 
+Future<void> _pumpAppHomeScreenWithProvider(
+  WidgetTester tester,
+  TimetableProvider provider,
+) async {
+  await tester.pumpWidget(
+    ChangeNotifierProvider<TimetableProvider>.value(
+      value: provider,
+      child: const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AppHomeScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> _pumpHomeScreenHostPage(
   WidgetTester tester,
   TimetableProvider provider,
@@ -314,7 +333,7 @@ void main() {
     await provider.load();
     provider.injectRemotePrivacyPolicyVersion('2026-05-25');
 
-    await _pumpHomeScreenWithProvider(tester, provider);
+    await _pumpAppHomeScreenWithProvider(tester, provider);
 
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(

@@ -44,6 +44,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Sensitive privacy page (served separately)
-web/privacy.html
 .claude/

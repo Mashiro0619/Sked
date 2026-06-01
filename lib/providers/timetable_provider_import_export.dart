@@ -139,9 +139,28 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       localeCode: _appData.localeCode,
     );
     if (mode == AppImportMode.replaceAll) {
-      _appData = imported;
+      final previousApiKey =
+          _appData.studentMode.schoolImportParserSettings.customApiKey;
+      final importedApiKey = imported
+          .studentMode
+          .schoolImportParserSettings
+          .customApiKey
+          .trim();
+      final apiKeyChanged = previousApiKey != importedApiKey;
+      if (apiKeyChanged &&
+          !await _writeSecureCustomSchoolImportApiKey(importedApiKey)) {
+        throw StateError('Unable to save custom school import API key.');
+      }
+      _appData = _withRuntimeCustomSchoolImportApiKey(imported, importedApiKey);
       _selectedWeek = _currentWeekForActiveTimetable();
-      await _saveAndNotify();
+      try {
+        await _saveAndNotify();
+      } catch (_) {
+        if (apiKeyChanged) {
+          await _writeSecureCustomSchoolImportApiKey(previousApiKey);
+        }
+        rethrow;
+      }
       return imported.studentMode.timetables.length;
     }
 

@@ -2,17 +2,15 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
-import '../theme/app_motion.dart';
 import '../widgets/app_layout_tokens.dart';
+import '../widgets/app_modal_sheet.dart';
 import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
@@ -25,7 +23,6 @@ import 'timetable_import_flow.dart';
 
 part 'home_screen_course_actions.dart';
 part 'home_screen_imports.dart';
-part 'home_screen_privacy.dart';
 part 'home_screen_timetable_management.dart';
 part 'home_screen_widgets.dart';
 
@@ -38,9 +35,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   PageController? _pageController;
-  bool _hasScheduledStartupUpdateCheck = false;
-  bool _hasStartedPrivacyPolicyFetch = false;
-  bool _isShowingPrivacyConsentDialog = false;
   bool _weekPickerOpen = false;
   bool _courseEditorOpen = false;
   bool _courseDetailsOpen = false;
@@ -58,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final provider = context.read<TimetableProvider>();
-    _startPrivacyPolicyFetch(provider);
     if (_lastProvider != provider) {
       _lastProvider?.removeListener(_onProviderReady);
       _lastProvider = provider;
@@ -71,8 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     final provider = _lastProvider;
     if (provider == null || !provider.isLoaded) return;
-    _ensurePrivacyConsentDialog(provider);
-    _scheduleStartupUpdateCheck(provider);
     _ensureLiveCourseTimer(provider);
   }
 
@@ -82,31 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _liveCourseTimer?.cancel();
     _pageController?.dispose();
     super.dispose();
-  }
-
-  void _startPrivacyPolicyFetch(TimetableProvider provider) {
-    if (_hasStartedPrivacyPolicyFetch) return;
-    _hasStartedPrivacyPolicyFetch = true;
-    provider.fetchRemotePrivacyPolicyVersion();
-  }
-
-  void _scheduleStartupUpdateCheck(TimetableProvider provider) {
-    if (_hasScheduledStartupUpdateCheck) {
-      return;
-    }
-    _hasScheduledStartupUpdateCheck = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted ||
-          !provider.isLoaded ||
-          !provider.hasAcceptedCurrentPrivacyPolicy) {
-        return;
-      }
-      await AppUpdateCoordinator.checkForUpdates(
-        context,
-        provider: provider,
-        source: UpdateCheckSource.startup,
-      );
-    });
   }
 
   void _ensureLiveCourseTimer(TimetableProvider provider) {

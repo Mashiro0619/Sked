@@ -173,7 +173,10 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
               Icon(Icons.error_outline, color: theme.colorScheme.error),
               const SizedBox(width: 8),
             ] else if (_isDone) ...[
-              Icon(Icons.check_circle_outline, color: theme.colorScheme.primary),
+              Icon(
+                Icons.check_circle_outline,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 8),
             ] else ...[
               const SizedBox(

@@ -195,6 +195,27 @@ void main() {
     expect(find.text('App'), findsOneWidget);
   });
 
+  testWidgets('app backup entry opens restore and export actions', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildGeneralData());
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
+    await tester.tap(find.text('App backup and restore'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Restore from JSON file'), findsOneWidget);
+    expect(find.text('Paste backup JSON'), findsOneWidget);
+    expect(find.text('Share backup file'), findsOneWidget);
+    expect(find.text('Save backup file'), findsOneWidget);
+    expect(find.text('Copy backup text'), findsOneWidget);
+    expect(
+      find.textContaining('are not written to backup files'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('theme settings entry ignores rapid duplicate taps', (
     tester,
   ) async {

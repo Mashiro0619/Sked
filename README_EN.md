@@ -47,7 +47,8 @@ English
 - Theme settings: light / dark / follow system, with both single-color themes and colorful UI modes
 - School webpage / HTML import: open the school site in-app and import the current page, or paste HTML manually
 - Import preview and merge behavior: review parsed results before import, choose the period-time set, and decide whether to import as a new timetable or replace the current one
-- Data import/export: import, export, and share timetable JSON files or plain-text timetable content
+- General schedules: use a separate schedule mode with calendar views, event editing, reminders, and JSON / ICS import and export
+- Data import/export: import, export, and share timetable JSON, general schedule JSON / ICS, full app backups, and plain-text transfer content
 - School site management: add, edit, delete, and import or export school-site JSON entries
 
 Everyone is welcome to submit PRs to expand `assets/school_sites.json` with more school site entries.
@@ -77,14 +78,17 @@ web/
 
 ## Privacy policy
 
-Timetables, timetable settings, period-time sets, and school-site configuration are stored locally on your device or in the browser, and are not automatically uploaded to the developer's server.
+Timetables, general schedules, timetable settings, period-time sets, and school-site configuration are stored locally on your device or in the browser, and are not automatically uploaded to the developer's server.
 Only when you actively use features such as import, export, sharing, external links, update checks, or webpage parsing will the app read related content or hand the corresponding operation off to the system or your configured parsing endpoint.
+
+Full app backups export local data such as timetables, general schedules, app settings, and school sites, but they do not include custom parser API keys. API keys are stored through platform secure storage; after restoring a full backup, re-enter the key before using webpage / HTML parsing again.
 
 A privacy policy consent dialog is shown on first launch. The full privacy policy is available at [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html).
 
 ## School webpage / HTML parsing
 
 School webpage import and pasted HTML parsing only use the OpenAI-compatible endpoint, API key, and model that the user enters in `Timetable parser settings`.
+Sked no longer provides a built-in official parser endpoint and does not send parsing requests to a developer-controlled parser backend.
 
 Custom endpoints may use either `https://` or `http://` Base URLs. If you use `http://`, make sure you trust the current network and endpoint service because submitted content and API keys may not be protected by transport encryption.
 
