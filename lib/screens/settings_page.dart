@@ -738,7 +738,8 @@ class _SettingsPageState extends State<SettingsPage> {
       final action = await showModalBottomSheet<_DataAction>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 680),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) {
           final l10n = AppLocalizations.of(sheetContext);
@@ -749,68 +750,64 @@ class _SettingsPageState extends State<SettingsPage> {
             Navigator.of(sheetContext).pop(action);
           }
 
-          return _buildAdaptiveBottomSheet(
-            sheetContext,
-            maxWidth: 680,
-            child: SafeArea(
-              top: false,
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                children: [
-                  _ActionSheetHeader(
-                    icon: Icons.import_export,
-                    title: l10n.dataImportExport,
-                    subtitle: l10n.dataImportExportDesc,
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionSheetGroup(
-                    children: [
-                      _ActionSheetTile(
-                        icon: Icons.file_download_outlined,
-                        title: l10n.importTimetableFiles,
-                        subtitle: l10n.importTimetableFilesDesc,
-                        onTap: () => popWith(_DataAction.importTimetables),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.paste_outlined,
-                        title: l10n.importTimetableText,
-                        subtitle: l10n.importTimetableTextDesc,
-                        onTap: () => popWith(_DataAction.importTimetablesText),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.html_outlined,
-                        title: l10n.schoolHtmlImportEntry,
-                        subtitle: l10n.schoolHtmlImportEntryDesc,
-                        onTap: () => popWith(_DataAction.importSchoolHtml),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionSheetGroup(
-                    children: [
-                      _ActionSheetTile(
-                        icon: Icons.share_outlined,
-                        title: l10n.shareTimetableFiles,
-                        subtitle: l10n.shareTimetableFilesDesc,
-                        onTap: () => popWith(_DataAction.exportTimetablesShare),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.save_alt_outlined,
-                        title: l10n.saveTimetableFiles,
-                        subtitle: l10n.saveTimetableFilesDesc,
-                        onTap: () => popWith(_DataAction.exportTimetablesSave),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.text_snippet_outlined,
-                        title: l10n.exportTimetableText,
-                        subtitle: l10n.exportTimetableTextDesc,
-                        onTap: () => popWith(_DataAction.exportTimetablesText),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          return SafeArea(
+            top: false,
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              children: [
+                _ActionSheetHeader(
+                  icon: Icons.import_export,
+                  title: l10n.dataImportExport,
+                  subtitle: l10n.dataImportExportDesc,
+                ),
+                const SizedBox(height: 12),
+                _ActionSheetGroup(
+                  children: [
+                    _ActionSheetTile(
+                      icon: Icons.file_download_outlined,
+                      title: l10n.importTimetableFiles,
+                      subtitle: l10n.importTimetableFilesDesc,
+                      onTap: () => popWith(_DataAction.importTimetables),
+                    ),
+                    _ActionSheetTile(
+                      icon: Icons.paste_outlined,
+                      title: l10n.importTimetableText,
+                      subtitle: l10n.importTimetableTextDesc,
+                      onTap: () => popWith(_DataAction.importTimetablesText),
+                    ),
+                    _ActionSheetTile(
+                      icon: Icons.html_outlined,
+                      title: l10n.schoolHtmlImportEntry,
+                      subtitle: l10n.schoolHtmlImportEntryDesc,
+                      onTap: () => popWith(_DataAction.importSchoolHtml),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _ActionSheetGroup(
+                  children: [
+                    _ActionSheetTile(
+                      icon: Icons.share_outlined,
+                      title: l10n.shareTimetableFiles,
+                      subtitle: l10n.shareTimetableFilesDesc,
+                      onTap: () => popWith(_DataAction.exportTimetablesShare),
+                    ),
+                    _ActionSheetTile(
+                      icon: Icons.save_alt_outlined,
+                      title: l10n.saveTimetableFiles,
+                      subtitle: l10n.saveTimetableFilesDesc,
+                      onTap: () => popWith(_DataAction.exportTimetablesSave),
+                    ),
+                    _ActionSheetTile(
+                      icon: Icons.text_snippet_outlined,
+                      title: l10n.exportTimetableText,
+                      subtitle: l10n.exportTimetableTextDesc,
+                      onTap: () => popWith(_DataAction.exportTimetablesText),
+                    ),
+                  ],
+                ),
+              ],
             ),
           );
         },
@@ -1202,7 +1199,8 @@ class _SettingsPageState extends State<SettingsPage> {
       final action = await showModalBottomSheet<_GeneralDataAction>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 680),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
         builder: (sheetContext) {
           final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
@@ -1213,114 +1211,101 @@ class _SettingsPageState extends State<SettingsPage> {
             Navigator.of(sheetContext).pop(action);
           }
 
-          return _buildAdaptiveBottomSheet(
-            sheetContext,
-            maxWidth: 680,
-            child: SafeArea(
-              top: false,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: ListView(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                  children: [
-                    _ActionSheetHeader(
-                      icon: Icons.event_note_outlined,
-                      title: l10n.generalScheduleImportExport,
-                      subtitle: l10n.generalScheduleImportExportDesc,
-                    ),
-                    const SizedBox(height: 12),
-                    _ActionSheetGroup(
-                      children: [
-                        _ActionSheetTile(
-                          icon: Icons.file_download_outlined,
-                          title: l10n.importJsonFile,
-                          subtitle: l10n.importGeneralSchedulesDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.importSchedulesJsonFile,
-                          ),
+          return SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                children: [
+                  _ActionSheetHeader(
+                    icon: Icons.event_note_outlined,
+                    title: l10n.generalScheduleImportExport,
+                    subtitle: l10n.generalScheduleImportExportDesc,
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionSheetGroup(
+                    children: [
+                      _ActionSheetTile(
+                        icon: Icons.file_download_outlined,
+                        title: l10n.importJsonFile,
+                        subtitle: l10n.importGeneralSchedulesDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.importSchedulesJsonFile),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.paste_outlined,
+                        title: l10n.pasteJson,
+                        subtitle: l10n.importGeneralSchedulesJsonTextDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.importSchedulesJsonText),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.calendar_month_outlined,
+                        title: l10n.importIcsFile,
+                        subtitle: l10n.importIcsFileDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.importSchedulesIcsFile),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.event_note_outlined,
+                        title: l10n.pasteIcs,
+                        subtitle: l10n.pasteIcsDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.importSchedulesIcsText),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionSheetGroup(
+                    children: [
+                      _ActionSheetTile(
+                        icon: Icons.share_outlined,
+                        title: '${l10n.shareGeneralSchedules} JSON',
+                        subtitle: l10n.shareGeneralSchedulesDesc,
+                        onTap: () => popWith(
+                          _GeneralDataAction.exportSchedulesJsonShare,
                         ),
-                        _ActionSheetTile(
-                          icon: Icons.paste_outlined,
-                          title: l10n.pasteJson,
-                          subtitle: l10n.importGeneralSchedulesJsonTextDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.importSchedulesJsonText,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.calendar_month_outlined,
-                          title: l10n.importIcsFile,
-                          subtitle: l10n.importIcsFileDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.importSchedulesIcsFile,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.event_note_outlined,
-                          title: l10n.pasteIcs,
-                          subtitle: l10n.pasteIcsDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.importSchedulesIcsText,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _ActionSheetGroup(
-                      children: [
-                        _ActionSheetTile(
-                          icon: Icons.share_outlined,
-                          title: '${l10n.shareGeneralSchedules} JSON',
-                          subtitle: l10n.shareGeneralSchedulesDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.exportSchedulesJsonShare,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.save_alt_outlined,
-                          title: '${l10n.saveGeneralSchedules} JSON',
-                          subtitle: l10n.saveGeneralSchedulesDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.exportSchedulesJsonSave,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.text_snippet_outlined,
-                          title: l10n.copyJson,
-                          subtitle: l10n.copyJsonDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.exportSchedulesJsonText,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.ios_share_outlined,
-                          title: l10n.shareIcs,
-                          subtitle: l10n.shareIcsDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.exportSchedulesIcsShare,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.event_available_outlined,
-                          title: l10n.saveIcs,
-                          subtitle: l10n.saveIcsDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.exportSchedulesIcsSave,
-                          ),
-                        ),
-                        _ActionSheetTile(
-                          icon: Icons.event_note_outlined,
-                          title: l10n.copyIcs,
-                          subtitle: l10n.copyIcsDesc,
-                          onTap: () => popWith(
-                            _GeneralDataAction.exportSchedulesIcsText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.save_alt_outlined,
+                        title: '${l10n.saveGeneralSchedules} JSON',
+                        subtitle: l10n.saveGeneralSchedulesDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.exportSchedulesJsonSave),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.text_snippet_outlined,
+                        title: l10n.copyJson,
+                        subtitle: l10n.copyJsonDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.exportSchedulesJsonText),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.ios_share_outlined,
+                        title: l10n.shareIcs,
+                        subtitle: l10n.shareIcsDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.exportSchedulesIcsShare),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.event_available_outlined,
+                        title: l10n.saveIcs,
+                        subtitle: l10n.saveIcsDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.exportSchedulesIcsSave),
+                      ),
+                      _ActionSheetTile(
+                        icon: Icons.event_note_outlined,
+                        title: l10n.copyIcs,
+                        subtitle: l10n.copyIcsDesc,
+                        onTap: () =>
+                            popWith(_GeneralDataAction.exportSchedulesIcsText),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           );
@@ -1805,33 +1790,6 @@ class _SettingsPageState extends State<SettingsPage> {
           warning.values.isEmpty ? '' : warning.values.first,
         ),
     };
-  }
-
-  Widget _buildAdaptiveBottomSheet(
-    BuildContext context, {
-    required Widget child,
-    required double maxWidth,
-  }) {
-    final width = MediaQuery.of(context).size.width;
-    final isDesktopLike = width >= 900;
-
-    return SafeArea(
-      top: false,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isDesktopLike ? maxWidth : width,
-          ),
-          child: Material(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            clipBehavior: Clip.antiAlias,
-            child: child,
-          ),
-        ),
-      ),
-    );
   }
 }
 

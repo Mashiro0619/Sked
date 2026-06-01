@@ -17,38 +17,35 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 860),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
-        builder: (sheetContext) => AdaptiveModalSurface(
-          maxWidth: 860,
-          dismissOnOutsideTap: canDismiss,
-          child: CourseDetailsSheet(
-            courseId: info.course.id,
-            weekday: info.course.dayOfWeek,
-            conflictKey: info.conflictKey,
-            isFullConflict: info.isFullConflict,
-            onEdit: () => _openEditor(context, provider, course: info.course),
-            onMissing: () {
-              if (sheetContext.mounted) {
-                Navigator.of(sheetContext).maybePop();
-              }
-            },
-            onSelectDisplayedCourse:
-                !info.isFullConflict || info.conflictKey == null
-                ? null
-                : (course) async {
-                    await provider.setDisplayedCourseForConflict(
-                      info.conflictKey!,
-                      course.id,
-                    );
-                    if (sheetContext.mounted) {
-                      Navigator.of(sheetContext).pop();
-                    }
-                  },
-            onEditConflictCourse: !info.isFullConflict
-                ? null
-                : (course) => _openEditor(context, provider, course: course),
-          ),
+        builder: (sheetContext) => CourseDetailsSheet(
+          courseId: info.course.id,
+          weekday: info.course.dayOfWeek,
+          conflictKey: info.conflictKey,
+          isFullConflict: info.isFullConflict,
+          onEdit: () => _openEditor(context, provider, course: info.course),
+          onMissing: () {
+            if (sheetContext.mounted) {
+              Navigator.of(sheetContext).maybePop();
+            }
+          },
+          onSelectDisplayedCourse:
+              !info.isFullConflict || info.conflictKey == null
+              ? null
+              : (course) async {
+                  await provider.setDisplayedCourseForConflict(
+                    info.conflictKey!,
+                    course.id,
+                  );
+                  if (sheetContext.mounted) {
+                    Navigator.of(sheetContext).pop();
+                  }
+                },
+          onEditConflictCourse: !info.isFullConflict
+              ? null
+              : (course) => _openEditor(context, provider, course: course),
         ),
       );
     } finally {
@@ -79,20 +76,17 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 920),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
-        builder: (sheetContext) => AdaptiveModalSurface(
-          maxWidth: 920,
-          dismissOnOutsideTap: canDismiss,
-          child: CourseEditorSheet(
-            periodTimes: periodTimes,
-            totalWeeks: totalWeeks,
-            initialCourse: course,
-            dayOfWeek: weekday ?? emptySlot?.weekday ?? course?.dayOfWeek ?? 1,
-            initialStartMinutes: emptySlot?.startMinutes,
-            initialEndMinutes: emptySlot?.endMinutes,
-            initialPeriods: emptySlot?.periods,
-          ),
+        builder: (sheetContext) => CourseEditorSheet(
+          periodTimes: periodTimes,
+          totalWeeks: totalWeeks,
+          initialCourse: course,
+          dayOfWeek: weekday ?? emptySlot?.weekday ?? course?.dayOfWeek ?? 1,
+          initialStartMinutes: emptySlot?.startMinutes,
+          initialEndMinutes: emptySlot?.endMinutes,
+          initialPeriods: emptySlot?.periods,
         ),
       );
 

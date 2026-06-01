@@ -47,6 +47,8 @@ class _ExpressiveTapState extends State<ExpressiveTap> {
     if (disableAnimations) {
       return Material(
         type: MaterialType.transparency,
+        shape: RoundedRectangleBorder(borderRadius: borderRadius),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           borderRadius: borderRadius,
           onTap: _enabled ? widget.onTap : null,
@@ -60,6 +62,8 @@ class _ExpressiveTapState extends State<ExpressiveTap> {
       curve: AppMotion.enter,
       child: Material(
         type: MaterialType.transparency,
+        shape: RoundedRectangleBorder(borderRadius: borderRadius),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           borderRadius: borderRadius,
           onTap: _enabled ? widget.onTap : null,

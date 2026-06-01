@@ -9,7 +9,6 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/app_motion.dart';
-import '../widgets/adaptive_modal_surface.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
@@ -94,11 +93,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         ),
         actions: [
           const ModeSwitchAction(),
-          IconButton(
-            icon: const Icon(Icons.today_outlined),
-            tooltip: l10n.today,
-            onPressed: () => _goToToday(provider),
-          ),
           IconButton(
             icon: const Icon(Icons.calendar_month_outlined),
             tooltip: l10n.calendars,
@@ -313,17 +307,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 680),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
-        builder: (sheetContext) => AdaptiveModalSurface(
-          maxWidth: 680,
-          dismissOnOutsideTap: canDismiss,
-          child: GeneralEventEditorSheet(
-            initialEvent: event,
-            initialDate: initialDate ?? provider.selectedGeneralDate,
-            calendars: provider.generalSchedules,
-            activeCalendarId: provider.activeGeneralSchedule.id,
-          ),
+        builder: (sheetContext) => GeneralEventEditorSheet(
+          initialEvent: event,
+          initialDate: initialDate ?? provider.selectedGeneralDate,
+          calendars: provider.generalSchedules,
+          activeCalendarId: provider.activeGeneralSchedule.id,
         ),
       );
 
@@ -373,60 +364,57 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 560),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
-        builder: (sheetContext) => AdaptiveModalSurface(
-          maxWidth: 560,
-          dismissOnOutsideTap: canDismiss,
-          child: GeneralEventDetailsSheet(
-            occurrence: occurrence,
-            isReminderHandled: provider.isGeneralReminderHandled(occurrence),
-            onEdit: () {
-              Navigator.of(sheetContext).pop();
-              return _openEditor(context, provider, event: occurrence.event);
-            },
-            onDismissReminder: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final message = AppLocalizations.of(context).reminderHandled;
-              await provider.dismissGeneralReminder(occurrence);
-              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-              if (mounted) {
-                messenger.showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            onRestoreReminder: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final message = AppLocalizations.of(context).reminderRestored;
-              await provider.restoreGeneralReminder(occurrence);
-              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-              if (mounted) {
-                messenger.showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            onDuplicate: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final message = AppLocalizations.of(context).eventDuplicated;
-              await provider.duplicateGeneralOccurrence(occurrence);
-              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-              if (mounted) {
-                messenger.showSnackBar(SnackBar(content: Text(message)));
-              }
-            },
-            onDeleteThis: () async {
-              await provider.deleteGeneralOccurrence(occurrence);
-              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-            },
-            onDeleteFuture: occurrence.event.recurrenceRule.isRepeating
-                ? () async {
-                    await provider.deleteFutureGeneralOccurrences(occurrence);
-                    if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                  }
-                : null,
-            onDeleteAll: () async {
-              await provider.deleteGeneralEvent(occurrence.event.id);
-              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-            },
-          ),
+        builder: (sheetContext) => GeneralEventDetailsSheet(
+          occurrence: occurrence,
+          isReminderHandled: provider.isGeneralReminderHandled(occurrence),
+          onEdit: () {
+            Navigator.of(sheetContext).pop();
+            return _openEditor(context, provider, event: occurrence.event);
+          },
+          onDismissReminder: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final message = AppLocalizations.of(context).reminderHandled;
+            await provider.dismissGeneralReminder(occurrence);
+            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+            if (mounted) {
+              messenger.showSnackBar(SnackBar(content: Text(message)));
+            }
+          },
+          onRestoreReminder: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final message = AppLocalizations.of(context).reminderRestored;
+            await provider.restoreGeneralReminder(occurrence);
+            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+            if (mounted) {
+              messenger.showSnackBar(SnackBar(content: Text(message)));
+            }
+          },
+          onDuplicate: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final message = AppLocalizations.of(context).eventDuplicated;
+            await provider.duplicateGeneralOccurrence(occurrence);
+            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+            if (mounted) {
+              messenger.showSnackBar(SnackBar(content: Text(message)));
+            }
+          },
+          onDeleteThis: () async {
+            await provider.deleteGeneralOccurrence(occurrence);
+            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+          },
+          onDeleteFuture: occurrence.event.recurrenceRule.isRepeating
+              ? () async {
+                  await provider.deleteFutureGeneralOccurrences(occurrence);
+                  if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                }
+              : null,
+          onDeleteAll: () async {
+            await provider.deleteGeneralEvent(occurrence.event.id);
+            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+          },
         ),
       );
     } finally {
@@ -449,16 +437,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isScrollControlled: true,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
-        backgroundColor: Colors.transparent,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 620),
         sheetAnimationStyle: AppMotion.sheetAnimationStyle,
-        builder: (sheetContext) => AdaptiveModalSurface(
-          maxWidth: 620,
-          dismissOnOutsideTap: canDismiss,
-          child: ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const _CalendarManagerSheet(),
-          ),
-        ),
+        builder: (sheetContext) =>
+            ChangeNotifierProvider<TimetableProvider>.value(
+              value: provider,
+              child: const _CalendarManagerSheet(),
+            ),
       );
     } finally {
       _setUiBusyFlag(() => _calendarManagerOpen = false);

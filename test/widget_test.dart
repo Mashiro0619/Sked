@@ -2383,7 +2383,8 @@ void main() {
                         await showModalBottomSheet<SchoolImportApplyRequest>(
                           context: context,
                           isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
+                          showDragHandle: true,
+                          constraints: const BoxConstraints(maxWidth: 680),
                           builder: (_) => SchoolWebImportResultSheet(
                             response: response,
                             canReplaceCurrent: true,

@@ -41,11 +41,11 @@ class SettingsListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return ExpressiveTap(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: ExpressiveTap(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
         child: Ink(
           decoration: ShapeDecoration(
             color: colors.surfaceContainerLow,
