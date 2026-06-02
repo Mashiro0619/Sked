@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
-import 'package:sked/widgets/expressive_dialog.dart';
 
 Widget _localizedApp(Widget child) {
   return MaterialApp(
@@ -71,7 +70,7 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Choose day'), findsOneWidget);
 
-    await tester.tap(find.byType(ExpressiveDialogOption).first);
+    await tester.tap(find.text('Tuesday'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsNothing);

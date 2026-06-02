@@ -324,30 +324,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
             Navigator.of(context).pop(day);
           }
 
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context).selectDayOfWeek),
-            content: ExpressiveDialogContent(
-              maxWidth: 360,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var index = 0; index < 7; index++)
-                    ExpressiveDialogOption(
-                      title: Text(
-                        formatDayOfWeekLabel(
-                          index + 1,
-                          localeCode: app_locale.localeCodeFromLocale(
-                            Localizations.localeOf(context),
-                          ),
-                        ),
-                      ),
-                      leading: const Icon(Icons.calendar_today_outlined),
-                      selected: index + 1 == _selectedDayOfWeek,
-                      onTap: () => popWith(index + 1),
-                    ),
-                ],
-              ),
-            ),
+          return _WeekdayPickerDialog(
+            selectedDay: _selectedDayOfWeek,
+            onSelect: popWith,
           );
         },
       );
@@ -771,6 +750,144 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
       result[key] = content;
     }
     return result;
+  }
+}
+
+class _WeekdayPickerDialog extends StatelessWidget {
+  const _WeekdayPickerDialog({
+    required this.selectedDay,
+    required this.onSelect,
+  });
+
+  final int selectedDay;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final localeCode = app_locale.localeCodeFromLocale(
+      Localizations.localeOf(context),
+    );
+
+    return AlertDialog(
+      title: Text(l10n.selectDayOfWeek),
+      titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
+      contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      content: ExpressiveDialogContent(
+        maxWidth: 320,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var day = DateTime.monday; day <= DateTime.sunday; day++)
+              _WeekdayChoiceRow(
+                label: formatDayOfWeekLabel(day, localeCode: localeCode),
+                shortLabel: formatWeekdayShortLabel(
+                  day,
+                  localeCode: localeCode,
+                ),
+                selected: day == selectedDay,
+                onTap: () => onSelect(day),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WeekdayChoiceRow extends StatelessWidget {
+  const _WeekdayChoiceRow({
+    required this.label,
+    required this.shortLabel,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String shortLabel;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final fillColor = selected ? colors.primaryContainer : Colors.transparent;
+    final foreground = selected ? colors.onPrimaryContainer : colors.onSurface;
+    final indicatorColor = selected
+        ? colors.onPrimaryContainer
+        : Colors.transparent;
+    final badgeFill = selected ? colors.primary : colors.surfaceContainerHigh;
+    final badgeForeground = selected
+        ? colors.onPrimary
+        : colors.onSurfaceVariant;
+    final borderColor = selected
+        ? colors.primary.withValues(alpha: 0.46)
+        : Colors.transparent;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: Material(
+          color: fillColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: borderColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: SizedBox(
+              height: 52,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 10, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: badgeFill,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        shortLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: badgeForeground,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: foreground,
+                          fontWeight: selected
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(Icons.check_rounded, color: indicatorColor, size: 24),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

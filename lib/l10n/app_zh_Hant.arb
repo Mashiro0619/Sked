@@ -1250,7 +1250,7 @@
   "@replaceActiveRequiresSingleScheduleMessage": {},
   "noActiveScheduleToReplaceMessage": "目前沒有可取代的日程。",
   "@noActiveScheduleToReplaceMessage": {},
-  "dataRestoredFromBackupNotice": "App data was restored from the previous backup because the main file failed to load.",
+  "dataRestoredFromBackupNotice": "主資料檔案載入失敗，已從上一份備份還原應用程式資料。",
   "@dataRestoredFromBackupNotice": {},
   "dataBackupRestoreFailedNotice": "主資料檔案和備份檔案均已損壞。應用程式已使用全新狀態啟動。",
   "@dataBackupRestoreFailedNotice": {},

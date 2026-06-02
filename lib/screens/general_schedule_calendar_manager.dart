@@ -23,31 +23,31 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
-            child: Row(
-              children: [
-                Text(
-                  l10n.calendars,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: l10n.addCalendar,
-                  icon: const Icon(Icons.add),
-                  onPressed: _actionInProgress
-                      ? null
-                      : () => _runCalendarAction(
-                          () => provider.addGeneralSchedule(
-                            name: l10n.newCalendar,
-                            colorValue: _nextCalendarColor(
-                              provider.generalSchedules,
-                            ),
-                          ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactHeader = constraints.maxWidth < 420;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.calendars,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w700,
                         ),
-                ),
-              ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _CalendarManagerAddAction(
+                      compact: compactHeader,
+                      disabled: _actionInProgress,
+                      onPressed: () => _addCalendar(provider, l10n),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           Flexible(
@@ -82,6 +82,15 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _addCalendar(TimetableProvider provider, AppLocalizations l10n) {
+    return _runCalendarAction(
+      () => provider.addGeneralSchedule(
+        name: l10n.newCalendar,
+        colorValue: _nextCalendarColor(provider.generalSchedules),
       ),
     );
   }
@@ -190,6 +199,40 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
         await provider.deleteGeneralSchedule(schedule.id);
       }
     });
+  }
+}
+
+class _CalendarManagerAddAction extends StatelessWidget {
+  const _CalendarManagerAddAction({
+    required this.compact,
+    required this.disabled,
+    required this.onPressed,
+  });
+
+  final bool compact;
+  final bool disabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final callback = disabled ? null : onPressed;
+    if (compact) {
+      return IconButton(
+        tooltip: l10n.addCalendar,
+        icon: const Icon(Icons.add),
+        onPressed: callback,
+      );
+    }
+
+    return Tooltip(
+      message: l10n.addCalendar,
+      child: FilledButton.tonalIcon(
+        onPressed: callback,
+        icon: const Icon(Icons.add),
+        label: Text(l10n.addCalendar),
+      ),
+    );
   }
 }
 

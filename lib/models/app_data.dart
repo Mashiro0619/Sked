@@ -534,7 +534,7 @@ AppData buildInitialAppData(
   );
 
   return AppData(
-    activeMode: AppMode.general,
+    activeMode: AppMode.student,
     studentMode: StudentModeData(
       activeTimetableId: '',
       timetables: const [],

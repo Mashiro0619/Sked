@@ -53,7 +53,27 @@ void main() {
     await tester.pump();
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    expect(find.byType(DropdownMenu<String>), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('hides calendar picker when only one calendar exists', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(DropdownMenu<String>), findsNothing);
+    expect(find.text('Work'), findsNothing);
   });
 
   testWidgets('all-day switch tap changes once', (tester) async {
@@ -99,6 +119,26 @@ void main() {
     await tester.pump();
 
     expect(find.text('Home'), findsOneWidget);
+  });
+
+  testWidgets('shows calendar picker when multiple calendars exist', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+            GeneralSchedule(id: 'home', name: 'Home', events: []),
+          ],
+          activeCalendarId: 'work',
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(DropdownMenu<String>), findsOneWidget);
+    expect(find.text('Work'), findsOneWidget);
   });
 
   testWidgets('save / cancel / delete cannot pop twice on rapid tap', (

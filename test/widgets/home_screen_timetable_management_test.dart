@@ -13,6 +13,7 @@ import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/update_service.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
@@ -74,6 +75,39 @@ class _NoopPrivacyService extends PrivacyService {
 
   @override
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
+}
+
+class _BlockingPrivacyService extends PrivacyService {
+  final Completer<String?> _completer = Completer<String?>();
+  var fetchCount = 0;
+
+  @override
+  Future<String?> fetchCurrentPrivacyPolicyVersion() {
+    fetchCount += 1;
+    return _completer.future;
+  }
+
+  void complete(String? version) {
+    if (!_completer.isCompleted) {
+      _completer.complete(version);
+    }
+  }
+}
+
+class _RecordingUpdateService extends UpdateService {
+  var checkCount = 0;
+
+  @override
+  Future<UpdateCheckResult> checkForUpdates() async {
+    checkCount += 1;
+    return const UpdateCheckResult(
+      localVersion: '1.0.0',
+      remoteVersion: '1.0.0',
+      hasUpdate: false,
+      releaseUrl: 'https://github.com/Mashiro0619/Sked/releases/latest',
+      updateContent: '',
+    );
+  }
 }
 
 AppData _buildPopulatedStudentData() {
@@ -247,20 +281,26 @@ Future<void> _pumpHomeScreenWithProvider(
 
 Future<void> _pumpAppHomeScreenWithProvider(
   WidgetTester tester,
-  TimetableProvider provider,
-) async {
+  TimetableProvider provider, {
+  UpdateService startupUpdateService = const UpdateService(),
+  bool settle = true,
+}) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: AppHomeScreen(),
+        home: AppHomeScreen(startupUpdateService: startupUpdateService),
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
 }
 
 Future<void> _pumpHomeScreenHostPage(
@@ -318,6 +358,38 @@ String _selectedWeekTitle(TimetableProvider provider) {
 }
 
 void main() {
+  testWidgets('fresh launch with empty storage shows timetable onboarding', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(null);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      startupUpdateService: _RecordingUpdateService(),
+    );
+
+    expect(provider.isStudentMode, isTrue);
+    expect(storage.data?.activeMode, AppMode.student);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('No timetable yet'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'New timetable'), findsOneWidget);
+    expect(
+      find.widgetWithText(OutlinedButton, 'Import timetable'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(OutlinedButton, 'Import timetable from text'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('privacy consent waits for save before closing', (tester) async {
     final storage = _BlockingTimetableStorage(
       _buildPopulatedStudentData().copyWith(
@@ -367,6 +439,40 @@ void main() {
     expect(storage.saveCount, 1);
     expect(provider.hasAcceptedCurrentPrivacyPolicy, isTrue);
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('startup update check waits for privacy version fetch', (
+    tester,
+  ) async {
+    final privacyService = _BlockingPrivacyService();
+    final updateService = _RecordingUpdateService();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(
+        _buildPopulatedStudentData().copyWith(
+          privacyPolicyAcceptedVersion: '2026-05-25',
+          privacyPolicyAcceptedAtIso: '2026-05-25T00:00:00.000',
+        ),
+      ),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: privacyService,
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      startupUpdateService: updateService,
+      settle: false,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(privacyService.fetchCount, 1);
+    expect(updateService.checkCount, 0);
+
+    privacyService.complete(null);
+    await tester.pumpAndSettle();
+
+    expect(updateService.checkCount, 1);
   });
 
   testWidgets('start date picker ignores rapid duplicate taps', (tester) async {

@@ -171,6 +171,9 @@ void main() {
   testWidgets('calendar manager add ignores rapid duplicate taps', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final initialData = buildInitialAppData(
       buildDefaultPeriodTimes(),
       localeCode: defaultLocaleCode,
@@ -185,6 +188,7 @@ void main() {
     await tester.tap(calendarsButton);
     await tester.pumpAndSettle();
 
+    expect(find.widgetWithText(FilledButton, 'Add calendar'), findsOneWidget);
     final addCalendarButton = find.byTooltip('Add calendar');
     expect(addCalendarButton, findsOneWidget);
 
@@ -800,6 +804,45 @@ void main() {
     expect(find.text('7'), findsOneWidget);
   });
 
+  testWidgets('month view title opens quick date picker', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewMonth,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final titleButton = find.byKey(const ValueKey('general-date-title-button'));
+    expect(titleButton, findsOneWidget);
+
+    await tester.tap(titleButton);
+    await tester.tap(titleButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(provider.selectedGeneralDate.year, 2026);
+    expect(provider.selectedGeneralDate.month, 6);
+    expect(provider.selectedGeneralDate.day, 16);
+  });
+
   testWidgets('month view omits weekend cells when weekends are hidden', (
     tester,
   ) async {
@@ -1108,6 +1151,42 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('July 2026'), findsWidgets);
     expect(find.text('31'), findsOneWidget);
+  });
+
+  testWidgets('month view keeps the calendar panel dense on wide screens', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1600, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-07-15',
+          defaultView: generalViewMonth,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final panelSize = tester.getSize(
+      find.byKey(const ValueKey('general-month-calendar-panel')),
+    );
+    expect(panelSize.width, lessThanOrEqualTo(940));
+    expect(panelSize.height, lessThanOrEqualTo(600));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('month view shows lunar labels on Android phone width', (

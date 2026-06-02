@@ -1655,8 +1655,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportJsonText => '导出 JSON 文本';
 
   @override
-  String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+  String get dataRestoredFromBackupNotice => '主数据文件加载失败，已从上一份备份恢复应用数据。';
 
   @override
   String get dataBackupRestoreFailedNotice => '主数据文件和备份文件均已损坏。应用已使用全新状态启动。';
@@ -3356,8 +3355,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get exportJsonText => '匯出 JSON 文字';
 
   @override
-  String get dataRestoredFromBackupNotice =>
-      'App data was restored from the previous backup because the main file failed to load.';
+  String get dataRestoredFromBackupNotice => '主資料檔案載入失敗，已從上一份備份還原應用程式資料。';
 
   @override
   String get dataBackupRestoreFailedNotice => '主資料檔案和備份檔案均已損壞。應用程式已使用全新狀態啟動。';

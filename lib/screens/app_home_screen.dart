@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
+import '../services/update_service.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import 'general_schedule_home_screen.dart';
@@ -13,7 +16,12 @@ import 'home_screen.dart';
 import 'settings_page.dart';
 
 class AppHomeScreen extends StatefulWidget {
-  const AppHomeScreen({super.key});
+  const AppHomeScreen({
+    super.key,
+    this.startupUpdateService = const UpdateService(),
+  });
+
+  final UpdateService startupUpdateService;
 
   @override
   State<AppHomeScreen> createState() => _AppHomeScreenState();
@@ -21,6 +29,7 @@ class AppHomeScreen extends StatefulWidget {
 
 class _AppHomeScreenState extends State<AppHomeScreen> {
   bool _hasStartedPrivacyPolicyFetch = false;
+  bool _hasCompletedPrivacyPolicyFetch = false;
   bool _hasScheduledStartupUpdateCheck = false;
   bool _isShowingPrivacyConsentDialog = false;
   TimetableProvider? _lastProvider;
@@ -29,12 +38,15 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final provider = context.read<TimetableProvider>();
-    _startPrivacyPolicyFetch(provider);
     if (_lastProvider != provider) {
       _lastProvider?.removeListener(_onProviderReady);
       _lastProvider = provider;
       provider.addListener(_onProviderReady);
+      _hasStartedPrivacyPolicyFetch = false;
+      _hasCompletedPrivacyPolicyFetch = false;
+      _hasScheduledStartupUpdateCheck = false;
     }
+    _startPrivacyPolicyFetch(provider);
     _onProviderReady();
   }
 
@@ -55,27 +67,49 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void _startPrivacyPolicyFetch(TimetableProvider provider) {
     if (_hasStartedPrivacyPolicyFetch) return;
     _hasStartedPrivacyPolicyFetch = true;
-    provider.fetchRemotePrivacyPolicyVersion();
+    unawaited(_fetchPrivacyPolicyVersion(provider));
+  }
+
+  Future<void> _fetchPrivacyPolicyVersion(TimetableProvider provider) async {
+    try {
+      await provider.fetchRemotePrivacyPolicyVersion();
+    } catch (error, stackTrace) {
+      debugPrint('Privacy policy version fetch failed: $error\n$stackTrace');
+    }
+    if (!mounted || _lastProvider != provider) {
+      return;
+    }
+    _hasCompletedPrivacyPolicyFetch = true;
+    _onProviderReady();
   }
 
   void _scheduleStartupUpdateCheck(TimetableProvider provider) {
     if (_hasScheduledStartupUpdateCheck ||
+        !_hasCompletedPrivacyPolicyFetch ||
         !provider.hasAcceptedCurrentPrivacyPolicy) {
       return;
     }
     _hasScheduledStartupUpdateCheck = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted ||
-          !provider.isLoaded ||
-          !provider.hasAcceptedCurrentPrivacyPolicy) {
-        return;
-      }
-      await AppUpdateCoordinator.checkForUpdates(
-        context,
-        provider: provider,
-        source: UpdateCheckSource.startup,
-      );
-    });
+    unawaited(_runStartupUpdateCheckAfterFrame(provider));
+  }
+
+  Future<void> _runStartupUpdateCheckAfterFrame(
+    TimetableProvider provider,
+  ) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        _lastProvider != provider ||
+        !_hasCompletedPrivacyPolicyFetch ||
+        !provider.isLoaded ||
+        !provider.hasAcceptedCurrentPrivacyPolicy) {
+      return;
+    }
+    await AppUpdateCoordinator.checkForUpdates(
+      context,
+      provider: provider,
+      source: UpdateCheckSource.startup,
+      updateService: widget.startupUpdateService,
+    );
   }
 
   void _ensurePrivacyConsentDialog(TimetableProvider provider) {

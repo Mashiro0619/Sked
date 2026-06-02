@@ -61,16 +61,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       appBar: AppBar(
         titleSpacing: 12,
         title: InkWell(
+          key: const ValueKey('general-date-title-button'),
           borderRadius: BorderRadius.circular(24),
-          onTap: _datePickerOpen
-              ? null
-              : () {
-                  if (view == generalViewMonth) {
-                    _goToToday(provider);
-                  } else {
-                    _pickDate(context, provider);
-                  }
-                },
+          onTap: _datePickerOpen ? null : () => _pickDate(context, provider),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Column(
@@ -93,12 +86,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         ),
         actions: [
           const ModeSwitchAction(),
-          IconButton(
-            icon: const Icon(Icons.calendar_month_outlined),
-            tooltip: l10n.calendars,
-            onPressed: _calendarManagerOpen
-                ? null
-                : () => _openCalendarManager(context, provider),
+          _CalendarManagerAction(
+            expanded: MediaQuery.sizeOf(context).width >= 1000,
+            disabled: _calendarManagerOpen,
+            onPressed: () => _openCalendarManager(context, provider),
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -462,6 +453,43 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     } finally {
       _setUiBusyFlag(() => _settingsPageOpen = false);
     }
+  }
+}
+
+class _CalendarManagerAction extends StatelessWidget {
+  const _CalendarManagerAction({
+    required this.expanded,
+    required this.disabled,
+    required this.onPressed,
+  });
+
+  final bool expanded;
+  final bool disabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final callback = disabled ? null : onPressed;
+    if (!expanded) {
+      return IconButton(
+        icon: const Icon(Icons.calendar_month_outlined),
+        tooltip: l10n.calendars,
+        onPressed: callback,
+      );
+    }
+
+    return Tooltip(
+      message: l10n.calendars,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: TextButton.icon(
+          onPressed: callback,
+          icon: const Icon(Icons.calendar_month_outlined),
+          label: Text(l10n.calendars),
+        ),
+      ),
+    );
   }
 }
 

@@ -1,5 +1,17 @@
 part of 'general_schedule_home_screen.dart';
 
+const _monthCalendarPanelMaxWidth = 940.0;
+const _monthCalendarPanelMaxHeight = 600.0;
+const _monthCalendarPanelFillHeightThreshold = 560.0;
+const _monthGridSpacing = 1.0;
+
+double _monthCellHeightForWidth(double cellWidth, {required bool compact}) {
+  final preferred = cellWidth * (compact ? 0.58 : 0.62);
+  final minHeight = compact ? 48.0 : 64.0;
+  final maxHeight = compact ? 64.0 : 82.0;
+  return preferred.clamp(minHeight, maxHeight).toDouble();
+}
+
 class _MonthCalendarView extends StatefulWidget {
   const _MonthCalendarView({
     required this.date,
@@ -119,7 +131,19 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(flex: 3, child: calendar),
+                Expanded(
+                  flex: 3,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: _monthCalendarPanelMaxWidth,
+                        maxHeight: _monthCalendarPanelMaxHeight,
+                      ),
+                      child: calendar,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 72),
@@ -478,6 +502,9 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
       builder: (context, constraints) {
         final fillsHeight =
             constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
+        final shouldFillHeight =
+            fillsHeight &&
+            constraints.maxHeight < _monthCalendarPanelFillHeightThreshold;
         final grid = _DraggableMonthGrid(
           model: widget.model,
           selectedDate: widget.selectedDate,
@@ -496,6 +523,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         );
 
         return Material(
+          key: const ValueKey('general-month-calendar-panel'),
           color: colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -503,7 +531,9 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
-            mainAxisSize: fillsHeight ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisSize: shouldFillHeight
+                ? MainAxisSize.max
+                : MainAxisSize.min,
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
@@ -549,7 +579,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
               _MonthWeekdayHeaderRow(
                 showWeekends: widget.provider.generalShowWeekends,
               ),
-              if (fillsHeight)
+              if (shouldFillHeight)
                 Flexible(fit: FlexFit.loose, child: grid)
               else
                 grid,
@@ -611,12 +641,12 @@ class _DraggableMonthGrid extends StatelessWidget {
     BoxConstraints constraints,
     double width,
   ) {
-    const spacing = 1.0;
     final cellWidth = width / model.columnCount;
-    final preferredCellHeight = (cellWidth * (compact ? 0.58 : 0.68))
-        .clamp(compact ? 48.0 : 72.0, compact ? 64.0 : 92.0)
-        .toDouble();
-    final totalSpacing = (model.rowCount - 1) * spacing;
+    final preferredCellHeight = _monthCellHeightForWidth(
+      cellWidth,
+      compact: compact,
+    );
+    final totalSpacing = (model.rowCount - 1) * _monthGridSpacing;
     final preferredGridHeight =
         model.rowCount * preferredCellHeight + totalSpacing;
     if (constraints.hasBoundedHeight && constraints.maxHeight.isFinite) {
@@ -741,14 +771,14 @@ class _MonthDateGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const spacing = 1.0;
         final boundedHeight =
             constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
         final cellWidth = constraints.maxWidth / model.columnCount;
-        final preferredHeight = (cellWidth * (compact ? 0.58 : 0.68))
-            .clamp(compact ? 48.0 : 72.0, compact ? 64.0 : 92.0)
-            .toDouble();
-        final totalSpacing = (model.rowCount - 1) * spacing;
+        final preferredHeight = _monthCellHeightForWidth(
+          cellWidth,
+          compact: compact,
+        );
+        final totalSpacing = (model.rowCount - 1) * _monthGridSpacing;
         final preferredGridHeight =
             model.rowCount * preferredHeight + totalSpacing;
         final height = boundedHeight
@@ -766,8 +796,8 @@ class _MonthDateGrid extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: model.columnCount,
-              mainAxisSpacing: spacing,
-              crossAxisSpacing: spacing,
+              mainAxisSpacing: _monthGridSpacing,
+              crossAxisSpacing: _monthGridSpacing,
               childAspectRatio: cellWidth / math.max(targetHeight, 1.0),
             ),
             itemCount: model.days.length,
@@ -982,14 +1012,14 @@ class _MonthDayCell extends StatelessWidget {
     );
     final standardDateContent = SizedBox(
       width: double.infinity,
-      height: 38,
+      height: 46,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 22,
-            height: 21,
+            width: 28,
+            height: 27,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: dayFillColor,
@@ -997,7 +1027,7 @@ class _MonthDayCell extends StatelessWidget {
             ),
             child: Text(
               date.day.toString(),
-              style: theme.textTheme.labelLarge?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 height: 1.0,
                 color: standardTextColor,
                 fontWeight: FontWeight.w700,
@@ -1012,6 +1042,7 @@ class _MonthDayCell extends StatelessWidget {
               colorScheme: colorScheme,
               localeCode: localeCode,
               enabled: showLunarCalendar,
+              fontSize: 11,
             ),
           ),
         ],
@@ -1365,6 +1396,7 @@ class _LunarDateLabel extends StatelessWidget {
     required this.localeCode,
     required this.enabled,
     this.overrideColor,
+    this.fontSize = 9.5,
   });
 
   final DateTime date;
@@ -1372,6 +1404,7 @@ class _LunarDateLabel extends StatelessWidget {
   final String localeCode;
   final bool enabled;
   final Color? overrideColor;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1383,28 +1416,36 @@ class _LunarDateLabel extends StatelessWidget {
     if (festivals.isNotEmpty) {
       return _LunarText(
         text: festivals.first,
-        color: overrideColor ?? colorScheme.primary,
+        color: colorScheme.primary,
+        fontSize: fontSize,
       );
     }
     final jieQi = lunar.getJieQi();
     if (jieQi.isNotEmpty) {
       return _LunarText(
         text: jieQi,
-        color: overrideColor ?? colorScheme.tertiary,
+        color: colorScheme.tertiary,
+        fontSize: fontSize,
       );
     }
     return _LunarText(
       text: lunar.getDayInChinese(),
       color: overrideColor ?? colorScheme.onSurfaceVariant,
+      fontSize: fontSize,
     );
   }
 }
 
 class _LunarText extends StatelessWidget {
-  const _LunarText({required this.text, required this.color});
+  const _LunarText({
+    required this.text,
+    required this.color,
+    required this.fontSize,
+  });
 
   final String text;
   final Color color;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1414,7 +1455,7 @@ class _LunarText extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
       style: TextStyle(
-        fontSize: 9.5,
+        fontSize: fontSize,
         height: 1.05,
         color: color,
         fontWeight: FontWeight.w500,

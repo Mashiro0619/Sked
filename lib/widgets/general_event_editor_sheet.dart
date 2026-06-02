@@ -54,6 +54,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   final _formKey = GlobalKey<FormState>();
 
   bool get _isEditing => widget.initialEvent != null;
+  bool get _showCalendarPicker => _calendarOptions.length > 1;
 
   @override
   void initState() {
@@ -299,24 +300,26 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
-            DropdownMenu<String>(
-              initialSelection: _calendarId,
-              label: Text(l10n.calendar),
-              leadingIcon: const Icon(Icons.calendar_month_outlined),
-              expandedInsets: EdgeInsets.zero,
-              dropdownMenuEntries: [
-                for (final calendar in _calendarOptions)
-                  DropdownMenuEntry(
-                    value: calendar.id,
-                    label: calendar.name,
-                    labelWidget: _CalendarDropdownItem(calendar: calendar),
-                  ),
-              ],
-              onSelected: (value) {
-                if (value != null) setState(() => _calendarId = value);
-              },
-            ),
+            if (_showCalendarPicker) ...[
+              const SizedBox(height: 12),
+              DropdownMenu<String>(
+                initialSelection: _calendarId,
+                label: Text(l10n.calendar),
+                leadingIcon: const Icon(Icons.calendar_month_outlined),
+                expandedInsets: EdgeInsets.zero,
+                dropdownMenuEntries: [
+                  for (final calendar in _calendarOptions)
+                    DropdownMenuEntry(
+                      value: calendar.id,
+                      label: calendar.name,
+                      labelWidget: _CalendarDropdownItem(calendar: calendar),
+                    ),
+                ],
+                onSelected: (value) {
+                  if (value != null) setState(() => _calendarId = value);
+                },
+              ),
+            ],
             const SizedBox(height: 8),
             _EventSwitchRow(
               icon: Icons.event_available_outlined,
