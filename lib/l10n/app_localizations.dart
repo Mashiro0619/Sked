@@ -2391,6 +2391,54 @@ abstract class AppLocalizations {
   /// **'Student timetable'**
   String get studentTimetable;
 
+  /// No description provided for @firstLaunchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your starting mode'**
+  String get firstLaunchTitle;
+
+  /// No description provided for @firstLaunchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the workspace you use most. You can switch modes later.'**
+  String get firstLaunchSubtitle;
+
+  /// No description provided for @firstLaunchStudentDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage timetables, courses, weeks, period times, and imports.'**
+  String get firstLaunchStudentDesc;
+
+  /// No description provided for @firstLaunchGeneralDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage calendars, events, reminders, and JSON / ICS data.'**
+  String get firstLaunchGeneralDesc;
+
+  /// No description provided for @firstLaunchStartStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with timetable'**
+  String get firstLaunchStartStudent;
+
+  /// No description provided for @firstLaunchStartGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with schedule'**
+  String get firstLaunchStartGeneral;
+
+  /// No description provided for @firstLaunchPrivacyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You will review and agree to the privacy policy before entering.'**
+  String get firstLaunchPrivacyHint;
+
+  /// No description provided for @firstLaunchPreparingPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing the privacy policy check...'**
+  String get firstLaunchPreparingPrivacy;
+
   /// No description provided for @switchMode.
   ///
   /// In en, this message translates to:

@@ -1,12 +1,11 @@
 <div align="center">
 
 # Sked
-### 一个基于 Flutter 的课程表应用
+### 本地优先的课表与日程管理工具
 
 <a href="README_EN.md">English</a>
 &nbsp;&nbsp;|&nbsp;&nbsp;
 简体中文
-</p>
 
 [![GitHub release](https://img.shields.io/github/v/release/Mashiro0619/Sked?color=black&label=Stable&logo=github)](https://github.com/Mashiro0619/Sked/releases/latest/)
 [![GitHub all releases](https://img.shields.io/github/downloads/Mashiro0619/Sked/total?label=Downloads&logo=github)](https://github.com/Mashiro0619/Sked/releases/)
@@ -15,7 +14,6 @@
 [![License](https://img.shields.io/badge/License-AGPL%20v3-A42E2B?logo=gnu)](LICENSE)
 
 </div>
-
 
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked">
@@ -27,7 +25,9 @@
   </a>
 </p>
 
-## 截图展示
+Sked 是一个面向学生课表和日常安排的本地优先应用。它可以管理课程、周次、节次时间、学校站点、通用日历事件、提醒、导入导出和完整应用备份。应用默认把数据保存在你的设备或浏览器本地，不要求注册 Sked 账号，也不会自动把课表或日程上传到开发者服务器。
+
+## 截图
 
 <div align="center">
 <img src="docs/screenshots/s1.jpg" width="20%" />
@@ -39,82 +39,50 @@
 <img src="docs/screenshots/s7.jpg" width="20%" />
 </div>
 
-## 功能特性
+## 主要功能
 
-- 多课表管理：支持新建、切换、编辑、删除课表，并按周切换查看学期进度
-- 课程编辑：支持课程名称、地点、教师、周次、时间、关联节次、备注与自定义字段编辑
-- 节次时间集：支持复用、编辑、导入导出，并可在多个课表之间共享
-- 课程提醒与展示：支持当前课程 / 下一节课程高亮、保留空白时间、显示已结束课程 / 之后课程，以及课表网格线开关
-- 主题设置：支持浅色 / 深色 / 跟随系统，支持单色主题与多彩界面配色
-- 学校网页 / HTML 导入：支持在应用内打开学校网站导入当前页面，也支持手动粘贴 HTML 内容导入
-- 导入预览与合并：导入前可查看解析结果、选择节次时间集，并决定导入为新课表或替换当前课表
-- 通用日程：支持独立的通用日程模式、日历视图、事件编辑、提醒、JSON 与 ICS 导入导出
-- 数据导入导出：支持课表 JSON、通用日程 JSON / ICS、完整应用备份与恢复、文本导入导出，以及分享
-- 学校站点管理：支持新增、编辑、删除学校登录地址，并导入导出学校站点 JSON
+- **学生课表**：创建、切换、编辑和删除多个课表，按周查看课程安排，并显示当前课程、下一节课程和学期进度。
+- **课程编辑**：维护课程名称、地点、教师、周次、节次、关联时间、备注和自定义字段。
+- **节次时间集**：复用、编辑、导入和导出节次模板，并在多个课表之间共享。
+- **通用日程**：使用独立日程模式管理事件、日历、提醒、重复规则、月视图、日视图、周视图和列表视图。
+- **导入导出**：支持课表 JSON、通用日程 JSON / ICS、学校站点 JSON、节次模板、文本导入导出、分享和完整应用备份 / 恢复。
+- **学校网页 / HTML 解析**：在应用内打开学校站点或粘贴页面内容，并通过你自己配置的 OpenAI 兼容接口解析课表。
+- **导入预览**：保存前查看解析结果，选择节次时间集，并决定导入为新课表或替换当前课表。
+- **主题与界面**：支持浅色、深色、跟随系统、主题色和多彩界面配置，并持续迁移到 Material 3 Expressive 风格。
+- **隐私优先**：不内置开发者控制的课表解析后端，不导出自定义解析 API 密钥，不启用默认云端备份或广告标识符跟踪。
 
+## 数据与隐私
 
-欢迎大家通过提交 PR 为 `assets/school_sites.json` 补充和扩展学校站点配置。
+Sked 的核心数据包括学生课表、通用日程、应用设置、节次时间集和学校站点配置。它们默认保存在设备或浏览器本地。完整应用备份会导出这些本地数据，但不会包含自定义解析 API 密钥。
 
+只有在你主动执行导入、导出、分享、打开外部链接、检查更新、获取模型列表或解析网页 / HTML 内容时，应用才会访问相关文件、调用系统功能或连接你配置的外部接口。
 
-## 项目结构
+首次启动应用时会显示隐私政策确认。完整隐私政策可在 [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html) 查看。
 
-```text
-lib/
-├─ config/       # 应用配置
-├─ data/         # 平台相关的数据存储实现
-├─ l10n/         # 本地化资源、语言元数据与生成代码
-├─ models/       # 课表、课程、学校站点、导入响应等数据模型
-├─ providers/    # 应用状态管理
-├─ screens/      # 页面，如主页、设置页、导入页、学校站点管理页
-├─ services/     # 导入导出、解析、分享、更新等服务
-└─ widgets/      # 课表网格、课程编辑、课程详情、导入结果等组件
+## 自定义解析接口
 
-assets/
-├─ default_period_times.json
-└─ school_sites.json
+Sked 不内置课表解析接口。学校网页导入和粘贴 HTML 解析只会使用你在应用内“课表解析设置”填写的 OpenAI 兼容接口。
 
-web/
-├─ index.html
-├─ manifest.json
-└─ privacy.html
-```
+解析配置包括：
 
-## 隐私政策
-
-课表、通用日程、课表设置、节次时间集和学校站点配置保存在设备或浏览器本地，不会自动上传到开发者服务器。
-只有在你主动使用导入、导出、分享、外部链接、更新检查或网页解析等功能时，应用才会读取相关内容或把对应操作交给系统或你配置的解析接口处理。
-
-完整应用备份会导出课表、通用日程、应用设置和学校站点等本地数据，但不会导出自定义解析 API 密钥。API 密钥通过系统安全存储保存；恢复完整备份后，如需继续使用网页 / HTML 解析，请重新填写密钥。
-
-首次进入应用时会显示隐私政策确认；隐私政策全文可在 [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html) 查看。
-
-
-## 学校网页 / HTML 解析
-
-学校网页导入和手动粘贴 HTML 解析只会使用用户在应用内“课表解析设置”中填写的 OpenAI 兼容接口、API 密钥和模型。
-Sked 不再提供内置官方解析接口，也不会把解析请求发送到开发者控制的解析后端。
-
-自定义接口支持 `https://` 和 `http://` Base URL。使用 `http://` 时，请确认你信任当前网络和接口服务，因为请求内容和 API 密钥可能无法获得传输层加密保护。
-
-### 解析配置
-
-- `Base URL`：OpenAI 兼容接口地址，例如 `https://api.example.com/v1` 或内网 `http://192.168.1.10:8000/v1`
-- `API 密钥`：发送到该接口的 Bearer Token，应用会尽可能使用系统安全存储保存
-- `模型名称`：聊天补全模型名称，可手动输入，也可通过“获取模型列表”从自定义接口读取
+- `Base URL`：OpenAI 兼容接口地址，例如 `https://api.example.com/v1` 或可信内网 `http://192.168.1.10:8000/v1`
+- `API 密钥`：发送到该接口的 Bearer Token，应用会尽可能通过平台安全存储保存
+- `模型名称`：聊天补全模型名称，可手动填写，也可从自定义接口获取模型列表
 - `自定义提示词`：可选；留空时使用应用内置课表解析提示词
 
-### 请求行为
+请求行为：
 
-- 获取模型列表时，应用会请求你填写的 `Base URL` 下的 `/models`
-- 解析课表时，应用会请求你填写的 `Base URL` 下的 `/chat/completions`
-- 请求会携带页面内容、可选页面标题、页面 URL、当前应用语言和解析提示词
-- 自定义接口及其上游服务如何存储、转发或处理数据，取决于你选择的服务提供方
+- 获取模型列表会请求你填写的 `Base URL` 下的 `/models`
+- 解析课表会请求你填写的 `Base URL` 下的 `/chat/completions`
+- 请求会携带你主动提交的页面内容、可选页面标题、页面 URL、当前应用语言和解析提示词
+- 如果使用 `http://` Base URL，请只在可信设备、可信网络和可信接口服务中使用，因为内容和 API 密钥可能不受传输层加密保护
 
-应用仍支持通过 `--dart-define=SKED_UPDATE_VERSION_URL=...` 覆盖更新信息地址；该配置只影响应用更新检查，不用于课表解析。
+## 贡献
 
+欢迎提交 Issue 和 Pull Request。也欢迎为 `assets/school_sites.json` 补充学校站点配置。提交前请尽量保持现有隐私边界、数据兼容性和导入导出行为。
 
 ## 开源协议与第三方说明
 
-- 本项目源码基于 [GNU Affero General Public License v3.0](LICENSE) 开源
-- 项目内分发的启动图标及相关平台图标资源包含第三方授权内容，详见 [NOTICE](NOTICE)
-- Flutter 依赖与第三方库许可可在应用内“设置 → 开源许可”查看
+- 源码基于 [GNU Affero General Public License v3.0](LICENSE) 开源。
+- 项目内分发的启动图标及相关平台图标资源包含第三方授权内容，详见 [NOTICE](NOTICE)。
+- Flutter 依赖与第三方库许可可在应用内“设置 -> 开源许可”查看。

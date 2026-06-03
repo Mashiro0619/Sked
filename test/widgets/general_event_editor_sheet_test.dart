@@ -3,9 +3,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/sked_dropdown_menu.dart';
 
 Widget _localizedApp(Widget child) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: Scaffold(body: child),
+  );
+}
+
+Widget _localizedZhApp(Widget child) {
+  return MaterialApp(
+    locale: const Locale('zh'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
@@ -53,7 +63,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
-    expect(find.byType(DropdownMenu<String>), findsNothing);
+    expect(find.byType(SkedDropdownMenu<String>), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -72,8 +82,31 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(DropdownMenu<String>), findsNothing);
+    expect(find.byType(SkedDropdownMenu<String>), findsNothing);
     expect(find.text('Work'), findsNothing);
+  });
+
+  testWidgets('shows event place field below title in Chinese locale', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _localizedZhApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('地点'), findsOneWidget);
+    expect(find.text('上课地点'), findsNothing);
+
+    final titleTop = tester.getTopLeft(find.text('日程标题')).dy;
+    final placeTop = tester.getTopLeft(find.text('地点')).dy;
+    expect(placeTop, greaterThan(titleTop));
   });
 
   testWidgets('all-day switch tap changes once', (tester) async {
@@ -137,7 +170,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(DropdownMenu<String>), findsOneWidget);
+    expect(find.byType(SkedDropdownMenu<String>), findsOneWidget);
     expect(find.text('Work'), findsOneWidget);
   });
 

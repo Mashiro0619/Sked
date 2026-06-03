@@ -7,6 +7,7 @@ import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 
 enum _PeriodTimesMenuAction {
@@ -84,33 +85,33 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
       appBar: AppBar(
         title: Text(l10n.periodTimesTitle),
         actions: [
-          PopupMenuButton<_PeriodTimesMenuAction>(
+          SkedPopupMenuButton<_PeriodTimesMenuAction>(
             tooltip: l10n.importExport,
             enabled: !_menuActionInProgress,
             onSelected: _handleMenuAction,
             itemBuilder: (context) => [
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.importTemplate,
                 child: Text(l10n.importPeriodTemplate),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.importTemplateText,
                 child: Text(l10n.importPeriodTemplateText),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.exportTemplate,
                 child: Text(l10n.sharePeriodTemplate),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.saveTemplate,
                 child: Text(l10n.saveTemplateToFile),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.exportTemplateText,
                 child: Text(l10n.exportPeriodTemplateText),
               ),
-              PopupMenuDivider(),
-              PopupMenuItem(
+              SkedPopupMenuDivider(),
+              SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.deleteSet,
                 child: Text(l10n.deletePeriodTimeSet),
               ),

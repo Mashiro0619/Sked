@@ -10,6 +10,7 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -293,6 +294,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Import JSON file'), findsOneWidget);
+  });
+
+  testWidgets('general data action chevrons are vertically centered', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildGeneralData());
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.tap(find.text('Schedule import & export'));
+    await tester.pumpAndSettle();
+
+    final actionTitles = [
+      'Import JSON file',
+      'Paste JSON',
+      'Import ICS file',
+      'Paste ICS',
+    ];
+    for (final title in actionTitles) {
+      final titleFinder = find.text(title);
+      expect(titleFinder, findsOneWidget);
+
+      final tileBox = tester.renderObject<RenderBox>(
+        find.ancestor(of: titleFinder, matching: find.byType(ExpressiveTap)),
+      );
+      final chevronFinder = find.descendant(
+        of: find.ancestor(
+          of: titleFinder,
+          matching: find.byType(ExpressiveTap),
+        ),
+        matching: find.byIcon(Icons.chevron_right),
+      );
+      final chevronBox = tester.renderObject<RenderBox>(chevronFinder);
+      final tileCenterY = tileBox
+          .localToGlobal(tileBox.size.center(Offset.zero))
+          .dy;
+      final chevronCenterY = chevronBox
+          .localToGlobal(chevronBox.size.center(Offset.zero))
+          .dy;
+
+      expect((chevronCenterY - tileCenterY).abs(), lessThanOrEqualTo(1.0));
+    }
   });
 
   testWidgets('general data sheet action ignores rapid duplicate taps', (

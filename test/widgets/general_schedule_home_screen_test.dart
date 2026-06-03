@@ -137,6 +137,9 @@ const _generalDayWeekPickerPagerKey = ValueKey<String>(
 const _generalDayPickerSelectionIndicatorKey = ValueKey<String>(
   'general-day-picker-selection-indicator',
 );
+const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
+  'general-month-compact-selected-day-feedback',
+);
 
 void main() {
   testWidgets('add event entry ignores rapid duplicate taps', (tester) async {
@@ -1218,6 +1221,49 @@ void main() {
     expect(find.text('芒种'), findsOneWidget);
     expect(find.text('端午节'), findsOneWidget);
     expect(find.text('夏至'), findsOneWidget);
+  });
+
+  testWidgets('month view compact selected day clips ripple to the selection', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(496, 1052));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'zh').copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-05',
+          defaultView: generalViewMonth,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final feedback = find.byKey(_generalMonthCompactSelectedDayFeedbackKey);
+    expect(feedback, findsOneWidget);
+
+    final feedbackSize = tester.getSize(feedback);
+    final inkWell = find.descendant(
+      of: feedback,
+      matching: find.byType(InkWell),
+    );
+    expect(inkWell, findsOneWidget);
+    final inkWellSize = tester.getSize(inkWell);
+    final material = tester.widget<Material>(feedback);
+
+    expect(material.shape, isA<CircleBorder>());
+    expect(feedbackSize.width, closeTo(feedbackSize.height, 0.01));
+    expect(inkWellSize.width, feedbackSize.width);
+    expect(inkWellSize.height, feedbackSize.height);
   });
 
   testWidgets('month view lunar special labels follow theme colors', (

@@ -5,6 +5,7 @@ import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 
 class GeneralDisplaySettingsPage extends StatelessWidget {
@@ -24,7 +25,7 @@ class GeneralDisplaySettingsPage extends StatelessWidget {
               SettingsSectionHeader(title: l10n.generalDefaultViewSection),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: DropdownMenu<String>(
+                child: SkedDropdownMenu<String>(
                   initialSelection: provider.generalDefaultView,
                   label: Text(l10n.defaultView),
                   leadingIcon: const Icon(Icons.space_dashboard_outlined),
@@ -96,7 +97,7 @@ class GeneralDisplaySettingsPage extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: DropdownMenu<int>(
+                child: SkedDropdownMenu<int>(
                   initialSelection: provider.generalTimeGridMinutes,
                   label: Text(l10n.timeGridDensity),
                   leadingIcon: const Icon(Icons.grid_4x4_outlined),

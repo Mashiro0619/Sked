@@ -7,6 +7,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/general_display_settings_page.dart';
+import 'package:sked/widgets/sked_dropdown_menu.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -69,13 +70,35 @@ void main() {
     expect(find.text('Time grid'), findsOneWidget);
     expect(find.text('Popup behavior'), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
-    expect(find.byType(DropdownMenu<String>), findsOneWidget);
+    expect(find.byType(SkedDropdownMenu<String>), findsOneWidget);
 
-    await tester.tap(find.byType(DropdownMenu<String>));
+    await tester.tap(find.byType(SkedDropdownMenu<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Month').last);
     await tester.pumpAndSettle();
 
     expect(provider.generalDefaultView, generalViewMonth);
+  });
+
+  testWidgets('default view dropdown opens with a full field-width menu', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+
+    await _pumpPage(tester, provider);
+
+    final dropdown = find.byType(SkedDropdownMenu<String>);
+    final dropdownRect = tester.getRect(dropdown);
+
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+
+    final firstMenuItem = find
+        .ancestor(of: find.text('Week').last, matching: find.byType(MenuItemButton))
+        .first;
+    final menuItemRect = tester.getRect(firstMenuItem);
+
+    expect(menuItemRect.left, closeTo(dropdownRect.left, 1));
+    expect(menuItemRect.width, greaterThanOrEqualTo(dropdownRect.width - 16));
   });
 }

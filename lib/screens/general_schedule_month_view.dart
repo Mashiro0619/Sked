@@ -4,6 +4,9 @@ const _monthCalendarPanelMaxWidth = 940.0;
 const _monthCalendarPanelMaxHeight = 600.0;
 const _monthCalendarPanelFillHeightThreshold = 560.0;
 const _monthGridSpacing = 1.0;
+const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
+  'general-month-compact-selected-day-feedback',
+);
 
 double _monthCellHeightForWidth(double cellWidth, {required bool compact}) {
   final preferred = cellWidth * (compact ? 0.58 : 0.62);
@@ -961,11 +964,14 @@ class _MonthDayCell extends StatelessWidget {
       34.0,
       math.min(math.min(cellWidth, cellHeight) - 4, 56.0),
     );
+    final compactButtonSize = hasEventMarker
+        ? math.max(28.0, compactTileSize - 10)
+        : compactTileSize;
     final compactDateStyle = theme.textTheme.titleLarge?.copyWith(
       height: 1.0,
       color: compactTextColor,
       fontWeight: FontWeight.w700,
-      fontSize: math.max(17.0, math.min(22.0, compactTileSize * 0.48)),
+      fontSize: math.max(15.0, math.min(22.0, compactButtonSize * 0.48)),
     );
     final compactLunarWidget = showLunarCalendar
         ? _LunarDateLabel(
@@ -988,15 +994,6 @@ class _MonthDayCell extends StatelessWidget {
           shape: BoxShape.circle,
         ),
       ),
-    );
-    final selectedCompactTileSize = hasCompactEventMarker
-        ? math.max(28.0, compactTileSize - 10)
-        : compactTileSize;
-    final selectedCompactDateStyle = theme.textTheme.titleLarge?.copyWith(
-      height: 1.0,
-      color: compactTextColor,
-      fontWeight: FontWeight.w700,
-      fontSize: math.max(15.0, math.min(22.0, selectedCompactTileSize * 0.48)),
     );
     final standardEventMarker = AnimatedOpacity(
       opacity: hasEventMarker ? 1 : 0,
@@ -1063,26 +1060,34 @@ class _MonthDayCell extends StatelessWidget {
         ),
       ),
     );
-    final compactDateContent = isSelected
-        ? Center(
-            child: SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    width: selectedCompactTileSize,
-                    height: selectedCompactTileSize,
+    final compactButtonBackground = isSelected
+        ? colorScheme.primary.withValues(alpha: 0.12)
+        : Colors.transparent;
+    final compactDateContent = Center(
+      child: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              width: compactButtonSize,
+              height: compactButtonSize,
+              child: Material(
+                key: isSelected
+                    ? _generalMonthCompactSelectedDayFeedbackKey
+                    : null,
+                color: compactButtonBackground,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onTap,
+                  child: Padding(
                     padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1092,75 +1097,60 @@ class _MonthDayCell extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: selectedCompactDateStyle,
+                          style: compactDateStyle,
                         ),
                         if (showLunarCalendar) const SizedBox(height: 1),
                         if (showLunarCalendar) compactLunarWidget,
                       ],
                     ),
                   ),
-                  if (hasCompactEventMarker) const SizedBox(height: 2),
-                  if (hasCompactEventMarker) compactEventMarker,
-                ],
+                ),
               ),
             ),
-          )
-        : Center(
-            child: SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        date.day.toString(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: compactDateStyle,
-                      ),
-                      if (showLunarCalendar) const SizedBox(height: 1),
-                      if (showLunarCalendar) compactLunarWidget,
-                    ],
-                  ),
-                  Positioned(bottom: 4, child: compactEventMarker),
-                ],
-              ),
-            ),
-          );
+            if (hasCompactEventMarker) const SizedBox(height: 2),
+            if (hasCompactEventMarker) compactEventMarker,
+          ],
+        ),
+      ),
+    );
+    final semanticsLabel = occurrences.isNotEmpty
+        ? AppLocalizations.of(
+            context,
+          ).monthDayEvents(date.day, occurrences.length)
+        : '${date.day}';
+
+    if (compact) {
+      return Semantics(
+        button: true,
+        selected: isSelected,
+        label: semanticsLabel,
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: compactDateContent,
+        ),
+      );
+    }
 
     return Semantics(
       button: true,
       selected: isSelected,
-      label: occurrences.isNotEmpty
-          ? AppLocalizations.of(
-              context,
-            ).monthDayEvents(date.day, occurrences.length)
-          : '${date.day}',
+      label: semanticsLabel,
       child: Material(
         color: standardBackgroundColor,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            compact ? compactTileSize / 2 : 6,
-          ),
+          borderRadius: BorderRadius.circular(6),
           side: BorderSide(
             color: standardBorderColor,
-            width: isSelected && !compact ? 1.4 : 0,
+            width: isSelected ? 1.4 : 0,
           ),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(
-            compact ? compactTileSize / 2 : 6,
-          ),
+          borderRadius: BorderRadius.circular(6),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.all(compact ? 2 : 5),
-            child: compact ? compactDateContent : standardDateStack,
+            padding: const EdgeInsets.all(5),
+            child: standardDateStack,
           ),
         ),
       ),

@@ -362,6 +362,116 @@ void main() {
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(null);
+    final updateService = _RecordingUpdateService();
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      startupUpdateService: updateService,
+      settle: false,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(provider.isStudentMode, isTrue);
+    expect(storage.data?.activeMode, AppMode.student);
+    expect(provider.acceptedPrivacyPolicyVersion, isNull);
+    expect(updateService.checkCount, 0);
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.text('Choose your starting mode'), findsOneWidget);
+    expect(find.text('Student timetable'), findsOneWidget);
+    expect(find.text('General schedule'), findsOneWidget);
+    expect(find.text('Start with timetable'), findsOneWidget);
+    expect(find.text('Start with schedule'), findsOneWidget);
+    expect(find.text('No timetable yet'), findsNothing);
+  });
+
+  testWidgets('first launch waits for privacy version before mode selection', (
+    tester,
+  ) async {
+    final privacyService = _BlockingPrivacyService();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(null),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: privacyService,
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      startupUpdateService: _RecordingUpdateService(),
+      settle: false,
+    );
+    await tester.pump();
+
+    expect(find.text('Choose your starting mode'), findsOneWidget);
+    expect(find.text('Preparing the privacy policy check...'), findsOneWidget);
+
+    await tester.tap(find.text('Start with timetable'), warnIfMissed: false);
+    await tester.pump();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(privacyService.fetchCount, 1);
+
+    privacyService.complete('2026-06-02');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Preparing the privacy policy check...'), findsNothing);
+    expect(find.text('Start with timetable'), findsOneWidget);
+  });
+
+  testWidgets('existing empty general calendars skip first launch onboarding', (
+    tester,
+  ) async {
+    final schedule = createDefaultGeneralSchedule().copyWith(
+      name: 'Work',
+      colorValue: 0xFF1565C0,
+    );
+    final extraSchedule = createDefaultGeneralSchedule(name: 'Personal');
+    final initialData =
+        buildInitialAppData(
+          buildDefaultPeriodTimes(),
+          localeCode: defaultLocaleCode,
+        ).copyWith(
+          activeMode: AppMode.general,
+          privacyPolicyAcceptedVersion: null,
+          privacyPolicyAcceptedAtIso: null,
+          generalMode: GeneralScheduleData(
+            activeScheduleId: schedule.id,
+            schedules: [schedule, extraSchedule],
+          ),
+        );
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(initialData),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+    );
+    await provider.load();
+    provider.injectRemotePrivacyPolicyVersion('2026-06-02');
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      startupUpdateService: _RecordingUpdateService(),
+      settle: false,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Choose your starting mode'), findsNothing);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
+  });
+
+  testWidgets('first launch can start with student timetable after consent', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(null);
     final provider = TimetableProvider(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -373,21 +483,80 @@ void main() {
       tester,
       provider,
       startupUpdateService: _RecordingUpdateService(),
+      settle: false,
     );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('Start with timetable'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(
+      find.text('Please agree to the privacy policy before using the app'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'Timetables, general schedules, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Student timetable'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Agree and continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Agree and continue'));
+    await tester.pumpAndSettle();
 
     expect(provider.isStudentMode, isTrue);
+    expect(provider.acceptedPrivacyPolicyVersion, bundledPrivacyPolicyVersion);
     expect(storage.data?.activeMode, AppMode.student);
+    expect(find.byType(AlertDialog), findsNothing);
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.text('No timetable yet'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'New timetable'), findsOneWidget);
+  });
+
+  testWidgets('first launch can start with general schedule after consent', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(null);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      startupUpdateService: _RecordingUpdateService(),
+      settle: false,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('Start with schedule'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
     expect(
-      find.widgetWithText(OutlinedButton, 'Import timetable'),
+      find.text('Please agree to the privacy policy before using the app'),
       findsOneWidget,
     );
-    expect(
-      find.widgetWithText(OutlinedButton, 'Import timetable from text'),
-      findsOneWidget,
-    );
+    expect(find.text('General schedule'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Agree and continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Agree and continue'));
+    await tester.pumpAndSettle();
+
+    expect(provider.isGeneralMode, isTrue);
+    expect(provider.acceptedPrivacyPolicyVersion, bundledPrivacyPolicyVersion);
+    expect(storage.data?.activeMode, AppMode.general);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.text('No timetable yet'), findsNothing);
+    expect(find.text('Sked'), findsWidgets);
   });
 
   testWidgets('privacy consent waits for save before closing', (tester) async {

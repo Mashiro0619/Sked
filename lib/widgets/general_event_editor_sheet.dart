@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import 'app_modal_sheet.dart';
+import 'sked_dropdown_menu.dart';
 
 class GeneralEventEditorResult {
   const GeneralEventEditorResult({this.event, this.delete = false});
@@ -300,9 +301,17 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                 return null;
               },
             ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _locationController,
+              decoration: InputDecoration(
+                labelText: l10n.place,
+                prefixIcon: const Icon(Icons.location_on_outlined),
+              ),
+            ),
             if (_showCalendarPicker) ...[
               const SizedBox(height: 12),
-              DropdownMenu<String>(
+              SkedDropdownMenu<String>(
                 initialSelection: _calendarId,
                 label: Text(l10n.calendar),
                 leadingIcon: const Icon(Icons.calendar_month_outlined),
@@ -396,7 +405,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                     },
             ),
             const SizedBox(height: 12),
-            DropdownMenu<GeneralEventRecurrence>(
+            SkedDropdownMenu<GeneralEventRecurrence>(
               initialSelection: _recurrence,
               label: Text(l10n.eventRecurrence),
               leadingIcon: const Icon(Icons.repeat),
@@ -459,14 +468,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
             _ReminderPicker(
               reminders: _reminders,
               onChanged: (values) => setState(() => _reminders = values),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _locationController,
-              decoration: InputDecoration(
-                labelText: l10n.location,
-                prefixIcon: const Icon(Icons.location_on_outlined),
-              ),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -760,7 +761,7 @@ class _RepeatOptions extends StatelessWidget {
           _ResponsiveFormRow(
             breakpoint: 420,
             children: [
-              DropdownMenu<int>(
+              SkedDropdownMenu<int>(
                 initialSelection: interval.clamp(1, 30).toInt(),
                 label: Text(l10n.recurrenceEvery),
                 expandedInsets: EdgeInsets.zero,
@@ -772,7 +773,7 @@ class _RepeatOptions extends StatelessWidget {
                   if (value != null) onIntervalChanged(value);
                 },
               ),
-              DropdownMenu<GeneralEventRecurrenceUnit>(
+              SkedDropdownMenu<GeneralEventRecurrenceUnit>(
                 initialSelection: customUnit,
                 label: Text(l10n.recurrenceUnit),
                 expandedInsets: EdgeInsets.zero,

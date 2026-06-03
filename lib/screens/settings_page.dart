@@ -2163,7 +2163,13 @@ class _ActionSheetTile extends StatelessWidget {
             );
             final trailing = Icon(
               Icons.chevron_right,
+              size: 28,
               color: colorScheme.onSurfaceVariant,
+            );
+            final trailingBox = SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(child: trailing),
             );
 
             if (constraints.maxWidth < 300) {
@@ -2186,7 +2192,7 @@ class _ActionSheetTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Align(
                     alignment: AlignmentDirectional.centerEnd,
-                    child: trailing,
+                    child: trailingBox,
                   ),
                 ],
               );
@@ -2197,8 +2203,8 @@ class _ActionSheetTile extends StatelessWidget {
                 SizedBox(width: 40, height: 40, child: Center(child: leading)),
                 const SizedBox(width: 12),
                 Expanded(child: text),
-                const SizedBox(width: 8),
-                trailing,
+                const SizedBox(width: 4),
+                trailingBox,
               ],
             );
           },

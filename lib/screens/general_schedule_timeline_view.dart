@@ -678,11 +678,18 @@ class _DayPickerItem extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isToday = _sameDay(date, DateTime.now());
-    final foreground = selected ? colorScheme.primary : colorScheme.onSurface;
+    final background = selected
+        ? colorScheme.primary.withValues(alpha: 0.20)
+        : isToday
+        ? colorScheme.primary.withValues(alpha: 0.14)
+        : Colors.transparent;
+    final foreground = selected
+        ? colorScheme.primary
+        : isToday
+        ? colorScheme.primary
+        : colorScheme.onSurface;
     return Material(
-      color: isToday && !selected
-          ? colorScheme.primary.withValues(alpha: 0.08)
-          : Colors.transparent,
+      color: background,
       borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -1114,7 +1121,18 @@ class _DayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isToday = _sameDay(date, DateTime.now());
+    final background = selected
+        ? colorScheme.primary.withValues(alpha: 0.20)
+        : isToday
+        ? colorScheme.primary.withValues(alpha: 0.14)
+        : Colors.transparent;
+    final foreground = selected
+        ? colorScheme.primary
+        : isToday
+        ? colorScheme.primary
+        : colorScheme.onSurface;
     return SizedBox(
       width: width,
       child: InkWell(
@@ -1123,11 +1141,7 @@ class _DayHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: selected
-                  ? theme.colorScheme.primary.withValues(alpha: 0.12)
-                  : isToday
-                  ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                  : Colors.transparent,
+              color: background,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
@@ -1140,7 +1154,12 @@ class _DayHeader extends StatelessWidget {
                       _weekdayLabel(context, date),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: foreground,
+                        fontWeight: selected || isToday
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -1148,6 +1167,7 @@ class _DayHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
+                        color: foreground,
                         fontWeight: selected || isToday
                             ? FontWeight.w700
                             : FontWeight.w500,

@@ -1,5 +1,7 @@
 part of 'timetable_provider.dart';
 
+const bundledPrivacyPolicyVersion = '2026-06-02';
+
 mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   String? _remotePrivacyPolicyVersion;
 
@@ -103,8 +105,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   }
 
   Future<void> acceptPrivacyPolicyCurrentVersion() async {
-    final active = _remotePrivacyPolicyVersion;
-    if (active == null) return;
+    final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
     if (_appData.privacyPolicyAcceptedVersion == active) return;
     _appData = _appData.copyWith(
       privacyPolicyAcceptedVersion: active,

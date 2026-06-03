@@ -1296,6 +1296,35 @@ class AppLocalizationsFr extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
+  String get firstLaunchTitle => 'Choose your starting mode';
+
+  @override
+  String get firstLaunchSubtitle =>
+      'Pick the workspace you use most. You can switch modes later.';
+
+  @override
+  String get firstLaunchStudentDesc =>
+      'Manage timetables, courses, weeks, period times, and imports.';
+
+  @override
+  String get firstLaunchGeneralDesc =>
+      'Manage calendars, events, reminders, and JSON / ICS data.';
+
+  @override
+  String get firstLaunchStartStudent => 'Start with timetable';
+
+  @override
+  String get firstLaunchStartGeneral => 'Start with schedule';
+
+  @override
+  String get firstLaunchPrivacyHint =>
+      'You will review and agree to the privacy policy before entering.';
+
+  @override
+  String get firstLaunchPreparingPrivacy =>
+      'Preparing the privacy policy check...';
+
+  @override
   String get switchMode => 'Switch mode';
 
   @override

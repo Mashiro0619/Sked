@@ -1,12 +1,11 @@
 <div align="center">
 
 # Sked
-### A Flutter timetable app
+### A local-first timetable and schedule manager
 
 <a href="README.md">中文</a>
 &nbsp;&nbsp;|&nbsp;&nbsp;
 English
-</p>
 
 [![GitHub release](https://img.shields.io/github/v/release/Mashiro0619/Sked?color=black&label=Stable&logo=github)](https://github.com/Mashiro0619/Sked/releases/latest/)
 [![GitHub all releases](https://img.shields.io/github/downloads/Mashiro0619/Sked/total?label=Downloads&logo=github)](https://github.com/Mashiro0619/Sked/releases/)
@@ -26,6 +25,8 @@ English
   </a>
 </p>
 
+Sked is a local-first app for student timetables and everyday schedules. It manages courses, semester weeks, period-time sets, school sites, general calendar events, reminders, import/export flows, and full app backups. By default, data stays on your device or in browser storage. Sked does not require a Sked account and does not automatically upload your timetable or schedule data to a developer-controlled server.
+
 ## Screenshots
 
 <div align="center">
@@ -40,76 +41,48 @@ English
 
 ## Features
 
-- Multi-timetable management: create, switch, edit, and delete timetables, and browse the semester week by week
-- Course editing: edit course name, location, teacher, weeks, time, linked periods, remarks, and custom fields
-- Period-time sets: reuse, edit, import, and export them across multiple timetables
-- Course reminders and display: highlight the current or next course, preserve timetable gaps, show past-ended or future courses, and toggle timetable grid lines
-- Theme settings: light / dark / follow system, with both single-color themes and colorful UI modes
-- School webpage / HTML import: open the school site in-app and import the current page, or paste HTML manually
-- Import preview and merge behavior: review parsed results before import, choose the period-time set, and decide whether to import as a new timetable or replace the current one
-- General schedules: use a separate schedule mode with calendar views, event editing, reminders, and JSON / ICS import and export
-- Data import/export: import, export, and share timetable JSON, general schedule JSON / ICS, full app backups, and plain-text transfer content
-- School site management: add, edit, delete, and import or export school-site JSON entries
+- **Student timetables**: create, switch, edit, and delete multiple timetables, browse by week, and highlight the current or next course.
+- **Course editing**: maintain course name, location, teacher, weeks, periods, linked times, notes, and custom fields.
+- **Period-time sets**: reuse, edit, import, and export period templates across multiple timetables.
+- **General schedules**: manage events, calendars, reminders, recurrence rules, month/day/week views, and list view in a separate schedule mode.
+- **Import and export**: handle timetable JSON, general schedule JSON / ICS, school-site JSON, period templates, text transfer, sharing, and full app backup / restore.
+- **School webpage / HTML parsing**: open school sites in-app or paste page content, then parse timetable data through your own OpenAI-compatible endpoint.
+- **Import preview**: review parsed results before saving, choose the period-time set, and decide whether to import as a new timetable or replace the current one.
+- **Appearance**: supports light mode, dark mode, system mode, theme colors, colorful UI settings, and an ongoing Material 3 Expressive migration.
+- **Privacy first**: no built-in developer-controlled parser backend, no custom parser API keys in full backups, and no default cloud backup or advertising-identifier tracking.
 
-Everyone is welcome to submit PRs to expand `assets/school_sites.json` with more school site entries.
+## Data And Privacy
 
-## Project structure
+Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration locally on your device or in browser storage by default. Full app backups export this local data, but they do not include custom parser API keys.
 
-```text
-lib/
-├─ config/       # App configuration
-├─ data/         # Platform-specific storage implementations
-├─ l10n/         # Localization resources, language metadata, and generated code
-├─ models/       # Timetable, course, school-site, and import response models
-├─ providers/    # App state management
-├─ screens/      # Screens such as home, settings, import, and school-site management
-├─ services/     # Import/export, parsing, sharing, and update services
-└─ widgets/      # Timetable grid, course editor, course details, and import result widgets
+The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, or sends webpage / HTML content only when you explicitly start the corresponding action.
 
-assets/
-├─ default_period_times.json
-└─ school_sites.json
+A privacy policy consent screen is shown on first launch. The full policy is available at [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html).
 
-web/
-├─ index.html
-├─ manifest.json
-└─ privacy.html
-```
+## Custom Parser Endpoint
 
-## Privacy policy
+Sked does not include a built-in timetable parser endpoint. School webpage import and pasted HTML parsing only use the OpenAI-compatible endpoint configured by the user in the app.
 
-Timetables, general schedules, timetable settings, period-time sets, and school-site configuration are stored locally on your device or in the browser, and are not automatically uploaded to the developer's server.
-Only when you actively use features such as import, export, sharing, external links, update checks, or webpage parsing will the app read related content or hand the corresponding operation off to the system or your configured parsing endpoint.
+Parser settings include:
 
-Full app backups export local data such as timetables, general schedules, app settings, and school sites, but they do not include custom parser API keys. API keys are stored through platform secure storage; after restoring a full backup, re-enter the key before using webpage / HTML parsing again.
-
-A privacy policy consent dialog is shown on first launch. The full privacy policy is available at [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html).
-
-## School webpage / HTML parsing
-
-School webpage import and pasted HTML parsing only use the OpenAI-compatible endpoint, API key, and model that the user enters in `Timetable parser settings`.
-Sked no longer provides a built-in official parser endpoint and does not send parsing requests to a developer-controlled parser backend.
-
-Custom endpoints may use either `https://` or `http://` Base URLs. If you use `http://`, make sure you trust the current network and endpoint service because submitted content and API keys may not be protected by transport encryption.
-
-### Parser configuration
-
-- `Base URL`: OpenAI-compatible API base URL, such as `https://api.example.com/v1` or a local-network `http://192.168.1.10:8000/v1`
+- `Base URL`: OpenAI-compatible API base URL, such as `https://api.example.com/v1` or a trusted local-network endpoint like `http://192.168.1.10:8000/v1`
 - `API key`: Bearer token sent to that endpoint; the app stores it with platform secure storage where available
-- `Model`: chat completion model name, entered manually or fetched from the custom endpoint with `Fetch model list`
+- `Model`: chat completion model name, entered manually or fetched from the custom endpoint
 - `Custom prompt`: optional; when empty, the built-in timetable extraction prompt is used
 
-### Request behavior
+Request behavior:
 
-- Fetching the model list requests `/models` under the configured `Base URL`
+- Fetching models requests `/models` under the configured `Base URL`
 - Parsing a timetable requests `/chat/completions` under the configured `Base URL`
-- Requests include page content, optional page title, page URL, current app language, and parser prompt content
-- How the custom endpoint and any upstream services store, forward, or process data depends on the service provider you choose
+- Requests include the submitted page content, optional page title, page URL, current app language, and parser prompt content
+- If you use an `http://` Base URL, only use it on trusted devices, trusted networks, and trusted endpoint services, because content and API keys may not be protected by transport encryption
 
-The app still supports `--dart-define=SKED_UPDATE_VERSION_URL=...` for overriding the update feed URL. This setting only affects update checks and is not used for timetable parsing.
+## Contributing
 
-## Open-source license and third-party notices
+Issues and pull requests are welcome. Contributions to `assets/school_sites.json` are also welcome. Please preserve the existing privacy boundaries, data compatibility, and import/export behavior where possible.
 
-- The source code is licensed under the [GNU Affero General Public License v3.0](LICENSE)
-- Bundled launcher icon and related platform icon assets include third-party licensed material; see [NOTICE](NOTICE)
-- Flutter package and third-party library licenses can be viewed in the app under `Settings → Open-source licenses`
+## License And Notices
+
+- Source code is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+- Bundled launcher icon and platform icon assets include third-party licensed material; see [NOTICE](NOTICE).
+- Flutter package and third-party library licenses can be viewed in the app under `Settings -> Open-source licenses`.

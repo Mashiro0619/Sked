@@ -30,4 +30,11 @@ abstract final class AppMotion {
     curve: emphasized,
     reverseCurve: exit,
   );
+
+  static const menuAnimationStyle = AnimationStyle(
+    duration: Duration(milliseconds: 240),
+    reverseDuration: Duration(milliseconds: 140),
+    curve: enter,
+    reverseCurve: exit,
+  );
 }

@@ -38,6 +38,27 @@ ThemeData buildAppTheme({
   final theme = ThemeData(useMaterial3: true, colorScheme: colorScheme);
   final textTheme = theme.textTheme;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
+  final menuSurface = colorScheme.surfaceContainer;
+  final menuOutline = colorScheme.outlineVariant.withValues(alpha: 0.72);
+  final menuShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(18),
+    side: BorderSide(color: menuOutline),
+  );
+  final menuOverlayColor = WidgetStateProperty.resolveWith<Color?>((states) {
+    if (states.contains(WidgetState.disabled)) {
+      return Colors.transparent;
+    }
+    if (states.contains(WidgetState.pressed)) {
+      return colorScheme.primary.withValues(alpha: 0.14);
+    }
+    if (states.contains(WidgetState.focused)) {
+      return colorScheme.primary.withValues(alpha: 0.12);
+    }
+    if (states.contains(WidgetState.hovered)) {
+      return colorScheme.primary.withValues(alpha: 0.08);
+    }
+    return null;
+  });
 
   return theme.copyWith(
     scaffoldBackgroundColor: colorScheme.surface,
@@ -299,51 +320,95 @@ ThemeData buildAppTheme({
         ),
       ),
       menuStyle: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll<Color>(
-          colorScheme.surfaceContainerHighest,
+        backgroundColor: WidgetStatePropertyAll<Color>(menuSurface),
+        shadowColor: WidgetStatePropertyAll<Color>(
+          colorScheme.shadow.withValues(alpha: 0.18),
         ),
-        surfaceTintColor: WidgetStatePropertyAll<Color>(
-          colorScheme.surfaceTint,
+        surfaceTintColor: const WidgetStatePropertyAll<Color>(
+          Colors.transparent,
         ),
         elevation: const WidgetStatePropertyAll<double>(3),
-        shape: WidgetStatePropertyAll<OutlinedBorder>(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+          EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        ),
+        shape: WidgetStatePropertyAll<OutlinedBorder>(menuShape),
+        side: WidgetStatePropertyAll<BorderSide>(
+          BorderSide(color: menuOutline),
         ),
       ),
     ),
     menuTheme: MenuThemeData(
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll<Color>(
-          colorScheme.surfaceContainerHighest,
+        backgroundColor: WidgetStatePropertyAll<Color>(menuSurface),
+        shadowColor: WidgetStatePropertyAll<Color>(
+          colorScheme.shadow.withValues(alpha: 0.18),
         ),
-        surfaceTintColor: WidgetStatePropertyAll<Color>(
-          colorScheme.surfaceTint,
+        surfaceTintColor: const WidgetStatePropertyAll<Color>(
+          Colors.transparent,
         ),
         elevation: const WidgetStatePropertyAll<double>(3),
-        shape: WidgetStatePropertyAll<OutlinedBorder>(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+          EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        ),
+        shape: WidgetStatePropertyAll<OutlinedBorder>(menuShape),
+        side: WidgetStatePropertyAll<BorderSide>(
+          BorderSide(color: menuOutline),
         ),
       ),
     ),
     menuButtonTheme: MenuButtonThemeData(
       style: ButtonStyle(
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        minimumSize: const WidgetStatePropertyAll(Size.fromHeight(44)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 12),
         ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        overlayColor: menuOverlayColor,
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) {
+            return colorScheme.primary.withValues(alpha: 0.12);
+          }
+          return Colors.transparent;
+        }),
         foregroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
             return colorScheme.onSurface.withValues(alpha: 0.38);
+          }
+          if (states.contains(WidgetState.focused)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.onSurface;
+        }),
+        iconColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.onSurface.withValues(alpha: 0.38);
+          }
+          if (states.contains(WidgetState.focused)) {
+            return colorScheme.primary;
           }
           return colorScheme.onSurfaceVariant;
         }),
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: colorScheme.surfaceContainerHighest,
-      surfaceTintColor: colorScheme.surfaceTint,
+      color: menuSurface,
+      surfaceTintColor: Colors.transparent,
       elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
+      menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      shape: menuShape,
       iconColor: colorScheme.onSurfaceVariant,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final color = states.contains(WidgetState.disabled)
+            ? colorScheme.onSurface.withValues(alpha: 0.38)
+            : colorScheme.onSurface;
+        return textTheme.labelLarge?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        );
+      }),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

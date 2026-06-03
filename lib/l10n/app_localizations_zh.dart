@@ -1207,6 +1207,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studentTimetable => '学生课表';
 
   @override
+  String get firstLaunchTitle => '选择你的起始模式';
+
+  @override
+  String get firstLaunchSubtitle => '先选一个最常用的工作区，之后仍可在应用内切换。';
+
+  @override
+  String get firstLaunchStudentDesc => '管理课表、课程、周次、节次时间，并支持课表导入。';
+
+  @override
+  String get firstLaunchGeneralDesc => '管理日历、事件、提醒，以及 JSON / ICS 导入导出。';
+
+  @override
+  String get firstLaunchStartStudent => '使用学生课表';
+
+  @override
+  String get firstLaunchStartGeneral => '使用通用日程';
+
+  @override
+  String get firstLaunchPrivacyHint => '进入应用前会先查看并同意隐私政策。';
+
+  @override
+  String get firstLaunchPreparingPrivacy => '正在准备隐私政策检查...';
+
+  @override
   String get switchMode => '切换模式';
 
   @override
@@ -2905,6 +2929,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get studentTimetable => '學生課表';
+
+  @override
+  String get firstLaunchTitle => '選擇你的起始模式';
+
+  @override
+  String get firstLaunchSubtitle => '先選一個最常用的工作區，之後仍可在應用內切換。';
+
+  @override
+  String get firstLaunchStudentDesc => '管理課表、課程、週次、節次時間，並支援課表匯入。';
+
+  @override
+  String get firstLaunchGeneralDesc => '管理日曆、事件、提醒，以及 JSON / ICS 匯入匯出。';
+
+  @override
+  String get firstLaunchStartStudent => '使用學生課表';
+
+  @override
+  String get firstLaunchStartGeneral => '使用通用日程';
+
+  @override
+  String get firstLaunchPrivacyHint => '進入應用前會先檢閱並同意隱私政策。';
+
+  @override
+  String get firstLaunchPreparingPrivacy => '正在準備隱私政策檢查...';
 
   @override
   String get switchMode => '切換模式';

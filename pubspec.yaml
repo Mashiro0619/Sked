@@ -1,5 +1,5 @@
 name: sked
-description: "A local-first, multi-platform timetable management app."
+description: "A local-first timetable and schedule management app."
 publish_to: 'none'
 
 version: 2.0.0+6

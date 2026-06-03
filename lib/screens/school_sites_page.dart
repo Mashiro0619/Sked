@@ -11,6 +11,7 @@ import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_motion.dart';
+import '../widgets/sked_popup_menu.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
 
@@ -75,25 +76,25 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
             onPressed: _htmlImportOpen ? null : _openHtmlImport,
             icon: const Icon(Icons.code),
           ),
-          PopupMenuButton<_SchoolSitesMenuAction>(
+          SkedPopupMenuButton<_SchoolSitesMenuAction>(
             tooltip: l10n.importExport,
             onSelected: _handleMenuAction,
             itemBuilder: (context) => [
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _SchoolSitesMenuAction.toggleEditMode,
                 child: Text(_isEditMode ? l10n.confirm : l10n.schoolSitesEdit),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _SchoolSitesMenuAction.importJson,
                 enabled: !_jsonImportInProgress,
                 child: Text(l10n.schoolSitesImportJson),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _SchoolSitesMenuAction.shareJson,
                 enabled: !_jsonShareInProgress,
                 child: Text(l10n.schoolSitesShareJson),
               ),
-              PopupMenuItem(
+              SkedPopupMenuItem(
                 value: _SchoolSitesMenuAction.saveJson,
                 enabled: !_jsonSaveInProgress,
                 child: Text(l10n.schoolSitesSaveJson),
@@ -124,7 +125,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                       ? () => _openWebImportForSite(site)
                       : null,
                   trailing: _isEditMode
-                      ? PopupMenuButton<_SchoolSiteItemAction>(
+                      ? SkedPopupMenuButton<_SchoolSiteItemAction>(
                           onSelected: (action) async {
                             switch (action) {
                               case _SchoolSiteItemAction.edit:
@@ -136,11 +137,11 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                             }
                           },
                           itemBuilder: (context) => [
-                            PopupMenuItem(
+                            SkedPopupMenuItem(
                               value: _SchoolSiteItemAction.edit,
                               child: Text(l10n.schoolSitesEdit),
                             ),
-                            PopupMenuItem(
+                            SkedPopupMenuItem(
                               value: _SchoolSiteItemAction.delete,
                               child: Text(l10n.delete),
                             ),
