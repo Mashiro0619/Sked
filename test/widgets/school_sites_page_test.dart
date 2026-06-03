@@ -131,13 +131,13 @@ void main() {
     expect(find.text('Add school'), findsWidgets);
   });
 
-  testWidgets('HTML import entry ignores rapid duplicate taps', (tester) async {
+  testWidgets('text / HTML parsing entry ignores rapid duplicate taps', (
+    tester,
+  ) async {
     final provider = await _createProvider();
     await _pumpSchoolSitesPage(tester, provider);
 
-    final htmlImportButton = find.byTooltip(
-      'Import by pasting timetable page content',
-    );
+    final htmlImportButton = find.byTooltip('Parse timetable from text / HTML');
     expect(htmlImportButton, findsOneWidget);
 
     await tester.tap(htmlImportButton);

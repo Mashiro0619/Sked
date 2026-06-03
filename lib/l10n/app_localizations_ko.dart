@@ -802,7 +802,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => '정책 업데이트';
@@ -915,13 +915,13 @@ class AppLocalizationsKo extends AppLocalizations {
       'HTML뿐 아니라 시간표 정보가 포함된 모든 내용을 파싱하여 가져올 수 있습니다.';
 
   @override
-  String get schoolHtmlImportCompress => '내용 압축';
+  String get schoolHtmlImportCompress => '내용 정리';
 
   @override
-  String get schoolHtmlImportCompressed => '내용이 압축되었습니다';
+  String get schoolHtmlImportCompressed => '내용이 정리되었습니다';
 
   @override
-  String get schoolHtmlImportCompressFirst => '먼저 내용을 압축하세요.';
+  String get schoolHtmlImportCompressFirst => '먼저 내용을 정리하세요.';
 
   @override
   String get schoolHtmlImportSubmit => '파싱 후 가져오기';

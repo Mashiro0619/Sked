@@ -43,7 +43,8 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
     final dropdownTheme = theme.dropdownMenuTheme;
     final effectiveInputDecorationTheme =
         dropdownTheme.inputDecorationTheme ?? theme.inputDecorationTheme;
-    final baseMenuStyle = dropdownTheme.menuStyle ?? MenuTheme.of(context).style;
+    final baseMenuStyle =
+        dropdownTheme.menuStyle ?? MenuTheme.of(context).style;
     final selectedEntry = _entryForValue(_selectedValue);
     final expand = widget.expandedInsets == EdgeInsets.zero;
 

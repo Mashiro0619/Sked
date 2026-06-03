@@ -816,7 +816,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Policy updates';
@@ -836,7 +836,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, export, and sharing only happen when you explicitly start them; webpage parsing sends only the compressed content you submit to your configured parsing endpoint, and you can review the parsed timetable before saving.';
+      'Import, export, and sharing only happen when you explicitly start them; webpage parsing sends only the submitted content to your configured parsing endpoint, and you can review the parsed timetable before saving.';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -933,13 +933,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Any content containing timetable information can be parsed and imported, not just HTML.';
 
   @override
-  String get schoolHtmlImportCompress => 'Compress content';
+  String get schoolHtmlImportCompress => 'Inhoud voorbereiden';
 
   @override
-  String get schoolHtmlImportCompressed => 'Content compressed';
+  String get schoolHtmlImportCompressed => 'Inhoud voorbereid';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'Compress the content first.';
+  String get schoolHtmlImportCompressFirst => 'Bereid eerst de inhoud voor.';
 
   @override
   String get schoolHtmlImportSubmit => 'Parse and import';

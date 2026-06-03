@@ -798,7 +798,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'ポリシーの更新';
@@ -911,13 +911,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'HTMLに限らず、時間割情報を含む内容であれば解析してインポートできます。';
 
   @override
-  String get schoolHtmlImportCompress => '内容を圧縮';
+  String get schoolHtmlImportCompress => '内容を整理';
 
   @override
-  String get schoolHtmlImportCompressed => '内容を圧縮しました';
+  String get schoolHtmlImportCompressed => '内容を整理しました';
 
   @override
-  String get schoolHtmlImportCompressFirst => '先に内容を圧縮してください。';
+  String get schoolHtmlImportCompressFirst => '先に内容を整理してください。';
 
   @override
   String get schoolHtmlImportSubmit => '解析してインポート';

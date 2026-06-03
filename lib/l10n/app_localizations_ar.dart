@@ -814,7 +814,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'تحديثات السياسة';
@@ -930,13 +930,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكن تحليل واستيراد أي محتوى يحتوي على معلومات الجدول الزمني ، وليس فقط HTML.';
 
   @override
-  String get schoolHtmlImportCompress => 'ضغط المحتوى';
+  String get schoolHtmlImportCompress => 'تجهيز المحتوى';
 
   @override
-  String get schoolHtmlImportCompressed => 'محتوى مضغوط';
+  String get schoolHtmlImportCompressed => 'تم تجهيز المحتوى';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'ضغط المحتوى أولاً.';
+  String get schoolHtmlImportCompressFirst => 'جهّز المحتوى أولاً.';
 
   @override
   String get schoolHtmlImportSubmit => 'تحليل واستيراد';

@@ -831,7 +831,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Actualizaciones de la política';
@@ -950,13 +950,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se puede analizar e importar cualquier contenido que contenga información del horario, no solo HTML.';
 
   @override
-  String get schoolHtmlImportCompress => 'Comprimir contenido';
+  String get schoolHtmlImportCompress => 'Preparar contenido';
 
   @override
-  String get schoolHtmlImportCompressed => 'Contenido comprimido';
+  String get schoolHtmlImportCompressed => 'Contenido preparado';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'Primero comprime el contenido.';
+  String get schoolHtmlImportCompressFirst => 'Prepara primero el contenido.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analizar e importar';

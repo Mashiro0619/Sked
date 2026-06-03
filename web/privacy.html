@@ -522,7 +522,7 @@
         <span class="eyebrow" data-i18n="heroEyebrow">隐私政策</span>
         <h1 data-i18n-html="heroTitle">Sked<br />隐私政策</h1>
         <p data-i18n="heroIntro">
-          本隐私政策用于说明 Sked 课表与日程管理应用在提供学生课表、通用日程、数据导入导出、学校网页解析导入、外部链接跳转及相关辅助功能过程中，对信息的处理方式、处理边界、适用范围以及用户可知悉的基本规则。
+          本隐私政策用于说明 Sked 课表与日程管理应用在提供学生课表、通用日程、数据导入导出、学校网页导入、课表文本 / HTML 解析导入、外部链接跳转及相关辅助功能过程中，对信息的处理方式、处理边界、适用范围以及用户可知悉的基本规则。
         </p>
       </div>
     </section>
@@ -538,7 +538,7 @@
             <a href="#sharing" data-i18n="tocSharing">分享功能</a>
             <a href="#external-links" data-i18n="tocExternalLinks">外部链接</a>
             <a href="#not-collected" data-i18n="tocNotCollected">默认不收集的内容</a>
-            <a href="#web-parse" data-i18n="tocWebParse">网页解析与自定义接口</a>
+            <a href="#web-parse" data-i18n="tocWebParse">文本 / HTML 解析与自定义接口</a>
             <a href="#rights" data-i18n="tocRights">用户注意事项</a>
             <a href="#updates" data-i18n="tocUpdates">政策更新</a>
             <a href="#contact" data-i18n="tocContact">联系方式</a>
@@ -552,10 +552,10 @@
           <section class="policy-block" id="scope">
             <h2 data-i18n="scopeTitle">适用范围</h2>
             <p data-i18n="scopeBody1">
-              本隐私政策适用于 Sked 课表与日程管理应用及其与之直接相关的本地功能、网页解析导入功能和公示页面。本政策旨在说明在你使用本应用过程中，应用会在何种情况下处理你的信息、处理何种类型的信息、将信息保存于何处，以及在何种情况下可能与外部系统发生交互。
+              本隐私政策适用于 Sked 课表与日程管理应用及其与之直接相关的本地功能、学校网页导入、课表文本 / HTML 解析导入功能和公示页面。本政策旨在说明在你使用本应用过程中，应用会在何种情况下处理你的信息、处理何种类型的信息、将信息保存于何处，以及在何种情况下可能与外部系统发生交互。
             </p>
             <p data-i18n="scopeBody2">
-              需要说明的是，本应用为本地优先的软件产品，不以建立用户账户体系、持续上传用户数据或实施行为画像为基础运行模式。因此，本政策所述的信息处理方式主要围绕本地存储、文件导入导出、网页内容解析、系统分享以及外部链接跳转等场景展开。
+              需要说明的是，本应用为本地优先的软件产品，不以建立用户账户体系、持续上传用户数据或实施行为画像为基础运行模式。因此，本政策所述的信息处理方式主要围绕本地存储、文件导入导出、课表文本 / HTML 内容解析、系统分享以及外部链接跳转等场景展开。
             </p>
           </section>
 
@@ -572,10 +572,10 @@
           <section class="policy-block" id="import-export">
             <h2 data-i18n="importExportTitle">导入与导出</h2>
             <p data-i18n="importExportBody1">
-              当且仅当你主动选择导入文件、主动保存文件或主动执行导出操作时，应用才会访问你指定的本地文件内容或向你指定的位置写出文件。该类文件可能包括 JSON 课表文件、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点配置文件及节次模板文件。完整应用备份会导出课表、通用日程、应用设置和学校站点等本地数据，但不会导出自定义解析 API 密钥。
+              当且仅当你主动选择导入文件、粘贴课表 JSON 文本、主动保存文件或主动执行导出操作时，应用才会访问你指定的本地文件内容、读取你粘贴的 JSON 文本或向你指定的位置写出文件。该类数据可能包括 JSON 课表文件、课表 JSON 文本、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点配置文件及节次模板文件。完整应用备份会导出课表、通用日程、应用设置和学校站点等本地数据，但不会导出自定义解析 API 密钥。
             </p>
             <p data-i18n="importExportBody2">
-              文件导入导出本身属于本地设备上的数据操作。恢复完整应用备份会替换当前应用数据，应用会在恢复前要求你确认。除非你进一步主动选择网页解析导入，否则单纯的导入导出行为不会将你的文件内容自动发送至外部解析接口或第三方服务。
+              文件和 JSON 文本的导入导出本身属于本地设备上的数据操作。恢复完整应用备份会替换当前应用数据，应用会在恢复前要求你确认。除非你进一步主动选择学校网页导入或课表文本 / HTML 解析导入，否则单纯的导入导出行为不会将你的文件内容或 JSON 文本自动发送至外部解析接口或第三方服务。
             </p>
           </section>
 
@@ -613,15 +613,15 @@
           </section>
 
           <section class="policy-block" id="web-parse">
-            <h2 data-i18n="webParseTitle">网页解析与自定义接口</h2>
+            <h2 data-i18n="webParseTitle">文本 / HTML 解析与自定义接口</h2>
             <p data-i18n="webParseBody1">
-              当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩和清理内容，再把你主动提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容解析接口。获取模型列表时，应用也会请求你配置的同一接口。Sked 的课表解析只使用你配置的自定义接口。
+              当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理和清理内容，再把你主动提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容解析接口。获取模型列表时，应用也会请求你配置的同一接口。Sked 的课表解析只使用你配置的自定义接口。
             </p>
             <p data-i18n="webParseBody2">
-              你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理页面内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// 开头的 Base URL，请求内容和 API 密钥可能不会受到传输层加密保护，请只在可信网络与可信服务中使用。
+              你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理你提交的课表文本、页面文本、HTML 内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// 开头的 Base URL，请求内容和 API 密钥可能不会受到传输层加密保护，请只在可信网络与可信服务中使用。
             </p>
             <div class="notice" data-i18n="webParseNotice">
-              解析前请自行确认页面内容适合提交给你配置的接口，并确认该接口的隐私政策、配额限制、日志保留和上游模型服务规则。应用只负责把你主动提交的内容发送到你填写的接口。
+              解析前请自行确认课表文本、页面文本或 HTML 内容适合提交给你配置的接口，并确认该接口的隐私政策、配额限制、日志保留和上游模型服务规则。应用只负责把你主动提交的内容发送到你填写的接口。
             </div>
           </section>
 
@@ -629,7 +629,7 @@
             <h2 data-i18n="rightsTitle">用户注意事项</h2>
             <ul>
               <li data-i18n="rightsItem1">你应确保导入、导出、分享或解析的内容系你有权处理的信息；</li>
-              <li data-i18n="rightsItem2">你应在使用学校网页解析前，自行判断相关页面内容是否包含不宜提交至解析接口的信息；</li>
+              <li data-i18n="rightsItem2">你应在使用学校网页导入或课表文本 / HTML 解析前，自行判断相关内容是否包含不宜提交至解析接口的信息；</li>
               <li data-i18n="rightsItem3">你应妥善保管导出的文件，避免在不受信任的环境中传播；</li>
               <li data-i18n="rightsItem4">如你通过外部网站、浏览器或第三方应用完成后续操作，应自行承担对第三方规则进行审查与选择的责任。</li>
             </ul>
@@ -679,7 +679,7 @@
         brandName: 'Sked 隐私政策',
         heroEyebrow: `隐私政策 · 当前版本 ${PRIVACY_POLICY_VERSION}`,
         heroTitle: 'Sked<br />隐私政策',
-        heroIntro: '本隐私政策用于说明 Sked 课表与日程管理应用在提供学生课表、通用日程、数据导入导出、学校网页解析导入、外部链接跳转及相关辅助功能过程中，对信息的处理方式、处理边界、适用范围以及用户可知悉的基本规则。',
+        heroIntro: '本隐私政策用于说明 Sked 课表与日程管理应用在提供学生课表、通用日程、数据导入导出、学校网页导入、课表文本 / HTML 解析导入、外部链接跳转及相关辅助功能过程中，对信息的处理方式、处理边界、适用范围以及用户可知悉的基本规则。',
         tocTitle: '目录',
         tocScope: '适用范围',
         tocLocal: '本地存储',
@@ -687,19 +687,19 @@
         tocSharing: '分享功能',
         tocExternalLinks: '外部链接',
         tocNotCollected: '默认不收集的内容',
-        tocWebParse: '网页解析与自定义接口',
+        tocWebParse: '文本 / HTML 解析与自定义接口',
         tocRights: '用户注意事项',
         tocUpdates: '政策更新',
         tocContact: '联系方式',
         scopeTitle: '适用范围',
-        scopeBody1: '本隐私政策适用于 Sked 课表与日程管理应用及其与之直接相关的本地功能、网页解析导入功能和公示页面。本政策旨在说明在你使用本应用过程中，应用会在何种情况下处理你的信息、处理何种类型的信息、将信息保存于何处，以及在何种情况下可能与外部系统发生交互。',
-        scopeBody2: '需要说明的是，本应用为本地优先的软件产品，不以建立用户账户体系、持续上传用户数据或实施行为画像为基础运行模式。因此，本政策所述的信息处理方式主要围绕本地存储、文件导入导出、网页内容解析、系统分享以及外部链接跳转等场景展开。',
+        scopeBody1: '本隐私政策适用于 Sked 课表与日程管理应用及其与之直接相关的本地功能、学校网页导入、课表文本 / HTML 解析导入功能和公示页面。本政策旨在说明在你使用本应用过程中，应用会在何种情况下处理你的信息、处理何种类型的信息、将信息保存于何处，以及在何种情况下可能与外部系统发生交互。',
+        scopeBody2: '需要说明的是，本应用为本地优先的软件产品，不以建立用户账户体系、持续上传用户数据或实施行为画像为基础运行模式。因此，本政策所述的信息处理方式主要围绕本地存储、文件导入导出、课表文本 / HTML 内容解析、系统分享以及外部链接跳转等场景展开。',
         localTitle: '本地存储',
         localBody1: '课表数据、通用日程、相关设置和完整应用备份内容会保存在你的设备本地或浏览器本地存储中。可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置中的 Base URL、所选模型和提示词会随同应用数据保存在本地；API 密钥会在可用时通过平台安全存储层保存，旧版本遗留的明文密钥会在加载时迁移。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。',
         localBody2: '除你主动触发特定外部交互功能外，本应用不会自动将上述本地数据上传至开发者控制的服务器，也不会在后台持续传输你的课表内容、通用日程、设置内容或学校站点配置内容。',
         importExportTitle: '导入与导出',
-        importExportBody1: '当且仅当你主动选择导入文件、主动保存文件或主动执行导出操作时，应用才会访问你指定的本地文件内容或向你指定的位置写出文件。该类文件可能包括 JSON 课表文件、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点配置文件及节次模板文件。完整应用备份会导出课表、通用日程、应用设置和学校站点等本地数据，但不会导出自定义解析 API 密钥。',
-        importExportBody2: '文件导入导出本身属于本地设备上的数据操作。恢复完整应用备份会替换当前应用数据，应用会在恢复前要求你确认。除非你进一步主动选择网页解析导入，否则单纯的导入导出行为不会将你的文件内容自动发送至外部解析接口或第三方服务。',
+        importExportBody1: '当且仅当你主动选择导入文件、粘贴课表 JSON 文本、主动保存文件或主动执行导出操作时，应用才会访问你指定的本地文件内容、读取你粘贴的 JSON 文本或向你指定的位置写出文件。该类数据可能包括 JSON 课表文件、课表 JSON 文本、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点配置文件及节次模板文件。完整应用备份会导出课表、通用日程、应用设置和学校站点等本地数据，但不会导出自定义解析 API 密钥。',
+        importExportBody2: '文件和 JSON 文本的导入导出本身属于本地设备上的数据操作。恢复完整应用备份会替换当前应用数据，应用会在恢复前要求你确认。除非你进一步主动选择学校网页导入或课表文本 / HTML 解析导入，否则单纯的导入导出行为不会将你的文件内容或 JSON 文本自动发送至外部解析接口或第三方服务。',
         sharingTitle: '分享功能',
         sharingBody1: '当你主动使用分享功能时，应用会将你明确选定的导出文件交由系统分享面板或你选择的目标应用处理。该操作属于你主动发起的设备级分享行为。分享后的文件如何被保存、转发或进一步处理，将取决于你所选择的目标应用、目标服务或接收方的处理规则。',
         sharingBody2: '本应用无法控制第三方应用在接收文件后的处理方式，也无法替代第三方对文件进行保密、删除或限制传播。为此，请你在使用分享功能前自行评估文件内容及分享对象。',
@@ -710,13 +710,13 @@
         notCollectedBody1: '在默认状态下，本应用不要求你注册 Sked 账号，不默认启用分析统计、个性化广告、广告标识符跟踪、云端画像或云端自动备份功能。本应用本身也未提供专门用于采集学校账号密码的独立输入字段。',
         notCollectedBody2: '若你在应用内打开的学校网页中输入账号、密码或其他学校系统凭据，该交互发生在你所访问的学校网页内，而非由本应用定义的账号体系之中。本应用仅提供网页容器或网页内容导入能力，并不以自身名义存储、管理或验证学校凭据。',
         notCollectedBody3: '本应用不包含崩溃报告、错误日志自动上报或使用情况遥测功能。应用启动时会在后台静默请求隐私政策公示页面以检测版本更新，该请求不会携带你的课表数据或个人标识信息。',
-        webParseTitle: '网页解析与自定义接口',
-        webParseBody1: '当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩和清理内容，再把你主动提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容解析接口。获取模型列表时，应用也会请求你配置的同一接口。Sked 的课表解析只使用你配置的自定义接口。',
-        webParseBody2: '你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理页面内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// 开头的 Base URL，请求内容和 API 密钥可能不会受到传输层加密保护，请只在可信网络与可信服务中使用。',
-        webParseNotice: '解析前请自行确认页面内容适合提交给你配置的接口，并确认该接口的隐私政策、配额限制、日志保留和上游模型服务规则。应用只负责把你主动提交的内容发送到你填写的接口。',
+        webParseTitle: '文本 / HTML 解析与自定义接口',
+        webParseBody1: '当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理和清理内容，再把你主动提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容解析接口。获取模型列表时，应用也会请求你配置的同一接口。Sked 的课表解析只使用你配置的自定义接口。',
+        webParseBody2: '你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理你提交的课表文本、页面文本、HTML 内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// 开头的 Base URL，请求内容和 API 密钥可能不会受到传输层加密保护，请只在可信网络与可信服务中使用。',
+        webParseNotice: '解析前请自行确认课表文本、页面文本或 HTML 内容适合提交给你配置的接口，并确认该接口的隐私政策、配额限制、日志保留和上游模型服务规则。应用只负责把你主动提交的内容发送到你填写的接口。',
         rightsTitle: '用户注意事项',
         rightsItem1: '你应确保导入、导出、分享或解析的内容系你有权处理的信息；',
-        rightsItem2: '你应在使用学校网页解析前，自行判断相关页面内容是否包含不宜提交至解析接口的信息；',
+        rightsItem2: '你应在使用学校网页导入或课表文本 / HTML 解析前，自行判断相关内容是否包含不宜提交至解析接口的信息；',
         rightsItem3: '你应妥善保管导出的文件，避免在不受信任的环境中传播；',
         rightsItem4: '如你通过外部网站、浏览器或第三方应用完成后续操作，应自行承担对第三方规则进行审查与选择的责任。',
         rightsBody: '本应用提供的是课表与日程管理、辅助导入工具，不对第三方平台的稳定性、持续可用性、内容准确性或数据处理方式作出额外保证。',
@@ -735,7 +735,7 @@
         brandName: 'Sked Privacy',
         heroEyebrow: `Privacy Policy · Version ${PRIVACY_POLICY_VERSION}`,
         heroTitle: 'Sked<br />Privacy Policy',
-        heroIntro: 'This privacy policy explains how the Sked timetable and schedule management app handles information when providing student timetables, general schedules, data import and export, school webpage parsing and import, external link navigation, and related supporting features, including the scope, boundaries, and applicable rules of such processing.',
+        heroIntro: 'This privacy policy explains how the Sked timetable and schedule management app handles information when providing student timetables, general schedules, data import and export, school webpage import, timetable text / HTML parsing import, external link navigation, and related supporting features, including the scope, boundaries, and applicable rules of such processing.',
         tocTitle: 'Contents',
         tocScope: 'Scope',
         tocLocal: 'Local storage',
@@ -743,19 +743,19 @@
         tocSharing: 'Sharing',
         tocExternalLinks: 'External links',
         tocNotCollected: 'What is not collected by default',
-        tocWebParse: 'Webpage parsing and custom endpoints',
+        tocWebParse: 'Text / HTML parsing and custom endpoints',
         tocRights: 'User notes',
         tocUpdates: 'Policy updates',
         tocContact: 'Contact',
         scopeTitle: 'Scope',
-        scopeBody1: 'This privacy policy applies to the Sked timetable and schedule management app and its directly related local features, webpage parsing and import features, and public disclosure page. It explains when the app may process your information, what kinds of information may be involved, where that information is stored, and in what circumstances the app may interact with external systems.',
-        scopeBody2: 'Sked is a local-first software product. It does not rely on user accounts, continuous cloud uploads, or behavioral profiling as its core operating model. Accordingly, the information-handling practices described in this policy mainly concern local storage, file import and export, webpage content parsing, system sharing, and external link navigation.',
+        scopeBody1: 'This privacy policy applies to the Sked timetable and schedule management app and its directly related local features, school webpage import, timetable text / HTML parsing import features, and public disclosure page. It explains when the app may process your information, what kinds of information may be involved, where that information is stored, and in what circumstances the app may interact with external systems.',
+        scopeBody2: 'Sked is a local-first software product. It does not rely on user accounts, continuous cloud uploads, or behavioral profiling as its core operating model. Accordingly, the information-handling practices described in this policy mainly concern local storage, file import and export, timetable text / HTML content parsing, system sharing, and external link navigation.',
         localTitle: 'Local storage',
         localBody1: 'Timetable data, general schedules, related settings, and full app backup content are stored locally on your device or in browser storage. Editable school-site configuration is stored separately in Sked_school_sites.json. Base URL, model selection, and prompt content configured for custom timetable parsing are stored locally alongside application data. The custom parser API key is stored through the platform secure-storage layer when available, and legacy plaintext values are migrated on load. Full app backups do not include the custom parser API key. The app does not automatically upload this local data to a developer-controlled server.',
         localBody2: 'Except when you explicitly trigger a feature that interacts with external systems, the app does not automatically upload the above local data to a developer-controlled server, nor does it continuously transmit your timetable content, general schedules, settings, or school-site configuration in the background.',
         importExportTitle: 'Import and export',
-        importExportBody1: 'The app reads a local file or writes a file to a location you choose only when you explicitly start an import, save, or export action. Such files may include timetable JSON files, general schedule JSON / ICS files, full app backup JSON files, school-site configuration files, and period-template files. Full app backups export local data such as timetables, general schedules, app settings, and school sites, but they do not include custom parser API keys.',
-        importExportBody2: 'Importing and exporting files is itself a local data operation on your device. Restoring a full app backup replaces current app data, and the app asks you to confirm before restoring. Unless you further choose webpage parsing, file import and export alone does not automatically send your file contents to an external parsing endpoint or third-party service.',
+        importExportBody1: 'The app reads a local file, reads pasted timetable JSON text, or writes a file to a location you choose only when you explicitly start an import, paste JSON, save, or export action. Such data may include timetable JSON files, timetable JSON text, general schedule JSON / ICS files, full app backup JSON files, school-site configuration files, and period-template files. Full app backups export local data such as timetables, general schedules, app settings, and school sites, but they do not include custom parser API keys.',
+        importExportBody2: 'Importing and exporting files or JSON text is itself a local data operation on your device. Restoring a full app backup replaces current app data, and the app asks you to confirm before restoring. Unless you further choose school webpage import or timetable text / HTML parsing import, file import/export and JSON text import/export alone do not automatically send your file contents or JSON text to an external parsing endpoint or third-party service.',
         sharingTitle: 'Sharing',
         sharingBody1: 'When you explicitly use the sharing feature, the app passes the export file you selected to the system share sheet or to the target app you choose. This is a device-level sharing action initiated by you. How the shared file is stored, forwarded, or otherwise processed afterward depends on the target app, service, or recipient you selected.',
         sharingBody2: 'The app cannot control how a third-party app handles the file after receiving it, nor can it guarantee confidentiality, deletion, or restricted distribution on behalf of that third party. Please evaluate the file contents and intended recipient before sharing.',
@@ -766,13 +766,13 @@
         notCollectedBody1: 'By default, the app does not require you to register a Sked account, and it does not enable analytics, personalized advertising, advertising-identifier tracking, cloud profiling, or automatic cloud backup. The app also does not provide a dedicated input field for collecting school account credentials.',
         notCollectedBody2: 'If you enter an account name, password, or other school-system credentials on a school webpage opened inside the app, that interaction occurs within the school webpage you chose to access, not within an account system defined by this app. The app only provides a webpage container or webpage-content import capability and does not store, manage, or validate school credentials in its own name.',
         notCollectedBody3: 'The app does not include crash reporting, automatic error-log upload, or usage telemetry. On startup, the app makes a background request to the privacy policy page to check for version updates; this request does not carry your timetable data or personal identifiers.',
-        webParseTitle: 'Webpage parsing and custom endpoints',
-        webParseBody1: 'When you explicitly use school webpage import or HTML paste parsing, the app first compresses and cleans the submitted page content locally, then sends the page content you chose to submit, an optional page title, the page URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Timetable parsing in Sked only uses the custom endpoint you configured.',
-        webParseBody2: 'You should understand that the custom parsing endpoint may forward requests to an AI service or another upstream processing service according to its deployer configuration. How the endpoint stores, forwards, limits, deletes, or otherwise processes page content and API keys is determined by the endpoint service, model service, and related providers you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption, so only use it on trusted networks and trusted services.',
-        webParseNotice: 'Before parsing, confirm that the page content is appropriate to submit to your configured endpoint, and review that endpoint policy, quota limits, log retention, and upstream model-service rules. The app only sends the content you explicitly submit to the endpoint you entered.',
+        webParseTitle: 'Text / HTML parsing and custom endpoints',
+        webParseBody1: 'When you explicitly use school webpage import or timetable text / HTML parsing, the app first prepares and cleans the submitted content locally, then sends the plain timetable text, page text or HTML content you chose to submit, an optional page title, the page URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Timetable parsing in Sked only uses the custom endpoint you configured.',
+        webParseBody2: 'You should understand that the custom parsing endpoint may forward requests to an AI service or another upstream processing service according to its deployer configuration. How the endpoint stores, forwards, limits, deletes, or otherwise processes submitted timetable text, page text, HTML content and API keys is determined by the endpoint service, model service, and related providers you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption, so only use it on trusted networks and trusted services.',
+        webParseNotice: 'Before parsing, confirm that the timetable text, page text or HTML content is appropriate to submit to your configured endpoint, and review that endpoint policy, quota limits, log retention, and upstream model-service rules. The app only sends the content you explicitly submit to the endpoint you entered.',
         rightsTitle: 'User notes',
         rightsItem1: 'You should ensure that the content you import, export, share, or submit for parsing is information that you are entitled to handle;',
-        rightsItem2: 'Before using school webpage parsing, you should determine for yourself whether the page contains information that should not be submitted to the parsing endpoint;',
+        rightsItem2: 'Before using school webpage import or timetable text / HTML parsing, you should determine for yourself whether the submitted content contains information that should not be sent to the parsing endpoint;',
         rightsItem3: 'You should properly protect exported files and avoid distributing them in untrusted environments;',
         rightsItem4: 'If you continue your actions through external websites, browsers, or third-party apps, you are responsible for reviewing and choosing the applicable third-party rules.',
         rightsBody: 'This app is a timetable and schedule management tool with assisted import features. It does not make additional guarantees regarding the stability, continued availability, content accuracy, or data-handling practices of third-party platforms.',

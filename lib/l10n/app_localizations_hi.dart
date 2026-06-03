@@ -821,7 +821,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'नीति अपडेट';
@@ -937,13 +937,13 @@ class AppLocalizationsHi extends AppLocalizations {
       'केवल HTML ही नहीं, टाइमटेबल जानकारी वाली कोई भी सामग्री पार्स और आयात की जा सकती है।';
 
   @override
-  String get schoolHtmlImportCompress => 'सामग्री संपीड़ित करें';
+  String get schoolHtmlImportCompress => 'सामग्री तैयार करें';
 
   @override
-  String get schoolHtmlImportCompressed => 'सामग्री संपीड़ित की गई';
+  String get schoolHtmlImportCompressed => 'सामग्री तैयार है';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'पहले सामग्री संपीड़ित करें।';
+  String get schoolHtmlImportCompressFirst => 'पहले सामग्री तैयार करें।';
 
   @override
   String get schoolHtmlImportSubmit => 'पार्स करें और आयात करें';

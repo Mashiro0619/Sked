@@ -818,7 +818,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Aktualizace zásad';
@@ -936,13 +936,13 @@ class AppLocalizationsCs extends AppLocalizations {
       'Veškerý obsah obsahující informace o harmonogramu může být analyzován a importován, nejen HTML.';
 
   @override
-  String get schoolHtmlImportCompress => 'Komprimovat obsah';
+  String get schoolHtmlImportCompress => 'Připravit obsah';
 
   @override
-  String get schoolHtmlImportCompressed => 'Komprimovaný obsah';
+  String get schoolHtmlImportCompressed => 'Obsah připraven';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'Nejdřív stiskněte obsah.';
+  String get schoolHtmlImportCompressFirst => 'Nejdřív připravte obsah.';
 
   @override
   String get schoolHtmlImportSubmit => 'Analyzovat a importovat';

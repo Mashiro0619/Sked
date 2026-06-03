@@ -811,7 +811,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'การปรับปรุงนโยบาย';
@@ -926,13 +926,13 @@ class AppLocalizationsTh extends AppLocalizations {
       'เนื้อหาใด ๆ ที่มีข้อมูลตารางเวลาสามารถวิเคราะห์และนำเข้าได้ ไม่ใช่เพียง HTML เท่านั้น';
 
   @override
-  String get schoolHtmlImportCompress => 'บีบอัดเนื้อหา';
+  String get schoolHtmlImportCompress => 'เตรียมเนื้อหา';
 
   @override
-  String get schoolHtmlImportCompressed => 'เนื้อหาที่บีบอัด';
+  String get schoolHtmlImportCompressed => 'เตรียมเนื้อหาแล้ว';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'กดเนื้อหาก่อน';
+  String get schoolHtmlImportCompressFirst => 'เตรียมเนื้อหาก่อน';
 
   @override
   String get schoolHtmlImportSubmit => 'วิเคราะห์และนำเข้า';

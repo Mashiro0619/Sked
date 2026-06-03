@@ -492,7 +492,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importTimetableFilesDesc => '支持单个或多个课表文件';
 
   @override
-  String get importTimetableText => '从文字导入课表';
+  String get importTimetableText => '从 JSON 文本导入课表';
 
   @override
   String get importTimetableTextDesc => '粘贴课表 JSON 内容后导入';
@@ -510,7 +510,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveTimetableFilesDesc => '先选择一个或多个课表';
 
   @override
-  String get exportTimetableText => '导出课表为文字';
+  String get exportTimetableText => '导出课表为 JSON 文本';
 
   @override
   String get exportTimetableTextDesc => '先选择一个或多个课表，再复制 JSON 内容';
@@ -730,7 +730,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyPolicyTitle => '隐私政策';
 
   @override
-  String get privacyPolicyEntryDesc => '了解应用如何处理本地存储、学校站点配置、文件导入导出、网页解析和外部链接。';
+  String get privacyPolicyEntryDesc =>
+      '了解应用如何处理本地存储、学校站点配置、文件导入导出、课表文本 / HTML 解析和外部链接。';
 
   @override
   String privacyPolicyAcceptedVersionLabel(Object version) {
@@ -739,7 +740,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked 为本地优先的课程表工具。课表数据、通用日程、节次时间集和学校站点配置仅保存在你的设备或浏览器本地，不会自动上传。应用仅在你主动触发导入、网页解析、分享或打开外部链接等操作时才会处理对应内容。完整隐私政策可在线查看。';
+      'Sked 为本地优先的课程表工具。课表数据、通用日程、节次时间集和学校站点配置仅保存在你的设备或浏览器本地，不会自动上传。应用仅在你主动触发导入、课表文本 / HTML 解析、学校网页导入、分享或打开外部链接等操作时才会处理对应内容。完整隐私政策可在线查看。';
 
   @override
   String get privacyPolicyLocalStorageTitle => '本地存储';
@@ -753,7 +754,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyImportExportBody =>
-      '只有在你主动选择文件或主动执行导出时，应用才会读取或写出 JSON 课表文件、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点 JSON 文件和节次模板文件。这些文件的导入导出本身属于本地操作；只有当你进一步选择网页解析时，相关页面内容才会被发送到你配置的解析接口。获取自定义模型列表同样属于你主动触发的联网操作，并且只会请求你填写的自定义接口。';
+      '只有在你主动选择文件、粘贴 JSON 或主动执行导出时，应用才会读取或写出 JSON 课表文件、课表 JSON 文本、通用日程 JSON / ICS 文件、完整应用备份 JSON 文件、学校站点 JSON 文件和节次模板文件。这些文件和 JSON 文本的导入导出本身属于本地操作；只有当你进一步选择课表文本 / HTML 解析或学校网页导入时，相关内容才会被发送到你配置的解析接口。获取自定义模型列表同样属于你主动触发的联网操作，并且只会请求你填写的自定义接口。';
 
   @override
   String get privacyPolicySharingTitle => '分享功能';
@@ -777,11 +778,11 @@ class AppLocalizationsZh extends AppLocalizations {
       '应用不要求你注册 Sked 账号，也不会启用分析统计、广告标识符或云端备份。应用本身也没有专门用于采集学校账号密码的输入字段；如果你在应用内打开的学校网页中登录，该交互发生在你访问的学校页面内。';
 
   @override
-  String get privacyPolicyFutureFeatureTitle => '网页解析';
+  String get privacyPolicyFutureFeatureTitle => '课表文本 / HTML 解析';
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '当你使用学校网页导入或粘贴 HTML 进行解析时，应用会先在本地压缩并清理内容，再把你提交的页面内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，提交内容和 API 密钥可能不会受到传输层加密保护。';
+      '当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理并清理内容，再把你提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，提交内容和 API 密钥可能不会受到传输层加密保护。';
 
   @override
   String get privacyPolicyUpdatesTitle => '政策更新';
@@ -800,7 +801,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyGateSummaryImportExport =>
-      '导入、导出、完整备份和分享仅在你主动操作时触发；完整应用备份不包含自定义 API 密钥，网页解析只会把你提交的内容发送到你配置的解析接口。';
+      '导入、导出、完整备份和分享仅在你主动操作时触发；完整应用备份不包含自定义 API 密钥，课表文本 / HTML 解析只会把你提交的内容发送到你配置的解析接口。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -866,13 +867,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolSitesJsonFileName => 'Sked_school_sites.json';
 
   @override
-  String get schoolHtmlImportEntry => '粘贴课程表页面内容导入';
+  String get schoolHtmlImportEntry => '从文本 / HTML 解析课表';
 
   @override
-  String get schoolHtmlImportEntryDesc => '手动粘贴包含课程信息的页面源码或原始内容。';
+  String get schoolHtmlImportEntryDesc => '粘贴普通课表文本、页面文本或 HTML 源码，通过自定义解析接口导入。';
 
   @override
-  String get schoolHtmlImportPageTitle => '解析课表页面内容';
+  String get schoolHtmlImportPageTitle => '解析文本 / HTML 课表内容';
 
   @override
   String get schoolHtmlImportUrlLabel => '来源 URL（可选）';
@@ -881,22 +882,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolHtmlImportTitleLabel => '页面标题（可选）';
 
   @override
-  String get schoolHtmlImportHtmlLabel => '页面内容';
+  String get schoolHtmlImportHtmlLabel => '文本 / HTML 内容';
 
   @override
-  String get schoolHtmlImportHtmlHint => '请粘贴包含课程信息的页面源码或原始内容。';
+  String get schoolHtmlImportHtmlHint =>
+      '例如“星期一 第三、四节 语文”，也可以粘贴课程表页面文本或 HTML 源码。';
 
   @override
-  String get schoolHtmlImportNonHtmlHint => '只要内容里包含课程信息，就可以解析导入，不限于 HTML。';
+  String get schoolHtmlImportNonHtmlHint =>
+      '只要内容里包含课程信息，就可以解析导入；普通文本和 HTML 都可以。';
 
   @override
-  String get schoolHtmlImportCompress => '压缩内容';
+  String get schoolHtmlImportCompress => '整理内容';
 
   @override
-  String get schoolHtmlImportCompressed => '内容已压缩';
+  String get schoolHtmlImportCompressed => '内容已整理';
 
   @override
-  String get schoolHtmlImportCompressFirst => '请先压缩内容。';
+  String get schoolHtmlImportCompressFirst => '请先整理内容。';
 
   @override
   String get schoolHtmlImportSubmit => '解析并导入';
@@ -905,7 +908,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolHtmlImportParsingMayTakeLong => '解析时间可能较长，请耐心等待。';
 
   @override
-  String get schoolHtmlImportEmpty => '请先粘贴网页 HTML。';
+  String get schoolHtmlImportEmpty => '请先粘贴课表文本或 HTML 内容。';
 
   @override
   String get schoolHtmlImportReturnToWebPage => '返回网页';
@@ -994,7 +997,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      '把页面内容直接发送到你自己的 OpenAI 兼容端点。HTTP 端点仅建议在可信网络中使用。';
+      '把课表文本、页面文本或 HTML 内容直接发送到你自己的 OpenAI 兼容端点。HTTP 端点仅建议在可信网络中使用。';
 
   @override
   String get schoolImportParserCustomOpenAi => '自定义 OpenAI 兼容解析';
@@ -2216,7 +2219,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get importTimetableFilesDesc => '支援單個或多個課表檔案';
 
   @override
-  String get importTimetableText => '從文字匯入課表';
+  String get importTimetableText => '從 JSON 文字匯入課表';
 
   @override
   String get importTimetableTextDesc => '貼上課表 JSON 內容後匯入';
@@ -2234,7 +2237,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get saveTimetableFilesDesc => '先選擇一個或多個課表';
 
   @override
-  String get exportTimetableText => '匯出課表為文字';
+  String get exportTimetableText => '匯出課表為 JSON 文字';
 
   @override
   String get exportTimetableTextDesc => '先選擇一個或多個課表，再複製 JSON 內容';
@@ -2454,7 +2457,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get privacyPolicyTitle => '隱私政策';
 
   @override
-  String get privacyPolicyEntryDesc => '了解應用如何處理本機儲存、學校站點設定、檔案匯入匯出、網頁解析和外部連結。';
+  String get privacyPolicyEntryDesc =>
+      '了解應用如何處理本機儲存、學校站點設定、檔案匯入匯出、課表文字 / HTML 解析和外部連結。';
 
   @override
   String privacyPolicyAcceptedVersionLabel(Object version) {
@@ -2463,7 +2467,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyIntro =>
-      'Sked 為本地優先的課程表工具。課表資料、通用日程、節次時間集和學校站點設定僅保存在你的裝置或瀏覽器本機，不會自動上傳。應用僅在你主動觸發匯入、網頁解析、分享或開啟外部連結等操作時才會處理對應內容。完整隱私政策可於線上查看。';
+      'Sked 為本地優先的課程表工具。課表資料、通用日程、節次時間集和學校站點設定僅保存在你的裝置或瀏覽器本機，不會自動上傳。應用僅在你主動觸發匯入、課表文字 / HTML 解析、學校網頁匯入、分享或開啟外部連結等操作時才會處理對應內容。完整隱私政策可於線上查看。';
 
   @override
   String get privacyPolicyLocalStorageTitle => '本機儲存';
@@ -2477,7 +2481,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyImportExportBody =>
-      '只有在你主動選擇檔案或主動執行匯出時，應用才會讀取或寫出 JSON 課表檔案、通用日程 JSON / ICS 檔案、完整應用備份 JSON 檔案、學校站點 JSON 檔案和節次範本檔案。這些檔案的匯入匯出本身屬於本機操作；只有當你進一步選擇網頁解析時，相關頁面內容才會被發送到你設定的解析介面。取得自訂模型清單同樣屬於你主動觸發的連網操作，並且只會請求你填寫的自訂介面。';
+      '只有在你主動選擇檔案、貼上 JSON 或主動執行匯出時，應用才會讀取或寫出 JSON 課表檔案、課表 JSON 文字、通用日程 JSON / ICS 檔案、完整應用備份 JSON 檔案、學校站點 JSON 檔案和節次範本檔案。這些檔案和 JSON 文字的匯入匯出本身屬於本機操作；只有當你進一步選擇課表文字 / HTML 解析或學校網頁匯入時，相關內容才會被發送到你設定的解析介面。取得自訂模型清單同樣屬於你主動觸發的連網操作，並且只會請求你填寫的自訂介面。';
 
   @override
   String get privacyPolicySharingTitle => '分享功能';
@@ -2501,11 +2505,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '應用不要求你註冊 Sked 帳號，也不會啟用分析統計、廣告識別碼或雲端備份。應用本身也沒有專門用於收集學校帳號密碼的輸入欄位；如果你在應用內開啟的學校網頁中登入，該互動發生在你造訪的學校頁面內。';
 
   @override
-  String get privacyPolicyFutureFeatureTitle => '網頁解析';
+  String get privacyPolicyFutureFeatureTitle => '課表文字 / HTML 解析';
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '當你使用學校網頁匯入或貼上 HTML 進行解析時，應用會先在本機壓縮並清理內容，再把你提交的頁面內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，提交內容和 API 金鑰可能不會受到傳輸層加密保護。';
+      '當你使用學校網頁匯入或貼上課表文字 / HTML 進行解析時，應用會先在本機整理並清理內容，再把你提交的普通課表文字、頁面文字或 HTML 內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，提交內容和 API 金鑰可能不會受到傳輸層加密保護。';
 
   @override
   String get privacyPolicyUpdatesTitle => '政策更新';
@@ -2524,7 +2528,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyGateSummaryImportExport =>
-      '匯入、匯出、完整備份和分享僅在你主動操作時觸發；完整應用備份不包含自訂 API 金鑰，網頁解析只會把你提交的內容發送到你設定的解析介面。';
+      '匯入、匯出、完整備份和分享僅在你主動操作時觸發；完整應用備份不包含自訂 API 金鑰，課表文字 / HTML 解析只會把你提交的內容發送到你設定的解析介面。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -2590,13 +2594,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolSitesJsonFileName => 'Sked_school_sites.json';
 
   @override
-  String get schoolHtmlImportEntry => '貼上課程表頁面內容匯入';
+  String get schoolHtmlImportEntry => '從文字 / HTML 解析課表';
 
   @override
-  String get schoolHtmlImportEntryDesc => '手動貼上包含課程資訊的頁面原始碼或原始內容。';
+  String get schoolHtmlImportEntryDesc => '貼上普通課表文字、頁面文字或 HTML 原始碼，透過自訂解析介面匯入。';
 
   @override
-  String get schoolHtmlImportPageTitle => '解析課表頁面內容';
+  String get schoolHtmlImportPageTitle => '解析文字 / HTML 課表內容';
 
   @override
   String get schoolHtmlImportUrlLabel => '來源 URL（可選）';
@@ -2605,22 +2609,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolHtmlImportTitleLabel => '頁面標題（可選）';
 
   @override
-  String get schoolHtmlImportHtmlLabel => '頁面內容';
+  String get schoolHtmlImportHtmlLabel => '文字 / HTML 內容';
 
   @override
-  String get schoolHtmlImportHtmlHint => '請貼上包含課程資訊的頁面原始碼或原始內容。';
+  String get schoolHtmlImportHtmlHint =>
+      '例如「星期一 第三、四節 語文」，也可以貼上課程表頁面文字或 HTML 原始碼。';
 
   @override
-  String get schoolHtmlImportNonHtmlHint => '只要內容裡包含課程資訊，就可以解析匯入，不限於 HTML。';
+  String get schoolHtmlImportNonHtmlHint =>
+      '只要內容裡包含課程資訊，就可以解析匯入；普通文字和 HTML 都可以。';
 
   @override
-  String get schoolHtmlImportCompress => '壓縮內容';
+  String get schoolHtmlImportCompress => '整理內容';
 
   @override
-  String get schoolHtmlImportCompressed => '內容已壓縮';
+  String get schoolHtmlImportCompressed => '內容已整理';
 
   @override
-  String get schoolHtmlImportCompressFirst => '請先壓縮內容。';
+  String get schoolHtmlImportCompressFirst => '請先整理內容。';
 
   @override
   String get schoolHtmlImportSubmit => '解析並匯入';
@@ -2629,7 +2635,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolHtmlImportParsingMayTakeLong => '解析時間可能較長，請耐心等待。';
 
   @override
-  String get schoolHtmlImportEmpty => '請先貼上網頁 HTML。';
+  String get schoolHtmlImportEmpty => '請先貼上課表文字或 HTML 內容。';
 
   @override
   String get schoolHtmlImportReturnToWebPage => '返回網頁';
@@ -2718,7 +2724,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParserSourceCustomOpenAiDesc =>
-      '把頁面內容直接發送到你自己的 OpenAI 相容端點。HTTP 端點僅建議在可信網路中使用。';
+      '把課表文字、頁面文字或 HTML 內容直接發送到你自己的 OpenAI 相容端點。HTTP 端點僅建議在可信網路中使用。';
 
   @override
   String get schoolImportParserCustomOpenAi => '自訂 OpenAI 相容解析';

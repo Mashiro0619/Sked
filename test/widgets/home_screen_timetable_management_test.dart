@@ -874,7 +874,9 @@ void main() {
     expect(find.byType(SettingsPage, skipOffstage: false), findsOneWidget);
   });
 
-  testWidgets('text import entry ignores rapid duplicate taps', (tester) async {
+  testWidgets('JSON text import entry ignores rapid duplicate taps', (
+    tester,
+  ) async {
     final storage = _BlockingTimetableStorage(null);
     final provider = await _createEmptyProvider(storage);
 
@@ -882,7 +884,7 @@ void main() {
 
     final textImportButton = find.widgetWithText(
       OutlinedButton,
-      'Import timetable from text',
+      'Import timetable from JSON text',
     );
     expect(textImportButton, findsOneWidget);
 

@@ -269,20 +269,33 @@ class ThemeSettingsPage extends StatelessWidget {
                                       colorValue,
                                     ),
                               ),
+                          onPickCalendarColor: (schedule) =>
+                              _openColorValueDialog(
+                                context,
+                                title: schedule.name,
+                                previewTitle: l10n.calendars,
+                                initialColorValue: schedule.colorValue,
+                                onApply: (colorValue) =>
+                                    provider.updateGeneralSchedule(
+                                      schedule.copyWith(colorValue: colorValue),
+                                    ),
+                              ),
                         ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _OutlineSettingsCard(
-                  key: const ValueKey('theme-outline-settings-card'),
-                  provider: provider,
-                  effectiveOutlineColorValue: effectiveOutlineColorValue,
-                  outlineWidth: outlineWidth,
-                  onTap: () => _openOutlineSettingsDialog(context, provider),
+              if (provider.isStudentMode) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _OutlineSettingsCard(
+                    key: const ValueKey('theme-outline-settings-card'),
+                    provider: provider,
+                    effectiveOutlineColorValue: effectiveOutlineColorValue,
+                    outlineWidth: outlineWidth,
+                    onTap: () => _openOutlineSettingsDialog(context, provider),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         );
@@ -895,27 +908,41 @@ class _ColorfulThemeSection extends StatelessWidget {
     required this.provider,
     required this.onPickUiColor,
     required this.onPickCourseColor,
+    required this.onPickCalendarColor,
   });
 
   final TimetableProvider provider;
   final ValueChanged<String> onPickUiColor;
   final ValueChanged<String> onPickCourseColor;
+  final ValueChanged<GeneralSchedule> onPickCalendarColor;
 
   @override
   Widget build(BuildContext context) {
     final courseNames = provider.courseNameColorValues.keys.toList()..sort();
+    final calendars = provider.generalSchedules.toList()
+      ..sort((a, b) {
+        final order = a.sortOrder.compareTo(b.sortOrder);
+        return order != 0 ? order : a.name.compareTo(b.name);
+      });
+    final uiColorKeys = provider.isStudentMode
+        ? const [
+            colorfulUiPrimaryKey,
+            colorfulUiSecondaryKey,
+            colorfulUiTertiaryKey,
+            colorfulCourseTextColorKey,
+          ]
+        : const [
+            colorfulUiPrimaryKey,
+            colorfulUiSecondaryKey,
+            colorfulUiTertiaryKey,
+          ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ColorSettingsGroup(
           title: AppLocalizations.of(context).themeColorUiColors,
           children: [
-            for (final key in const [
-              colorfulUiPrimaryKey,
-              colorfulUiSecondaryKey,
-              colorfulUiTertiaryKey,
-              colorfulCourseTextColorKey,
-            ])
+            for (final key in uiColorKeys)
               _ColorValueTile(
                 key: ValueKey('theme-ui-color-$key'),
                 title: _uiColorLabel(context, key),
@@ -924,30 +951,48 @@ class _ColorfulThemeSection extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 12),
-        _ColorSettingsGroup(
-          title: AppLocalizations.of(context).themeColorCourseColors,
-          children: courseNames.isEmpty
-              ? [
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(
-                      AppLocalizations.of(context).themeColorCourseColorsEmpty,
+        if (provider.isStudentMode) ...[
+          const SizedBox(height: 12),
+          _ColorSettingsGroup(
+            title: AppLocalizations.of(context).themeColorCourseColors,
+            children: courseNames.isEmpty
+                ? [
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(
+                        AppLocalizations.of(
+                          context,
+                        ).themeColorCourseColorsEmpty,
+                      ),
                     ),
-                  ),
-                ]
-              : [
-                  for (final courseName in courseNames)
-                    _ColorValueTile(
-                      key: ValueKey('theme-course-color-$courseName'),
-                      title: courseName,
-                      colorValue:
-                          provider.courseNameColorValues[courseName] ??
-                          provider.themeSeedColorValue,
-                      onTap: () => onPickCourseColor(courseName),
-                    ),
-                ],
-        ),
+                  ]
+                : [
+                    for (final courseName in courseNames)
+                      _ColorValueTile(
+                        key: ValueKey('theme-course-color-$courseName'),
+                        title: courseName,
+                        colorValue:
+                            provider.courseNameColorValues[courseName] ??
+                            provider.themeSeedColorValue,
+                        onTap: () => onPickCourseColor(courseName),
+                      ),
+                  ],
+          ),
+        ] else ...[
+          const SizedBox(height: 12),
+          _ColorSettingsGroup(
+            title: AppLocalizations.of(context).calendars,
+            children: [
+              for (final schedule in calendars)
+                _ColorValueTile(
+                  key: ValueKey('theme-general-calendar-color-${schedule.id}'),
+                  title: schedule.name,
+                  colorValue: schedule.colorValue,
+                  onTap: () => onPickCalendarColor(schedule),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }

@@ -1080,7 +1080,7 @@ abstract class AppLocalizations {
   /// No description provided for @importTimetableText.
   ///
   /// In en, this message translates to:
-  /// **'Import timetable from text'**
+  /// **'Import timetable from JSON text'**
   String get importTimetableText;
 
   /// No description provided for @importTimetableTextDesc.
@@ -1116,7 +1116,7 @@ abstract class AppLocalizations {
   /// No description provided for @exportTimetableText.
   ///
   /// In en, this message translates to:
-  /// **'Export timetable as text'**
+  /// **'Export timetable as JSON text'**
   String get exportTimetableText;
 
   /// No description provided for @exportTimetableTextDesc.
@@ -1518,7 +1518,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyEntryDesc.
   ///
   /// In en, this message translates to:
-  /// **'Learn how the app handles local storage, school-site configuration, file import/export, webpage parsing, and external links.'**
+  /// **'Learn how the app handles local storage, school-site configuration, file import/export, timetable text / HTML parsing, and external links.'**
   String get privacyPolicyEntryDesc;
 
   /// No description provided for @privacyPolicyAcceptedVersionLabel.
@@ -1530,7 +1530,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyIntro.
   ///
   /// In en, this message translates to:
-  /// **'Sked is a local-first timetable tool. Timetables, general schedules, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, webpage parsing, sharing, or opening external links. The full privacy policy is available online.'**
+  /// **'Sked is a local-first timetable tool. Timetables, general schedules, period-time sets, and school-site configuration are stored only on your device or in your browser, and are never automatically uploaded. The app only processes data when you explicitly trigger actions such as import, timetable text / HTML parsing, school webpage import, sharing, or opening external links. The full privacy policy is available online.'**
   String get privacyPolicyIntro;
 
   /// No description provided for @privacyPolicyLocalStorageTitle.
@@ -1554,7 +1554,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyImportExportBody.
   ///
   /// In en, this message translates to:
-  /// **'The app reads or writes timetable JSON files, general schedule JSON / ICS files, full app backup JSON files, school-site JSON files, and period-template files only when you explicitly choose a file or start an export action. Importing these files is a local operation unless you also choose webpage parsing. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.'**
+  /// **'The app reads or writes timetable JSON files, timetable JSON text, general schedule JSON / ICS files, full app backup JSON files, school-site JSON files, and period-template files only when you explicitly choose a file, paste JSON, or start an export action. Importing these files and JSON text is a local operation unless you also choose timetable text / HTML parsing or school webpage import. Fetching a custom model list is also an explicit network action and only contacts the custom endpoint you configured.'**
   String get privacyPolicyImportExportBody;
 
   /// No description provided for @privacyPolicySharingTitle.
@@ -1596,13 +1596,13 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyFutureFeatureTitle.
   ///
   /// In en, this message translates to:
-  /// **'Webpage parsing'**
+  /// **'Timetable text / HTML parsing'**
   String get privacyPolicyFutureFeatureTitle;
 
   /// No description provided for @privacyPolicyFutureFeatureBody.
   ///
   /// In en, this message translates to:
-  /// **'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.'**
+  /// **'When you use school webpage import or parse pasted timetable text / HTML, the app first prepares and cleans the content locally, then sends the submitted timetable text, page text or HTML content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.'**
   String get privacyPolicyFutureFeatureBody;
 
   /// No description provided for @privacyPolicyUpdatesTitle.
@@ -1632,7 +1632,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyGateSummaryImportExport.
   ///
   /// In en, this message translates to:
-  /// **'Import, export, full backups, and sharing only happen when you explicitly start them; full app backups exclude custom API keys, and webpage parsing only sends submitted content to your configured parser endpoint.'**
+  /// **'Import, export, full backups, and sharing only happen when you explicitly start them; full app backups exclude custom API keys, and timetable text / HTML parsing only sends submitted content to your configured parser endpoint.'**
   String get privacyGateSummaryImportExport;
 
   /// No description provided for @privacyGateSummaryUpdates.
@@ -1758,19 +1758,19 @@ abstract class AppLocalizations {
   /// No description provided for @schoolHtmlImportEntry.
   ///
   /// In en, this message translates to:
-  /// **'Import by pasting timetable page content'**
+  /// **'Parse timetable from text / HTML'**
   String get schoolHtmlImportEntry;
 
   /// No description provided for @schoolHtmlImportEntryDesc.
   ///
   /// In en, this message translates to:
-  /// **'Paste source code or raw page content containing timetable information manually.'**
+  /// **'Paste plain timetable text, page text, or HTML source, then import it through your custom parser endpoint.'**
   String get schoolHtmlImportEntryDesc;
 
   /// No description provided for @schoolHtmlImportPageTitle.
   ///
   /// In en, this message translates to:
-  /// **'Parse timetable from page content'**
+  /// **'Parse timetable text / HTML'**
   String get schoolHtmlImportPageTitle;
 
   /// No description provided for @schoolHtmlImportUrlLabel.
@@ -1788,37 +1788,37 @@ abstract class AppLocalizations {
   /// No description provided for @schoolHtmlImportHtmlLabel.
   ///
   /// In en, this message translates to:
-  /// **'Page content'**
+  /// **'Text / HTML content'**
   String get schoolHtmlImportHtmlLabel;
 
   /// No description provided for @schoolHtmlImportHtmlHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste source code or raw page content containing timetable information here.'**
+  /// **'For example, \"Monday periods 3-4 Chinese\", or paste timetable page text or HTML source.'**
   String get schoolHtmlImportHtmlHint;
 
   /// No description provided for @schoolHtmlImportNonHtmlHint.
   ///
   /// In en, this message translates to:
-  /// **'Any content containing timetable information can be parsed and imported, not just HTML.'**
+  /// **'Any content containing timetable information can be parsed and imported; plain text and HTML are both supported.'**
   String get schoolHtmlImportNonHtmlHint;
 
   /// No description provided for @schoolHtmlImportCompress.
   ///
   /// In en, this message translates to:
-  /// **'Compress content'**
+  /// **'Prepare content'**
   String get schoolHtmlImportCompress;
 
   /// No description provided for @schoolHtmlImportCompressed.
   ///
   /// In en, this message translates to:
-  /// **'Content compressed'**
+  /// **'Content prepared'**
   String get schoolHtmlImportCompressed;
 
   /// No description provided for @schoolHtmlImportCompressFirst.
   ///
   /// In en, this message translates to:
-  /// **'Compress the content first.'**
+  /// **'Prepare the content first.'**
   String get schoolHtmlImportCompressFirst;
 
   /// No description provided for @schoolHtmlImportSubmit.
@@ -1836,7 +1836,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolHtmlImportEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Paste the page HTML first.'**
+  /// **'Paste timetable text or HTML content first.'**
   String get schoolHtmlImportEmpty;
 
   /// No description provided for @schoolHtmlImportReturnToWebPage.
@@ -1998,7 +1998,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportParserSourceCustomOpenAiDesc.
   ///
   /// In en, this message translates to:
-  /// **'Send page content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.'**
+  /// **'Send timetable text, page text, or HTML content directly to your own OpenAI-compatible endpoint. HTTP endpoints are allowed only for trusted networks.'**
   String get schoolImportParserSourceCustomOpenAiDesc;
 
   /// No description provided for @schoolImportParserCustomOpenAi.

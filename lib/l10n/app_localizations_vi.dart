@@ -821,7 +821,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first compresses and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Cập nhật chính sách';
@@ -939,13 +939,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Bất kỳ nội dung nào chứa thông tin lịch trình có thể được phân tích và nhập khẩu, không chỉ HTML.';
 
   @override
-  String get schoolHtmlImportCompress => 'Nén nội dung';
+  String get schoolHtmlImportCompress => 'Chuẩn bị nội dung';
 
   @override
-  String get schoolHtmlImportCompressed => 'Nội dung nén';
+  String get schoolHtmlImportCompressed => 'Nội dung đã chuẩn bị';
 
   @override
-  String get schoolHtmlImportCompressFirst => 'Nhấn nội dung trước.';
+  String get schoolHtmlImportCompressFirst => 'Hãy chuẩn bị nội dung trước.';
 
   @override
   String get schoolHtmlImportSubmit => 'Phân tích và nhập khẩu';

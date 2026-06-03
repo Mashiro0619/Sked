@@ -264,7 +264,7 @@ void main() {
     await tester.tap(importExportTile);
     await tester.pumpAndSettle();
 
-    final importTextAction = find.text('Import timetable from text');
+    final importTextAction = find.text('Import timetable from JSON text');
     expect(importTextAction, findsOneWidget);
 
     await tester.tap(importTextAction);

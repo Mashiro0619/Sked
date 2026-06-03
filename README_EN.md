@@ -45,8 +45,8 @@ Sked is a local-first app for student timetables and everyday schedules. It mana
 - **Course editing**: maintain course name, location, teacher, weeks, periods, linked times, notes, and custom fields.
 - **Period-time sets**: reuse, edit, import, and export period templates across multiple timetables.
 - **General schedules**: manage events, calendars, reminders, recurrence rules, month/day/week views, and list view in a separate schedule mode.
-- **Import and export**: handle timetable JSON, general schedule JSON / ICS, school-site JSON, period templates, text transfer, sharing, and full app backup / restore.
-- **School webpage / HTML parsing**: open school sites in-app or paste page content, then parse timetable data through your own OpenAI-compatible endpoint.
+- **Import and export**: handle timetable JSON files, timetable JSON text import / export, general schedule JSON / ICS, school-site JSON, period templates, sharing, and full app backup / restore.
+- **Text / HTML parsing import**: open school sites in-app, or paste plain timetable text, page text, or HTML source, then parse timetable data through your own OpenAI-compatible endpoint.
 - **Import preview**: review parsed results before saving, choose the period-time set, and decide whether to import as a new timetable or replace the current one.
 - **Appearance**: supports light mode, dark mode, system mode, theme colors, colorful UI settings, and an ongoing Material 3 Expressive migration.
 - **Privacy first**: no built-in developer-controlled parser backend, no custom parser API keys in full backups, and no default cloud backup or advertising-identifier tracking.
@@ -55,13 +55,13 @@ Sked is a local-first app for student timetables and everyday schedules. It mana
 
 Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration locally on your device or in browser storage by default. Full app backups export this local data, but they do not include custom parser API keys.
 
-The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, or sends webpage / HTML content only when you explicitly start the corresponding action.
+The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, imports school webpages, or parses timetable text / HTML content only when you explicitly start the corresponding action.
 
 A privacy policy consent screen is shown on first launch. The full policy is available at [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html).
 
 ## Custom Parser Endpoint
 
-Sked does not include a built-in timetable parser endpoint. School webpage import and pasted HTML parsing only use the OpenAI-compatible endpoint configured by the user in the app.
+Sked does not include a built-in timetable parser endpoint. School webpage import and text / HTML parsing import only use the OpenAI-compatible endpoint configured by the user in the app.
 
 Parser settings include:
 
@@ -74,7 +74,7 @@ Request behavior:
 
 - Fetching models requests `/models` under the configured `Base URL`
 - Parsing a timetable requests `/chat/completions` under the configured `Base URL`
-- Requests include the submitted page content, optional page title, page URL, current app language, and parser prompt content
+- Requests include the submitted plain timetable text, page text or HTML content, optional page title, page URL, current app language, and parser prompt content
 - If you use an `http://` Base URL, only use it on trusted devices, trusted networks, and trusted endpoint services, because content and API keys may not be protected by transport encryption
 
 ## Contributing

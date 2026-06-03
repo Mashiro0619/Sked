@@ -41,7 +41,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   final TextEditingController _htmlController = TextEditingController();
 
   bool _isSubmitting = false;
-  bool _isCompressed = false;
+  bool _isContentPrepared = false;
   bool _parserSettingsPageOpen = false;
   bool _returnToWebPagePopped = false;
 
@@ -116,8 +116,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
                   controller: _htmlController,
                   enabled: !_isSubmitting,
                   onChanged: (_) {
-                    if (_isCompressed) {
-                      setState(() => _isCompressed = false);
+                    if (_isContentPrepared) {
+                      setState(() => _isContentPrepared = false);
                     }
                   },
                   minLines: 12,
@@ -138,19 +138,21 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
                 ),
                 const SizedBox(height: 20),
                 FilledButton.tonalIcon(
-                  onPressed: _isSubmitting ? null : _compressContent,
+                  onPressed: _isSubmitting ? null : _prepareContent,
                   icon: Icon(
-                    _isCompressed ? Icons.check_circle_outline : Icons.compress,
+                    _isContentPrepared
+                        ? Icons.check_circle_outline
+                        : Icons.auto_fix_high_outlined,
                   ),
                   label: Text(
-                    _isCompressed
+                    _isContentPrepared
                         ? l10n.schoolHtmlImportCompressed
                         : l10n.schoolHtmlImportCompress,
                   ),
                 ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: _isSubmitting || !_isCompressed ? null : _submit,
+                  onPressed: _isSubmitting ? null : _submit,
                   icon: _isSubmitting
                       ? const SizedBox(
                           width: 16,
@@ -183,23 +185,28 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     );
   }
 
-  Future<void> _compressContent() async {
+  bool _prepareContent() {
     final l10n = AppLocalizations.of(context);
-    final html = _htmlController.text.trim();
-    if (html.isEmpty) {
+    final sourceContent = _htmlController.text.trim();
+    if (sourceContent.isEmpty) {
       _showMessage(l10n.schoolHtmlImportEmpty);
-      return;
+      return false;
     }
-    final sanitizedContent = SchoolImportContentSanitizer.sanitize(html);
+    final sanitizedContent = SchoolImportContentSanitizer.sanitize(
+      sourceContent,
+    );
     if (sanitizedContent.isEmpty) {
       _showMessage(l10n.schoolHtmlImportEmpty);
-      return;
+      return false;
     }
     _htmlController.value = TextEditingValue(
       text: sanitizedContent,
       selection: TextSelection.collapsed(offset: sanitizedContent.length),
     );
-    setState(() => _isCompressed = true);
+    if (!_isContentPrepared) {
+      setState(() => _isContentPrepared = true);
+    }
+    return true;
   }
 
   Future<void> _openParserSettingsPage() async {
@@ -239,9 +246,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     if (!_isConfigured(provider)) {
       return _buildConfigMessage(provider, l10n);
     }
-    if (!_isCompressed) {
-      return l10n.schoolHtmlImportCompressFirst;
-    }
     return null;
   }
 
@@ -254,6 +258,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     final validationMessage = _validateBeforeSubmit(provider, l10n);
     if (validationMessage != null) {
       _showMessage(validationMessage);
+      return;
+    }
+    if (!_isContentPrepared && !_prepareContent()) {
       return;
     }
 

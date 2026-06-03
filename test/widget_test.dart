@@ -1978,7 +1978,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('解析课表页面内容'), findsOneWidget);
+      expect(find.text('解析文本 / HTML 课表内容'), findsOneWidget);
       expect(find.text('课表解析设置'), findsOneWidget);
 
       await tester.tap(find.text('课表解析设置'));
@@ -2087,14 +2087,14 @@ void main() {
       await tester.tap(dataImportExportTile);
       await tester.pumpAndSettle();
 
-      final schoolHtmlImportEntry = find.text('粘贴课程表页面内容导入');
+      final schoolHtmlImportEntry = find.text('从文本 / HTML 解析课表');
       expect(schoolHtmlImportEntry, findsOneWidget);
       await tester.ensureVisible(schoolHtmlImportEntry);
       await tester.pumpAndSettle();
       await tester.tap(schoolHtmlImportEntry);
       await tester.pumpAndSettle();
 
-      expect(find.text('解析课表页面内容'), findsOneWidget);
+      expect(find.text('解析文本 / HTML 课表内容'), findsOneWidget);
       expect(find.text('课表解析设置'), findsOneWidget);
     });
 
@@ -2152,7 +2152,7 @@ void main() {
       },
     );
 
-    testWidgets('HTML 导入页在自定义解析配置不完整时显示跳转配置页按钮', (tester) async {
+    testWidgets('文本 / HTML 解析页在自定义解析配置不完整时显示跳转配置页按钮', (tester) async {
       final incompleteProvider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2195,7 +2195,7 @@ void main() {
       expect(find.text('Base URL'), findsOneWidget);
     });
 
-    testWidgets('HTML 导入页会区分自定义配置缺失与完整状态', (tester) async {
+    testWidgets('文本 / HTML 解析页会区分自定义配置缺失与完整状态', (tester) async {
       final incompleteProvider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2470,7 +2470,7 @@ void main() {
       expect(find.textContaining('当前没有可用节次时间集'), findsOneWidget);
     });
 
-    testWidgets('HTML 导入页在请求进行中会禁用重复提交并只请求一次', (tester) async {
+    testWidgets('文本 / HTML 解析页在请求进行中会禁用重复提交并只请求一次', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2505,10 +2505,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), '<table>demo</table>');
+      await tester.enterText(find.byType(TextField), '星期一 第三、四节 语文');
       await tester.pump();
-      await tester.tap(find.widgetWithIcon(FilledButton, Icons.compress));
-      await tester.pumpAndSettle();
 
       final submitButtonFinder = find.widgetWithText(FilledButton, '解析并导入');
       await tester.ensureVisible(submitButtonFinder);
@@ -2518,6 +2516,7 @@ void main() {
       await tester.pump();
 
       expect(fakeApi.callCount, 1);
+      expect(fakeApi.lastPayload?.html, '星期一 第三、四节 语文');
       expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
 
       completer.complete(
@@ -2545,7 +2544,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     });
 
-    testWidgets('HTML 导入页成功后会把导入结果写入 provider', (tester) async {
+    testWidgets('文本 / HTML 解析页成功后会把导入结果写入 provider', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2609,13 +2608,8 @@ void main() {
 
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '<table>demo</table>');
+      await tester.enterText(find.byType(TextField), '星期一 第三、四节 语文');
       await tester.pump();
-      final compressButton = find.widgetWithIcon(FilledButton, Icons.compress);
-      await tester.ensureVisible(compressButton);
-      await tester.pumpAndSettle();
-      await tester.tap(compressButton);
-      await tester.pumpAndSettle();
       final submitButton = find.widgetWithText(FilledButton, '解析并导入');
       await tester.ensureVisible(submitButton);
       await tester.pumpAndSettle();
@@ -2636,6 +2630,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(fakeApi.callCount, 1);
+      expect(fakeApi.lastPayload?.html, '星期一 第三、四节 语文');
       expect(provider.activeTimetable.config.name, 'Widget imported timetable');
       expect(
         provider.activeTimetable.courses.first.customFields['来源'],
@@ -2859,6 +2854,66 @@ void main() {
       expect(find.text('课程文字色'), findsOneWidget);
       expect(find.text('高等数学'), findsOneWidget);
       expect(find.text('自定义颜色'), findsNothing);
+    });
+
+    testWidgets('通用模式五彩缤纷会显示日历颜色并隐藏课程专属设置', (tester) async {
+      final provider = TimetableProvider(
+        storage: MemoryTimetableStorage(
+          initialData: () {
+            final themed = _buildTestAppData();
+            return themed.copyWith(
+              activeMode: AppMode.general,
+              themeColorMode: themeColorModeColorful,
+              generalMode: GeneralScheduleData(
+                activeScheduleId: 'life',
+                schedules: const [
+                  GeneralSchedule(
+                    id: 'life',
+                    name: '生活日程',
+                    colorValue: 0xFF225577,
+                    events: [],
+                  ),
+                ],
+              ),
+              studentMode: themed.studentMode.copyWith(
+                courseNameColorValues: const {'高等数学': 0xFF445566},
+              ),
+            );
+          }(),
+        ),
+      );
+      await provider.load();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ThemeSettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('UI 配色'), findsOneWidget);
+      expect(find.text('日历'), findsOneWidget);
+      expect(find.text('生活日程'), findsOneWidget);
+      expect(find.text('#225577'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('theme-general-calendar-color-life')),
+        findsOneWidget,
+      );
+      expect(find.text('课程颜色'), findsNothing);
+      expect(find.text('课程文字色'), findsNothing);
+      expect(find.text('课程描边'), findsNothing);
+      expect(find.text('高等数学'), findsNothing);
     });
 
     testWidgets('单调主题色模式会隐藏五彩缤纷列表并显示原主题色入口', (tester) async {

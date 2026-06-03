@@ -94,7 +94,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final firstMenuItem = find
-        .ancestor(of: find.text('Week').last, matching: find.byType(MenuItemButton))
+        .ancestor(
+          of: find.text('Week').last,
+          matching: find.byType(MenuItemButton),
+        )
         .first;
     final menuItemRect = tester.getRect(firstMenuItem);
 

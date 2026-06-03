@@ -79,7 +79,7 @@ class SchoolImportApi {
   static const _defaultCustomOpenAiSystemPrompt =
       '''You are an expert timetable extraction engine.
 
-Your job is to read the provided page content and convert it into exactly one JSON object.
+Your job is to read the provided source content and convert it into exactly one JSON object.
 The content may be HTML, plain text, copied table text, JSON fragments, or mixed page source.
 Return JSON only. Do not wrap it in markdown. Do not add explanations.
 
@@ -333,11 +333,13 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   String _buildOpenAiUserPrompt(SchoolImportPagePayload payload) {
     return jsonEncode({
       'task':
-          'Extract timetable data from the provided source content. The content may be HTML or any other raw page content as long as it contains timetable information.',
+          'Extract timetable data from the provided source content. The content may be plain timetable text, copied table text, page text, HTML, or mixed markup as long as it contains timetable information.',
       'locale': payload.locale,
       'sourceHint': payload.sourceHint,
       'url': payload.url,
       'title': payload.title,
+      // Historical field name kept for custom prompt/API compatibility.
+      // The value may be plain timetable text, page text, or HTML.
       'html': payload.html,
     });
   }
