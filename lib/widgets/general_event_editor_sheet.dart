@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../utils/general_schedule_colors.dart';
 import 'app_modal_sheet.dart';
 import 'sked_dropdown_menu.dart';
 
@@ -954,7 +955,7 @@ class _CalendarDropdownItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ColorDot(color: Color(calendar.colorValue)),
+        _ColorDot(color: effectiveGeneralCalendarColor(context, calendar)),
         const SizedBox(width: 8),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 240),

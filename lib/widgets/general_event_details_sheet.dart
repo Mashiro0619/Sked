@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../utils/general_schedule_colors.dart';
 
 class GeneralEventDetailsSheet extends StatefulWidget {
   const GeneralEventDetailsSheet({
@@ -57,9 +58,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final event = widget.occurrence.event;
-    final color = Color(
-      event.colorValue ?? widget.occurrence.calendar.colorValue,
-    );
+    final color = effectiveGeneralOccurrenceColor(context, widget.occurrence);
     final isRepeating = event.recurrenceRule.isRepeating;
 
     return SafeArea(

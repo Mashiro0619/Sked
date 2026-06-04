@@ -1,6 +1,42 @@
 import 'general_event.dart';
 
 const defaultGeneralCalendarColorValue = 0xFF4DB6AC;
+const generalCalendarColorSlot2Value = -101;
+const generalCalendarColorSlot3Value = -102;
+const generalCalendarColorSlot4Value = -103;
+const generalCalendarColorSlot5Value = -104;
+const generalCalendarColorSlot6Value = -105;
+
+const generalCalendarSlotColorValues = <int>[
+  defaultGeneralCalendarColorValue,
+  generalCalendarColorSlot2Value,
+  generalCalendarColorSlot3Value,
+  generalCalendarColorSlot4Value,
+  generalCalendarColorSlot5Value,
+  generalCalendarColorSlot6Value,
+];
+
+const legacyAutoGeneralCalendarColorSecondaryValue = 0xFF64B5F6;
+const legacyAutoGeneralCalendarColorTertiaryValue = 0xFFFFB74D;
+const legacyAutoGeneralCalendarColorPrimaryContainerValue = 0xFFBA68C8;
+const legacyAutoGeneralCalendarColorSecondaryContainerValue = 0xFF81C784;
+const legacyAutoGeneralCalendarColorTertiaryContainerValue = 0xFFE57373;
+
+int normalizeGeneralCalendarColorValue(int colorValue) {
+  return switch (colorValue) {
+    legacyAutoGeneralCalendarColorSecondaryValue =>
+      generalCalendarColorSlot2Value,
+    legacyAutoGeneralCalendarColorTertiaryValue =>
+      generalCalendarColorSlot3Value,
+    legacyAutoGeneralCalendarColorPrimaryContainerValue =>
+      generalCalendarColorSlot4Value,
+    legacyAutoGeneralCalendarColorSecondaryContainerValue =>
+      generalCalendarColorSlot5Value,
+    legacyAutoGeneralCalendarColorTertiaryContainerValue =>
+      generalCalendarColorSlot6Value,
+    _ => colorValue,
+  };
+}
 
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
   if (value is! Map) {

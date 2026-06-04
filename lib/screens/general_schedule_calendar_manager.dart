@@ -306,7 +306,12 @@ class _CalendarManagerTile extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _ColorDot(color: Color(schedule.colorValue)),
+                        _ColorDot(
+                          color: effectiveGeneralCalendarColor(
+                            context,
+                            schedule,
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(child: titleBlock),
                       ],
@@ -323,7 +328,9 @@ class _CalendarManagerTile extends StatelessWidget {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _ColorDot(color: Color(schedule.colorValue)),
+                  _ColorDot(
+                    color: effectiveGeneralCalendarColor(context, schedule),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(child: titleBlock),
                   const SizedBox(width: 8),

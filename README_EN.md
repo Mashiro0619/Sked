@@ -1,7 +1,7 @@
 <div align="center">
 
 # Sked
-### A local-first timetable and schedule manager
+### Timetable and schedule manager
 
 <a href="README.md">中文</a>
 &nbsp;&nbsp;|&nbsp;&nbsp;
@@ -25,7 +25,7 @@ English
   </a>
 </p>
 
-Sked is a local-first app for student timetables and everyday schedules. It manages courses, semester weeks, period-time sets, school sites, general calendar events, reminders, import/export flows, and full app backups. By default, data stays on your device or in browser storage. Sked does not require a Sked account and does not automatically upload your timetable or schedule data to a developer-controlled server.
+Sked helps manage student timetables and everyday schedules in one place. Use it to organize courses, semester weeks, period-time sets, and school sites, or switch to general schedule mode for events, reminders, and recurring plans. It also supports timetable import/export, full app backup and restore, and assisted import from school webpages or text / HTML timetable content through your own parser endpoint.
 
 ## Screenshots
 
@@ -49,11 +49,11 @@ Sked is a local-first app for student timetables and everyday schedules. It mana
 - **Text / HTML parsing import**: open school sites in-app, or paste plain timetable text, page text, or HTML source, then parse timetable data through your own OpenAI-compatible endpoint.
 - **Import preview**: review parsed results before saving, choose the period-time set, and decide whether to import as a new timetable or replace the current one.
 - **Appearance**: supports light mode, dark mode, system mode, theme colors, colorful UI settings, and an ongoing Material 3 Expressive migration.
-- **Privacy first**: no built-in developer-controlled parser backend, no custom parser API keys in full backups, and no default cloud backup or advertising-identifier tracking.
+- **Data control**: timetables, schedules, and settings are stored on the current device by default, and full backups do not include custom parser API keys.
 
 ## Data And Privacy
 
-Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration locally on your device or in browser storage by default. Full app backups export this local data, but they do not include custom parser API keys.
+Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration on your device or in browser storage. Full app backups export this data, but they do not include custom parser API keys.
 
 The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, imports school webpages, or parses timetable text / HTML content only when you explicitly start the corresponding action.
 

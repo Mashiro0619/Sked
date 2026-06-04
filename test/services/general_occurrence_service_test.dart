@@ -32,6 +32,7 @@ void main() {
   GeneralScheduleData buildData({
     List<GeneralEvent> events = const [],
     bool calendarVisible = true,
+    int calendarColorValue = defaultGeneralCalendarColorValue,
     List<GeneralReminderAcknowledgement> acknowledgements = const [],
   }) {
     return GeneralScheduleData(
@@ -42,6 +43,7 @@ void main() {
           name: 'Work',
           events: events,
           isVisible: calendarVisible,
+          colorValue: calendarColorValue,
         ),
       ],
       reminderAcknowledgements: acknowledgements,
@@ -77,6 +79,63 @@ void main() {
 
       expect(results, hasLength(1));
       expect(results.single.event.id, equals('a'));
+    });
+
+    test(
+      'filters by calendar theme color when event has no explicit color',
+      () {
+        final data = buildData(
+          calendarColorValue: generalCalendarColorSlot2Value,
+          events: [
+            buildEvent(
+              id: 'a',
+              title: 'Inherited',
+              start: DateTime(2026, 5, 24, 10),
+            ),
+            buildEvent(
+              id: 'b',
+              title: 'Explicit',
+              start: DateTime(2026, 5, 24, 11),
+              colorValue: 0xFFFF0000,
+            ),
+          ],
+        );
+
+        final results = service.occurrencesForQuery(
+          data,
+          GeneralOccurrenceQuery(
+            startInclusive: DateTime(2026, 5, 24),
+            endExclusive: DateTime(2026, 5, 25),
+            colorValue: generalCalendarColorSlot2Value,
+          ),
+        );
+
+        expect(results.map((o) => o.event.id), equals(['a']));
+      },
+    );
+
+    test('normalizes legacy auto calendar colors when filtering', () {
+      final data = buildData(
+        calendarColorValue: legacyAutoGeneralCalendarColorSecondaryValue,
+        events: [
+          buildEvent(
+            id: 'a',
+            title: 'Legacy inherited',
+            start: DateTime(2026, 5, 24, 10),
+          ),
+        ],
+      );
+
+      final results = service.occurrencesForQuery(
+        data,
+        GeneralOccurrenceQuery(
+          startInclusive: DateTime(2026, 5, 24),
+          endExclusive: DateTime(2026, 5, 25),
+          colorValue: generalCalendarColorSlot2Value,
+        ),
+      );
+
+      expect(results.map((o) => o.event.id), equals(['a']));
     });
 
     test('filters by query.searchQuery against title/location/calendar', () {

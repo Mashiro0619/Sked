@@ -13,6 +13,7 @@ import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_service.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
@@ -77,6 +78,16 @@ class _NoopPrivacyService extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
+class _NoopSecretStore implements SecretStore {
+  const _NoopSecretStore();
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => '';
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {}
+}
+
 class _BlockingPrivacyService extends PrivacyService {
   final Completer<String?> _completer = Completer<String?>();
   var fetchCount = 0;
@@ -100,6 +111,21 @@ class _RecordingUpdateService extends UpdateService {
   @override
   Future<UpdateCheckResult> checkForUpdates() async {
     checkCount += 1;
+    return const UpdateCheckResult(
+      localVersion: '1.0.0',
+      remoteVersion: '1.0.0',
+      hasUpdate: false,
+      releaseUrl: 'https://github.com/Mashiro0619/Sked/releases/latest',
+      updateContent: '',
+    );
+  }
+}
+
+class _NoopUpdateService extends UpdateService {
+  const _NoopUpdateService();
+
+  @override
+  Future<UpdateCheckResult> checkForUpdates() async {
     return const UpdateCheckResult(
       localVersion: '1.0.0',
       remoteVersion: '1.0.0',
@@ -233,12 +259,20 @@ AppData _buildLongCourseStudentData() {
   );
 }
 
+AppData _buildDefaultFirstLaunchData() {
+  return buildInitialAppData(
+    buildDefaultPeriodTimes(),
+    localeCode: defaultLocaleCode,
+  ).copyWith(activeMode: AppMode.student);
+}
+
 Future<TimetableProvider> _createProvider() async {
   final data = _buildPopulatedStudentData();
   final provider = TimetableProvider(
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
+    secretStore: const _NoopSecretStore(),
   );
   await provider.load();
   return provider;
@@ -256,6 +290,7 @@ Future<TimetableProvider> _createEmptyProvider(
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
+    secretStore: const _NoopSecretStore(),
   );
   await provider.load();
   return provider;
@@ -265,14 +300,15 @@ Future<void> _pumpHomeScreenWithProvider(
   WidgetTester tester,
   TimetableProvider provider,
 ) async {
+  await _resetWidgetTree(tester);
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: HomeScreen(),
+        home: HomeScreen(key: UniqueKey()),
       ),
     ),
   );
@@ -282,9 +318,10 @@ Future<void> _pumpHomeScreenWithProvider(
 Future<void> _pumpAppHomeScreenWithProvider(
   WidgetTester tester,
   TimetableProvider provider, {
-  UpdateService startupUpdateService = const UpdateService(),
+  UpdateService startupUpdateService = const _NoopUpdateService(),
   bool settle = true,
 }) async {
+  await _resetWidgetTree(tester);
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
@@ -292,7 +329,10 @@ Future<void> _pumpAppHomeScreenWithProvider(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: AppHomeScreen(startupUpdateService: startupUpdateService),
+        home: AppHomeScreen(
+          key: UniqueKey(),
+          startupUpdateService: startupUpdateService,
+        ),
       ),
     ),
   );
@@ -307,6 +347,7 @@ Future<void> _pumpHomeScreenHostPage(
   WidgetTester tester,
   TimetableProvider provider,
 ) async {
+  await _resetWidgetTree(tester);
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
@@ -325,7 +366,7 @@ Future<void> _pumpHomeScreenHostPage(
                         builder: (_) =>
                             ChangeNotifierProvider<TimetableProvider>.value(
                               value: provider,
-                              child: const HomeScreen(),
+                              child: HomeScreen(key: UniqueKey()),
                             ),
                       ),
                     );
@@ -340,6 +381,11 @@ Future<void> _pumpHomeScreenHostPage(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+Future<void> _resetWidgetTree(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
 }
 
 Future<TimetableProvider> _pumpHomeScreen(WidgetTester tester) async {
@@ -367,6 +413,7 @@ void main() {
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -396,9 +443,10 @@ void main() {
   ) async {
     final privacyService = _BlockingPrivacyService();
     final provider = TimetableProvider(
-      storage: _MemoryTimetableStorage(null),
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: privacyService,
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -420,7 +468,8 @@ void main() {
     expect(privacyService.fetchCount, 1);
 
     privacyService.complete('2026-06-02');
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Preparing the privacy policy check...'), findsNothing);
     expect(find.text('Start with timetable'), findsOneWidget);
@@ -451,6 +500,7 @@ void main() {
       storage: _MemoryTimetableStorage(initialData),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
     provider.injectRemotePrivacyPolicyVersion('2026-06-02');
@@ -471,11 +521,12 @@ void main() {
   testWidgets('first launch can start with student timetable after consent', (
     tester,
   ) async {
-    final storage = _MemoryTimetableStorage(null);
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
     final provider = TimetableProvider(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -519,11 +570,12 @@ void main() {
   testWidgets('first launch can start with general schedule after consent', (
     tester,
   ) async {
-    final storage = _MemoryTimetableStorage(null);
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
     final provider = TimetableProvider(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -570,6 +622,7 @@ void main() {
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
     provider.injectRemotePrivacyPolicyVersion('2026-05-25');
@@ -624,6 +677,7 @@ void main() {
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: privacyService,
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -699,6 +753,7 @@ void main() {
       storage: _MemoryTimetableStorage(_buildLongCourseStudentData()),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -765,6 +820,7 @@ void main() {
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 
@@ -803,6 +859,7 @@ void main() {
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
     );
     await provider.load();
 

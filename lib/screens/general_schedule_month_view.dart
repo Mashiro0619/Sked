@@ -1311,9 +1311,7 @@ class _MonthAgendaTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final color = Color(
-      occurrence.event.colorValue ?? occurrence.calendar.colorValue,
-    );
+    final color = effectiveGeneralOccurrenceColor(context, occurrence);
     final subtitle = [
       _formatOccurrenceTime(context, occurrence),
       if (occurrence.event.location.isNotEmpty) occurrence.event.location,

@@ -24,6 +24,10 @@ class GeneralEventOccurrence {
       buildGeneralOccurrenceKey(calendar.id, event.id, start.toIso8601String());
 
   bool get isAllDay => event.isAllDay;
+
+  int get colorValue =>
+      event.colorValue ??
+      normalizeGeneralCalendarColorValue(calendar.colorValue);
 }
 
 class GeneralOccurrenceKeyParts {
@@ -125,8 +129,7 @@ class GeneralOccurrenceQuery {
 
   bool matches(GeneralEventOccurrence occurrence) {
     if (colorValue != null &&
-        (occurrence.event.colorValue ?? occurrence.calendar.colorValue) !=
-            colorValue) {
+        !_matchesGeneralOccurrenceColor(occurrence, colorValue!)) {
       return false;
     }
     final normalizedQuery = searchQuery.trim().toLowerCase();
@@ -140,6 +143,18 @@ class GeneralOccurrenceQuery {
       occurrence.calendar.name,
     ].any((value) => value.toLowerCase().contains(normalizedQuery));
   }
+}
+
+bool _matchesGeneralOccurrenceColor(
+  GeneralEventOccurrence occurrence,
+  int colorValue,
+) {
+  final eventColorValue = occurrence.event.colorValue;
+  if (eventColorValue != null) {
+    return eventColorValue == colorValue;
+  }
+  return normalizeGeneralCalendarColorValue(occurrence.calendar.colorValue) ==
+      normalizeGeneralCalendarColorValue(colorValue);
 }
 
 List<GeneralEventOccurrence> expandGeneralOccurrences({

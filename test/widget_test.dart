@@ -2857,6 +2857,9 @@ void main() {
     });
 
     testWidgets('通用模式五彩缤纷会显示日历颜色并隐藏课程专属设置', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: () {
@@ -2902,14 +2905,32 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('UI 配色'), findsOneWidget);
+      expect(find.text('日历颜色'), findsOneWidget);
+      expect(find.text('日历色 1'), findsOneWidget);
+      expect(find.text('日历色 6'), findsOneWidget);
       expect(find.text('日历'), findsOneWidget);
       expect(find.text('生活日程'), findsOneWidget);
       expect(find.text('#225577'), findsOneWidget);
       expect(
+        find.byKey(
+          const ValueKey('theme-general-calendar-slot-general_calendar_1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('theme-general-calendar-slot-general_calendar_6'),
+        ),
+        findsOneWidget,
+      );
+      expect(
         find.byKey(const ValueKey('theme-general-calendar-color-life')),
         findsOneWidget,
       );
+      expect(find.text('UI 配色'), findsNothing);
+      expect(find.text('主色'), findsNothing);
+      expect(find.text('辅色'), findsNothing);
+      expect(find.text('强调色'), findsNothing);
       expect(find.text('课程颜色'), findsNothing);
       expect(find.text('课程文字色'), findsNothing);
       expect(find.text('课程描边'), findsNothing);

@@ -213,6 +213,79 @@ void main() {
     );
   });
 
+  testWidgets('general colorful settings show calendar color slots', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+        activeMode: AppMode.general,
+        themeColorMode: themeColorModeColorful,
+        colorfulUiColorValues: const {
+          colorfulGeneralCalendarColor2Key: 0xFF778899,
+        },
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'life',
+          schedules: [
+            GeneralSchedule(
+              id: 'life',
+              name: 'Life',
+              colorValue: generalCalendarColorSlot2Value,
+              events: [],
+            ),
+          ],
+        ),
+      ),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendar colors'), findsOneWidget);
+    expect(find.text('Calendar color 1'), findsOneWidget);
+    expect(find.text('Calendar color 6'), findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey('theme-general-calendar-slot-general_calendar_1'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('theme-general-calendar-slot-general_calendar_6'),
+      ),
+      findsOneWidget,
+    );
+
+    final secondSlot = find.byKey(
+      const ValueKey('theme-general-calendar-slot-general_calendar_2'),
+    );
+    expect(
+      find.descendant(of: secondSlot, matching: find.text('#778899')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('theme-general-calendar-color-life')),
+        matching: find.text('#778899'),
+      ),
+      findsOneWidget,
+    );
+
+    expect(find.byKey(const ValueKey('theme-ui-color-primary')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('theme-ui-color-secondary')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('theme-ui-color-tertiary')), findsNothing);
+    expect(find.text('Primary'), findsNothing);
+    expect(find.text('Secondary'), findsNothing);
+    expect(find.text('Tertiary'), findsNothing);
+  });
+
   testWidgets('custom color apply is disabled while save is in progress', (
     tester,
   ) async {

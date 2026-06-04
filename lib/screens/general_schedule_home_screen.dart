@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../utils/general_schedule_colors.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
@@ -20,6 +21,7 @@ import 'settings_page.dart';
 part 'general_schedule_list_view.dart';
 part 'general_schedule_reminder_strip.dart';
 part 'general_schedule_timeline_view.dart';
+part 'general_schedule_timeline_components.dart';
 part 'general_schedule_calendar_manager.dart';
 part 'general_schedule_month_view.dart';
 
@@ -631,13 +633,6 @@ Color _readableColor(Color color) {
 }
 
 int _nextCalendarColor(List<GeneralSchedule> schedules) {
-  const colors = [
-    0xFF4DB6AC,
-    0xFF64B5F6,
-    0xFFFFB74D,
-    0xFFBA68C8,
-    0xFF81C784,
-    0xFFE57373,
-  ];
-  return colors[schedules.length % colors.length];
+  return generalCalendarSlotColorValues[schedules.length %
+      generalCalendarSlotColorValues.length];
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 import 'app_motion.dart';
+import 'general_calendar_color_theme.dart';
 
 ThemeMode themeModeFromValue(String value) {
   switch (value) {
@@ -61,6 +62,7 @@ ThemeData buildAppTheme({
   });
 
   return theme.copyWith(
+    extensions: [GeneralCalendarColorTheme.fromValues(colorfulUiColorValues)],
     scaffoldBackgroundColor: colorScheme.surface,
     pageTransitionsTheme: PageTransitionsTheme(
       builders: {
