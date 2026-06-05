@@ -30,13 +30,13 @@ Sked 是一个面向学生课表和日常安排的管理工具。你可以用它
 ## 截图
 
 <div align="center">
-<img src="docs/screenshots/s1.jpg" width="20%" />
-<img src="docs/screenshots/s2.jpg" width="20%" />
-<img src="docs/screenshots/s3.jpg" width="20%" />
-<img src="docs/screenshots/s4.jpg" width="20%" />
-<img src="docs/screenshots/s5.jpg" width="20%" />
-<img src="docs/screenshots/s6.jpg" width="20%" />
-<img src="docs/screenshots/s7.jpg" width="20%" />
+<img src="docs/screenshots/zh/b98a7be8de2586a28752aa39babfa9bf.jpg" width="20%" />
+<img src="docs/screenshots/zh/48b7919c0f0033c227c1c77f631f9184.jpg" width="20%" />
+<img src="docs/screenshots/zh/da4bcdee027eed0ee1e7e392f9904838.jpg" width="20%" />
+<img src="docs/screenshots/zh/4017abc76a8a36c18f1a0f12ec778598.jpg" width="20%" />
+<img src="docs/screenshots/zh/8f6f529390c675ec2175dfad9ea6f7de.jpg" width="20%" />
+<img src="docs/screenshots/zh/c998f379d204901c42177571b745068a.jpg" width="20%" />
+<img src="docs/screenshots/zh/3875d3da7b0b6544f2d4ab4de9a28af1.jpg" width="20%" />
 </div>
 
 ## 主要功能
@@ -57,7 +57,7 @@ Sked 会在设备或浏览器本地保存学生课表、通用日程、应用设
 
 只有在你主动执行导入、导出、分享、打开外部链接、检查更新、获取模型列表、学校网页导入或解析课表文本 / HTML 内容时，应用才会访问相关文件、调用系统功能或连接你配置的外部接口。
 
-首次启动应用时会显示隐私政策确认。完整隐私政策可在 [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html) 查看。
+首次启动应用时会显示隐私政策确认。完整隐私政策可在 [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html) 查看。
 
 ## 自定义解析接口
 

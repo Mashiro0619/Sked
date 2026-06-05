@@ -30,13 +30,13 @@ Sked helps manage student timetables and everyday schedules in one place. Use it
 ## Screenshots
 
 <div align="center">
-<img src="docs/screenshots/s1_en.jpg" width="20%" />
-<img src="docs/screenshots/s2_en.jpg" width="20%" />
-<img src="docs/screenshots/s3_en.jpg" width="20%" />
-<img src="docs/screenshots/s4_en.jpg" width="20%" />
-<img src="docs/screenshots/s5_en.jpg" width="20%" />
-<img src="docs/screenshots/s6_en.jpg" width="20%" />
-<img src="docs/screenshots/s7_en.jpg" width="20%" />
+<img src="docs/screenshots/en/f6c73781063a03a5a8c9e9e5cead1f48.jpg" width="20%" />
+<img src="docs/screenshots/en/d008fb6a4c8f907e056acca811f39cf9.jpg" width="20%" />
+<img src="docs/screenshots/en/5d9be198e7277ce7dce7914e8d8a09be.jpg" width="20%" />
+<img src="docs/screenshots/en/b9414f9eaf8e56a2820f083023d31d84.jpg" width="20%" />
+<img src="docs/screenshots/en/db6c49f914953f5c5c039cce608b4c0d.jpg" width="20%" />
+<img src="docs/screenshots/en/297068daa1e485912f33e9ca835ee2c0.jpg" width="20%" />
+<img src="docs/screenshots/en/5178c7db3fe2f2b20d4b7c0ee1f413dd.jpg" width="20%" />
 </div>
 
 ## Features
@@ -57,7 +57,7 @@ Sked stores student timetables, general schedules, app settings, period-time set
 
 The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, imports school webpages, or parses timetable text / HTML content only when you explicitly start the corresponding action.
 
-A privacy policy consent screen is shown on first launch. The full policy is available at [https://mashiro.tech/Sked/privacy.html](https://mashiro.tech/Sked/privacy.html).
+A privacy policy consent screen is shown on first launch. The full policy is available at [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html).
 
 ## Custom Parser Endpoint
 

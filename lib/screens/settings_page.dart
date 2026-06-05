@@ -655,7 +655,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _openPrivacyPolicyPage() async {
     await _guardFlow(_SettingsFlow.privacyPolicy, () async {
-      final uri = Uri.parse('https://mashiro.tech/Sked/privacy.html');
+      final uri = Uri.parse('https://sked.mashiro.tech/privacy.html');
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     });
   }

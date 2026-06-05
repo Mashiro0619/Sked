@@ -29,6 +29,49 @@ GeneralEventOccurrence _buildOccurrence() {
 }
 
 void main() {
+  testWidgets('action buttons prioritize primary actions and group delete', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 460,
+              child: GeneralEventDetailsSheet(
+                occurrence: _buildOccurrence(),
+                onEdit: () {},
+                onDuplicate: () {},
+                onDismissReminder: () {},
+                onDeleteThis: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final edit = find.widgetWithText(FilledButton, 'Edit event');
+    final duplicate = find.widgetWithText(FilledButton, 'Duplicate');
+    final handled = find.widgetWithText(OutlinedButton, 'Mark handled');
+    final delete = find.widgetWithText(OutlinedButton, 'Delete');
+
+    final editRect = tester.getRect(edit);
+    final duplicateRect = tester.getRect(duplicate);
+    final handledRect = tester.getRect(handled);
+    final deleteRect = tester.getRect(delete);
+
+    expect(editRect.width, greaterThan(duplicateRect.width * 1.8));
+    expect(deleteRect.width, closeTo(editRect.width, 0.1));
+    expect(editRect.left, closeTo(deleteRect.left, 0.1));
+    expect(duplicateRect.width, closeTo(handledRect.width, 0.1));
+    expect(duplicateRect.top, closeTo(handledRect.top, 0.1));
+    expect(editRect.top, lessThan(duplicateRect.top));
+    expect(deleteRect.top, greaterThan(handledRect.top));
+  });
+
   testWidgets('action buttons ignore rapid duplicate taps', (tester) async {
     final actionCompleter = Completer<void>();
     var duplicateCount = 0;
