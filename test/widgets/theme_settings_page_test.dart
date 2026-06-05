@@ -213,78 +213,115 @@ void main() {
     );
   });
 
-  testWidgets('general colorful settings show calendar color slots', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1200));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'general colorful settings show calendars and month text colors',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final storage = _BlockingTimetableStorage(
-      buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
-        activeMode: AppMode.general,
-        themeColorMode: themeColorModeColorful,
-        colorfulUiColorValues: const {
-          colorfulGeneralCalendarColor2Key: 0xFF778899,
-        },
-        generalMode: const GeneralScheduleData(
-          activeScheduleId: 'life',
-          schedules: [
-            GeneralSchedule(
-              id: 'life',
-              name: 'Life',
-              colorValue: generalCalendarColorSlot2Value,
-              events: [],
-            ),
-          ],
+      final storage = _BlockingTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+          activeMode: AppMode.general,
+          themeColorMode: themeColorModeColorful,
+          colorfulUiColorValues: const {
+            colorfulGeneralCalendarColor2Key: 0xFF778899,
+            colorfulGeneralLunarTextColorKey: 0xFF223344,
+            colorfulGeneralFestivalTextColorKey: 0xFFAA5500,
+            colorfulGeneralSolarTermTextColorKey: 0xFF336600,
+          },
+          generalMode: const GeneralScheduleData(
+            activeScheduleId: 'life',
+            schedules: [
+              GeneralSchedule(
+                id: 'life',
+                name: 'Life',
+                colorValue: generalCalendarColorSlot2Value,
+                events: [],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-    final provider = await _createProvider(storage);
+      );
+      final provider = await _createProvider(storage);
 
-    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Calendar colors'), findsOneWidget);
-    expect(find.text('Calendar color 1'), findsOneWidget);
-    expect(find.text('Calendar color 6'), findsOneWidget);
-    expect(
-      find.byKey(
-        const ValueKey('theme-general-calendar-slot-general_calendar_1'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(
-        const ValueKey('theme-general-calendar-slot-general_calendar_6'),
-      ),
-      findsOneWidget,
-    );
+      expect(find.text('Calendar colors'), findsNothing);
+      expect(find.text('Calendar color 1'), findsNothing);
+      expect(find.text('Calendar color 6'), findsNothing);
+      expect(find.text('Month view text'), findsOneWidget);
+      expect(find.text('Lunar dates'), findsOneWidget);
+      expect(find.text('Festivals and holidays'), findsOneWidget);
+      expect(find.text('Solar terms'), findsOneWidget);
+      expect(
+        find.byKey(
+          const ValueKey('theme-general-calendar-slot-general_calendar_1'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('theme-general-calendar-slot-general_calendar_6'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('theme-general-calendar-color-life')),
+          matching: find.text('#778899'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey('theme-general-month-text-color-general_lunar_text'),
+          ),
+          matching: find.text('#223344'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey(
+              'theme-general-month-text-color-general_festival_text',
+            ),
+          ),
+          matching: find.text('#AA5500'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey(
+              'theme-general-month-text-color-general_solar_term_text',
+            ),
+          ),
+          matching: find.text('#336600'),
+        ),
+        findsOneWidget,
+      );
 
-    final secondSlot = find.byKey(
-      const ValueKey('theme-general-calendar-slot-general_calendar_2'),
-    );
-    expect(
-      find.descendant(of: secondSlot, matching: find.text('#778899')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('theme-general-calendar-color-life')),
-        matching: find.text('#778899'),
-      ),
-      findsOneWidget,
-    );
-
-    expect(find.byKey(const ValueKey('theme-ui-color-primary')), findsNothing);
-    expect(
-      find.byKey(const ValueKey('theme-ui-color-secondary')),
-      findsNothing,
-    );
-    expect(find.byKey(const ValueKey('theme-ui-color-tertiary')), findsNothing);
-    expect(find.text('Primary'), findsNothing);
-    expect(find.text('Secondary'), findsNothing);
-    expect(find.text('Tertiary'), findsNothing);
-  });
+      expect(
+        find.byKey(const ValueKey('theme-ui-color-primary')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('theme-ui-color-secondary')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('theme-ui-color-tertiary')),
+        findsNothing,
+      );
+      expect(find.text('Primary'), findsNothing);
+      expect(find.text('Secondary'), findsNothing);
+      expect(find.text('Tertiary'), findsNothing);
+    },
+  );
 
   testWidgets('custom color apply is disabled while save is in progress', (
     tester,

@@ -39,6 +39,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   bool _datePickerOpen = false;
   bool _editorSheetOpen = false;
   bool _detailsSheetOpen = false;
+  bool _moreOccurrencesSheetOpen = false;
   bool _calendarManagerOpen = false;
   bool _settingsPageOpen = false;
 
@@ -200,6 +201,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             _openEditor(context, provider, initialDate: date),
                         onOccurrenceTap: (occurrence) =>
                             _openDetails(context, provider, occurrence),
+                        onMoreOccurrencesTap: (occurrences) =>
+                            _openMoreOccurrences(
+                              context,
+                              provider,
+                              occurrences,
+                            ),
                       ),
                       generalViewList => _ListCalendarView(
                         date: selectedDate,
@@ -229,6 +236,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             _openEditor(context, provider, initialDate: date),
                         onOccurrenceTap: (occurrence) =>
                             _openDetails(context, provider, occurrence),
+                        onMoreOccurrencesTap: (occurrences) =>
+                            _openMoreOccurrences(
+                              context,
+                              provider,
+                              occurrences,
+                            ),
                       ),
                     },
                   ),
@@ -409,6 +422,37 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     }
   }
 
+  Future<void> _openMoreOccurrences(
+    BuildContext context,
+    TimetableProvider provider,
+    List<GeneralEventOccurrence> occurrences,
+  ) async {
+    if (_moreOccurrencesSheetOpen || occurrences.isEmpty) {
+      return;
+    }
+    _setUiBusyFlag(() => _moreOccurrencesSheetOpen = true);
+    final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
+    GeneralEventOccurrence? selectedOccurrence;
+    try {
+      selectedOccurrence = await showAppModalSheet<GeneralEventOccurrence>(
+        context: context,
+        isDismissible: canDismiss,
+        enableDrag: canDismiss,
+        maxWidth: appSheetWidthCompact,
+        builder: (sheetContext) => _MoreGeneralOccurrencesSheet(
+          occurrences: occurrences,
+          onOccurrenceTap: (occurrence) =>
+              Navigator.of(sheetContext).pop(occurrence),
+        ),
+      );
+    } finally {
+      _setUiBusyFlag(() => _moreOccurrencesSheetOpen = false);
+    }
+    if (selectedOccurrence != null && mounted && context.mounted) {
+      await _openDetails(context, provider, selectedOccurrence);
+    }
+  }
+
   Future<void> _openCalendarManager(
     BuildContext context,
     TimetableProvider provider,
@@ -455,6 +499,45 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     } finally {
       _setUiBusyFlag(() => _settingsPageOpen = false);
     }
+  }
+}
+
+class _MoreGeneralOccurrencesSheet extends StatelessWidget {
+  const _MoreGeneralOccurrencesSheet({
+    required this.occurrences,
+    required this.onOccurrenceTap,
+  });
+
+  final List<GeneralEventOccurrence> occurrences;
+  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final first = occurrences.first;
+    return AppSheetScaffold(
+      title: Text(l10n.monthDayEvents(first.start.day, occurrences.length)),
+      subtitle: Text(
+        '${_formatDate(first.start)}  ${_formatOccurrenceTime(context, first)}',
+      ),
+      heightFactor: occurrences.length > 5 ? 0.72 : null,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final occurrence in occurrences)
+            _GeneralListOccurrenceTile(
+              occurrence: occurrence,
+              onTap: () => onOccurrenceTap(occurrence),
+            ),
+        ],
+      ),
+    );
   }
 }
 

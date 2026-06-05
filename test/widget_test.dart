@@ -2867,6 +2867,11 @@ void main() {
             return themed.copyWith(
               activeMode: AppMode.general,
               themeColorMode: themeColorModeColorful,
+              colorfulUiColorValues: const {
+                colorfulGeneralLunarTextColorKey: 0xFF223344,
+                colorfulGeneralFestivalTextColorKey: 0xFFAA5500,
+                colorfulGeneralSolarTermTextColorKey: 0xFF336600,
+              },
               generalMode: GeneralScheduleData(
                 activeScheduleId: 'life',
                 schedules: const [
@@ -2905,9 +2910,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('日历颜色'), findsOneWidget);
-      expect(find.text('日历色 1'), findsOneWidget);
-      expect(find.text('日历色 6'), findsOneWidget);
       expect(find.text('日历'), findsOneWidget);
       expect(find.text('生活日程'), findsOneWidget);
       expect(find.text('#225577'), findsOneWidget);
@@ -2915,18 +2917,43 @@ void main() {
         find.byKey(
           const ValueKey('theme-general-calendar-slot-general_calendar_1'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.byKey(
           const ValueKey('theme-general-calendar-slot-general_calendar_6'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.byKey(const ValueKey('theme-general-calendar-color-life')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(
+          const ValueKey('theme-general-month-text-color-general_lunar_text'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey(
+            'theme-general-month-text-color-general_festival_text',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey(
+            'theme-general-month-text-color-general_solar_term_text',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('#223344'), findsOneWidget);
+      expect(find.text('#AA5500'), findsOneWidget);
+      expect(find.text('#336600'), findsOneWidget);
       expect(find.text('UI 配色'), findsNothing);
       expect(find.text('主色'), findsNothing);
       expect(find.text('辅色'), findsNothing);

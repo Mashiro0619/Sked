@@ -121,6 +121,68 @@ void main() {
     );
   });
 
+  testWidgets('custom month text colors are scoped to colorful mode', (
+    tester,
+  ) async {
+    const values = {
+      colorfulGeneralLunarTextColorKey: 0xFF223344,
+      colorfulGeneralFestivalTextColorKey: 0xFFAA5500,
+      colorfulGeneralSolarTermTextColorKey: 0xFF336600,
+    };
+    const lunarFallback = Color(0xFF010203);
+    const festivalFallback = Color(0xFF040506);
+    const solarTermFallback = Color(0xFF070809);
+    late BuildContext capturedContext;
+
+    Future<void> pumpWithMode(String themeColorMode) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(
+            seedColor: const Color(0xFF123456),
+            brightness: Brightness.light,
+            themeColorMode: themeColorMode,
+            colorfulUiColorValues: values,
+          ),
+          home: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpWithMode(themeColorModeColorful);
+    expect(
+      effectiveGeneralLunarTextColor(capturedContext, lunarFallback),
+      const Color(0xFF223344),
+    );
+    expect(
+      effectiveGeneralFestivalTextColor(capturedContext, festivalFallback),
+      const Color(0xFFAA5500),
+    );
+    expect(
+      effectiveGeneralSolarTermTextColor(capturedContext, solarTermFallback),
+      const Color(0xFF336600),
+    );
+
+    await pumpWithMode(themeColorModeSingle);
+    expect(
+      effectiveGeneralLunarTextColor(capturedContext, lunarFallback),
+      lunarFallback,
+    );
+    expect(
+      effectiveGeneralFestivalTextColor(capturedContext, festivalFallback),
+      festivalFallback,
+    );
+    expect(
+      effectiveGeneralSolarTermTextColor(capturedContext, solarTermFallback),
+      solarTermFallback,
+    );
+  });
+
   testWidgets('legacy auto calendar colors resolve to calendar slots', (
     tester,
   ) async {

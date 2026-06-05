@@ -36,6 +36,9 @@ ThemeData buildAppTheme({
   final colorScheme = themeColorMode == themeColorModeColorful
       ? _withColorfulFamilies(baseScheme, brightness, colorfulUiColorValues)
       : baseScheme;
+  final colorfulExtensionValues = themeColorMode == themeColorModeColorful
+      ? colorfulUiColorValues
+      : const <String, int>{};
   final theme = ThemeData(useMaterial3: true, colorScheme: colorScheme);
   final textTheme = theme.textTheme;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
@@ -62,7 +65,7 @@ ThemeData buildAppTheme({
   });
 
   return theme.copyWith(
-    extensions: [GeneralCalendarColorTheme.fromValues(colorfulUiColorValues)],
+    extensions: [GeneralCalendarColorTheme.fromValues(colorfulExtensionValues)],
     scaffoldBackgroundColor: colorScheme.surface,
     pageTransitionsTheme: PageTransitionsTheme(
       builders: {

@@ -18,6 +18,7 @@ class _WeekCalendarView extends StatefulWidget {
     required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
+    required this.onMoreOccurrencesTap,
   });
 
   final DateTime date;
@@ -26,6 +27,7 @@ class _WeekCalendarView extends StatefulWidget {
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
   @override
   State<_WeekCalendarView> createState() => _WeekCalendarViewState();
@@ -127,9 +129,9 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
           selectedDate: weekStart.add(Duration(days: _selectedWeekdayOffset())),
           provider: widget.provider,
           filter: widget.filter,
-          onDaySelected: widget.onDaySelected,
           onEmptySlotTap: widget.onEmptySlotTap,
           onOccurrenceTap: widget.onOccurrenceTap,
+          onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
         );
       },
     );
@@ -142,18 +144,18 @@ class _WeekTimelinePage extends StatelessWidget {
     required this.selectedDate,
     required this.provider,
     required this.filter,
-    required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
+    required this.onMoreOccurrencesTap,
   });
 
   final DateTime weekStart;
   final DateTime selectedDate;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
   @override
   Widget build(BuildContext context) {
@@ -172,9 +174,9 @@ class _WeekTimelinePage extends StatelessWidget {
       endHour: provider.generalDayEndHour,
       gridMinutes: provider.generalTimeGridMinutes,
       showHeader: true,
-      onDaySelected: onDaySelected,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
+      onMoreOccurrencesTap: onMoreOccurrencesTap,
     );
   }
 }
@@ -187,6 +189,7 @@ class _DayCalendarView extends StatefulWidget {
     required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
+    required this.onMoreOccurrencesTap,
   });
 
   final DateTime date;
@@ -195,6 +198,7 @@ class _DayCalendarView extends StatefulWidget {
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
   @override
   State<_DayCalendarView> createState() => _DayCalendarViewState();
@@ -431,9 +435,9 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
                 date: pageDay,
                 provider: widget.provider,
                 filter: widget.filter,
-                onDaySelected: widget.onDaySelected,
                 onEmptySlotTap: widget.onEmptySlotTap,
                 onOccurrenceTap: widget.onOccurrenceTap,
+                onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
               );
             },
           ),
@@ -448,17 +452,17 @@ class _DayTimelinePage extends StatelessWidget {
     required this.date,
     required this.provider,
     required this.filter,
-    required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
+    required this.onMoreOccurrencesTap,
   });
 
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
   @override
   Widget build(BuildContext context) {
@@ -477,9 +481,9 @@ class _DayTimelinePage extends StatelessWidget {
       endHour: provider.generalDayEndHour,
       gridMinutes: provider.generalTimeGridMinutes,
       showHeader: false,
-      onDaySelected: onDaySelected,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
+      onMoreOccurrencesTap: onMoreOccurrencesTap,
     );
   }
 }
@@ -736,9 +740,9 @@ class _CalendarTimeline extends StatelessWidget {
     required this.endHour,
     required this.gridMinutes,
     required this.showHeader,
-    required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
+    required this.onMoreOccurrencesTap,
   });
 
   static const double _headerHeight = 56;
@@ -752,9 +756,9 @@ class _CalendarTimeline extends StatelessWidget {
   final int endHour;
   final int gridMinutes;
   final bool showHeader;
-  final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
   @override
   Widget build(BuildContext context) {
@@ -794,13 +798,13 @@ class _CalendarTimeline extends StatelessWidget {
                         _DayHeader(
                           date: day,
                           width: metrics.dayWidth,
-                          selected: _sameDay(day, selectedDate),
-                          onTap: () => onDaySelected(day),
+                          selected: false,
+                          onTap: null,
                         ),
                     ],
                   ),
                 ),
-              if (showHeader || hasAllDayOccurrences)
+              if (hasAllDayOccurrences)
                 SizedBox(
                   height: _allDayHeight,
                   child: Row(
@@ -826,7 +830,9 @@ class _CalendarTimeline extends StatelessWidget {
                     ],
                   ),
                 ),
-              if (showHeader || hasAllDayOccurrences)
+              if (hasAllDayOccurrences)
+                const Divider(height: 1)
+              else if (showHeader)
                 const Divider(height: 1)
               else
                 Container(
@@ -836,6 +842,7 @@ class _CalendarTimeline extends StatelessWidget {
                 ),
               Expanded(
                 child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 96),
                   child: SizedBox(
                     height: contentHeight,
                     child: Stack(
@@ -858,8 +865,11 @@ class _CalendarTimeline extends StatelessWidget {
                             width: metrics.dayWidth,
                             height: contentHeight,
                             child: GestureDetector(
+                              key: ValueKey(
+                                'general-timeline-empty-slot-${_dateKey(days[index])}',
+                              ),
                               behavior: HitTestBehavior.translucent,
-                              onTapUp: (details) {
+                              onLongPressStart: (details) {
                                 final minutes = _snapMinutes(
                                   startMinutes +
                                       (details.localPosition.dy / minuteHeight)
@@ -963,26 +973,44 @@ class _CalendarTimeline extends StatelessWidget {
         ),
       );
     }
-    final layouts = _layoutTimedOccurrenceSegments(segments);
+    final layouts = _layoutTimedOccurrenceSegments(
+      _collapseCrowdedTimedOccurrenceSegments(segments),
+    );
     for (final layout in layouts) {
       final height = math.max(
         28.0,
         (layout.endMinutes - layout.startMinutes) * minuteHeight,
       );
       final cardHeight = math.max(1.0, height - 4.0);
-      final laneGap = layout.laneCount > 1 ? 2.0 : 0.0;
-      final availableWidth = width - 8 - laneGap * (layout.laneCount - 1);
-      final laneWidth = math.max(1.0, availableWidth / layout.laneCount);
+      const laneGap = 2.0;
+      final horizontalInset = width < 52 ? 2.0 : 4.0;
+      final availableWidth = math.max(1.0, width - horizontalInset * 2);
+      final laneWidth = math.max(
+        1.0,
+        (availableWidth - laneGap * (layout.laneCount - 1)) / layout.laneCount,
+      );
+      final laneLeftOffset = layout.lane * (laneWidth + laneGap);
       yield Positioned(
-        left: left + 4 + layout.lane * (laneWidth + laneGap),
+        left: left + horizontalInset + laneLeftOffset,
         top: (layout.startMinutes - startMinutes) * minuteHeight + 2,
         width: laneWidth,
         height: cardHeight,
-        child: _OccurrenceCard(
-          occurrence: layout.occurrence,
-          dense: cardHeight < 64 || laneWidth < 72,
-          onTap: () => onOccurrenceTap(layout.occurrence),
-        ),
+        child: layout.isMore
+            ? _MoreOccurrencesCard(
+                occurrence: layout.occurrence,
+                count: layout.moreCount,
+                dense: cardHeight < 56 || laneWidth < 44,
+                narrow: laneWidth < 44,
+                overlapping: layout.laneCount > 1,
+                onTap: () => onMoreOccurrencesTap(layout.moreOccurrences!),
+              )
+            : _OccurrenceCard(
+                occurrence: layout.occurrence,
+                dense: cardHeight < 56 || laneWidth < 44,
+                narrow: laneWidth < 44,
+                overlapping: layout.laneCount > 1,
+                onTap: () => onOccurrenceTap(layout.occurrence),
+              ),
       );
     }
   }
@@ -1043,13 +1071,110 @@ class _TimedOccurrenceSegment {
     required this.occurrence,
     required this.startMinutes,
     required this.endMinutes,
-  });
+  }) : moreOccurrences = null;
+
+  _TimedOccurrenceSegment.more({
+    required List<GeneralEventOccurrence> occurrences,
+    required this.startMinutes,
+    required this.endMinutes,
+  }) : occurrence = occurrences.first,
+       moreOccurrences = List.unmodifiable(occurrences);
 
   final GeneralEventOccurrence occurrence;
+  final List<GeneralEventOccurrence>? moreOccurrences;
   final int startMinutes;
   final int endMinutes;
   int lane = 0;
   int laneCount = 1;
+
+  bool get isMore => moreOccurrences != null;
+
+  int get moreCount =>
+      moreOccurrences == null ? 0 : moreOccurrences!.length - 1;
+}
+
+List<_TimedOccurrenceSegment> _collapseCrowdedTimedOccurrenceSegments(
+  List<_TimedOccurrenceSegment> segments,
+) {
+  if (segments.length < 3) {
+    return segments;
+  }
+
+  final sorted = [...segments]..sort(_compareTimedOccurrenceSegments);
+  final groups = <List<_TimedOccurrenceSegment>>[];
+  var currentGroup = <_TimedOccurrenceSegment>[];
+  var currentGroupEnd = -1;
+  for (final segment in sorted) {
+    if (currentGroup.isEmpty || segment.startMinutes < currentGroupEnd) {
+      currentGroup.add(segment);
+      currentGroupEnd = math.max(currentGroupEnd, segment.endMinutes);
+    } else {
+      groups.add(currentGroup);
+      currentGroup = [segment];
+      currentGroupEnd = segment.endMinutes;
+    }
+  }
+  if (currentGroup.isNotEmpty) {
+    groups.add(currentGroup);
+  }
+
+  final collapsed = <_TimedOccurrenceSegment>[];
+  for (final group in groups) {
+    if (group.length < 3 || _maxConcurrentTimedSegments(group) < 3) {
+      collapsed.addAll(group);
+      continue;
+    }
+
+    final primary = _primaryTimedOccurrenceSegment(group);
+    final hidden =
+        group.where((segment) => !identical(segment, primary)).toList()
+          ..sort(_compareTimedOccurrenceSegments);
+    collapsed
+      ..add(primary)
+      ..add(
+        _TimedOccurrenceSegment.more(
+          occurrences: [
+            primary.occurrence,
+            for (final segment in hidden) segment.occurrence,
+          ],
+          startMinutes: primary.startMinutes,
+          endMinutes: primary.endMinutes,
+        ),
+      );
+  }
+  return collapsed;
+}
+
+int _maxConcurrentTimedSegments(List<_TimedOccurrenceSegment> segments) {
+  final points = <int>[];
+  for (final segment in segments) {
+    points
+      ..add(segment.startMinutes * 2 + 1)
+      ..add(segment.endMinutes * 2);
+  }
+  points.sort();
+
+  var active = 0;
+  var maxActive = 0;
+  for (final point in points) {
+    active += point.isOdd ? 1 : -1;
+    maxActive = math.max(maxActive, active);
+  }
+  return maxActive;
+}
+
+_TimedOccurrenceSegment _primaryTimedOccurrenceSegment(
+  List<_TimedOccurrenceSegment> segments,
+) {
+  final sorted = [...segments]
+    ..sort((a, b) {
+      final durationCompare = (b.endMinutes - b.startMinutes).compareTo(
+        a.endMinutes - a.startMinutes,
+      );
+      if (durationCompare != 0) return durationCompare;
+      return _compareTimedOccurrenceSegments(a, b);
+    });
+  return sorted.first;
 }
 
 List<_TimedOccurrenceSegment> _layoutTimedOccurrenceSegments(
@@ -1058,12 +1183,7 @@ List<_TimedOccurrenceSegment> _layoutTimedOccurrenceSegments(
   if (segments.isEmpty) {
     return segments;
   }
-  final sorted = [...segments]
-    ..sort((a, b) {
-      final startCompare = a.startMinutes.compareTo(b.startMinutes);
-      if (startCompare != 0) return startCompare;
-      return a.endMinutes.compareTo(b.endMinutes);
-    });
+  final sorted = [...segments]..sort(_compareTimedOccurrenceSegments);
 
   final groups = <List<_TimedOccurrenceSegment>>[];
   var currentGroup = <_TimedOccurrenceSegment>[];
@@ -1102,18 +1222,36 @@ List<_TimedOccurrenceSegment> _layoutTimedOccurrenceSegments(
   return sorted;
 }
 
+int _compareTimedOccurrenceSegments(
+  _TimedOccurrenceSegment a,
+  _TimedOccurrenceSegment b,
+) {
+  final startCompare = a.startMinutes.compareTo(b.startMinutes);
+  if (startCompare != 0) return startCompare;
+  final endCompare = a.endMinutes.compareTo(b.endMinutes);
+  if (endCompare != 0) return endCompare;
+  if (a.isMore != b.isMore) {
+    return a.isMore ? 1 : -1;
+  }
+  final titleCompare = a.occurrence.event.title.compareTo(
+    b.occurrence.event.title,
+  );
+  if (titleCompare != 0) return titleCompare;
+  return a.occurrence.event.id.compareTo(b.occurrence.event.id);
+}
+
 class _DayHeader extends StatelessWidget {
   const _DayHeader({
     required this.date,
     required this.width,
     required this.selected,
-    required this.onTap,
+    this.onTap,
   });
 
   final DateTime date;
   final double width;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1122,8 +1260,6 @@ class _DayHeader extends StatelessWidget {
     final isToday = _sameDay(date, DateTime.now());
     final background = selected
         ? colorScheme.primary.withValues(alpha: 0.20)
-        : isToday
-        ? colorScheme.primary.withValues(alpha: 0.14)
         : Colors.transparent;
     final foreground = selected
         ? colorScheme.primary
@@ -1131,8 +1267,10 @@ class _DayHeader extends StatelessWidget {
         ? colorScheme.primary
         : colorScheme.onSurface;
     return SizedBox(
+      key: ValueKey('general-week-day-header-${_dateKey(date)}'),
       width: width,
       child: InkWell(
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -1140,6 +1278,11 @@ class _DayHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: background,
               borderRadius: BorderRadius.circular(8),
+              border: isToday && !selected
+                  ? Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.52),
+                    )
+                  : null,
             ),
             child: Center(
               child: FittedBox(

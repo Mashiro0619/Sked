@@ -58,3 +58,15 @@ Color effectiveGeneralOccurrenceColor(
   }
   return effectiveGeneralCalendarColor(context, occurrence.calendar);
 }
+
+Color effectiveGeneralLunarTextColor(BuildContext context, Color fallback) {
+  return generalCalendarColorThemeOf(context).lunarTextColor ?? fallback;
+}
+
+Color effectiveGeneralFestivalTextColor(BuildContext context, Color fallback) {
+  return generalCalendarColorThemeOf(context).festivalTextColor ?? fallback;
+}
+
+Color effectiveGeneralSolarTermTextColor(BuildContext context, Color fallback) {
+  return generalCalendarColorThemeOf(context).solarTermTextColor ?? fallback;
+}

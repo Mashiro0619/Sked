@@ -12,6 +12,9 @@ class GeneralCalendarColorTheme
     required this.color4,
     required this.color5,
     required this.color6,
+    this.lunarTextColor,
+    this.festivalTextColor,
+    this.solarTermTextColor,
   });
 
   factory GeneralCalendarColorTheme.fromValues(Map<String, int> values) {
@@ -46,6 +49,18 @@ class GeneralCalendarColorTheme
         colorfulGeneralCalendarColor6Key,
         fallback.color6,
       ),
+      lunarTextColor: _optionalColorFor(
+        values,
+        colorfulGeneralLunarTextColorKey,
+      ),
+      festivalTextColor: _optionalColorFor(
+        values,
+        colorfulGeneralFestivalTextColorKey,
+      ),
+      solarTermTextColor: _optionalColorFor(
+        values,
+        colorfulGeneralSolarTermTextColorKey,
+      ),
     );
   }
 
@@ -64,6 +79,9 @@ class GeneralCalendarColorTheme
   final Color color4;
   final Color color5;
   final Color color6;
+  final Color? lunarTextColor;
+  final Color? festivalTextColor;
+  final Color? solarTermTextColor;
 
   List<Color> get colors => [color1, color2, color3, color4, color5, color6];
 
@@ -87,6 +105,9 @@ class GeneralCalendarColorTheme
     Color? color4,
     Color? color5,
     Color? color6,
+    Color? lunarTextColor,
+    Color? festivalTextColor,
+    Color? solarTermTextColor,
   }) {
     return GeneralCalendarColorTheme(
       color1: color1 ?? this.color1,
@@ -95,6 +116,9 @@ class GeneralCalendarColorTheme
       color4: color4 ?? this.color4,
       color5: color5 ?? this.color5,
       color6: color6 ?? this.color6,
+      lunarTextColor: lunarTextColor ?? this.lunarTextColor,
+      festivalTextColor: festivalTextColor ?? this.festivalTextColor,
+      solarTermTextColor: solarTermTextColor ?? this.solarTermTextColor,
     );
   }
 
@@ -113,6 +137,17 @@ class GeneralCalendarColorTheme
       color4: Color.lerp(color4, other.color4, t) ?? color4,
       color5: Color.lerp(color5, other.color5, t) ?? color5,
       color6: Color.lerp(color6, other.color6, t) ?? color6,
+      lunarTextColor: Color.lerp(lunarTextColor, other.lunarTextColor, t),
+      festivalTextColor: Color.lerp(
+        festivalTextColor,
+        other.festivalTextColor,
+        t,
+      ),
+      solarTermTextColor: Color.lerp(
+        solarTermTextColor,
+        other.solarTermTextColor,
+        t,
+      ),
     );
   }
 }
@@ -128,4 +163,9 @@ Color generalCalendarSlotColorOf(BuildContext context, String key) {
 
 Color _colorFor(Map<String, int> values, String key, Color fallback) {
   return Color(values[key] ?? fallback.toARGB32());
+}
+
+Color? _optionalColorFor(Map<String, int> values, String key) {
+  final value = values[key];
+  return value == null ? null : Color(value);
 }

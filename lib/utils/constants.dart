@@ -21,6 +21,14 @@ const colorfulGeneralCalendarColorKeys = [
   colorfulGeneralCalendarColor5Key,
   colorfulGeneralCalendarColor6Key,
 ];
+const colorfulGeneralLunarTextColorKey = 'general_lunar_text';
+const colorfulGeneralFestivalTextColorKey = 'general_festival_text';
+const colorfulGeneralSolarTermTextColorKey = 'general_solar_term_text';
+const colorfulGeneralMonthTextColorKeys = [
+  colorfulGeneralLunarTextColorKey,
+  colorfulGeneralFestivalTextColorKey,
+  colorfulGeneralSolarTermTextColorKey,
+];
 const colorfulCourseTextColorKey = 'course_text';
 const defaultColorfulCourseTextColorMode = 'auto';
 const colorfulCourseTextColorModeAuto = 'auto';

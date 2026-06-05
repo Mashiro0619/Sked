@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
-import '../theme/general_calendar_color_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
@@ -93,24 +92,54 @@ String _uiColorLabel(BuildContext context, String key) {
   };
 }
 
-int _effectiveGeneralCalendarSlotColorValue(BuildContext context, String key) {
-  return generalCalendarSlotColorOf(context, key).toARGB32();
+int _effectiveGeneralMonthTextColorValue(
+  BuildContext context,
+  TimetableProvider provider,
+  String key,
+) {
+  final customValue = provider.colorfulUiColorValues[key];
+  if (customValue != null) {
+    return customValue;
+  }
+  final colors = Theme.of(context).colorScheme;
+  return switch (key) {
+    colorfulGeneralFestivalTextColorKey => effectiveGeneralFestivalTextColor(
+      context,
+      colors.primary,
+    ).toARGB32(),
+    colorfulGeneralSolarTermTextColorKey => effectiveGeneralSolarTermTextColor(
+      context,
+      colors.tertiary,
+    ).toARGB32(),
+    _ => effectiveGeneralLunarTextColor(
+      context,
+      colors.onSurfaceVariant,
+    ).toARGB32(),
+  };
 }
 
-String _generalCalendarColorGroupTitle(BuildContext context) {
+String _generalMonthTextColorGroupTitle(BuildContext context) {
   final localeName = AppLocalizations.of(context).localeName;
   if (localeName.startsWith('zh')) {
-    return '日历颜色';
+    return '月视图文本';
   }
-  return 'Calendar colors';
+  return 'Month view text';
 }
 
-String _generalCalendarColorLabel(BuildContext context, int index) {
+String _generalMonthTextColorLabel(BuildContext context, String key) {
   final localeName = AppLocalizations.of(context).localeName;
   if (localeName.startsWith('zh')) {
-    return '日历色 ${index + 1}';
+    return switch (key) {
+      colorfulGeneralFestivalTextColorKey => '节日/假日',
+      colorfulGeneralSolarTermTextColorKey => '节气',
+      _ => '农历日期',
+    };
   }
-  return 'Calendar color ${index + 1}';
+  return switch (key) {
+    colorfulGeneralFestivalTextColorKey => 'Festivals and holidays',
+    colorfulGeneralSolarTermTextColorKey => 'Solar terms',
+    _ => 'Lunar dates',
+  };
 }
 
 class _SegmentOption {
@@ -278,21 +307,17 @@ class ThemeSettingsPage extends StatelessWidget {
                                   .updateColorfulUiColorValue(key, colorValue),
                             );
                           },
-                          onPickGeneralCalendarSlotColor: (key) {
-                            final index = colorfulGeneralCalendarColorKeys
-                                .indexOf(key);
+                          onPickGeneralMonthTextColor: (key) {
                             _openColorValueDialog(
                               context,
-                              title: _generalCalendarColorLabel(
-                                context,
-                                index < 0 ? 0 : index,
-                              ),
-                              previewTitle: _generalCalendarColorGroupTitle(
+                              title: _generalMonthTextColorLabel(context, key),
+                              previewTitle: _generalMonthTextColorGroupTitle(
                                 context,
                               ),
                               initialColorValue:
-                                  _effectiveGeneralCalendarSlotColorValue(
+                                  _effectiveGeneralMonthTextColorValue(
                                     context,
+                                    provider,
                                     key,
                                   ),
                               onApply: (colorValue) => provider

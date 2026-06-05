@@ -11,6 +11,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -450,6 +451,333 @@ void main() {
     expect(labelBox.center.dx, closeTo(26, 1));
   });
 
+  testWidgets('week header stays static when tapping a day label', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(496, 1052));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-05-18',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(find.byKey(_generalWeekPagerKey), findsOneWidget);
+    expect(find.text('All day'), findsNothing);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('general-week-day-header-2026-05-20T00:00:00.000'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedGeneralDate.year, 2026);
+    expect(provider.selectedGeneralDate.month, 5);
+    expect(provider.selectedGeneralDate.day, 18);
+    expect(find.byKey(_generalWeekPagerKey), findsOneWidget);
+    expect(find.byKey(_generalDayPagerKey), findsNothing);
+  });
+
+  testWidgets('week view lays overlapping timed events side by side', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'evt1',
+          calendarId: 'cal1',
+          title: 'Alpha',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T09:00:00.000',
+        ),
+        GeneralEvent(
+          id: 'evt2',
+          calendarId: 'cal1',
+          title: 'Beta',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T09:00:00.000',
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final cardFinders = [
+      find.byKey(
+        const ValueKey('general-timed-occurrence-evt1-2026-06-17T08:00:00.000'),
+      ),
+      find.byKey(
+        const ValueKey('general-timed-occurrence-evt2-2026-06-17T08:00:00.000'),
+      ),
+    ];
+    final rects = [for (final finder in cardFinders) tester.getRect(finder)]
+      ..sort((a, b) => a.left.compareTo(b.left));
+
+    expect(rects[1].width, closeTo(rects[0].width, 0.5));
+    expect(rects[1].left, greaterThanOrEqualTo(rects[0].right));
+    expect(
+      find.byKey(
+        const ValueKey(
+          'general-timed-more-occurrences-evt1-2026-06-17T08:00:00.000',
+        ),
+      ),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('week view collapses three crowded timed events into more card', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'evt1',
+          calendarId: 'cal1',
+          title: 'Alpha',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T09:00:00.000',
+        ),
+        GeneralEvent(
+          id: 'evt2',
+          calendarId: 'cal1',
+          title: 'Beta',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T09:00:00.000',
+        ),
+        GeneralEvent(
+          id: 'evt3',
+          calendarId: 'cal1',
+          title: 'Gamma',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T09:00:00.000',
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    const firstCardKey = ValueKey(
+      'general-timed-occurrence-evt1-2026-06-17T08:00:00.000',
+    );
+    const secondCardKey = ValueKey(
+      'general-timed-occurrence-evt2-2026-06-17T08:00:00.000',
+    );
+    const thirdCardKey = ValueKey(
+      'general-timed-occurrence-evt3-2026-06-17T08:00:00.000',
+    );
+    const moreCardKey = ValueKey(
+      'general-timed-more-occurrences-evt1-2026-06-17T08:00:00.000',
+    );
+
+    expect(find.byKey(firstCardKey), findsOneWidget);
+    expect(find.byKey(secondCardKey), findsNothing);
+    expect(find.byKey(thirdCardKey), findsNothing);
+    expect(find.byKey(moreCardKey), findsOneWidget);
+    expect(find.text('+2'), findsOneWidget);
+
+    await tester.tap(find.byKey(moreCardKey));
+    await tester.pumpAndSettle();
+
+    expect(find.text('17, 3 events'), findsOneWidget);
+    expect(find.text('Alpha'), findsWidgets);
+    expect(find.text('Beta'), findsOneWidget);
+    expect(find.text('Gamma'), findsOneWidget);
+
+    await tester.tap(find.text('Gamma'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('17, 3 events'), findsNothing);
+    expect(find.text('Gamma'), findsOneWidget);
+    expect(find.text('Edit event'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('week view collapses partial events in a crowded time group', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'evt1',
+          calendarId: 'cal1',
+          title: 'Long',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T10:00:00.000',
+        ),
+        GeneralEvent(
+          id: 'evt2',
+          calendarId: 'cal1',
+          title: 'Short A',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T09:00:00.000',
+        ),
+        GeneralEvent(
+          id: 'evt3',
+          calendarId: 'cal1',
+          title: 'Short B',
+          startDateTimeIso: '2026-06-17T08:30:00.000',
+          endDateTimeIso: '2026-06-17T09:30:00.000',
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    const primaryCardKey = ValueKey(
+      'general-timed-occurrence-evt1-2026-06-17T08:00:00.000',
+    );
+    const shortACardKey = ValueKey(
+      'general-timed-occurrence-evt2-2026-06-17T08:00:00.000',
+    );
+    const shortBCardKey = ValueKey(
+      'general-timed-occurrence-evt3-2026-06-17T08:30:00.000',
+    );
+    const moreCardKey = ValueKey(
+      'general-timed-more-occurrences-evt1-2026-06-17T08:00:00.000',
+    );
+
+    expect(find.byKey(primaryCardKey), findsOneWidget);
+    expect(find.byKey(shortACardKey), findsNothing);
+    expect(find.byKey(shortBCardKey), findsNothing);
+    expect(find.byKey(moreCardKey), findsOneWidget);
+    expect(find.text('+2'), findsOneWidget);
+
+    final primaryRect = tester.getRect(find.byKey(primaryCardKey));
+    final moreRect = tester.getRect(find.byKey(moreCardKey));
+    expect(moreRect.width, closeTo(primaryRect.width, 0.5));
+    expect(moreRect.left, greaterThanOrEqualTo(primaryRect.right));
+
+    await tester.tap(find.byKey(moreCardKey));
+    await tester.pumpAndSettle();
+
+    expect(find.text('17, 3 events'), findsOneWidget);
+    expect(find.text('Long'), findsWidgets);
+    expect(find.text('Short A'), findsOneWidget);
+    expect(find.text('Short B'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('week view empty slots open editor only on long press', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final slot = find.byKey(
+      const ValueKey('general-timeline-empty-slot-2026-06-17T00:00:00.000'),
+    );
+    final slotRect = tester.getRect(slot);
+    final slotPoint = Offset(slotRect.center.dx, slotRect.top + 160);
+
+    await tester.tapAt(slotPoint);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GeneralEventEditorSheet), findsNothing);
+
+    await tester.longPressAt(slotPoint);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+  });
+
   testWidgets('general schedule home hides search and filter controls', (
     tester,
   ) async {
@@ -559,6 +887,51 @@ void main() {
     expect(provider.selectedGeneralDate.year, 2026);
     expect(provider.selectedGeneralDate.month, 6);
     expect(provider.selectedGeneralDate.day, 18);
+  });
+
+  testWidgets('day view empty slots open editor only on long press', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewDay,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final slot = find.byKey(
+      const ValueKey('general-timeline-empty-slot-2026-06-16T00:00:00.000'),
+    );
+    final slotRect = tester.getRect(slot);
+    final slotPoint = Offset(slotRect.center.dx, slotRect.top + 160);
+
+    await tester.tapAt(slotPoint);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GeneralEventEditorSheet), findsNothing);
+
+    await tester.longPressAt(slotPoint);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
   });
 
   testWidgets('day view swipes the week strip to change week', (tester) async {
@@ -1304,6 +1677,60 @@ void main() {
 
     expect(festival.style?.color, festivalColor);
     expect(solarTerm.style?.color, solarTermColor);
+  });
+
+  testWidgets('month view lunar labels use custom colorful text colors', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(496, 1052));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const lunarColor = Color(0xFF223344);
+    const festivalColor = Color(0xFFAA5500);
+    const solarTermColor = Color(0xFF336600);
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'zh').copyWith(
+        activeMode: AppMode.general,
+        themeColorMode: themeColorModeColorful,
+        colorfulUiColorValues: const {
+          colorfulGeneralLunarTextColorKey: 0xFF223344,
+          colorfulGeneralFestivalTextColorKey: 0xFFAA5500,
+          colorfulGeneralSolarTermTextColorKey: 0xFF336600,
+        },
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewMonth,
+        ),
+      ),
+    );
+    final theme = buildAppTheme(
+      seedColor: Color(provider.themeSeedColorValue),
+      brightness: Brightness.light,
+      themeColorMode: provider.themeColorMode,
+      colorfulUiColorValues: provider.colorfulUiColorValues,
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider, theme: theme);
+
+    final festival = tester.widget<Text>(find.text('端午节'));
+    final solarTerm = tester.widget<Text>(find.text('芒种'));
+
+    expect(festival.style?.color, festivalColor);
+    expect(solarTerm.style?.color, solarTermColor);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Text && widget.style?.color == lunarColor,
+        description: 'Text using the custom lunar date color',
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('month view shows lunar labels for traditional Chinese locale', (

@@ -5,14 +5,14 @@ class _ColorfulThemeSection extends StatelessWidget {
     super.key,
     required this.provider,
     required this.onPickUiColor,
-    required this.onPickGeneralCalendarSlotColor,
+    required this.onPickGeneralMonthTextColor,
     required this.onPickCourseColor,
     required this.onPickCalendarColor,
   });
 
   final TimetableProvider provider;
   final ValueChanged<String> onPickUiColor;
-  final ValueChanged<String> onPickGeneralCalendarSlotColor;
+  final ValueChanged<String> onPickGeneralMonthTextColor;
   final ValueChanged<String> onPickCourseColor;
   final ValueChanged<GeneralSchedule> onPickCalendarColor;
 
@@ -73,31 +73,6 @@ class _ColorfulThemeSection extends StatelessWidget {
           ),
         ] else ...[
           _ColorSettingsGroup(
-            title: _generalCalendarColorGroupTitle(context),
-            children: [
-              for (
-                var index = 0;
-                index < colorfulGeneralCalendarColorKeys.length;
-                index += 1
-              )
-                _ColorValueTile(
-                  key: ValueKey(
-                    'theme-general-calendar-slot-'
-                    '${colorfulGeneralCalendarColorKeys[index]}',
-                  ),
-                  title: _generalCalendarColorLabel(context, index),
-                  colorValue: _effectiveGeneralCalendarSlotColorValue(
-                    context,
-                    colorfulGeneralCalendarColorKeys[index],
-                  ),
-                  onTap: () => onPickGeneralCalendarSlotColor(
-                    colorfulGeneralCalendarColorKeys[index],
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _ColorSettingsGroup(
             title: AppLocalizations.of(context).calendars,
             children: [
               for (final schedule in calendars)
@@ -109,6 +84,23 @@ class _ColorfulThemeSection extends StatelessWidget {
                     schedule,
                   ).toARGB32(),
                   onTap: () => onPickCalendarColor(schedule),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _ColorSettingsGroup(
+            title: _generalMonthTextColorGroupTitle(context),
+            children: [
+              for (final key in colorfulGeneralMonthTextColorKeys)
+                _ColorValueTile(
+                  key: ValueKey('theme-general-month-text-color-$key'),
+                  title: _generalMonthTextColorLabel(context, key),
+                  colorValue: _effectiveGeneralMonthTextColorValue(
+                    context,
+                    provider,
+                    key,
+                  ),
+                  onTap: () => onPickGeneralMonthTextColor(key),
                 ),
             ],
           ),

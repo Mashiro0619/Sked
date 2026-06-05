@@ -1404,7 +1404,7 @@ class _LunarDateLabel extends StatelessWidget {
     if (festivals.isNotEmpty) {
       return _LunarText(
         text: festivals.first,
-        color: colorScheme.primary,
+        color: effectiveGeneralFestivalTextColor(context, colorScheme.primary),
         fontSize: fontSize,
       );
     }
@@ -1412,13 +1412,19 @@ class _LunarDateLabel extends StatelessWidget {
     if (jieQi.isNotEmpty) {
       return _LunarText(
         text: jieQi,
-        color: colorScheme.tertiary,
+        color: effectiveGeneralSolarTermTextColor(
+          context,
+          colorScheme.tertiary,
+        ),
         fontSize: fontSize,
       );
     }
     return _LunarText(
       text: lunar.getDayInChinese(),
-      color: overrideColor ?? colorScheme.onSurfaceVariant,
+      color: effectiveGeneralLunarTextColor(
+        context,
+        overrideColor ?? colorScheme.onSurfaceVariant,
+      ),
       fontSize: fontSize,
     );
   }
