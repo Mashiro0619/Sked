@@ -86,6 +86,108 @@ String? _nullableStringValue(Object? value) {
   return value is String ? value : null;
 }
 
+class _ThemeSettingsSnapshot {
+  const _ThemeSettingsSnapshot({
+    required this.themeMode,
+    required this.themeColorMode,
+    required this.themeSeedColorValue,
+    required this.colorfulUiColorValues,
+  });
+
+  final String themeMode;
+  final String themeColorMode;
+  final int themeSeedColorValue;
+  final Map<String, int> colorfulUiColorValues;
+
+  _ThemeSettingsSnapshot copyWith({
+    String? themeMode,
+    String? themeColorMode,
+    int? themeSeedColorValue,
+    Map<String, int>? colorfulUiColorValues,
+  }) {
+    return _ThemeSettingsSnapshot(
+      themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
+      themeColorMode: normalizeThemeColorMode(
+        themeColorMode ?? this.themeColorMode,
+      ),
+      themeSeedColorValue: themeSeedColorValue ?? this.themeSeedColorValue,
+      colorfulUiColorValues:
+          colorfulUiColorValues ?? this.colorfulUiColorValues,
+    );
+  }
+}
+
+const _modeThemeFieldKeys = {
+  'themeMode',
+  'themeColorMode',
+  'themeSeedColorValue',
+  'colorfulUiColorValues',
+};
+
+bool _hasModeThemeFields(Map<String, dynamic> json) {
+  return _modeThemeFieldKeys.any(json.containsKey);
+}
+
+_ThemeSettingsSnapshot _decodeLegacyThemeSettings(Map<String, dynamic> json) {
+  return _ThemeSettingsSnapshot(
+    themeMode: normalizeThemeMode(
+      _stringValue(json['themeMode'], defaultThemeMode),
+    ),
+    themeColorMode: normalizeThemeColorMode(
+      _stringValue(json['themeColorMode'], defaultThemeColorMode),
+    ),
+    themeSeedColorValue:
+        _tryDecodeInt(json['themeSeedColorValue']) ??
+        defaultThemeSeedColorValue,
+    colorfulUiColorValues: decodeColorValueMap(json['colorfulUiColorValues']),
+  );
+}
+
+StudentModeData _applyThemeSettingsToStudentMode(
+  StudentModeData data,
+  _ThemeSettingsSnapshot theme,
+) {
+  return data.copyWith(
+    themeMode: theme.themeMode,
+    themeColorMode: theme.themeColorMode,
+    themeSeedColorValue: theme.themeSeedColorValue,
+    colorfulUiColorValues: theme.colorfulUiColorValues,
+  );
+}
+
+GeneralScheduleData _applyThemeSettingsToGeneralMode(
+  GeneralScheduleData data,
+  _ThemeSettingsSnapshot theme,
+) {
+  return data.copyWith(
+    themeMode: theme.themeMode,
+    themeColorMode: theme.themeColorMode,
+    themeSeedColorValue: theme.themeSeedColorValue,
+    colorfulUiColorValues: theme.colorfulUiColorValues,
+  );
+}
+
+_ThemeSettingsSnapshot _themeSettingsForMode(
+  AppMode mode,
+  StudentModeData studentMode,
+  GeneralScheduleData generalMode,
+) {
+  return switch (mode) {
+    AppMode.general => _ThemeSettingsSnapshot(
+      themeMode: generalMode.themeMode,
+      themeColorMode: generalMode.themeColorMode,
+      themeSeedColorValue: generalMode.themeSeedColorValue,
+      colorfulUiColorValues: generalMode.colorfulUiColorValues,
+    ),
+    AppMode.student => _ThemeSettingsSnapshot(
+      themeMode: studentMode.themeMode,
+      themeColorMode: studentMode.themeColorMode,
+      themeSeedColorValue: studentMode.themeSeedColorValue,
+      colorfulUiColorValues: studentMode.colorfulUiColorValues,
+    ),
+  };
+}
+
 List<dynamic> _listValue(Object? value) {
   return value is List ? value : const <dynamic>[];
 }
@@ -200,15 +302,69 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
 }
 
 class AppData {
-  const AppData({
+  factory AppData({
+    required AppMode activeMode,
+    required StudentModeData studentMode,
+    required GeneralScheduleData generalMode,
+    String localeCode = defaultLocaleCode,
+    String? themeMode,
+    String? themeColorMode,
+    int? themeSeedColorValue,
+    Map<String, int>? colorfulUiColorValues,
+    String? privacyPolicyAcceptedVersion,
+    String? privacyPolicyAcceptedAtIso,
+    String? ignoredUpdateVersion,
+    String? availableUpdateVersion,
+  }) {
+    var nextStudentMode = studentMode;
+    var nextGeneralMode = generalMode;
+    final hasThemeUpdate =
+        themeMode != null ||
+        themeColorMode != null ||
+        themeSeedColorValue != null ||
+        colorfulUiColorValues != null;
+    if (hasThemeUpdate) {
+      final currentTheme = _themeSettingsForMode(
+        activeMode,
+        nextStudentMode,
+        nextGeneralMode,
+      );
+      final updatedTheme = currentTheme.copyWith(
+        themeMode: themeMode,
+        themeColorMode: themeColorMode,
+        themeSeedColorValue: themeSeedColorValue,
+        colorfulUiColorValues: colorfulUiColorValues,
+      );
+      switch (activeMode) {
+        case AppMode.general:
+          nextGeneralMode = _applyThemeSettingsToGeneralMode(
+            nextGeneralMode,
+            updatedTheme,
+          );
+        case AppMode.student:
+          nextStudentMode = _applyThemeSettingsToStudentMode(
+            nextStudentMode,
+            updatedTheme,
+          );
+      }
+    }
+    return AppData._(
+      activeMode: activeMode,
+      studentMode: nextStudentMode,
+      generalMode: nextGeneralMode,
+      localeCode: localeCode,
+      privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
+      privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
+      ignoredUpdateVersion: ignoredUpdateVersion,
+      availableUpdateVersion: availableUpdateVersion,
+    );
+  }
+
+  const AppData._({
     required this.activeMode,
     required this.studentMode,
     required this.generalMode,
     this.localeCode = defaultLocaleCode,
-    this.themeMode = defaultThemeMode,
-    this.themeColorMode = defaultThemeColorMode,
-    this.themeSeedColorValue = defaultThemeSeedColorValue,
-    this.colorfulUiColorValues = const {},
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
     this.ignoredUpdateVersion,
@@ -219,14 +375,19 @@ class AppData {
   final StudentModeData studentMode;
   final GeneralScheduleData generalMode;
   final String localeCode;
-  final String themeMode;
-  final String themeColorMode;
-  final int themeSeedColorValue;
-  final Map<String, int> colorfulUiColorValues;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
   final String? ignoredUpdateVersion;
   final String? availableUpdateVersion;
+
+  _ThemeSettingsSnapshot get _activeThemeSettings =>
+      _themeSettingsForMode(activeMode, studentMode, generalMode);
+
+  String get themeMode => _activeThemeSettings.themeMode;
+  String get themeColorMode => _activeThemeSettings.themeColorMode;
+  int get themeSeedColorValue => _activeThemeSettings.themeSeedColorValue;
+  Map<String, int> get colorfulUiColorValues =>
+      _activeThemeSettings.colorfulUiColorValues;
 
   Map<String, dynamic> toJson() => {
     'schemaVersion': appDataCurrentSchemaVersion,
@@ -234,10 +395,6 @@ class AppData {
     'studentMode': studentMode.toJson(),
     'generalMode': generalMode.toJson(),
     'localeCode': normalizeLocaleCode(localeCode),
-    'themeMode': normalizeThemeMode(themeMode),
-    'themeColorMode': normalizeThemeColorMode(themeColorMode),
-    'themeSeedColorValue': themeSeedColorValue,
-    'colorfulUiColorValues': colorfulUiColorValues,
     if (privacyPolicyAcceptedVersion != null)
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
@@ -263,49 +420,52 @@ class AppData {
         migrated.containsKey('timetables') &&
         !migrated.containsKey('studentMode');
 
-    final StudentModeData studentMode;
-    final GeneralScheduleData generalMode;
+    final legacyThemeSettings = _decodeLegacyThemeSettings(migrated);
+
+    StudentModeData studentMode;
+    GeneralScheduleData generalMode;
     final AppMode activeMode;
+    Map<String, dynamic> studentModeJson = const {};
+    Map<String, dynamic> generalModeJson = const {};
 
     if (isLegacy) {
       // Migrate legacy flat JSON to nested StudentModeData
+      studentModeJson = migrated;
       studentMode = StudentModeData.fromJson(migrated, localeCode: localeCode);
+      generalModeJson = const {};
       generalMode = GeneralScheduleData.fromJson(const {});
       activeMode = studentMode.timetables.isNotEmpty
           ? AppMode.student
           : AppMode.general;
     } else {
+      studentModeJson = _asStringKeyedMap(migrated['studentMode']) ?? const {};
       studentMode = migrated.containsKey('studentMode')
-          ? StudentModeData.fromJson(
-              _asStringKeyedMap(migrated['studentMode']) ?? const {},
-              localeCode: localeCode,
-            )
+          ? StudentModeData.fromJson(studentModeJson, localeCode: localeCode)
           : StudentModeData.fromJson({}, localeCode: localeCode);
+      generalModeJson = _asStringKeyedMap(migrated['generalMode']) ?? const {};
       generalMode = migrated.containsKey('generalMode')
-          ? GeneralScheduleData.fromJson(
-              _asStringKeyedMap(migrated['generalMode']) ?? const {},
-            )
+          ? GeneralScheduleData.fromJson(generalModeJson)
           : _buildDefaultGeneralMode();
       activeMode = parseAppMode(_nullableStringValue(migrated['activeMode']));
     }
 
+    if (!_hasModeThemeFields(studentModeJson)) {
+      studentMode = _applyThemeSettingsToStudentMode(
+        studentMode,
+        legacyThemeSettings,
+      );
+    }
+    if (!_hasModeThemeFields(generalModeJson)) {
+      generalMode = _applyThemeSettingsToGeneralMode(
+        generalMode,
+        legacyThemeSettings,
+      );
+    }
     return AppData(
       activeMode: activeMode,
       studentMode: studentMode,
       generalMode: generalMode,
       localeCode: localeCode,
-      themeMode: normalizeThemeMode(
-        _stringValue(migrated['themeMode'], defaultThemeMode),
-      ),
-      themeColorMode: normalizeThemeColorMode(
-        _stringValue(migrated['themeColorMode'], defaultThemeColorMode),
-      ),
-      themeSeedColorValue:
-          _tryDecodeInt(migrated['themeSeedColorValue']) ??
-          defaultThemeSeedColorValue,
-      colorfulUiColorValues: decodeColorValueMap(
-        migrated['colorfulUiColorValues'],
-      ),
       privacyPolicyAcceptedVersion: _nullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
@@ -335,18 +495,44 @@ class AppData {
     Object? ignoredUpdateVersion = _keepNullable,
     Object? availableUpdateVersion = _keepNullable,
   }) {
+    final nextActiveMode = activeMode ?? this.activeMode;
+    var nextStudentMode = studentMode ?? this.studentMode;
+    var nextGeneralMode = generalMode ?? this.generalMode;
+    final hasThemeUpdate =
+        themeMode != null ||
+        themeColorMode != null ||
+        themeSeedColorValue != null ||
+        colorfulUiColorValues != null;
+    if (hasThemeUpdate) {
+      final currentTheme = _themeSettingsForMode(
+        nextActiveMode,
+        nextStudentMode,
+        nextGeneralMode,
+      );
+      final updatedTheme = currentTheme.copyWith(
+        themeMode: themeMode,
+        themeColorMode: themeColorMode,
+        themeSeedColorValue: themeSeedColorValue,
+        colorfulUiColorValues: colorfulUiColorValues,
+      );
+      switch (nextActiveMode) {
+        case AppMode.general:
+          nextGeneralMode = _applyThemeSettingsToGeneralMode(
+            nextGeneralMode,
+            updatedTheme,
+          );
+        case AppMode.student:
+          nextStudentMode = _applyThemeSettingsToStudentMode(
+            nextStudentMode,
+            updatedTheme,
+          );
+      }
+    }
     return AppData(
-      activeMode: activeMode ?? this.activeMode,
-      studentMode: studentMode ?? this.studentMode,
-      generalMode: generalMode ?? this.generalMode,
+      activeMode: nextActiveMode,
+      studentMode: nextStudentMode,
+      generalMode: nextGeneralMode,
       localeCode: normalizeLocaleCode(localeCode ?? this.localeCode),
-      themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
-      themeColorMode: normalizeThemeColorMode(
-        themeColorMode ?? this.themeColorMode,
-      ),
-      themeSeedColorValue: themeSeedColorValue ?? this.themeSeedColorValue,
-      colorfulUiColorValues:
-          colorfulUiColorValues ?? this.colorfulUiColorValues,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
           ? this.privacyPolicyAcceptedVersion
@@ -445,8 +631,26 @@ void _ensureSupportedEnvelope(
   }
 }
 
+const _knownImportExportSchemas = {
+  appDataSchema,
+  timetableDataSchema,
+  periodTimesSchema,
+  generalScheduleDataSchema,
+};
+
+String _importExportSchemaSuffix(String schema) {
+  final normalized = schema.trim();
+  for (final knownSchema in _knownImportExportSchemas) {
+    if (normalized == knownSchema || normalized.endsWith('-$knownSchema')) {
+      return knownSchema;
+    }
+  }
+  return normalized;
+}
+
 bool isImportExportSchema(String schema, String expectedSchema) =>
-    schema == expectedSchema;
+    _importExportSchemaSuffix(schema) ==
+    _importExportSchemaSuffix(expectedSchema);
 
 String encodeAppDataEnvelope(AppData data) {
   return ImportExportEnvelope(

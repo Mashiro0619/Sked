@@ -167,12 +167,20 @@ class TimetableProvider extends _TimetableProviderBase
   bool get showTimetableGridLines =>
       _appData.studentMode.showTimetableGridLines;
   String get localeCode => _appData.localeCode;
-  String get themeMode => _appData.themeMode;
-  String get themeColorMode => _appData.themeColorMode;
-  int get themeSeedColorValue => _appData.themeSeedColorValue;
+  String get themeMode => isGeneralMode
+      ? _appData.generalMode.themeMode
+      : _appData.studentMode.themeMode;
+  String get themeColorMode => isGeneralMode
+      ? _appData.generalMode.themeColorMode
+      : _appData.studentMode.themeColorMode;
+  int get themeSeedColorValue => isGeneralMode
+      ? _appData.generalMode.themeSeedColorValue
+      : _appData.studentMode.themeSeedColorValue;
   String get colorfulCourseTextColorMode =>
       _appData.studentMode.colorfulCourseTextColorMode;
-  Map<String, int> get colorfulUiColorValues => _appData.colorfulUiColorValues;
+  Map<String, int> get colorfulUiColorValues => isGeneralMode
+      ? _appData.generalMode.colorfulUiColorValues
+      : _appData.studentMode.colorfulUiColorValues;
   Map<String, int> get courseNameColorValues =>
       _appData.studentMode.courseNameColorValues;
   SchoolImportParserSettings get schoolImportParserSettings =>

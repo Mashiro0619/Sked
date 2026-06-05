@@ -1,3 +1,4 @@
+import '../utils/constants.dart';
 import '../utils/time_utils.dart';
 import 'general_event.dart';
 import 'general_event_occurrence.dart';
@@ -37,6 +38,16 @@ String? _nullableStringValue(Object? value) {
 
 int? _intValue(Object? value) {
   return value is num ? value.toInt() : null;
+}
+
+int? _tryDecodeInt(Object? value) {
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value.trim());
+  }
+  return null;
 }
 
 int? _schemaVersionValue(Object? value) {
@@ -134,6 +145,10 @@ class GeneralScheduleData {
     this.dayEndHour = 23,
     this.timeGridMinutes = 60,
     this.closeEventPopupOnOutsideTap = true,
+    this.themeMode = defaultThemeMode,
+    this.themeColorMode = defaultThemeColorMode,
+    this.themeSeedColorValue = defaultThemeSeedColorValue,
+    this.colorfulUiColorValues = const {},
     this.reminderAcknowledgements = const [],
   });
 
@@ -147,6 +162,10 @@ class GeneralScheduleData {
   final int dayEndHour;
   final int timeGridMinutes;
   final bool closeEventPopupOnOutsideTap;
+  final String themeMode;
+  final String themeColorMode;
+  final int themeSeedColorValue;
+  final Map<String, int> colorfulUiColorValues;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
 
   List<GeneralSchedule> get visibleSchedules =>
@@ -186,6 +205,10 @@ class GeneralScheduleData {
     'dayEndHour': dayEndHour,
     'timeGridMinutes': timeGridMinutes,
     'closeEventPopupOnOutsideTap': closeEventPopupOnOutsideTap,
+    'themeMode': normalizeThemeMode(themeMode),
+    'themeColorMode': normalizeThemeColorMode(themeColorMode),
+    'themeSeedColorValue': themeSeedColorValue,
+    'colorfulUiColorValues': colorfulUiColorValues,
     'reminderAcknowledgements': reminderAcknowledgements
         .map((item) => item.toJson())
         .toList(),
@@ -244,6 +267,16 @@ class GeneralScheduleData {
       ),
       closeEventPopupOnOutsideTap:
           _boolValue(json['closeEventPopupOnOutsideTap']) ?? true,
+      themeMode: normalizeThemeMode(
+        _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
+      ),
+      themeColorMode: normalizeThemeColorMode(
+        _nullableStringValue(json['themeColorMode']) ?? defaultThemeColorMode,
+      ),
+      themeSeedColorValue:
+          _tryDecodeInt(json['themeSeedColorValue']) ??
+          defaultThemeSeedColorValue,
+      colorfulUiColorValues: decodeColorValueMap(json['colorfulUiColorValues']),
       reminderAcknowledgements: _listValue(json['reminderAcknowledgements'])
           .map(_asStringKeyedMap)
           .whereType<Map<String, dynamic>>()
@@ -272,6 +305,10 @@ class GeneralScheduleData {
     int? dayEndHour,
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
+    String? themeMode,
+    String? themeColorMode,
+    int? themeSeedColorValue,
+    Map<String, int>? colorfulUiColorValues,
     List<GeneralReminderAcknowledgement>? reminderAcknowledgements,
   }) {
     return GeneralScheduleData(
@@ -288,6 +325,13 @@ class GeneralScheduleData {
       timeGridMinutes: timeGridMinutes ?? this.timeGridMinutes,
       closeEventPopupOnOutsideTap:
           closeEventPopupOnOutsideTap ?? this.closeEventPopupOnOutsideTap,
+      themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
+      themeColorMode: normalizeThemeColorMode(
+        themeColorMode ?? this.themeColorMode,
+      ),
+      themeSeedColorValue: themeSeedColorValue ?? this.themeSeedColorValue,
+      colorfulUiColorValues:
+          colorfulUiColorValues ?? this.colorfulUiColorValues,
       reminderAcknowledgements:
           reminderAcknowledgements ?? this.reminderAcknowledgements,
     ).normalized();
@@ -385,6 +429,10 @@ class GeneralScheduleData {
       dayEndHour: end,
       timeGridMinutes: _normalizeGridMinutes(timeGridMinutes),
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
+      themeMode: normalizeThemeMode(themeMode),
+      themeColorMode: normalizeThemeColorMode(themeColorMode),
+      themeSeedColorValue: themeSeedColorValue,
+      colorfulUiColorValues: colorfulUiColorValues,
       reminderAcknowledgements: acknowledgementsByKey.values.toList()
         ..sort((a, b) => a.occurrenceKey.compareTo(b.occurrenceKey)),
     );

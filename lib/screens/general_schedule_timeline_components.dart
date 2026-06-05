@@ -287,7 +287,7 @@ class _OccurrenceCard extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: narrow ? 3 : 7,
+              horizontal: narrow ? 2 : 7,
               vertical: dense ? 4 : 6,
             ),
             child: LayoutBuilder(
@@ -418,7 +418,7 @@ class _MoreOccurrencesCard extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: narrow ? 3 : 7,
+              horizontal: narrow ? 2 : 7,
               vertical: dense ? 4 : 6,
             ),
             child: Center(
@@ -465,7 +465,7 @@ class _TimelineOccurrenceTitleLayout {
     final fontSize = style?.fontSize ?? 12.0;
     final lineHeight = fontSize * (style?.height ?? 1.15);
     final possibleLines = math.max(1, (safeHeight / lineHeight).floor());
-    final cappedPossibleLines = possibleLines.clamp(1, narrow ? 4 : 5).toInt();
+    final cappedPossibleLines = possibleLines.clamp(1, narrow ? 10 : 5).toInt();
 
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),

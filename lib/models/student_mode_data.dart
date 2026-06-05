@@ -163,6 +163,10 @@ class StudentModeData {
     this.showPastEndedCourses = false,
     this.showFutureCourses = true,
     this.showTimetableGridLines = true,
+    this.themeMode = defaultThemeMode,
+    this.themeColorMode = defaultThemeColorMode,
+    this.themeSeedColorValue = defaultThemeSeedColorValue,
+    this.colorfulUiColorValues = const {},
     this.colorfulCourseTextColorMode = defaultColorfulCourseTextColorMode,
     this.courseNameColorValues = const {},
     this.schoolImportParserSettings = const SchoolImportParserSettings(),
@@ -184,6 +188,10 @@ class StudentModeData {
   final bool showPastEndedCourses;
   final bool showFutureCourses;
   final bool showTimetableGridLines;
+  final String themeMode;
+  final String themeColorMode;
+  final int themeSeedColorValue;
+  final Map<String, int> colorfulUiColorValues;
   final String colorfulCourseTextColorMode;
   final Map<String, int> courseNameColorValues;
   final SchoolImportParserSettings schoolImportParserSettings;
@@ -204,6 +212,10 @@ class StudentModeData {
     'showPastEndedCourses': showPastEndedCourses,
     'showFutureCourses': showFutureCourses,
     'showTimetableGridLines': showTimetableGridLines,
+    'themeMode': normalizeThemeMode(themeMode),
+    'themeColorMode': normalizeThemeColorMode(themeColorMode),
+    'themeSeedColorValue': themeSeedColorValue,
+    'colorfulUiColorValues': colorfulUiColorValues,
     'colorfulCourseTextColorMode': colorfulCourseTextColorMode,
     'courseNameColorValues': courseNameColorValues,
     'schoolImportParserSettings': schoolImportParserSettings.toJson(),
@@ -299,6 +311,16 @@ class StudentModeData {
       showFutureCourses: _tryDecodeBool(json['showFutureCourses']) ?? true,
       showTimetableGridLines:
           _tryDecodeBool(json['showTimetableGridLines']) ?? true,
+      themeMode: normalizeThemeMode(
+        _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
+      ),
+      themeColorMode: normalizeThemeColorMode(
+        _nullableStringValue(json['themeColorMode']) ?? defaultThemeColorMode,
+      ),
+      themeSeedColorValue:
+          _tryDecodeInt(json['themeSeedColorValue']) ??
+          defaultThemeSeedColorValue,
+      colorfulUiColorValues: decodeColorValueMap(json['colorfulUiColorValues']),
       colorfulCourseTextColorMode: normalizeColorfulCourseTextColorMode(
         _nullableStringValue(json['colorfulCourseTextColorMode']) ??
             defaultColorfulCourseTextColorMode,
@@ -339,6 +361,10 @@ class StudentModeData {
     bool? showPastEndedCourses,
     bool? showFutureCourses,
     bool? showTimetableGridLines,
+    String? themeMode,
+    String? themeColorMode,
+    int? themeSeedColorValue,
+    Map<String, int>? colorfulUiColorValues,
     String? colorfulCourseTextColorMode,
     Map<String, int>? courseNameColorValues,
     SchoolImportParserSettings? schoolImportParserSettings,
@@ -363,6 +389,13 @@ class StudentModeData {
       showFutureCourses: showFutureCourses ?? this.showFutureCourses,
       showTimetableGridLines:
           showTimetableGridLines ?? this.showTimetableGridLines,
+      themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
+      themeColorMode: normalizeThemeColorMode(
+        themeColorMode ?? this.themeColorMode,
+      ),
+      themeSeedColorValue: themeSeedColorValue ?? this.themeSeedColorValue,
+      colorfulUiColorValues:
+          colorfulUiColorValues ?? this.colorfulUiColorValues,
       colorfulCourseTextColorMode: normalizeColorfulCourseTextColorMode(
         colorfulCourseTextColorMode ?? this.colorfulCourseTextColorMode,
       ),

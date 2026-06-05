@@ -1042,6 +1042,148 @@ void main() {
       expect(legacy.colorfulUiColorValues, isEmpty);
       expect(legacy.studentMode.courseNameColorValues, isEmpty);
       expect(legacy.activeMode, AppMode.general);
+
+      final legacyThemed = AppData.decode(
+        jsonEncode({
+          'activeMode': 'student',
+          'studentMode': const {
+            'activeTimetableId': '',
+            'timetables': [],
+            'periodTimeSets': [],
+          },
+          'generalMode': const {
+            'activeScheduleId': 'life',
+            'schedules': [
+              {'id': 'life', 'name': 'Life', 'events': []},
+            ],
+          },
+          'themeMode': 'dark',
+          'themeColorMode': themeColorModeColorful,
+          'themeSeedColorValue': 0xFF00897B,
+          'colorfulUiColorValues': const {colorfulUiPrimaryKey: 0xFF112233},
+        }),
+      );
+
+      expect(legacyThemed.studentMode.themeMode, 'dark');
+      expect(legacyThemed.generalMode.themeMode, 'dark');
+      expect(legacyThemed.studentMode.themeColorMode, themeColorModeColorful);
+      expect(legacyThemed.generalMode.themeColorMode, themeColorModeColorful);
+      expect(legacyThemed.studentMode.themeSeedColorValue, 0xFF00897B);
+      expect(legacyThemed.generalMode.themeSeedColorValue, 0xFF00897B);
+      expect(
+        legacyThemed.studentMode.colorfulUiColorValues[colorfulUiPrimaryKey],
+        0xFF112233,
+      );
+      expect(
+        legacyThemed.generalMode.colorfulUiColorValues[colorfulUiPrimaryKey],
+        0xFF112233,
+      );
+      expect(legacyThemed.toJson().containsKey('themeColorMode'), isFalse);
+    });
+
+    test(
+      'theme settings stay independent between student and general modes',
+      () async {
+        final provider = TimetableProvider(
+          storage: MemoryTimetableStorage(
+            initialData: buildInitialAppData(buildDefaultPeriodTimes()),
+          ),
+        );
+        await provider.load();
+
+        await provider.updateThemeSeedColorValue(0xFF00897B);
+        await provider.updateColorfulUiColorValue(
+          colorfulUiPrimaryKey,
+          0xFF112233,
+        );
+
+        expect(provider.studentMode.themeSeedColorValue, 0xFF00897B);
+        expect(
+          provider.studentMode.colorfulUiColorValues[colorfulUiPrimaryKey],
+          0xFF112233,
+        );
+        expect(
+          provider.generalMode.themeSeedColorValue,
+          defaultThemeSeedColorValue,
+        );
+        expect(provider.generalMode.colorfulUiColorValues, isEmpty);
+
+        await provider.switchMode(AppMode.general);
+        expect(provider.themeSeedColorValue, defaultThemeSeedColorValue);
+        expect(provider.colorfulUiColorValues, isEmpty);
+
+        await provider.updateThemeColorMode(themeColorModeColorful);
+        await provider.updateThemeSeedColorValue(0xFF3949AB);
+        await provider.updateColorfulUiColorValue(
+          colorfulGeneralLunarTextColorKey,
+          0xFF445566,
+        );
+
+        expect(provider.generalMode.themeColorMode, themeColorModeColorful);
+        expect(provider.generalMode.themeSeedColorValue, 0xFF3949AB);
+        expect(
+          provider
+              .generalMode
+              .colorfulUiColorValues[colorfulGeneralLunarTextColorKey],
+          0xFF445566,
+        );
+        expect(provider.studentMode.themeColorMode, defaultThemeColorMode);
+        expect(provider.studentMode.themeSeedColorValue, 0xFF00897B);
+
+        await provider.switchMode(AppMode.student);
+        expect(provider.themeColorMode, defaultThemeColorMode);
+        expect(provider.themeSeedColorValue, 0xFF00897B);
+        expect(
+          provider.colorfulUiColorValues[colorfulUiPrimaryKey],
+          0xFF112233,
+        );
+        expect(
+          provider.colorfulUiColorValues[colorfulGeneralLunarTextColorKey],
+          isNull,
+        );
+      },
+    );
+
+    test('AppData constructor routes theme arguments to the active mode', () {
+      final base = buildInitialAppData(buildDefaultPeriodTimes());
+
+      final studentThemed = AppData(
+        activeMode: AppMode.student,
+        studentMode: base.studentMode,
+        generalMode: base.generalMode,
+        themeSeedColorValue: 0xFF00897B,
+        colorfulUiColorValues: const {colorfulUiPrimaryKey: 0xFF112233},
+      );
+
+      expect(studentThemed.themeSeedColorValue, 0xFF00897B);
+      expect(studentThemed.studentMode.themeSeedColorValue, 0xFF00897B);
+      expect(
+        studentThemed.studentMode.colorfulUiColorValues[colorfulUiPrimaryKey],
+        0xFF112233,
+      );
+      expect(
+        studentThemed.generalMode.themeSeedColorValue,
+        defaultThemeSeedColorValue,
+      );
+      expect(studentThemed.generalMode.colorfulUiColorValues, isEmpty);
+
+      final generalThemed = AppData(
+        activeMode: AppMode.general,
+        studentMode: base.studentMode,
+        generalMode: base.generalMode,
+        themeColorMode: themeColorModeColorful,
+        themeSeedColorValue: 0xFF3949AB,
+      );
+
+      expect(generalThemed.themeColorMode, themeColorModeColorful);
+      expect(generalThemed.themeSeedColorValue, 0xFF3949AB);
+      expect(generalThemed.generalMode.themeColorMode, themeColorModeColorful);
+      expect(generalThemed.generalMode.themeSeedColorValue, 0xFF3949AB);
+      expect(generalThemed.studentMode.themeColorMode, defaultThemeColorMode);
+      expect(
+        generalThemed.studentMode.themeSeedColorValue,
+        defaultThemeSeedColorValue,
+      );
     });
 
     test('描边设置字段可以正确编码解码并兼容旧数据默认值', () {
@@ -3855,6 +3997,12 @@ void main() {
       }) async {
         await tester.pumpWidget(
           MaterialApp(
+            theme: buildAppTheme(
+              seedColor: const Color(0xFF674FA3),
+              brightness: Brightness.light,
+              themeColorMode: themeColorMode,
+              colorfulUiColorValues: const {},
+            ),
             home: Scaffold(
               body: SizedBox(
                 width: 900,
@@ -3893,12 +4041,118 @@ void main() {
         courseNameColorValues: const {},
       );
       expect(find.text('色彩课程'), findsOneWidget);
+      final singleModeCourseCard = find.byType(Card);
+      expect(singleModeCourseCard, findsOneWidget);
+      final expectedSingleModeColor = Theme.of(
+        tester.element(singleModeCourseCard),
+      ).colorScheme.primaryContainer;
+      expect(
+        tester.widget<Card>(singleModeCourseCard).color,
+        expectedSingleModeColor,
+      );
 
       await pumpGrid(
         themeColorMode: themeColorModeColorful,
         courseNameColorValues: const {'色彩课程': 0xFFAA3344},
       );
       expect(find.text('色彩课程'), findsOneWidget);
+      final courseCard = find.byType(Card);
+      expect(courseCard, findsOneWidget);
+      expect(tester.widget<Card>(courseCard).color, const Color(0xFFAA3344));
+    });
+
+    testWidgets('TimetableGrid narrow course cards keep legacy text wrapping', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      const title = 'Advanced Writing Workshop Seminar';
+      const location = 'Building A Room 106';
+      const teacher = 'Mr. Smith';
+      final periodTimes = buildDefaultPeriodTimes().take(4).toList();
+      final timetable = TimetableData(
+        id: 'table_legacy_text_wrap',
+        config: TimetableConfig(
+          name: 'Narrow',
+          startDate: DateTime(2026, 2, 23),
+          totalWeeks: 18,
+          periodTimeSetId: 'set1',
+        ),
+        courses: [
+          CourseItem(
+            id: 'course_legacy_text_wrap',
+            name: title,
+            teacher: teacher,
+            location: location,
+            dayOfWeek: 1,
+            semesterWeeks: const [1],
+            periods: const [1],
+            startMinutes: periodTimes[0].startMinutes,
+            endMinutes: periodTimes[0].endMinutes,
+            timeRange: buildTimeRange(
+              periodTimes[0].startMinutes,
+              periodTimes[0].endMinutes,
+            ),
+            credit: 0,
+            remarks: '',
+            customFields: const {},
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 360,
+              height: 640,
+              child: TimetableGrid(
+                timetable: timetable,
+                periodTimes: periodTimes,
+                weekDateStart: DateTime(2026, 2, 23),
+                selectedWeek: 1,
+                realCurrentWeek: 1,
+                localeCode: 'en',
+                preserveGaps: true,
+                showPastEndedCourses: false,
+                showFutureCourses: true,
+                showGridLines: true,
+                themeColorMode: themeColorModeSingle,
+                courseNameColorValues: const {},
+                colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
+                liveCourseOutlineEnabled: true,
+                liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
+                onCourseTap: (_) {},
+                onEmptySlotTap: (_) {},
+                liveCourseOutlineColorValue: defaultLiveCourseOutlineColorValue,
+                liveCourseOutlineWidth: defaultLiveCourseOutlineWidth,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(location), findsOneWidget);
+      expect(find.text(teacher), findsOneWidget);
+
+      final titleText = tester.widget<Text>(find.text(title));
+      final locationText = tester.widget<Text>(find.text(location));
+      final teacherText = tester.widget<Text>(find.text(teacher));
+      expect(titleText.maxLines, isNull);
+      expect(locationText.maxLines, isNull);
+      expect(teacherText.maxLines, isNull);
+      expect(titleText.overflow, TextOverflow.visible);
+      expect(locationText.overflow, TextOverflow.visible);
+      expect(teacherText.overflow, TextOverflow.visible);
+      expect(titleText.softWrap, isTrue);
+      expect(locationText.softWrap, isTrue);
+      expect(teacherText.softWrap, isTrue);
     });
 
     testWidgets('TimetableGrid 会在全部描边时继续突出当前或下一节课程', (tester) async {

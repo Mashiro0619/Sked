@@ -348,10 +348,6 @@ bool _shouldShowFirstLaunchOnboarding(TimetableProvider provider) {
 
 bool _hasDefaultFirstLaunchData(TimetableProvider provider) {
   if (provider.activeMode != AppMode.student) return false;
-  if (provider.themeMode != defaultThemeMode) return false;
-  if (provider.themeColorMode != defaultThemeColorMode) return false;
-  if (provider.themeSeedColorValue != defaultThemeSeedColorValue) return false;
-  if (provider.colorfulUiColorValues.isNotEmpty) return false;
   if (provider.ignoredUpdateVersion != null ||
       provider.availableUpdateVersion != null) {
     return false;
@@ -369,7 +365,13 @@ bool _hasDefaultStudentData(StudentModeData data) {
       data.preserveTimetableGaps ||
       data.showPastEndedCourses ||
       !data.showFutureCourses ||
-      !data.showTimetableGridLines) {
+      !data.showTimetableGridLines ||
+      !_hasDefaultModeTheme(
+        themeMode: data.themeMode,
+        themeColorMode: data.themeColorMode,
+        themeSeedColorValue: data.themeSeedColorValue,
+        colorfulUiColorValues: data.colorfulUiColorValues,
+      )) {
     return false;
   }
   if (data.colorfulCourseTextColorMode != defaultColorfulCourseTextColorMode) {
@@ -463,10 +465,28 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
       data.dayEndHour != 23 ||
       data.timeGridMinutes != 60 ||
       !data.closeEventPopupOnOutsideTap ||
+      !_hasDefaultModeTheme(
+        themeMode: data.themeMode,
+        themeColorMode: data.themeColorMode,
+        themeSeedColorValue: data.themeSeedColorValue,
+        colorfulUiColorValues: data.colorfulUiColorValues,
+      ) ||
       data.reminderAcknowledgements.isNotEmpty) {
     return false;
   }
   return true;
+}
+
+bool _hasDefaultModeTheme({
+  required String themeMode,
+  required String themeColorMode,
+  required int themeSeedColorValue,
+  required Map<String, int> colorfulUiColorValues,
+}) {
+  return themeMode == defaultThemeMode &&
+      themeColorMode == defaultThemeColorMode &&
+      themeSeedColorValue == defaultThemeSeedColorValue &&
+      colorfulUiColorValues.isEmpty;
 }
 
 class _FirstLaunchOnboardingScreen extends StatelessWidget {

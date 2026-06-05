@@ -204,6 +204,18 @@ void main() {
       expect(decoded.schedules.single.id, 'home');
     });
 
+    test('uses unprefixed general schedule schema for new exports', () {
+      final exported = service.exportSelectedGeneralSchedulesJson(
+        data(),
+        const ['cal'],
+        localeCode: defaultLocaleCode,
+      );
+      final envelope = ImportExportEnvelope.decode(exported);
+
+      expect(envelope.schema, 'general-schedule-data');
+      expect(envelope.schema.startsWith('Sked-'), isFalse);
+    });
+
     test('throws when no selected calendar exists', () {
       expect(
         () => service.exportSelectedGeneralSchedulesJson(data(), const [
@@ -236,6 +248,20 @@ void main() {
         expect(decoded.schedules.single.id, 'valid');
       },
     );
+
+    test('decodes legacy prefixed general schedule schema', () {
+      final source = ImportExportEnvelope(
+        schema: 'Sked-general-schedule-data',
+        version: importExportVersion,
+        data: {
+          'schedules': [schedule(id: 'legacy', name: 'Legacy').toJson()],
+        },
+      ).encode();
+
+      final decoded = decodeGeneralScheduleDataEnvelope(source);
+
+      expect(decoded.schedules.single.id, 'legacy');
+    });
 
     test('rejects non-empty schedule arrays without valid entries', () {
       final source = ImportExportEnvelope(
@@ -674,6 +700,18 @@ END:VCALENDAR
       expect(decoded.timetables.map((item) => item.id), ['table2']);
       expect(decoded.periodTimeSets.map((item) => item.id), ['set2']);
     });
+
+    test('uses unprefixed timetable schema for new exports', () {
+      final source = studentData(timetables: [timetable(id: 'table1')]);
+
+      final exported = service.exportSelectedTimetablesJson(source, const [
+        'table1',
+      ], localeCode: defaultLocaleCode);
+      final envelope = ImportExportEnvelope.decode(exported);
+
+      expect(envelope.schema, 'timetable-data');
+      expect(envelope.schema.startsWith('Sked-'), isFalse);
+    });
   });
 
   group('student JSON import', () {
@@ -696,6 +734,22 @@ END:VCALENDAR
       expect(decoded.generalMode.schedules, isNotEmpty);
       expect(decoded.themeSeedColorValue, defaultThemeSeedColorValue);
       expect(decoded.colorfulUiColorValues, {'ok': 0xFF123456});
+      expect(decoded.studentMode.colorfulUiColorValues, {'ok': 0xFF123456});
+    });
+
+    test('decodes legacy prefixed timetable schema', () {
+      final source = ImportExportEnvelope(
+        schema: 'Sked-timetable-data',
+        version: importExportVersion,
+        data: TimetableExportData(
+          timetables: [timetable(id: 'legacy')],
+          periodTimeSets: [periodSet()],
+        ).toJson(),
+      ).encode();
+
+      final decoded = decodeTimetableDataEnvelope(source);
+
+      expect(decoded.timetables.single.id, 'legacy');
     });
 
     test('rejects non-empty timetable arrays without valid entries', () {

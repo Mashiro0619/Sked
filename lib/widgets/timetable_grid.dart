@@ -616,6 +616,26 @@ class _TimetableVerticalLayout {
 
 enum CourseDisplayState { active, futureInactive, pastEnded }
 
+double _courseCardFillAlpha(CourseLayout layout) {
+  final isInactiveForCurrentWeek =
+      layout.entry?.isInactive ??
+      layout.displayState != CourseDisplayState.active;
+  final isPastEnded =
+      layout.entry?.isPastEnded ??
+      layout.displayState == CourseDisplayState.pastEnded;
+
+  if (isInactiveForCurrentWeek) {
+    return isPastEnded ? 0.92 : 0.96;
+  }
+  if (layout.isFullConflict) {
+    return 0.96;
+  }
+  if (layout.priorityDepth == 0) {
+    return 1;
+  }
+  return math.max(0.56, 0.88 - (layout.priorityDepth * 0.10));
+}
+
 class _CourseCard extends StatelessWidget {
   const _CourseCard({
     required this.layout,
@@ -644,10 +664,6 @@ class _CourseCard extends StatelessWidget {
   bool get _isInactiveForCurrentWeek =>
       layout.entry?.isInactive ??
       layout.displayState != CourseDisplayState.active;
-
-  bool get _isPastEnded =>
-      layout.entry?.isPastEnded ??
-      layout.displayState == CourseDisplayState.pastEnded;
 
   String get _title => layout.entry?.title ?? layout.course?.name ?? '';
 
@@ -685,12 +701,7 @@ class _CourseCard extends StatelessWidget {
         ? Color(entryColorValue)
         : themeColorMode == themeColorModeColorful && colorfulCourseBase != null
         ? Color(colorfulCourseBase)
-        : Color.lerp(
-                colorScheme.surfaceContainerHighest,
-                colorScheme.primary,
-                0.20 + (layout.priorityDepth * 0.06),
-              ) ??
-              colorScheme.surfaceContainerHighest;
+        : colorScheme.primaryContainer;
     final futureInactiveColor = themeColorMode == themeColorModeColorful
         ? Color.lerp(activeBaseColor, colorScheme.surface, 0.58) ??
               colorScheme.surfaceContainerHighest
@@ -714,15 +725,10 @@ class _CourseCard extends StatelessWidget {
       CourseDisplayState.futureInactive => futureInactiveColor,
       CourseDisplayState.pastEnded => pastEndedColor,
     };
-    final color = baseColor.withValues(
-      alpha: _isInactiveForCurrentWeek
-          ? (_isPastEnded ? 0.92 : 0.96)
-          : layout.isFullConflict
-          ? 0.94
-          : layout.priorityDepth == 0
-          ? 0.92
-          : math.max(0.48, 0.82 - (layout.priorityDepth * 0.10)),
-    );
+    final fillAlpha = _courseCardFillAlpha(layout);
+    final color = fillAlpha >= 1
+        ? baseColor
+        : baseColor.withValues(alpha: fillAlpha);
 
     final effectiveOutlineWidth = compact
         ? math.max(minLiveCourseOutlineWidth, outlineWidth - 0.5)
@@ -766,7 +772,7 @@ class _CourseCard extends StatelessWidget {
                             ? (colorfulTextColor ?? colorScheme.onSurface)
                             : (_isInactiveForCurrentWeek
                                   ? colorScheme.onSurfaceVariant
-                                  : colorScheme.onSurface))
+                                  : colorScheme.onPrimaryContainer))
                         .withValues(
                           alpha: _isInactiveForCurrentWeek
                               ? 0.9
@@ -791,19 +797,6 @@ class _CourseCard extends StatelessWidget {
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         );
-                final availableHeight = constraints.maxHeight.isFinite
-                    ? constraints.maxHeight
-                    : height;
-                final showLocation =
-                    _location.isNotEmpty &&
-                    availableHeight >= (layout.isFullConflict ? 58 : 52);
-                final showTeacher =
-                    _teacher.isNotEmpty &&
-                    availableHeight >= (layout.isFullConflict ? 78 : 68);
-                final titleMaxLines = compact
-                    ? (showLocation || showTeacher ? 2 : 3)
-                    : 3;
-
                 return Stack(
                   children: [
                     Positioned.fill(
@@ -813,31 +806,41 @@ class _CourseCard extends StatelessWidget {
                               ? (compact ? 18.0 : 22.0)
                               : 0.0,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Text(
-                              _title,
-                              maxLines: titleMaxLines,
-                              overflow: TextOverflow.ellipsis,
-                              style: titleStyle,
+                        child: ClipRect(
+                          child: OverflowBox(
+                            alignment: Alignment.topLeft,
+                            minWidth: constraints.maxWidth,
+                            maxWidth: constraints.maxWidth,
+                            minHeight: 0,
+                            maxHeight: double.infinity,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _title,
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
+                                  style: titleStyle,
+                                ),
+                                if (_location.isNotEmpty)
+                                  Text(
+                                    _location,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    style: bodyStyle,
+                                  ),
+                                if (_teacher.isNotEmpty)
+                                  Text(
+                                    _teacher,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    style: teacherStyle,
+                                  ),
+                              ],
                             ),
-                            if (showLocation)
-                              Text(
-                                _location,
-                                maxLines: compact ? 1 : 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: bodyStyle,
-                              ),
-                            if (showTeacher)
-                              Text(
-                                _teacher,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: teacherStyle,
-                              ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -933,20 +936,11 @@ Color resolveSharedColorfulTextColor({
         Color.lerp(activeBaseColor, surfaceColor, 0.58) ?? surfaceColor,
       CourseDisplayState.pastEnded => inactiveColor,
     };
-    final blendedColor = Color.alphaBlend(
-      baseColor.withValues(
-        alpha: layout.displayState != CourseDisplayState.active
-            ? (layout.displayState == CourseDisplayState.pastEnded
-                  ? 0.92
-                  : 0.96)
-            : layout.isFullConflict
-            ? 0.94
-            : layout.priorityDepth == 0
-            ? 0.92
-            : math.max(0.48, 0.82 - (layout.priorityDepth * 0.10)),
-      ),
-      surfaceColor,
-    );
+    final fillAlpha = _courseCardFillAlpha(layout);
+    final effectiveColor = fillAlpha >= 1
+        ? baseColor
+        : baseColor.withValues(alpha: fillAlpha);
+    final blendedColor = Color.alphaBlend(effectiveColor, surfaceColor);
     minLuminance = math.min(minLuminance, blendedColor.computeLuminance());
   }
 

@@ -48,28 +48,68 @@ class SettingsService {
 
   AppData updateThemeMode(AppData data, String themeMode) {
     final normalized = normalizeThemeMode(themeMode);
-    if (data.themeMode == normalized) return data;
-    return data.copyWith(themeMode: normalized);
+    if (data.activeMode == AppMode.general) {
+      if (data.generalMode.themeMode == normalized) return data;
+      return data.copyWith(
+        generalMode: data.generalMode.copyWith(themeMode: normalized),
+      );
+    }
+    if (data.studentMode.themeMode == normalized) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(themeMode: normalized),
+    );
   }
 
   AppData updateThemeColorMode(AppData data, String mode) {
     final normalized = normalizeThemeColorMode(mode);
-    if (data.themeColorMode == normalized) return data;
-    return data.copyWith(themeColorMode: normalized);
+    if (data.activeMode == AppMode.general) {
+      if (data.generalMode.themeColorMode == normalized) return data;
+      return data.copyWith(
+        generalMode: data.generalMode.copyWith(themeColorMode: normalized),
+      );
+    }
+    if (data.studentMode.themeColorMode == normalized) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(themeColorMode: normalized),
+    );
   }
 
   AppData updateThemeSeedColorValue(AppData data, int colorValue) {
-    if (data.themeSeedColorValue == colorValue) return data;
-    return data.copyWith(themeSeedColorValue: colorValue);
+    if (data.activeMode == AppMode.general) {
+      if (data.generalMode.themeSeedColorValue == colorValue) return data;
+      return data.copyWith(
+        generalMode: data.generalMode.copyWith(themeSeedColorValue: colorValue),
+      );
+    }
+    if (data.studentMode.themeSeedColorValue == colorValue) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(themeSeedColorValue: colorValue),
+    );
   }
 
   AppData updateColorfulUiColorValue(AppData data, String key, int colorValue) {
     final normalizedKey = key.trim();
     if (normalizedKey.isEmpty) return data;
-    if (data.colorfulUiColorValues[normalizedKey] == colorValue) return data;
-    final updated = Map<String, int>.from(data.colorfulUiColorValues)
-      ..[normalizedKey] = colorValue;
-    return data.copyWith(colorfulUiColorValues: updated);
+    if (data.activeMode == AppMode.general) {
+      if (data.generalMode.colorfulUiColorValues[normalizedKey] == colorValue) {
+        return data;
+      }
+      final updated = Map<String, int>.from(
+        data.generalMode.colorfulUiColorValues,
+      )..[normalizedKey] = colorValue;
+      return data.copyWith(
+        generalMode: data.generalMode.copyWith(colorfulUiColorValues: updated),
+      );
+    }
+    if (data.studentMode.colorfulUiColorValues[normalizedKey] == colorValue) {
+      return data;
+    }
+    final updated = Map<String, int>.from(
+      data.studentMode.colorfulUiColorValues,
+    )..[normalizedKey] = colorValue;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(colorfulUiColorValues: updated),
+    );
   }
 
   AppData updateColorfulCourseTextColorMode(AppData data, String mode) {
