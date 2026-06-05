@@ -25,11 +25,7 @@ ThemeData buildAppTheme({
 }) {
   final opaqueSeedColor = _opaque(seedColor);
   final baseScheme = _withPrimaryFamily(
-    ColorScheme.fromSeed(
-      seedColor: opaqueSeedColor,
-      brightness: brightness,
-      dynamicSchemeVariant: DynamicSchemeVariant.expressive,
-    ),
+    ColorScheme.fromSeed(seedColor: opaqueSeedColor, brightness: brightness),
     opaqueSeedColor,
     brightness,
   );
@@ -470,7 +466,6 @@ ColorScheme _withPrimaryFamily(
   final generated = ColorScheme.fromSeed(
     seedColor: exactColor,
     brightness: brightness,
-    dynamicSchemeVariant: DynamicSchemeVariant.expressive,
   );
   return baseScheme.copyWith(
     primary: exactColor,
@@ -495,7 +490,6 @@ ColorScheme _withSecondaryFamily(
   final generated = ColorScheme.fromSeed(
     seedColor: exactColor,
     brightness: brightness,
-    dynamicSchemeVariant: DynamicSchemeVariant.expressive,
   );
   return baseScheme.copyWith(
     secondary: exactColor,
@@ -518,7 +512,6 @@ ColorScheme _withTertiaryFamily(
   final generated = ColorScheme.fromSeed(
     seedColor: exactColor,
     brightness: brightness,
-    dynamicSchemeVariant: DynamicSchemeVariant.expressive,
   );
   return baseScheme.copyWith(
     tertiary: exactColor,

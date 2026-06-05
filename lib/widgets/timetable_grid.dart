@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/timetable_models.dart';
-import 'expressive_motion.dart';
 import 'timetable_entry.dart';
 
 const _minuteHeight = 1.4;
@@ -149,7 +148,7 @@ class TimetableGrid extends StatelessWidget {
                   layouts: dayLayoutsByWeekday.values.expand((items) => items),
                   courseNameColorValues: courseNameColorValues,
                   surfaceColor: colors.surface,
-                  fallbackColor: colors.onSurface,
+                  fallbackColor: colors.onSecondaryContainer,
                 )
         : null;
 
@@ -616,26 +615,6 @@ class _TimetableVerticalLayout {
 
 enum CourseDisplayState { active, futureInactive, pastEnded }
 
-double _courseCardFillAlpha(CourseLayout layout) {
-  final isInactiveForCurrentWeek =
-      layout.entry?.isInactive ??
-      layout.displayState != CourseDisplayState.active;
-  final isPastEnded =
-      layout.entry?.isPastEnded ??
-      layout.displayState == CourseDisplayState.pastEnded;
-
-  if (isInactiveForCurrentWeek) {
-    return isPastEnded ? 0.92 : 0.96;
-  }
-  if (layout.isFullConflict) {
-    return 0.96;
-  }
-  if (layout.priorityDepth == 0) {
-    return 1;
-  }
-  return math.max(0.56, 0.88 - (layout.priorityDepth * 0.10));
-}
-
 class _CourseCard extends StatelessWidget {
   const _CourseCard({
     required this.layout,
@@ -664,6 +643,10 @@ class _CourseCard extends StatelessWidget {
   bool get _isInactiveForCurrentWeek =>
       layout.entry?.isInactive ??
       layout.displayState != CourseDisplayState.active;
+
+  bool get _isPastEnded =>
+      layout.entry?.isPastEnded ??
+      layout.displayState == CourseDisplayState.pastEnded;
 
   String get _title => layout.entry?.title ?? layout.course?.name ?? '';
 
@@ -701,7 +684,12 @@ class _CourseCard extends StatelessWidget {
         ? Color(entryColorValue)
         : themeColorMode == themeColorModeColorful && colorfulCourseBase != null
         ? Color(colorfulCourseBase)
-        : colorScheme.primaryContainer;
+        : Color.lerp(
+                colorScheme.secondaryContainer,
+                colorScheme.primaryContainer,
+                0.18 + (layout.priorityDepth * 0.18),
+              ) ??
+              colorScheme.secondaryContainer;
     final futureInactiveColor = themeColorMode == themeColorModeColorful
         ? Color.lerp(activeBaseColor, colorScheme.surface, 0.58) ??
               colorScheme.surfaceContainerHighest
@@ -725,10 +713,15 @@ class _CourseCard extends StatelessWidget {
       CourseDisplayState.futureInactive => futureInactiveColor,
       CourseDisplayState.pastEnded => pastEndedColor,
     };
-    final fillAlpha = _courseCardFillAlpha(layout);
-    final color = fillAlpha >= 1
-        ? baseColor
-        : baseColor.withValues(alpha: fillAlpha);
+    final color = baseColor.withValues(
+      alpha: _isInactiveForCurrentWeek
+          ? (_isPastEnded ? 0.92 : 0.96)
+          : layout.isFullConflict
+          ? 0.94
+          : layout.priorityDepth == 0
+          ? 0.92
+          : math.max(0.48, 0.82 - (layout.priorityDepth * 0.10)),
+    );
 
     final effectiveOutlineWidth = compact
         ? math.max(minLiveCourseOutlineWidth, outlineWidth - 0.5)
@@ -744,35 +737,34 @@ class _CourseCard extends StatelessWidget {
       left: metrics.courseGap,
       width: width,
       height: height,
-      child: ExpressiveTap(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(compact ? 8 : 10),
-        scale: 0.97,
-        child: Card.filled(
-          color: color,
-          clipBehavior: Clip.antiAlias,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(compact ? 8 : 10),
-            side: layout.isLiveHighlighted
-                ? BorderSide(
-                    color: outlineColor,
-                    width: layout.isPrimaryLiveTarget
-                        ? effectivePrimaryOutlineWidth
-                        : effectiveOutlineWidth,
-                  )
-                : BorderSide.none,
-          ),
+      child: Card.filled(
+        color: color,
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(compact ? 8 : 10),
+          side: layout.isLiveHighlighted
+              ? BorderSide(
+                  color: outlineColor,
+                  width: layout.isPrimaryLiveTarget
+                      ? effectivePrimaryOutlineWidth
+                      : effectiveOutlineWidth,
+                )
+              : BorderSide.none,
+        ),
+        child: InkWell(
+          onTap: onTap,
           child: Padding(
             padding: EdgeInsets.all(metrics.cardPadding),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final textColor =
                     (themeColorMode == themeColorModeColorful
-                            ? (colorfulTextColor ?? colorScheme.onSurface)
+                            ? (colorfulTextColor ??
+                                  colorScheme.onSecondaryContainer)
                             : (_isInactiveForCurrentWeek
                                   ? colorScheme.onSurfaceVariant
-                                  : colorScheme.onPrimaryContainer))
+                                  : colorScheme.onSecondaryContainer))
                         .withValues(
                           alpha: _isInactiveForCurrentWeek
                               ? 0.9
@@ -936,11 +928,20 @@ Color resolveSharedColorfulTextColor({
         Color.lerp(activeBaseColor, surfaceColor, 0.58) ?? surfaceColor,
       CourseDisplayState.pastEnded => inactiveColor,
     };
-    final fillAlpha = _courseCardFillAlpha(layout);
-    final effectiveColor = fillAlpha >= 1
-        ? baseColor
-        : baseColor.withValues(alpha: fillAlpha);
-    final blendedColor = Color.alphaBlend(effectiveColor, surfaceColor);
+    final blendedColor = Color.alphaBlend(
+      baseColor.withValues(
+        alpha: layout.displayState != CourseDisplayState.active
+            ? (layout.displayState == CourseDisplayState.pastEnded
+                  ? 0.92
+                  : 0.96)
+            : layout.isFullConflict
+            ? 0.94
+            : layout.priorityDepth == 0
+            ? 0.92
+            : math.max(0.48, 0.82 - (layout.priorityDepth * 0.10)),
+      ),
+      surfaceColor,
+    );
     minLuminance = math.min(minLuminance, blendedColor.computeLuminance());
   }
 

@@ -4043,9 +4043,14 @@ void main() {
       expect(find.text('色彩课程'), findsOneWidget);
       final singleModeCourseCard = find.byType(Card);
       expect(singleModeCourseCard, findsOneWidget);
-      final expectedSingleModeColor = Theme.of(
+      final colorScheme = Theme.of(
         tester.element(singleModeCourseCard),
-      ).colorScheme.primaryContainer;
+      ).colorScheme;
+      final expectedSingleModeColor = Color.lerp(
+        colorScheme.secondaryContainer,
+        colorScheme.primaryContainer,
+        0.18,
+      )!.withValues(alpha: 0.92);
       expect(
         tester.widget<Card>(singleModeCourseCard).color,
         expectedSingleModeColor,
@@ -4058,7 +4063,10 @@ void main() {
       expect(find.text('色彩课程'), findsOneWidget);
       final courseCard = find.byType(Card);
       expect(courseCard, findsOneWidget);
-      expect(tester.widget<Card>(courseCard).color, const Color(0xFFAA3344));
+      expect(
+        tester.widget<Card>(courseCard).color,
+        const Color(0xFFAA3344).withValues(alpha: 0.92),
+      );
     });
 
     testWidgets('TimetableGrid narrow course cards keep legacy text wrapping', (
@@ -4430,12 +4438,10 @@ void main() {
       final secondaryLight = ColorScheme.fromSeed(
         seedColor: const Color(0xFF223344),
         brightness: Brightness.light,
-        dynamicSchemeVariant: DynamicSchemeVariant.expressive,
       );
       final tertiaryLight = ColorScheme.fromSeed(
         seedColor: const Color(0xFF334455),
         brightness: Brightness.light,
-        dynamicSchemeVariant: DynamicSchemeVariant.expressive,
       );
 
       expect(lightTheme.colorScheme.primary, const Color(0xFF112233));
@@ -4479,17 +4485,16 @@ void main() {
         final materialApp = tester.widget<MaterialApp>(
           find.byType(MaterialApp),
         );
-        final expressiveLight = ColorScheme.fromSeed(
+        final seedLight = ColorScheme.fromSeed(
           seedColor: const Color(0xFF6750A4),
           brightness: Brightness.light,
-          dynamicSchemeVariant: DynamicSchemeVariant.expressive,
         );
 
         expect(materialApp.theme!.useMaterial3, isTrue);
         expect(materialApp.theme!.colorScheme.primary, const Color(0xFF6750A4));
         expect(
           materialApp.theme!.colorScheme.primaryContainer,
-          expressiveLight.primaryContainer,
+          seedLight.primaryContainer,
         );
         expect(
           materialApp.theme!.navigationBarTheme.indicatorColor,
