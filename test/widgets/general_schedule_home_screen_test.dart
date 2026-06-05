@@ -451,6 +451,45 @@ void main() {
     expect(labelBox.center.dx, closeTo(26, 1));
   });
 
+  testWidgets('week view keeps the final time label inside the grid', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(496, 1052));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = const GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-07-20',
+          defaultView: generalViewWeek,
+          dayStartHour: 6,
+          dayEndHour: 23,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final gridRect = tester.getRect(
+      find.byKey(const ValueKey('general-timeline-grid')),
+    );
+    final finalLabelRect = tester.getRect(find.text('23:00'));
+
+    expect(finalLabelRect.top, greaterThanOrEqualTo(gridRect.top));
+    expect(finalLabelRect.bottom, lessThanOrEqualTo(gridRect.bottom));
+  });
+
   testWidgets('week header stays static when tapping a day label', (
     tester,
   ) async {

@@ -361,7 +361,7 @@ class _PrimaryInfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(icon, color: colorScheme.primary),
           const SizedBox(width: 12),

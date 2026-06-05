@@ -123,6 +123,7 @@ class _GridBackground extends StatelessWidget {
     required this.endHour,
     required this.gridMinutes,
     required this.hourHeight,
+    required this.topOffset,
   });
 
   final double timeColumnWidth;
@@ -132,12 +133,12 @@ class _GridBackground extends StatelessWidget {
   final int endHour;
   final int gridMinutes;
   final double hourHeight;
+  final double topOffset;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final totalHeight = (endHour - startHour) * hourHeight;
     final lineColor = colors.outlineVariant.withValues(alpha: 0.56);
     final minorColor = colors.outlineVariant.withValues(alpha: 0.28);
     final timeLabelColor = colors.onSurfaceVariant;
@@ -158,13 +159,13 @@ class _GridBackground extends StatelessWidget {
           Positioned(
             left: timeColumnWidth,
             right: 0,
-            top: (hour - startHour) * hourHeight,
+            top: topOffset + (hour - startHour) * hourHeight,
             child: Divider(height: 1, color: lineColor),
           ),
         for (var hour = startHour; hour <= endHour; hour++)
           Positioned(
             left: 0,
-            top: math.max(0, (hour - startHour) * hourHeight - 9),
+            top: topOffset + (hour - startHour) * hourHeight - 9,
             width: timeColumnWidth,
             height: 18,
             child: Padding(
@@ -194,22 +195,16 @@ class _GridBackground extends StatelessWidget {
             Positioned(
               left: timeColumnWidth,
               right: 0,
-              top: minute / 60 * hourHeight,
+              top: topOffset + minute / 60 * hourHeight,
               child: Divider(height: 1, color: minorColor),
             ),
         for (var day = 0; day <= dayCount; day++)
           Positioned(
-            top: 0,
-            bottom: 0,
+            top: topOffset,
+            bottom: topOffset,
             left: timeColumnWidth + day * dayWidth,
             child: VerticalDivider(width: 1, color: lineColor),
           ),
-        Positioned(
-          left: timeColumnWidth,
-          right: 0,
-          top: totalHeight - 1,
-          child: Divider(height: 1, color: lineColor),
-        ),
       ],
     );
   }

@@ -748,6 +748,7 @@ class _CalendarTimeline extends StatelessWidget {
   static const double _headerHeight = 56;
   static const double _allDayHeight = 74;
   static const double _hourHeight = 72;
+  static const double _timeLabelVerticalPadding = 12;
 
   final List<DateTime> days;
   final DateTime selectedDate;
@@ -768,7 +769,8 @@ class _CalendarTimeline extends StatelessWidget {
     }
     final startMinutes = startHour * 60;
     final endMinutes = endHour * 60;
-    final contentHeight = math.max(1, endHour - startHour) * _hourHeight;
+    final gridHeight = math.max(1, endHour - startHour) * _hourHeight;
+    final contentHeight = gridHeight + _timeLabelVerticalPadding * 2;
     final minuteHeight = _hourHeight / 60;
     final allDayOccurrencesByDay = [
       for (final day in days) _allDayOccurrencesFor(day),
@@ -846,6 +848,7 @@ class _CalendarTimeline extends StatelessWidget {
                   child: SizedBox(
                     height: contentHeight,
                     child: Stack(
+                      key: const ValueKey('general-timeline-grid'),
                       children: [
                         _GridBackground(
                           timeColumnWidth: metrics.timeColumnWidth,
@@ -855,15 +858,16 @@ class _CalendarTimeline extends StatelessWidget {
                           endHour: endHour,
                           gridMinutes: gridMinutes,
                           hourHeight: _hourHeight,
+                          topOffset: _timeLabelVerticalPadding,
                         ),
                         for (var index = 0; index < days.length; index++)
                           Positioned(
                             left:
                                 metrics.timeColumnWidth +
                                 index * metrics.dayWidth,
-                            top: 0,
+                            top: _timeLabelVerticalPadding,
                             width: metrics.dayWidth,
-                            height: contentHeight,
+                            height: gridHeight,
                             child: GestureDetector(
                               key: ValueKey(
                                 'general-timeline-empty-slot-${_dateKey(days[index])}',
@@ -900,6 +904,7 @@ class _CalendarTimeline extends StatelessWidget {
                             startMinutes: startMinutes,
                             endMinutes: endMinutes,
                             minuteHeight: minuteHeight,
+                            topOffset: _timeLabelVerticalPadding,
                           ),
                         for (var index = 0; index < days.length; index++)
                           if (_sameDay(days[index], DateTime.now()) &&
@@ -910,6 +915,7 @@ class _CalendarTimeline extends StatelessWidget {
                                   metrics.timeColumnWidth +
                                   index * metrics.dayWidth,
                               top:
+                                  _timeLabelVerticalPadding +
                                   (_nowMinutes() - startMinutes) * minuteHeight,
                               width: metrics.dayWidth,
                               child: const _NowLine(),
@@ -941,6 +947,7 @@ class _CalendarTimeline extends StatelessWidget {
     required int startMinutes,
     required int endMinutes,
     required double minuteHeight,
+    required double topOffset,
   }) sync* {
     final dayStart = normalizeDateOnly(day);
     final dayEnd = dayStart.add(const Duration(days: 1));
@@ -992,7 +999,8 @@ class _CalendarTimeline extends StatelessWidget {
       final laneLeftOffset = layout.lane * (laneWidth + laneGap);
       yield Positioned(
         left: left + horizontalInset + laneLeftOffset,
-        top: (layout.startMinutes - startMinutes) * minuteHeight + 2,
+        top:
+            topOffset + (layout.startMinutes - startMinutes) * minuteHeight + 2,
         width: laneWidth,
         height: cardHeight,
         child: layout.isMore

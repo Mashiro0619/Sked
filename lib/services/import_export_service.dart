@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
@@ -795,6 +797,7 @@ class ImportExportService {
 
     final existingIds = data.schedules.map((s) => s.id).toSet();
     final existingEventIds = _generalEventIds(data.schedules);
+    final existingEventContentKeys = _generalEventContentKeys(data.schedules);
     final appended = <GeneralSchedule>[];
     for (final schedule in selected) {
       final nextId = _normalizeImportedGeneralId(
@@ -803,11 +806,27 @@ class ImportExportService {
         existingIds: existingIds,
       );
       existingIds.add(nextId);
-      appended.add(
-        _sanitizeImportedGeneralSchedule(
-          schedule,
-          scheduleId: nextId,
-          existingEventIds: existingEventIds,
+      final sanitized = _sanitizeImportedGeneralSchedule(
+        schedule,
+        scheduleId: nextId,
+        existingEventIds: existingEventIds,
+      );
+      final uniqueEvents = _uniqueImportedGeneralEvents(
+        sanitized,
+        existingEventContentKeys,
+      );
+      if (sanitized.events.isNotEmpty && uniqueEvents.isEmpty) {
+        continue;
+      }
+      appended.add(sanitized.copyWith(events: uniqueEvents));
+    }
+    if (appended.isEmpty) {
+      return GeneralScheduleImportMutation(
+        data: data,
+        result: GeneralScheduleImportResult(
+          importedCount: 0,
+          scheduleNames: const [],
+          icsWarnings: icsWarnings,
         ),
       );
     }
@@ -1499,6 +1518,54 @@ Set<String> _generalEventIds(Iterable<GeneralSchedule> schedules) {
         if (event.id.trim().isNotEmpty) event.id.trim(),
   };
 }
+
+Set<String> _generalEventContentKeys(Iterable<GeneralSchedule> schedules) {
+  return {
+    for (final schedule in schedules)
+      for (final event in schedule.events)
+        _generalEventContentKey(schedule, event),
+  };
+}
+
+List<GeneralEvent> _uniqueImportedGeneralEvents(
+  GeneralSchedule schedule,
+  Set<String> existingContentKeys,
+) {
+  final uniqueEvents = <GeneralEvent>[];
+  for (final event in schedule.events) {
+    final contentKey = _generalEventContentKey(schedule, event);
+    if (!existingContentKeys.add(contentKey)) {
+      continue;
+    }
+    uniqueEvents.add(event);
+  }
+  return uniqueEvents;
+}
+
+String _generalEventContentKey(GeneralSchedule schedule, GeneralEvent event) {
+  final normalizedEvent = event.normalized(fallbackCalendarId: schedule.id);
+  final reminderMinutes =
+      normalizedEvent.reminders
+          .map((reminder) => reminder.minutesBefore)
+          .toList()
+        ..sort();
+  return jsonEncode({
+    'calendarName': _normalizedGeneralText(schedule.name),
+    'calendarColor': schedule.colorValue,
+    'title': _normalizedGeneralText(normalizedEvent.title),
+    'start': normalizedEvent.startDateTimeIso,
+    'end': normalizedEvent.endDateTimeIso,
+    'isAllDay': normalizedEvent.isAllDay,
+    'recurrenceRule': normalizedEvent.recurrenceRule.toJson(),
+    'recurrenceExceptionDates': normalizedEvent.recurrenceExceptionDateIso,
+    'location': _normalizedGeneralText(normalizedEvent.location),
+    'notes': _normalizedGeneralText(normalizedEvent.notes),
+    'colorValue': normalizedEvent.colorValue,
+    'reminders': reminderMinutes,
+  });
+}
+
+String _normalizedGeneralText(String value) => value.trim();
 
 String _normalizeImportedGeneralId(
   String rawId, {

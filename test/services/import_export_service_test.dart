@@ -14,13 +14,19 @@ void main() {
     String id = 'event',
     String calendarId = 'cal',
     String title = 'Event',
+    String startDateTimeIso = '2026-05-25T09:00:00.000',
+    String endDateTimeIso = '2026-05-25T10:00:00.000',
+    String location = '',
+    String notes = '',
   }) {
     return GeneralEvent(
       id: id,
       calendarId: calendarId,
       title: title,
-      startDateTimeIso: '2026-05-25T09:00:00.000',
-      endDateTimeIso: '2026-05-25T10:00:00.000',
+      startDateTimeIso: startDateTimeIso,
+      endDateTimeIso: endDateTimeIso,
+      location: location,
+      notes: notes,
     );
   }
 
@@ -405,6 +411,101 @@ void main() {
       expect(mutation.data.activeScheduleId, mutation.data.schedules.last.id);
     });
 
+    test('skips exact duplicate general events when adding as new', () {
+      final existing = schedule(
+        id: 'demo',
+        name: 'Demo',
+        events: [
+          event(
+            id: 'existing_event',
+            calendarId: 'demo',
+            title: 'Weekly planning',
+            location: 'Room 201',
+            notes: 'Bring notebook',
+          ),
+        ],
+      );
+      final current = data(schedules: [existing], activeScheduleId: 'demo');
+      final source = envelope([
+        schedule(
+          id: 'demo',
+          name: 'Demo',
+          events: [
+            event(
+              id: 'imported_event',
+              calendarId: 'demo',
+              title: 'Weekly planning',
+              location: 'Room 201',
+              notes: 'Bring notebook',
+            ),
+          ],
+        ),
+      ]);
+
+      final mutation = service.importSelectedGeneralSchedulesJson(
+        current,
+        source,
+        scheduleIds: const ['demo'],
+        mode: GeneralScheduleImportMode.addAsNew,
+        localeCode: defaultLocaleCode,
+      );
+
+      expect(mutation.result.importedCount, 0);
+      expect(mutation.result.scheduleNames, isEmpty);
+      expect(mutation.data.schedules, hasLength(1));
+      expect(mutation.data.schedules.single.events, hasLength(1));
+      expect(mutation.data.activeScheduleId, 'demo');
+    });
+
+    test(
+      'keeps only new events when imported calendar is partially duplicate',
+      () {
+        final existing = schedule(
+          id: 'demo',
+          name: 'Demo',
+          events: [
+            event(id: 'existing_event', calendarId: 'demo', title: 'Existing'),
+          ],
+        );
+        final current = data(schedules: [existing], activeScheduleId: 'demo');
+        final source = envelope([
+          schedule(
+            id: 'demo',
+            name: 'Demo',
+            events: [
+              event(
+                id: 'duplicate_event',
+                calendarId: 'demo',
+                title: 'Existing',
+              ),
+              event(
+                id: 'new_event',
+                calendarId: 'demo',
+                title: 'New item',
+                startDateTimeIso: '2026-05-26T14:00:00.000',
+                endDateTimeIso: '2026-05-26T15:00:00.000',
+              ),
+            ],
+          ),
+        ]);
+
+        final mutation = service.importSelectedGeneralSchedulesJson(
+          current,
+          source,
+          scheduleIds: const ['demo'],
+          mode: GeneralScheduleImportMode.addAsNew,
+          localeCode: defaultLocaleCode,
+        );
+
+        expect(mutation.result.importedCount, 1);
+        expect(mutation.result.scheduleNames, ['Demo']);
+        expect(mutation.data.schedules, hasLength(2));
+        expect(mutation.data.schedules.last.events, hasLength(1));
+        expect(mutation.data.schedules.last.events.single.title, 'New item');
+        expect(mutation.data.activeScheduleId, mutation.data.schedules.last.id);
+      },
+    );
+
     test('sanitizes unsafe calendar and event ids when adding as new', () {
       final current = data(
         schedules: [
@@ -421,8 +522,8 @@ void main() {
           id: 'shared|calendar',
           name: 'Unsafe',
           events: [
-            event(id: 'a|b', calendarId: 'shared|calendar'),
-            event(id: 'a:b', calendarId: 'shared|calendar'),
+            event(id: 'a|b', calendarId: 'shared|calendar', title: 'First'),
+            event(id: 'a:b', calendarId: 'shared|calendar', title: 'Second'),
           ],
         ),
       ]);

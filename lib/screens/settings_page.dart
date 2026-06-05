@@ -2076,9 +2076,12 @@ class _ActionSheetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        SizedBox(
+          width: 40,
+          child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -2107,7 +2110,20 @@ class _ActionSheetGroup extends StatelessWidget {
       color: colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
-      child: Column(children: children),
+      child: Column(
+        children: [
+          for (var index = 0; index < children.length; index++) ...[
+            if (index > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: 72,
+                color: colorScheme.outlineVariant.withValues(alpha: 0.48),
+              ),
+            children[index],
+          ],
+        ],
+      ),
     );
   }
 }
@@ -2132,82 +2148,58 @@ class _ActionSheetTile extends StatelessWidget {
     return ExpressiveTap(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final leading = Icon(icon, color: colorScheme.onSurfaceVariant);
-            final text = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 10, 10),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(
+                  child: Icon(icon, color: colorScheme.onSurfaceVariant),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            );
-            final trailing = Icon(
-              Icons.chevron_right,
-              size: 28,
-              color: colorScheme.onSurfaceVariant,
-            );
-            final trailingBox = SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(child: trailing),
-            );
-
-            if (constraints.maxWidth < 300) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Center(child: leading),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(child: text),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: trailingBox,
-                  ),
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                SizedBox(width: 40, height: 40, child: Center(child: leading)),
-                const SizedBox(width: 12),
-                Expanded(child: text),
-                const SizedBox(width: 4),
-                trailingBox,
-              ],
-            );
-          },
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 32,
+                height: 48,
+                child: Icon(
+                  Icons.chevron_right,
+                  size: 28,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
