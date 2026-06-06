@@ -370,67 +370,62 @@ class AppLocalizationsKo extends AppLocalizations {
       '전체 데이터 또는 개별 시간표를 가져오거나, 현재/전체 시간표를 내보낼 수 있습니다.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => '앱 백업 및 복원';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      '시간표, 일정, 설정, 학교 사이트를 백업하거나 복원합니다. API 키는 포함되지 않습니다.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      '전체 복원은 현재 앱 데이터를 대체합니다. 사용자 지정 파서 API 키는 보안 저장소에 보관되며 백업 파일에 기록되지 않습니다.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'JSON 파일에서 복원';
 
   @override
-  String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+  String get restoreBackupFileSubtitle => '전체 Sked 백업 파일을 선택합니다. 복원 전에 확인합니다.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => '백업 JSON 붙여넣기';
 
   @override
-  String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+  String get restoreBackupTextSubtitle => '전체 백업을 붙여넣어 현재 앱 데이터를 복원합니다.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => '백업 파일 공유';
 
   @override
-  String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+  String get shareBackupSubtitle => '전체 앱 데이터를 JSON으로 내보냅니다. API 키는 제외됩니다.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => '백업 파일 저장';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle => '전체 앱 백업을 로컬 파일에 저장합니다.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => '백업 텍스트 복사';
 
   @override
-  String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+  String get copyBackupSubtitle => '전체 백업 JSON을 표시하여 복사하거나 임시로 저장할 수 있습니다.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => '전체 백업을 복원할까요?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      '현재 모든 시간표, 일반 일정, 설정, 학교 사이트가 대체됩니다. API 키는 백업에서 가져오지 않으므로 시간표를 다시 파싱하기 전에 키를 다시 입력하세요.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => '백업 복원';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      '전체 앱 백업이 복원되었습니다. 파서 API 키를 다시 입력해야 합니다.';
 
   @override
-  String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+  String get restoreBackupFailureMessage => '복원에 실패했습니다. 백업 내용을 확인하고 다시 시도하세요.';
 
   @override
   String get openSourceLicenses => '오픈소스 라이선스';
@@ -802,7 +797,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      '학교 웹페이지 가져오기를 사용하거나 붙여넣은 시간표 텍스트 / HTML을 분석하면, 앱은 먼저 콘텐츠를 로컬에서 준비하고 정리한 뒤 제출한 시간표 텍스트, 페이지 텍스트 또는 HTML 콘텐츠, 선택적 페이지 제목과 URL, 현재 앱 언어, 파서 프롬프트 내용을 사용자가 설정한 OpenAI 호환 엔드포인트로 보냅니다. 모델 목록을 가져올 때도 같은 엔드포인트에 요청합니다. Sked는 내장 파서 엔드포인트를 제공하지 않으며, 개발자가 제어하는 시간표 파서 백엔드로 분석 요청을 보내지 않습니다. 사용자 지정 엔드포인트와 그 상위 서비스는 사용자가 선택한 서비스 제공자의 규칙에 따라 데이터를 저장, 전달, 제한, 삭제하거나 기타 방식으로 처리할 수 있습니다. http:// Base URL을 사용하는 경우 콘텐츠와 API 키가 전송 암호화로 보호되지 않을 수 있으므로 신뢰할 수 있는 기기, 네트워크, 엔드포인트 서비스에서만 사용하세요.';
 
   @override
   String get privacyPolicyUpdatesTitle => '정책 업데이트';
@@ -1048,6 +1043,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Base URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL은 호스트가 포함된 HTTP 또는 HTTPS URL이어야 합니다.';
+
+  @override
   String get schoolImportParserApiKey => 'API key';
 
   @override
@@ -1242,33 +1241,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => '시작 모드 선택';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      '가장 많이 사용하는 작업 공간을 선택하세요. 나중에 모드를 전환할 수 있습니다.';
 
   @override
-  String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+  String get firstLaunchStudentDesc => '시간표, 과목, 주차, 교시 시간, 가져오기를 관리합니다.';
 
   @override
-  String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+  String get firstLaunchGeneralDesc => '캘린더, 이벤트, 알림, JSON / ICS 데이터를 관리합니다.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => '시간표로 시작';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => '일정으로 시작';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+  String get firstLaunchPrivacyHint => '들어가기 전에 개인정보 처리방침을 검토하고 동의합니다.';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+  String get firstLaunchPreparingPrivacy => '개인정보 처리방침 확인을 준비하는 중...';
 
   @override
   String get switchMode => 'Switch mode';

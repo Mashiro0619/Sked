@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/school_html_import_page.dart';
+import '../services/school_import_api.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
 import '../utils/platform_capabilities.dart';
@@ -65,9 +66,10 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider?>();
+    final baseUrl = provider?.customSchoolImportBaseUrl.trim() ?? '';
     final isConfigured =
         provider != null &&
-        provider.customSchoolImportBaseUrl.trim().isNotEmpty &&
+        isValidCustomOpenAiBaseUrl(baseUrl) &&
         provider.customSchoolImportApiKey.trim().isNotEmpty &&
         provider.customSchoolImportModel.trim().isNotEmpty;
     return Scaffold(
@@ -98,7 +100,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         ],
       ),
       body: !isConfigured
-          ? _buildMessage(l10n.schoolImportParserCustomConfigIncomplete)
+          ? _buildMessage(_buildConfigMessage(provider, l10n))
           : !_supportsWebView
           ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
           : _schoolLoadError != null
@@ -215,6 +217,17 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
 
   Widget _buildMessage(String message) {
     return ExpressiveEmptyState(icon: Icons.language_outlined, title: message);
+  }
+
+  String _buildConfigMessage(
+    TimetableProvider? provider,
+    AppLocalizations l10n,
+  ) {
+    final baseUrl = provider?.customSchoolImportBaseUrl.trim() ?? '';
+    if (baseUrl.isNotEmpty && !isValidCustomOpenAiBaseUrl(baseUrl)) {
+      return l10n.schoolImportParserBaseUrlInvalid;
+    }
+    return l10n.schoolImportParserCustomConfigIncomplete;
   }
 
   Future<void> _loadSchools() async {

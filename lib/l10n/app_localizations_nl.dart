@@ -378,67 +378,68 @@ class AppLocalizationsNl extends AppLocalizations {
       'Import full data or single timetables, or export current/all timetables.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'App-back-up en herstel';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Maak een back-up van roosters, agenda\'s, instellingen en schoolsites of herstel ze. API-sleutels worden niet meegenomen.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Een volledig herstel vervangt de huidige appgegevens. API-sleutels voor de aangepaste parser staan in beveiligde opslag en worden niet naar back-upbestanden geschreven.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Herstellen vanuit JSON-bestand';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Kies een volledig Sked-back-upbestand. Je bevestigt voordat er wordt hersteld.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Back-up-JSON plakken';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Plak een volledige back-up en herstel de huidige appgegevens.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Back-upbestand delen';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exporteer alle appgegevens als JSON. API-sleutels worden uitgesloten.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Back-upbestand opslaan';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Sla een volledige app-back-up op in een lokaal bestand.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Back-uptekst kopiëren';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Toon de volledige back-up-JSON zodat je deze kunt kopiëren of tijdelijk bewaren.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Volledige back-up herstellen?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Dit vervangt alle huidige roosters, algemene agenda\'s, instellingen en schoolsites. API-sleutels worden niet uit back-ups geïmporteerd; voer de sleutel opnieuw in voordat je opnieuw roosters parseert.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Back-up herstellen';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Volledige app-back-up hersteld. Parser-API-sleutels moeten opnieuw worden ingevoerd.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Herstellen mislukt. Controleer de inhoud van de back-up en probeer het opnieuw.';
 
   @override
   String get openSourceLicenses => 'Open-source licenses';
@@ -816,7 +817,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Wanneer je schoolwebpagina-import gebruikt of geplakte roostertekst / HTML analyseert, bereidt en schoont de app de inhoud eerst lokaal op en verzendt daarna de ingediende roostertekst, paginatekst of HTML-inhoud, de optionele paginatitel en URL, de huidige app-taal en de parserprompt naar het OpenAI-compatibele endpoint dat je hebt geconfigureerd. Het ophalen van de modellenlijst vraagt ook datzelfde endpoint aan. Sked biedt geen ingebouwd parser-endpoint en verzendt geen parseraanvragen naar een door de ontwikkelaar beheerde roosterparser-backend. Het aangepaste endpoint en eventuele upstreamdiensten kunnen gegevens opslaan, doorsturen, beperken, verwijderen of anderszins verwerken volgens de regels van de door jou gekozen serviceprovider. Als je een http:// Base URL gebruikt, gebruik die dan alleen op vertrouwde apparaten, vertrouwde netwerken en vertrouwde endpointdiensten, omdat inhoud en API-sleutels mogelijk niet door transportversleuteling worden beschermd.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Policy updates';
@@ -1068,6 +1069,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Base URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'De Base URL moet een HTTP- of HTTPS-URL met host zijn.';
+
+  @override
   String get schoolImportParserApiKey => 'API key';
 
   @override
@@ -1268,33 +1273,32 @@ class AppLocalizationsNl extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Kies je startmodus';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Kies de werkruimte die je het meest gebruikt. Je kunt later van modus wisselen.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Beheer roosters, vakken, weken, lestijden en import.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Beheer agenda\'s, evenementen, herinneringen en JSON / ICS-gegevens.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Starten met rooster';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Starten met agenda';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Je leest en accepteert het privacybeleid voordat je verdergaat.';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+  String get firstLaunchPreparingPrivacy => 'Privacycontrole voorbereiden...';
 
   @override
   String get switchMode => 'Switch mode';

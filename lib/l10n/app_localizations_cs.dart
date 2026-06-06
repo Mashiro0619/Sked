@@ -378,67 +378,68 @@ class AppLocalizationsCs extends AppLocalizations {
       'Importovat úplná data nebo jednotlivé rozvrhy nebo exportovat aktuální/všechny rozvrhy.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Záloha a obnovení aplikace';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Zálohujte nebo obnovte rozvrhy, plány, nastavení a školní weby. Klíče API nejsou zahrnuty.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Úplné obnovení nahradí aktuální data aplikace. Klíče API vlastního parseru jsou uloženy v zabezpečeném úložišti a nezapisují se do záloh.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Obnovit ze souboru JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Vyberte úplný záložní soubor Sked. Před obnovením budete požádáni o potvrzení.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Vložit JSON zálohy';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Vložte úplnou zálohu a obnovte aktuální data aplikace.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Sdílet soubor zálohy';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exportujte všechna data aplikace jako JSON. Klíče API jsou vynechány.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Uložit soubor zálohy';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Uložte úplnou zálohu aplikace do místního souboru.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Kopírovat text zálohy';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Zobrazí úplný JSON zálohy, abyste jej mohli zkopírovat nebo dočasně uložit.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Obnovit úplnou zálohu?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Tím nahradíte všechny aktuální rozvrhy, obecné plány, nastavení a školní weby. Klíče API se ze záloh neimportují; před dalším parsováním rozvrhů zadejte klíč znovu.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Obnovit zálohu';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Úplná záloha aplikace byla obnovena. Klíče API parseru je nutné zadat znovu.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Obnovení selhalo. Zkontrolujte obsah zálohy a zkuste to znovu.';
 
   @override
   String get openSourceLicenses => 'Licence s otevřeným zdrojovým kódem';
@@ -818,7 +819,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Když použijete import školní webové stránky nebo analyzujete vložený text rozvrhu / HTML, aplikace obsah nejprve připraví a vyčistí lokálně a potom odešle zadaný text rozvrhu, text stránky nebo obsah HTML, volitelný název stránky a URL, aktuální jazyk aplikace a obsah pokynů pro parser do vámi nastaveného koncového bodu kompatibilního s OpenAI. Na stejný koncový bod se požaduje také načtení seznamu modelů. Sked neposkytuje vestavěný koncový bod parseru a neposílá požadavky na analýzu do backendu pro rozvrhy řízeného vývojářem. Vlastní koncový bod a případné nadřazené služby mohou data ukládat, přeposílat, omezovat, mazat nebo jinak zpracovávat podle pravidel vámi zvoleného poskytovatele služeb. Pokud používáte http:// Base URL, používejte jej pouze na důvěryhodných zařízeních, v důvěryhodných sítích a s důvěryhodnými službami koncového bodu, protože obsah a API klíče nemusí být chráněny transportním šifrováním.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Aktualizace zásad';
@@ -1071,6 +1072,10 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Základní adresa URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL musí být adresa HTTP nebo HTTPS s hostitelem.';
+
+  @override
   String get schoolImportParserApiKey => 'Klíč API';
 
   @override
@@ -1272,33 +1277,33 @@ class AppLocalizationsCs extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Vyberte výchozí režim';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Vyberte pracovní prostor, který používáte nejčastěji. Režim můžete později změnit.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Spravujte rozvrhy, kurzy, týdny, časy hodin a importy.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Spravujte kalendáře, události, připomenutí a data JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Začít s rozvrhem';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Začít s plánem';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Před vstupem si přečtete a odsouhlasíte zásady ochrany osobních údajů.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Připravuje se kontrola zásad ochrany osobních údajů...';
 
   @override
   String get switchMode => 'Switch mode';

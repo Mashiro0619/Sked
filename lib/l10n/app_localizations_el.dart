@@ -383,67 +383,69 @@ class AppLocalizationsEl extends AppLocalizations {
       'Εισαγωγή πλήρων δεδομένων ή ενιαίων προγραμμάτων ή εξαγωγή τρέχοντος/όλων των προγραμμάτων.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Αντίγραφο ασφαλείας και επαναφορά εφαρμογής';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Δημιουργήστε αντίγραφα ασφαλείας ή επαναφέρετε ωρολόγια προγράμματα, προγράμματα, ρυθμίσεις και σχολικούς ιστότοπους. Τα κλειδιά API δεν περιλαμβάνονται.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Η πλήρης επαναφορά αντικαθιστά τα τρέχοντα δεδομένα της εφαρμογής. Τα κλειδιά API του προσαρμοσμένου αναλυτή αποθηκεύονται σε ασφαλή αποθήκευση και δεν γράφονται στα αρχεία αντιγράφων ασφαλείας.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Επαναφορά από αρχείο JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Επιλέξτε ένα πλήρες αρχείο αντιγράφου ασφαλείας Sked. Θα επιβεβαιώσετε πριν από την επαναφορά.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Επικόλληση JSON αντιγράφου ασφαλείας';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Επικολλήστε ένα πλήρες αντίγραφο ασφαλείας και επαναφέρετε τα τρέχοντα δεδομένα της εφαρμογής.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Κοινή χρήση αρχείου αντιγράφου ασφαλείας';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Εξαγωγή όλων των δεδομένων της εφαρμογής ως JSON. Τα κλειδιά API εξαιρούνται.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Αποθήκευση αρχείου αντιγράφου ασφαλείας';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Αποθηκεύστε ένα πλήρες αντίγραφο ασφαλείας της εφαρμογής σε τοπικό αρχείο.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Αντιγραφή κειμένου αντιγράφου ασφαλείας';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Εμφανίζει το πλήρες JSON του αντιγράφου ασφαλείας για αντιγραφή ή προσωρινή αποθήκευση.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle =>
+      'Επαναφορά πλήρους αντιγράφου ασφαλείας;';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Αυτό θα αντικαταστήσει όλα τα τρέχοντα ωρολόγια προγράμματα, γενικά προγράμματα, ρυθμίσεις και σχολικούς ιστότοπους. Τα κλειδιά API δεν εισάγονται από αντίγραφα ασφαλείας· εισαγάγετε ξανά το κλειδί πριν αναλύσετε ξανά ωρολόγια προγράμματα.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Επαναφορά αντιγράφου ασφαλείας';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Το πλήρες αντίγραφο ασφαλείας της εφαρμογής επαναφέρθηκε. Τα κλειδιά API του αναλυτή πρέπει να εισαχθούν ξανά.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Η επαναφορά απέτυχε. Ελέγξτε το περιεχόμενο του αντιγράφου ασφαλείας και δοκιμάστε ξανά.';
 
   @override
   String get openSourceLicenses => 'Άδειες ανοιχτού κώδικα';
@@ -833,7 +835,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Όταν χρησιμοποιείτε εισαγωγή σχολικής ιστοσελίδας ή ανάλυση επικολλημένου κειμένου ωρολογίου προγράμματος / HTML, η εφαρμογή πρώτα προετοιμάζει και καθαρίζει το περιεχόμενο τοπικά και έπειτα στέλνει το υποβληθέν κείμενο προγράμματος, κείμενο σελίδας ή περιεχόμενο HTML, τον προαιρετικό τίτλο και το URL της σελίδας, την τρέχουσα γλώσσα της εφαρμογής και το περιεχόμενο οδηγιών του αναλυτή στο συμβατό με OpenAI endpoint που ρυθμίσατε. Η λήψη της λίστας μοντέλων ζητά επίσης το ίδιο endpoint. Το Sked δεν παρέχει ενσωματωμένο endpoint ανάλυσης και δεν στέλνει αιτήματα ανάλυσης σε backend αναλυτή προγραμμάτων που ελέγχεται από τον προγραμματιστή. Το προσαρμοσμένο endpoint και τυχόν ανάντη υπηρεσίες μπορεί να αποθηκεύουν, προωθούν, περιορίζουν, διαγράφουν ή επεξεργάζονται με άλλο τρόπο τα δεδομένα σύμφωνα με τους κανόνες του παρόχου υπηρεσίας που επιλέγετε. Αν χρησιμοποιείτε http:// Base URL, χρησιμοποιήστε το μόνο σε αξιόπιστες συσκευές, δίκτυα και υπηρεσίες endpoint, επειδή το περιεχόμενο και τα API keys μπορεί να μην προστατεύονται με κρυπτογράφηση μεταφοράς.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Ενημερώσεις πολιτικής';
@@ -1091,6 +1093,10 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'URL βάσης';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Το Base URL πρέπει να είναι διεύθυνση HTTP ή HTTPS με κεντρικό υπολογιστή.';
+
+  @override
   String get schoolImportParserApiKey => 'API κλειδί';
 
   @override
@@ -1291,33 +1297,33 @@ class AppLocalizationsEl extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Επιλέξτε λειτουργία εκκίνησης';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Επιλέξτε τον χώρο εργασίας που χρησιμοποιείτε περισσότερο. Μπορείτε να αλλάξετε λειτουργία αργότερα.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Διαχειριστείτε ωρολόγια προγράμματα, μαθήματα, εβδομάδες, ώρες περιόδων και εισαγωγές.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Διαχειριστείτε ημερολόγια, συμβάντα, υπενθυμίσεις και δεδομένα JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Έναρξη με ωρολόγιο πρόγραμμα';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Έναρξη με πρόγραμμα';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Θα ελέγξετε και θα αποδεχτείτε την πολιτική απορρήτου πριν εισέλθετε.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Προετοιμασία ελέγχου πολιτικής απορρήτου...';
 
   @override
   String get switchMode => 'Switch mode';

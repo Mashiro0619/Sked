@@ -782,7 +782,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理并清理内容，再把你提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，提交内容和 API 密钥可能不会受到传输层加密保护。';
+      '当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理并清理内容，再把你提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容接口。获取模型列表时也会请求同一个自定义接口。Sked 的课表解析只使用你配置的自定义接口，不提供内置解析接口，也不会把解析请求发送到开发者控制的课表解析后端。自定义接口及其上游服务可能会按照你选择的服务提供方规则保存、转发、限制、删除或继续处理数据。如果你使用 http:// Base URL，请只在可信设备、可信网络和可信接口服务中使用，因为内容和 API 密钥可能不受传输层加密保护。';
 
   @override
   String get privacyPolicyUpdatesTitle => '政策更新';
@@ -1017,6 +1017,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolImportParserBaseUrl => 'Base URL';
+
+  @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL 必须是包含主机名的 HTTP 或 HTTPS 地址。';
 
   @override
   String get schoolImportParserApiKey => 'API 密钥';
@@ -2509,7 +2513,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      '當你使用學校網頁匯入或貼上課表文字 / HTML 進行解析時，應用會先在本機整理並清理內容，再把你提交的普通課表文字、頁面文字或 HTML 內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，提交內容和 API 金鑰可能不會受到傳輸層加密保護。';
+      '當你使用學校網頁匯入或貼上課表文字 / HTML 進行解析時，應用會先在本機整理並清理內容，再把你提交的普通課表文字、頁面文字或 HTML 內容、可選的頁面標題與 URL、目前應用語言以及解析提示詞發送到你設定的 OpenAI 相容介面。取得模型清單時也會請求同一個自訂介面。Sked 的課表解析只使用你設定的自訂介面，不提供內建解析介面，也不會把解析請求發送到開發者控制的課表解析後端。自訂介面及其上游服務可能會按照你選擇的服務提供方規則保存、轉發、限制、刪除或繼續處理資料。如果你使用 http:// Base URL，請只在可信裝置、可信網路和可信介面服務中使用，因為內容和 API 金鑰可能不受傳輸層加密保護。';
 
   @override
   String get privacyPolicyUpdatesTitle => '政策更新';
@@ -2744,6 +2748,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParserBaseUrl => 'Base URL';
+
+  @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL 必須是包含主機名稱的 HTTP 或 HTTPS 位址。';
 
   @override
   String get schoolImportParserApiKey => 'API 金鑰';

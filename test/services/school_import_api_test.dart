@@ -223,6 +223,130 @@ void main() {
   });
 
   group('SchoolImportApi custom OpenAI streaming', () {
+    test('model list supports HTTP base URLs', () async {
+      final api = SchoolImportApi(
+        client: _StreamingClient((request) async {
+          expect(request.url.scheme, 'http');
+          expect(request.url.path, '/v1/models');
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode(
+                jsonEncode({
+                  'data': [
+                    {'id': 'local-model'},
+                  ],
+                }),
+              ),
+            ]),
+            200,
+          );
+        }),
+      );
+
+      final models = await api.fetchCustomModels(
+        baseUrl: 'http://api.example.com/v1',
+        apiKey: 'sk-test',
+      );
+
+      expect(models, ['local-model']);
+    });
+
+    test('custom import supports HTTP base URLs', () async {
+      final responseJson = {
+        'ok': true,
+        'meta': {
+          'sourceUrl': '',
+          'pageTitle': '',
+          'parser': '',
+          'warnings': [],
+        },
+        'timetable': {
+          'name': 'HTTP Timetable',
+          'startDate': '2026-02-23',
+          'totalWeeks': 18,
+          'periodTimeSet': {'name': '', 'periodTimes': []},
+          'courses': [_minimalCourseJson('HTTP Course')],
+        },
+      };
+      final api = SchoolImportApi(
+        client: _StreamingClient((request) async {
+          expect(request.url.scheme, 'http');
+          expect(request.url.path, '/v1/chat/completions');
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode(
+                jsonEncode({
+                  'choices': [
+                    {
+                      'message': {'content': jsonEncode(responseJson)},
+                    },
+                  ],
+                }),
+              ),
+            ]),
+            200,
+          );
+        }),
+      );
+
+      final result = await api.importCurrentPageWithRawResponse(
+        const SchoolImportPagePayload(
+          url: 'https://example.test/page',
+          title: 'Example page',
+          html: '<table>demo</table>',
+          locale: 'zh',
+          sourceHint: schoolImportParserSourceCustomOpenAi,
+        ),
+        parserSettings: const SchoolImportParserSettings(
+          source: schoolImportParserSourceCustomOpenAi,
+          customBaseUrl: 'http://api.example.com/v1',
+          customApiKey: 'sk-test',
+          customModel: 'gpt-4.1-mini',
+        ),
+      );
+
+      expect(result.response.timetable.name, 'HTTP Timetable');
+      expect(result.response.timetable.courses.single.name, 'HTTP Course');
+    });
+
+    test(
+      'custom stream rejects non-web base URLs without sending requests',
+      () async {
+        var requestSent = false;
+        final client = _StreamingClient((request) async {
+          requestSent = true;
+          return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
+        });
+
+        final events = await const SchoolImportApi()
+            .importCurrentPageStream(
+              const SchoolImportPagePayload(
+                url: 'https://example.test/page',
+                title: 'Example page',
+                html: '<table>demo</table>',
+                locale: 'zh',
+                sourceHint: schoolImportParserSourceCustomOpenAi,
+              ),
+              parserSettings: const SchoolImportParserSettings(
+                source: schoolImportParserSourceCustomOpenAi,
+                customBaseUrl: 'ftp://api.example.com/v1',
+                customApiKey: 'sk-test',
+                customModel: 'gpt-4.1-mini',
+              ),
+              client: client,
+            )
+            .toList();
+
+        expect(requestSent, isFalse);
+        expect(events, hasLength(1));
+        expect(events.single, isA<ParseError>());
+        expect(
+          (events.single as ParseError).message,
+          customOpenAiBaseUrlInvalidMessage,
+        );
+      },
+    );
+
     test('model list request reports a timeout clearly', () async {
       final api = SchoolImportApi(
         requestTimeout: const Duration(milliseconds: 1),

@@ -67,6 +67,26 @@ bool _hasTimetablePayload(Map<String, dynamic> json) {
       json.containsKey('courses');
 }
 
+const customOpenAiBaseUrlInvalidMessage =
+    'Custom parser base URL must be an HTTP or HTTPS URL.';
+
+bool isValidCustomOpenAiBaseUrl(String baseUrl) {
+  final uri = Uri.tryParse(baseUrl.trim());
+  return uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.trim().isNotEmpty;
+}
+
+Uri _parseCustomOpenAiBaseUri(String baseUrl) {
+  final uri = Uri.tryParse(baseUrl.trim());
+  if (uri == null ||
+      (uri.scheme != 'http' && uri.scheme != 'https') ||
+      uri.host.trim().isEmpty) {
+    throw const FormatException(customOpenAiBaseUrlInvalidMessage);
+  }
+  return uri;
+}
+
 class SchoolImportApi {
   const SchoolImportApi({
     http.Client? client,
@@ -471,19 +491,19 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   }
 
   Uri _buildOpenAiChatUri(String baseUrl) {
-    final baseUri = Uri.parse(baseUrl.trim());
+    final baseUri = _parseCustomOpenAiBaseUri(baseUrl);
     final path = baseUri.path.trim().toLowerCase().endsWith('/chat/completions')
         ? baseUri.path
         : _joinPath(baseUri.path, 'chat/completions');
-    return baseUri.replace(path: path, query: '');
+    return baseUri.replace(path: path, query: '', fragment: '');
   }
 
   Uri _buildOpenAiModelsUri(String baseUrl) {
-    final baseUri = Uri.parse(baseUrl.trim());
+    final baseUri = _parseCustomOpenAiBaseUri(baseUrl);
     final path = baseUri.path.trim().toLowerCase().endsWith('/models')
         ? baseUri.path
         : _joinPath(baseUri.path, 'models');
-    return baseUri.replace(path: path, query: '');
+    return baseUri.replace(path: path, query: '', fragment: '');
   }
 
   Map<String, dynamic>? _tryDecodeJson(String source) {
@@ -720,6 +740,8 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       yield ParseError(
         _timeoutMessage(e, fallback: 'Import request timed out.'),
       );
+    } on FormatException catch (e) {
+      yield ParseError(e.message);
     } catch (e) {
       yield ParseError('Unable to connect to the import service.\n\n$e');
     } finally {

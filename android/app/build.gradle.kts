@@ -14,6 +14,20 @@ val keystoreProperties =
         }
     }
 
+fun keystoreProperty(name: String): String? =
+    (keystoreProperties[name] as String?)?.trim()?.takeIf { it.isNotEmpty() }
+
+val hasReleaseKeystore =
+    keystoreProperty("keyAlias") != null &&
+        keystoreProperty("keyPassword") != null &&
+        keystoreProperty("storeFile") != null &&
+        keystoreProperty("storePassword") != null
+
+fun isReleaseBuildTask(taskName: String): Boolean {
+    return taskName.equals("assembleRelease", ignoreCase = true) ||
+        taskName.equals("bundleRelease", ignoreCase = true)
+}
+
 android {
     namespace = "com.mashiro.sked"
     compileSdk = flutter.compileSdkVersion
@@ -33,17 +47,32 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
+        if (hasReleaseKeystore) {
+            create("release") {
+                keyAlias = keystoreProperty("keyAlias")
+                keyPassword = keystoreProperty("keyPassword")
+                storeFile = keystoreProperty("storeFile")?.let { file(it) }
+                storePassword = keystoreProperty("storePassword")
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+}
+
+tasks.matching { isReleaseBuildTask(it.name) }.configureEach {
+    doFirst {
+        if (!hasReleaseKeystore) {
+            throw GradleException(
+                "Release builds require android/key.properties with keyAlias, " +
+                    "keyPassword, storeFile, and storePassword.",
+            )
         }
     }
 }

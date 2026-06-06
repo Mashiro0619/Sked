@@ -379,67 +379,69 @@ class AppLocalizationsDe extends AppLocalizations {
       'Importieren Sie alle Daten oder einzelne Stundenpläne oder exportieren Sie den aktuellen/alle Stundenpläne.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'App-Sicherung und Wiederherstellung';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Sichere oder stelle Stundenpläne, Terminpläne, Einstellungen und Schul-Websites wieder her. API-Schlüssel sind nicht enthalten.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Eine vollständige Wiederherstellung ersetzt die aktuellen App-Daten. API-Schlüssel für den benutzerdefinierten Parser liegen im sicheren Speicher und werden nicht in Sicherungsdateien geschrieben.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Aus JSON-Datei wiederherstellen';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Wähle eine vollständige Sked-Sicherungsdatei. Vor der Wiederherstellung musst du bestätigen.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Sicherungs-JSON einfügen';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Füge eine vollständige Sicherung ein und stelle die aktuellen App-Daten wieder her.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Sicherungsdatei teilen';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exportiere alle App-Daten als JSON. API-Schlüssel werden ausgeschlossen.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Sicherungsdatei speichern';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Speichere eine vollständige App-Sicherung in einer lokalen Datei.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Sicherungstext kopieren';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Zeigt das vollständige Sicherungs-JSON an, damit du es kopieren oder vorübergehend speichern kannst.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle =>
+      'Vollständige Sicherung wiederherstellen?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Dies ersetzt alle aktuellen Stundenpläne, allgemeinen Terminpläne, Einstellungen und Schul-Websites. API-Schlüssel werden nicht aus Sicherungen importiert; gib den Schlüssel erneut ein, bevor du wieder Stundenpläne analysierst.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Sicherung wiederherstellen';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Vollständige App-Sicherung wiederhergestellt. Parser-API-Schlüssel müssen erneut eingegeben werden.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Wiederherstellung fehlgeschlagen. Prüfe den Inhalt der Sicherung und versuche es erneut.';
 
   @override
   String get openSourceLicenses => 'Open-Source-Lizenzen';
@@ -826,7 +828,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Wenn du den Import einer Schul-Webseite verwendest oder eingefügten Stundenplantext / HTML analysierst, bereitet und bereinigt die App den Inhalt zuerst lokal und sendet anschließend den übermittelten Stundenplantext, Seitentext oder HTML-Inhalt, optionalen Seitentitel und URL, die aktuelle App-Sprache sowie den Parser-Prompt an den von dir konfigurierten OpenAI-kompatiblen Endpunkt. Auch das Abrufen der Modellliste fragt denselben Endpunkt an. Sked stellt keinen integrierten Parser-Endpunkt bereit und sendet keine Analyseanfragen an ein vom Entwickler kontrolliertes Stundenplan-Parser-Backend. Der benutzerdefinierte Endpunkt und mögliche Upstream-Dienste können Daten nach den Regeln des von dir gewählten Dienstanbieters speichern, weiterleiten, begrenzen, löschen oder anderweitig verarbeiten. Wenn du eine http:// Base URL verwendest, nutze sie nur auf vertrauenswürdigen Geräten, in vertrauenswürdigen Netzwerken und mit vertrauenswürdigen Endpunktdiensten, da Inhalte und API-Schlüssel möglicherweise nicht durch Transportverschlüsselung geschützt sind.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Richtlinien-Updates';
@@ -1085,6 +1087,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Base URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Die Base URL muss eine HTTP- oder HTTPS-Adresse mit Host sein.';
+
+  @override
   String get schoolImportParserApiKey => 'API key';
 
   @override
@@ -1286,33 +1292,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Startmodus auswählen';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Wähle den Arbeitsbereich, den du am häufigsten nutzt. Du kannst den Modus später wechseln.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Verwalte Stundenpläne, Kurse, Wochen, Unterrichtszeiten und Importe.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Verwalte Kalender, Ereignisse, Erinnerungen und JSON- / ICS-Daten.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Mit Stundenplan starten';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Mit Terminplan starten';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Vor dem Fortfahren liest und akzeptierst du die Datenschutzrichtlinie.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Datenschutzprüfung wird vorbereitet...';
 
   @override
   String get switchMode => 'Switch mode';

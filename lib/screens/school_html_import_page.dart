@@ -46,7 +46,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   bool _returnToWebPagePopped = false;
 
   bool _isConfigured(TimetableProvider provider) {
-    return provider.customSchoolImportBaseUrl.trim().isNotEmpty &&
+    return isValidCustomOpenAiBaseUrl(provider.customSchoolImportBaseUrl) &&
         provider.customSchoolImportApiKey.trim().isNotEmpty &&
         provider.customSchoolImportModel.trim().isNotEmpty;
   }
@@ -65,6 +65,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
+    final baseUrl = provider.customSchoolImportBaseUrl.trim();
+    if (baseUrl.isNotEmpty && !isValidCustomOpenAiBaseUrl(baseUrl)) {
+      return l10n.schoolImportParserBaseUrlInvalid;
+    }
     return l10n.schoolImportParserCustomConfigIncomplete;
   }
 

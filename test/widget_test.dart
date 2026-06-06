@@ -1800,13 +1800,13 @@ void main() {
         ),
         parserSettings: const SchoolImportParserSettings(
           source: 'legacy',
-          customBaseUrl: 'http://api.example.com/v1',
+          customBaseUrl: 'https://api.example.com/v1',
           customApiKey: 'sk-test',
           customModel: 'gpt-4.1-mini',
         ),
       );
 
-      expect(capturedUri.scheme, 'http');
+      expect(capturedUri.scheme, 'https');
       expect(capturedUri.path, '/v1/chat/completions');
       expect(capturedHeaders['authorization'], 'Bearer sk-test');
       expect(capturedBody['model'], 'gpt-4.1-mini');

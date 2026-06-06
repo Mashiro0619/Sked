@@ -378,67 +378,68 @@ class AppLocalizationsHi extends AppLocalizations {
       'पूरा डेटा या अलग-अलग टाइमटेबल आयात करें, या वर्तमान/सभी टाइमटेबल निर्यात करें।';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'ऐप बैकअप और पुनर्स्थापना';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'टाइमटेबल, शेड्यूल, सेटिंग और स्कूल साइटों का बैकअप लें या पुनर्स्थापित करें। API कुंजियां शामिल नहीं हैं।';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'पूरा पुनर्स्थापन वर्तमान ऐप डेटा को बदल देता है। कस्टम पार्सर API कुंजियां सुरक्षित संग्रहण में रहती हैं और बैकअप फ़ाइलों में नहीं लिखी जातीं।';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'JSON फ़ाइल से पुनर्स्थापित करें';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'पूर्ण Sked बैकअप फ़ाइल चुनें। पुनर्स्थापना से पहले आप पुष्टि करेंगे।';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'बैकअप JSON पेस्ट करें';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'पूर्ण बैकअप पेस्ट करें और वर्तमान ऐप डेटा पुनर्स्थापित करें।';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'बैकअप फ़ाइल साझा करें';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'पूरा ऐप डेटा JSON के रूप में निर्यात करें। API कुंजियां शामिल नहीं की जाएंगी।';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'बैकअप फ़ाइल सहेजें';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'पूर्ण ऐप बैकअप को स्थानीय फ़ाइल में सहेजें।';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'बैकअप टेक्स्ट कॉपी करें';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'पूर्ण बैकअप JSON दिखाएं ताकि आप उसे कॉपी या अस्थायी रूप से संग्रहीत कर सकें।';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'पूर्ण बैकअप पुनर्स्थापित करें?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'यह सभी वर्तमान टाइमटेबल, सामान्य शेड्यूल, सेटिंग और स्कूल साइटों को बदल देगा। API कुंजियां बैकअप से आयात नहीं होतीं; टाइमटेबल फिर से पार्स करने से पहले कुंजी दोबारा दर्ज करें।';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'बैकअप पुनर्स्थापित करें';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'पूर्ण ऐप बैकअप पुनर्स्थापित हो गया। पार्सर API कुंजियां दोबारा दर्ज करनी होंगी।';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'पुनर्स्थापना विफल रही। बैकअप सामग्री जांचें और फिर कोशिश करें।';
 
   @override
   String get openSourceLicenses => 'ओपन-सोर्स लाइसेंस';
@@ -821,7 +822,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'जब आप स्कूल वेबपेज आयात का उपयोग करते हैं या पेस्ट किए गए समय-सारणी पाठ / HTML को पार्स करते हैं, तो ऐप पहले सामग्री को स्थानीय रूप से तैयार और साफ करता है, फिर सबमिट किया गया समय-सारणी पाठ, पेज पाठ या HTML सामग्री, वैकल्पिक पेज शीर्षक और URL, ऐप की वर्तमान भाषा और पार्सर प्रॉम्प्ट सामग्री आपके कॉन्फ़िगर किए गए OpenAI-संगत एंडपॉइंट पर भेजता है। मॉडल सूची लाने पर भी वही एंडपॉइंट अनुरोधित होता है। Sked कोई अंतर्निहित पार्सर एंडपॉइंट प्रदान नहीं करता और पार्सिंग अनुरोधों को डेवलपर-नियंत्रित समय-सारणी पार्सर बैकएंड पर नहीं भेजता। कस्टम एंडपॉइंट और कोई भी अपस्ट्रीम सेवाएँ आपके चुने हुए सेवा प्रदाता के नियमों के अनुसार डेटा को सहेज, आगे भेज, सीमित, हटा या अन्यथा संसाधित कर सकती हैं। यदि आप http:// Base URL का उपयोग करते हैं, तो इसे केवल विश्वसनीय डिवाइस, विश्वसनीय नेटवर्क और विश्वसनीय एंडपॉइंट सेवाओं पर उपयोग करें, क्योंकि सामग्री और API कुंजियाँ ट्रांसपोर्ट एन्क्रिप्शन से सुरक्षित नहीं हो सकती हैं।';
 
   @override
   String get privacyPolicyUpdatesTitle => 'नीति अपडेट';
@@ -1072,6 +1073,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Base URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL होस्ट वाली HTTP या HTTPS URL होनी चाहिए.';
+
+  @override
   String get schoolImportParserApiKey => 'API key';
 
   @override
@@ -1273,33 +1278,33 @@ class AppLocalizationsHi extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'अपना प्रारंभिक मोड चुनें';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'जिस कार्यक्षेत्र का आप सबसे अधिक उपयोग करते हैं उसे चुनें। आप बाद में मोड बदल सकते हैं।';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'टाइमटेबल, कोर्स, सप्ताह, पीरियड समय और आयात प्रबंधित करें।';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'कैलेंडर, ईवेंट, रिमाइंडर और JSON / ICS डेटा प्रबंधित करें।';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'टाइमटेबल से शुरू करें';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'शेड्यूल से शुरू करें';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'प्रवेश से पहले आप गोपनीयता नीति पढ़कर स्वीकार करेंगे।';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'गोपनीयता नीति जांच तैयार हो रही है...';
 
   @override
   String get switchMode => 'Switch mode';

@@ -378,67 +378,68 @@ class AppLocalizationsRo extends AppLocalizations {
       'Importați date complete sau orare unice sau exportați orarele curente/toate.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Backup și restaurare aplicație';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Fă backup sau restaurează orare, programe, setări și site-uri școlare. Cheile API nu sunt incluse.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'O restaurare completă înlocuiește datele curente ale aplicației. Cheile API ale parserului personalizat rămân în stocarea securizată și nu sunt scrise în fișierele de backup.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Restaurează din fișier JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Alege un fișier complet de backup Sked. Vei confirma înainte de restaurare.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Lipește JSON de backup';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Lipește un backup complet și restaurează datele curente ale aplicației.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Partajează fișierul de backup';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exportă toate datele aplicației ca JSON. Cheile API sunt excluse.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Salvează fișierul de backup';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Salvează un backup complet al aplicației într-un fișier local.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Copiază textul backupului';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Afișează JSON-ul complet al backupului, ca să îl poți copia sau păstra temporar.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Restaurezi backupul complet?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Aceasta înlocuiește toate orarele, programele generale, setările și site-urile școlare curente. Cheile API nu sunt importate din backupuri; reintrodu cheia înainte de a analiza din nou orare.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Restaurează backupul';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Backupul complet al aplicației a fost restaurat. Cheile API ale parserului trebuie reintroduse.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Restaurarea a eșuat. Verifică conținutul backupului și încearcă din nou.';
 
   @override
   String get openSourceLicenses => 'Licențe open-source';
@@ -828,7 +829,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Când folosești importul unei pagini web a școlii sau analizezi text de orar / HTML lipit, aplicația pregătește și curăță mai întâi conținutul local, apoi trimite textul de orar, textul paginii sau conținutul HTML trimis, titlul și URL-ul opțional al paginii, limba curentă a aplicației și conținutul promptului parserului către endpointul compatibil OpenAI pe care l-ai configurat. Obținerea listei de modele solicită același endpoint. Sked nu oferă un endpoint de parser integrat și nu trimite cereri de analiză către un backend de parser de orare controlat de dezvoltator. Endpointul personalizat și eventualele servicii upstream pot stoca, redirecționa, limita, șterge sau procesa datele în alt mod conform regulilor furnizorului de servicii ales. Dacă folosești un Base URL http://, utilizează-l numai pe dispozitive, rețele și servicii endpoint de încredere, deoarece conținutul și cheile API pot să nu fie protejate prin criptare de transport.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Actualizări ale politicii';
@@ -1085,6 +1086,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'URL-ul de bază';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL trebuie să fie un URL HTTP sau HTTPS cu gazdă.';
+
+  @override
   String get schoolImportParserApiKey => 'Cheia API';
 
   @override
@@ -1286,33 +1291,33 @@ class AppLocalizationsRo extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Alege modul de pornire';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Alege spațiul de lucru pe care îl folosești cel mai des. Poți schimba modul mai târziu.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Gestionează orare, cursuri, săptămâni, ore de curs și importuri.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Gestionează calendare, evenimente, mementouri și date JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Începe cu orarul';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Începe cu programul';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Vei citi și accepta politica de confidențialitate înainte de a intra.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Se pregătește verificarea politicii de confidențialitate...';
 
   @override
   String get switchMode => 'Switch mode';

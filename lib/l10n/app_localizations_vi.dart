@@ -379,67 +379,68 @@ class AppLocalizationsVi extends AppLocalizations {
       'Nhập dữ liệu đầy đủ hoặc lịch trình đơn, hoặc xuất hiện tại / tất cả các lịch trình.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Sao lưu và khôi phục ứng dụng';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Sao lưu hoặc khôi phục thời khóa biểu, lịch trình, cài đặt và trang trường học. Không bao gồm khóa API.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Khôi phục đầy đủ sẽ thay thế dữ liệu ứng dụng hiện tại. Khóa API của bộ phân tích tùy chỉnh nằm trong bộ nhớ bảo mật và không được ghi vào tệp sao lưu.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Khôi phục từ tệp JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Chọn một tệp sao lưu Sked đầy đủ. Bạn sẽ xác nhận trước khi khôi phục.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Dán JSON sao lưu';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Dán bản sao lưu đầy đủ và khôi phục dữ liệu ứng dụng hiện tại.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Chia sẻ tệp sao lưu';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Xuất toàn bộ dữ liệu ứng dụng dưới dạng JSON. Khóa API bị loại trừ.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Lưu tệp sao lưu';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Lưu bản sao lưu đầy đủ của ứng dụng vào tệp cục bộ.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Sao chép văn bản sao lưu';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Hiển thị JSON sao lưu đầy đủ để bạn có thể sao chép hoặc lưu tạm thời.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Khôi phục bản sao lưu đầy đủ?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Thao tác này sẽ thay thế tất cả thời khóa biểu, lịch trình chung, cài đặt và trang trường học hiện tại. Khóa API không được nhập từ bản sao lưu; hãy nhập lại khóa trước khi phân tích thời khóa biểu lần nữa.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Khôi phục sao lưu';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Đã khôi phục bản sao lưu ứng dụng đầy đủ. Cần nhập lại khóa API của bộ phân tích.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Khôi phục thất bại. Hãy kiểm tra nội dung bản sao lưu và thử lại.';
 
   @override
   String get openSourceLicenses => 'Giấy phép nguồn mở';
@@ -821,7 +822,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Khi bạn dùng nhập trang web của trường hoặc phân tích văn bản thời khóa biểu / HTML đã dán, ứng dụng trước tiên chuẩn bị và làm sạch nội dung cục bộ, rồi gửi văn bản thời khóa biểu, văn bản trang hoặc nội dung HTML đã gửi, tiêu đề và URL trang tùy chọn, ngôn ngữ hiện tại của ứng dụng và nội dung prompt của trình phân tích tới endpoint tương thích OpenAI mà bạn đã cấu hình. Việc lấy danh sách mô hình cũng yêu cầu cùng endpoint đó. Sked không cung cấp endpoint phân tích tích hợp và không gửi yêu cầu phân tích tới backend phân tích thời khóa biểu do nhà phát triển kiểm soát. Endpoint tùy chỉnh và mọi dịch vụ upstream có thể lưu trữ, chuyển tiếp, giới hạn, xóa hoặc xử lý dữ liệu theo cách khác theo quy tắc của nhà cung cấp dịch vụ mà bạn chọn. Nếu bạn dùng Base URL http://, chỉ dùng trên thiết bị, mạng và dịch vụ endpoint đáng tin cậy, vì nội dung và khóa API có thể không được bảo vệ bằng mã hóa truyền tải.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Cập nhật chính sách';
@@ -1077,6 +1078,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'URL cơ sở';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL phải là URL HTTP hoặc HTTPS có máy chủ.';
+
+  @override
   String get schoolImportParserApiKey => 'Khóa API';
 
   @override
@@ -1277,33 +1282,33 @@ class AppLocalizationsVi extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Chọn chế độ bắt đầu';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Chọn không gian làm việc bạn dùng nhiều nhất. Bạn có thể đổi chế độ sau.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Quản lý thời khóa biểu, khóa học, tuần, tiết học và nhập dữ liệu.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Quản lý lịch, sự kiện, nhắc nhở và dữ liệu JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Bắt đầu với thời khóa biểu';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Bắt đầu với lịch trình';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Bạn sẽ xem và đồng ý với chính sách quyền riêng tư trước khi vào.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Đang chuẩn bị kiểm tra chính sách quyền riêng tư...';
 
   @override
   String get switchMode => 'Switch mode';

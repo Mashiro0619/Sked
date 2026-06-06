@@ -142,6 +142,13 @@ Finder _apiKeyTextField() {
   );
 }
 
+Finder _baseUrlTextField() {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.labelText == 'Base URL',
+  );
+}
+
 void main() {
   testWidgets('fetch model list ignores rapid duplicate taps', (tester) async {
     final provider = await _createProvider();
@@ -166,6 +173,48 @@ void main() {
 
     expect(api.callCount, 1);
     expect(find.text('model-a'), findsOneWidget);
+  });
+
+  testWidgets('HTTP base URL allows model fetching', (tester) async {
+    final provider = await _createProvider();
+    final api = _BlockingSchoolImportApi();
+    await _pumpPage(tester, provider, api);
+
+    await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Base URL must be an HTTP or HTTPS URL with a host.'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Fetch model list'));
+    await tester.pump();
+
+    expect(api.callCount, 1);
+
+    api.completer.complete(['local-model']);
+    await tester.pumpAndSettle();
+
+    expect(find.text('local-model'), findsOneWidget);
+  });
+
+  testWidgets('non-web base URL shows an error and disables model fetching', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    final api = _BlockingSchoolImportApi();
+    await _pumpPage(tester, provider, api);
+
+    await tester.enterText(_baseUrlTextField(), 'ftp://api.example.com/v1');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Base URL must be an HTTP or HTTPS URL with a host.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Fetch model list'), warnIfMissed: false);
+
+    expect(api.callCount, 0);
   });
 
   testWidgets('API key edits are debounced before secure storage writes', (

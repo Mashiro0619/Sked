@@ -618,7 +618,7 @@
               当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理和清理内容，再把你主动提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容解析接口。获取模型列表时，应用也会请求你配置的同一接口。Sked 的课表解析只使用你配置的自定义接口。
             </p>
             <p data-i18n="webParseBody2">
-              你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理你提交的课表文本、页面文本、HTML 内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// 开头的 Base URL，请求内容和 API 密钥可能不会受到传输层加密保护，请只在可信网络与可信服务中使用。
+              你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理你提交的课表文本、页面文本、HTML 内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// Base URL，请只在可信设备、可信网络和可信接口服务中使用，因为内容和 API 密钥可能不受传输层加密保护。
             </p>
             <div class="notice" data-i18n="webParseNotice">
               解析前请自行确认课表文本、页面文本或 HTML 内容适合提交给你配置的接口，并确认该接口的隐私政策、配额限制、日志保留和上游模型服务规则。应用只负责把你主动提交的内容发送到你填写的接口。
@@ -712,7 +712,7 @@
         notCollectedBody3: '本应用不包含崩溃报告、错误日志自动上报或使用情况遥测功能。应用启动时会在后台静默请求隐私政策公示页面以检测版本更新，该请求不会携带你的课表数据或个人标识信息。',
         webParseTitle: '文本 / HTML 解析与自定义接口',
         webParseBody1: '当你使用学校网页导入或粘贴课表文本 / HTML 进行解析时，应用会先在本地整理和清理内容，再把你主动提交的普通课表文本、页面文本或 HTML 内容、可选的页面标题与 URL、当前应用语言以及解析提示词发送到你配置的 OpenAI 兼容解析接口。获取模型列表时，应用也会请求你配置的同一接口。Sked 的课表解析只使用你配置的自定义接口。',
-        webParseBody2: '你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理你提交的课表文本、页面文本、HTML 内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// 开头的 Base URL，请求内容和 API 密钥可能不会受到传输层加密保护，请只在可信网络与可信服务中使用。',
+        webParseBody2: '你应当了解，自定义解析接口可能由其部署方继续把请求转发至 AI 服务或其他上游处理服务。接口如何保存、转发、限制、删除或继续处理你提交的课表文本、页面文本、HTML 内容与 API 密钥，取决于你选择的接口服务、模型服务和相关提供方规则。如果你使用 http:// Base URL，请只在可信设备、可信网络和可信接口服务中使用，因为内容和 API 密钥可能不受传输层加密保护。',
         webParseNotice: '解析前请自行确认课表文本、页面文本或 HTML 内容适合提交给你配置的接口，并确认该接口的隐私政策、配额限制、日志保留和上游模型服务规则。应用只负责把你主动提交的内容发送到你填写的接口。',
         rightsTitle: '用户注意事项',
         rightsItem1: '你应确保导入、导出、分享或解析的内容系你有权处理的信息；',
@@ -768,7 +768,7 @@
         notCollectedBody3: 'The app does not include crash reporting, automatic error-log upload, or usage telemetry. On startup, the app makes a background request to the privacy policy page to check for version updates; this request does not carry your timetable data or personal identifiers.',
         webParseTitle: 'Text / HTML parsing and custom endpoints',
         webParseBody1: 'When you explicitly use school webpage import or timetable text / HTML parsing, the app first prepares and cleans the submitted content locally, then sends the plain timetable text, page text or HTML content you chose to submit, an optional page title, the page URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Timetable parsing in Sked only uses the custom endpoint you configured.',
-        webParseBody2: 'You should understand that the custom parsing endpoint may forward requests to an AI service or another upstream processing service according to its deployer configuration. How the endpoint stores, forwards, limits, deletes, or otherwise processes submitted timetable text, page text, HTML content and API keys is determined by the endpoint service, model service, and related providers you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption, so only use it on trusted networks and trusted services.',
+        webParseBody2: 'You should understand that the custom parsing endpoint may forward requests to an AI service or another upstream processing service according to its deployer configuration. How the endpoint stores, forwards, limits, deletes, or otherwise processes submitted timetable text, page text, HTML content and API keys is determined by the endpoint service, model service, and related providers you choose. If you use an http:// Base URL, only use it on trusted devices, trusted networks, and trusted endpoint services, because content and API keys may not be protected by transport encryption.',
         webParseNotice: 'Before parsing, confirm that the timetable text, page text or HTML content is appropriate to submit to your configured endpoint, and review that endpoint policy, quota limits, log retention, and upstream model-service rules. The app only sends the content you explicitly submit to the endpoint you entered.',
         rightsTitle: 'User notes',
         rightsItem1: 'You should ensure that the content you import, export, share, or submit for parsing is information that you are entitled to handle;',

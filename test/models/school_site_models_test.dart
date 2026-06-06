@@ -3,7 +3,7 @@ import 'package:sked/models/school_site_models.dart';
 
 void main() {
   group('SchoolSite validation', () {
-    test('accepts absolute http and https URLs with hosts', () {
+    test('accepts absolute HTTP and HTTPS URLs with hosts', () {
       expect(
         const SchoolSite(
           name: 'School',

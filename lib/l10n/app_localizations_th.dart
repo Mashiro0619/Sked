@@ -376,67 +376,68 @@ class AppLocalizationsTh extends AppLocalizations {
       'นำเข้าข้อมูลเต็มหรือตารางเวลาเดียว หรือส่งออกตารางเวลาปัจจุบัน/ทั้งหมด';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'สำรองและกู้คืนแอป';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'สำรองหรือกู้คืนตารางเรียน ตารางเวลา การตั้งค่า และเว็บไซต์โรงเรียน ไม่รวมคีย์ API';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'การกู้คืนแบบเต็มจะแทนที่ข้อมูลแอปปัจจุบัน คีย์ API ของตัวแยกวิเคราะห์แบบกำหนดเองจะอยู่ในที่จัดเก็บที่ปลอดภัยและจะไม่ถูกเขียนลงในไฟล์สำรอง';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'กู้คืนจากไฟล์ JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'เลือกไฟล์สำรอง Sked แบบเต็ม คุณจะต้องยืนยันก่อนกู้คืน';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'วาง JSON สำรอง';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'วางข้อมูลสำรองแบบเต็มและกู้คืนข้อมูลแอปปัจจุบัน';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'แชร์ไฟล์สำรอง';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'ส่งออกข้อมูลแอปทั้งหมดเป็น JSON โดยไม่รวมคีย์ API';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'บันทึกไฟล์สำรอง';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'บันทึกข้อมูลสำรองของแอปแบบเต็มลงในไฟล์ภายในเครื่อง';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'คัดลอกข้อความสำรอง';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'แสดง JSON สำรองแบบเต็มเพื่อให้คุณคัดลอกหรือเก็บไว้ชั่วคราวได้';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'กู้คืนข้อมูลสำรองแบบเต็มหรือไม่';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'การดำเนินการนี้จะแทนที่ตารางเรียน ตารางเวลาทั่วไป การตั้งค่า และเว็บไซต์โรงเรียนทั้งหมดในปัจจุบัน คีย์ API จะไม่ถูกนำเข้าจากข้อมูลสำรอง โปรดป้อนคีย์อีกครั้งก่อนแยกวิเคราะห์ตารางเรียนอีกครั้ง';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'กู้คืนข้อมูลสำรอง';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'กู้คืนข้อมูลสำรองของแอปแบบเต็มแล้ว ต้องป้อนคีย์ API ของตัวแยกวิเคราะห์อีกครั้ง';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'กู้คืนไม่สำเร็จ โปรดตรวจสอบเนื้อหาข้อมูลสำรองแล้วลองอีกครั้ง';
 
   @override
   String get openSourceLicenses => 'ใบอนุญาตแหล่งเปิด';
@@ -811,7 +812,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'เมื่อคุณใช้นำเข้าหน้าเว็บของโรงเรียนหรือแยกวิเคราะห์ข้อความตารางเรียน / HTML ที่วางไว้ แอปจะเตรียมและล้างเนื้อหาในเครื่องก่อน จากนั้นจึงส่งข้อความตารางเรียน ข้อความหน้าเว็บ หรือเนื้อหา HTML ที่คุณส่ง ชื่อหน้าและ URL ที่เลือกใส่ได้ ภาษาปัจจุบันของแอป และเนื้อหา prompt ของตัวแยกวิเคราะห์ ไปยัง endpoint ที่เข้ากันได้กับ OpenAI ที่คุณกำหนดไว้ การดึงรายการโมเดลก็จะร้องขอไปยัง endpoint เดียวกัน Sked ไม่มี endpoint ตัวแยกวิเคราะห์ในตัว และจะไม่ส่งคำขอแยกวิเคราะห์ไปยัง backend ตัวแยกวิเคราะห์ตารางเรียนที่นักพัฒนาควบคุม endpoint แบบกำหนดเองและบริการต้นทางใด ๆ อาจจัดเก็บ ส่งต่อ จำกัด ลบ หรือประมวลผลข้อมูลด้วยวิธีอื่นตามกฎของผู้ให้บริการที่คุณเลือก หากคุณใช้ http:// Base URL ให้ใช้เฉพาะบนอุปกรณ์ เครือข่าย และบริการ endpoint ที่เชื่อถือได้เท่านั้น เพราะเนื้อหาและคีย์ API อาจไม่ได้รับการปกป้องด้วยการเข้ารหัสระหว่างส่งข้อมูล';
 
   @override
   String get privacyPolicyUpdatesTitle => 'การปรับปรุงนโยบาย';
@@ -1063,6 +1064,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'URL ฐาน';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL ต้องเป็น URL แบบ HTTP หรือ HTTPS ที่มีโฮสต์';
+
+  @override
   String get schoolImportParserApiKey => 'คีย์ API';
 
   @override
@@ -1260,33 +1265,33 @@ class AppLocalizationsTh extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'เลือกโหมดเริ่มต้น';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'เลือกพื้นที่ทำงานที่คุณใช้บ่อยที่สุด คุณสามารถสลับโหมดได้ภายหลัง';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'จัดการตารางเรียน วิชา สัปดาห์ เวลาเรียน และการนำเข้า';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'จัดการปฏิทิน เหตุการณ์ การแจ้งเตือน และข้อมูล JSON / ICS';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'เริ่มด้วยตารางเรียน';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'เริ่มด้วยตารางเวลา';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'คุณจะต้องอ่านและยอมรับนโยบายความเป็นส่วนตัวก่อนเข้าใช้งาน';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'กำลังเตรียมการตรวจสอบนโยบายความเป็นส่วนตัว...';
 
   @override
   String get switchMode => 'Switch mode';

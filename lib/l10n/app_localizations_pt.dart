@@ -380,67 +380,68 @@ class AppLocalizationsPt extends AppLocalizations {
       'Importe todos os dados ou horários individuais, ou exporte o horário atual/todos os horários.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Backup e restauração do app';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Faça backup ou restaure horários, agendas, configurações e sites escolares. As chaves de API não são incluídas.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Uma restauração completa substitui os dados atuais do app. As chaves de API do analisador personalizado ficam no armazenamento seguro e não são gravadas nos arquivos de backup.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Restaurar de arquivo JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Escolha um arquivo de backup completo do Sked. Você confirmará antes de restaurar.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Colar JSON de backup';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Cole um backup completo e restaure os dados atuais do app.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Compartilhar arquivo de backup';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exporte todos os dados do app como JSON. As chaves de API são excluídas.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Salvar arquivo de backup';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Salve um backup completo do app em um arquivo local.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Copiar texto de backup';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Mostra o JSON completo do backup para que você possa copiá-lo ou armazená-lo temporariamente.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Restaurar backup completo?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Isto substituirá todos os horários, agendas gerais, configurações e sites escolares atuais. As chaves de API não são importadas dos backups; insira a chave novamente antes de analisar horários outra vez.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Restaurar backup';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Backup completo do app restaurado. As chaves de API do analisador precisam ser inseridas novamente.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Falha ao restaurar. Verifique o conteúdo do backup e tente novamente.';
 
   @override
   String get openSourceLicenses => 'Licenças de código aberto';
@@ -827,7 +828,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Quando você usa a importação de uma página escolar ou analisa texto de horário / HTML colado, o app primeiro prepara e limpa o conteúdo localmente e depois envia o texto do horário, texto da página ou conteúdo HTML enviado, o título e URL opcionais da página, o idioma atual do app e o conteúdo do prompt do analisador para o endpoint compatível com OpenAI que você configurou. A busca da lista de modelos também solicita esse mesmo endpoint. O Sked não fornece um endpoint de análise integrado e não envia solicitações de análise para um backend de análise de horários controlado pelo desenvolvedor. O endpoint personalizado e quaisquer serviços upstream podem armazenar, encaminhar, limitar, excluir ou processar os dados de outra forma conforme as regras do provedor de serviço que você escolher. Se você usar uma Base URL http://, use-a apenas em dispositivos, redes e serviços de endpoint confiáveis, porque o conteúdo e as chaves de API podem não estar protegidos por criptografia de transporte.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Atualizações da política';
@@ -1082,6 +1083,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'URL base';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'A Base URL deve ser uma URL HTTP ou HTTPS com host.';
+
+  @override
   String get schoolImportParserApiKey => 'Chave de API';
 
   @override
@@ -1282,33 +1287,33 @@ class AppLocalizationsPt extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Escolha o modo inicial';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Escolha o espaço de trabalho que você mais usa. Você pode trocar de modo depois.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Gerencie horários, cursos, semanas, períodos e importações.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Gerencie calendários, eventos, lembretes e dados JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Começar com horário';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Começar com agenda';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Você revisará e aceitará a política de privacidade antes de entrar.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Preparando a verificação da política de privacidade...';
 
   @override
   String get switchMode => 'Switch mode';

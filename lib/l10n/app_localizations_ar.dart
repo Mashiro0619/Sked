@@ -377,67 +377,68 @@ class AppLocalizationsAr extends AppLocalizations {
       'استيراد البيانات الكاملة أو الجداول الزمنية الفردية، أو تصدير الجداول الزمنية الحالية / جميع.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'نسخ التطبيق احتياطيًا واستعادته';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'انسخ الجداول الدراسية والجداول العامة والإعدادات ومواقع المدارس احتياطيًا أو استعدها. لا يتم تضمين مفاتيح API.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'تؤدي الاستعادة الكاملة إلى استبدال بيانات التطبيق الحالية. تُحفظ مفاتيح API الخاصة بالمحلل المخصص في التخزين الآمن ولا تُكتب في ملفات النسخ الاحتياطي.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'استعادة من ملف JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'اختر ملف نسخ احتياطي كامل لـ Sked. ستؤكد قبل الاستعادة.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'لصق JSON للنسخة الاحتياطية';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'الصق نسخة احتياطية كاملة لاستعادة بيانات التطبيق الحالية.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'مشاركة ملف النسخة الاحتياطية';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'صدّر بيانات التطبيق الكاملة بتنسيق JSON. يتم استبعاد مفاتيح API.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'حفظ ملف النسخة الاحتياطية';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'احفظ نسخة احتياطية كاملة للتطبيق في ملف محلي.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'نسخ نص النسخة الاحتياطية';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'اعرض JSON الكامل للنسخة الاحتياطية كي تتمكن من نسخه أو تخزينه مؤقتًا.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'استعادة النسخة الاحتياطية الكاملة؟';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'سيؤدي هذا إلى استبدال كل الجداول الدراسية والجداول العامة والإعدادات ومواقع المدارس الحالية. لا يتم استيراد مفاتيح API من النسخ الاحتياطية؛ أعد إدخال المفتاح قبل تحليل الجداول الدراسية مرة أخرى.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'استعادة النسخة الاحتياطية';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'تمت استعادة النسخة الاحتياطية الكاملة للتطبيق. يجب إعادة إدخال مفاتيح API للمحلل.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'فشلت الاستعادة. تحقق من محتوى النسخة الاحتياطية وحاول مرة أخرى.';
 
   @override
   String get openSourceLicenses => 'تراخيص المصدر المفتوح';
@@ -814,7 +815,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'عند استخدام استيراد صفحة المدرسة أو تحليل نص جدول دراسي / HTML ملصوق، يجهز التطبيق المحتوى وينظفه محليًا أولًا، ثم يرسل نص الجدول الدراسي أو نص الصفحة أو محتوى HTML الذي أرسلته، مع عنوان الصفحة ورابطها الاختياريين، ولغة التطبيق الحالية، ومحتوى تعليمات المحلل، إلى نقطة النهاية المتوافقة مع OpenAI التي قمت بتكوينها. كما يطلب جلب قائمة النماذج نقطة النهاية نفسها. لا يوفر Sked نقطة نهاية تحليل مدمجة ولا يرسل طلبات التحليل إلى خادم خلفي لتحليل الجداول يتحكم فيه المطور. قد تحفظ نقطة النهاية المخصصة وأي خدمات علوية البيانات أو تعيد توجيهها أو تحد منها أو تحذفها أو تعالجها بطرق أخرى وفق قواعد مزود الخدمة الذي تختاره. إذا كنت تستخدم Base URL يبدأ بـ http://، فاستخدمه فقط على أجهزة وشبكات وخدمات نقطة نهاية موثوقة، لأن المحتوى ومفاتيح API قد لا تكون محمية بتشفير النقل.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'تحديثات السياسة';
@@ -1065,6 +1066,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'عنوان العنوان الأساسي';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'يجب أن يكون Base URL عنوان HTTP أو HTTPS يحتوي على مضيف.';
+
+  @override
   String get schoolImportParserApiKey => 'مفتاح API';
 
   @override
@@ -1263,33 +1268,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'اختر وضع البداية';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'اختر مساحة العمل التي تستخدمها أكثر. يمكنك تبديل الأوضاع لاحقًا.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'إدارة الجداول الدراسية والمقررات والأسابيع وأوقات الحصص والاستيراد.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'إدارة التقويمات والأحداث والتذكيرات وبيانات JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'البدء بالجدول الدراسي';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'البدء بالجدول العام';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'ستراجع سياسة الخصوصية وتوافق عليها قبل الدخول.';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+  String get firstLaunchPreparingPrivacy => 'جارٍ تجهيز فحص سياسة الخصوصية...';
 
   @override
   String get switchMode => 'Switch mode';

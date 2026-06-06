@@ -1602,7 +1602,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyFutureFeatureBody.
   ///
   /// In en, this message translates to:
-  /// **'When you use school webpage import or parse pasted timetable text / HTML, the app first prepares and cleans the content locally, then sends the submitted timetable text, page text or HTML content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.'**
+  /// **'When you use school webpage import or parse pasted timetable text / HTML, the app first prepares and cleans the content locally, then sends the submitted timetable text, page text or HTML content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, only use it on trusted devices, trusted networks, and trusted endpoint services, because content and API keys may not be protected by transport encryption.'**
   String get privacyPolicyFutureFeatureBody;
 
   /// No description provided for @privacyPolicyUpdatesTitle.
@@ -2036,6 +2036,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Base URL'**
   String get schoolImportParserBaseUrl;
+
+  /// No description provided for @schoolImportParserBaseUrlInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Base URL must be an HTTP or HTTPS URL with a host.'**
+  String get schoolImportParserBaseUrlInvalid;
 
   /// No description provided for @schoolImportParserApiKey.
   ///

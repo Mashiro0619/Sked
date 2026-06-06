@@ -367,67 +367,65 @@ class AppLocalizationsJa extends AppLocalizations {
       '全データまたは単一の時間割をインポート、または現在/すべての時間割をエクスポートします。';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'アプリのバックアップと復元';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      '時間割、予定、設定、学校サイトをバックアップまたは復元します。API キーは含まれません。';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      '完全復元では現在のアプリデータが置き換えられます。カスタム解析用の API キーは安全なストレージに保存され、バックアップファイルには書き込まれません。';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'JSON ファイルから復元';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Sked の完全バックアップファイルを選択します。復元前に確認があります。';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'バックアップ JSON を貼り付け';
 
   @override
-  String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+  String get restoreBackupTextSubtitle => '完全バックアップを貼り付けて、現在のアプリデータを復元します。';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'バックアップファイルを共有';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'アプリの全データを JSON としてエクスポートします。API キーは除外されます。';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'バックアップファイルを保存';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle => 'アプリの完全バックアップをローカルファイルに保存します。';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'バックアップテキストをコピー';
 
   @override
-  String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+  String get copyBackupSubtitle => '完全なバックアップ JSON を表示し、コピーまたは一時保存できるようにします。';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => '完全バックアップを復元しますか？';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      '現在のすべての時間割、一般予定、設定、学校サイトが置き換えられます。API キーはバックアップからインポートされません。時間割を再度解析する前にキーを再入力してください。';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'バックアップを復元';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'アプリの完全バックアップを復元しました。解析用 API キーを再入力する必要があります。';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      '復元に失敗しました。バックアップ内容を確認して、もう一度お試しください。';
 
   @override
   String get openSourceLicenses => 'オープンソースライセンス';
@@ -798,7 +796,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      '学校のウェブページ取り込みを使用する場合、または貼り付けた時間割テキスト / HTML を解析する場合、アプリはまず内容をローカルで整形して不要な部分を取り除き、その後、送信された時間割テキスト、ページ本文または HTML 内容、任意のページタイトルと URL、現在のアプリ言語、解析用プロンプトの内容を、あなたが設定した OpenAI 互換エンドポイントへ送信します。モデル一覧の取得でも同じエンドポイントへリクエストします。Sked は組み込みの解析エンドポイントを提供せず、開発者が管理する時間割解析バックエンドへ解析リクエストを送信することもありません。カスタムエンドポイントおよびその上流サービスは、選択したサービス提供者の規則に従って、データを保存、転送、制限、削除、またはその他の方法で処理する場合があります。http:// Base URL を使用する場合は、内容や API キーが転送時暗号化で保護されない可能性があるため、信頼できる端末、ネットワーク、エンドポイントサービスでのみ使用してください。';
 
   @override
   String get privacyPolicyUpdatesTitle => 'ポリシーの更新';
@@ -1043,6 +1041,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Base URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL はホストを含む HTTP または HTTPS の URL にしてください。';
+
+  @override
   String get schoolImportParserApiKey => 'API key';
 
   @override
@@ -1237,33 +1239,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => '開始モードを選択';
 
   @override
-  String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+  String get firstLaunchSubtitle => 'よく使うワークスペースを選択してください。モードは後から切り替えられます。';
 
   @override
-  String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+  String get firstLaunchStudentDesc => '時間割、科目、週、時限、インポートを管理します。';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'カレンダー、イベント、リマインダー、JSON / ICS データを管理します。';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => '時間割で開始';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => '予定で開始';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+  String get firstLaunchPrivacyHint => '開始前にプライバシーポリシーを確認し、同意します。';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+  String get firstLaunchPreparingPrivacy => 'プライバシーポリシーの確認を準備しています...';
 
   @override
   String get switchMode => 'Switch mode';

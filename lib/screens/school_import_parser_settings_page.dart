@@ -81,6 +81,8 @@ class _SchoolImportParserSettingsPageState
       builder: (context, provider, child) {
         _syncControllers(provider);
         final l10n = AppLocalizations.of(context);
+        final baseUrl = provider.customSchoolImportBaseUrl.trim();
+        final hasValidBaseUrl = isValidCustomOpenAiBaseUrl(baseUrl);
         return Scaffold(
           appBar: AppBar(title: Text(l10n.schoolImportParserSettingsTitle)),
           body: ListView(
@@ -100,6 +102,9 @@ class _SchoolImportParserSettingsPageState
                   labelText: l10n.schoolImportParserBaseUrl,
                   hintText: 'https://api.example.com/v1',
                   prefixIcon: const Icon(Icons.link),
+                  errorText: baseUrl.isNotEmpty && !hasValidBaseUrl
+                      ? l10n.schoolImportParserBaseUrlInvalid
+                      : null,
                 ),
                 keyboardType: TextInputType.url,
                 onChanged: provider.updateCustomSchoolImportBaseUrl,
@@ -154,7 +159,7 @@ class _SchoolImportParserSettingsPageState
                     _isFetchingModels ||
                         _pendingApiKeyValue != null ||
                         _isSavingApiKey ||
-                        provider.customSchoolImportBaseUrl.isEmpty ||
+                        !hasValidBaseUrl ||
                         provider.customSchoolImportApiKey.isEmpty
                     ? null
                     : () => _fetchModels(provider),

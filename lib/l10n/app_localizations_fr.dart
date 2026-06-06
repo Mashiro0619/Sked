@@ -382,67 +382,68 @@ class AppLocalizationsFr extends AppLocalizations {
       'Importez toutes les données ou un seul emploi du temps, ou exportez l\'emploi du temps actuel/tous les emplois du temps.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Sauvegarde et restauration de l’application';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Sauvegardez ou restaurez les emplois du temps, plannings, paramètres et sites d’école. Les clés API ne sont pas incluses.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Une restauration complète remplace les données actuelles de l’application. Les clés API du parseur personnalisé restent dans le stockage sécurisé et ne sont pas écrites dans les fichiers de sauvegarde.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Restaurer depuis un fichier JSON';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Choisissez un fichier de sauvegarde complet de Sked. Une confirmation sera demandée avant la restauration.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Coller le JSON de sauvegarde';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Collez une sauvegarde complète pour restaurer les données actuelles de l’application.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Partager le fichier de sauvegarde';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exportez toutes les données de l’application en JSON. Les clés API sont exclues.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Enregistrer le fichier de sauvegarde';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Enregistrez une sauvegarde complète de l’application dans un fichier local.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Copier le texte de sauvegarde';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Affiche le JSON complet de la sauvegarde afin de le copier ou de le stocker temporairement.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Restaurer la sauvegarde complète ?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Cela remplacera tous les emplois du temps, plannings généraux, paramètres et sites d’école actuels. Les clés API ne sont pas importées depuis les sauvegardes ; saisissez à nouveau la clé avant de parser des emplois du temps.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Restaurer la sauvegarde';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Sauvegarde complète de l’application restaurée. Les clés API du parseur doivent être saisies à nouveau.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Échec de la restauration. Vérifiez le contenu de la sauvegarde et réessayez.';
 
   @override
   String get openSourceLicenses => 'Licences open source';
@@ -836,7 +837,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Lorsque vous utilisez l’import d’une page web d’école ou l’analyse d’un texte d’emploi du temps / HTML collé, l’application prépare et nettoie d’abord le contenu localement, puis envoie le texte d’emploi du temps, le texte de page ou le contenu HTML soumis, le titre et l’URL facultatifs de la page, la langue actuelle de l’application et le contenu du prompt d’analyse au point de terminaison compatible OpenAI que vous avez configuré. La récupération de la liste des modèles interroge aussi ce même point de terminaison. Sked ne fournit pas de point de terminaison d’analyse intégré et n’envoie pas les requêtes d’analyse à un backend d’analyse d’emploi du temps contrôlé par le développeur. Le point de terminaison personnalisé et les éventuels services en amont peuvent stocker, transférer, limiter, supprimer ou traiter les données d’une autre manière selon les règles du fournisseur de services que vous choisissez. Si vous utilisez une Base URL en http://, utilisez-la uniquement sur des appareils, réseaux et services de point de terminaison de confiance, car le contenu et les clés API peuvent ne pas être protégés par le chiffrement du transport.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Mises à jour de la politique';
@@ -1096,6 +1097,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Base URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'La Base URL doit être une URL HTTP ou HTTPS avec un hôte.';
+
+  @override
   String get schoolImportParserApiKey => 'API key';
 
   @override
@@ -1297,33 +1302,33 @@ class AppLocalizationsFr extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Choisissez votre mode de départ';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Choisissez l’espace de travail que vous utilisez le plus. Vous pourrez changer de mode plus tard.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Gérez les emplois du temps, cours, semaines, horaires de périodes et imports.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Gérez les calendriers, événements, rappels et données JSON / ICS.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Commencer avec l’emploi du temps';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Commencer avec le planning';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Vous devrez lire et accepter la politique de confidentialité avant d’entrer.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Préparation de la vérification de la politique de confidentialité...';
 
   @override
   String get switchMode => 'Switch mode';

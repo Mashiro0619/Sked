@@ -378,67 +378,69 @@ class AppLocalizationsFi extends AppLocalizations {
       'Tuo täydet tiedot tai yksittäiset aikataulut tai vie nykyiset/kaikki aikataulut.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle => 'Sovelluksen varmuuskopiointi ja palautus';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Varmuuskopioi tai palauta lukujärjestykset, aikataulut, asetukset ja koulusivustot. API-avaimia ei sisällytetä.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'Täysi palautus korvaa nykyiset sovellustiedot. Mukautetun jäsentimen API-avaimet ovat suojatussa tallennustilassa, eikä niitä kirjoiteta varmuuskopiotiedostoihin.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Palauta JSON-tiedostosta';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Valitse täydellinen Sked-varmuuskopiotiedosto. Vahvistat ennen palautusta.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Liitä varmuuskopion JSON';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Liitä täydellinen varmuuskopio ja palauta nykyiset sovellustiedot.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Jaa varmuuskopiotiedosto';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Vie kaikki sovellustiedot JSON-muodossa. API-avaimet jätetään pois.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Tallenna varmuuskopiotiedosto';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Tallenna sovelluksen täydellinen varmuuskopio paikalliseen tiedostoon.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Kopioi varmuuskopion teksti';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Näytä varmuuskopion koko JSON, jotta voit kopioida sen tai tallentaa sen väliaikaisesti.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle =>
+      'Palautetaanko täydellinen varmuuskopio?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Tämä korvaa kaikki nykyiset lukujärjestykset, yleiset aikataulut, asetukset ja koulusivustot. API-avaimia ei tuoda varmuuskopioista; syötä avain uudelleen ennen lukujärjestysten jäsentämistä.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Palauta varmuuskopio';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Sovelluksen täydellinen varmuuskopio palautettiin. Jäsentimen API-avaimet on syötettävä uudelleen.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'Palautus epäonnistui. Tarkista varmuuskopion sisältö ja yritä uudelleen.';
 
   @override
   String get openSourceLicenses => 'Avoimen lähdekoodin lisenssit';
@@ -820,7 +822,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Kun käytät koulun verkkosivun tuontia tai jäsennät liitettyä lukujärjestystekstiä / HTML:ää, sovellus valmistelee ja puhdistaa sisällön ensin paikallisesti ja lähettää sen jälkeen lähettämäsi lukujärjestystekstin, sivutekstin tai HTML-sisällön, valinnaisen sivun otsikon ja URL-osoitteen, sovelluksen nykyisen kielen sekä jäsentimen kehotesisällön määrittämääsi OpenAI-yhteensopivaan päätepisteeseen. Malliluettelon haku tekee pyynnön samaan päätepisteeseen. Sked ei tarjoa sisäänrakennettua jäsenninpäätepistettä eikä lähetä jäsennyspyyntöjä kehittäjän hallitsemaan lukujärjestysjäsentimen taustapalveluun. Mukautettu päätepiste ja mahdolliset ylävirran palvelut voivat tallentaa, välittää, rajoittaa, poistaa tai muuten käsitellä tietoja valitsemasi palveluntarjoajan sääntöjen mukaisesti. Jos käytät http:// Base URL -osoitetta, käytä sitä vain luotetuilla laitteilla, luotetuissa verkoissa ja luotetuissa päätepistepalveluissa, koska sisältöä ja API-avaimia ei välttämättä suojata siirtokerroksen salauksella.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Käytännön päivitykset';
@@ -1075,6 +1077,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Perus-URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'Base URL -osoitteen on oltava HTTP- tai HTTPS-osoite, jossa on isäntä.';
+
+  @override
   String get schoolImportParserApiKey => 'API-avain';
 
   @override
@@ -1273,33 +1279,33 @@ class AppLocalizationsFi extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Valitse aloitustila';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Valitse työtila, jota käytät eniten. Voit vaihtaa tilaa myöhemmin.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Hallitse lukujärjestyksiä, kursseja, viikkoja, oppituntien aikoja ja tuonteja.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Hallitse kalentereita, tapahtumia, muistutuksia ja JSON / ICS -tietoja.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Aloita lukujärjestyksellä';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Aloita aikataululla';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Tarkistat ja hyväksyt tietosuojakäytännön ennen jatkamista.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Valmistellaan tietosuojakäytännön tarkistusta...';
 
   @override
   String get switchMode => 'Switch mode';

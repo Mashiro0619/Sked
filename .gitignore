@@ -33,6 +33,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/untranslated_messages.json
+lib/l10n/untranslated_messages.json
 
 # Symbolication related
 app.*.symbols

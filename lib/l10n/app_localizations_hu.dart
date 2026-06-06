@@ -382,67 +382,69 @@ class AppLocalizationsHu extends AppLocalizations {
       'Teljes adatok vagy egyetlen menetrend importálása, vagy az aktuális/összes menetrend exportálása.';
 
   @override
-  String get appBackupTitle => 'App backup and restore';
+  String get appBackupTitle =>
+      'Alkalmazás biztonsági mentése és visszaállítása';
 
   @override
   String get appBackupSubtitle =>
-      'Back up or restore timetables, schedules, settings, and school sites. API keys are not included.';
+      'Mentse vagy állítsa vissza az órarendeket, naptárakat, beállításokat és iskolai webhelyeket. Az API-kulcsok nem szerepelnek benne.';
 
   @override
   String get appBackupSheetSubtitle =>
-      'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.';
+      'A teljes visszaállítás lecseréli az aktuális alkalmazásadatokat. Az egyéni elemző API-kulcsai biztonságos tárhelyen vannak, és nem kerülnek a mentési fájlokba.';
 
   @override
-  String get restoreBackupFileTitle => 'Restore from JSON file';
+  String get restoreBackupFileTitle => 'Visszaállítás JSON-fájlból';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Choose a full Sked backup file. You will confirm before restoring.';
+      'Válasszon egy teljes Sked biztonsági mentési fájlt. Visszaállítás előtt megerősítést kérünk.';
 
   @override
-  String get restoreBackupTextTitle => 'Paste backup JSON';
+  String get restoreBackupTextTitle => 'Mentési JSON beillesztése';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Paste a full backup and restore current app data.';
+      'Illesszen be egy teljes mentést, és állítsa vissza az aktuális alkalmazásadatokat.';
 
   @override
-  String get shareBackupTitle => 'Share backup file';
+  String get shareBackupTitle => 'Mentési fájl megosztása';
 
   @override
   String get shareBackupSubtitle =>
-      'Export full app data as JSON. API keys are excluded.';
+      'Exportálja a teljes alkalmazásadatot JSON-ként. Az API-kulcsok kimaradnak.';
 
   @override
-  String get saveBackupTitle => 'Save backup file';
+  String get saveBackupTitle => 'Mentési fájl mentése';
 
   @override
-  String get saveBackupSubtitle => 'Save a full app backup to a local file.';
+  String get saveBackupSubtitle =>
+      'Teljes alkalmazásmentés mentése helyi fájlba.';
 
   @override
-  String get copyBackupTitle => 'Copy backup text';
+  String get copyBackupTitle => 'Mentési szöveg másolása';
 
   @override
   String get copyBackupSubtitle =>
-      'Show the full backup JSON so you can copy or store it temporarily.';
+      'Megjeleníti a teljes mentési JSON-t, hogy kimásolhassa vagy ideiglenesen eltárolhassa.';
 
   @override
-  String get restoreBackupConfirmTitle => 'Restore full backup?';
+  String get restoreBackupConfirmTitle => 'Teljes mentés visszaállítása?';
 
   @override
   String get restoreBackupConfirmMessage =>
-      'This replaces all current timetables, general schedules, settings, and school sites. API keys are not imported from backups; re-enter the key before parsing timetables again.';
+      'Ez lecseréli az összes jelenlegi órarendet, általános naptárat, beállítást és iskolai webhelyet. Az API-kulcsok nem importálódnak a mentésekből; az órarendek újraelemzése előtt adja meg újra a kulcsot.';
 
   @override
-  String get restoreBackupConfirmAction => 'Restore backup';
+  String get restoreBackupConfirmAction => 'Mentés visszaállítása';
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Full app backup restored. Parser API keys must be re-entered.';
+      'Teljes alkalmazásmentés visszaállítva. Az elemző API-kulcsait újra meg kell adni.';
 
   @override
   String get restoreBackupFailureMessage =>
-      'Restore failed. Please check the backup content and try again.';
+      'A visszaállítás sikertelen. Ellenőrizze a mentés tartalmát, és próbálja újra.';
 
   @override
   String get openSourceLicenses => 'Nyílt forráskódú licencek';
@@ -828,7 +830,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get privacyPolicyFutureFeatureBody =>
-      'When you use school webpage import or paste HTML for parsing, the app first prepares and cleans the content locally, then sends the submitted page content, optional page title and URL, the current app language, and parser prompt content to the OpenAI-compatible endpoint you configured. Fetching the model list also requests that same configured endpoint. Sked does not provide a built-in parser endpoint and does not send parsing requests to a developer-controlled timetable parser backend. The custom endpoint and any upstream services may store, forward, limit, delete, or otherwise process data according to the rules of the service provider you choose. If you use an http:// Base URL, submitted content and API keys may not be protected by transport encryption.';
+      'Amikor iskolai weboldal importálását használod, vagy beillesztett órarendszöveget / HTML-t elemeztetsz, az alkalmazás először helyben előkészíti és megtisztítja a tartalmat, majd elküldi a beküldött órarendszöveget, oldalszöveget vagy HTML-tartalmat, az opcionális oldal címet és URL-t, az alkalmazás aktuális nyelvét és az elemző prompt tartalmát az általad beállított OpenAI-kompatibilis végpontra. A modelllista lekérése is ugyanezt a végpontot hívja meg. A Sked nem biztosít beépített elemző végpontot, és nem küld elemzési kéréseket fejlesztő által vezérelt órarendelemző háttérrendszernek. Az egyéni végpont és az esetleges upstream szolgáltatások az általad választott szolgáltató szabályai szerint tárolhatják, továbbíthatják, korlátozhatják, törölhetik vagy más módon kezelhetik az adatokat. Ha http:// Base URL-t használsz, csak megbízható eszközökön, hálózatokon és végpontszolgáltatásokkal használd, mert a tartalom és az API-kulcsok nem feltétlenül védettek szállítási titkosítással.';
 
   @override
   String get privacyPolicyUpdatesTitle => 'Politikai frissítések';
@@ -1085,6 +1087,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolImportParserBaseUrl => 'Bázis URL';
 
   @override
+  String get schoolImportParserBaseUrlInvalid =>
+      'A Base URL mezőnek gazdagépet tartalmazó HTTP- vagy HTTPS-címnek kell lennie.';
+
+  @override
   String get schoolImportParserApiKey => 'API kulcs';
 
   @override
@@ -1286,33 +1292,33 @@ class AppLocalizationsHu extends AppLocalizations {
   String get studentTimetable => 'Student timetable';
 
   @override
-  String get firstLaunchTitle => 'Choose your starting mode';
+  String get firstLaunchTitle => 'Válassza ki a kezdő módot';
 
   @override
   String get firstLaunchSubtitle =>
-      'Pick the workspace you use most. You can switch modes later.';
+      'Válassza ki a leggyakrabban használt munkaterületet. Később módot válthat.';
 
   @override
   String get firstLaunchStudentDesc =>
-      'Manage timetables, courses, weeks, period times, and imports.';
+      'Órarendek, kurzusok, hetek, órakezdések és importok kezelése.';
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Manage calendars, events, reminders, and JSON / ICS data.';
+      'Naptárak, események, emlékeztetők és JSON / ICS adatok kezelése.';
 
   @override
-  String get firstLaunchStartStudent => 'Start with timetable';
+  String get firstLaunchStartStudent => 'Kezdés órarenddel';
 
   @override
-  String get firstLaunchStartGeneral => 'Start with schedule';
+  String get firstLaunchStartGeneral => 'Kezdés naptárral';
 
   @override
   String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+      'Belépés előtt áttekinti és elfogadja az adatvédelmi szabályzatot.';
 
   @override
   String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+      'Adatvédelmi ellenőrzés előkészítése...';
 
   @override
   String get switchMode => 'Switch mode';
