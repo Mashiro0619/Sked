@@ -244,7 +244,7 @@ class _TimetableDrawerItem extends StatelessWidget {
   }
 }
 
-class _TimetableWeekPager extends StatelessWidget {
+class _TimetableWeekPager extends StatefulWidget {
   const _TimetableWeekPager({
     required this.controller,
     required this.provider,
@@ -264,14 +264,37 @@ class _TimetableWeekPager extends StatelessWidget {
   final ValueChanged<TimetableEmptySlotTapInfo> onEmptySlotTap;
 
   @override
+  State<_TimetableWeekPager> createState() => _TimetableWeekPagerState();
+}
+
+class _TimetableWeekPagerState extends State<_TimetableWeekPager> {
+  Timer? _liveCourseTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _liveCourseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _liveCourseTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-          onJumpWeekBy(-1);
+          widget.onJumpWeekBy(-1);
         },
         const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-          onJumpWeekBy(1);
+          widget.onJumpWeekBy(1);
         },
       },
       child: Focus(
@@ -287,55 +310,65 @@ class _TimetableWeekPager extends StatelessWidget {
             },
           ),
           child: PageView.builder(
-            controller: controller,
-            itemCount: config.totalWeeks,
-            onPageChanged: (index) => provider.setSelectedWeek(index + 1),
+            controller: widget.controller,
+            itemCount: widget.config.totalWeeks,
+            onPageChanged: (index) =>
+                widget.provider.setSelectedWeek(index + 1),
             itemBuilder: (context, index) {
               final pageWeek = index + 1;
-              final weekStart = startOfWeekFor(config, pageWeek);
-              final realCurrentWeek = currentWeekFor(config);
+              final weekStart = startOfWeekFor(widget.config, pageWeek);
+              final realCurrentWeek = currentWeekFor(widget.config);
               final liveCourseTarget = currentOrNextCourseTargetFor(
-                timetable: timetable,
+                timetable: widget.timetable,
                 selectedWeek: pageWeek,
                 realCurrentWeek: realCurrentWeek,
                 now: DateTime.now(),
                 displayedCourseIdForConflict:
-                    provider.displayedCourseIdForConflict,
+                    widget.provider.displayedCourseIdForConflict,
               );
               final liveCourseOutlineColorValue =
-                  provider.liveCourseOutlineFollowTheme
+                  widget.provider.liveCourseOutlineFollowTheme
                   ? deriveLiveCourseOutlineColorFromSeed(
-                      Color(provider.themeSeedColorValue),
+                      Color(widget.provider.themeSeedColorValue),
                     ).toARGB32()
-                  : provider.liveCourseOutlineColorValue;
+                  : widget.provider.liveCourseOutlineColorValue;
               return Padding(
                 padding: const EdgeInsets.fromLTRB(2, 8, 0, AppSpacing.md),
-                child: TimetableGrid(
-                  timetable: timetable,
-                  periodTimes: provider.periodTimesForTimetable(timetable),
-                  weekDateStart: weekStart,
-                  selectedWeek: pageWeek,
-                  realCurrentWeek: realCurrentWeek,
-                  localeCode: provider.localeCode,
-                  preserveGaps: provider.preserveTimetableGaps,
-                  showPastEndedCourses: provider.showPastEndedCourses,
-                  showFutureCourses: provider.showFutureCourses,
-                  showGridLines: provider.showTimetableGridLines,
-                  themeColorMode: provider.themeColorMode,
-                  courseNameColorValues: provider.courseNameColorValues,
-                  colorfulCourseTextColorMode:
-                      provider.colorfulCourseTextColorMode,
-                  colorfulCourseTextColorValue: provider
-                      .colorfulUiColorValues[colorfulCourseTextColorKey],
-                  displayedCourseIdForConflict:
-                      provider.displayedCourseIdForConflict,
-                  liveCourseTarget: liveCourseTarget,
-                  liveCourseOutlineEnabled: provider.liveCourseOutlineEnabled,
-                  liveCourseOutlineMode: provider.liveCourseOutlineMode,
-                  liveCourseOutlineColorValue: liveCourseOutlineColorValue,
-                  liveCourseOutlineWidth: provider.liveCourseOutlineWidth,
-                  onCourseTap: onCourseTap,
-                  onEmptySlotTap: onEmptySlotTap,
+                child: RepaintBoundary(
+                  child: TimetableGrid(
+                    timetable: widget.timetable,
+                    periodTimes: widget.provider.periodTimesForTimetable(
+                      widget.timetable,
+                    ),
+                    weekDateStart: weekStart,
+                    selectedWeek: pageWeek,
+                    realCurrentWeek: realCurrentWeek,
+                    localeCode: widget.provider.localeCode,
+                    preserveGaps: widget.provider.preserveTimetableGaps,
+                    showPastEndedCourses: widget.provider.showPastEndedCourses,
+                    showFutureCourses: widget.provider.showFutureCourses,
+                    showGridLines: widget.provider.showTimetableGridLines,
+                    themeColorMode: widget.provider.themeColorMode,
+                    courseNameColorValues:
+                        widget.provider.courseNameColorValues,
+                    colorfulCourseTextColorMode:
+                        widget.provider.colorfulCourseTextColorMode,
+                    colorfulCourseTextColorValue: widget
+                        .provider
+                        .colorfulUiColorValues[colorfulCourseTextColorKey],
+                    displayedCourseIdForConflict:
+                        widget.provider.displayedCourseIdForConflict,
+                    liveCourseTarget: liveCourseTarget,
+                    liveCourseOutlineEnabled:
+                        widget.provider.liveCourseOutlineEnabled,
+                    liveCourseOutlineMode:
+                        widget.provider.liveCourseOutlineMode,
+                    liveCourseOutlineColorValue: liveCourseOutlineColorValue,
+                    liveCourseOutlineWidth:
+                        widget.provider.liveCourseOutlineWidth,
+                    onCourseTap: widget.onCourseTap,
+                    onEmptySlotTap: widget.onEmptySlotTap,
+                  ),
                 ),
               );
             },

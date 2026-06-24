@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../services/general_calendar_service.dart';
 import '../services/general_calendar_ics_service.dart';
+import '../services/general_occurrence_cache.dart';
 import '../services/general_occurrence_service.dart';
 import '../services/import_export_service.dart';
 import '../services/privacy_service.dart';
@@ -61,6 +63,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   SettingsService get _settings;
   PrivacyService get _privacy;
   SecretStore get _secrets;
+  GeneralOccurrenceCache get _generalOccurrenceCache;
 
   GeneralSchedule? get activeGeneralScheduleOrNull;
   TimetableData? get activeTimetableOrNull;
@@ -72,6 +75,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<AppData> _buildDefaultAppData();
   Future<void> _saveAndNotify();
   Future<void> _save();
+  void _scheduleUiStateSave();
 
   AppData _withRuntimeCustomSchoolImportApiKey(AppData data, String value) {
     final normalized = value.trim();
@@ -120,13 +124,15 @@ class TimetableProvider extends _TimetableProviderBase
     SettingsService? settingsService,
     PrivacyService? privacyService,
     SecretStore? secretStore,
+    @visibleForTesting Duration? uiStateSaveDelay,
   }) : _repository =
            repository ?? AppRepository(storage: storage ?? TimetableStorage()),
        _systemLocaleCodeResolver =
            systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver,
        _settings = settingsService ?? const SettingsService(),
        _privacy = privacyService ?? const PrivacyService(),
-       _secrets = secretStore ?? SecretStore();
+       _secrets = secretStore ?? SecretStore(),
+       _uiStateSaveDelay = uiStateSaveDelay ?? _defaultUiStateSaveDelay;
 
   @override
   final AppRepository _repository;
@@ -138,6 +144,9 @@ class TimetableProvider extends _TimetableProviderBase
   final PrivacyService _privacy;
   @override
   final SecretStore _secrets;
+  @override
+  final GeneralOccurrenceCache _generalOccurrenceCache =
+      GeneralOccurrenceCache();
 
   @override
   AppData _appData = buildInitialAppData(buildDefaultPeriodTimes());
@@ -149,6 +158,11 @@ class TimetableProvider extends _TimetableProviderBase
   bool _isLoading = false;
   @override
   String? _storagePath;
+  Timer? _uiStateSaveTimer;
+  Future<void>? _uiStateSaveInFlight;
+  final Duration _uiStateSaveDelay;
+
+  static const _defaultUiStateSaveDelay = Duration(milliseconds: 450);
 
   bool get isLoaded => _isLoaded;
   bool get hasTimetables => _appData.studentMode.timetables.isNotEmpty;
@@ -224,6 +238,7 @@ class TimetableProvider extends _TimetableProviderBase
 
   @override
   Future<void> _saveAndNotify() async {
+    _cancelScheduledUiStateSave();
     final previous = _repository.current;
     try {
       await _save();
@@ -239,12 +254,74 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   @override
-  Future<void> _save() async {
+  Future<void> _save({bool flush = true}) async {
     final normalized = _importExportService.normalizeAppData(
       _appData,
       localeCode: _appData.localeCode,
     );
-    await _repository.save(normalized);
+    await _repository.save(normalized, flush: flush);
     _appData = normalized;
+  }
+
+  @override
+  void _scheduleUiStateSave() {
+    _uiStateSaveTimer?.cancel();
+    if (_uiStateSaveDelay <= Duration.zero) {
+      _uiStateSaveTimer = null;
+      _startDeferredUiStateSave();
+      return;
+    }
+    _uiStateSaveTimer = Timer(_uiStateSaveDelay, () {
+      _uiStateSaveTimer = null;
+      _startDeferredUiStateSave();
+    });
+  }
+
+  Future<void> flushPendingUiStateSaves() async {
+    final hadScheduledSave = _cancelScheduledUiStateSave();
+    if (hadScheduledSave) {
+      await _runDeferredUiStateSave();
+    }
+    final inFlight = _uiStateSaveInFlight;
+    if (inFlight != null) {
+      await inFlight;
+    }
+  }
+
+  bool _cancelScheduledUiStateSave() {
+    final timer = _uiStateSaveTimer;
+    _uiStateSaveTimer = null;
+    timer?.cancel();
+    return timer != null;
+  }
+
+  void _startDeferredUiStateSave() {
+    final future = _runDeferredUiStateSave();
+    _uiStateSaveInFlight = future;
+    unawaited(
+      future.whenComplete(() {
+        if (identical(_uiStateSaveInFlight, future)) {
+          _uiStateSaveInFlight = null;
+        }
+      }),
+    );
+  }
+
+  Future<void> _runDeferredUiStateSave() async {
+    try {
+      await _save(flush: false);
+      await _repository.flush();
+    } catch (e, st) {
+      debugPrint('Deferred UI state save failed: $e\n$st');
+    }
+  }
+
+  @override
+  void dispose() {
+    final hadScheduledSave = _cancelScheduledUiStateSave();
+    if (hadScheduledSave) {
+      unawaited(_runDeferredUiStateSave());
+    }
+    super.dispose();
   }
 }

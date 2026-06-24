@@ -104,8 +104,26 @@ class GeneralCalendarService {
   }
 
   GeneralScheduleData setSelectedDate(GeneralScheduleData data, DateTime date) {
-    return data.copyWith(
-      selectedDateIso: date.toIso8601String().split('T').first,
+    final selectedDateIso = date.toIso8601String().split('T').first;
+    if (data.selectedDateIso == selectedDateIso) {
+      return data;
+    }
+    return GeneralScheduleData(
+      activeScheduleId: data.activeScheduleId,
+      schedules: data.schedules,
+      selectedDateIso: selectedDateIso,
+      defaultView: data.defaultView,
+      showWeekends: data.showWeekends,
+      showLunarCalendar: data.showLunarCalendar,
+      dayStartHour: data.dayStartHour,
+      dayEndHour: data.dayEndHour,
+      timeGridMinutes: data.timeGridMinutes,
+      closeEventPopupOnOutsideTap: data.closeEventPopupOnOutsideTap,
+      themeMode: data.themeMode,
+      themeColorMode: data.themeColorMode,
+      themeSeedColorValue: data.themeSeedColorValue,
+      colorfulUiColorValues: data.colorfulUiColorValues,
+      reminderAcknowledgements: data.reminderAcknowledgements,
     );
   }
 

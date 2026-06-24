@@ -73,6 +73,7 @@ Future<TimetableProvider> _createProvider() async {
       ),
     ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
+    uiStateSaveDelay: Duration.zero,
   );
   await provider.load();
   return provider;
@@ -82,6 +83,7 @@ Future<TimetableProvider> _createGeneralProvider(AppData data) async {
   final provider = TimetableProvider(
     storage: _MemoryTimetableStorage(data),
     systemLocaleCodeResolver: () => defaultLocaleCode,
+    uiStateSaveDelay: Duration.zero,
   );
   await provider.load();
   return provider;
@@ -93,6 +95,7 @@ Future<TimetableProvider> _createProviderWithStorage(
   final provider = TimetableProvider(
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
+    uiStateSaveDelay: Duration.zero,
   );
   await provider.load();
   return provider;
@@ -103,6 +106,7 @@ Future<void> _pumpGeneralScheduleHomeScreen(
   TimetableProvider provider, {
   ThemeData? theme,
 }) async {
+  addTearDown(provider.dispose);
   PackageInfo.setMockInitialValues(
     appName: 'Sked',
     packageName: 'com.example.sked',

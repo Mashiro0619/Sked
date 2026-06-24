@@ -308,17 +308,19 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        if (!provider.isLoaded) {
+    return Selector<TimetableProvider, _AppHomeSnapshot>(
+      selector: (_, provider) => _AppHomeSnapshot.from(provider),
+      builder: (context, snapshot, child) {
+        if (!snapshot.isLoaded) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
+        final provider = context.read<TimetableProvider>();
         final showOnboarding =
             _firstLaunchSelectedMode != null ||
-            _shouldShowFirstLaunchOnboarding(provider);
+            snapshot.showFirstLaunchOnboarding;
         return ExpressiveSwitcher(
           child: _isCompletingFirstLaunch || showOnboarding
               ? _FirstLaunchOnboardingScreen(
@@ -332,13 +334,45 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                   onDeclinePrivacyPolicy: () => _declinePrivacyPolicy(context),
                   onAgreeAndContinue: () => _completeFirstLaunch(provider),
                 )
-              : provider.isStudentMode
+              : snapshot.isStudentMode
               ? const HomeScreen(key: ValueKey('student-home'))
               : const GeneralScheduleHomeScreen(key: ValueKey('general-home')),
         );
       },
     );
   }
+}
+
+class _AppHomeSnapshot {
+  const _AppHomeSnapshot({
+    required this.isLoaded,
+    required this.isStudentMode,
+    required this.showFirstLaunchOnboarding,
+  });
+
+  factory _AppHomeSnapshot.from(TimetableProvider provider) {
+    return _AppHomeSnapshot(
+      isLoaded: provider.isLoaded,
+      isStudentMode: provider.isStudentMode,
+      showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
+    );
+  }
+
+  final bool isLoaded;
+  final bool isStudentMode;
+  final bool showFirstLaunchOnboarding;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _AppHomeSnapshot &&
+        other.isLoaded == isLoaded &&
+        other.isStudentMode == isStudentMode &&
+        other.showFirstLaunchOnboarding == showFirstLaunchOnboarding;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(isLoaded, isStudentMode, showFirstLaunchOnboarding);
 }
 
 bool _shouldShowFirstLaunchOnboarding(TimetableProvider provider) {

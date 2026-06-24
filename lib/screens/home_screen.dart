@@ -45,51 +45,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _fileImportInProgress = false;
   bool _textImportPageOpen = false;
   bool _schoolWebImportPageOpen = false;
-  Timer? _liveCourseTimer;
-  TimetableProvider? _lastProvider;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final provider = context.read<TimetableProvider>();
-    if (_lastProvider != provider) {
-      _lastProvider?.removeListener(_onProviderReady);
-      _lastProvider = provider;
-      provider.addListener(_onProviderReady);
-    }
-    _onProviderReady();
-  }
-
-  void _onProviderReady() {
-    if (!mounted) return;
-    final provider = _lastProvider;
-    if (provider == null || !provider.isLoaded) return;
-    _ensureLiveCourseTimer(provider);
-  }
 
   @override
   void dispose() {
-    _lastProvider?.removeListener(_onProviderReady);
-    _liveCourseTimer?.cancel();
     _pageController?.dispose();
     super.dispose();
-  }
-
-  void _ensureLiveCourseTimer(TimetableProvider provider) {
-    if (!provider.isLoaded || provider.activeTimetableOrNull == null) {
-      _liveCourseTimer?.cancel();
-      _liveCourseTimer = null;
-      return;
-    }
-    if (_liveCourseTimer != null) {
-      return;
-    }
-    _liveCourseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
-    });
   }
 
   void _setWeekPickerOpen(bool value) {
@@ -237,15 +197,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
+    return Selector<TimetableProvider, _StudentHomeSnapshot>(
+      selector: (_, provider) => _StudentHomeSnapshot.from(provider),
+      builder: (context, snapshot, child) {
+        final provider = context.read<TimetableProvider>();
         final l10n = AppLocalizations.of(context);
-        if (!provider.isLoaded) {
+        if (!snapshot.isLoaded) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final timetable = provider.activeTimetableOrNull;
+        final timetable = snapshot.activeTimetable;
         if (timetable == null) {
           return Scaffold(
             appBar: AppBar(
@@ -270,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final config = timetable.config;
-        final week = provider.selectedWeek;
+        final week = snapshot.selectedWeek;
         _ensurePageController(week);
 
         return Scaffold(
@@ -380,4 +342,135 @@ class _HomeScreenState extends State<HomeScreen> {
       curve: Curves.easeOutCubic,
     );
   }
+}
+
+class _StudentHomeSnapshot {
+  const _StudentHomeSnapshot({
+    required this.isLoaded,
+    required this.activeTimetable,
+    required this.timetables,
+    required this.periodTimeSets,
+    required this.selectedWeek,
+    required this.localeCode,
+    required this.preserveTimetableGaps,
+    required this.showPastEndedCourses,
+    required this.showFutureCourses,
+    required this.showTimetableGridLines,
+    required this.themeMode,
+    required this.themeColorMode,
+    required this.themeSeedColorValue,
+    required this.colorfulUiColorValues,
+    required this.courseNameColorValues,
+    required this.colorfulCourseTextColorMode,
+    required this.conflictDisplayCourseIds,
+    required this.liveCourseOutlineEnabled,
+    required this.liveCourseOutlineFollowTheme,
+    required this.liveCourseOutlineColorValue,
+    required this.liveCourseOutlineMode,
+    required this.liveCourseOutlineWidth,
+  });
+
+  factory _StudentHomeSnapshot.from(TimetableProvider provider) {
+    final data = provider.studentMode;
+    return _StudentHomeSnapshot(
+      isLoaded: provider.isLoaded,
+      activeTimetable: provider.activeTimetableOrNull,
+      timetables: data.timetables,
+      periodTimeSets: data.periodTimeSets,
+      selectedWeek: provider.selectedWeek,
+      localeCode: provider.localeCode,
+      preserveTimetableGaps: data.preserveTimetableGaps,
+      showPastEndedCourses: data.showPastEndedCourses,
+      showFutureCourses: data.showFutureCourses,
+      showTimetableGridLines: data.showTimetableGridLines,
+      themeMode: data.themeMode,
+      themeColorMode: data.themeColorMode,
+      themeSeedColorValue: data.themeSeedColorValue,
+      colorfulUiColorValues: data.colorfulUiColorValues,
+      courseNameColorValues: data.courseNameColorValues,
+      colorfulCourseTextColorMode: data.colorfulCourseTextColorMode,
+      conflictDisplayCourseIds: data.conflictDisplayCourseIds,
+      liveCourseOutlineEnabled: data.liveCourseOutlineEnabled,
+      liveCourseOutlineFollowTheme: data.liveCourseOutlineFollowTheme,
+      liveCourseOutlineColorValue: data.liveCourseOutlineColorValue,
+      liveCourseOutlineMode: data.liveCourseOutlineMode,
+      liveCourseOutlineWidth: data.liveCourseOutlineWidth,
+    );
+  }
+
+  final bool isLoaded;
+  final TimetableData? activeTimetable;
+  final List<TimetableData> timetables;
+  final List<PeriodTimeSet> periodTimeSets;
+  final int selectedWeek;
+  final String localeCode;
+  final bool preserveTimetableGaps;
+  final bool showPastEndedCourses;
+  final bool showFutureCourses;
+  final bool showTimetableGridLines;
+  final String themeMode;
+  final String themeColorMode;
+  final int themeSeedColorValue;
+  final Map<String, int> colorfulUiColorValues;
+  final Map<String, int> courseNameColorValues;
+  final String colorfulCourseTextColorMode;
+  final Map<String, String> conflictDisplayCourseIds;
+  final bool liveCourseOutlineEnabled;
+  final bool liveCourseOutlineFollowTheme;
+  final int liveCourseOutlineColorValue;
+  final String liveCourseOutlineMode;
+  final double liveCourseOutlineWidth;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _StudentHomeSnapshot &&
+        other.isLoaded == isLoaded &&
+        identical(other.activeTimetable, activeTimetable) &&
+        identical(other.timetables, timetables) &&
+        identical(other.periodTimeSets, periodTimeSets) &&
+        other.selectedWeek == selectedWeek &&
+        other.localeCode == localeCode &&
+        other.preserveTimetableGaps == preserveTimetableGaps &&
+        other.showPastEndedCourses == showPastEndedCourses &&
+        other.showFutureCourses == showFutureCourses &&
+        other.showTimetableGridLines == showTimetableGridLines &&
+        other.themeMode == themeMode &&
+        other.themeColorMode == themeColorMode &&
+        other.themeSeedColorValue == themeSeedColorValue &&
+        identical(other.colorfulUiColorValues, colorfulUiColorValues) &&
+        identical(other.courseNameColorValues, courseNameColorValues) &&
+        other.colorfulCourseTextColorMode == colorfulCourseTextColorMode &&
+        identical(other.conflictDisplayCourseIds, conflictDisplayCourseIds) &&
+        other.liveCourseOutlineEnabled == liveCourseOutlineEnabled &&
+        other.liveCourseOutlineFollowTheme == liveCourseOutlineFollowTheme &&
+        other.liveCourseOutlineColorValue == liveCourseOutlineColorValue &&
+        other.liveCourseOutlineMode == liveCourseOutlineMode &&
+        other.liveCourseOutlineWidth == liveCourseOutlineWidth;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    isLoaded,
+    identityHashCode(activeTimetable),
+    identityHashCode(timetables),
+    identityHashCode(periodTimeSets),
+    selectedWeek,
+    localeCode,
+    preserveTimetableGaps,
+    showPastEndedCourses,
+    showFutureCourses,
+    showTimetableGridLines,
+    themeMode,
+    themeColorMode,
+    themeSeedColorValue,
+    identityHashCode(colorfulUiColorValues),
+    identityHashCode(courseNameColorValues),
+    colorfulCourseTextColorMode,
+    identityHashCode(conflictDisplayCourseIds),
+    liveCourseOutlineEnabled,
+    liveCourseOutlineFollowTheme,
+    liveCourseOutlineColorValue,
+    liveCourseOutlineMode,
+    liveCourseOutlineWidth,
+  ]);
 }

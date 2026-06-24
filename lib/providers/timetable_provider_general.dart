@@ -91,10 +91,17 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   }
 
   Future<void> setSelectedGeneralDate(DateTime date) async {
-    _appData = _appData.copyWith(
-      generalMode: _calendarService.setSelectedDate(_appData.generalMode, date),
-    );
-    await _saveAndNotify();
+    final next = _calendarService.setSelectedDate(_appData.generalMode, date);
+    if (identical(next, _appData.generalMode) ||
+        _sameGeneralDate(
+          next.selectedDate,
+          _appData.generalMode.selectedDate,
+        )) {
+      return;
+    }
+    _appData = _appData.copyWith(generalMode: next);
+    notifyListeners();
+    _scheduleUiStateSave();
   }
 
   Future<void> updateGeneralDisplaySettings({
@@ -176,7 +183,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     required DateTime endExclusive,
     bool onlyVisibleCalendars = true,
   }) {
-    return _occurrenceService.occurrencesForRange(
+    return _generalOccurrenceCache.occurrencesForRange(
       _appData.generalMode,
       startInclusive: startInclusive,
       endExclusive: endExclusive,
@@ -187,14 +194,17 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   List<GeneralEventOccurrence> generalOccurrencesForQuery(
     GeneralOccurrenceQuery query,
   ) {
-    return _occurrenceService.occurrencesForQuery(_appData.generalMode, query);
+    return _generalOccurrenceCache.occurrencesForQuery(
+      _appData.generalMode,
+      query,
+    );
   }
 
   List<GeneralEventOccurrence> upcomingGeneralOccurrences({
     DateTime? now,
     Duration horizon = const Duration(days: 7),
   }) {
-    return _occurrenceService.upcomingOccurrences(
+    return _generalOccurrenceCache.upcomingOccurrences(
       _appData.generalMode,
       now: now,
       horizon: horizon,
@@ -234,7 +244,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     Duration overdueWindow = const Duration(hours: 24),
     GeneralOccurrenceQuery? occurrenceFilter,
   }) {
-    return _occurrenceService.reminderItems(
+    return _generalOccurrenceCache.reminderItems(
       _appData.generalMode,
       now: now,
       upcomingHorizon: upcomingHorizon,
@@ -242,4 +252,8 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       occurrenceFilter: occurrenceFilter,
     );
   }
+}
+
+bool _sameGeneralDate(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
 }

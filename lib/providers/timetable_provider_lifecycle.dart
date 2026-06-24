@@ -64,7 +64,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
             migratedLegacyApiKey;
         final shouldWriteBack =
             canDropLegacyApiKey &&
-            (normalized.encode() != fileData.encode() ||
+            (!_jsonLikeEquals(normalized.toJson(), fileData.toJson()) ||
                 legacyApiKey.isNotEmpty);
         if (shouldWriteBack) {
           try {
@@ -134,4 +134,24 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     _appData = _appData.copyWith(availableUpdateVersion: nextValue);
     await _saveAndNotify();
   }
+}
+
+bool _jsonLikeEquals(Object? a, Object? b) {
+  if (identical(a, b)) return true;
+  if (a is Map && b is Map) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      if (!_jsonLikeEquals(entry.value, b[entry.key])) return false;
+    }
+    return true;
+  }
+  if (a is List && b is List) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!_jsonLikeEquals(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  return a == b;
 }

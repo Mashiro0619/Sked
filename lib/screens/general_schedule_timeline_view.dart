@@ -772,8 +772,9 @@ class _CalendarTimeline extends StatelessWidget {
     final gridHeight = math.max(1, endHour - startHour) * _hourHeight;
     final contentHeight = gridHeight + _timeLabelVerticalPadding * 2;
     final minuteHeight = _hourHeight / 60;
+    final occurrenceIndex = _TimelineOccurrenceIndex.build(occurrences, days);
     final allDayOccurrencesByDay = [
-      for (final day in days) _allDayOccurrencesFor(day),
+      for (final day in days) occurrenceIndex.allDayFor(day),
     ];
     final hasAllDayOccurrences = allDayOccurrencesByDay.any(
       (items) => items.isNotEmpty,
@@ -905,6 +906,9 @@ class _CalendarTimeline extends StatelessWidget {
                             endMinutes: endMinutes,
                             minuteHeight: minuteHeight,
                             topOffset: _timeLabelVerticalPadding,
+                            dayOccurrences: occurrenceIndex.timedFor(
+                              days[index],
+                            ),
                           ),
                         for (var index = 0; index < days.length; index++)
                           if (_sameDay(days[index], DateTime.now()) &&
@@ -932,16 +936,10 @@ class _CalendarTimeline extends StatelessWidget {
     );
   }
 
-  List<GeneralEventOccurrence> _allDayOccurrencesFor(DateTime day) {
-    return occurrences.where((occurrence) {
-      if (!_occurrenceIntersectsDay(occurrence, day)) return false;
-      return occurrence.isAllDay || !_sameDay(occurrence.start, occurrence.end);
-    }).toList();
-  }
-
   Iterable<Widget> _timedOccurrenceCards({
     required BuildContext context,
     required DateTime day,
+    required List<GeneralEventOccurrence> dayOccurrences,
     required double left,
     required double width,
     required int startMinutes,
@@ -952,11 +950,8 @@ class _CalendarTimeline extends StatelessWidget {
     final dayStart = normalizeDateOnly(day);
     final dayEnd = dayStart.add(const Duration(days: 1));
     final segments = <_TimedOccurrenceSegment>[];
-    for (final occurrence in occurrences) {
+    for (final occurrence in dayOccurrences) {
       if (occurrence.isAllDay || !_sameDay(occurrence.start, occurrence.end)) {
-        continue;
-      }
-      if (!_occurrenceIntersectsDay(occurrence, day)) {
         continue;
       }
       final segmentStart = occurrence.start.isBefore(dayStart)
@@ -1022,6 +1017,81 @@ class _CalendarTimeline extends StatelessWidget {
       );
     }
   }
+}
+
+class _TimelineOccurrenceIndex {
+  const _TimelineOccurrenceIndex({
+    required this.allDayByDate,
+    required this.timedByDate,
+  });
+
+  final Map<String, List<GeneralEventOccurrence>> allDayByDate;
+  final Map<String, List<GeneralEventOccurrence>> timedByDate;
+
+  factory _TimelineOccurrenceIndex.build(
+    List<GeneralEventOccurrence> occurrences,
+    List<DateTime> days,
+  ) {
+    final allDayByDate = <String, List<GeneralEventOccurrence>>{};
+    final timedByDate = <String, List<GeneralEventOccurrence>>{};
+    if (days.isEmpty) {
+      return _TimelineOccurrenceIndex(
+        allDayByDate: allDayByDate,
+        timedByDate: timedByDate,
+      );
+    }
+
+    for (final day in days) {
+      final key = _dateKey(day);
+      allDayByDate[key] = [];
+      timedByDate[key] = [];
+    }
+    final firstDay = normalizeDateOnly(days.first);
+    final lastDay = normalizeDateOnly(days.last);
+    final rangeEndExclusive = lastDay.add(const Duration(days: 1));
+
+    for (final occurrence in occurrences) {
+      if (!occurrence.end.isAfter(occurrence.start) ||
+          !occurrence.end.isAfter(firstDay) ||
+          !occurrence.start.isBefore(rangeEndExclusive)) {
+        continue;
+      }
+
+      if (occurrence.isAllDay || !_sameDay(occurrence.start, occurrence.end)) {
+        var bucketDay = normalizeDateOnly(occurrence.start);
+        if (bucketDay.isBefore(firstDay)) {
+          bucketDay = firstDay;
+        }
+        var lastBucketDay = normalizeDateOnly(
+          occurrence.end.subtract(const Duration(microseconds: 1)),
+        );
+        if (lastBucketDay.isAfter(lastDay)) {
+          lastBucketDay = lastDay;
+        }
+        for (
+          var day = bucketDay;
+          !day.isAfter(lastBucketDay);
+          day = day.add(const Duration(days: 1))
+        ) {
+          allDayByDate[_dateKey(day)]?.add(occurrence);
+        }
+        continue;
+      }
+
+      timedByDate[_dateKey(occurrence.start)]?.add(occurrence);
+    }
+
+    return _TimelineOccurrenceIndex(
+      allDayByDate: allDayByDate,
+      timedByDate: timedByDate,
+    );
+  }
+
+  List<GeneralEventOccurrence> allDayFor(DateTime day) =>
+      allDayByDate[_dateKey(day)] ?? const [];
+
+  List<GeneralEventOccurrence> timedFor(DateTime day) =>
+      timedByDate[_dateKey(day)] ?? const [];
 }
 
 class _TimelineMetrics {

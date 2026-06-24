@@ -54,10 +54,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TimetableProvider>();
+    final snapshot = context.select<TimetableProvider, _GeneralHomeSnapshot>(
+      _GeneralHomeSnapshot.from,
+    );
+    final provider = context.read<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
-    final selectedDate = provider.selectedGeneralDate;
-    final view = normalizeGeneralView(_view ?? provider.generalDefaultView);
+    final selectedDate = snapshot.selectedDate;
+    final view = normalizeGeneralView(_view ?? snapshot.defaultView);
     const filter = _GeneralOccurrenceFilter(query: '', colorValue: null);
 
     return Scaffold(
@@ -502,6 +505,74 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   }
 }
 
+class _GeneralHomeSnapshot {
+  const _GeneralHomeSnapshot({
+    required this.selectedDate,
+    required this.defaultView,
+    required this.schedules,
+    required this.reminderAcknowledgements,
+    required this.showWeekends,
+    required this.showLunarCalendar,
+    required this.dayStartHour,
+    required this.dayEndHour,
+    required this.timeGridMinutes,
+  });
+
+  factory _GeneralHomeSnapshot.from(TimetableProvider provider) {
+    final data = provider.generalMode;
+    return _GeneralHomeSnapshot(
+      selectedDate: data.selectedDate,
+      defaultView: data.defaultView,
+      schedules: data.schedules,
+      reminderAcknowledgements: data.reminderAcknowledgements,
+      showWeekends: data.showWeekends,
+      showLunarCalendar: data.showLunarCalendar,
+      dayStartHour: data.dayStartHour,
+      dayEndHour: data.dayEndHour,
+      timeGridMinutes: data.timeGridMinutes,
+    );
+  }
+
+  final DateTime selectedDate;
+  final String defaultView;
+  final List<GeneralSchedule> schedules;
+  final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
+  final bool showWeekends;
+  final bool showLunarCalendar;
+  final int dayStartHour;
+  final int dayEndHour;
+  final int timeGridMinutes;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _GeneralHomeSnapshot &&
+        _sameDay(other.selectedDate, selectedDate) &&
+        other.defaultView == defaultView &&
+        identical(other.schedules, schedules) &&
+        identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
+        other.showWeekends == showWeekends &&
+        other.showLunarCalendar == showLunarCalendar &&
+        other.dayStartHour == dayStartHour &&
+        other.dayEndHour == dayEndHour &&
+        other.timeGridMinutes == timeGridMinutes;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    selectedDate.year,
+    selectedDate.month,
+    selectedDate.day,
+    defaultView,
+    identityHashCode(schedules),
+    identityHashCode(reminderAcknowledgements),
+    showWeekends,
+    showLunarCalendar,
+    dayStartHour,
+    dayEndHour,
+    timeGridMinutes,
+  );
+}
+
 class _MoreGeneralOccurrencesSheet extends StatelessWidget {
   const _MoreGeneralOccurrencesSheet({
     required this.occurrences,
@@ -693,12 +764,6 @@ String _dateKey(DateTime date) => normalizeDateOnly(date).toIso8601String();
 
 bool _sameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
-}
-
-bool _occurrenceIntersectsDay(GeneralEventOccurrence occurrence, DateTime day) {
-  final start = normalizeDateOnly(day);
-  final end = start.add(const Duration(days: 1));
-  return occurrence.end.isAfter(start) && occurrence.start.isBefore(end);
 }
 
 int _nowMinutes() {

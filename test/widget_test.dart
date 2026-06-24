@@ -73,6 +73,15 @@ class MemoryTimetableStorage implements TimetableStorage {
   MemoryTimetableStorage.raw(String content) : _content = content;
 
   String? _content;
+  int saveCount = 0;
+
+  AppData? get data {
+    final content = _content;
+    if (content == null || content.trim().isEmpty) {
+      return null;
+    }
+    return AppData.decode(content);
+  }
 
   @override
   Future<StorageLoadResult> load() async {
@@ -87,6 +96,7 @@ class MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<void> save(AppData data) async {
+    saveCount += 1;
     _content = data.encode();
   }
 
@@ -3309,6 +3319,32 @@ void main() {
       await tester.pumpWidget(MyApp(provider: provider));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('进入后台时会保存待写入的通用日程选中日期', (tester) async {
+      final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
+      final provider = TimetableProvider(
+        storage: storage,
+        uiStateSaveDelay: const Duration(days: 1),
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+      storage.saveCount = 0;
+
+      await tester.pumpWidget(MyApp(provider: provider));
+      await tester.pump();
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 19));
+
+      expect(storage.saveCount, 0);
+
+      WidgetsBinding.instance.handleAppLifecycleStateChanged(
+        AppLifecycleState.paused,
+      );
+      await tester.pumpAndSettle();
+
+      expect(storage.saveCount, 1);
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-19');
     });
 
     testWidgets('首次未同意隐私政策时显示弹窗而不是整页', (tester) async {

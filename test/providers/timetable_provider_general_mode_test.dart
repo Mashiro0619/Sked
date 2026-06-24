@@ -9,6 +9,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
 
   AppData? data;
+  int saveCount = 0;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -16,6 +17,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<void> save(AppData data) async {
+    saveCount += 1;
     this.data = data;
   }
 
@@ -24,6 +26,63 @@ class _MemoryTimetableStorage implements TimetableStorage {
 }
 
 void main() {
+  test(
+    'selected general date notifies immediately and defers persistence',
+    () async {
+      final storage = _MemoryTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+
+      await provider.load();
+      storage.saveCount = 0;
+      var notifications = 0;
+      provider.addListener(() => notifications += 1);
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 1, 14));
+
+      expect(provider.selectedGeneralDate, DateTime(2026, 6));
+      expect(notifications, 1);
+      expect(storage.saveCount, 0);
+
+      await provider.flushPendingUiStateSaves();
+
+      expect(storage.saveCount, 1);
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-01');
+    },
+  );
+
+  test(
+    'rapid selected general date changes persist only the last date',
+    () async {
+      final storage = _MemoryTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+
+      await provider.load();
+      storage.saveCount = 0;
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 1));
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 3));
+
+      expect(storage.saveCount, 0);
+
+      await provider.flushPendingUiStateSaves();
+
+      expect(storage.saveCount, 1);
+      expect(provider.selectedGeneralDate, DateTime(2026, 6, 3));
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-03');
+    },
+  );
+
   test('filters occurrences by visible calendars by default', () async {
     final visibleCalendar = GeneralSchedule(
       id: 'visible',

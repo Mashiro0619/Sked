@@ -839,17 +839,44 @@ Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
   List<GeneralEventOccurrence> occurrences,
   List<DateTime> days,
 ) {
-  final daySet = days.map(_dateKey).toSet();
   final result = <String, List<GeneralEventOccurrence>>{};
-  for (final key in daySet) {
-    result[key] = [];
+  if (days.isEmpty) {
+    return result;
   }
+
+  for (final day in days) {
+    result[_dateKey(day)] = [];
+  }
+  final firstDay = normalizeDateOnly(days.first);
+  final lastDay = normalizeDateOnly(days.last);
+  final rangeEndExclusive = lastDay.add(const Duration(days: 1));
+
   for (final occurrence in occurrences) {
-    for (final day in days) {
-      if (_occurrenceIntersectsDay(occurrence, day)) {
-        final key = _dateKey(day);
-        result[key]?.add(occurrence);
-      }
+    if (!occurrence.end.isAfter(occurrence.start)) {
+      continue;
+    }
+    if (!occurrence.end.isAfter(firstDay) ||
+        !occurrence.start.isBefore(rangeEndExclusive)) {
+      continue;
+    }
+
+    var bucketDay = normalizeDateOnly(occurrence.start);
+    if (bucketDay.isBefore(firstDay)) {
+      bucketDay = firstDay;
+    }
+    var lastBucketDay = normalizeDateOnly(
+      occurrence.end.subtract(const Duration(microseconds: 1)),
+    );
+    if (lastBucketDay.isAfter(lastDay)) {
+      lastBucketDay = lastDay;
+    }
+
+    for (
+      var day = bucketDay;
+      !day.isAfter(lastBucketDay);
+      day = day.add(const Duration(days: 1))
+    ) {
+      result[_dateKey(day)]?.add(occurrence);
     }
   }
   return result;
@@ -1399,35 +1426,62 @@ class _LunarDateLabel extends StatelessWidget {
     if (!enabled || (localeCode != 'zh' && localeCode != 'zh-Hant')) {
       return const SizedBox.shrink();
     }
-    final lunar = Lunar.fromDate(date);
-    final festivals = lunar.getFestivals();
-    if (festivals.isNotEmpty) {
-      return _LunarText(
-        text: festivals.first,
-        color: effectiveGeneralFestivalTextColor(context, colorScheme.primary),
-        fontSize: fontSize,
-      );
-    }
-    final jieQi = lunar.getJieQi();
-    if (jieQi.isNotEmpty) {
-      return _LunarText(
-        text: jieQi,
-        color: effectiveGeneralSolarTermTextColor(
-          context,
-          colorScheme.tertiary,
-        ),
-        fontSize: fontSize,
-      );
-    }
-    return _LunarText(
-      text: lunar.getDayInChinese(),
-      color: effectiveGeneralLunarTextColor(
+    final label = _cachedLunarLabelFor(date, localeCode);
+    final color = switch (label.kind) {
+      _LunarLabelKind.festival => effectiveGeneralFestivalTextColor(
+        context,
+        colorScheme.primary,
+      ),
+      _LunarLabelKind.solarTerm => effectiveGeneralSolarTermTextColor(
+        context,
+        colorScheme.tertiary,
+      ),
+      _LunarLabelKind.day => effectiveGeneralLunarTextColor(
         context,
         overrideColor ?? colorScheme.onSurfaceVariant,
       ),
-      fontSize: fontSize,
-    );
+    };
+    return _LunarText(text: label.text, color: color, fontSize: fontSize);
   }
+}
+
+enum _LunarLabelKind { festival, solarTerm, day }
+
+class _CachedLunarLabel {
+  const _CachedLunarLabel({required this.text, required this.kind});
+
+  final String text;
+  final _LunarLabelKind kind;
+}
+
+const _maxLunarLabelCacheEntries = 512;
+final _lunarLabelCache = <String, _CachedLunarLabel>{};
+
+_CachedLunarLabel _cachedLunarLabelFor(DateTime date, String localeCode) {
+  final key = '${_dateKey(date)}|$localeCode';
+  final cached = _lunarLabelCache[key];
+  if (cached != null) {
+    return cached;
+  }
+
+  final lunar = Lunar.fromDate(date);
+  final festivals = lunar.getFestivals();
+  final label = festivals.isNotEmpty
+      ? _CachedLunarLabel(text: festivals.first, kind: _LunarLabelKind.festival)
+      : lunar.getJieQi().isNotEmpty
+      ? _CachedLunarLabel(
+          text: lunar.getJieQi(),
+          kind: _LunarLabelKind.solarTerm,
+        )
+      : _CachedLunarLabel(
+          text: lunar.getDayInChinese(),
+          kind: _LunarLabelKind.day,
+        );
+  if (_lunarLabelCache.length >= _maxLunarLabelCacheEntries) {
+    _lunarLabelCache.remove(_lunarLabelCache.keys.first);
+  }
+  _lunarLabelCache[key] = label;
+  return label;
 }
 
 class _LunarText extends StatelessWidget {
