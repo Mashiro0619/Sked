@@ -21,8 +21,23 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # Guards against using a BuildContext after an await without a mounted check.
+    - use_build_context_synchronously
+    # Fire-and-forget futures must be explicit via unawaited(), so a dropped
+    # await cannot silently swallow a failed save.
+    - unawaited_futures
+    # Deliberately NOT enabled: avoid_slow_async_io. It flags `await
+    # File.exists()` in the atomic-write path and would have us switch to
+    # `existsSync()`, which blocks the UI isolate on every save. Keeping the
+    # isolate free matters more here than the thread-dispatch overhead the
+    # rule optimizes away. Reconsider only if profiling says otherwise.
+    #
+    # Keeps return types explicit instead of relying on inference at API edges.
+    - always_declare_return_types
+    - prefer_final_in_for_each
+    # Every package imported from lib/ must be a declared dependency, not one
+    # that merely happens to be pulled in transitively.
+    - depend_on_referenced_packages
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

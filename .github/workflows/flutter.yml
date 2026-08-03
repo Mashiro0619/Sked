@@ -24,6 +24,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # The generated localizations under lib/l10n/ are committed on purpose,
+      # so CI has to guarantee they still match the .arb sources. Regenerating
+      # here must be a no-op; anything else means an .arb was edited without
+      # running `flutter gen-l10n` (or the Flutter generator itself changed).
+      - name: Verify generated l10n is in sync with ARB
+        run: |
+          flutter gen-l10n
+          if [ -n "$(git status --porcelain lib/l10n/)" ]; then
+            echo "::error::lib/l10n/ is out of sync with the .arb sources. Run 'flutter gen-l10n' locally and commit the result."
+            git status --porcelain lib/l10n/
+            git diff -- lib/l10n/
+            exit 1
+          fi
+
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
 
