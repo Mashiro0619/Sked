@@ -1380,5 +1380,37 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolImportContentTruncated": "Тази страница достигна безопасния лимит за импортиране. Само заснетата част ще бъде изпратена за анализиране.",
+  "@schoolImportContentTruncated": {},
+  "schoolWebImportUnknownOrigin": "Неизвестен сайт",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "Да се продължи ли към друг сайт?",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "Входът в училищната система може да изисква отваряне на друг сайт. Продължете само ако имате доверие на тази дестинация за текущата сесия за импортиране:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolImportHttpConfirmationTitle": "Да се използва ли нешифрована HTTP крайна точка?",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "API ключът и съдържанието на разписанието може да бъдат прочетени или променени при преноса. Продължете само ако имате доверие на това устройство, мрежа и крайна точка. Това разрешение важи, докато затворите Sked.",
+  "@schoolImportHttpConfirmationMessage": {},
+  "schoolWebImportSignInConsentTitle": "Да се отвори ли входът в училищната система?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Входът в училищната система може да изпрати идентификационни данни чрез формуляри или сървърни пренасочвания към училището и неговите доставчици за вход. Android не може да спре всяко такова предаване за отделно потвърждение на дестинацията. Продължете само ако имате доверие на тези страни за текущата сесия за импортиране:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Отваряне на незащитен вход за училището?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Този вход за училището използва HTTP. Всеки, който може да наблюдава или променя тази връзка, може да прочете или промени вашите идентификационни данни и съдържанието на страницата. Продължете само ако приемате този риск за:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

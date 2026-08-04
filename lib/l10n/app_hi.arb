@@ -1380,5 +1380,37 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolImportContentTruncated": "यह पेज सुरक्षित आयात सीमा तक पहुँच गया है। विश्लेषण के लिए केवल कैप्चर किया गया भाग भेजा जाएगा।",
+  "@schoolImportContentTruncated": {},
+  "schoolWebImportUnknownOrigin": "अज्ञात साइट",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "किसी दूसरी साइट पर जाएँ?",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "स्कूल में साइन इन करने के लिए दूसरी साइट खोलनी पड़ सकती है। केवल तभी जारी रखें जब आप मौजूदा आयात सत्र के लिए इस गंतव्य पर भरोसा करते हों:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolImportHttpConfirmationTitle": "क्या बिना एन्क्रिप्शन वाले HTTP एंडपॉइंट का उपयोग करें?",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "API कुंजी और समय-सारणी की सामग्री को भेजे जाते समय पढ़ा या बदला जा सकता है। केवल तभी जारी रखें जब आप इस डिवाइस, नेटवर्क और एंडपॉइंट पर भरोसा करते हों। यह अनुमति Sked बंद करने तक मान्य रहेगी।",
+  "@schoolImportHttpConfirmationMessage": {},
+  "schoolWebImportSignInConsentTitle": "स्कूल साइन-इन खोलें?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "स्कूल साइन-इन, फ़ॉर्म या सर्वर रीडायरेक्ट के माध्यम से स्कूल और उसके साइन-इन प्रदाताओं को क्रेडेंशियल भेज सकता है। Android हर ऐसे ट्रांसफ़र को अलग गंतव्य पुष्टि के लिए रोक नहीं सकता। केवल तभी जारी रखें जब आप इस आयात सत्र के लिए उन पर भरोसा करते हों:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "असुरक्षित स्कूल साइन-इन खोलें?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

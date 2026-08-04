@@ -1380,5 +1380,37 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolImportContentTruncated": "Tato stránka dosáhla bezpečného limitu importu. K analýze bude odeslána pouze zachycená část.",
+  "@schoolImportContentTruncated": {},
+  "schoolWebImportUnknownOrigin": "Neznámý web",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "Pokračovat na jiný web?",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "Přihlášení do školního systému může vyžadovat otevření jiného webu. Pokračujte pouze tehdy, pokud tomuto cíli pro aktuální relaci importu důvěřujete:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolImportHttpConfirmationTitle": "Použít nešifrovaný koncový bod HTTP?",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "Klíč API a obsah rozvrhu mohou být během přenosu přečteny nebo změněny. Pokračujte pouze tehdy, pokud důvěřujete tomuto zařízení, síti a koncovému bodu. Toto schválení platí, dokud Sked nezavřete.",
+  "@schoolImportHttpConfirmationMessage": {},
+  "schoolWebImportSignInConsentTitle": "Otevřít přihlášení do školního systému?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Přihlášení do školního systému může odeslat přihlašovací údaje prostřednictvím formulářů nebo přesměrování serveru škole a jejím poskytovatelům přihlášení. Android nemůže každé takové odeslání pozastavit a zobrazit samostatné potvrzení cíle. Pokračujte pouze tehdy, pokud jim pro tuto relaci importu důvěřujete:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Otevřít nezabezpečené přihlášení ke škole?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Parser endpoints are configured at runtime and may be arbitrary LAN
+         hosts. The app confirms each HTTP endpoint before sending secrets or
+         timetable content, because static domain rules cannot express that
+         product contract. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

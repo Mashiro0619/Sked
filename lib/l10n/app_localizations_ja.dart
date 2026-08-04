@@ -988,6 +988,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolHtmlImportSubmit => '解析してインポート';
 
   @override
+  String get schoolImportContentTruncated =>
+      'このページは安全なインポート上限に達しました。取得できた部分だけが解析のために送信されます。';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       '解析には時間がかかる場合があります。しばらくお待ちください。';
 
@@ -1065,6 +1069,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolWebImportLoadTimedOut => 'ページ読み込みがタイムアウトしました。更新して再度お試しください。';
 
   @override
+  String get schoolWebImportUnknownOrigin => '不明なサイト';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => '別のサイトに移動しますか？';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return '学校へのログインには別のサイトを開く必要がある場合があります。現在のインポートセッションでこの移動先を信頼できる場合のみ続行してください：\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage => '現在のページ内容が空のため、まだインポートできません。';
 
   @override
@@ -1134,6 +1149,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      '暗号化されていない HTTP エンドポイントを使用しますか？';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API キーと時間割の内容は、通信中に読み取られたり改ざんされたりする可能性があります。このデバイス、ネットワーク、エンドポイントを信頼できる場合のみ続行してください。この許可は Sked を閉じるまで有効です。';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1880,4 +1903,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => '学校のログインページを開きますか？';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return '学校へのログインでは、フォームやサーバーのリダイレクトを通じて、学校やログインサービス提供元に認証情報が送信される場合があります。Android では、このような送信を毎回停止して移動先を個別に確認することはできません。今回のインポートセッションでこれらを信頼できる場合のみ続行してください：\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle => '安全でない学校ログインを開きますか？';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n$origin';
+  }
 }

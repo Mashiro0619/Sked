@@ -1012,6 +1012,10 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analyser og importer';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Denne side har nået den sikre importgrænse. Kun den registrerede del sendes til analyse.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsing kan tage et stykke tid. Vent venligst.';
 
@@ -1090,6 +1094,17 @@ class AppLocalizationsDa extends AppLocalizations {
       'Sideindlæsning er tidsudløbet. Opdater og prøv igen.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Ukendt websted';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Fortsæt til et andet websted?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Login på skolens system kan kræve, at et andet websted åbnes. Fortsæt kun, hvis du har tillid til denne destination i den aktuelle importsession:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Det aktuelle indhold er tomt og kan endnu ikke importeres.';
 
@@ -1163,6 +1178,14 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Vil du bruge et ukrypteret HTTP-slutpunkt?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API-nøglen og skemaindholdet kan blive læst eller ændret under overførslen. Fortsæt kun, hvis du har tillid til denne enhed, dette netværk og slutpunktet. Godkendelsen gælder, indtil du lukker Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1917,4 +1940,21 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Åbn skolens login?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Skolens login kan sende legitimationsoplysninger via formularer eller serveromdirigeringer til skolen og dens loginudbydere. Android kan ikke sætte hver sådan overførsel på pause for at vise en særskilt destinationsbekræftelse. Fortsæt kun, hvis du har tillid til dem i denne importsession:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Åbn et usikkert skolelogin?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Dette skolelogin bruger HTTP. Enhver, der kan overvåge eller ændre forbindelsen, kan læse eller ændre dine loginoplysninger og sidens indhold. Fortsæt kun, hvis du accepterer denne risiko for:\n\n$origin';
+  }
 }

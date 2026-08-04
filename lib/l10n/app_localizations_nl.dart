@@ -1013,6 +1013,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Parse and import';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Deze pagina heeft de veilige importlimiet bereikt. Alleen het vastgelegde gedeelte wordt verzonden voor analyse.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsing may take a while. Please wait.';
 
@@ -1091,6 +1095,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Page loading timed out. Please refresh and try again.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Onbekende website';
+
+  @override
+  String get schoolWebImportCrossOriginTitle =>
+      'Doorgaan naar een andere website?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Voor aanmelden bij de school moet mogelijk een andere website worden geopend. Ga alleen door als u deze bestemming vertrouwt voor de huidige importsessie:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'The current page content is empty and cannot be imported yet.';
 
@@ -1163,6 +1179,14 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Een niet-versleuteld HTTP-eindpunt gebruiken?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'De API-sleutel en de inhoud van het rooster kunnen tijdens de overdracht worden gelezen of gewijzigd. Ga alleen door als u dit apparaat, netwerk en eindpunt vertrouwt. Deze toestemming blijft geldig totdat u Sked sluit.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1917,4 +1941,22 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Aanmelden bij de school openen?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Bij aanmelden bij de school kunnen aanmeldgegevens via formulieren of serveromleidingen naar de school en haar aanmeldproviders worden verzonden. Android kan niet elke dergelijke overdracht onderbreken voor een afzonderlijke bevestiging van de bestemming. Ga alleen door als u hen voor deze importsessie vertrouwt:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Onveilige schoolaanmelding openen?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Deze schoolaanmelding gebruikt HTTP. Iedereen die deze verbinding kan volgen of wijzigen, kan uw aanmeldgegevens en de pagina-inhoud lezen of veranderen. Ga alleen door als u dit risico accepteert voor:\n\n$origin';
+  }
 }

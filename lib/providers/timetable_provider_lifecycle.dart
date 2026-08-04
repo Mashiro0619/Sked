@@ -3,7 +3,7 @@ part of 'timetable_provider.dart';
 const bundledPrivacyPolicyVersion = '2026-06-02';
 
 mixin _TimetableProviderLifecycle on _TimetableProviderBase {
-  String? _remotePrivacyPolicyVersion;
+  String? _remotePrivacyPolicyVersion = bundledPrivacyPolicyVersion;
 
   String? get activePrivacyPolicyVersion => _remotePrivacyPolicyVersion;
 
@@ -16,19 +16,41 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   }
 
   bool get hasAcceptedCurrentPrivacyPolicy {
-    if (_remotePrivacyPolicyVersion == null) return true;
-    return _appData.privacyPolicyAcceptedVersion == _remotePrivacyPolicyVersion;
+    return _isPrivacyPolicyVersionAtLeast(
+      _appData.privacyPolicyAcceptedVersion,
+      _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion,
+    );
   }
 
   void injectRemotePrivacyPolicyVersion(String version) {
-    _remotePrivacyPolicyVersion = version;
+    if (_parsePrivacyPolicyVersion(version) == null) {
+      _remotePrivacyPolicyVersion = version;
+      return;
+    }
+    _promoteActivePrivacyPolicyVersion(version);
   }
 
   Future<void> fetchRemotePrivacyPolicyVersion() async {
     final version = await _privacy.fetchCurrentPrivacyPolicyVersion();
-    if (version == null || _remotePrivacyPolicyVersion == version) return;
-    _remotePrivacyPolicyVersion = version;
+    if (version == null || !_promoteActivePrivacyPolicyVersion(version)) {
+      return;
+    }
     notifyListeners();
+  }
+
+  bool _promoteActivePrivacyPolicyVersion(String candidate) {
+    if (_parsePrivacyPolicyVersion(candidate) == null) return false;
+    final current =
+        _parsePrivacyPolicyVersion(_remotePrivacyPolicyVersion) == null
+        ? bundledPrivacyPolicyVersion
+        : _remotePrivacyPolicyVersion!;
+    final floor = current.compareTo(bundledPrivacyPolicyVersion) >= 0
+        ? current
+        : bundledPrivacyPolicyVersion;
+    final next = candidate.compareTo(floor) > 0 ? candidate : floor;
+    if (_remotePrivacyPolicyVersion == next) return false;
+    _remotePrivacyPolicyVersion = next;
+    return true;
   }
 
   Future<void> load() async {
@@ -212,7 +234,15 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
 
   Future<void> acceptPrivacyPolicyCurrentVersion() async {
     final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
-    if (_appData.privacyPolicyAcceptedVersion == active) return;
+    if (_isPrivacyPolicyVersionAtLeast(
+      _appData.privacyPolicyAcceptedVersion,
+      active,
+    )) {
+      return;
+    }
+    if (_parsePrivacyPolicyVersion(active) == null) {
+      throw StateError('Invalid active privacy policy version: $active');
+    }
     _appData = _appData.copyWith(
       privacyPolicyAcceptedVersion: active,
       privacyPolicyAcceptedAtIso: DateTime.now().toIso8601String(),
@@ -240,6 +270,21 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     _appData = _appData.copyWith(availableUpdateVersion: nextValue);
     await _saveAndNotify();
   }
+}
+
+bool _isPrivacyPolicyVersionAtLeast(String? accepted, String? active) {
+  if (_parsePrivacyPolicyVersion(accepted) == null ||
+      _parsePrivacyPolicyVersion(active) == null) {
+    return false;
+  }
+  return accepted!.compareTo(active!) >= 0;
+}
+
+DateTime? _parsePrivacyPolicyVersion(String? value) {
+  if (value == null || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+    return null;
+  }
+  return tryParseStrictIsoDate(value);
 }
 
 bool _jsonLikeEquals(Object? a, Object? b) {

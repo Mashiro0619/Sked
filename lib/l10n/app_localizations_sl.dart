@@ -1018,6 +1018,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Razčlenitev in uvoz';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Ta stran je dosegla varno omejitev uvoza. V razčlenjevanje bo poslan samo zajeti del.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Razčlenitev bo trajala nekaj časa. Prosim, počakajte.';
 
@@ -1096,6 +1100,18 @@ class AppLocalizationsSl extends AppLocalizations {
       'Nalaganje strani je poteklo. Prosim osvežite in poskusite znova.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Neznano spletno mesto';
+
+  @override
+  String get schoolWebImportCrossOriginTitle =>
+      'Nadaljujem na drugo spletno mesto?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Prijava v šolski sistem bo morda zahtevala odprtje drugega spletnega mesta. Nadaljujte le, če temu cilju zaupate za trenutno sejo uvoza:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Trenutna vsebina strani je prazna in je še ni mogoče uvoziti.';
 
@@ -1170,6 +1186,14 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Želite uporabiti nešifrirano končno točko HTTP?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Ključ API in vsebina urnika sta med prenosom lahko prebrana ali spremenjena. Nadaljujte le, če zaupate tej napravi, omrežju in končni točki. Odobritev velja, dokler ne zaprete aplikacije Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1925,4 +1949,22 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Želite odpreti prijavo v šolski sistem?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Prijava v šolski sistem lahko prek obrazcev ali preusmeritev strežnika pošlje poverilnice šoli in njenim ponudnikom prijave. Android ne more ustaviti vsakega takega prenosa za ločeno potrditev cilja. Nadaljujte le, če jim zaupate za to sejo uvoza:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Odprem nezaščiteno prijavo v šolski sistem?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Ta prijava v šolski sistem uporablja HTTP. Kdor lahko spremlja ali spreminja to povezavo, lahko prebere ali spremeni vaše poverilnice in vsebino strani. Nadaljujte le, če sprejemate to tveganje za:\n\n$origin';
+  }
 }

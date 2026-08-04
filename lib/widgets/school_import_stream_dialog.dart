@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../services/school_import_api.dart';
+import '../utils/text_input_limits.dart';
 import 'expressive_dialog.dart';
 
 Map<String, dynamic>? _tryDecodeJsonObject(String source) {
@@ -30,6 +31,9 @@ Map<String, dynamic>? _tryDecodeJsonObject(String source) {
 class SchoolImportStreamDialog extends StatefulWidget {
   const SchoolImportStreamDialog({super.key, required this.stream});
 
+  static const int maxPreviewCodeUnits = 4096;
+  static const int maxEditableCodeUnits = 64 * 1024;
+
   final Stream<SchoolImportStreamEvent> stream;
 
   @override
@@ -39,6 +43,7 @@ class SchoolImportStreamDialog extends StatefulWidget {
 
 class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   final _textBuffer = StringBuffer();
+  String _previewText = '';
   final _scrollController = ScrollController();
   late final TextEditingController _editController;
   StreamSubscription<SchoolImportStreamEvent>? _subscription;
@@ -47,6 +52,10 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   String? _error;
   SchoolImportResponse? _response;
   bool _hasPopped = false;
+
+  bool get _canEdit =>
+      _isDone &&
+      _textBuffer.length <= SchoolImportStreamDialog.maxEditableCodeUnits;
 
   @override
   void initState() {
@@ -57,6 +66,7 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
         switch (event) {
           case ParseDelta(:final text):
             _textBuffer.write(text);
+            _appendPreview(text);
             break;
           case ParseDone(:final response):
             _response = response;
@@ -100,7 +110,38 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
     });
   }
 
+  void _appendPreview(String text) {
+    if (text.isEmpty) {
+      return;
+    }
+    final limit = SchoolImportStreamDialog.maxPreviewCodeUnits;
+    if (text.length >= limit) {
+      _previewText = text.substring(_safeTailStart(text, text.length - limit));
+      return;
+    }
+
+    final overflow = _previewText.length + text.length - limit;
+    final retainedPreview = overflow > 0
+        ? _previewText.substring(_safeTailStart(_previewText, overflow))
+        : _previewText;
+    _previewText = '$retainedPreview$text';
+  }
+
+  int _safeTailStart(String value, int start) {
+    if (start <= 0) {
+      return 0;
+    }
+    if (start >= value.length) {
+      return value.length;
+    }
+    final codeUnit = value.codeUnitAt(start);
+    return codeUnit >= 0xdc00 && codeUnit <= 0xdfff ? start + 1 : start;
+  }
+
   void _enterEditMode() {
+    if (!_canEdit) {
+      return;
+    }
     _editController.text = _textBuffer.toString();
     setState(() => _isEditing = true);
   }
@@ -211,6 +252,11 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                 child: _isEditing
                     ? TextField(
                         controller: _editController,
+                        inputFormatters: const [
+                          Utf16CodeUnitLimitingTextInputFormatter(
+                            SchoolImportStreamDialog.maxEditableCodeUnits,
+                          ),
+                        ],
                         maxLines: null,
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontFamily: 'monospace',
@@ -225,8 +271,8 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                         controller: _scrollController,
                         padding: const EdgeInsets.all(12),
                         child: SelectableText(
-                          _textBuffer.isNotEmpty
-                              ? _textBuffer.toString()
+                          _previewText.isNotEmpty
+                              ? _previewText
                               : (_error != null
                                     ? l10n.importFailedCheckContent
                                     : l10n.schoolWebImportParsing),
@@ -258,7 +304,7 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                     ),
                   ] else ...[
                     OutlinedButton(
-                      onPressed: _isDone ? _enterEditMode : null,
+                      onPressed: _canEdit ? _enterEditMode : null,
                       child: Text(l10n.editTimetable),
                     ),
                     FilledButton(

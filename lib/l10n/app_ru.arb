@@ -1380,5 +1380,37 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolImportContentTruncated": "Эта страница достигла безопасного ограничения на импорт. На анализ будет отправлена только сохранённая часть.",
+  "@schoolImportContentTruncated": {},
+  "schoolWebImportUnknownOrigin": "Неизвестный сайт",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "Перейти на другой сайт?",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "Для входа в школьную систему может потребоваться открыть другой сайт. Продолжайте, только если доверяете этому адресу в рамках текущего сеанса импорта:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolImportHttpConfirmationTitle": "Использовать незашифрованный HTTP-адрес?",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "Ключ API и содержимое расписания могут быть прочитаны или изменены при передаче. Продолжайте, только если доверяете этому устройству, сети и адресу. Разрешение действует до закрытия Sked.",
+  "@schoolImportHttpConfirmationMessage": {},
+  "schoolWebImportSignInConsentTitle": "Открыть вход в школьную систему?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "При входе в школьную систему учётные данные могут отправляться через формы или серверные перенаправления школе и её поставщикам входа. Android не может приостанавливать каждую такую передачу для отдельного подтверждения адреса. Продолжайте, только если доверяете им в рамках этого сеанса импорта:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Открыть небезопасный вход в школьную систему?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Этот вход в школьную систему использует HTTP. Любой, кто может просматривать или изменять это соединение, может прочитать либо изменить ваши учётные данные и содержимое страницы. Продолжайте, только если принимаете этот риск для:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

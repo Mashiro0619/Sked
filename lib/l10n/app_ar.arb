@@ -1380,5 +1380,37 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolImportContentTruncated": "بلغت هذه الصفحة حد الاستيراد الآمن. سيتم إرسال الجزء الذي تم التقاطه فقط للتحليل.",
+  "@schoolImportContentTruncated": {},
+  "schoolWebImportUnknownOrigin": "موقع غير معروف",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "هل تريد المتابعة إلى موقع آخر؟",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "قد يتطلب تسجيل الدخول إلى المدرسة فتح موقع آخر. لا تتابع إلا إذا كنت تثق بهذه الوجهة لجلسة الاستيراد الحالية:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolImportHttpConfirmationTitle": "هل تريد استخدام نقطة نهاية HTTP غير مشفرة؟",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "قد تتم قراءة مفتاح API ومحتوى الجدول الدراسي أو تغييرهما أثناء النقل. لا تتابع إلا إذا كنت تثق بهذا الجهاز والشبكة ونقطة النهاية. تظل هذه الموافقة سارية حتى تغلق Sked.",
+  "@schoolImportHttpConfirmationMessage": {},
+  "schoolWebImportSignInConsentTitle": "فتح صفحة تسجيل الدخول إلى المدرسة؟",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "قد يرسل تسجيل الدخول إلى المدرسة بيانات الاعتماد عبر النماذج أو عمليات إعادة التوجيه من الخادم إلى المدرسة وموفري تسجيل الدخول التابعين لها. لا يستطيع Android إيقاف كل عملية نقل من هذا النوع لعرض تأكيد منفصل للوجهة. لا تتابع إلا إذا كنت تثق بهم لجلسة الاستيراد هذه:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "فتح تسجيل دخول غير آمن للمدرسة؟",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "يستخدم تسجيل الدخول هذا HTTP. يمكن لأي شخص يستطيع مراقبة هذا الاتصال أو تعديله قراءة بيانات اعتمادك ومحتوى الصفحة أو تغييرهما. لا تتابع إلا إذا كنت تقبل هذه المخاطرة لهذا الموقع:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

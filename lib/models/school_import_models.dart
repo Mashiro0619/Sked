@@ -64,11 +64,13 @@ class SchoolImportSourcePayload {
     required this.url,
     required this.title,
     required this.content,
+    this.wasTruncated = false,
   });
 
   final String url;
   final String title;
   final String content;
+  final bool wasTruncated;
 }
 
 class SchoolImportParseRequest {

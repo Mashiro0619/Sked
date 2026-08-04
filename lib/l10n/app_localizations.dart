@@ -1926,6 +1926,12 @@ abstract class AppLocalizations {
   /// **'Parse and import'**
   String get schoolHtmlImportSubmit;
 
+  /// No description provided for @schoolImportContentTruncated.
+  ///
+  /// In en, this message translates to:
+  /// **'This page reached the safe import limit. Only the captured portion will be sent for parsing.'**
+  String get schoolImportContentTruncated;
+
   /// No description provided for @schoolHtmlImportParsingMayTakeLong.
   ///
   /// In en, this message translates to:
@@ -2058,6 +2064,24 @@ abstract class AppLocalizations {
   /// **'Page loading timed out. Please refresh and try again.'**
   String get schoolWebImportLoadTimedOut;
 
+  /// No description provided for @schoolWebImportUnknownOrigin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown site'**
+  String get schoolWebImportUnknownOrigin;
+
+  /// No description provided for @schoolWebImportCrossOriginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to another site?'**
+  String get schoolWebImportCrossOriginTitle;
+
+  /// No description provided for @schoolWebImportCrossOriginMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'School sign-in may need to open another site. Continue only if you trust this destination for the current import session:\n\n{origin}'**
+  String schoolWebImportCrossOriginMessage(Object origin);
+
   /// No description provided for @schoolWebImportEmptyPage.
   ///
   /// In en, this message translates to:
@@ -2183,6 +2207,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.'**
   String get schoolImportParserPlaintextWarning;
+
+  /// No description provided for @schoolImportHttpConfirmationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use an unencrypted HTTP endpoint?'**
+  String get schoolImportHttpConfirmationTitle;
+
+  /// No description provided for @schoolImportHttpConfirmationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The API key and timetable content may be read or changed in transit. Continue only if you trust this device, network, and endpoint. This approval lasts until you close Sked.'**
+  String get schoolImportHttpConfirmationMessage;
 
   /// No description provided for @schoolImportParserCustomConfigIncomplete.
   ///
@@ -3545,6 +3581,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Popup behavior'**
   String get generalPopupSection;
+
+  /// No description provided for @schoolWebImportSignInConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open school sign-in?'**
+  String get schoolWebImportSignInConsentTitle;
+
+  /// No description provided for @schoolWebImportSignInConsentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}'**
+  String schoolWebImportSignInConsentMessage(Object origin);
+
+  /// No description provided for @schoolWebImportInsecureSignInConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open an insecure school sign-in?'**
+  String get schoolWebImportInsecureSignInConsentTitle;
+
+  /// No description provided for @schoolWebImportInsecureSignInConsentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}'**
+  String schoolWebImportInsecureSignInConsentMessage(Object origin);
 }
 
 class _AppLocalizationsDelegate

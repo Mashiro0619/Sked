@@ -1027,6 +1027,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analiza și import';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Această pagină a atins limita de import sigur. Doar partea capturată va fi trimisă pentru analiză.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Analiza poate dura ceva timp. Vă rog aşteptaţi.';
 
@@ -1105,6 +1109,17 @@ class AppLocalizationsRo extends AppLocalizations {
       'Încărcarea paginii a expirat. Vă rugăm să vă reîmprospătați și să încercați din nou.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Site necunoscut';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Continuați către alt site?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Autentificarea în sistemul școlii poate necesita deschiderea altui site. Continuați numai dacă aveți încredere în această destinație pentru sesiunea curentă de import:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Conținutul paginii curente este gol și nu poate fi încă importat.';
 
@@ -1180,6 +1195,14 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Utilizați un endpoint HTTP necriptat?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Cheia API și conținutul orarului pot fi citite sau modificate în timpul transferului. Continuați numai dacă aveți încredere în acest dispozitiv, în rețea și în endpoint. Aprobarea este valabilă până când închideți Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1936,4 +1959,22 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Deschideți autentificarea în sistemul școlii?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Autentificarea în sistemul școlii poate trimite date de conectare prin formulare sau redirecționări ale serverului către școală și furnizorii săi de autentificare. Android nu poate întrerupe fiecare astfel de transfer pentru o confirmare separată a destinației. Continuați numai dacă aveți încredere în aceștia pentru această sesiune de import:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Deschideți o autentificare școlară nesecurizată?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Această autentificare școlară folosește HTTP. Oricine poate monitoriza sau modifica această conexiune vă poate citi ori schimba datele de conectare și conținutul paginii. Continuați numai dacă acceptați acest risc pentru:\n\n$origin';
+  }
 }

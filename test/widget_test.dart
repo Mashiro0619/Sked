@@ -1792,6 +1792,7 @@ void main() {
                   'message': {
                     'content': jsonEncode(_buildSchoolImportSuccessJson()),
                   },
+                  'finish_reason': 'stop',
                 },
               ],
             }),
@@ -1850,6 +1851,7 @@ void main() {
                       _buildSchoolImportSuccessJson(parser: ''),
                     ),
                   },
+                  'finish_reason': 'stop',
                 },
               ],
             }),
@@ -1981,6 +1983,7 @@ void main() {
                       _buildSchoolImportSuccessJson(parser: ''),
                     ),
                   },
+                  'finish_reason': 'stop',
                 },
               ],
             }),

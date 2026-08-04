@@ -127,4 +127,134 @@ void main() {
     unawaited(controller.close());
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('stream preview is bounded while edit mode keeps full content', (
+    tester,
+  ) async {
+    final controller = StreamController<SchoolImportStreamEvent>();
+    final fullContent = 'BEGIN-${'x' * 10000}-TAIL';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () {
+                unawaited(
+                  showDialog<SchoolImportResponse>(
+                    context: context,
+                    builder: (_) =>
+                        SchoolImportStreamDialog(stream: controller.stream),
+                  ),
+                );
+              },
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pump();
+    for (final chunk in [
+      fullContent.substring(0, 3500),
+      fullContent.substring(3500, 7000),
+      fullContent.substring(7000),
+    ]) {
+      controller.add(ParseDelta(chunk));
+      await tester.pump();
+      final currentPreview = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
+      expect(
+        currentPreview.data!.length,
+        lessThanOrEqualTo(SchoolImportStreamDialog.maxPreviewCodeUnits),
+      );
+    }
+
+    final preview = tester.widget<SelectableText>(find.byType(SelectableText));
+    expect(preview.data, endsWith('-TAIL'));
+    expect(preview.data, isNot(contains('BEGIN-')));
+
+    controller.add(ParseDone(response: _buildResponse()));
+    await tester.pump();
+    await tester.tap(find.byType(OutlinedButton));
+    await tester.pump();
+
+    final editor = tester.widget<TextField>(find.byType(TextField));
+    expect(editor.controller!.text, fullContent);
+
+    await tester.enterText(
+      find.byType(TextField),
+      '\u{1f600}' * (SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2 + 1),
+    );
+    expect(
+      editor.controller!.text.length,
+      SchoolImportStreamDialog.maxEditableCodeUnits,
+    );
+    expect(
+      editor.controller!.text.runes.length,
+      SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2,
+    );
+
+    unawaited(controller.close());
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+    'oversized raw content disables editing but keeps validated confirmation',
+    (tester) async {
+      final controller = StreamController<SchoolImportStreamEvent>();
+      final response = _buildResponse();
+      final results = <SchoolImportResponse?>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  unawaited(
+                    showDialog<SchoolImportResponse>(
+                      context: context,
+                      builder: (_) =>
+                          SchoolImportStreamDialog(stream: controller.stream),
+                    ).then(results.add),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      controller.add(
+        ParseDelta('x' * (SchoolImportStreamDialog.maxEditableCodeUnits + 1)),
+      );
+      controller.add(ParseDone(response: response));
+      await tester.pump();
+
+      final editButton = find.byType(OutlinedButton);
+      expect(tester.widget<OutlinedButton>(editButton).onPressed, isNull);
+      final confirmButton = find.byType(FilledButton);
+      expect(tester.widget<FilledButton>(confirmButton).onPressed, isNotNull);
+
+      await tester.tap(confirmButton);
+      await tester.pumpAndSettle();
+
+      expect(results, [same(response)]);
+      expect(find.text('Open'), findsOneWidget);
+
+      unawaited(controller.close());
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

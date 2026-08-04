@@ -704,6 +704,8 @@
   "@schoolHtmlImportCompressFirst": {},
   "schoolHtmlImportSubmit": "Parse and import",
   "@schoolHtmlImportSubmit": {},
+  "schoolImportContentTruncated": "This page reached the safe import limit. Only the captured portion will be sent for parsing.",
+  "@schoolImportContentTruncated": {},
   "schoolHtmlImportParsingMayTakeLong": "Parsing may take a while. Please wait.",
   "@schoolHtmlImportParsingMayTakeLong": {},
   "schoolHtmlImportEmpty": "Paste timetable text or HTML content first.",
@@ -760,6 +762,16 @@
   "@schoolWebImportLoadFailed": {},
   "schoolWebImportLoadTimedOut": "Page loading timed out. Please refresh and try again.",
   "@schoolWebImportLoadTimedOut": {},
+  "schoolWebImportUnknownOrigin": "Unknown site",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "Continue to another site?",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "School sign-in may need to open another site. Continue only if you trust this destination for the current import session:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
   "schoolWebImportEmptyPage": "The current page content is empty and cannot be imported yet.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web timetable imported",
@@ -808,6 +820,10 @@
   },
   "schoolImportParserPlaintextWarning": "The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.",
   "@schoolImportParserPlaintextWarning": {},
+  "schoolImportHttpConfirmationTitle": "Use an unencrypted HTTP endpoint?",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "The API key and timetable content may be read or changed in transit. Continue only if you trust this device, network, and endpoint. This approval lasts until you close Sked.",
+  "@schoolImportHttpConfirmationMessage": {},
   "schoolImportParserCustomConfigIncomplete": "Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.",
   "@schoolImportParserCustomConfigIncomplete": {},
   "schoolImportParserCurrentSourceCustom": "Parser: Custom ({model})",
@@ -1380,5 +1396,21 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolWebImportSignInConsentTitle": "Open school sign-in?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Open an insecure school sign-in?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

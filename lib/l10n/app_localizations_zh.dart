@@ -966,6 +966,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolHtmlImportSubmit => '解析并导入';
 
   @override
+  String get schoolImportContentTruncated => '此页面已达到安全导入上限，仅会把已截取的部分发送给解析端点。';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong => '解析时间可能较长，请耐心等待。';
 
   @override
@@ -1038,6 +1041,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportLoadTimedOut => '页面加载超时，请刷新后重试。';
 
   @override
+  String get schoolWebImportUnknownOrigin => '未知站点';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => '继续前往其他站点？';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return '学校登录可能需要跳转到其他站点。仅在你信任以下目标站点时，才允许本次导入会话继续访问：\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage => '当前页面内容为空，暂时无法导入。';
 
   @override
@@ -1106,6 +1120,13 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       '自定义 API 密钥会在可用时通过平台安全存储层保存。请仅在你信任的设备、浏览器和网络中使用自定义解析凭据与 HTTP 端点。';
+
+  @override
+  String get schoolImportHttpConfirmationTitle => '使用未加密的 HTTP 端点？';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API 密钥和课表内容在传输途中可能被读取或篡改。仅在你信任当前设备、网络和端点时继续；本次许可会在关闭 Sked 后失效。';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1835,6 +1856,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get generalPopupSection => '弹窗行为';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => '打开学校登录页面？';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return '学校登录可能会通过表单或服务器重定向，将登录凭据提交给学校及其登录服务提供方。Android 无法在每次此类传输前都暂停并单独确认目标。仅在你信任这些服务用于本次导入会话时继续：\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle => '打开不安全的学校登录页面？';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return '此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n$origin';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2799,6 +2836,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolHtmlImportSubmit => '解析並匯入';
 
   @override
+  String get schoolImportContentTruncated => '此頁面已達到安全匯入上限，僅會把已截取的部分傳送給解析端點。';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong => '解析時間可能較長，請耐心等待。';
 
   @override
@@ -2871,6 +2911,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportLoadTimedOut => '頁面載入逾時，請重新整理後重試。';
 
   @override
+  String get schoolWebImportUnknownOrigin => '未知站點';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => '繼續前往其他站點？';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return '學校登入可能需要跳轉到其他站點。僅在你信任以下目標站點時，才允許本次匯入工作階段繼續存取：\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage => '當前頁面內容為空，暫時無法匯入。';
 
   @override
@@ -2939,6 +2990,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get schoolImportParserPlaintextWarning =>
       '自訂 API 金鑰會在可用時透過平台安全儲存層保存。請僅在你信任的裝置、瀏覽器和網路中使用自訂解析憑據與 HTTP 端點。';
+
+  @override
+  String get schoolImportHttpConfirmationTitle => '使用未加密的 HTTP 端點？';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API 金鑰和課表內容在傳輸途中可能被讀取或竄改。僅在你信任目前裝置、網路和端點時繼續；本次許可會在關閉 Sked 後失效。';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -3668,4 +3726,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generalPopupSection => '彈窗行為';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => '開啟學校登入頁面？';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return '學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle => '開啟不安全的學校登入頁面？';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return '此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n$origin';
+  }
 }

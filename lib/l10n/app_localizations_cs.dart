@@ -1016,6 +1016,10 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analyzovat a importovat';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Tato stránka dosáhla bezpečného limitu importu. K analýze bude odeslána pouze zachycená část.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsing může chvíli trvat. Počkejte, prosím.';
 
@@ -1094,6 +1098,17 @@ class AppLocalizationsCs extends AppLocalizations {
       'Načítání stránky vypršelo. Prosím, osvěžte a zkuste znovu.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Neznámý web';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Pokračovat na jiný web?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Přihlášení do školního systému může vyžadovat otevření jiného webu. Pokračujte pouze tehdy, pokud tomuto cíli pro aktuální relaci importu důvěřujete:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Aktuální obsah stránky je prázdný a zatím nelze importovat.';
 
@@ -1166,6 +1181,14 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Použít nešifrovaný koncový bod HTTP?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Klíč API a obsah rozvrhu mohou být během přenosu přečteny nebo změněny. Pokračujte pouze tehdy, pokud důvěřujete tomuto zařízení, síti a koncovému bodu. Toto schválení platí, dokud Sked nezavřete.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1922,4 +1945,22 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Otevřít přihlášení do školního systému?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Přihlášení do školního systému může odeslat přihlašovací údaje prostřednictvím formulářů nebo přesměrování serveru škole a jejím poskytovatelům přihlášení. Android nemůže každé takové odeslání pozastavit a zobrazit samostatné potvrzení cíle. Pokračujte pouze tehdy, pokud jim pro tuto relaci importu důvěřujete:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Otevřít nezabezpečené přihlášení ke škole?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n$origin';
+  }
 }

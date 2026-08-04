@@ -1033,6 +1033,10 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Ανάλυση και εισαγωγή';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Αυτή η σελίδα έφτασε το ασφαλές όριο εισαγωγής. Μόνο το τμήμα που καταγράφηκε θα σταλεί για ανάλυση.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Η ανάλυση μπορεί να διαρκέσει λίγο. Παρακαλώ περιμένετε.';
 
@@ -1111,6 +1115,17 @@ class AppLocalizationsEl extends AppLocalizations {
       'Η φόρτωση σελίδας έχει λήξει το χρόνο. Ανανεώστε και δοκιμάστε ξανά.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Άγνωστος ιστότοπος';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Συνέχεια σε άλλον ιστότοπο;';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Η σύνδεση στο σχολικό σύστημα ενδέχεται να χρειαστεί να ανοίξει άλλον ιστότοπο. Συνεχίστε μόνο αν εμπιστεύεστε αυτόν τον προορισμό για την τρέχουσα περίοδο εισαγωγής:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Το τρέχον περιεχόμενο της σελίδας είναι άδειο και δεν μπορεί ακόμα να εισαχθεί.';
 
@@ -1187,6 +1202,14 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Χρήση μη κρυπτογραφημένου τελικού σημείου HTTP;';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Το κλειδί API και το περιεχόμενο του ωρολογίου προγράμματος ενδέχεται να διαβαστούν ή να τροποποιηθούν κατά τη μεταφορά. Συνεχίστε μόνο αν εμπιστεύεστε αυτήν τη συσκευή, το δίκτυο και το τελικό σημείο. Η έγκριση ισχύει μέχρι να κλείσετε το Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1942,4 +1965,22 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Άνοιγμα σύνδεσης στο σχολικό σύστημα;';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Η σύνδεση στο σχολικό σύστημα μπορεί να υποβάλει διαπιστευτήρια μέσω φορμών ή ανακατευθύνσεων διακομιστή στο σχολείο και στους παρόχους σύνδεσής του. Το Android δεν μπορεί να διακόπτει κάθε τέτοια μεταφορά για ξεχωριστή επιβεβαίωση προορισμού. Συνεχίστε μόνο αν τους εμπιστεύεστε για αυτήν την περίοδο εισαγωγής:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Άνοιγμα μη ασφαλούς σύνδεσης σχολείου;';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n$origin';
+  }
 }

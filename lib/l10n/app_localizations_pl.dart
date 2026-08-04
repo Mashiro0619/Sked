@@ -1023,6 +1023,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analizuj i importuj';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Ta strona osiągnęła bezpieczny limit importu. Do analizy zostanie wysłana tylko przechwycona część.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsing może zająć trochę czasu. Proszę poczekać.';
 
@@ -1101,6 +1105,17 @@ class AppLocalizationsPl extends AppLocalizations {
       'Czas ładowania strony się skończył. Proszę odświeżyć i spróbować ponownie.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Nieznana witryna';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Przejść do innej witryny?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Logowanie do systemu szkoły może wymagać otwarcia innej witryny. Kontynuuj tylko wtedy, gdy ufasz temu miejscu docelowemu w bieżącej sesji importu:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Aktualna zawartość strony jest pusta i nie może być jeszcze zaimportowana.';
 
@@ -1175,6 +1190,14 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Użyć nieszyfrowanego punktu końcowego HTTP?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Klucz API i zawartość planu lekcji mogą zostać odczytane lub zmienione podczas przesyłania. Kontynuuj tylko wtedy, gdy ufasz temu urządzeniu, sieci i punktowi końcowemu. Zgoda obowiązuje do zamknięcia aplikacji Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1930,4 +1953,22 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Otworzyć logowanie do systemu szkoły?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Logowanie do systemu szkoły może przesyłać dane logowania za pomocą formularzy lub przekierowań serwera do szkoły i jej dostawców logowania. Android nie może wstrzymać każdego takiego transferu, aby osobno potwierdzić miejsce docelowe. Kontynuuj tylko wtedy, gdy ufasz im w tej sesji importu:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Otworzyć niezabezpieczone logowanie do szkoły?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'To logowanie do szkoły używa protokołu HTTP. Każdy, kto może obserwować lub modyfikować to połączenie, może odczytać albo zmienić Twoje dane logowania i zawartość strony. Kontynuuj tylko, jeśli akceptujesz to ryzyko dla:\n\n$origin';
+  }
 }

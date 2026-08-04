@@ -1011,6 +1011,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Parse and import';
 
   @override
+  String get schoolImportContentTruncated =>
+      'This page reached the safe import limit. Only the captured portion will be sent for parsing.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsing may take a while. Please wait.';
 
@@ -1090,6 +1094,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Page loading timed out. Please refresh and try again.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Unknown site';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Continue to another site?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'School sign-in may need to open another site. Continue only if you trust this destination for the current import session:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'The current page content is empty and cannot be imported yet.';
 
@@ -1162,6 +1177,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Use an unencrypted HTTP endpoint?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'The API key and timetable content may be read or changed in transit. Continue only if you trust this device, network, and endpoint. This approval lasts until you close Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1917,4 +1940,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Open school sign-in?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Open an insecure school sign-in?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n$origin';
+  }
 }

@@ -1380,5 +1380,37 @@
   "generalTimeGridSection": "Time grid",
   "@generalTimeGridSection": {},
   "generalPopupSection": "Popup behavior",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolImportContentTruncated": "Αυτή η σελίδα έφτασε το ασφαλές όριο εισαγωγής. Μόνο το τμήμα που καταγράφηκε θα σταλεί για ανάλυση.",
+  "@schoolImportContentTruncated": {},
+  "schoolWebImportUnknownOrigin": "Άγνωστος ιστότοπος",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "Συνέχεια σε άλλον ιστότοπο;",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "Η σύνδεση στο σχολικό σύστημα ενδέχεται να χρειαστεί να ανοίξει άλλον ιστότοπο. Συνεχίστε μόνο αν εμπιστεύεστε αυτόν τον προορισμό για την τρέχουσα περίοδο εισαγωγής:\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolImportHttpConfirmationTitle": "Χρήση μη κρυπτογραφημένου τελικού σημείου HTTP;",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "Το κλειδί API και το περιεχόμενο του ωρολογίου προγράμματος ενδέχεται να διαβαστούν ή να τροποποιηθούν κατά τη μεταφορά. Συνεχίστε μόνο αν εμπιστεύεστε αυτήν τη συσκευή, το δίκτυο και το τελικό σημείο. Η έγκριση ισχύει μέχρι να κλείσετε το Sked.",
+  "@schoolImportHttpConfirmationMessage": {},
+  "schoolWebImportSignInConsentTitle": "Άνοιγμα σύνδεσης στο σχολικό σύστημα;",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Η σύνδεση στο σχολικό σύστημα μπορεί να υποβάλει διαπιστευτήρια μέσω φορμών ή ανακατευθύνσεων διακομιστή στο σχολείο και στους παρόχους σύνδεσής του. Το Android δεν μπορεί να διακόπτει κάθε τέτοια μεταφορά για ξεχωριστή επιβεβαίωση προορισμού. Συνεχίστε μόνο αν τους εμπιστεύεστε για αυτήν την περίοδο εισαγωγής:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Άνοιγμα μη ασφαλούς σύνδεσης σχολείου;",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

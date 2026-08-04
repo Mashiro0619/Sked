@@ -1019,6 +1019,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analyysi ja tuonti';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Tämä sivu saavutti turvallisen tuonnin rajan. Vain tallennettu osa lähetetään jäsennettäväksi.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsing voi kestää jonkin aikaa. Odottakaa.';
 
@@ -1097,6 +1101,18 @@ class AppLocalizationsFi extends AppLocalizations {
       'Sivun lataaminen on päättynyt. Virkistä ja yritä uudelleen.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Tuntematon sivusto';
+
+  @override
+  String get schoolWebImportCrossOriginTitle =>
+      'Jatketaanko toiselle sivustolle?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Koulun järjestelmään kirjautuminen saattaa edellyttää toisen sivuston avaamista. Jatka vain, jos luotat tähän kohteeseen nykyisen tuonti-istunnon ajan:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Nykyinen sivun sisältö on tyhjä eikä sitä voi tuoda vielä.';
 
@@ -1171,6 +1187,14 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Käytetäänkö salaamatonta HTTP-päätepistettä?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API-avain ja lukujärjestyksen sisältö voidaan lukea tai niitä voidaan muuttaa siirron aikana. Jatka vain, jos luotat tähän laitteeseen, verkkoon ja päätepisteeseen. Hyväksyntä on voimassa, kunnes suljet Skedin.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1924,4 +1948,22 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Avataanko koulun kirjautuminen?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Koulun kirjautuminen voi lähettää tunnistetietoja lomakkeiden tai palvelimen uudelleenohjausten kautta koululle ja sen kirjautumispalvelujen tarjoajille. Android ei voi keskeyttää jokaista tällaista siirtoa erillistä kohteen vahvistusta varten. Jatka vain, jos luotat niihin tämän tuonti-istunnon ajan:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Avataanko suojaamaton koulukirjautuminen?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n$origin';
+  }
 }

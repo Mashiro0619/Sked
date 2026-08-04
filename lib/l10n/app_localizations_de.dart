@@ -1027,6 +1027,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analysieren und importieren';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Diese Seite hat das sichere Importlimit erreicht. Nur der erfasste Teil wird zur Analyse gesendet.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Die Analyse kann etwas dauern. Bitte warten.';
 
@@ -1105,6 +1109,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zeitüberschreitung beim Laden der Seite. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Unbekannte Website';
+
+  @override
+  String get schoolWebImportCrossOriginTitle =>
+      'Zu einer anderen Website wechseln?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Für die Anmeldung beim Schulsystem muss möglicherweise eine andere Website geöffnet werden. Fahren Sie nur fort, wenn Sie diesem Ziel für die aktuelle Importsitzung vertrauen:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Der aktuelle Seiteninhalt ist leer und kann noch nicht importiert werden.';
 
@@ -1181,6 +1197,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Unverschlüsselten HTTP-Endpunkt verwenden?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Der API-Schlüssel und die Stundenplandaten können während der Übertragung gelesen oder verändert werden. Fahren Sie nur fort, wenn Sie diesem Gerät, Netzwerk und Endpunkt vertrauen. Diese Zustimmung gilt, bis Sie Sked schließen.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1937,4 +1961,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Schulanmeldung öffnen?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Bei der Schulanmeldung können Anmeldedaten über Formulare oder Serverweiterleitungen an die Schule und deren Anmeldeanbieter gesendet werden. Android kann nicht jede solche Übertragung für eine separate Zielbestätigung anhalten. Fahren Sie nur fort, wenn Sie diesen Stellen für diese Importsitzung vertrauen:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Unsichere Schulanmeldung öffnen?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Diese Schulanmeldung verwendet HTTP. Jeder, der diese Verbindung beobachten oder verändern kann, kann Ihre Anmeldedaten und Seiteninhalte lesen oder ändern. Fahren Sie nur fort, wenn Sie dieses Risiko akzeptieren für:\n\n$origin';
+  }
 }

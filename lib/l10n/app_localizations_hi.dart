@@ -1017,6 +1017,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'पार्स करें और आयात करें';
 
   @override
+  String get schoolImportContentTruncated =>
+      'यह पेज सुरक्षित आयात सीमा तक पहुँच गया है। विश्लेषण के लिए केवल कैप्चर किया गया भाग भेजा जाएगा।';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'पार्सिंग में समय लग सकता है। कृपया प्रतीक्षा करें।';
 
@@ -1095,6 +1099,17 @@ class AppLocalizationsHi extends AppLocalizations {
       'पेज लोड होने में समय समाप्त हो गया। कृपया रीफ़्रेश करें और फिर प्रयास करें।';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'अज्ञात साइट';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'किसी दूसरी साइट पर जाएँ?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'स्कूल में साइन इन करने के लिए दूसरी साइट खोलनी पड़ सकती है। केवल तभी जारी रखें जब आप मौजूदा आयात सत्र के लिए इस गंतव्य पर भरोसा करते हों:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'वर्तमान पेज सामग्री खाली है और अभी आयात नहीं की जा सकती।';
 
@@ -1168,6 +1183,14 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'क्या बिना एन्क्रिप्शन वाले HTTP एंडपॉइंट का उपयोग करें?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API कुंजी और समय-सारणी की सामग्री को भेजे जाते समय पढ़ा या बदला जा सकता है। केवल तभी जारी रखें जब आप इस डिवाइस, नेटवर्क और एंडपॉइंट पर भरोसा करते हों। यह अनुमति Sked बंद करने तक मान्य रहेगी।';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1923,4 +1946,21 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'स्कूल साइन-इन खोलें?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'स्कूल साइन-इन, फ़ॉर्म या सर्वर रीडायरेक्ट के माध्यम से स्कूल और उसके साइन-इन प्रदाताओं को क्रेडेंशियल भेज सकता है। Android हर ऐसे ट्रांसफ़र को अलग गंतव्य पुष्टि के लिए रोक नहीं सकता। केवल तभी जारी रखें जब आप इस आयात सत्र के लिए उन पर भरोसा करते हों:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'असुरक्षित स्कूल साइन-इन खोलें?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n$origin';
+  }
 }

@@ -1026,6 +1026,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Разобрать и импортировать';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Эта страница достигла безопасного ограничения на импорт. На анализ будет отправлена только сохранённая часть.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Разбор может занять некоторое время. Пожалуйста, подождите.';
 
@@ -1105,6 +1109,17 @@ class AppLocalizationsRu extends AppLocalizations {
       'Время загрузки страницы истекло. Обновите страницу и попробуйте снова.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Неизвестный сайт';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Перейти на другой сайт?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Для входа в школьную систему может потребоваться открыть другой сайт. Продолжайте, только если доверяете этому адресу в рамках текущего сеанса импорта:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Содержимое текущей страницы пусто и пока не может быть импортировано.';
 
@@ -1180,6 +1195,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Использовать незашифрованный HTTP-адрес?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Ключ API и содержимое расписания могут быть прочитаны или изменены при передаче. Продолжайте, только если доверяете этому устройству, сети и адресу. Разрешение действует до закрытия Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1936,4 +1959,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Открыть вход в школьную систему?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'При входе в школьную систему учётные данные могут отправляться через формы или серверные перенаправления школе и её поставщикам входа. Android не может приостанавливать каждую такую передачу для отдельного подтверждения адреса. Продолжайте, только если доверяете им в рамках этого сеанса импорта:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Открыть небезопасный вход в школьную систему?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Этот вход в школьную систему использует HTTP. Любой, кто может просматривать или изменять это соединение, может прочитать либо изменить ваши учётные данные и содержимое страницы. Продолжайте, только если принимаете этот риск для:\n\n$origin';
+  }
 }

@@ -1010,6 +1010,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'تحليل واستيراد';
 
   @override
+  String get schoolImportContentTruncated =>
+      'بلغت هذه الصفحة حد الاستيراد الآمن. سيتم إرسال الجزء الذي تم التقاطه فقط للتحليل.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'تحليل قد يستغرق بعض الوقت. أرجوك انتظر';
 
@@ -1088,6 +1092,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'انتهى وقت تحميل الصفحة. يرجى تحديث ومحاولة مرة أخرى.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'موقع غير معروف';
+
+  @override
+  String get schoolWebImportCrossOriginTitle =>
+      'هل تريد المتابعة إلى موقع آخر؟';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'قد يتطلب تسجيل الدخول إلى المدرسة فتح موقع آخر. لا تتابع إلا إذا كنت تثق بهذه الوجهة لجلسة الاستيراد الحالية:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'محتوى الصفحة الحالية فارغ ولا يمكن استيراده بعد.';
 
@@ -1160,6 +1176,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'هل تريد استخدام نقطة نهاية HTTP غير مشفرة؟';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'قد تتم قراءة مفتاح API ومحتوى الجدول الدراسي أو تغييرهما أثناء النقل. لا تتابع إلا إذا كنت تثق بهذا الجهاز والشبكة ونقطة النهاية. تظل هذه الموافقة سارية حتى تغلق Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1912,4 +1936,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'فتح صفحة تسجيل الدخول إلى المدرسة؟';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'قد يرسل تسجيل الدخول إلى المدرسة بيانات الاعتماد عبر النماذج أو عمليات إعادة التوجيه من الخادم إلى المدرسة وموفري تسجيل الدخول التابعين لها. لا يستطيع Android إيقاف كل عملية نقل من هذا النوع لعرض تأكيد منفصل للوجهة. لا تتابع إلا إذا كنت تثق بهم لجلسة الاستيراد هذه:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'فتح تسجيل دخول غير آمن للمدرسة؟';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'يستخدم تسجيل الدخول هذا HTTP. يمكن لأي شخص يستطيع مراقبة هذا الاتصال أو تعديله قراءة بيانات اعتمادك ومحتوى الصفحة أو تغييرهما. لا تتابع إلا إذا كنت تقبل هذه المخاطرة لهذا الموقع:\n\n$origin';
+  }
 }

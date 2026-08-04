@@ -1030,6 +1030,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analizar e importar';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Esta página alcanzó el límite seguro de importación. Solo se enviará para su análisis la parte capturada.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'El análisis puede tardar un poco. Espera, por favor.';
 
@@ -1108,6 +1112,17 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se agotó el tiempo de carga de la página. Actualiza e inténtalo de nuevo.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Sitio desconocido';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => '¿Continuar a otro sitio?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'El inicio de sesión de la escuela puede requerir abrir otro sitio. Continúa solo si confías en este destino para la sesión de importación actual:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'El contenido actual de la página está vacío y aún no se puede importar.';
 
@@ -1183,6 +1198,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      '¿Usar un endpoint HTTP sin cifrar?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'La clave de API y el contenido del horario pueden leerse o modificarse durante el tránsito. Continúa solo si confías en este dispositivo, la red y el endpoint. Esta aprobación dura hasta que cierres Sked.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1938,4 +1961,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      '¿Abrir el inicio de sesión de la escuela?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'El inicio de sesión de la escuela puede enviar credenciales mediante formularios o redirecciones del servidor a la escuela y a sus proveedores de acceso. Android no puede pausar cada transferencia de este tipo para mostrar una confirmación independiente del destino. Continúa solo si confías en ellos para esta sesión de importación:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      '¿Abrir un inicio de sesión escolar no seguro?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Este inicio de sesión escolar usa HTTP. Cualquiera que pueda observar o alterar esta conexión podría leer o cambiar sus credenciales y el contenido de la página. Continúe solo si acepta este riesgo para:\n\n$origin';
+  }
 }

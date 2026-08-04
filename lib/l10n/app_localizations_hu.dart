@@ -1028,6 +1028,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Elemzés és importálás';
 
   @override
+  String get schoolImportContentTruncated =>
+      'Ez az oldal elérte a biztonságos importálási korlátot. Csak a rögzített rész lesz elküldve elemzésre.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Az elemzés eltarthat egy ideig. Kérem, várjon!';
 
@@ -1106,6 +1110,18 @@ class AppLocalizationsHu extends AppLocalizations {
       'Az oldal betöltése lejárt. Kérjük, frissítse meg és próbálja meg újra.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Ismeretlen webhely';
+
+  @override
+  String get schoolWebImportCrossOriginTitle =>
+      'Folytatja egy másik webhelyen?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Az iskolai bejelentkezéshez szükség lehet egy másik webhely megnyitására. Csak akkor folytassa, ha az aktuális importálási munkamenetben megbízik ebben a célban:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Az aktuális oldal tartalma üres, és még nem lehet importálni.';
 
@@ -1181,6 +1197,14 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Titkosítatlan HTTP-végpontot használ?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'Az API-kulcs és az órarend tartalma átvitel közben elolvasható vagy módosítható. Csak akkor folytassa, ha megbízik ebben az eszközben, hálózatban és végpontban. A jóváhagyás a Sked bezárásáig érvényes.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1937,4 +1961,22 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Megnyitja az iskolai bejelentkezést?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Az iskolai bejelentkezés űrlapokon vagy szerverátirányításokon keresztül hitelesítő adatokat küldhet az iskolának és bejelentkezési szolgáltatóinak. Az Android nem tud minden ilyen átvitelt külön célmegerősítéshez megállítani. Csak akkor folytassa, ha megbízik bennük ebben az importálási munkamenetben:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Megnyitja a nem biztonságos iskolai bejelentkezést?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n$origin';
+  }
 }

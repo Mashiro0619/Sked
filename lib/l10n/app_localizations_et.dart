@@ -1015,6 +1015,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'Analüüs ja import';
 
   @override
+  String get schoolImportContentTruncated =>
+      'See leht saavutas turvalise impordi piirangu. Analüüsimiseks saadetakse ainult jäädvustatud osa.';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'Parsimine võib võtta mõnda aega. Palun oota.';
 
@@ -1094,6 +1098,17 @@ class AppLocalizationsEt extends AppLocalizations {
       'Lehekülje laadimise aeg on möödunud. Palun värskendage ja proovige uuesti.';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'Tundmatu sait';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'Kas jätkata teisele saidile?';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'Kooli sisselogimiseks võib olla vaja avada teine sait. Jätkake ainult siis, kui usaldate seda sihtkohta praeguse impordiseansi jaoks:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'Praeguse lehekülje sisu on tühi ja seda ei saa veel importida.';
 
@@ -1167,6 +1182,14 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'Kas kasutada krüptimata HTTP-lõpp-punkti?';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'API-võtit ja tunniplaani sisu võidakse edastamise ajal lugeda või muuta. Jätkake ainult siis, kui usaldate seda seadet, võrku ja lõpp-punkti. Nõusolek kehtib kuni Skedi sulgemiseni.';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1920,4 +1943,22 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Kas avada kooli sisselogimine?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Kooli sisselogimine võib saata kasutajatunnused vormide või serveri ümbersuunamiste kaudu koolile ja selle sisselogimisteenuse pakkujatele. Android ei saa iga sellist edastust eraldi sihtkoha kinnitamiseks peatada. Jätkake ainult siis, kui usaldate neid selle impordiseansi jaoks:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Kas avada ebaturvaline kooli sisselogimine?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'See kooli sisselogimine kasutab HTTP-d. Igaüks, kes saab seda ühendust jälgida või muuta, võib lugeda või muuta teie sisselogimisandmeid ja lehe sisu. Jätkake ainult siis, kui nõustute selle riskiga saidi puhul:\n\n$origin';
+  }
 }

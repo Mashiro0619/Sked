@@ -11,21 +11,17 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
-import '../services/update_service.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import 'general_schedule_home_screen.dart';
 import 'home_screen.dart';
-import 'settings_page.dart';
 
 class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({
     super.key,
-    this.startupUpdateService = const UpdateService(),
     this.recoveryExportService = const ExportService(),
   });
 
-  final UpdateService startupUpdateService;
   final ExportService recoveryExportService;
 
   @override
@@ -33,9 +29,6 @@ class AppHomeScreen extends StatefulWidget {
 }
 
 class _AppHomeScreenState extends State<AppHomeScreen> {
-  bool _hasStartedPrivacyPolicyFetch = false;
-  bool _hasCompletedPrivacyPolicyFetch = false;
-  bool _hasScheduledStartupUpdateCheck = false;
   bool _isShowingPrivacyConsentDialog = false;
   bool _isCompletingFirstLaunch = false;
   bool _isHandlingRecovery = false;
@@ -54,9 +47,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       _lastProvider = provider;
       _lastObservedCanWrite = provider.canWrite;
       provider.addListener(_onProviderReady);
-      _hasStartedPrivacyPolicyFetch = false;
-      _hasCompletedPrivacyPolicyFetch = false;
-      _hasScheduledStartupUpdateCheck = false;
       _hasShownRecoveryBanner = false;
     }
     _onProviderReady();
@@ -79,10 +69,8 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       return;
     }
     if (!provider.isLoaded || !provider.canWrite) return;
-    _startPrivacyPolicyFetch(provider);
     _showRecoveryBannerIfNeeded(provider);
     _ensurePrivacyConsentDialog(provider);
-    _scheduleStartupUpdateCheck(provider);
   }
 
   void _clearRoutesForRecovery(TimetableProvider provider) {
@@ -101,63 +89,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         _isClearingRoutesForRecovery = false;
       }
     });
-  }
-
-  void _startPrivacyPolicyFetch(TimetableProvider provider) {
-    if (_hasStartedPrivacyPolicyFetch ||
-        !provider.isLoaded ||
-        !provider.canWrite) {
-      return;
-    }
-    _hasStartedPrivacyPolicyFetch = true;
-    unawaited(_fetchPrivacyPolicyVersion(provider));
-  }
-
-  Future<void> _fetchPrivacyPolicyVersion(TimetableProvider provider) async {
-    try {
-      await provider.fetchRemotePrivacyPolicyVersion();
-    } catch (error, stackTrace) {
-      debugPrint('Privacy policy version fetch failed: $error\n$stackTrace');
-    }
-    if (!mounted || _lastProvider != provider) {
-      return;
-    }
-    setState(() => _hasCompletedPrivacyPolicyFetch = true);
-    _onProviderReady();
-  }
-
-  void _scheduleStartupUpdateCheck(TimetableProvider provider) {
-    if (_hasScheduledStartupUpdateCheck ||
-        !_hasCompletedPrivacyPolicyFetch ||
-        !provider.canWrite ||
-        !provider.hasAcceptedCurrentPrivacyPolicy ||
-        _isCompletingFirstLaunch ||
-        _firstLaunchSelectedMode != null ||
-        _shouldShowFirstLaunchOnboarding(provider)) {
-      return;
-    }
-    _hasScheduledStartupUpdateCheck = true;
-    unawaited(_runStartupUpdateCheckAfterFrame(provider));
-  }
-
-  Future<void> _runStartupUpdateCheckAfterFrame(
-    TimetableProvider provider,
-  ) async {
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted ||
-        _lastProvider != provider ||
-        !_hasCompletedPrivacyPolicyFetch ||
-        !provider.isLoaded ||
-        !provider.canWrite ||
-        !provider.hasAcceptedCurrentPrivacyPolicy) {
-      return;
-    }
-    await AppUpdateCoordinator.checkForUpdates(
-      context,
-      provider: provider,
-      source: UpdateCheckSource.startup,
-      updateService: widget.startupUpdateService,
-    );
   }
 
   void _ensurePrivacyConsentDialog(TimetableProvider provider) {
@@ -295,7 +226,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   }
 
   void _showFirstLaunchPrivacyStep(AppMode mode) {
-    if (_isCompletingFirstLaunch || !_hasCompletedPrivacyPolicyFetch) {
+    if (_isCompletingFirstLaunch) {
       return;
     }
     setState(() => _firstLaunchSelectedMode = mode);
@@ -312,8 +243,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     final selectedMode = _firstLaunchSelectedMode;
     if (selectedMode == null ||
         _isCompletingFirstLaunch ||
-        !provider.canWrite ||
-        !_hasCompletedPrivacyPolicyFetch) {
+        !provider.canWrite) {
       return;
     }
     var completed = false;
@@ -340,9 +270,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
             _firstLaunchSelectedMode = null;
           }
         });
-        if (completed) {
-          _scheduleStartupUpdateCheck(provider);
-        }
       }
     }
   }
@@ -613,7 +540,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           child: _isCompletingFirstLaunch || showOnboarding
               ? _FirstLaunchOnboardingScreen(
                   key: const ValueKey('first-launch-onboarding'),
-                  canStart: _hasCompletedPrivacyPolicyFetch,
+                  canStart: true,
                   selectedMode: _firstLaunchSelectedMode,
                   isCompleting: _isCompletingFirstLaunch,
                   onStartWithMode: _showFirstLaunchPrivacyStep,

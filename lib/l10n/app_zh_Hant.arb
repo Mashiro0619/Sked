@@ -706,6 +706,8 @@
   "@schoolHtmlImportCompressFirst": {},
   "schoolHtmlImportSubmit": "解析並匯入",
   "@schoolHtmlImportSubmit": {},
+  "schoolImportContentTruncated": "此頁面已達到安全匯入上限，僅會把已截取的部分傳送給解析端點。",
+  "@schoolImportContentTruncated": {},
   "schoolHtmlImportParsingMayTakeLong": "解析時間可能較長，請耐心等待。",
   "@schoolHtmlImportParsingMayTakeLong": {},
   "schoolHtmlImportEmpty": "請先貼上課表文字或 HTML 內容。",
@@ -762,6 +764,16 @@
   "@schoolWebImportLoadFailed": {},
   "schoolWebImportLoadTimedOut": "頁面載入逾時，請重新整理後重試。",
   "@schoolWebImportLoadTimedOut": {},
+  "schoolWebImportUnknownOrigin": "未知站點",
+  "@schoolWebImportUnknownOrigin": {},
+  "schoolWebImportCrossOriginTitle": "繼續前往其他站點？",
+  "@schoolWebImportCrossOriginTitle": {},
+  "schoolWebImportCrossOriginMessage": "學校登入可能需要跳轉到其他站點。僅在你信任以下目標站點時，才允許本次匯入工作階段繼續存取：\n\n{origin}",
+  "@schoolWebImportCrossOriginMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
   "schoolWebImportEmptyPage": "當前頁面內容為空，暫時無法匯入。",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "網頁課表已匯入",
@@ -810,6 +822,10 @@
   },
   "schoolImportParserPlaintextWarning": "自訂 API 金鑰會在可用時透過平台安全儲存層保存。請僅在你信任的裝置、瀏覽器和網路中使用自訂解析憑據與 HTTP 端點。",
   "@schoolImportParserPlaintextWarning": {},
+  "schoolImportHttpConfirmationTitle": "使用未加密的 HTTP 端點？",
+  "@schoolImportHttpConfirmationTitle": {},
+  "schoolImportHttpConfirmationMessage": "API 金鑰和課表內容在傳輸途中可能被讀取或竄改。僅在你信任目前裝置、網路和端點時繼續；本次許可會在關閉 Sked 後失效。",
+  "@schoolImportHttpConfirmationMessage": {},
   "schoolImportParserCustomConfigIncomplete": "自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。",
   "@schoolImportParserCustomConfigIncomplete": {},
   "schoolImportParserCurrentSourceCustom": "解析器：自訂（{model}）",
@@ -1382,5 +1398,21 @@
   "generalTimeGridSection": "時間格線",
   "@generalTimeGridSection": {},
   "generalPopupSection": "彈窗行為",
-  "@generalPopupSection": {}
+  "@generalPopupSection": {},
+  "schoolWebImportSignInConsentTitle": "開啟學校登入頁面？",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "開啟不安全的學校登入頁面？",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

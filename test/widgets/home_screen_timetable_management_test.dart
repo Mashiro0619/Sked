@@ -16,7 +16,6 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
-import 'package:sked/services/update_service.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
@@ -110,6 +109,13 @@ class _RecordingPrivacyService extends PrivacyService {
     fetchCount += 1;
     return null;
   }
+}
+
+class _MutablePrivacyService extends PrivacyService {
+  String? version;
+
+  @override
+  Future<String?> fetchCurrentPrivacyPolicyVersion() async => version;
 }
 
 class _NoopSecretStore implements SecretStore {
@@ -228,43 +234,6 @@ class _BlockingPrivacyService extends PrivacyService {
   Future<String?> fetchCurrentPrivacyPolicyVersion() {
     fetchCount += 1;
     return _completer.future;
-  }
-
-  void complete(String? version) {
-    if (!_completer.isCompleted) {
-      _completer.complete(version);
-    }
-  }
-}
-
-class _RecordingUpdateService extends UpdateService {
-  var checkCount = 0;
-
-  @override
-  Future<UpdateCheckResult> checkForUpdates() async {
-    checkCount += 1;
-    return const UpdateCheckResult(
-      localVersion: '1.0.0',
-      remoteVersion: '1.0.0',
-      hasUpdate: false,
-      releaseUrl: 'https://github.com/Mashiro0619/Sked/releases/latest',
-      updateContent: '',
-    );
-  }
-}
-
-class _NoopUpdateService extends UpdateService {
-  const _NoopUpdateService();
-
-  @override
-  Future<UpdateCheckResult> checkForUpdates() async {
-    return const UpdateCheckResult(
-      localVersion: '1.0.0',
-      remoteVersion: '1.0.0',
-      hasUpdate: false,
-      releaseUrl: 'https://github.com/Mashiro0619/Sked/releases/latest',
-      updateContent: '',
-    );
   }
 }
 
@@ -450,7 +419,6 @@ Future<void> _pumpHomeScreenWithProvider(
 Future<void> _pumpAppHomeScreenWithProvider(
   WidgetTester tester,
   TimetableProvider provider, {
-  UpdateService startupUpdateService = const _NoopUpdateService(),
   ExportService recoveryExportService = const ExportService(),
   bool settle = true,
 }) async {
@@ -464,7 +432,6 @@ Future<void> _pumpAppHomeScreenWithProvider(
         supportedLocales: AppLocalizations.supportedLocales,
         home: AppHomeScreen(
           key: UniqueKey(),
-          startupUpdateService: startupUpdateService,
           recoveryExportService: recoveryExportService,
         ),
       ),
@@ -545,7 +512,6 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
       final privacyService = _RecordingPrivacyService();
-      final updateService = _RecordingUpdateService();
       final provider = _RecoveryTimetableProvider(
         storage: storage,
         status: StorageLoadStatus.corrupt,
@@ -554,12 +520,7 @@ void main() {
         privacyService: privacyService,
       );
 
-      await _pumpAppHomeScreenWithProvider(
-        tester,
-        provider,
-        startupUpdateService: updateService,
-        settle: false,
-      );
+      await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
@@ -574,7 +535,6 @@ void main() {
       expect(find.text('Choose your starting mode'), findsNothing);
       expect(find.byType(HomeScreen), findsNothing);
       expect(privacyService.fetchCount, 0);
-      expect(updateService.checkCount, 0);
       expect(storage.saveCount, 0);
     },
   );
@@ -726,7 +686,12 @@ void main() {
     tester,
   ) async {
     final provider = TimetableProvider(
-      storage: _FailingTimetableStorage(_buildPopulatedStudentData()),
+      storage: _FailingTimetableStorage(
+        _buildPopulatedStudentData().copyWith(
+          privacyPolicyAcceptedVersion: bundledPrivacyPolicyVersion,
+          privacyPolicyAcceptedAtIso: '2026-06-02T00:00:00.000',
+        ),
+      ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       privacyService: const _NoopPrivacyService(),
       secretStore: const _NoopSecretStore(),
@@ -788,7 +753,6 @@ void main() {
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(null);
-    final updateService = _RecordingUpdateService();
     final provider = TimetableProvider(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -797,18 +761,12 @@ void main() {
     );
     await provider.load();
 
-    await _pumpAppHomeScreenWithProvider(
-      tester,
-      provider,
-      startupUpdateService: updateService,
-      settle: false,
-    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(provider.isStudentMode, isTrue);
     expect(storage.data?.activeMode, AppMode.student);
     expect(provider.acceptedPrivacyPolicyVersion, isNull);
-    expect(updateService.checkCount, 0);
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.text('Choose your starting mode'), findsOneWidget);
     expect(find.text('Student timetable'), findsOneWidget);
@@ -818,7 +776,7 @@ void main() {
     expect(find.text('No timetable yet'), findsNothing);
   });
 
-  testWidgets('first launch waits for privacy version before mode selection', (
+  testWidgets('first launch uses bundled privacy version without networking', (
     tester,
   ) async {
     final privacyService = _BlockingPrivacyService();
@@ -830,29 +788,22 @@ void main() {
     );
     await provider.load();
 
-    await _pumpAppHomeScreenWithProvider(
-      tester,
-      provider,
-      startupUpdateService: _RecordingUpdateService(),
-      settle: false,
-    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump();
 
     expect(find.text('Choose your starting mode'), findsOneWidget);
-    expect(find.text('Preparing the privacy policy check...'), findsOneWidget);
+    expect(find.text('Preparing the privacy policy check...'), findsNothing);
+    expect(privacyService.fetchCount, 0);
 
-    await tester.tap(find.text('Start with timetable'), warnIfMissed: false);
-    await tester.pump();
+    await tester.tap(find.text('Start with timetable'));
+    await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsNothing);
-    expect(privacyService.fetchCount, 1);
-
-    privacyService.complete('2026-06-02');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Preparing the privacy policy check...'), findsNothing);
-    expect(find.text('Start with timetable'), findsOneWidget);
+    expect(
+      find.text('Please agree to the privacy policy before using the app'),
+      findsOneWidget,
+    );
+    expect(privacyService.fetchCount, 0);
   });
 
   testWidgets('existing empty general calendars skip first launch onboarding', (
@@ -885,12 +836,7 @@ void main() {
     await provider.load();
     provider.injectRemotePrivacyPolicyVersion('2026-06-02');
 
-    await _pumpAppHomeScreenWithProvider(
-      tester,
-      provider,
-      startupUpdateService: _RecordingUpdateService(),
-      settle: false,
-    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Choose your starting mode'), findsNothing);
@@ -910,12 +856,7 @@ void main() {
     );
     await provider.load();
 
-    await _pumpAppHomeScreenWithProvider(
-      tester,
-      provider,
-      startupUpdateService: _RecordingUpdateService(),
-      settle: false,
-    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.text('Start with timetable'));
@@ -959,12 +900,7 @@ void main() {
     );
     await provider.load();
 
-    await _pumpAppHomeScreenWithProvider(
-      tester,
-      provider,
-      startupUpdateService: _RecordingUpdateService(),
-      settle: false,
-    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.text('Start with schedule'));
@@ -1076,16 +1012,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('startup update check waits for privacy version fetch', (
+  testWidgets('existing launch does not fetch a remote privacy version', (
     tester,
   ) async {
     final privacyService = _BlockingPrivacyService();
-    final updateService = _RecordingUpdateService();
     final provider = TimetableProvider(
       storage: _MemoryTimetableStorage(
         _buildPopulatedStudentData().copyWith(
-          privacyPolicyAcceptedVersion: '2026-05-25',
-          privacyPolicyAcceptedAtIso: '2026-05-25T00:00:00.000',
+          privacyPolicyAcceptedVersion: bundledPrivacyPolicyVersion,
+          privacyPolicyAcceptedAtIso: '2026-06-02T00:00:00.000',
         ),
       ),
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1094,21 +1029,142 @@ void main() {
     );
     await provider.load();
 
-    await _pumpAppHomeScreenWithProvider(
-      tester,
-      provider,
-      startupUpdateService: updateService,
-      settle: false,
-    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(privacyService.fetchCount, 1);
-    expect(updateService.checkCount, 0);
+    expect(privacyService.fetchCount, 0);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
 
-    privacyService.complete(null);
-    await tester.pumpAndSettle();
+  testWidgets(
+    'newer persisted privacy acceptance remains valid without networking',
+    (tester) async {
+      final privacyService = _RecordingPrivacyService();
+      final provider = TimetableProvider(
+        storage: _MemoryTimetableStorage(
+          _buildPopulatedStudentData().copyWith(
+            privacyPolicyAcceptedVersion: '2026-07-01',
+            privacyPolicyAcceptedAtIso: '2026-07-01T08:30:00.000Z',
+          ),
+        ),
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: privacyService,
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
 
-    expect(updateService.checkCount, 1);
+      await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(provider.activePrivacyPolicyVersion, bundledPrivacyPolicyVersion);
+      expect(provider.hasAcceptedCurrentPrivacyPolicy, isTrue);
+      expect(privacyService.fetchCount, 0);
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+    },
+  );
+
+  test(
+    'accepting the current policy does not downgrade newer acceptance',
+    () async {
+      const acceptedVersion = '2026-07-01';
+      const acceptedAt = '2026-07-01T08:30:00.000Z';
+      final storage = _MemoryTimetableStorage(
+        _buildPopulatedStudentData().copyWith(
+          privacyPolicyAcceptedVersion: acceptedVersion,
+          privacyPolicyAcceptedAtIso: acceptedAt,
+        ),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+
+      await provider.acceptPrivacyPolicyCurrentVersion();
+
+      expect(provider.acceptedPrivacyPolicyVersion, acceptedVersion);
+      expect(provider.privacyPolicyAcceptedAt?.toIso8601String(), acceptedAt);
+      expect(storage.data?.privacyPolicyAcceptedVersion, acceptedVersion);
+      expect(storage.data?.privacyPolicyAcceptedAtIso, acceptedAt);
+      expect(storage.saveCount, 0);
+    },
+  );
+
+  test('privacy version comparison fails closed', () async {
+    Future<TimetableProvider> providerWithAcceptedVersion(
+      String version,
+    ) async {
+      final provider = TimetableProvider(
+        storage: _MemoryTimetableStorage(
+          _buildPopulatedStudentData().copyWith(
+            privacyPolicyAcceptedVersion: version,
+            privacyPolicyAcceptedAtIso: '2026-05-01T00:00:00.000Z',
+          ),
+        ),
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      return provider;
+    }
+
+    final invalid = await providerWithAcceptedVersion('2026-02-30');
+    expect(invalid.hasAcceptedCurrentPrivacyPolicy, isFalse);
+
+    final older = await providerWithAcceptedVersion('2026-05-01');
+    expect(older.hasAcceptedCurrentPrivacyPolicy, isFalse);
+
+    final accepted = await providerWithAcceptedVersion('2026-07-01');
+    accepted.injectRemotePrivacyPolicyVersion('2026-08-01');
+    expect(accepted.hasAcceptedCurrentPrivacyPolicy, isFalse);
+  });
+
+  test('active privacy policy version only moves forward', () async {
+    final privacyService = _MutablePrivacyService();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildPopulatedStudentData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: privacyService,
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    privacyService.version = '2026-05-01';
+    await provider.fetchRemotePrivacyPolicyVersion();
+    expect(provider.activePrivacyPolicyVersion, bundledPrivacyPolicyVersion);
+
+    privacyService.version = '2026-08-01';
+    await provider.fetchRemotePrivacyPolicyVersion();
+    expect(provider.activePrivacyPolicyVersion, '2026-08-01');
+
+    privacyService.version = '2026-07-01';
+    await provider.fetchRemotePrivacyPolicyVersion();
+    provider.injectRemotePrivacyPolicyVersion('2026-06-15');
+    expect(provider.activePrivacyPolicyVersion, '2026-08-01');
+  });
+
+  test('invalid active privacy policy version cannot be accepted', () async {
+    final storage = _MemoryTimetableStorage(_buildPopulatedStudentData());
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    provider.injectRemotePrivacyPolicyVersion('invalid');
+
+    expect(provider.hasAcceptedCurrentPrivacyPolicy, isFalse);
+    await expectLater(
+      provider.acceptPrivacyPolicyCurrentVersion(),
+      throwsA(isA<StateError>()),
+    );
+    expect(storage.saveCount, 0);
   });
 
   testWidgets('start date picker ignores rapid duplicate taps', (tester) async {

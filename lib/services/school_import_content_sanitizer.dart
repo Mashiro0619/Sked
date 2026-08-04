@@ -1,117 +1,229 @@
+import 'dart:convert';
+
+import 'package:html/dom.dart';
+import 'package:html/parser.dart' as html_parser;
+
+import '../utils/text_input_limits.dart';
+
+class SchoolImportSanitizationResult {
+  const SchoolImportSanitizationResult({
+    required this.content,
+    required this.wasTruncated,
+  });
+
+  final String content;
+  final bool wasTruncated;
+}
+
 class SchoolImportContentSanitizer {
   const SchoolImportContentSanitizer._();
 
+  static const int maxInputLength = 240000;
   static const int maxContentLength = 120000;
+  static const int _maxTreeDepth = 64;
 
-  // Tags whose entire block (including inner content) should be removed.
-  static final RegExp _blockRemoveRe = RegExp(
-    r'<(?:script|style|noscript|svg|canvas|iframe|template|nav|header|footer|aside|form|object|embed|applet)\b[^>]*>[\s\S]*?<\/(?:script|style|noscript|svg|canvas|iframe|template|nav|header|footer|aside|form|object|embed|applet)>',
-    caseSensitive: false,
-  );
-  static final RegExp _danglingBlockStartRe = RegExp(
-    r'<(?:script|style|noscript|svg|canvas|iframe|template|object|embed|applet)\b[^>]*>[\s\S]*?(?=<\s*(?:body|main|section|article|div|table|tbody|thead|tfoot|tr|td|th|p|ul|ol|li)\b|$)',
-    caseSensitive: false,
-  );
+  static const Set<String> _allowedTags = {
+    'article',
+    'blockquote',
+    'br',
+    'caption',
+    'code',
+    'dd',
+    'div',
+    'dl',
+    'dt',
+    'em',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'hr',
+    'li',
+    'main',
+    'ol',
+    'p',
+    'pre',
+    'section',
+    'span',
+    'strong',
+    'table',
+    'tbody',
+    'td',
+    'tfoot',
+    'th',
+    'thead',
+    'tr',
+    'ul',
+  };
 
-  // Void/empty tags that should be removed entirely.
-  static final RegExp _voidTagRe = RegExp(
-    r'<(?:img|input|button|select|textarea|link|meta|base|source|embed|object|param|area|col|colgroup|wbr)\b[^>]*\/?\s*>',
-    caseSensitive: false,
-  );
+  static const Set<String> _discardedTags = {
+    'applet',
+    'aside',
+    'audio',
+    'button',
+    'canvas',
+    'embed',
+    'footer',
+    'header',
+    'iframe',
+    'input',
+    'link',
+    'meta',
+    'nav',
+    'noscript',
+    'object',
+    'script',
+    'select',
+    'style',
+    'svg',
+    'template',
+    'textarea',
+    'video',
+  };
 
-  // Tags to unwrap: remove the opening/closing tag but keep the text content.
-  static final RegExp _unwrapTagOpenRe = RegExp(
-    r'<\s*(?:a|span|em|strong|b|i|u|s|small|mark|sub|sup|label|font|abbr|cite|code|tt|var)\b[^>]*>',
-    caseSensitive: false,
-  );
-  static final RegExp _unwrapTagCloseRe = RegExp(
-    r'<\s*/\s*(?:a|span|em|strong|b|i|u|s|small|mark|sub|sup|label|font|abbr|cite|code|tt|var)\s*>',
-    caseSensitive: false,
-  );
-
-  // Tags to unwrap that may wrap larger blocks (keep inner content).
-  static final RegExp _listTagOpenRe = RegExp(
-    r'<\s*(?:ul|ol|li|dl|dt|dd)\b[^>]*>',
-    caseSensitive: false,
-  );
-  static final RegExp _listTagCloseRe = RegExp(
-    r'<\s*/\s*(?:ul|ol|li|dl|dt|dd)\s*>',
-    caseSensitive: false,
-  );
-
-  // Full list of HTML event handlers and display attributes to strip.
-  static final RegExp _attributePattern = RegExp(
-    r'''\s(?:style|class|id|tabindex|role|target|rel|href|src|alt|title|type|width|height|align|valign|bgcolor|border|cellpadding|cellspacing|scope|headers|summary|lang|dir|hidden|disabled|readonly|checked|selected|placeholder|formaction|srcdoc|onclick|ondblclick|onchange|oninput|onload|onerror|onfocus|onblur|onmousedown|onmouseup|onmousemove|onmouseenter|onmouseleave|onmouseover|onmouseout|onkeydown|onkeyup|onkeypress|onscroll|onwheel|ontouchstart|ontouchmove|ontouchend|oncontextmenu|onselect|onselectstart|oncut|oncopy|onpaste|ondrag|ondragstart|ondragend|ondrop|onanimationstart|onanimationend|ontransitionend|onpointerdown|onpointerup|onpointermove|onreset|onsubmit|onsearch|ontoggle|onbeforeinput|onformdata|data-[\w:-]+|aria-[\w-]+)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)''',
-    caseSensitive: false,
+  static const Set<String> _voidTags = {'br', 'hr'};
+  static const HtmlEscape _textEscape = HtmlEscape(HtmlEscapeMode.element);
+  static const HtmlEscape _attributeEscape = HtmlEscape(
+    HtmlEscapeMode.attribute,
   );
 
   static String sanitize(String source) {
-    var cleaned = source;
-
-    // 1. Strip entire blocks that are never timetable content.
-    cleaned = _stripAll(cleaned, _blockRemoveRe);
-    // Also remove malformed dangling unsafe blocks without swallowing the next
-    // likely content container.
-    cleaned = cleaned.replaceAll(_danglingBlockStartRe, '');
-
-    // 2. Strip HTML comments.
-    cleaned = cleaned.replaceAll(RegExp(r'<!--[\s\S]*?-->'), '');
-
-    // 3. Convert <br>, <hr>, <p> to space (preserve text separation).
-    cleaned = cleaned.replaceAll(
-      RegExp(r'<\s*br\s*\/?\s*>', caseSensitive: false),
-      ' ',
-    );
-    cleaned = cleaned.replaceAll(
-      RegExp(r'<\s*hr\s*\/?\s*>', caseSensitive: false),
-      ' ',
-    );
-    cleaned = cleaned.replaceAll(
-      RegExp(r'<\s*\/?\s*p\s*>', caseSensitive: false),
-      ' ',
-    );
-
-    // 4. Remove void/inline replacement tags entirely.
-    cleaned = cleaned.replaceAll(_voidTagRe, '');
-
-    // 4. Unwrap inline formatting tags (keep text).
-    cleaned = cleaned.replaceAll(_unwrapTagOpenRe, '');
-    cleaned = cleaned.replaceAll(_unwrapTagCloseRe, '');
-
-    // 5. Unwrap list tags (keep text inside <li>).
-    cleaned = cleaned.replaceAll(_listTagOpenRe, '');
-    cleaned = cleaned.replaceAll(_listTagCloseRe, '');
-
-    // 6. Strip remaining attributes from all tags.
-    cleaned = cleaned.replaceAll(_attributePattern, '');
-
-    // 7. Collapse whitespace.
-    cleaned = cleaned.replaceAll(RegExp(r'[\r\n\t\x0B\f]+'), ' ');
-    cleaned = cleaned.replaceAll(RegExp(r' {2,}'), ' ');
-    // Collapse repeated angle-bracket tags with nothing between them.
-    for (var i = 0; i < 3; i++) {
-      final prev = cleaned.length;
-      cleaned = cleaned.replaceAll(RegExp(r'>\s+<'), '> <');
-      // Remove empty tags: <xxx>  </xxx> or self-closing-like patterns.
-      cleaned = cleaned.replaceAll(RegExp(r'<(\w+)\s*>\s*<\s*/\s*\1\s*>'), '');
-      if (cleaned.length == prev) break;
-    }
-
-    cleaned = cleaned.trim();
-    if (cleaned.length <= maxContentLength) {
-      return cleaned;
-    }
-    return cleaned.substring(0, maxContentLength);
+    return sanitizeWithResult(source).content;
   }
 
-  static String _stripAll(String source, RegExp pattern) {
-    var result = source;
-    // Repeat until no more matches (handles nested cases).
-    for (var i = 0; i < 5; i++) {
-      final prevLen = result.length;
-      result = result.replaceAll(pattern, '');
-      if (result.length == prevLen) break;
+  static SchoolImportSanitizationResult sanitizeWithResult(String source) {
+    final inputWasTruncated = source.length > maxInputLength;
+    final boundedSource = !inputWasTruncated
+        ? source
+        : truncateUtf16CodeUnits(source, maxInputLength);
+    final fragment = html_parser.parseFragment(boundedSource);
+    final writer = _BoundedHtmlWriter(maxContentLength);
+    for (final node in fragment.nodes) {
+      _serializeNode(node, writer, depth: 0);
+      if (writer.truncated) break;
+    }
+    return SchoolImportSanitizationResult(
+      content: writer.toString().trim(),
+      wasTruncated: inputWasTruncated || writer.truncated,
+    );
+  }
+
+  static void _serializeNode(
+    Node node,
+    _BoundedHtmlWriter writer, {
+    required int depth,
+  }) {
+    if (writer.truncated) return;
+    if (node is Text) {
+      writer.writeText(_normalizeText(node.data));
+      return;
+    }
+    if (node is! Element) return;
+
+    final tag = node.localName?.toLowerCase() ?? '';
+    if (_discardedTags.contains(tag)) return;
+    if (depth >= _maxTreeDepth) {
+      writer.markTruncated();
+      return;
+    }
+
+    if (!_allowedTags.contains(tag)) {
+      for (final child in node.nodes) {
+        _serializeNode(child, writer, depth: depth + 1);
+        if (writer.truncated) break;
+      }
+      return;
+    }
+
+    final attributes = _safeAttributes(node, tag);
+    final openingTag = attributes.isEmpty
+        ? '<$tag>'
+        : '<$tag ${attributes.join(' ')}>';
+    if (_voidTags.contains(tag)) {
+      writer.writeToken(openingTag);
+      return;
+    }
+
+    final closingTag = '</$tag>';
+    if (!writer.openElement(openingTag, closingTag)) return;
+    for (final child in node.nodes) {
+      _serializeNode(child, writer, depth: depth + 1);
+      if (writer.truncated) break;
+    }
+    writer.closeElement(closingTag);
+  }
+
+  static List<String> _safeAttributes(Element element, String tag) {
+    if (tag != 'td' && tag != 'th') return const [];
+    final result = <String>[];
+    for (final name in const ['rowspan', 'colspan']) {
+      final rawValue = element.attributes[name]?.trim();
+      final value = int.tryParse(rawValue ?? '');
+      if (value == null || value < 1 || value > 1000) continue;
+      result.add('$name="${_attributeEscape.convert('$value')}"');
     }
     return result;
   }
+
+  static String _normalizeText(String source) {
+    return source.replaceAll(RegExp(r'[\s\u00a0]+'), ' ');
+  }
+}
+
+class _BoundedHtmlWriter {
+  _BoundedHtmlWriter(this.maxLength);
+
+  final int maxLength;
+  final StringBuffer _buffer = StringBuffer();
+  int _reservedClosingLength = 0;
+  bool truncated = false;
+
+  void markTruncated() {
+    truncated = true;
+  }
+
+  bool openElement(String openingTag, String closingTag) {
+    if (!_canWrite(openingTag.length + closingTag.length)) {
+      truncated = true;
+      return false;
+    }
+    _buffer.write(openingTag);
+    _reservedClosingLength += closingTag.length;
+    return true;
+  }
+
+  void closeElement(String closingTag) {
+    _reservedClosingLength -= closingTag.length;
+    _buffer.write(closingTag);
+  }
+
+  void writeToken(String token) {
+    if (!_canWrite(token.length)) {
+      truncated = true;
+      return;
+    }
+    _buffer.write(token);
+  }
+
+  void writeText(String text) {
+    for (final rune in text.runes) {
+      final escaped = SchoolImportContentSanitizer._textEscape.convert(
+        String.fromCharCode(rune),
+      );
+      if (!_canWrite(escaped.length)) {
+        truncated = true;
+        return;
+      }
+      _buffer.write(escaped);
+    }
+  }
+
+  bool _canWrite(int length) {
+    return _buffer.length + _reservedClosingLength + length <= maxLength;
+  }
+
+  @override
+  String toString() => _buffer.toString();
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -87,14 +88,152 @@ Uri _parseCustomOpenAiBaseUri(String baseUrl) {
   return uri;
 }
 
+Stream<List<int>> _boundedByteStream(
+  Stream<List<int>> source, {
+  required int maxBytes,
+  required String operation,
+  required Duration idleTimeout,
+  required Duration totalTimeout,
+}) {
+  late StreamController<List<int>> controller;
+  StreamSubscription<List<int>>? subscription;
+  Timer? idleTimer;
+  Timer? totalTimer;
+  var totalBytes = 0;
+  var closed = false;
+
+  void cancelTimers() {
+    idleTimer?.cancel();
+    totalTimer?.cancel();
+  }
+
+  void closeWithError(Object error, [StackTrace? stackTrace]) {
+    if (closed) return;
+    closed = true;
+    cancelTimers();
+    unawaited(subscription?.cancel());
+    controller.addError(error, stackTrace ?? StackTrace.current);
+    unawaited(controller.close());
+  }
+
+  void resetIdleTimer() {
+    idleTimer?.cancel();
+    idleTimer = Timer(
+      idleTimeout,
+      () => closeWithError(
+        TimeoutException('$operation timed out.', idleTimeout),
+      ),
+    );
+  }
+
+  controller = StreamController<List<int>>(
+    onListen: () {
+      totalTimer = Timer(
+        totalTimeout,
+        () => closeWithError(
+          TimeoutException(
+            '$operation exceeded its total deadline.',
+            totalTimeout,
+          ),
+        ),
+      );
+      resetIdleTimer();
+      subscription = source.listen(
+        (chunk) {
+          if (closed) return;
+          resetIdleTimer();
+          totalBytes += chunk.length;
+          if (totalBytes > maxBytes) {
+            closeWithError(
+              FormatException('$operation exceeded $maxBytes bytes.'),
+            );
+            return;
+          }
+          controller.add(chunk);
+        },
+        onError: closeWithError,
+        onDone: () {
+          if (closed) return;
+          closed = true;
+          cancelTimers();
+          unawaited(controller.close());
+        },
+      );
+    },
+    onPause: () => subscription?.pause(),
+    onResume: () => subscription?.resume(),
+    onCancel: () {
+      if (!closed) {
+        closed = true;
+        cancelTimers();
+      }
+      return subscription?.cancel();
+    },
+  );
+  return controller.stream;
+}
+
+Stream<String> _decodeBoundedLines(
+  Stream<List<int>> source, {
+  required int maxLineBytes,
+  required String operation,
+}) async* {
+  final lineBytes = <int>[];
+  await for (final chunk in source) {
+    for (final byte in chunk) {
+      if (byte == 0x0A) {
+        yield utf8.decode(lineBytes);
+        lineBytes.clear();
+        continue;
+      }
+      lineBytes.add(byte);
+      if (lineBytes.length > maxLineBytes) {
+        throw FormatException('$operation exceeded $maxLineBytes bytes.');
+      }
+    }
+  }
+  if (lineBytes.isNotEmpty) {
+    yield utf8.decode(lineBytes);
+  }
+}
+
+class _AbortableRequestHandle {
+  _AbortableRequestHandle(String method, Uri url) {
+    request = http.AbortableRequest(
+      method,
+      url,
+      abortTrigger: _abortCompleter.future,
+    );
+  }
+
+  final Completer<void> _abortCompleter = Completer<void>();
+  late final http.AbortableRequest request;
+
+  void abort() {
+    if (!_abortCompleter.isCompleted) {
+      _abortCompleter.complete();
+    }
+  }
+}
+
 class SchoolImportApi {
   const SchoolImportApi({
     http.Client? client,
     Duration requestTimeout = const Duration(seconds: 30),
     Duration streamIdleTimeout = const Duration(minutes: 2),
+    Duration streamTotalTimeout = const Duration(minutes: 5),
+    int maxModelResponseBytes = 1024 * 1024,
+    int maxImportResponseBytes = 2 * 1024 * 1024,
+    int maxStreamResponseBytes = 2 * 1024 * 1024,
+    int maxSseLineBytes = 128 * 1024,
   }) : _client = client,
        _requestTimeout = requestTimeout,
-       _streamIdleTimeout = streamIdleTimeout;
+       _streamIdleTimeout = streamIdleTimeout,
+       _streamTotalTimeout = streamTotalTimeout,
+       _maxModelResponseBytes = maxModelResponseBytes,
+       _maxImportResponseBytes = maxImportResponseBytes,
+       _maxStreamResponseBytes = maxStreamResponseBytes,
+       _maxSseLineBytes = maxSseLineBytes;
 
   static const _defaultCustomOpenAiSystemPrompt =
       '''You are an expert timetable extraction engine.
@@ -158,11 +297,38 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   static String get defaultCustomOpenAiSystemPrompt =>
       _defaultCustomOpenAiSystemPrompt;
 
-  static const int _maxStreamErrorBodyBytes = 32 * 1024;
+  static const int maxErrorMessageBytes = 4 * 1024;
+  static const int _maxStreamErrorBodyBytes = 3 * 1024;
+  static const int maxModelCount = 500;
+  static const int maxModelIdLength = 256;
+  static const int maxImportedCourseCount = 500;
+  static const int maxImportedPeriodTimeCount = 100;
+  static const int maxImportWarningCount = 100;
+  static const int maxImportedSemesterWeekCount = 100;
+  static const int maxImportedCoursePeriodCount = 100;
+  static const int maxImportedCustomFieldCount = 50;
+  static const int maxImportedTotalCustomFieldCount = 1000;
+  static const int maxImportedShortTextBytes = 2 * 1024;
+  static const int maxImportedLongTextBytes = 16 * 1024;
+  static const int maxImportedUrlBytes = 8 * 1024;
+  static const int maxImportedTotalStringBytes = 256 * 1024;
+  static const int maxSourceContentLength = 120000;
+  static const int maxSourceUrlLength = 2048;
+  static const int maxSourceTitleLength = 512;
+  static const int maxCustomPromptLength = 64 * 1024;
+  static const int maxApiKeyLength = 8 * 1024;
+  static const int maxRequestBodyBytes = 512 * 1024;
+  static const int _deltaBatchLength = 1024;
+  static const Duration _deltaBatchInterval = Duration(milliseconds: 50);
 
   final http.Client? _client;
   final Duration _requestTimeout;
   final Duration _streamIdleTimeout;
+  final Duration _streamTotalTimeout;
+  final int _maxModelResponseBytes;
+  final int _maxImportResponseBytes;
+  final int _maxStreamResponseBytes;
+  final int _maxSseLineBytes;
 
   Future<SchoolImportResponse> importCurrentPage(
     SchoolImportPagePayload payload, {
@@ -199,41 +365,65 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     final ownsClient = _client == null;
     try {
       final uri = _buildOpenAiModelsUri(normalizedBaseUrl);
-      final response = await client
-          .get(
-            uri,
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $normalizedApiKey',
-            },
-          )
-          .timeout(_requestTimeout);
-      final rawBody = _decodeBody(response);
+      _validateApiKey(normalizedApiKey);
+      final requestHandle = _AbortableRequestHandle('GET', uri);
+      requestHandle.request
+        ..followRedirects = false
+        ..headers.addAll({
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $normalizedApiKey',
+        });
+      final response = await _sendSensitiveRequest(
+        client,
+        requestHandle,
+        operation: 'Model list request',
+      );
+      final rawBody = await _readBoundedBody(
+        response.stream,
+        maxBytes: _maxModelResponseBytes,
+        operation: 'Model list response',
+        totalTimeout: _requestTimeout,
+        allowMalformed: response.statusCode < 200 || response.statusCode >= 300,
+      );
       final decoded = _tryDecodeJson(rawBody);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final message = _extractErrorMessage(decoded);
         throw FormatException(
           message ??
-              'Model list request failed (${response.statusCode}).\n\n$rawBody',
+              _errorWithDetails(
+                'Model list request failed (${response.statusCode}).',
+                rawBody,
+              ),
         );
       }
       if (decoded is! Map<String, dynamic>) {
         throw FormatException(
-          'Model list response format is invalid.\n\n$rawBody',
+          _errorWithDetails('Model list response format is invalid.', rawBody),
         );
       }
       final data = decoded['data'];
       if (data is! List) {
         throw FormatException(
-          'Model list response format is invalid.\n\n$rawBody',
+          _errorWithDetails('Model list response format is invalid.', rawBody),
         );
+      }
+      if (data.length > maxModelCount) {
+        throw const FormatException('Model list contains too many entries.');
       }
       final models =
           data
               .map((item) {
                 if (item is Map) {
                   final id = item['id'];
-                  return id is String ? id.trim() : '';
+                  if (id is String) {
+                    final normalizedId = id.trim();
+                    if (normalizedId.length > maxModelIdLength) {
+                      throw const FormatException(
+                        'Model list contains an overlong model ID.',
+                      );
+                    }
+                    return normalizedId;
+                  }
                 }
                 return '';
               })
@@ -247,7 +437,9 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     } on FormatException {
       rethrow;
     } catch (error) {
-      throw FormatException('Unable to fetch the model list.\n\n$error');
+      throw FormatException(
+        _errorWithDetails('Unable to fetch the model list.', error),
+      );
     } finally {
       if (ownsClient) {
         client.close();
@@ -267,49 +459,66 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         normalizedModel.isEmpty) {
       throw const FormatException('Custom parser configuration is incomplete.');
     }
+    _validateImportRequest(
+      payload: payload,
+      settings: settings,
+      apiKey: normalizedApiKey,
+      model: normalizedModel,
+    );
 
     final client = _client ?? http.Client();
     final ownsClient = _client == null;
     try {
       final uri = _buildOpenAiChatUri(normalizedBaseUrl);
-      final response = await client
-          .post(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $normalizedApiKey',
-            },
-            body: jsonEncode({
-              'model': normalizedModel,
-              'temperature': 0,
-              'messages': [
-                {
-                  'role': 'system',
-                  'content': _buildCustomOpenAiSystemPrompt(settings),
-                },
-                {'role': 'user', 'content': _buildOpenAiUserPrompt(payload)},
-              ],
-              'response_format': const {'type': 'json_object'},
-            }),
-          )
-          .timeout(_requestTimeout);
-      final rawBody = _decodeBody(response);
+      final body = _buildOpenAiRequestBody(
+        payload: payload,
+        settings: settings,
+        model: normalizedModel,
+        stream: false,
+      );
+      final requestHandle = _AbortableRequestHandle('POST', uri);
+      requestHandle.request
+        ..followRedirects = false
+        ..headers.addAll({
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $normalizedApiKey',
+        })
+        ..body = body;
+      final response = await _sendSensitiveRequest(
+        client,
+        requestHandle,
+        operation: 'Import request',
+      );
+      final rawBody = await _readBoundedBody(
+        response.stream,
+        maxBytes: _maxImportResponseBytes,
+        operation: 'Import response',
+        totalTimeout: _requestTimeout,
+        allowMalformed: response.statusCode < 200 || response.statusCode >= 300,
+      );
       final decoded = _tryDecodeJson(rawBody);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final message = _extractErrorMessage(decoded);
         throw FormatException(
           message ??
-              'Import request failed (${response.statusCode}).\n\n$rawBody',
+              _errorWithDetails(
+                'Import request failed (${response.statusCode}).',
+                rawBody,
+              ),
         );
       }
       if (decoded is! Map<String, dynamic>) {
-        throw FormatException('Import response format is invalid.\n\n$rawBody');
+        throw FormatException(
+          _errorWithDetails('Import response format is invalid.', rawBody),
+        );
       }
       final content = _extractOpenAiMessageContent(decoded);
       final parsedJson = _tryDecodeJsonFromModelContent(content);
       if (parsedJson is! Map<String, dynamic>) {
-        throw FormatException('Import response parse failed.\n\n$rawBody');
+        throw FormatException(
+          _errorWithDetails('Import response parse failed.', content),
+        );
       }
       try {
         final normalizedResponseJson = _normalizeCustomImportResponse(
@@ -317,6 +526,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
           payload: payload,
           model: normalizedModel,
         );
+        _validateImportResponseBounds(normalizedResponseJson);
         return SchoolImportApiResult(
           response: SchoolImportResponse.fromJson(normalizedResponseJson),
           rawBody: rawBody,
@@ -324,7 +534,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         );
       } on FormatException catch (error) {
         throw FormatException(
-          'Import response parse failed.\n\n${error.message}',
+          _errorWithDetails('Import response parse failed.', error.message),
         );
       }
     } on TimeoutException {
@@ -333,7 +543,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       rethrow;
     } catch (error) {
       throw FormatException(
-        'Unable to connect to the import service.\n\n$error',
+        _errorWithDetails('Unable to connect to the import service.', error),
       );
     } finally {
       if (ownsClient) {
@@ -362,6 +572,164 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       // The value may be plain timetable text, page text, or HTML.
       'html': payload.html,
     });
+  }
+
+  String _buildOpenAiRequestBody({
+    required SchoolImportPagePayload payload,
+    required SchoolImportParserSettings settings,
+    required String model,
+    required bool stream,
+  }) {
+    final body = jsonEncode({
+      'model': model,
+      'temperature': 0,
+      if (stream) 'stream': true,
+      'messages': [
+        {'role': 'system', 'content': _buildCustomOpenAiSystemPrompt(settings)},
+        {'role': 'user', 'content': _buildOpenAiUserPrompt(payload)},
+      ],
+      'response_format': const {'type': 'json_object'},
+    });
+    if (utf8.encode(body).length > maxRequestBodyBytes) {
+      throw const FormatException('Import request content is too large.');
+    }
+    return body;
+  }
+
+  void _validateApiKey(String apiKey) {
+    if (apiKey.length > maxApiKeyLength) {
+      throw const FormatException('Custom parser API key is too long.');
+    }
+  }
+
+  void _validateImportRequest({
+    required SchoolImportPagePayload payload,
+    required SchoolImportParserSettings settings,
+    required String apiKey,
+    required String model,
+  }) {
+    _validateApiKey(apiKey);
+    if (model.length > maxModelIdLength) {
+      throw const FormatException('Custom parser model ID is too long.');
+    }
+    if (payload.html.length > maxSourceContentLength) {
+      throw const FormatException('Import content is too large.');
+    }
+    if (payload.url.length > maxSourceUrlLength) {
+      throw const FormatException('Import source URL is too long.');
+    }
+    if (payload.title.length > maxSourceTitleLength) {
+      throw const FormatException('Import source title is too long.');
+    }
+    if (settings.customPrompt.length > maxCustomPromptLength) {
+      throw const FormatException('Custom parser prompt is too long.');
+    }
+  }
+
+  static void _validateImportResponseBounds(Map<String, dynamic> responseJson) {
+    final budget = _ImportResponseBudget();
+    final timetable = _asStringKeyedMap(responseJson['timetable']);
+    if (timetable == null) {
+      return;
+    }
+    budget.addString(
+      timetable['name'],
+      field: 'timetable name',
+      maxBytes: maxImportedShortTextBytes,
+    );
+    budget.addString(timetable['startDate'], field: 'start date', maxBytes: 64);
+
+    final courses = timetable['courses'];
+    if (courses is List && courses.length > maxImportedCourseCount) {
+      throw const FormatException('Import response contains too many courses.');
+    }
+    if (courses is List) {
+      for (final rawCourse in courses) {
+        final course = _asStringKeyedMap(rawCourse);
+        if (course == null) {
+          throw const FormatException('Import response course is invalid.');
+        }
+        for (final field in const ['name', 'teacher', 'location']) {
+          budget.addString(
+            course[field],
+            field: 'course $field',
+            maxBytes: maxImportedShortTextBytes,
+          );
+        }
+        budget.addString(
+          course['remarks'],
+          field: 'course remarks',
+          maxBytes: maxImportedLongTextBytes,
+        );
+        _validateRawListCount(
+          course['semesterWeeks'],
+          field: 'semester weeks',
+          maxCount: maxImportedSemesterWeekCount,
+        );
+        _validateRawListCount(
+          course['periods'],
+          field: 'periods',
+          maxCount: maxImportedCoursePeriodCount,
+        );
+        budget.addCustomFields(course['customFields']);
+      }
+    }
+
+    final periodTimeSet = _asStringKeyedMap(timetable['periodTimeSet']);
+    budget.addString(
+      periodTimeSet?['name'],
+      field: 'period time set name',
+      maxBytes: maxImportedShortTextBytes,
+    );
+    final periodTimes = periodTimeSet?['periodTimes'];
+    if (periodTimes is List &&
+        periodTimes.length > maxImportedPeriodTimeCount) {
+      throw const FormatException(
+        'Import response contains too many period times.',
+      );
+    }
+    final meta = _asStringKeyedMap(responseJson['meta']);
+    budget.addString(
+      meta?['sourceUrl'],
+      field: 'source URL',
+      maxBytes: maxImportedUrlBytes,
+    );
+    budget.addString(
+      meta?['pageTitle'],
+      field: 'page title',
+      maxBytes: maxImportedShortTextBytes,
+    );
+    budget.addString(
+      meta?['parser'],
+      field: 'parser name',
+      maxBytes: maxImportedShortTextBytes,
+    );
+    final warnings = meta?['warnings'];
+    if (warnings is List && warnings.length > maxImportWarningCount) {
+      throw const FormatException(
+        'Import response contains too many warnings.',
+      );
+    }
+    if (warnings is List) {
+      for (final warning in warnings) {
+        budget.addString(
+          warning,
+          field: 'warning',
+          maxBytes: maxImportedLongTextBytes,
+          mustBeString: true,
+        );
+      }
+    }
+  }
+
+  static void _validateRawListCount(
+    Object? value, {
+    required String field,
+    required int maxCount,
+  }) {
+    if (value is List && value.length > maxCount) {
+      throw FormatException('Import response contains too many $field.');
+    }
   }
 
   Map<String, dynamic> _normalizeCustomImportResponse(
@@ -417,6 +785,17 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     final firstChoice = choices.first;
     if (firstChoice is! Map) {
       throw const FormatException('Import response format is invalid.');
+    }
+    final finishReason = firstChoice['finish_reason'];
+    if (finishReason is! String || finishReason.trim().isEmpty) {
+      throw const FormatException('Import response finish reason is invalid.');
+    }
+    final normalizedFinishReason = finishReason.trim();
+    if (normalizedFinishReason != 'stop') {
+      final reason = _boundedUtf8(normalizedFinishReason, maxBytes: 256);
+      throw FormatException(
+        _boundedUtf8('Import response ended with finish reason "$reason".'),
+      );
     }
     final message = firstChoice['message'];
     if (message is! Map) {
@@ -474,12 +853,19 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     return _extractOpenAiTextContent(firstChoice['text']);
   }
 
-  bool _hasOpenAiFinishReason(Map<String, dynamic> json) {
+  String? _extractOpenAiFinishReason(Map<String, dynamic> json) {
     final choices = json['choices'];
     final firstChoice = choices is List && choices.isNotEmpty
         ? choices.first
         : null;
-    return firstChoice is Map && firstChoice['finish_reason'] != null;
+    if (firstChoice is! Map || firstChoice['finish_reason'] == null) {
+      return null;
+    }
+    final finishReason = firstChoice['finish_reason'];
+    if (finishReason is! String || finishReason.trim().isEmpty) {
+      throw const FormatException('Import stream finish reason is invalid.');
+    }
+    return finishReason.trim();
   }
 
   String? _extractSseData(String line) {
@@ -514,8 +900,45 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     }
   }
 
-  String _decodeBody(http.Response response) {
-    return utf8.decode(response.bodyBytes, allowMalformed: true);
+  Future<http.StreamedResponse> _sendSensitiveRequest(
+    http.Client client,
+    _AbortableRequestHandle requestHandle, {
+    required String operation,
+  }) async {
+    final request = requestHandle.request;
+    request.followRedirects = false;
+    late final http.StreamedResponse response;
+    try {
+      response = await client.send(request).timeout(_requestTimeout);
+    } on TimeoutException {
+      requestHandle.abort();
+      rethrow;
+    }
+    if (response.statusCode >= 300 && response.statusCode < 400) {
+      await response.stream.listen((_) {}).cancel();
+      throw FormatException('$operation redirect was blocked.');
+    }
+    return response;
+  }
+
+  Future<String> _readBoundedBody(
+    Stream<List<int>> stream, {
+    required int maxBytes,
+    required String operation,
+    required Duration totalTimeout,
+    bool allowMalformed = false,
+  }) async {
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in _boundedByteStream(
+      stream,
+      maxBytes: maxBytes,
+      operation: operation,
+      idleTimeout: _requestTimeout,
+      totalTimeout: totalTimeout,
+    )) {
+      bytes.add(chunk);
+    }
+    return utf8.decode(bytes.takeBytes(), allowMalformed: allowMalformed);
   }
 
   Map<String, dynamic>? _tryDecodeJsonFromModelContent(String source) {
@@ -545,17 +968,18 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   }
 
   String? _extractErrorMessage(Map<String, dynamic>? json) {
-    final topLevelMessage = json?['message']?.toString().trim();
-    if (topLevelMessage != null && topLevelMessage.isNotEmpty) {
+    final topLevelMessage = _serverErrorText(json?['message']);
+    if (topLevelMessage != null) {
       return topLevelMessage;
     }
     final error = json?['error'];
-    if (error is String && error.trim().isNotEmpty) {
-      return error.trim();
+    final directError = _serverErrorText(error);
+    if (directError != null) {
+      return directError;
     }
     if (error is Map) {
-      final nestedMessage = error['message']?.toString().trim();
-      if (nestedMessage != null && nestedMessage.isNotEmpty) {
+      final nestedMessage = _serverErrorText(error['message']);
+      if (nestedMessage != null) {
         return nestedMessage;
       }
     }
@@ -567,22 +991,18 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     if (message == null || message == 'Future not completed') {
       return fallback;
     }
-    return message;
+    return _boundedUtf8(message);
   }
 
   Future<String> _readStreamErrorBody(Stream<List<int>> stream) async {
     final bytes = <int>[];
     var truncated = false;
-    final limitedStream = stream.timeout(
-      _streamIdleTimeout,
-      onTimeout: (sink) {
-        sink.addError(
-          TimeoutException(
-            'Import error response timed out.',
-            _streamIdleTimeout,
-          ),
-        );
-      },
+    final limitedStream = _boundedByteStream(
+      stream,
+      maxBytes: _maxStreamResponseBytes,
+      operation: 'Import error response',
+      idleTimeout: _streamIdleTimeout,
+      totalTimeout: _streamTotalTimeout,
     );
     await for (final chunk in limitedStream) {
       final remaining = _maxStreamErrorBodyBytes - bytes.length;
@@ -602,7 +1022,9 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       }
     }
     final body = utf8.decode(bytes, allowMalformed: true);
-    return truncated ? '$body\n\n[response body truncated]' : body;
+    return _boundedUtf8(
+      truncated ? '$body\n\n[response body truncated]' : body,
+    );
   }
 
   Stream<SchoolImportStreamEvent> importCurrentPageStream(
@@ -632,22 +1054,23 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     final effectiveClient = client ?? _client ?? http.Client();
     final ownsClient = client == null && _client == null;
     try {
+      _validateImportRequest(
+        payload: payload,
+        settings: settings,
+        apiKey: normalizedApiKey,
+        model: normalizedModel,
+      );
       final uri = _buildOpenAiChatUri(normalizedBaseUrl);
-      final body = jsonEncode({
-        'model': normalizedModel,
-        'temperature': 0,
-        'stream': true,
-        'messages': [
-          {
-            'role': 'system',
-            'content': _buildCustomOpenAiSystemPrompt(settings),
-          },
-          {'role': 'user', 'content': _buildOpenAiUserPrompt(payload)},
-        ],
-        'response_format': const {'type': 'json_object'},
-      });
+      final body = _buildOpenAiRequestBody(
+        payload: payload,
+        settings: settings,
+        model: normalizedModel,
+        stream: true,
+      );
 
-      final request = http.Request('POST', uri)
+      final requestHandle = _AbortableRequestHandle('POST', uri);
+      requestHandle.request
+        ..followRedirects = false
         ..headers.addAll({
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
@@ -655,53 +1078,98 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         })
         ..body = body;
 
-      final response = await effectiveClient
-          .send(request)
-          .timeout(_requestTimeout);
+      final response = await _sendSensitiveRequest(
+        effectiveClient,
+        requestHandle,
+        operation: 'Import request',
+      );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final rawBody = await _readStreamErrorBody(response.stream);
         yield ParseError(
-          'Import request failed (${response.statusCode}).\n\n$rawBody',
+          _errorWithDetails(
+            'Import request failed (${response.statusCode}).',
+            rawBody,
+          ),
         );
         return;
       }
 
-      final stream = response.stream
-          .timeout(
-            _streamIdleTimeout,
-            onTimeout: (sink) {
-              sink.addError(
-                TimeoutException(
-                  'Import stream timed out.',
-                  _streamIdleTimeout,
-                ),
-              );
-            },
-          )
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
+      final byteStream = _boundedByteStream(
+        response.stream,
+        maxBytes: _maxStreamResponseBytes,
+        operation: 'Import stream',
+        idleTimeout: _streamIdleTimeout,
+        totalTimeout: _streamTotalTimeout,
+      );
+      final stream = _decodeBoundedLines(
+        byteStream,
+        maxLineBytes: _maxSseLineBytes,
+        operation: 'Import stream line',
+      );
 
-      String accumulatedContent = '';
-      bool doneReceived = false;
+      final accumulatedContent = StringBuffer();
+      var pendingDelta = StringBuffer();
+      final deltaStopwatch = Stopwatch()..start();
+      var doneReceived = false;
       await for (final line in stream) {
         final jsonStr = _extractSseData(line);
         if (jsonStr == null || jsonStr.isEmpty) continue;
         if (jsonStr == '[DONE]') {
           doneReceived = true;
-          continue;
+          break;
         }
         try {
           final json = _tryDecodeJson(jsonStr);
-          if (json == null) continue;
+          if (json == null) {
+            throw const FormatException('Import stream event is invalid.');
+          }
+          if (json.containsKey('error')) {
+            final message = _extractErrorMessage(json);
+            throw FormatException(
+              message == null
+                  ? 'Import stream returned an error.'
+                  : _errorWithDetails(
+                      'Import stream failed:',
+                      message,
+                      separator: ' ',
+                    ),
+            );
+          }
           final delta = _extractOpenAiStreamTextContent(json);
           if (delta.isNotEmpty) {
-            accumulatedContent += delta;
-            yield ParseDelta(delta);
+            accumulatedContent.write(delta);
+            pendingDelta.write(delta);
+            if (accumulatedContent.length > _maxStreamResponseBytes) {
+              throw const FormatException(
+                'Import stream content exceeded its limit.',
+              );
+            }
+            if (pendingDelta.length >= _deltaBatchLength ||
+                deltaStopwatch.elapsed >= _deltaBatchInterval) {
+              yield ParseDelta(pendingDelta.toString());
+              pendingDelta = StringBuffer();
+              deltaStopwatch.reset();
+            }
           }
-          if (_hasOpenAiFinishReason(json)) {
+          final finishReason = _extractOpenAiFinishReason(json);
+          if (finishReason != null) {
+            if (finishReason != 'stop') {
+              final reason = _boundedUtf8(finishReason, maxBytes: 256);
+              throw FormatException(
+                _boundedUtf8(
+                  'Import stream ended with finish reason "$reason".',
+                ),
+              );
+            }
             doneReceived = true;
+            break;
           }
+        } on FormatException {
+          rethrow;
         } catch (_) {}
+      }
+      if (pendingDelta.isNotEmpty) {
+        yield ParseDelta(pendingDelta.toString());
       }
 
       if (!doneReceived) {
@@ -714,10 +1182,11 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         return;
       }
 
-      final parsedJson = _tryDecodeJsonFromModelContent(accumulatedContent);
+      final accumulatedText = accumulatedContent.toString();
+      final parsedJson = _tryDecodeJsonFromModelContent(accumulatedText);
       if (parsedJson is! Map<String, dynamic>) {
         yield ParseError(
-          'Import response parse failed.\n\n$accumulatedContent',
+          _errorWithDetails('Import response parse failed.', accumulatedText),
         );
         return;
       }
@@ -728,22 +1197,23 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
           payload: payload,
           model: normalizedModel,
         );
+        _validateImportResponseBounds(normalizedResponseJson);
         yield ParseDone(
           response: SchoolImportResponse.fromJson(normalizedResponseJson),
         );
       } catch (e) {
-        yield ParseError(
-          'Import response parse failed.\n\n$accumulatedContent\n\n$e',
-        );
+        yield ParseError(_errorWithDetails('Import response parse failed.', e));
       }
     } on TimeoutException catch (e) {
       yield ParseError(
         _timeoutMessage(e, fallback: 'Import request timed out.'),
       );
     } on FormatException catch (e) {
-      yield ParseError(e.message);
+      yield ParseError(_boundedUtf8(e.message));
     } catch (e) {
-      yield ParseError('Unable to connect to the import service.\n\n$e');
+      yield ParseError(
+        _errorWithDetails('Unable to connect to the import service.', e),
+      );
     } finally {
       if (ownsClient) {
         effectiveClient.close();
@@ -755,9 +1225,10 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     Map<String, dynamic> json,
   ) {
     if (json['ok'] == false) {
+      final message = json['message'];
       return SchoolImportResponse.fromJson({
         'ok': false,
-        'message': json['message'],
+        'message': message is String ? _boundedUtf8(message) : message,
         'meta': _asStringKeyedMap(json['meta']) ?? const {},
         'timetable': const {},
       });
@@ -784,7 +1255,74 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         'courses': rawTimetable['courses'] ?? const [],
       },
     };
+    _validateImportResponseBounds(wrapped);
     return SchoolImportResponse.fromJson(wrapped);
+  }
+
+  static String? _serverErrorText(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : _boundedUtf8(normalized);
+  }
+
+  static String _errorWithDetails(
+    String summary,
+    Object? details, {
+    String separator = '\n\n',
+  }) {
+    final prefix = '$summary$separator';
+    final remainingBytes = maxErrorMessageBytes - utf8.encode(prefix).length;
+    if (remainingBytes <= 0) {
+      return _boundedUtf8(summary);
+    }
+
+    String detailText;
+    try {
+      detailText = details is String ? details : details?.toString() ?? '';
+    } catch (_) {
+      detailText = 'Error details unavailable.';
+    }
+    if (detailText.isEmpty) {
+      return _boundedUtf8(summary);
+    }
+    return '$prefix${_boundedUtf8(detailText, maxBytes: remainingBytes)}';
+  }
+
+  static String _boundedUtf8(
+    String value, {
+    int maxBytes = maxErrorMessageBytes,
+  }) {
+    const marker = '\n\n[details truncated]';
+    if (maxBytes <= 0) {
+      return '';
+    }
+    final markerBytes = utf8.encode(marker).length;
+    if (maxBytes <= markerBytes) {
+      return '';
+    }
+
+    final contentBudget = maxBytes - markerBytes;
+    var totalBytes = 0;
+    var codeUnitOffset = 0;
+    var safeEnd = 0;
+    for (final rune in value.runes) {
+      totalBytes += switch (rune) {
+        <= 0x7f => 1,
+        <= 0x7ff => 2,
+        <= 0xffff => 3,
+        _ => 4,
+      };
+      codeUnitOffset += rune > 0xffff ? 2 : 1;
+      if (totalBytes <= contentBudget) {
+        safeEnd = codeUnitOffset;
+      }
+      if (totalBytes > maxBytes) {
+        return '${value.substring(0, safeEnd)}$marker';
+      }
+    }
+    return value;
   }
 
   String _joinPath(String basePath, String child) {
@@ -796,5 +1334,94 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
         ? trimmedBase.substring(0, trimmedBase.length - 1)
         : trimmedBase;
     return '$normalizedBase/$child';
+  }
+}
+
+class _ImportResponseBudget {
+  int _stringBytes = 0;
+  int _customFieldCount = 0;
+
+  void addString(
+    Object? value, {
+    required String field,
+    required int maxBytes,
+    bool mustBeString = false,
+  }) {
+    if (value == null) {
+      if (mustBeString) {
+        throw FormatException('Import response $field is invalid.');
+      }
+      return;
+    }
+    if (value is! String) {
+      throw FormatException('Import response $field is invalid.');
+    }
+    final bytes = _utf8Length(value);
+    if (bytes > maxBytes) {
+      throw FormatException('Import response $field is too long.');
+    }
+    _stringBytes += bytes;
+    if (_stringBytes > SchoolImportApi.maxImportedTotalStringBytes) {
+      throw const FormatException('Import response contains too much text.');
+    }
+  }
+
+  void addCustomFields(Object? value) {
+    if (value == null) {
+      return;
+    }
+    if (value is! Map) {
+      throw const FormatException('Import response custom fields are invalid.');
+    }
+    if (value.length > SchoolImportApi.maxImportedCustomFieldCount) {
+      throw const FormatException(
+        'Import response contains too many custom fields.',
+      );
+    }
+    _customFieldCount += value.length;
+    if (_customFieldCount > SchoolImportApi.maxImportedTotalCustomFieldCount) {
+      throw const FormatException(
+        'Import response contains too many custom fields.',
+      );
+    }
+    for (final entry in value.entries) {
+      addString(
+        entry.key,
+        field: 'custom field key',
+        maxBytes: SchoolImportApi.maxImportedShortTextBytes,
+        mustBeString: true,
+      );
+      final customValue = entry.value;
+      if (customValue is String) {
+        addString(
+          customValue,
+          field: 'custom field value',
+          maxBytes: SchoolImportApi.maxImportedLongTextBytes,
+        );
+      } else if (customValue is num) {
+        if (!customValue.isFinite) {
+          throw const FormatException(
+            'Import response custom field value is invalid.',
+          );
+        }
+      } else if (customValue is! bool && customValue != null) {
+        throw const FormatException(
+          'Import response custom field value is invalid.',
+        );
+      }
+    }
+  }
+
+  int _utf8Length(String value) {
+    var result = 0;
+    for (final rune in value.runes) {
+      result += switch (rune) {
+        <= 0x7f => 1,
+        <= 0x7ff => 2,
+        <= 0xffff => 3,
+        _ => 4,
+      };
+    }
+    return result;
   }
 }

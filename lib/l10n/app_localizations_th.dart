@@ -1006,6 +1006,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolHtmlImportSubmit => 'วิเคราะห์และนำเข้า';
 
   @override
+  String get schoolImportContentTruncated =>
+      'หน้านี้ถึงขีดจำกัดการนำเข้าที่ปลอดภัยแล้ว ระบบจะส่งเฉพาะส่วนที่บันทึกไว้ไปวิเคราะห์';
+
+  @override
   String get schoolHtmlImportParsingMayTakeLong =>
       'การวิเคราะห์อาจใช้เวลาสักพัก โปรดรอ';
 
@@ -1084,6 +1088,17 @@ class AppLocalizationsTh extends AppLocalizations {
       'การโหลดหน้าถูกหมดเวลา กรุณาปรับปรุงและลองอีกครั้ง';
 
   @override
+  String get schoolWebImportUnknownOrigin => 'ไซต์ที่ไม่รู้จัก';
+
+  @override
+  String get schoolWebImportCrossOriginTitle => 'ไปยังไซต์อื่นหรือไม่';
+
+  @override
+  String schoolWebImportCrossOriginMessage(Object origin) {
+    return 'การลงชื่อเข้าใช้ระบบของโรงเรียนอาจต้องเปิดไซต์อื่น โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือปลายทางนี้สำหรับเซสชันการนำเข้าปัจจุบัน:\n\n$origin';
+  }
+
+  @override
   String get schoolWebImportEmptyPage =>
       'เนื้อหาหน้าปัจจุบันว่างเปล่าและยังไม่สามารถนำเข้าได้';
 
@@ -1158,6 +1173,14 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get schoolImportParserPlaintextWarning =>
       'The custom API key is stored through the platform secure-storage layer when available. Only use custom parser credentials and HTTP endpoints on devices, browsers, and networks you trust.';
+
+  @override
+  String get schoolImportHttpConfirmationTitle =>
+      'ใช้ปลายทาง HTTP ที่ไม่ได้เข้ารหัสหรือไม่';
+
+  @override
+  String get schoolImportHttpConfirmationMessage =>
+      'คีย์ API และเนื้อหาตารางเรียนอาจถูกอ่านหรือแก้ไขระหว่างการส่ง โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถืออุปกรณ์ เครือข่าย และปลายทางนี้ การอนุญาตนี้มีผลจนกว่าคุณจะปิด Sked';
 
   @override
   String get schoolImportParserCustomConfigIncomplete =>
@@ -1910,4 +1933,22 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'การลงชื่อเข้าใช้ของโรงเรียนอาจส่งข้อมูลรับรองผ่านแบบฟอร์มหรือการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ไปยังโรงเรียนและผู้ให้บริการลงชื่อเข้าใช้ Android ไม่สามารถหยุดการส่งแต่ละครั้งเพื่อยืนยันปลายทางแยกกันได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือบริการเหล่านี้สำหรับเซสชันการนำเข้านี้:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'เปิดการลงชื่อเข้าใช้โรงเรียนที่ไม่ปลอดภัยหรือไม่';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n$origin';
+  }
 }

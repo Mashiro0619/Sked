@@ -6,15 +6,19 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
+import '../services/school_import_http_consent.dart';
+import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/settings_list.dart';
 
 class SchoolImportParserSettingsPage extends StatefulWidget {
   const SchoolImportParserSettingsPage({
     super.key,
     this.api = const SchoolImportApi(),
+    this.httpConsentStore,
   });
 
   final SchoolImportApi api;
+  final SchoolImportHttpConsentStore? httpConsentStore;
 
   @override
   State<SchoolImportParserSettingsPage> createState() =>
@@ -409,11 +413,22 @@ class _SchoolImportParserSettingsPageState
       return;
     }
     final l10n = AppLocalizations.of(context);
+    final baseUrl = provider.customSchoolImportBaseUrl;
+    final apiKey = provider.customSchoolImportApiKey;
     setState(() => _isFetchingModels = true);
     try {
+      final confirmed = await confirmSchoolImportHttpEndpoint(
+        context: context,
+        baseUrl: baseUrl,
+        consentStore:
+            widget.httpConsentStore ?? SchoolImportHttpConsentStore.session,
+      );
+      if (!confirmed || !mounted) {
+        return;
+      }
       final models = await widget.api.fetchCustomModels(
-        baseUrl: provider.customSchoolImportBaseUrl,
-        apiKey: provider.customSchoolImportApiKey,
+        baseUrl: baseUrl,
+        apiKey: apiKey,
       );
       if (!mounted) {
         return;

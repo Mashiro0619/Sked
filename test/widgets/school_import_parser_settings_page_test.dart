@@ -10,6 +10,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/services/school_import_http_consent.dart';
 import 'package:sked/services/secret_store.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -41,6 +42,34 @@ class _BlockingSchoolImportApi extends SchoolImportApi {
   }) {
     callCount += 1;
     return completer.future;
+  }
+}
+
+class _ImmediateSchoolImportApi extends SchoolImportApi {
+  var callCount = 0;
+
+  @override
+  Future<List<String>> fetchCustomModels({
+    required String baseUrl,
+    required String apiKey,
+  }) async {
+    callCount += 1;
+    return ['model-$callCount'];
+  }
+}
+
+class _CapturingSchoolImportApi extends SchoolImportApi {
+  String? baseUrl;
+  String? apiKey;
+
+  @override
+  Future<List<String>> fetchCustomModels({
+    required String baseUrl,
+    required String apiKey,
+  }) async {
+    this.baseUrl = baseUrl;
+    this.apiKey = apiKey;
+    return const ['captured-model'];
   }
 }
 
@@ -167,8 +196,9 @@ Future<TimetableProvider> _createProvider({SecretStore? secretStore}) async {
 Future<void> _pumpPage(
   WidgetTester tester,
   TimetableProvider provider,
-  SchoolImportApi api,
-) async {
+  SchoolImportApi api, {
+  SchoolImportHttpConsentStore? httpConsentStore,
+}) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
@@ -176,7 +206,10 @@ Future<void> _pumpPage(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: SchoolImportParserSettingsPage(api: api),
+        home: SchoolImportParserSettingsPage(
+          api: api,
+          httpConsentStore: httpConsentStore,
+        ),
       ),
     ),
   );
@@ -256,7 +289,12 @@ void main() {
   testWidgets('HTTP base URL allows model fetching', (tester) async {
     final provider = await _createProvider();
     final api = _BlockingSchoolImportApi();
-    await _pumpPage(tester, provider, api);
+    await _pumpPage(
+      tester,
+      provider,
+      api,
+      httpConsentStore: SchoolImportHttpConsentStore(),
+    );
 
     await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
     await tester.pumpAndSettle();
@@ -268,12 +306,85 @@ void main() {
     await tester.tap(find.text('Fetch model list'));
     await tester.pump();
 
+    expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
+    expect(api.callCount, 0);
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.pump();
+
     expect(api.callCount, 1);
 
     api.completer.complete(['local-model']);
     await tester.pumpAndSettle();
 
     expect(find.text('local-model'), findsOneWidget);
+  });
+
+  testWidgets('HTTP confirmation and request use one settings snapshot', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    final api = _CapturingSchoolImportApi();
+    await _pumpPage(
+      tester,
+      provider,
+      api,
+      httpConsentStore: SchoolImportHttpConsentStore(),
+    );
+    await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fetch model list'));
+    await tester.pump();
+    expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    unawaited(
+      provider.updateCustomSchoolImportBaseUrl('http://changed.example.com/v1'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.baseUrl, 'http://api.example.com/v1');
+    expect(api.apiKey, 'sk-test');
+  });
+
+  testWidgets('HTTP approval is remembered only for the same endpoint', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    final api = _ImmediateSchoolImportApi();
+    final consentStore = SchoolImportHttpConsentStore();
+    await _pumpPage(tester, provider, api, httpConsentStore: consentStore);
+
+    await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fetch model list'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(api.callCount, 0);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(api.callCount, 0);
+
+    await tester.tap(find.text('Fetch model list'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.pumpAndSettle();
+    expect(api.callCount, 1);
+
+    await tester.tap(find.text('Fetch model list'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use an unencrypted HTTP endpoint?'), findsNothing);
+    expect(api.callCount, 2);
+
+    await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v2');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fetch model list'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
+    expect(api.callCount, 2);
   });
 
   testWidgets('non-web base URL shows an error and disables model fetching', (
