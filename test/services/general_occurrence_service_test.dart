@@ -368,6 +368,31 @@ void main() {
   });
 
   group('GeneralOccurrenceService.reminderItems', () {
+    test('excludes events without reminders from every reminder status', () {
+      final now = DateTime(2026, 5, 24, 10, 30);
+      final data = buildData(
+        events: [
+          buildEvent(
+            id: 'upcoming',
+            title: 'Upcoming without reminder',
+            start: DateTime(2026, 5, 24, 11),
+          ),
+          buildEvent(
+            id: 'in-progress',
+            title: 'Current without reminder',
+            start: DateTime(2026, 5, 24, 10),
+          ),
+          buildEvent(
+            id: 'overdue',
+            title: 'Past without reminder',
+            start: DateTime(2026, 5, 24, 8),
+          ),
+        ],
+      );
+
+      expect(service.reminderItems(data, now: now), isEmpty);
+    });
+
     test('classifies as upcoming when within reminder window before start', () {
       final now = DateTime(2026, 5, 24, 9, 55);
       final start = DateTime(2026, 5, 24, 10);
@@ -448,7 +473,7 @@ void main() {
       expect(items.single.status, equals(GeneralReminderStatus.inProgress));
     });
 
-    test('does not classify as in progress when event ends exactly now', () {
+    test('classifies as overdue when event ends exactly now', () {
       final now = DateTime(2026, 5, 24, 11);
       final data = buildData(
         events: [
@@ -461,7 +486,10 @@ void main() {
         ],
       );
 
-      expect(service.reminderItems(data, now: now), isEmpty);
+      final items = service.reminderItems(data, now: now);
+
+      expect(items, hasLength(1));
+      expect(items.single.status, equals(GeneralReminderStatus.overdue));
     });
 
     test('excludes occurrences already marked handled', () {

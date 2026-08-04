@@ -3,6 +3,7 @@ import '../models/general_event_occurrence.dart';
 import '../models/general_schedule.dart';
 import '../models/general_schedule_data.dart';
 import '../utils/time_utils.dart';
+import 'general_occurrence_service.dart';
 
 class GeneralEventMutationResult {
   const GeneralEventMutationResult({required this.data, required this.event});
@@ -286,11 +287,9 @@ class GeneralCalendarService {
     if (!event.recurrenceRule.isRepeating || occurrence.sequence <= 0) {
       return deleteEvent(data, event.id);
     }
-    final until = occurrence.start
-        .subtract(const Duration(days: 1))
-        .toIso8601String()
-        .split('T')
-        .first;
+    final until = previousCalendarDate(
+      occurrence.start,
+    ).toIso8601String().split('T').first;
     final updated = saveEvent(
       data,
       event.copyWith(
@@ -317,23 +316,58 @@ class GeneralCalendarService {
     GeneralEventOccurrence occurrence, {
     DateTime? now,
   }) {
-    if (!_occurrenceBelongsToData(data, occurrence)) {
+    final currentOccurrence = _matchingOccurrenceInData(data, occurrence);
+    if (currentOccurrence == null ||
+        currentOccurrence.event.reminders.isEmpty) {
       return data;
     }
-    final key = occurrence.occurrenceKey;
+    final anchor = now ?? DateTime.now();
+    final pruned = pruneReminderAcknowledgements(data, now: anchor);
+    final key = currentOccurrence.occurrenceKey;
     final acknowledgement = GeneralReminderAcknowledgement(
       occurrenceKey: key,
-      updatedAtIso: (now ?? DateTime.now()).toIso8601String(),
+      updatedAtIso: anchor.toIso8601String(),
     );
-    return data.copyWith(
+    return pruned.copyWith(
       reminderAcknowledgements: [
-        ...data.reminderAcknowledgements.where(
-          (item) =>
-              !_reminderKeyMatchesOccurrence(item.occurrenceKey, occurrence),
+        ...pruned.reminderAcknowledgements.where(
+          (item) => !_reminderKeyMatchesOccurrence(
+            item.occurrenceKey,
+            currentOccurrence,
+          ),
         ),
         acknowledgement,
       ],
     );
+  }
+
+  GeneralScheduleData pruneReminderAcknowledgements(
+    GeneralScheduleData data, {
+    DateTime? now,
+  }) {
+    if (data.reminderAcknowledgements.isEmpty) {
+      return data;
+    }
+    final cutoff = (now ?? DateTime.now()).subtract(
+      maximumGeneralReminderLookback,
+    );
+    final retained = <GeneralReminderAcknowledgement>[];
+    for (final acknowledgement in data.reminderAcknowledgements) {
+      final occurrence = _occurrenceForAcknowledgement(
+        data,
+        acknowledgement.occurrenceKey,
+      );
+      if (occurrence == null || occurrence.event.reminders.isEmpty) {
+        continue;
+      }
+      if (!occurrence.end.isBefore(cutoff)) {
+        retained.add(acknowledgement);
+      }
+    }
+    if (retained.length == data.reminderAcknowledgements.length) {
+      return data;
+    }
+    return data.copyWith(reminderAcknowledgements: retained);
   }
 
   GeneralScheduleData restoreReminder(
@@ -506,13 +540,13 @@ bool _reminderKeyMatchesOccurrence(
   );
 }
 
-bool _occurrenceBelongsToData(
+GeneralEventOccurrence? _matchingOccurrenceInData(
   GeneralScheduleData data,
   GeneralEventOccurrence occurrence,
 ) {
   final schedule = _scheduleById(data, occurrence.calendar.id);
   if (schedule == null) {
-    return false;
+    return null;
   }
   GeneralEvent? currentEvent;
   for (final event in schedule.events) {
@@ -522,14 +556,63 @@ bool _occurrenceBelongsToData(
     }
   }
   if (currentEvent == null) {
-    return false;
+    return null;
   }
-  if (currentEvent.recurrenceRule.isRepeating) {
-    return true;
+  final queryEnd = occurrence.start.add(const Duration(microseconds: 1));
+  for (final currentOccurrence in expandGeneralEventOccurrences(
+    calendar: schedule,
+    event: currentEvent,
+    startInclusive: occurrence.start,
+    endExclusive: queryEnd,
+  )) {
+    if (currentOccurrence.start.isAtSameMomentAs(occurrence.start)) {
+      return currentOccurrence;
+    }
   }
-  final currentStart = tryParseStrictIsoDateTime(currentEvent.startDateTimeIso);
-  return currentStart != null &&
-      currentStart.isAtSameMomentAs(occurrence.start);
+  return null;
+}
+
+GeneralEventOccurrence? _occurrenceForAcknowledgement(
+  GeneralScheduleData data,
+  String occurrenceKey,
+) {
+  final parts = resolveGeneralOccurrenceKey(
+    occurrenceKey,
+    knownEvents: [
+      for (final schedule in data.schedules)
+        for (final event in schedule.events)
+          (calendarId: schedule.id, eventId: event.id),
+    ],
+  );
+  if (parts == null) {
+    return null;
+  }
+  final schedule = _scheduleById(data, parts.calendarId);
+  if (schedule == null) {
+    return null;
+  }
+  GeneralEvent? event;
+  for (final candidate in schedule.events) {
+    if (candidate.id == parts.eventId) {
+      event = candidate;
+      break;
+    }
+  }
+  final start = tryParseStrictIsoDateTime(parts.startDateTimeIso);
+  if (event == null || start == null) {
+    return null;
+  }
+  for (final occurrence in expandGeneralEventOccurrences(
+    calendar: schedule,
+    event: event,
+    startInclusive: start,
+    endExclusive: start.add(const Duration(microseconds: 1)),
+  )) {
+    if (occurrence.start.isAtSameMomentAs(start)) {
+      return occurrence;
+    }
+  }
+  return null;
 }
 
 DateTime? _legacyReminderKeyStart(

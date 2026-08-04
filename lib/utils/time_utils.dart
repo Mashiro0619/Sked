@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/course_item.dart';
+import 'calendar_date_utils.dart';
 import 'constants.dart';
+
+export 'calendar_date_utils.dart';
 
 Color deriveLiveCourseOutlineColorFromSeed(Color seedColor) {
   final hsl = HSLColor.fromColor(seedColor);
@@ -49,10 +52,6 @@ String formatMinutes(int minutes) {
 
 int normalizeTimetableWeeks(int? totalWeeks) {
   return (totalWeeks ?? 18).clamp(1, maxTimetableWeeks);
-}
-
-DateTime normalizeDateOnly(DateTime date) {
-  return DateTime(date.year, date.month, date.day);
 }
 
 DateTime? tryParseStrictIsoDateTime(String? value) {
@@ -115,15 +114,11 @@ bool _isValidDateTimeParts({
 }
 
 DateTime startOfWeekMonday(DateTime date) {
-  final normalized = normalizeDateOnly(date);
-  return normalized.subtract(
-    Duration(days: normalized.weekday - DateTime.monday),
-  );
+  return startOfCalendarWeek(date, firstWeekday: DateTime.monday);
 }
 
 DateTime startOfWeekSunday(DateTime date) {
-  final normalized = normalizeDateOnly(date);
-  return normalized.subtract(Duration(days: normalized.weekday % 7));
+  return startOfCalendarWeek(date, firstWeekday: DateTime.sunday);
 }
 
 String buildTimeRange(int startMinutes, int endMinutes) {

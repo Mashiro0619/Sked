@@ -180,7 +180,7 @@ class TimetableGrid extends StatelessWidget {
                         width: metrics.dayColumnWidth,
                         child: _DayHeader(
                           weekday: weekday,
-                          date: weekDateStart.add(Duration(days: weekday - 1)),
+                          date: addCalendarDays(weekDateStart, weekday - 1),
                           compact: metrics.compact,
                           localeCode: localeCode,
                         ),

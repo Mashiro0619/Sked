@@ -1332,6 +1332,8 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
           eventId: eventId,
           startDateTimeIso: normalizedEventWithIds.startDateTimeIso,
           isRepeating: normalizedEventWithIds.recurrenceRule.isRepeating,
+          recurrenceRule: normalizedEventWithIds.recurrenceRule,
+          hasReminders: normalizedEventWithIds.reminders.isNotEmpty,
         ),
       );
       events.add(normalizedEventWithIds);
@@ -1364,11 +1366,15 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
     if (occurrenceKey == null) {
       continue;
     }
-    acknowledgementsByKey[occurrenceKey] = GeneralReminderAcknowledgement(
+    final candidate = GeneralReminderAcknowledgement(
       occurrenceKey: occurrenceKey,
       isHandled: normalizedAcknowledgement.isHandled,
       updatedAtIso: normalizedAcknowledgement.updatedAtIso,
     );
+    final existing = acknowledgementsByKey[occurrenceKey];
+    if (existing == null || _isAcknowledgementNewer(candidate, existing)) {
+      acknowledgementsByKey[occurrenceKey] = candidate;
+    }
   }
   final acknowledgements = acknowledgementsByKey.values.toList()
     ..sort((left, right) => left.occurrenceKey.compareTo(right.occurrenceKey));
@@ -1405,17 +1411,13 @@ String? _remapGeneralOccurrenceKey(
       startDateTimeIso: parsed.startDateTimeIso,
     );
     if (remap != null) {
+      if (!remap.hasReminders) {
+        return null;
+      }
       final remappedStart = _remappedGeneralOccurrenceStart(
         remap,
         parsed.startDateTimeIso,
       );
-      if (remap.mapsToSameIds(
-            calendarId: parsed.calendarId,
-            eventId: parsed.eventId,
-          ) &&
-          remappedStart == parsed.startDateTimeIso) {
-        return occurrenceKey;
-      }
       return buildGeneralOccurrenceKey(
         remap.scheduleId,
         remap.eventId,
@@ -1442,17 +1444,13 @@ String? _remapGeneralOccurrenceKey(
       startDateTimeIso: legacyStartDateTimeIso,
     );
     if (remap != null) {
+      if (!remap.hasReminders) {
+        return null;
+      }
       final remappedStart = _remappedGeneralOccurrenceStart(
         remap,
         legacyStartDateTimeIso,
       );
-      if (remap.mapsToSameIds(
-            calendarId: remap.rawScheduleId,
-            eventId: remap.rawEventId,
-          ) &&
-          remappedStart == legacyStartDateTimeIso) {
-        return occurrenceKey;
-      }
       return buildGeneralOccurrenceKey(
         remap.scheduleId,
         remap.eventId,
@@ -1490,6 +1488,8 @@ class _GeneralOccurrenceKeyRemap {
     required this.eventId,
     required this.startDateTimeIso,
     required this.isRepeating,
+    required this.recurrenceRule,
+    required this.hasReminders,
   });
 
   final String rawScheduleId;
@@ -1499,6 +1499,8 @@ class _GeneralOccurrenceKeyRemap {
   final String eventId;
   final String startDateTimeIso;
   final bool isRepeating;
+  final GeneralEventRecurrenceRule recurrenceRule;
+  final bool hasReminders;
 
   bool matchesIds(String calendarId, String eventId) {
     final matchesRaw = calendarId == rawScheduleId && eventId == rawEventId;
@@ -1511,10 +1513,22 @@ class _GeneralOccurrenceKeyRemap {
     return _sameOccurrenceStart(startDateTimeIso, rawStartDateTimeIso) ||
         _sameOccurrenceStart(startDateTimeIso, this.startDateTimeIso);
   }
+}
 
-  bool mapsToSameIds({required String calendarId, required String eventId}) {
-    return scheduleId == calendarId && this.eventId == eventId;
+bool _isAcknowledgementNewer(
+  GeneralReminderAcknowledgement candidate,
+  GeneralReminderAcknowledgement existing,
+) {
+  final candidateUpdated = tryParseStrictIsoDateTime(candidate.updatedAtIso);
+  final existingUpdated = tryParseStrictIsoDateTime(existing.updatedAtIso);
+  if (candidateUpdated == null) {
+    return false;
   }
+  if (existingUpdated == null) {
+    return true;
+  }
+  return candidateUpdated.isAfter(existingUpdated) ||
+      candidateUpdated.isAtSameMomentAs(existingUpdated);
 }
 
 String _remappedGeneralOccurrenceStart(
@@ -1522,10 +1536,22 @@ String _remappedGeneralOccurrenceStart(
   String occurrenceStartDateTimeIso,
 ) {
   if (!remap.isRepeating) return remap.startDateTimeIso;
-  return tryParseStrictIsoDateTime(
-        occurrenceStartDateTimeIso,
-      )?.toIso8601String() ??
-      remap.startDateTimeIso;
+  final rawEventStart = tryParseStrictIsoDateTime(remap.rawStartDateTimeIso);
+  final normalizedEventStart = tryParseStrictIsoDateTime(
+    remap.startDateTimeIso,
+  );
+  final occurrenceStart = tryParseStrictIsoDateTime(occurrenceStartDateTimeIso);
+  if (rawEventStart == null ||
+      normalizedEventStart == null ||
+      occurrenceStart == null) {
+    return remap.startDateTimeIso;
+  }
+  return remapLegacyElapsedGeneralOccurrenceStart(
+    rawEventStart: rawEventStart,
+    normalizedEventStart: normalizedEventStart,
+    recurrenceRule: remap.recurrenceRule,
+    occurrenceStart: occurrenceStart,
+  ).toIso8601String();
 }
 
 bool _sameOccurrenceStart(String left, String right) {

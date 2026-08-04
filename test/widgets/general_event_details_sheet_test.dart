@@ -6,13 +6,16 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 
-GeneralEventOccurrence _buildOccurrence() {
+GeneralEventOccurrence _buildOccurrence({bool hasReminder = true}) {
   final event = GeneralEvent(
     id: 'event-1',
     calendarId: 'calendar-1',
     title: 'Planning',
     startDateTimeIso: '2026-05-25T09:00:00.000',
     endDateTimeIso: '2026-05-25T10:00:00.000',
+    reminders: hasReminder
+        ? const [GeneralEventReminder(minutesBefore: 10)]
+        : const [],
   );
   final calendar = GeneralSchedule(
     id: 'calendar-1',
@@ -29,6 +32,27 @@ GeneralEventOccurrence _buildOccurrence() {
 }
 
 void main() {
+  testWidgets('events without reminders do not expose reminder actions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: GeneralEventDetailsSheet(
+            occurrence: _buildOccurrence(hasReminder: false),
+            onDismissReminder: () {},
+            onRestoreReminder: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Mark handled'), findsNothing);
+    expect(find.text('Restore reminder'), findsNothing);
+  });
+
   testWidgets('action buttons prioritize primary actions and group delete', (
     tester,
   ) async {

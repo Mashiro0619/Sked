@@ -46,7 +46,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
         normalized.weekday <= DateTime.friday) {
       return normalized;
     }
-    return normalized.add(Duration(days: 8 - normalized.weekday));
+    return addCalendarDays(normalized, 8 - normalized.weekday);
   }
 
   void _selectDay(DateTime nextDate) {
@@ -102,7 +102,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
     );
     final occurrencesByDay = _groupOccurrencesByDay(occurrences, model.days);
     final selectedOccurrences =
-        (occurrencesByDay[_dateKey(selectedDate)] ?? const [])
+        (occurrencesByDay[_calendarDateKey(selectedDate)] ?? const [])
             .sortedForAgenda();
 
     return LayoutBuilder(
@@ -200,17 +200,12 @@ class _MonthGridModel {
     final gridStart = showWeekends
         ? startOfWeekSunday(firstOfMonth)
         : startOfWeekMonday(firstOfMonth);
-    final gridEnd =
-        (showWeekends
-                ? startOfWeekSunday(lastOfMonth)
-                : startOfWeekMonday(lastOfMonth))
-            .add(Duration(days: showWeekends ? 6 : 4));
+    final lastWeekStart = showWeekends
+        ? startOfWeekSunday(lastOfMonth)
+        : startOfWeekMonday(lastOfMonth);
+    final gridEnd = addCalendarDays(lastWeekStart, showWeekends ? 6 : 4);
     final days = <DateTime>[];
-    for (
-      var d = gridStart;
-      !d.isAfter(gridEnd);
-      d = d.add(const Duration(days: 1))
-    ) {
+    for (var d = gridStart; !d.isAfter(gridEnd); d = nextCalendarDate(d)) {
       if (showWeekends || d.weekday <= DateTime.friday) {
         days.add(d);
       }
@@ -221,7 +216,7 @@ class _MonthGridModel {
       columnCount: columnCount,
       rowCount: days.length ~/ columnCount,
       queryStart: days.first,
-      queryEndExclusive: days.last.add(const Duration(days: 1)),
+      queryEndExclusive: calendarDateEndExclusive(days.last),
     );
   }
 }
@@ -351,7 +346,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         normalized.weekday <= DateTime.friday) {
       return normalized;
     }
-    return normalized.add(Duration(days: 8 - normalized.weekday));
+    return addCalendarDays(normalized, 8 - normalized.weekday);
   }
 
   DateTime _adjacentMonthDate(int monthOffset) {
@@ -807,7 +802,7 @@ class _MonthDateGrid extends StatelessWidget {
             itemBuilder: (context, index) {
               final day = model.days[index];
               final dayOccurrences =
-                  occurrencesByDay[_dateKey(day)] ?? const [];
+                  occurrencesByDay[_calendarDateKey(day)] ?? const [];
               return LayoutBuilder(
                 builder: (context, cellConstraints) {
                   final cellCompact =
@@ -845,27 +840,29 @@ Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
   }
 
   for (final day in days) {
-    result[_dateKey(day)] = [];
+    result[_calendarDateKey(day)] = [];
   }
   final firstDay = normalizeDateOnly(days.first);
   final lastDay = normalizeDateOnly(days.last);
-  final rangeEndExclusive = lastDay.add(const Duration(days: 1));
+  final rangeEndExclusive = calendarDateEndExclusive(lastDay);
 
   for (final occurrence in occurrences) {
-    if (!occurrence.end.isAfter(occurrence.start)) {
+    final displayStart = occurrence.calendarDisplayStart;
+    final displayEnd = occurrence.calendarDisplayEnd;
+    if (!displayEnd.isAfter(displayStart)) {
       continue;
     }
-    if (!occurrence.end.isAfter(firstDay) ||
-        !occurrence.start.isBefore(rangeEndExclusive)) {
+    if (!displayEnd.isAfter(firstDay) ||
+        !displayStart.isBefore(rangeEndExclusive)) {
       continue;
     }
 
-    var bucketDay = normalizeDateOnly(occurrence.start);
+    var bucketDay = normalizeDateOnly(displayStart);
     if (bucketDay.isBefore(firstDay)) {
       bucketDay = firstDay;
     }
     var lastBucketDay = normalizeDateOnly(
-      occurrence.end.subtract(const Duration(microseconds: 1)),
+      displayEnd.subtract(const Duration(microseconds: 1)),
     );
     if (lastBucketDay.isAfter(lastDay)) {
       lastBucketDay = lastDay;
@@ -874,9 +871,9 @@ Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
     for (
       var day = bucketDay;
       !day.isAfter(lastBucketDay);
-      day = day.add(const Duration(days: 1))
+      day = nextCalendarDate(day)
     ) {
-      result[_dateKey(day)]?.add(occurrence);
+      result[_calendarDateKey(day)]?.add(occurrence);
     }
   }
   return result;
@@ -922,8 +919,9 @@ class _MonthWeekdayHeaderRow extends StatelessWidget {
                 child: Text(
                   _weekdayLabel(
                     context,
-                    _referenceMonday.add(
-                      Duration(days: weekday - DateTime.monday),
+                    addCalendarDays(
+                      _referenceMonday,
+                      weekday - DateTime.monday,
                     ),
                   ),
                   maxLines: 1,

@@ -79,7 +79,7 @@ List<int> matchPeriodsForTimeRange(
 int currentWeekFor(TimetableConfig config, {DateTime? now}) {
   final today = startOfWeekMonday(now ?? DateTime.now());
   final semesterWeekStart = startOfWeekMonday(config.startDate);
-  final days = today.difference(semesterWeekStart).inDays;
+  final days = calendarDaysBetween(semesterWeekStart, today);
   if (days < 0) {
     return 1;
   }
@@ -92,7 +92,7 @@ int currentWeekFor(TimetableConfig config, {DateTime? now}) {
 
 DateTime startOfWeekFor(TimetableConfig config, int week) {
   return startOfWeekMonday(
-    normalizeDateOnly(config.startDate).add(Duration(days: (week - 1) * 7)),
+    addCalendarDays(normalizeDateOnly(config.startDate), (week - 1) * 7),
   );
 }
 
@@ -117,7 +117,7 @@ TimetableLiveCourseTarget? currentOrNextCourseTargetFor({
     return todayTarget.week == selectedWeek ? todayTarget : null;
   }
 
-  final tomorrow = today.add(const Duration(days: 1));
+  final tomorrow = nextCalendarDate(today);
   if (!_isDateWithinTimetableRange(timetable.config, tomorrow)) {
     return null;
   }
@@ -225,7 +225,7 @@ TimetableLiveCourseTarget? _courseTargetForDay({
 bool _isDateWithinTimetableRange(TimetableConfig config, DateTime date) {
   final normalizedDate = normalizeDateOnly(date);
   final lastWeekStart = startOfWeekFor(config, config.totalWeeks);
-  final lastWeekEnd = lastWeekStart.add(const Duration(days: 6));
+  final lastWeekEnd = addCalendarDays(lastWeekStart, 6);
   return !normalizedDate.isAfter(lastWeekEnd);
 }
 

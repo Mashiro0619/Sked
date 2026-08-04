@@ -18,6 +18,7 @@ void main() {
     String endDateTimeIso = '2026-05-25T10:00:00.000',
     String location = '',
     String notes = '',
+    List<GeneralEventReminder> reminders = const [],
   }) {
     return GeneralEvent(
       id: id,
@@ -27,6 +28,7 @@ void main() {
       endDateTimeIso: endDateTimeIso,
       location: location,
       notes: notes,
+      reminders: reminders,
     );
   }
 
@@ -1131,8 +1133,16 @@ END:VCALENDAR
                 id: 'shared|calendar',
                 name: 'Unsafe',
                 events: [
-                  event(id: 'a|b', calendarId: 'shared|calendar'),
-                  event(id: 'a:b', calendarId: 'shared|calendar'),
+                  event(
+                    id: 'a|b',
+                    calendarId: 'shared|calendar',
+                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                  ),
+                  event(
+                    id: 'a:b',
+                    calendarId: 'shared|calendar',
+                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                  ),
                 ],
               ),
             ],
@@ -1199,8 +1209,16 @@ END:VCALENDAR
                 id: 'calendar',
                 name: 'Calendar',
                 events: [
-                  event(id: 'event', calendarId: 'calendar'),
-                  event(id: 'event', calendarId: 'calendar').copyWith(
+                  event(
+                    id: 'event',
+                    calendarId: 'calendar',
+                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                  ),
+                  event(
+                    id: 'event',
+                    calendarId: 'calendar',
+                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                  ).copyWith(
                     startDateTimeIso: secondStart,
                     endDateTimeIso: '2026-05-26T10:00:00.000',
                   ),
@@ -1243,18 +1261,28 @@ END:VCALENDAR
             schedule(
               id: 'calendar',
               name: 'Calendar',
-              events: [event(id: 'event', calendarId: 'calendar')],
+              events: [
+                event(
+                  id: 'event',
+                  calendarId: 'calendar',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                ),
+              ],
             ),
           ],
-          reminderAcknowledgements: const [
+          reminderAcknowledgements: [
             GeneralReminderAcknowledgement(
-              occurrenceKey: 'calendar|event|$eventStart',
-              updatedAtIso: '2026-05-25T08:55:00.000',
-            ),
-            GeneralReminderAcknowledgement(
-              occurrenceKey: 'calendar|event|$eventStart',
+              occurrenceKey: buildGeneralOccurrenceKey(
+                'calendar',
+                'event',
+                eventStart,
+              ),
               isHandled: false,
               updatedAtIso: '2026-05-25T08:56:00.000',
+            ),
+            const GeneralReminderAcknowledgement(
+              occurrenceKey: 'calendar|event|$eventStart',
+              updatedAtIso: '2026-05-25T08:55:00.000',
             ),
             GeneralReminderAcknowledgement(
               occurrenceKey: 'calendar|missing|$eventStart',

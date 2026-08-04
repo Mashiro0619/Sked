@@ -23,7 +23,7 @@ class _ListCalendarView extends StatelessWidget {
     final occurrences = provider.generalOccurrencesForQuery(
       filter.toQuery(
         startInclusive: start,
-        endExclusive: start.add(const Duration(days: 180)),
+        endExclusive: addCalendarDays(start, 180),
       ),
     );
     if (occurrences.isEmpty) {
@@ -34,7 +34,7 @@ class _ListCalendarView extends StatelessWidget {
     }
     final groups = <String, List<GeneralEventOccurrence>>{};
     for (final occurrence in occurrences) {
-      final key = _dateKey(occurrence.start);
+      final key = _calendarDateKey(occurrence.calendarDisplayStart);
       groups.putIfAbsent(key, () => []).add(occurrence);
     }
     final entries = groups.entries.toList();

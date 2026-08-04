@@ -78,7 +78,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
               startDt.add(const Duration(hours: 1))
         : startDt.add(const Duration(hours: 1));
     var displayEndDt = event?.isAllDay == true
-        ? endDt.subtract(const Duration(days: 1))
+        ? previousCalendarDate(endDt)
         : endDt;
     if (displayEndDt.isBefore(startDt)) {
       displayEndDt = startDt;
@@ -174,10 +174,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
 
   DateTime _buildEndDateTime() {
     if (_isAllDay) {
-      var end = normalizeDateOnly(_endDate).add(const Duration(days: 1));
+      var end = calendarDateEndExclusive(_endDate);
       final start = _buildStartDateTime();
       if (!end.isAfter(start)) {
-        end = start.add(const Duration(days: 1));
+        end = calendarDateEndExclusive(start);
       }
       return end;
     }
@@ -459,8 +459,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                         final picked = await _runPicker(
                           () => _pickDate(
                             context,
-                            _untilDate ??
-                                _startDate.add(const Duration(days: 90)),
+                            _untilDate ?? addCalendarDays(_startDate, 90),
                             firstDate: _startDate,
                           ),
                         );

@@ -239,7 +239,12 @@ void main() {
             id: 'cal|raw',
             name: 'Other',
             events: [
-              buildEvent(id: 'other', calendarId: 'cal|raw', start: start),
+              buildEvent(
+                id: 'other',
+                calendarId: 'cal|raw',
+                start: start,
+                reminders: const [GeneralEventReminder(minutesBefore: 10)],
+              ),
             ],
           ),
         ],
@@ -259,7 +264,13 @@ void main() {
 
       expect(
         updated.reminderAcknowledgements.map((item) => item.occurrenceKey),
-        ['cal|raw|other|${start.toIso8601String()}'],
+        [
+          buildGeneralOccurrenceKey(
+            'cal|raw',
+            'other',
+            start.toIso8601String(),
+          ),
+        ],
       );
     });
 
@@ -270,6 +281,7 @@ void main() {
         id: 'event',
         calendarId: 'cal|raw',
         start: start,
+        reminders: const [GeneralEventReminder(minutesBefore: 10)],
       );
       final data = buildData(
         schedules: [
@@ -293,12 +305,20 @@ void main() {
       expect(updated.schedules.map((item) => item.id), ['cal|raw']);
       expect(
         updated.reminderAcknowledgements.map((item) => item.occurrenceKey),
-        ['cal|raw|event|${start.toIso8601String()}'],
+        [
+          buildGeneralOccurrenceKey(
+            'cal|raw',
+            'event',
+            start.toIso8601String(),
+          ),
+        ],
       );
     });
 
     test('keeps handled reminder records when editing event details only', () {
-      final event = buildEvent();
+      final event = buildEvent(
+        reminders: const [GeneralEventReminder(minutesBefore: 10)],
+      );
       final data = buildData(
         schedules: [
           GeneralSchedule(id: 'cal', name: 'Work', events: [event]),
@@ -320,15 +340,20 @@ void main() {
       expect(updated.reminderAcknowledgements, hasLength(1));
       expect(
         updated.reminderAcknowledgements.single.occurrenceKey,
-        'cal|event|2026-05-25T09:00:00.000',
+        buildGeneralOccurrenceKey('cal', 'event', '2026-05-25T09:00:00.000'),
       );
     });
 
     test(
       'clears stale handled reminder records when event occurrence moves',
       () {
-        final event = buildEvent();
-        final other = buildEvent(id: 'other');
+        final event = buildEvent(
+          reminders: const [GeneralEventReminder(minutesBefore: 10)],
+        );
+        final other = buildEvent(
+          id: 'other',
+          reminders: const [GeneralEventReminder(minutesBefore: 10)],
+        );
         final data = buildData(
           schedules: [
             GeneralSchedule(id: 'cal', name: 'Work', events: [event, other]),
@@ -368,7 +393,13 @@ void main() {
         );
         expect(
           updated.reminderAcknowledgements.map((item) => item.occurrenceKey),
-          ['cal|other|2026-05-25T09:00:00.000'],
+          [
+            buildGeneralOccurrenceKey(
+              'cal',
+              'other',
+              '2026-05-25T09:00:00.000',
+            ),
+          ],
         );
       },
     );
@@ -381,6 +412,7 @@ void main() {
           id: 'event|raw',
           calendarId: 'cal|raw',
           start: start,
+          reminders: const [GeneralEventReminder(minutesBefore: 10)],
         );
         final data = buildData(
           activeScheduleId: 'cal|raw',
@@ -419,7 +451,10 @@ void main() {
           ),
           reminders: const [GeneralEventReminder(minutesBefore: 10)],
         );
-        final other = buildEvent(id: 'other');
+        final other = buildEvent(
+          id: 'other',
+          reminders: const [GeneralEventReminder(minutesBefore: 10)],
+        );
         final data = buildData(
           schedules: [
             GeneralSchedule(id: 'cal', name: 'Work', events: [event, other]),
@@ -453,7 +488,13 @@ void main() {
         );
         expect(
           updated.reminderAcknowledgements.map((item) => item.occurrenceKey),
-          ['cal|other|2026-05-25T09:00:00.000'],
+          [
+            buildGeneralOccurrenceKey(
+              'cal',
+              'other',
+              '2026-05-25T09:00:00.000',
+            ),
+          ],
         );
       },
     );
@@ -513,6 +554,7 @@ void main() {
             unit: GeneralEventRecurrenceUnit.week,
             count: 4,
           ),
+          reminders: const [GeneralEventReminder(minutesBefore: 10)],
         );
         final calendar = GeneralSchedule(
           id: 'cal',
@@ -554,6 +596,7 @@ void main() {
             unit: GeneralEventRecurrenceUnit.week,
             count: 4,
           ),
+          reminders: const [GeneralEventReminder(minutesBefore: 10)],
         );
         final calendar = GeneralSchedule(
           id: 'cal',
@@ -592,7 +635,13 @@ void main() {
         );
         expect(
           updated.reminderAcknowledgements.map((item) => item.occurrenceKey),
-          ['cal|repeat|2026-05-18T09:00:00.000'],
+          [
+            buildGeneralOccurrenceKey(
+              'cal',
+              'repeat',
+              '2026-05-18T09:00:00.000',
+            ),
+          ],
         );
       },
     );
@@ -600,7 +649,9 @@ void main() {
 
   group('GeneralCalendarService reminders', () {
     test('dismisses and restores one occurrence reminder', () {
-      final event = buildEvent();
+      final event = buildEvent(
+        reminders: const [GeneralEventReminder(minutesBefore: 10)],
+      );
       final calendar = GeneralSchedule(
         id: 'cal',
         name: 'Work',
@@ -629,7 +680,9 @@ void main() {
     });
 
     test('ignores a dismissal for an event removed from current data', () {
-      final event = buildEvent();
+      final event = buildEvent(
+        reminders: const [GeneralEventReminder(minutesBefore: 10)],
+      );
       final staleCalendar = GeneralSchedule(
         id: 'cal',
         name: 'Work',
@@ -649,8 +702,13 @@ void main() {
     });
 
     test('ignores a stale dismissal after a one-off event is rescheduled', () {
-      final staleEvent = buildEvent();
-      final currentEvent = buildEvent(start: DateTime(2026, 5, 26, 9));
+      final staleEvent = buildEvent(
+        reminders: const [GeneralEventReminder(minutesBefore: 10)],
+      );
+      final currentEvent = buildEvent(
+        start: DateTime(2026, 5, 26, 9),
+        reminders: const [GeneralEventReminder(minutesBefore: 10)],
+      );
       final calendar = GeneralSchedule(
         id: 'cal',
         name: 'Work',
@@ -668,5 +726,168 @@ void main() {
       expect(dismissed, same(data));
       expect(dismissed.reminderAcknowledgements, isEmpty);
     });
+
+    test(
+      'rejects forged recurring occurrences outside count, until, or exceptions',
+      () {
+        final cases = <({GeneralEvent event, DateTime forgedStart})>[
+          (
+            event: buildEvent(
+              id: 'counted',
+              start: DateTime(2026, 5, 1, 9),
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.weekly,
+                unit: GeneralEventRecurrenceUnit.week,
+                count: 2,
+              ),
+              reminders: const [GeneralEventReminder(minutesBefore: 10)],
+            ),
+            forgedStart: DateTime(2026, 5, 15, 9),
+          ),
+          (
+            event: buildEvent(
+              id: 'until',
+              start: DateTime(2026, 5, 1, 9),
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.weekly,
+                unit: GeneralEventRecurrenceUnit.week,
+                untilDateIso: '2026-05-08',
+              ),
+              reminders: const [GeneralEventReminder(minutesBefore: 10)],
+            ),
+            forgedStart: DateTime(2026, 5, 15, 9),
+          ),
+          (
+            event: buildEvent(
+              id: 'excepted',
+              start: DateTime(2026, 5, 1, 9),
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.weekly,
+                unit: GeneralEventRecurrenceUnit.week,
+              ),
+              exceptions: const ['2026-05-08'],
+              reminders: const [GeneralEventReminder(minutesBefore: 10)],
+            ),
+            forgedStart: DateTime(2026, 5, 8, 9),
+          ),
+        ];
+
+        for (final testCase in cases) {
+          final calendar = GeneralSchedule(
+            id: 'cal',
+            name: 'Work',
+            events: [testCase.event],
+          );
+          final data = buildData(schedules: [calendar]);
+          final forged = buildOccurrence(
+            event: testCase.event,
+            calendar: calendar,
+            start: testCase.forgedStart,
+          );
+
+          final dismissed = service.dismissReminder(data, forged);
+
+          expect(dismissed, same(data), reason: testCase.event.id);
+          expect(dismissed.reminderAcknowledgements, isEmpty);
+        }
+      },
+    );
+
+    test(
+      'prunes only acknowledgements for occurrences ending before the cutoff',
+      () {
+        final now = DateTime(2026, 6, 30, 12);
+        final cutoff = now.subtract(const Duration(days: 30));
+        const reminders = [GeneralEventReminder(minutesBefore: 10)];
+        final old = buildEvent(
+          id: 'old',
+          start: DateTime(2026, 5, 30, 10),
+          reminders: reminders,
+        );
+        final atCutoffStart = cutoff.subtract(const Duration(hours: 1));
+        final atCutoff = buildEvent(
+          id: 'cutoff',
+          start: atCutoffStart,
+          reminders: reminders,
+        );
+        final longRunningStart = DateTime(2026, 5, 1, 9);
+        final longRunning = buildEvent(
+          id: 'long',
+          start: longRunningStart,
+          duration: DateTime(2026, 6, 1, 9).difference(longRunningStart),
+          reminders: reminders,
+        );
+        final future = buildEvent(
+          id: 'future',
+          start: DateTime(2026, 7, 2, 9),
+          reminders: reminders,
+        );
+        final infinite = buildEvent(
+          id: 'infinite',
+          start: DateTime(2026, 1, 4, 9),
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.weekly,
+            unit: GeneralEventRecurrenceUnit.week,
+          ),
+          reminders: reminders,
+        );
+        final calendar = GeneralSchedule(
+          id: 'cal',
+          name: 'Work',
+          events: [old, atCutoff, longRunning, future, infinite],
+        );
+        String key(String eventId, DateTime start) =>
+            buildGeneralOccurrenceKey('cal', eventId, start.toIso8601String());
+        final data = buildData(
+          schedules: [calendar],
+          acknowledgements: [
+            GeneralReminderAcknowledgement(
+              occurrenceKey: key('old', DateTime(2026, 5, 30, 10)),
+              updatedAtIso: '2026-05-30T09:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: key('cutoff', atCutoffStart),
+              updatedAtIso: '2026-05-31T10:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: key('long', longRunningStart),
+              updatedAtIso: '2026-05-01T08:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: key('future', DateTime(2026, 7, 2, 9)),
+              updatedAtIso: '2026-07-02T08:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: key('infinite', DateTime(2026, 5, 24, 9)),
+              updatedAtIso: '2026-05-24T08:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: key('infinite', DateTime(2026, 6, 28, 9)),
+              updatedAtIso: '2026-06-28T08:55:00.000',
+            ),
+          ],
+        );
+
+        final pruned = service.pruneReminderAcknowledgements(data, now: now);
+        final retainedKeys = pruned.reminderAcknowledgements
+            .map((item) => item.occurrenceKey)
+            .toSet();
+
+        expect(retainedKeys, {
+          key('cutoff', atCutoffStart),
+          key('long', longRunningStart),
+          key('future', DateTime(2026, 7, 2, 9)),
+          key('infinite', DateTime(2026, 6, 28, 9)),
+        });
+        expect(
+          retainedKeys,
+          isNot(contains(key('old', DateTime(2026, 5, 30, 10)))),
+        );
+        expect(
+          retainedKeys,
+          isNot(contains(key('infinite', DateTime(2026, 5, 24, 9)))),
+        );
+      },
+    );
   });
 }

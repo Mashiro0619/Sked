@@ -1193,6 +1193,45 @@ void main() {
     expect(find.text('21'), findsNothing);
   });
 
+  testWidgets('day timeline buckets UTC timed events by calendar date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'utc-timed',
+          calendarId: 'cal1',
+          title: 'UTC planning',
+          startDateTimeIso: DateTime.utc(2026, 6, 15, 9).toIso8601String(),
+          endDateTimeIso: DateTime.utc(2026, 6, 15, 10).toIso8601String(),
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-15',
+          defaultView: generalViewDay,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(find.text('UTC planning'), findsWidgets);
+  });
+
   testWidgets('month view trims trailing calendar weeks', (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1376,6 +1415,46 @@ void main() {
 
     expect(find.text('Dentist'), findsWidgets);
     expect(find.text('Review'), findsWidgets);
+  });
+
+  testWidgets('month view buckets UTC all-day events by calendar date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'utc-all-day',
+          calendarId: 'cal1',
+          title: 'UTC holiday',
+          startDateTimeIso: DateTime.utc(2026, 6, 15).toIso8601String(),
+          endDateTimeIso: DateTime.utc(2026, 6, 16).toIso8601String(),
+          isAllDay: true,
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-15',
+          defaultView: generalViewMonth,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(find.text('UTC holiday'), findsWidgets);
   });
 
   testWidgets('month view does not show all-day exclusive end date', (

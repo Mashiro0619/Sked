@@ -740,7 +740,11 @@ void main() {
     }
 
     test('accepts semantically valid current events and acknowledgements', () {
-      final snapshot = snapshotWithEvents([validEvent()]);
+      final event = validEvent()
+        ..['reminders'] = [
+          {'minutesBefore': 10},
+        ];
+      final snapshot = snapshotWithEvents([event]);
       final general = generalMode(snapshot);
       final schedule = firstSchedule(general);
       final key = buildGeneralOccurrenceKey(
@@ -766,10 +770,33 @@ void main() {
       );
     });
 
+    test('accepts a same-date recurrence end across UTC and local values', () {
+      final event = validEvent()
+        ..['start'] = '2026-08-04T23:00:00.000Z'
+        ..['end'] = '2026-08-05T00:00:00.000Z'
+        ..['recurrenceRule'] = {
+          'type': 'weekly',
+          'interval': 1,
+          'unit': 'week',
+          'untilDate': '2026-08-04',
+        };
+      final snapshot = snapshotWithEvents([event]);
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+
+      expect(
+        decoded.generalMode.activeSchedule.events.single.recurrenceEndDateIso,
+        '2026-08-04',
+      );
+    });
+
     test('normalization keeps offset acknowledgement keys decodable', () {
       final event = validEvent()
         ..['start'] = '2026-08-04T10:00:00+08:00'
-        ..['end'] = '2026-08-04T11:00:00+08:00';
+        ..['end'] = '2026-08-04T11:00:00+08:00'
+        ..['reminders'] = [
+          {'minutesBefore': 10},
+        ];
       final snapshot = snapshotWithEvents([event]);
       final general = generalMode(snapshot);
       final schedule = firstSchedule(general);
@@ -803,6 +830,64 @@ void main() {
       )!;
       expect(key.startDateTimeIso, normalizedEvent.startDateTimeIso);
     });
+
+    test(
+      'strictly loads separator legacy keys and de-duplicates them with v2',
+      () {
+        const calendarId = 'calendar|main';
+        const eventId = 'event|exam';
+        const start = '2026-08-03T08:00:00.000';
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot);
+        final schedule = firstSchedule(general)
+          ..['id'] = calendarId
+          ..['events'] = [
+            validEvent()
+              ..['id'] = eventId
+              ..['calendarId'] = calendarId
+              ..['reminders'] = [
+                {'minutesBefore': 10},
+              ],
+          ];
+        general
+          ..['activeScheduleId'] = calendarId
+          ..['schedules'] = [schedule]
+          ..['reminderAcknowledgements'] = [
+            {
+              'occurrenceKey': buildGeneralOccurrenceKey(
+                calendarId,
+                eventId,
+                start,
+              ),
+              'isHandled': false,
+              'updatedAt': '2026-08-03T08:06:00.000',
+            },
+            {
+              'occurrenceKey': '$calendarId|$eventId|$start',
+              'isHandled': true,
+              'updatedAt': '2026-08-03T08:05:00.000',
+            },
+          ];
+        snapshot['generalMode'] = general;
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+        final acknowledgement =
+            decoded.generalMode.reminderAcknowledgements.single;
+        final parsed = parseGeneralOccurrenceKey(
+          acknowledgement.occurrenceKey,
+        )!;
+
+        expect(
+          acknowledgement.occurrenceKey,
+          buildGeneralOccurrenceKey(calendarId, eventId, start),
+        );
+        expect(parsed.calendarId, calendarId);
+        expect(parsed.eventId, eventId);
+        expect(parsed.startDateTimeIso, start);
+        expect(acknowledgement.isHandled, isFalse);
+        expect(acknowledgement.updatedAtIso, '2026-08-03T08:06:00.000');
+      },
+    );
 
     for (final interval in const [0, 1000]) {
       test('rejects invalid recurrence interval $interval', () {
@@ -998,7 +1083,11 @@ void main() {
     });
 
     test('rejects duplicate and unresolved acknowledgement keys', () {
-      final duplicateSnapshot = snapshotWithEvents([validEvent()]);
+      final eventWithReminder = validEvent()
+        ..['reminders'] = [
+          {'minutesBefore': 10},
+        ];
+      final duplicateSnapshot = snapshotWithEvents([eventWithReminder]);
       final duplicateGeneral = generalMode(duplicateSnapshot);
       final duplicateSchedule = firstSchedule(duplicateGeneral);
       final validKey = buildGeneralOccurrenceKey(
@@ -1017,7 +1106,12 @@ void main() {
       ];
       duplicateSnapshot['generalMode'] = duplicateGeneral;
 
-      final unresolvedSnapshot = snapshotWithEvents([validEvent()]);
+      final unresolvedSnapshot = snapshotWithEvents([
+        validEvent()
+          ..['reminders'] = [
+            {'minutesBefore': 10},
+          ],
+      ]);
       final unresolvedGeneral = generalMode(unresolvedSnapshot);
       final unresolvedSchedule = firstSchedule(unresolvedGeneral);
       unresolvedGeneral['reminderAcknowledgements'] = [
@@ -1042,7 +1136,12 @@ void main() {
     });
 
     test('rejects an acknowledgement for an impossible occurrence', () {
-      final snapshot = snapshotWithEvents([validEvent()]);
+      final snapshot = snapshotWithEvents([
+        validEvent()
+          ..['reminders'] = [
+            {'minutesBefore': 10},
+          ],
+      ]);
       final general = generalMode(snapshot);
       final schedule = firstSchedule(general);
       general['reminderAcknowledgements'] = [
@@ -1071,6 +1170,9 @@ void main() {
         'type': 'weekly',
         'unit': 'week',
       };
+      event['reminders'] = [
+        {'minutesBefore': 10},
+      ];
       final snapshot = snapshotWithEvents([event]);
       final general = generalMode(snapshot);
       final schedule = firstSchedule(general);

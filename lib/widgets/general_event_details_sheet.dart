@@ -159,7 +159,8 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                     label: _ActionLabel(l10n.duplicateEvent),
                     style: _filledActionStyle(theme),
                   ),
-                if (!widget.isReminderHandled &&
+                if (event.reminders.isNotEmpty &&
+                    !widget.isReminderHandled &&
                     widget.onDismissReminder != null)
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
@@ -169,7 +170,8 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                     label: _ActionLabel(l10n.markReminderHandled),
                     style: _outlinedActionStyle(theme),
                   ),
-                if (widget.isReminderHandled &&
+                if (event.reminders.isNotEmpty &&
+                    widget.isReminderHandled &&
                     widget.onRestoreReminder != null)
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
@@ -380,16 +382,18 @@ String _formatOccurrenceTime(
   AppLocalizations l10n,
 ) {
   if (occurrence.isAllDay) {
-    final end = occurrence.end.subtract(const Duration(days: 1));
+    final end = previousCalendarDate(occurrence.end);
     if (_sameDay(occurrence.start, end)) {
       return '${_fmtDate(occurrence.start)}  ${l10n.allDay}';
     }
     return '${_fmtDate(occurrence.start)} - ${_fmtDate(end)}  ${l10n.allDay}';
   }
-  if (_sameDay(occurrence.start, occurrence.end)) {
-    return '${_fmtDate(occurrence.start)} ${_fmtTime(occurrence.start)} - ${_fmtTime(occurrence.end)}';
+  final displayStart = occurrence.calendarDisplayStart;
+  final displayEnd = occurrence.calendarDisplayEnd;
+  if (_sameDay(displayStart, displayEnd)) {
+    return '${_fmtDate(displayStart)} ${_fmtTime(displayStart)} - ${_fmtTime(displayEnd)}';
   }
-  return '${_fmtDate(occurrence.start)} ${_fmtTime(occurrence.start)} - ${_fmtDate(occurrence.end)} ${_fmtTime(occurrence.end)}';
+  return '${_fmtDate(displayStart)} ${_fmtTime(displayStart)} - ${_fmtDate(displayEnd)} ${_fmtTime(displayEnd)}';
 }
 
 String _repeatSummary(GeneralEventRecurrenceRule rule, AppLocalizations l10n) {

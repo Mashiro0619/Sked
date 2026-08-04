@@ -17,6 +17,15 @@ class GeneralEventOccurrence {
   final DateTime end;
   final int sequence;
 
+  /// Start time as it should be placed on the user's calendar.
+  ///
+  /// Timed events imported with an explicit UTC offset need local calendar
+  /// bucketing. All-day events keep their declared date semantics.
+  DateTime get calendarDisplayStart => isAllDay ? start : start.toLocal();
+
+  /// End time as it should be placed on the user's calendar.
+  DateTime get calendarDisplayEnd => isAllDay ? end : end.toLocal();
+
   String get exceptionDateIso =>
       normalizeDateOnly(start).toIso8601String().split('T').first;
 
@@ -68,6 +77,35 @@ GeneralOccurrenceKeyParts? parseGeneralOccurrenceKey(String key) {
     );
   }
   return null;
+}
+
+GeneralOccurrenceKeyParts? resolveGeneralOccurrenceKey(
+  String key, {
+  required Iterable<({String calendarId, String eventId})> knownEvents,
+}) {
+  final parsed = parseGeneralOccurrenceKey(key);
+  if (parsed != null) {
+    return parsed;
+  }
+  final matches = <GeneralOccurrenceKeyParts>[];
+  for (final event in knownEvents) {
+    final prefix = '${event.calendarId}|${event.eventId}|';
+    if (!key.startsWith(prefix)) {
+      continue;
+    }
+    final startDateTimeIso = key.substring(prefix.length);
+    if (tryParseStrictIsoDateTime(startDateTimeIso) == null) {
+      continue;
+    }
+    matches.add(
+      GeneralOccurrenceKeyParts(
+        calendarId: event.calendarId,
+        eventId: event.eventId,
+        startDateTimeIso: startDateTimeIso,
+      ),
+    );
+  }
+  return matches.length == 1 ? matches.single : null;
 }
 
 bool generalOccurrenceKeyMatches(
@@ -204,14 +242,19 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
       !endExclusive.isAfter(startInclusive)) {
     return const [];
   }
-  final duration = eventEnd.isAfter(eventStart)
-      ? eventEnd.difference(eventStart)
-      : const Duration(hours: 1);
+  final effectiveEventEnd = eventEnd.isAfter(eventStart)
+      ? eventEnd
+      : event.isAllDay
+      ? calendarDateEndExclusive(eventStart)
+      : eventStart.add(const Duration(hours: 1));
+  final duration = effectiveEventEnd.difference(eventStart);
+  final rawAllDaySpan = calendarDaysBetween(eventStart, effectiveEventEnd);
+  final allDaySpan = rawAllDaySpan < 1 ? 1 : rawAllDaySpan;
   final rule = event.recurrenceRule;
   if (!rule.isRepeating) {
     return _overlaps(
           eventStart,
-          eventStart.add(duration),
+          effectiveEventEnd,
           startInclusive,
           endExclusive,
         )
@@ -220,7 +263,7 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
               calendar: calendar,
               event: event,
               start: eventStart,
-              end: eventStart.add(duration),
+              end: effectiveEventEnd,
               sequence: 0,
             ),
           ]
@@ -232,7 +275,9 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
   final maxCount = rule.count == null || rule.count! < 1 ? null : rule.count!;
   final firstCandidateIndex = _firstCandidateIndex(
     eventStart: eventStart,
-    rangeStart: startInclusive.subtract(duration),
+    rangeStart: event.isAllDay
+        ? addCalendarDays(startInclusive, -allDaySpan)
+        : startInclusive.subtract(duration),
     rule: rule,
   );
   final results = <GeneralEventOccurrence>[];
@@ -245,10 +290,12 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
     if (occurrenceStart == null) {
       break;
     }
-    if (until != null && normalizeDateOnly(occurrenceStart).isAfter(until)) {
+    if (until != null && calendarDaysBetween(until, occurrenceStart) > 0) {
       break;
     }
-    final occurrenceEnd = occurrenceStart.add(duration);
+    final occurrenceEnd = event.isAllDay
+        ? addCalendarDays(occurrenceStart, allDaySpan)
+        : occurrenceStart.add(duration);
     if (!occurrenceStart.isBefore(endExclusive) &&
         !_overlaps(
           occurrenceStart,
@@ -258,9 +305,7 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
         )) {
       break;
     }
-    final exceptionKey = normalizeDateOnly(
-      occurrenceStart,
-    ).toIso8601String().split('T').first;
+    final exceptionKey = _dateIso(occurrenceStart);
     if (!exceptions.contains(exceptionKey) &&
         _overlaps(
           occurrenceStart,
@@ -284,6 +329,112 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
     }
   }
   return results;
+}
+
+/// Converts date-only exception keys produced by the legacy elapsed-day
+/// recurrence engine into the corresponding civil-date keys.
+///
+/// Each legacy date is replaced with its civil-date equivalent when it matches
+/// a legacy recurrence sequence. Dates that do not match a legacy occurrence
+/// are kept as their normalized date-only keys.
+///
+/// This is intended for one-time storage migration only; runtime recurrence
+/// expansion should read only the normalized civil exception keys.
+List<String> remapLegacyElapsedGeneralRecurrenceExceptionDates({
+  required DateTime rawEventStart,
+  required DateTime normalizedEventStart,
+  required GeneralEventRecurrenceRule recurrenceRule,
+  required Iterable<String> exceptionDateIso,
+}) {
+  final exceptions = exceptionDateIso
+      .map(tryParseStrictIsoDate)
+      .whereType<DateTime>()
+      .map(_dateIso)
+      .toSet();
+  if (exceptions.isEmpty || !recurrenceRule.isRepeating) {
+    return exceptions.toList()..sort();
+  }
+  final unit = _effectiveUnit(recurrenceRule);
+  if (unit == GeneralEventRecurrenceUnit.month) {
+    return exceptions.toList()..sort();
+  }
+
+  final until = _parseUntil(recurrenceRule.untilDateIso);
+  final maxCount = recurrenceRule.count == null || recurrenceRule.count! < 1
+      ? null
+      : recurrenceRule.count!;
+  final maxIterations = maxCount ?? 3700;
+  final legacyToCivil = <String, String>{};
+  for (var index = 0; index < maxIterations; index += 1) {
+    final legacyStart = _legacyElapsedRecurrenceStart(
+      rawEventStart,
+      recurrenceRule,
+      index,
+    );
+    final civilStart = _addRecurrenceSteps(
+      normalizedEventStart,
+      recurrenceRule,
+      index,
+    );
+    if (legacyStart == null || civilStart == null) {
+      break;
+    }
+    if (until != null && calendarDaysBetween(until, civilStart) > 0) {
+      break;
+    }
+    final legacyKey = _dateIso(legacyStart);
+    if (exceptions.contains(legacyKey)) {
+      legacyToCivil[legacyKey] = _dateIso(civilStart);
+      if (legacyToCivil.length == exceptions.length) {
+        break;
+      }
+    }
+  }
+  final migrated = <String>{};
+  for (final exception in exceptions) {
+    migrated.add(legacyToCivil[exception] ?? exception);
+  }
+  return migrated.toList()..sort();
+}
+
+/// Maps an exact start produced by the legacy elapsed-day recurrence logic to
+/// the civil-date start for the same sequence.
+DateTime remapLegacyElapsedGeneralOccurrenceStart({
+  required DateTime rawEventStart,
+  required DateTime normalizedEventStart,
+  required GeneralEventRecurrenceRule recurrenceRule,
+  required DateTime occurrenceStart,
+}) {
+  if (!recurrenceRule.isRepeating) {
+    return normalizedEventStart;
+  }
+  final unit = _effectiveUnit(recurrenceRule);
+  final stepDays = switch (unit) {
+    GeneralEventRecurrenceUnit.day => recurrenceRule.normalizedInterval,
+    GeneralEventRecurrenceUnit.week => 7 * recurrenceRule.normalizedInterval,
+    GeneralEventRecurrenceUnit.month => null,
+  };
+  if (stepDays == null) {
+    return occurrenceStart;
+  }
+  final stepMicroseconds = Duration(days: stepDays).inMicroseconds;
+  final elapsedMicroseconds = occurrenceStart
+      .difference(rawEventStart)
+      .inMicroseconds;
+  if (elapsedMicroseconds < 0 || elapsedMicroseconds % stepMicroseconds != 0) {
+    return occurrenceStart;
+  }
+  final sequence = elapsedMicroseconds ~/ stepMicroseconds;
+  final legacyStart = _legacyElapsedRecurrenceStart(
+    rawEventStart,
+    recurrenceRule,
+    sequence,
+  );
+  if (legacyStart == null || !legacyStart.isAtSameMomentAs(occurrenceStart)) {
+    return occurrenceStart;
+  }
+  return _addRecurrenceSteps(normalizedEventStart, recurrenceRule, sequence) ??
+      occurrenceStart;
 }
 
 bool _overlaps(
@@ -311,14 +462,10 @@ int _firstCandidateIndex({
   final unit = _effectiveUnit(rule);
   switch (unit) {
     case GeneralEventRecurrenceUnit.day:
-      final days = normalizeDateOnly(
-        rangeStart,
-      ).difference(normalizeDateOnly(eventStart)).inDays;
+      final days = calendarDaysBetween(eventStart, rangeStart);
       return (days ~/ interval).clamp(0, 1 << 30).toInt();
     case GeneralEventRecurrenceUnit.week:
-      final days = normalizeDateOnly(
-        rangeStart,
-      ).difference(normalizeDateOnly(eventStart)).inDays;
+      final days = calendarDaysBetween(eventStart, rangeStart);
       return (days ~/ (7 * interval)).clamp(0, 1 << 30).toInt();
     case GeneralEventRecurrenceUnit.month:
       final months =
@@ -346,29 +493,40 @@ DateTime? _addRecurrenceSteps(
   final interval = rule.normalizedInterval;
   final amount = index * interval;
   return switch (_effectiveUnit(rule)) {
-    GeneralEventRecurrenceUnit.day => start.add(Duration(days: amount)),
-    GeneralEventRecurrenceUnit.week => start.add(Duration(days: amount * 7)),
+    GeneralEventRecurrenceUnit.day => addCalendarDays(start, amount),
+    GeneralEventRecurrenceUnit.week => addCalendarDays(start, amount * 7),
     GeneralEventRecurrenceUnit.month => _addMonths(start, amount),
   };
 }
+
+DateTime? _legacyElapsedRecurrenceStart(
+  DateTime start,
+  GeneralEventRecurrenceRule rule,
+  int index,
+) {
+  final interval = rule.normalizedInterval;
+  return switch (_effectiveUnit(rule)) {
+    GeneralEventRecurrenceUnit.day => start.add(
+      Duration(days: index * interval),
+    ),
+    GeneralEventRecurrenceUnit.week => start.add(
+      Duration(days: index * interval * 7),
+    ),
+    GeneralEventRecurrenceUnit.month => null,
+  };
+}
+
+String _dateIso(DateTime value) =>
+    normalizeDateOnly(value).toIso8601String().split('T').first;
 
 DateTime _addMonths(DateTime start, int months) {
   final targetMonthZero = (start.month - 1) + months;
   final year = start.year + (targetMonthZero ~/ 12);
   final month = (targetMonthZero % 12) + 1;
   final day = start.day.clamp(1, _daysInMonth(year, month)).toInt();
-  return DateTime(
-    year,
-    month,
-    day,
-    start.hour,
-    start.minute,
-    start.second,
-    start.millisecond,
-    start.microsecond,
-  );
+  return dateTimeOnCalendarDate(DateTime.utc(year, month, day), start);
 }
 
 int _daysInMonth(int year, int month) {
-  return DateTime(year, month + 1, 0).day;
+  return DateTime.utc(year, month + 1, 0).day;
 }

@@ -241,7 +241,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   List<GeneralReminderItem> generalReminderItems({
     DateTime? now,
     Duration upcomingHorizon = const Duration(hours: 24),
-    Duration overdueWindow = const Duration(hours: 24),
+    Duration overdueWindow = defaultGeneralReminderOverdueWindow,
     GeneralOccurrenceQuery? occurrenceFilter,
   }) {
     return _generalOccurrenceCache.reminderItems(

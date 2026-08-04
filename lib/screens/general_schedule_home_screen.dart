@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
@@ -671,7 +672,7 @@ class _ColorDot extends StatelessWidget {
 List<DateTime> _visibleWeekDays(DateTime weekStart, bool showWeekends) {
   return [
     for (var i = 0; i < 7; i++)
-      if (showWeekends || i < 5) weekStart.add(Duration(days: i)),
+      if (showWeekends || i < 5) addCalendarDays(weekStart, i),
   ];
 }
 
@@ -710,7 +711,7 @@ String _yearLabel(DateTime date, String view, BuildContext context) {
     return date.year.toString();
   }
   final start = startOfWeekMonday(date);
-  final end = start.add(const Duration(days: 6));
+  final end = addCalendarDays(start, 6);
   return start.year == end.year
       ? '${start.year}'
       : '${start.year} / ${end.year}';
@@ -741,10 +742,12 @@ String _formatOccurrenceTime(
   if (occurrence.isAllDay) {
     return AppLocalizations.of(context).allDay;
   }
-  if (!_sameDay(occurrence.start, occurrence.end)) {
-    return '${_formatDate(occurrence.start)} ${_formatTime(occurrence.start)} - ${_formatDate(occurrence.end)} ${_formatTime(occurrence.end)}';
+  final displayStart = occurrence.calendarDisplayStart;
+  final displayEnd = occurrence.calendarDisplayEnd;
+  if (!_sameDay(displayStart, displayEnd)) {
+    return '${_formatDate(displayStart)} ${_formatTime(displayStart)} - ${_formatDate(displayEnd)} ${_formatTime(displayEnd)}';
   }
-  return '${_formatTime(occurrence.start)} - ${_formatTime(occurrence.end)}';
+  return '${_formatTime(displayStart)} - ${_formatTime(displayEnd)}';
 }
 
 String _weekdayLabel(BuildContext context, DateTime date) {
@@ -761,6 +764,9 @@ String _weekdayLabel(BuildContext context, DateTime date) {
 }
 
 String _dateKey(DateTime date) => normalizeDateOnly(date).toIso8601String();
+
+String _calendarDateKey(DateTime date) =>
+    normalizeDateOnly(date).toIso8601String().split('T').first;
 
 bool _sameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;

@@ -1,6 +1,36 @@
 part of 'general_schedule_home_screen.dart';
 
-class _ReminderStrip extends StatelessWidget {
+typedef GeneralReminderTimerFactory =
+    Timer Function(Duration delay, VoidCallback callback);
+
+@visibleForTesting
+class GeneralReminderTimeScope extends InheritedWidget {
+  const GeneralReminderTimeScope({
+    super.key,
+    required this.now,
+    required this.createTimer,
+    required super.child,
+  });
+
+  final DateTime Function() now;
+  final GeneralReminderTimerFactory createTimer;
+
+  static GeneralReminderTimeScope? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<GeneralReminderTimeScope>();
+  }
+
+  @override
+  bool updateShouldNotify(GeneralReminderTimeScope oldWidget) {
+    return now != oldWidget.now || createTimer != oldWidget.createTimer;
+  }
+}
+
+Timer _createGeneralReminderTimer(Duration delay, VoidCallback callback) {
+  return Timer(delay, callback);
+}
+
+class _ReminderStrip extends StatefulWidget {
   const _ReminderStrip({
     required this.provider,
     required this.filter,
@@ -12,13 +42,96 @@ class _ReminderStrip extends StatelessWidget {
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
   @override
+  State<_ReminderStrip> createState() => _ReminderStripState();
+}
+
+class _ReminderStripState extends State<_ReminderStrip>
+    with WidgetsBindingObserver {
+  Timer? _refreshTimer;
+  DateTime Function() _now = DateTime.now;
+  GeneralReminderTimerFactory _createTimer = _createGeneralReminderTimer;
+  bool _isForeground = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    _isForeground =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final timeScope = GeneralReminderTimeScope.maybeOf(context);
+    final nextNow = timeScope?.now ?? DateTime.now;
+    final nextCreateTimer =
+        timeScope?.createTimer ?? _createGeneralReminderTimer;
+    if (_now != nextNow || _createTimer != nextCreateTimer) {
+      _now = nextNow;
+      _createTimer = nextCreateTimer;
+    }
+    _restartRefreshTimer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _isForeground = true;
+      _refreshNow();
+      return;
+    }
+    _isForeground = false;
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refreshNow() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+    _scheduleRefreshTimer();
+  }
+
+  void _restartRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    _scheduleRefreshTimer();
+  }
+
+  void _scheduleRefreshTimer() {
+    if (!_isForeground || !mounted) {
+      return;
+    }
+    _refreshTimer = _createTimer(_delayUntilNextMinute(_now()), () {
+      _refreshTimer = null;
+      if (!mounted || !_isForeground) {
+        return;
+      }
+      setState(() {});
+      _scheduleRefreshTimer();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final reminderFilter = filter.toQuery(
+    final now = _now();
+    final reminderFilter = widget.filter.toQuery(
       startInclusive: now.subtract(const Duration(hours: 24)),
       endExclusive: now.add(const Duration(hours: 24)),
     );
-    final items = provider.generalReminderItems(
+    final items = widget.provider.generalReminderItems(
       now: now,
       occurrenceFilter: reminderFilter,
     );
@@ -50,29 +163,41 @@ class _ReminderStrip extends StatelessWidget {
               item: item,
               statusLabel: l10n.reminderUpcoming,
               color: theme.colorScheme.primary,
-              onTap: () => onOccurrenceTap(item.occurrence),
-              onDismiss: () => provider.dismissGeneralReminder(item.occurrence),
+              onTap: () => widget.onOccurrenceTap(item.occurrence),
+              onDismiss: () =>
+                  widget.provider.dismissGeneralReminder(item.occurrence),
             ),
           for (final item in inProgress)
             _GeneralReminderItemPill(
               item: item,
               statusLabel: l10n.reminderInProgress,
               color: theme.colorScheme.tertiary,
-              onTap: () => onOccurrenceTap(item.occurrence),
-              onDismiss: () => provider.dismissGeneralReminder(item.occurrence),
+              onTap: () => widget.onOccurrenceTap(item.occurrence),
+              onDismiss: () =>
+                  widget.provider.dismissGeneralReminder(item.occurrence),
             ),
           for (final item in overdue)
             _GeneralReminderItemPill(
               item: item,
               statusLabel: l10n.reminderOverdue,
               color: theme.colorScheme.error,
-              onTap: () => onOccurrenceTap(item.occurrence),
-              onDismiss: () => provider.dismissGeneralReminder(item.occurrence),
+              onTap: () => widget.onOccurrenceTap(item.occurrence),
+              onDismiss: () =>
+                  widget.provider.dismissGeneralReminder(item.occurrence),
             ),
         ],
       ),
     );
   }
+}
+
+Duration _delayUntilNextMinute(DateTime now) {
+  final elapsedInMinute = Duration(
+    seconds: now.second,
+    milliseconds: now.millisecond,
+    microseconds: now.microsecond,
+  );
+  return const Duration(minutes: 1) - elapsedInMinute;
 }
 
 class _GeneralReminderItemPill extends StatelessWidget {

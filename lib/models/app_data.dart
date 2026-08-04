@@ -770,7 +770,7 @@ void _validateStorageGeneralEvent(
         final until = tryParseStrictIsoDateTime(
           recurrenceRule['untilDate'] as String,
         )!;
-        if (normalizeDateOnly(until).isBefore(normalizeDateOnly(eventStart))) {
+        if (calendarDaysBetween(eventStart, until) < 0) {
           throw const FormatException(
             'Stored general event recurrence end is invalid.',
           );
@@ -1392,6 +1392,9 @@ void _validateStorageGeneralMode(Map<String, dynamic> json) {
     required: currentSchemaVersion >= 3,
   );
   final acknowledgementKeys = <String>{};
+  final knownEvents = eventsByLocation.keys
+      .map((key) => (calendarId: key.$1, eventId: key.$2))
+      .toList();
   for (final acknowledgement in acknowledgements) {
     final occurrenceKey = acknowledgement['occurrenceKey'];
     final isHandled = acknowledgement['isHandled'];
@@ -1414,7 +1417,10 @@ void _validateStorageGeneralMode(Map<String, dynamic> json) {
           'Stored reminder acknowledgement key is invalid.',
         );
       }
-      final parts = parseGeneralOccurrenceKey(occurrenceKey);
+      final parts = resolveGeneralOccurrenceKey(
+        occurrenceKey,
+        knownEvents: knownEvents,
+      );
       final occurrenceStart = tryParseStrictIsoDateTime(
         parts?.startDateTimeIso,
       );

@@ -278,7 +278,7 @@ class GeneralCalendarIcsService {
           ignoredSupportedFields.add('DURATION');
           adjustedEnd = true;
         } else {
-          end = start.add(duration);
+          end = duration.addTo(start, calendarDays: isAllDay);
           adjustedEnd = adjustedEnd || hasInvalidEnd;
         }
       } else {
@@ -295,12 +295,12 @@ class GeneralCalendarIcsService {
       end = normalizedEnd;
     }
     end ??= isAllDay
-        ? normalizeDateOnly(start).add(const Duration(days: 1))
+        ? calendarDateEndExclusive(start)
         : start.add(const Duration(hours: 1));
     if (!end.isAfter(start)) {
       adjustedEnd = true;
       end = isAllDay
-          ? normalizeDateOnly(start).add(const Duration(days: 1))
+          ? calendarDateEndExclusive(start)
           : start.add(const Duration(hours: 1));
     }
     if (adjustedEnd) {
@@ -637,7 +637,7 @@ DateTime? _parseIsoDateTime(String value) {
   return parsed?.isUtc == true ? parsed!.toLocal() : parsed;
 }
 
-Duration? _parseIcsDuration(String value) {
+_IcsDuration? _parseIcsDuration(String value) {
   final trimmed = value.trim().toUpperCase();
   final weekMatch = RegExp(r'^\+?P(\d+)W$').firstMatch(trimmed);
   if (weekMatch != null) {
@@ -645,7 +645,7 @@ Duration? _parseIcsDuration(String value) {
     if (weeks == null || weeks < 1 || weeks > 5200) {
       return null;
     }
-    return Duration(days: weeks * 7);
+    return _IcsDuration(calendarDayCount: weeks * 7);
   }
 
   final match = RegExp(
@@ -675,13 +675,32 @@ Duration? _parseIcsDuration(String value) {
   if (days > 36500 || hours > 999999 || minutes > 999999 || seconds > 999999) {
     return null;
   }
-  final duration = Duration(
-    days: days,
+  final elapsedTime = Duration(
     hours: hours,
     minutes: minutes,
     seconds: seconds,
   );
-  return duration > Duration.zero ? duration : null;
+  if (days == 0 && elapsedTime <= Duration.zero) {
+    return null;
+  }
+  return _IcsDuration(calendarDayCount: days, elapsedTime: elapsedTime);
+}
+
+class _IcsDuration {
+  const _IcsDuration({
+    this.calendarDayCount = 0,
+    this.elapsedTime = Duration.zero,
+  });
+
+  final int calendarDayCount;
+  final Duration elapsedTime;
+
+  DateTime addTo(DateTime start, {required bool calendarDays}) {
+    if (!calendarDays) {
+      return start.add(Duration(days: calendarDayCount) + elapsedTime);
+    }
+    return addCalendarDays(start, calendarDayCount).add(elapsedTime);
+  }
 }
 
 DateTime? _strictDateTime({

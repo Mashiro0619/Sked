@@ -68,60 +68,23 @@ class GeneralOccurrenceCache {
     GeneralScheduleData general, {
     DateTime? now,
     Duration upcomingHorizon = const Duration(hours: 24),
-    Duration overdueWindow = const Duration(hours: 24),
+    Duration overdueWindow = defaultGeneralReminderOverdueWindow,
     GeneralOccurrenceQuery? occurrenceFilter,
   }) {
     final anchor = now ?? DateTime.now();
-    final upcoming =
-        occurrencesForRange(
-              general,
-              startInclusive: anchor,
-              endExclusive: anchor.add(upcomingHorizon),
-            )
-            .where((o) => occurrenceFilter?.matches(o) ?? true)
-            .where((o) => !_service.isReminderHandled(general, o))
-            .where((o) => _service.isInReminderWindow(o, anchor))
-            .map(
-              (o) => GeneralReminderItem(
-                occurrence: o,
-                status: GeneralReminderStatus.upcoming,
-              ),
-            );
-    final overdue =
-        occurrencesForRange(
-              general,
-              startInclusive: anchor.subtract(overdueWindow),
-              endExclusive: anchor,
-            )
-            .where((o) => occurrenceFilter?.matches(o) ?? true)
-            .where((o) => !_service.isReminderHandled(general, o))
-            .where((o) => o.end.isBefore(anchor))
-            .map(
-              (o) => GeneralReminderItem(
-                occurrence: o,
-                status: GeneralReminderStatus.overdue,
-              ),
-            );
-    final inProgress =
-        occurrencesForRange(
-              general,
-              startInclusive: anchor.subtract(overdueWindow),
-              endExclusive: anchor.add(const Duration(microseconds: 1)),
-            )
-            .where((o) => occurrenceFilter?.matches(o) ?? true)
-            .where((o) => !_service.isReminderHandled(general, o))
-            .where((o) => !o.start.isAfter(anchor) && o.end.isAfter(anchor))
-            .map(
-              (o) => GeneralReminderItem(
-                occurrence: o,
-                status: GeneralReminderStatus.inProgress,
-              ),
-            );
-    return [...upcoming, ...inProgress, ...overdue]..sort((a, b) {
-      final statusCompare = a.status.index.compareTo(b.status.index);
-      if (statusCompare != 0) return statusCompare;
-      return a.occurrence.start.compareTo(b.occurrence.start);
-    });
+    final candidates = occurrencesForRange(
+      general,
+      startInclusive: anchor.subtract(
+        boundedGeneralReminderLookback(overdueWindow),
+      ),
+      endExclusive: anchor.add(upcomingHorizon),
+    );
+    return _service.reminderItemsFromOccurrences(
+      general,
+      candidates,
+      now: anchor,
+      occurrenceFilter: occurrenceFilter,
+    );
   }
 
   void clear() {

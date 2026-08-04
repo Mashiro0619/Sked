@@ -230,6 +230,19 @@ void main() {
       expect(DateTime.parse(event.startDateTimeIso).year, isNot(9999));
     });
 
+    test('normalized repairs 23:00 drift on all-day start and end', () {
+      final event = GeneralEvent(
+        id: 'all_day_drift',
+        title: 'All day drift',
+        startDateTimeIso: '2026-10-25T23:00:00.000',
+        endDateTimeIso: '2026-10-26T23:00:00.000',
+        isAllDay: true,
+      ).normalized(fallbackCalendarId: 'cal');
+
+      expect(event.startDateTimeIso, '2026-10-26T00:00:00.000');
+      expect(event.endDateTimeIso, '2026-10-27T00:00:00.000');
+    });
+
     test('normalized repairs recurrence and optional date fields', () {
       final event = GeneralEvent(
         id: 'recurrence',
@@ -394,6 +407,7 @@ void main() {
       title: 'Event',
       startDateTimeIso: '2026-05-25T09:00:00.000',
       endDateTimeIso: '2026-05-25T10:00:00.000',
+      reminders: const [GeneralEventReminder(minutesBefore: 10)],
     );
 
     test('JSON round-trip with data', () {
@@ -428,35 +442,42 @@ void main() {
       expect(decoded.closeEventPopupOnOutsideTap, false);
     });
 
-    test('reminder acknowledgements round-trip with schema version 3', () {
-      final data = GeneralScheduleData(
-        activeScheduleId: 'sched1',
-        schedules: [
-          GeneralSchedule(
-            id: 'sched1',
-            name: 'My Schedule',
-            events: [acknowledgementEvent('event1')],
-          ),
-        ],
-        reminderAcknowledgements: const [
-          GeneralReminderAcknowledgement(
-            occurrenceKey: 'sched1|event1|2026-05-25T09:00:00.000',
-            updatedAtIso: '2026-05-25T08:55:00.000',
-          ),
-        ],
-      );
+    test(
+      'reminder acknowledgements round-trip with current schema version',
+      () {
+        final data = GeneralScheduleData(
+          activeScheduleId: 'sched1',
+          schedules: [
+            GeneralSchedule(
+              id: 'sched1',
+              name: 'My Schedule',
+              events: [acknowledgementEvent('event1')],
+            ),
+          ],
+          reminderAcknowledgements: const [
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'sched1|event1|2026-05-25T09:00:00.000',
+              updatedAtIso: '2026-05-25T08:55:00.000',
+            ),
+          ],
+        );
 
-      final json = data.toJson();
-      final decoded = GeneralScheduleData.fromJson(json);
+        final json = data.toJson();
+        final decoded = GeneralScheduleData.fromJson(json);
 
-      expect(json['schemaVersion'], generalScheduleSchemaVersion);
-      expect(decoded.reminderAcknowledgements, hasLength(1));
-      expect(
-        decoded.reminderAcknowledgements.single.occurrenceKey,
-        'sched1|event1|2026-05-25T09:00:00.000',
-      );
-      expect(decoded.reminderAcknowledgements.single.isHandled, true);
-    });
+        expect(json['schemaVersion'], generalScheduleSchemaVersion);
+        expect(decoded.reminderAcknowledgements, hasLength(1));
+        expect(
+          decoded.reminderAcknowledgements.single.occurrenceKey,
+          buildGeneralOccurrenceKey(
+            'sched1',
+            'event1',
+            '2026-05-25T09:00:00.000',
+          ),
+        );
+        expect(decoded.reminderAcknowledgements.single.isHandled, true);
+      },
+    );
 
     test(
       'schema version 2 data defaults to empty reminder acknowledgements',
@@ -648,46 +669,61 @@ void main() {
       expect(updated.reminderAcknowledgements.single.isHandled, false);
     });
 
-    test('normalized de-duplicates reminder acknowledgements by key', () {
-      final data = GeneralScheduleData(
-        activeScheduleId: 'sched1',
-        schedules: [
-          GeneralSchedule(
-            id: 'sched1',
-            name: 'First',
-            events: [acknowledgementEvent('event')],
-          ),
-        ],
-        reminderAcknowledgements: const [
-          GeneralReminderAcknowledgement(
-            occurrenceKey: 'sched1|event|2026-05-25T09:00:00.000',
-            updatedAtIso: '2026-05-25T08:55:00.000',
-          ),
-          GeneralReminderAcknowledgement(
-            occurrenceKey: 'sched1|event|2026-05-25T09:00:00.000',
-            isHandled: false,
-            updatedAtIso: '2026-05-25T08:56:00.000',
-          ),
-          GeneralReminderAcknowledgement(
-            occurrenceKey: '',
-            updatedAtIso: '2026-05-25T08:57:00.000',
-          ),
-          GeneralReminderAcknowledgement(
-            occurrenceKey: 'sched1|missing|2026-05-25T09:00:00.000',
-            updatedAtIso: '2026-05-25T08:58:00.000',
-          ),
-        ],
-      );
+    test(
+      'normalized de-duplicates legacy and v2 acknowledgements by newest time',
+      () {
+        final data = GeneralScheduleData(
+          activeScheduleId: 'sched1',
+          schedules: [
+            GeneralSchedule(
+              id: 'sched1',
+              name: 'First',
+              events: [acknowledgementEvent('event')],
+            ),
+          ],
+          reminderAcknowledgements: [
+            GeneralReminderAcknowledgement(
+              occurrenceKey: buildGeneralOccurrenceKey(
+                'sched1',
+                'event',
+                '2026-05-25T09:00:00.000',
+              ),
+              isHandled: false,
+              updatedAtIso: '2026-05-25T08:56:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'sched1|event|2026-05-25T09:00:00.000',
+              updatedAtIso: '2026-05-25T08:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: '',
+              updatedAtIso: '2026-05-25T08:57:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'sched1|missing|2026-05-25T09:00:00.000',
+              updatedAtIso: '2026-05-25T08:58:00.000',
+            ),
+          ],
+        );
 
-      final normalized = data.normalized();
+        final normalized = data.normalized();
 
-      expect(normalized.reminderAcknowledgements, hasLength(1));
-      expect(normalized.reminderAcknowledgements.single.isHandled, false);
-      expect(
-        normalized.reminderAcknowledgements.single.updatedAtIso,
-        '2026-05-25T08:56:00.000',
-      );
-    });
+        expect(normalized.reminderAcknowledgements, hasLength(1));
+        expect(normalized.reminderAcknowledgements.single.isHandled, false);
+        expect(
+          normalized.reminderAcknowledgements.single.updatedAtIso,
+          '2026-05-25T08:56:00.000',
+        );
+        expect(
+          normalized.reminderAcknowledgements.single.occurrenceKey,
+          buildGeneralOccurrenceKey(
+            'sched1',
+            'event',
+            '2026-05-25T09:00:00.000',
+          ),
+        );
+      },
+    );
 
     test('withSchedule replaces schedule by id', () {
       final original = GeneralScheduleData(
@@ -784,6 +820,7 @@ void main() {
                   title: 'First event',
                   startDateTimeIso: firstStart,
                   endDateTimeIso: '2026-05-22T10:00:00.000',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
                 ),
               ],
             ),
@@ -797,6 +834,7 @@ void main() {
                   title: 'Second event',
                   startDateTimeIso: secondStart,
                   endDateTimeIso: '2026-05-23T10:00:00.000',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
                 ),
               ],
             ),
@@ -840,6 +878,7 @@ void main() {
                   type: GeneralEventRecurrence.weekly,
                   unit: GeneralEventRecurrenceUnit.week,
                 ),
+                reminders: const [GeneralEventReminder(minutesBefore: 10)],
               ),
             ],
           ),
@@ -923,6 +962,9 @@ void main() {
                 'title': 'Event',
                 'start': '2026-05-22T09:00:00.000',
                 'end': '2026-05-22T10:00:00.000',
+                'reminders': [
+                  {'minutesBefore': 10},
+                ],
               },
               42,
             ],
@@ -971,6 +1013,51 @@ void main() {
       expect(occurrence.calendar.id, 'sched1');
       expect(occurrence.start.hour, 9);
       expect(occurrence.end.hour, 10);
+    });
+
+    test('uses local display dates for timed UTC occurrences only', () {
+      final timedEvent = GeneralEvent(
+        id: 'utc',
+        calendarId: 'sched1',
+        title: 'UTC meeting',
+        startDateTimeIso: '2026-06-14T23:00:00.000Z',
+        endDateTimeIso: '2026-06-15T00:00:00.000Z',
+      );
+      final allDayEvent = GeneralEvent(
+        id: 'all_day',
+        calendarId: 'sched1',
+        title: 'All day',
+        startDateTimeIso: '2026-06-14T00:00:00.000Z',
+        endDateTimeIso: '2026-06-15T00:00:00.000Z',
+        isAllDay: true,
+      );
+      final schedule = GeneralSchedule(
+        id: 'sched1',
+        name: 'Work',
+        events: [timedEvent, allDayEvent],
+      );
+      final utcStart = DateTime.utc(2026, 6, 14, 23);
+      final utcEnd = DateTime.utc(2026, 6, 15);
+
+      final timedOccurrence = GeneralEventOccurrence(
+        event: timedEvent,
+        calendar: schedule,
+        start: utcStart,
+        end: utcEnd,
+        sequence: 0,
+      );
+      final allDayOccurrence = GeneralEventOccurrence(
+        event: allDayEvent,
+        calendar: schedule,
+        start: DateTime.utc(2026, 6, 14),
+        end: DateTime.utc(2026, 6, 15),
+        sequence: 0,
+      );
+
+      expect(timedOccurrence.calendarDisplayStart, utcStart.toLocal());
+      expect(timedOccurrence.calendarDisplayEnd, utcEnd.toLocal());
+      expect(allDayOccurrence.calendarDisplayStart.isUtc, true);
+      expect(allDayOccurrence.calendarDisplayStart.day, 14);
     });
 
     test('expands daily recurrence with count', () {

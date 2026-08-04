@@ -69,13 +69,13 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
   }
 
   int _pageForWeek(DateTime weekStart) {
-    final deltaDays = weekStart.difference(_baseWeekStart).inDays;
+    final deltaDays = calendarDaysBetween(_baseWeekStart, weekStart);
     return _generalTimelineInitialPage + deltaDays ~/ 7;
   }
 
   DateTime _weekStartForPage(int page) {
     final deltaWeeks = page - _generalTimelineInitialPage;
-    return _baseWeekStart.add(Duration(days: deltaWeeks * 7));
+    return addCalendarDays(_baseWeekStart, deltaWeeks * 7);
   }
 
   bool _isVisibleDay(DateTime date) {
@@ -88,7 +88,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
     if (_isVisibleDay(normalized)) {
       return normalized;
     }
-    return normalized.add(Duration(days: 8 - normalized.weekday));
+    return addCalendarDays(normalized, 8 - normalized.weekday);
   }
 
   void _syncVisibleSelectedDate() {
@@ -105,15 +105,13 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 
   int _selectedWeekdayOffset() {
     final selected = _visibleDayForDate(widget.date);
-    return selected.difference(startOfWeekMonday(selected)).inDays;
+    return calendarDaysBetween(startOfWeekMonday(selected), selected);
   }
 
   void _handlePageChanged(int page) {
     _currentPage = page;
-    final nextDate = _weekStartForPage(
-      page,
-    ).add(Duration(days: _selectedWeekdayOffset()));
-    widget.onDaySelected(nextDate);
+    final nextDate = _weekStartForPage(page);
+    widget.onDaySelected(addCalendarDays(nextDate, _selectedWeekdayOffset()));
   }
 
   @override
@@ -126,7 +124,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
         final weekStart = _weekStartForPage(index);
         return _WeekTimelinePage(
           weekStart: weekStart,
-          selectedDate: weekStart.add(Duration(days: _selectedWeekdayOffset())),
+          selectedDate: addCalendarDays(weekStart, _selectedWeekdayOffset()),
           provider: widget.provider,
           filter: widget.filter,
           onEmptySlotTap: widget.onEmptySlotTap,
@@ -163,7 +161,7 @@ class _WeekTimelinePage extends StatelessWidget {
     final occurrences = provider.generalOccurrencesForQuery(
       filter.toQuery(
         startInclusive: weekStart,
-        endExclusive: weekStart.add(const Duration(days: 7)),
+        endExclusive: addCalendarDays(weekStart, 7),
       ),
     );
     return _CalendarTimeline(
@@ -259,7 +257,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     final selectedDate = _visibleDayForDate(date);
     if (widget.provider.generalShowWeekends) {
       return _generalTimelineInitialPage +
-          selectedDate.difference(_baseDate).inDays;
+          calendarDaysBetween(_baseDate, selectedDate);
     }
     return _generalTimelineInitialPage +
         _visibleDayDifference(_baseDate, selectedDate);
@@ -268,19 +266,19 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
   DateTime _dayForPage(int page) {
     final deltaDays = page - _generalTimelineInitialPage;
     if (widget.provider.generalShowWeekends) {
-      return _baseDate.add(Duration(days: deltaDays));
+      return addCalendarDays(_baseDate, deltaDays);
     }
     return _addVisibleDays(_baseDate, deltaDays);
   }
 
   int _pageForWeek(DateTime weekStart) {
-    final deltaDays = weekStart.difference(_baseWeekStart).inDays;
+    final deltaDays = calendarDaysBetween(_baseWeekStart, weekStart);
     return _generalTimelineInitialPage + deltaDays ~/ 7;
   }
 
   DateTime _weekStartForPage(int page) {
     final deltaWeeks = page - _generalTimelineInitialPage;
-    return _baseWeekStart.add(Duration(days: deltaWeeks * 7));
+    return addCalendarDays(_baseWeekStart, deltaWeeks * 7);
   }
 
   double _pageControllerValue(PageController controller, int fallback) {
@@ -336,7 +334,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
 
   int _selectedWeekdayOffset() {
     final selected = _visibleDayForDate(widget.date);
-    return selected.difference(startOfWeekMonday(selected)).inDays;
+    return calendarDaysBetween(startOfWeekMonday(selected), selected);
   }
 
   bool _isVisibleDay(DateTime date) {
@@ -349,7 +347,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     if (_isVisibleDay(normalized)) {
       return normalized;
     }
-    return normalized.add(Duration(days: 8 - normalized.weekday));
+    return addCalendarDays(normalized, 8 - normalized.weekday);
   }
 
   void _syncVisibleSelectedDate() {
@@ -369,7 +367,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     final step = deltaDays < 0 ? -1 : 1;
     var remaining = deltaDays.abs();
     while (remaining > 0) {
-      result = result.add(Duration(days: step));
+      result = addCalendarDays(result, step);
       if (_isVisibleDay(result)) {
         remaining -= 1;
       }
@@ -384,7 +382,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     var difference = 0;
     final step = to.isBefore(from) ? -1 : 1;
     while (!_sameDay(cursor, to)) {
-      cursor = cursor.add(Duration(days: step));
+      cursor = addCalendarDays(cursor, step);
       if (_isVisibleDay(cursor)) {
         difference += step;
       }
@@ -402,10 +400,8 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
       return;
     }
     _currentWeekPage = page;
-    final nextDate = _weekStartForPage(
-      page,
-    ).add(Duration(days: _selectedWeekdayOffset()));
-    widget.onDaySelected(nextDate);
+    final nextDate = _weekStartForPage(page);
+    widget.onDaySelected(addCalendarDays(nextDate, _selectedWeekdayOffset()));
   }
 
   @override
@@ -470,7 +466,7 @@ class _DayTimelinePage extends StatelessWidget {
     final occurrences = provider.generalOccurrencesForQuery(
       filter.toQuery(
         startInclusive: day,
-        endExclusive: day.add(const Duration(days: 1)),
+        endExclusive: calendarDateEndExclusive(day),
       ),
     );
     return _CalendarTimeline(
@@ -948,18 +944,18 @@ class _CalendarTimeline extends StatelessWidget {
     required double topOffset,
   }) sync* {
     final dayStart = normalizeDateOnly(day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
+    final dayEnd = calendarDateEndExclusive(dayStart);
     final segments = <_TimedOccurrenceSegment>[];
     for (final occurrence in dayOccurrences) {
-      if (occurrence.isAllDay || !_sameDay(occurrence.start, occurrence.end)) {
+      final displayStart = occurrence.calendarDisplayStart;
+      final displayEnd = occurrence.calendarDisplayEnd;
+      if (occurrence.isAllDay || !_sameDay(displayStart, displayEnd)) {
         continue;
       }
-      final segmentStart = occurrence.start.isBefore(dayStart)
+      final segmentStart = displayStart.isBefore(dayStart)
           ? dayStart
-          : occurrence.start;
-      final segmentEnd = occurrence.end.isAfter(dayEnd)
-          ? dayEnd
-          : occurrence.end;
+          : displayStart;
+      final segmentEnd = displayEnd.isAfter(dayEnd) ? dayEnd : displayEnd;
       final rawStart = segmentStart.hour * 60 + segmentStart.minute;
       final rawEnd = segmentEnd.hour * 60 + segmentEnd.minute;
       final topMinutes = rawStart.clamp(startMinutes, endMinutes).toInt();
@@ -1042,28 +1038,30 @@ class _TimelineOccurrenceIndex {
     }
 
     for (final day in days) {
-      final key = _dateKey(day);
+      final key = _calendarDateKey(day);
       allDayByDate[key] = [];
       timedByDate[key] = [];
     }
     final firstDay = normalizeDateOnly(days.first);
     final lastDay = normalizeDateOnly(days.last);
-    final rangeEndExclusive = lastDay.add(const Duration(days: 1));
+    final rangeEndExclusive = calendarDateEndExclusive(lastDay);
 
     for (final occurrence in occurrences) {
-      if (!occurrence.end.isAfter(occurrence.start) ||
-          !occurrence.end.isAfter(firstDay) ||
-          !occurrence.start.isBefore(rangeEndExclusive)) {
+      final displayStart = occurrence.calendarDisplayStart;
+      final displayEnd = occurrence.calendarDisplayEnd;
+      if (!displayEnd.isAfter(displayStart) ||
+          !displayEnd.isAfter(firstDay) ||
+          !displayStart.isBefore(rangeEndExclusive)) {
         continue;
       }
 
-      if (occurrence.isAllDay || !_sameDay(occurrence.start, occurrence.end)) {
-        var bucketDay = normalizeDateOnly(occurrence.start);
+      if (occurrence.isAllDay || !_sameDay(displayStart, displayEnd)) {
+        var bucketDay = normalizeDateOnly(displayStart);
         if (bucketDay.isBefore(firstDay)) {
           bucketDay = firstDay;
         }
         var lastBucketDay = normalizeDateOnly(
-          occurrence.end.subtract(const Duration(microseconds: 1)),
+          displayEnd.subtract(const Duration(microseconds: 1)),
         );
         if (lastBucketDay.isAfter(lastDay)) {
           lastBucketDay = lastDay;
@@ -1071,14 +1069,14 @@ class _TimelineOccurrenceIndex {
         for (
           var day = bucketDay;
           !day.isAfter(lastBucketDay);
-          day = day.add(const Duration(days: 1))
+          day = nextCalendarDate(day)
         ) {
-          allDayByDate[_dateKey(day)]?.add(occurrence);
+          allDayByDate[_calendarDateKey(day)]?.add(occurrence);
         }
         continue;
       }
 
-      timedByDate[_dateKey(occurrence.start)]?.add(occurrence);
+      timedByDate[_calendarDateKey(displayStart)]?.add(occurrence);
     }
 
     return _TimelineOccurrenceIndex(
@@ -1088,10 +1086,10 @@ class _TimelineOccurrenceIndex {
   }
 
   List<GeneralEventOccurrence> allDayFor(DateTime day) =>
-      allDayByDate[_dateKey(day)] ?? const [];
+      allDayByDate[_calendarDateKey(day)] ?? const [];
 
   List<GeneralEventOccurrence> timedFor(DateTime day) =>
-      timedByDate[_dateKey(day)] ?? const [];
+      timedByDate[_calendarDateKey(day)] ?? const [];
 }
 
 class _TimelineMetrics {

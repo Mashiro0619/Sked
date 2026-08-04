@@ -47,6 +47,18 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Test DST regressions in America/New_York
+        env:
+          TZ: America/New_York
+          SKED_DST_TEST_ZONE: america-new-york
+        run: flutter test test/date_dst_regression_test.dart
+
+      - name: Test DST regressions in Europe/Berlin
+        env:
+          TZ: Europe/Berlin
+          SKED_DST_TEST_ZONE: europe-berlin
+        run: flutter test test/date_dst_regression_test.dart
+
       - name: Build web
         run: flutter build web --debug
 

@@ -318,13 +318,17 @@ class GeneralEvent {
   }
 
   GeneralEvent normalized({required String fallbackCalendarId}) {
-    final start = tryParseStrictIsoDateTime(startDateTimeIso) ?? DateTime.now();
+    var start = tryParseStrictIsoDateTime(startDateTimeIso) ?? DateTime.now();
     var end =
         tryParseStrictIsoDateTime(endDateTimeIso) ??
         start.add(const Duration(hours: 1));
+    if (isAllDay) {
+      start = _nearestCalendarDateBoundary(start);
+      end = _nearestCalendarDateBoundary(end);
+    }
     if (!end.isAfter(start)) {
       end = isAllDay
-          ? normalizeDateOnly(start).add(const Duration(days: 1))
+          ? calendarDateEndExclusive(start)
           : start.add(const Duration(hours: 1));
     }
     final startDate = normalizeDateOnly(start);
@@ -332,7 +336,9 @@ class GeneralEvent {
     final normalizedUntilDate = parsedUntilDate == null
         ? null
         : _formatDateIso(
-            parsedUntilDate.isBefore(startDate) ? startDate : parsedUntilDate,
+            calendarDaysBetween(startDate, parsedUntilDate) < 0
+                ? startDate
+                : parsedUntilDate,
           );
     final normalizedRecurrenceRule = recurrenceRule.copyWith(
       interval: recurrenceRule.interval.clamp(1, 999),
@@ -368,6 +374,14 @@ class GeneralEvent {
       updatedAtIso: _tryNormalizeDateTimeIso(updatedAtIso),
     );
   }
+}
+
+DateTime _nearestCalendarDateBoundary(DateTime value) {
+  final date = normalizeDateOnly(value);
+  if (value.hour >= 12) {
+    return nextCalendarDate(date);
+  }
+  return date;
 }
 
 String? _tryNormalizeDateIso(String value) {

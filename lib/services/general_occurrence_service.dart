@@ -1,6 +1,9 @@
 import '../models/general_event_occurrence.dart';
 import '../models/general_schedule_data.dart';
 
+const defaultGeneralReminderOverdueWindow = Duration(hours: 24);
+const maximumGeneralReminderLookback = Duration(days: 30);
+
 /// 通用模式（general mode）下"事件发生（occurrence）"相关的纯查询逻辑集合。
 ///
 /// 这个 service 只读 [GeneralScheduleData]，不持有任何状态，所有方法都是
@@ -94,59 +97,65 @@ class GeneralOccurrenceService {
     GeneralScheduleData general, {
     DateTime? now,
     Duration upcomingHorizon = const Duration(hours: 24),
-    Duration overdueWindow = const Duration(hours: 24),
+    Duration overdueWindow = defaultGeneralReminderOverdueWindow,
     GeneralOccurrenceQuery? occurrenceFilter,
   }) {
     final anchor = now ?? DateTime.now();
-    final upcoming =
-        occurrencesForRange(
-              general,
-              startInclusive: anchor,
-              endExclusive: anchor.add(upcomingHorizon),
-            )
-            .where((o) => occurrenceFilter?.matches(o) ?? true)
-            .where((o) => !isReminderHandled(general, o))
-            .where((o) => isInReminderWindow(o, anchor))
-            .map(
-              (o) => GeneralReminderItem(
-                occurrence: o,
-                status: GeneralReminderStatus.upcoming,
-              ),
-            );
-    final overdue =
-        occurrencesForRange(
-              general,
-              startInclusive: anchor.subtract(overdueWindow),
-              endExclusive: anchor,
-            )
-            .where((o) => occurrenceFilter?.matches(o) ?? true)
-            .where((o) => !isReminderHandled(general, o))
-            .where((o) => o.end.isBefore(anchor))
-            .map(
-              (o) => GeneralReminderItem(
-                occurrence: o,
-                status: GeneralReminderStatus.overdue,
-              ),
-            );
-    final inProgress =
-        occurrencesForRange(
-              general,
-              startInclusive: anchor.subtract(overdueWindow),
-              endExclusive: anchor.add(const Duration(microseconds: 1)),
-            )
-            .where((o) => occurrenceFilter?.matches(o) ?? true)
-            .where((o) => !isReminderHandled(general, o))
-            .where((o) => !o.start.isAfter(anchor) && o.end.isAfter(anchor))
-            .map(
-              (o) => GeneralReminderItem(
-                occurrence: o,
-                status: GeneralReminderStatus.inProgress,
-              ),
-            );
-    return [...upcoming, ...inProgress, ...overdue]..sort((a, b) {
+    final lookback = boundedGeneralReminderLookback(overdueWindow);
+    final candidates = occurrencesForRange(
+      general,
+      startInclusive: anchor.subtract(lookback),
+      endExclusive: anchor.add(upcomingHorizon),
+    );
+    return reminderItemsFromOccurrences(
+      general,
+      candidates,
+      now: anchor,
+      occurrenceFilter: occurrenceFilter,
+    );
+  }
+
+  List<GeneralReminderItem> reminderItemsFromOccurrences(
+    GeneralScheduleData general,
+    Iterable<GeneralEventOccurrence> occurrences, {
+    required DateTime now,
+    GeneralOccurrenceQuery? occurrenceFilter,
+  }) {
+    final items = <GeneralReminderItem>[];
+    for (final occurrence in occurrences) {
+      if (occurrence.event.reminders.isEmpty ||
+          !(occurrenceFilter?.matches(occurrence) ?? true) ||
+          isReminderHandled(general, occurrence)) {
+        continue;
+      }
+      GeneralReminderStatus? status;
+      if (occurrence.start.isAfter(now)) {
+        if (isInReminderWindow(occurrence, now)) {
+          status = GeneralReminderStatus.upcoming;
+        }
+      } else if (occurrence.end.isAfter(now)) {
+        status = GeneralReminderStatus.inProgress;
+      } else if (!occurrence.end.isAfter(now)) {
+        status = GeneralReminderStatus.overdue;
+      }
+      if (status != null) {
+        items.add(GeneralReminderItem(occurrence: occurrence, status: status));
+      }
+    }
+    return items..sort((a, b) {
       final statusCompare = a.status.index.compareTo(b.status.index);
       if (statusCompare != 0) return statusCompare;
       return a.occurrence.start.compareTo(b.occurrence.start);
     });
   }
+}
+
+Duration boundedGeneralReminderLookback(Duration requested) {
+  if (requested <= Duration.zero) {
+    return Duration.zero;
+  }
+  if (requested > maximumGeneralReminderLookback) {
+    return maximumGeneralReminderLookback;
+  }
+  return requested;
 }

@@ -299,7 +299,7 @@ void main() {
   });
 
   test(
-    'general reminder items include recent overdue unhandled events',
+    'general reminder items exclude events without configured reminders',
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());
       final provider = TimetableProvider(
@@ -322,8 +322,7 @@ void main() {
       final now = DateTime(2026, 5, 25, 10);
       final items = provider.generalReminderItems(now: now);
 
-      expect(items, hasLength(1));
-      expect(items.single.status, GeneralReminderStatus.overdue);
+      expect(items, isEmpty);
     },
   );
 
