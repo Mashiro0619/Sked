@@ -170,7 +170,7 @@ class TimetableImportFlow {
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
-          child: const SchoolSitesPage(),
+          child: SchoolSitesPage(),
         ),
       ),
     );

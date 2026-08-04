@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../services/export_service.dart';
 import '../services/update_service.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
@@ -20,9 +22,11 @@ class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({
     super.key,
     this.startupUpdateService = const UpdateService(),
+    this.recoveryExportService = const ExportService(),
   });
 
   final UpdateService startupUpdateService;
+  final ExportService recoveryExportService;
 
   @override
   State<AppHomeScreen> createState() => _AppHomeScreenState();
@@ -34,8 +38,12 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   bool _hasScheduledStartupUpdateCheck = false;
   bool _isShowingPrivacyConsentDialog = false;
   bool _isCompletingFirstLaunch = false;
+  bool _isHandlingRecovery = false;
+  bool _isClearingRoutesForRecovery = false;
+  bool _hasShownRecoveryBanner = false;
   AppMode? _firstLaunchSelectedMode;
   TimetableProvider? _lastProvider;
+  bool? _lastObservedCanWrite;
 
   @override
   void didChangeDependencies() {
@@ -44,12 +52,13 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     if (_lastProvider != provider) {
       _lastProvider?.removeListener(_onProviderReady);
       _lastProvider = provider;
+      _lastObservedCanWrite = provider.canWrite;
       provider.addListener(_onProviderReady);
       _hasStartedPrivacyPolicyFetch = false;
       _hasCompletedPrivacyPolicyFetch = false;
       _hasScheduledStartupUpdateCheck = false;
+      _hasShownRecoveryBanner = false;
     }
-    _startPrivacyPolicyFetch(provider);
     _onProviderReady();
   }
 
@@ -62,13 +71,44 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void _onProviderReady() {
     if (!mounted) return;
     final provider = _lastProvider;
-    if (provider == null || !provider.isLoaded) return;
+    if (provider == null) return;
+    final wasWritable = _lastObservedCanWrite;
+    _lastObservedCanWrite = provider.canWrite;
+    if (provider.isLoaded && wasWritable == true && !provider.canWrite) {
+      _clearRoutesForRecovery(provider);
+      return;
+    }
+    if (!provider.isLoaded || !provider.canWrite) return;
+    _startPrivacyPolicyFetch(provider);
+    _showRecoveryBannerIfNeeded(provider);
     _ensurePrivacyConsentDialog(provider);
     _scheduleStartupUpdateCheck(provider);
   }
 
+  void _clearRoutesForRecovery(TimetableProvider provider) {
+    if (_isClearingRoutesForRecovery) return;
+    _isClearingRoutesForRecovery = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        if (!mounted || _lastProvider != provider || provider.canWrite) {
+          return;
+        }
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).popUntil((route) => route.isFirst);
+      } finally {
+        _isClearingRoutesForRecovery = false;
+      }
+    });
+  }
+
   void _startPrivacyPolicyFetch(TimetableProvider provider) {
-    if (_hasStartedPrivacyPolicyFetch) return;
+    if (_hasStartedPrivacyPolicyFetch ||
+        !provider.isLoaded ||
+        !provider.canWrite) {
+      return;
+    }
     _hasStartedPrivacyPolicyFetch = true;
     unawaited(_fetchPrivacyPolicyVersion(provider));
   }
@@ -89,6 +129,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void _scheduleStartupUpdateCheck(TimetableProvider provider) {
     if (_hasScheduledStartupUpdateCheck ||
         !_hasCompletedPrivacyPolicyFetch ||
+        !provider.canWrite ||
         !provider.hasAcceptedCurrentPrivacyPolicy ||
         _isCompletingFirstLaunch ||
         _firstLaunchSelectedMode != null ||
@@ -107,6 +148,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         _lastProvider != provider ||
         !_hasCompletedPrivacyPolicyFetch ||
         !provider.isLoaded ||
+        !provider.canWrite ||
         !provider.hasAcceptedCurrentPrivacyPolicy) {
       return;
     }
@@ -121,6 +163,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void _ensurePrivacyConsentDialog(TimetableProvider provider) {
     if (!mounted ||
         !provider.isLoaded ||
+        !provider.canWrite ||
         provider.hasAcceptedCurrentPrivacyPolicy ||
         _shouldShowFirstLaunchOnboarding(provider) ||
         _isShowingPrivacyConsentDialog) {
@@ -131,6 +174,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       try {
         if (!mounted ||
             !provider.isLoaded ||
+            !provider.canWrite ||
             provider.hasAcceptedCurrentPrivacyPolicy ||
             _shouldShowFirstLaunchOnboarding(provider)) {
           return;
@@ -161,13 +205,29 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
             if (!dialogContext.mounted || popped) {
               return;
             }
+            if (!provider.canWrite) {
+              popped = true;
+              Navigator.of(dialogContext).pop(false);
+              return;
+            }
             popped = true;
             Navigator.of(dialogContext).pop(true);
-          } catch (_) {
-            if (dialogContext.mounted) {
-              setDialogState(() => isAccepting = false);
+          } catch (error, stackTrace) {
+            debugPrint('Privacy consent save failed: $error\n$stackTrace');
+            if (!dialogContext.mounted || popped) return;
+            if (!provider.canWrite) {
+              popped = true;
+              Navigator.of(dialogContext).pop(false);
+              return;
             }
-            rethrow;
+            setDialogState(() => isAccepting = false);
+            ScaffoldMessenger.of(dialogContext).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(dialogContext).saveFailedRetry,
+                ),
+              ),
+            );
           }
         }
 
@@ -252,6 +312,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     final selectedMode = _firstLaunchSelectedMode;
     if (selectedMode == null ||
         _isCompletingFirstLaunch ||
+        !provider.canWrite ||
         !_hasCompletedPrivacyPolicyFetch) {
       return;
     }
@@ -259,7 +320,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     setState(() => _isCompletingFirstLaunch = true);
     try {
       await provider.acceptPrivacyPolicyCurrentVersion();
-      if (!mounted) {
+      if (!mounted || !provider.canWrite) {
         return;
       }
       await provider.switchMode(selectedMode);
@@ -283,6 +344,216 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           _scheduleStartupUpdateCheck(provider);
         }
       }
+    }
+  }
+
+  void _showRecoveryBannerIfNeeded(TimetableProvider provider) {
+    if (_hasShownRecoveryBanner ||
+        provider.lastRecoveryStatus != RecoveryStatus.restoredFromBackup) {
+      return;
+    }
+    _hasShownRecoveryBanner = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _lastProvider != provider || !provider.canWrite) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showMaterialBanner(
+        MaterialBanner(
+          leading: const Icon(Icons.history_toggle_off),
+          content: Text(
+            AppLocalizations.of(context).dataRestoredFromBackupNotice,
+          ),
+          actions: [
+            TextButton(
+              onPressed: messenger.hideCurrentMaterialBanner,
+              child: Text(AppLocalizations.of(context).confirm),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Future<void> _retryRecovery(TimetableProvider provider) async {
+    if (_isHandlingRecovery) return;
+    setState(() => _isHandlingRecovery = true);
+    try {
+      await provider.retryStorageLoad();
+      _onProviderReady();
+    } catch (error, stackTrace) {
+      debugPrint('Storage recovery retry failed: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).saveFailedRetry)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isHandlingRecovery = false);
+    }
+  }
+
+  Future<void> _confirmStartFresh(TimetableProvider provider) async {
+    if (_isHandlingRecovery) return;
+    final confirmed = await showExpressiveDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.dataRecoveryStartFreshConfirmTitle),
+          content: Text(l10n.dataRecoveryStartFreshConfirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey('data-recovery-confirm-start-fresh'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.dataRecoveryStartFreshAction),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isHandlingRecovery = true);
+    try {
+      await provider.startFreshAfterRecovery();
+      _onProviderReady();
+    } catch (error, stackTrace) {
+      debugPrint('Starting fresh after recovery failed: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).saveFailedRetry)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isHandlingRecovery = false);
+    }
+  }
+
+  Future<void> _showRecoveryArtifacts(
+    TimetableProvider provider,
+    List<String> artifacts,
+  ) async {
+    if (artifacts.isEmpty) return;
+    final exportableArtifacts = <String>{};
+    for (final artifact in artifacts) {
+      try {
+        if (await provider.readRecoveryArtifact(artifact) != null) {
+          exportableArtifacts.add(artifact);
+        }
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Recovery artifact read failed for $artifact: $error\n$stackTrace',
+        );
+      }
+    }
+    if (!mounted) return;
+    final content = artifacts.join('\n');
+    final action = await showExpressiveDialog<_RecoveryArtifactDialogAction>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.dataRecoveryArtifactsAction),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620, maxHeight: 360),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var index = 0; index < artifacts.length; index++) ...[
+                    if (index > 0) const Divider(height: 1),
+                    _RecoveryArtifactRow(
+                      artifact: artifacts[index],
+                      onExport: exportableArtifacts.contains(artifacts[index])
+                          ? () => Navigator.of(dialogContext).pop(
+                              _RecoveryArtifactDialogAction.export(
+                                artifacts[index],
+                              ),
+                            )
+                          : null,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(const _RecoveryArtifactDialogAction.copyPaths()),
+              icon: const Icon(Icons.copy_outlined),
+              label: Text(l10n.copyText),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || action == null) return;
+    if (action.type == _RecoveryArtifactDialogActionType.copyPaths) {
+      await Clipboard.setData(ClipboardData(text: content));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).copiedToClipboard)),
+      );
+      return;
+    }
+    final artifactPath = action.artifactPath;
+    if (artifactPath != null) {
+      await _exportRecoveryArtifact(provider, artifactPath);
+    }
+  }
+
+  Future<void> _exportRecoveryArtifact(
+    TimetableProvider provider,
+    String artifactPath,
+  ) async {
+    if (_isHandlingRecovery) return;
+    setState(() => _isHandlingRecovery = true);
+    try {
+      final bytes = await provider.readRecoveryArtifact(artifactPath);
+      if (bytes == null) {
+        throw StateError('Recovery artifact is no longer available.');
+      }
+      final fileName = _recoveryArtifactFileName(artifactPath);
+      final result = await widget.recoveryExportService.saveBytes(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/json',
+      );
+      if (!mounted) return;
+      if (result.status == ExportSaveStatus.saved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).savedToPath(result.path ?? fileName),
+            ),
+          ),
+        );
+        return;
+      }
+      if (result.status == ExportSaveStatus.cancelled) return;
+      await widget.recoveryExportService.shareBytes(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/json',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Recovery artifact export failed: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).saveFailedRetry)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isHandlingRecovery = false);
     }
   }
 
@@ -318,6 +589,23 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         }
 
         final provider = context.read<TimetableProvider>();
+        if (!snapshot.canWrite) {
+          return _DataRecoveryScreen(
+            status: snapshot.storageLoadStatus,
+            artifacts: snapshot.recoveryArtifacts,
+            isBusy: _isHandlingRecovery,
+            onRetry: () => _retryRecovery(provider),
+            onShowArtifacts: snapshot.recoveryArtifacts.isEmpty
+                ? null
+                : () => _showRecoveryArtifacts(
+                    provider,
+                    snapshot.recoveryArtifacts,
+                  ),
+            onStartFresh: provider.canStartFreshAfterRecovery
+                ? () => _confirmStartFresh(provider)
+                : null,
+          );
+        }
         final showOnboarding =
             _firstLaunchSelectedMode != null ||
             snapshot.showFirstLaunchOnboarding;
@@ -343,11 +631,193 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   }
 }
 
+enum _RecoveryArtifactDialogActionType { copyPaths, export }
+
+class _RecoveryArtifactDialogAction {
+  const _RecoveryArtifactDialogAction.copyPaths()
+    : type = _RecoveryArtifactDialogActionType.copyPaths,
+      artifactPath = null;
+
+  const _RecoveryArtifactDialogAction.export(this.artifactPath)
+    : type = _RecoveryArtifactDialogActionType.export;
+
+  final _RecoveryArtifactDialogActionType type;
+  final String? artifactPath;
+}
+
+class _RecoveryArtifactRow extends StatelessWidget {
+  const _RecoveryArtifactRow({required this.artifact, required this.onExport});
+
+  final String artifact;
+  final VoidCallback? onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      children: [
+        Expanded(child: SelectableText(artifact)),
+        if (onExport != null)
+          IconButton(
+            tooltip: kIsWeb ? l10n.save : l10n.share,
+            onPressed: onExport,
+            icon: Icon(kIsWeb ? Icons.download_outlined : Icons.ios_share),
+          ),
+      ],
+    );
+  }
+}
+
+String _recoveryArtifactFileName(String artifactPath) {
+  final segments = artifactPath.replaceAll('\\', '/').split('/');
+  final rawName = segments.isEmpty ? '' : segments.last.trim();
+  var fileName = rawName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+  if (fileName.isEmpty) fileName = 'Sked_recovery_data.json';
+  if (!fileName.contains('.')) fileName = '$fileName.json';
+  return fileName;
+}
+
+class _DataRecoveryScreen extends StatelessWidget {
+  const _DataRecoveryScreen({
+    required this.status,
+    required this.artifacts,
+    required this.isBusy,
+    required this.onRetry,
+    required this.onShowArtifacts,
+    required this.onStartFresh,
+  });
+
+  final StorageLoadStatus status;
+  final List<String> artifacts;
+  final bool isBusy;
+  final VoidCallback onRetry;
+  final VoidCallback? onShowArtifacts;
+  final VoidCallback? onStartFresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final title = switch (status) {
+      StorageLoadStatus.ioFailure => l10n.dataRecoveryIoFailureTitle,
+      StorageLoadStatus.unsupportedVersion =>
+        l10n.dataRecoveryUnsupportedVersionTitle,
+      StorageLoadStatus.missing ||
+      StorageLoadStatus.success ||
+      StorageLoadStatus.restored ||
+      StorageLoadStatus.corrupt => l10n.dataRecoveryCorruptTitle,
+    };
+    final message = switch (status) {
+      StorageLoadStatus.ioFailure => l10n.dataRecoveryIoFailureMessage,
+      StorageLoadStatus.unsupportedVersion =>
+        l10n.dataRecoveryUnsupportedVersionMessage,
+      StorageLoadStatus.missing ||
+      StorageLoadStatus.success ||
+      StorageLoadStatus.restored ||
+      StorageLoadStatus.corrupt => l10n.dataRecoveryCorruptMessage,
+    };
+    final icon = switch (status) {
+      StorageLoadStatus.ioFailure => Icons.storage_outlined,
+      StorageLoadStatus.unsupportedVersion => Icons.system_update_outlined,
+      StorageLoadStatus.missing ||
+      StorageLoadStatus.success ||
+      StorageLoadStatus.restored ||
+      StorageLoadStatus.corrupt => Icons.warning_amber_rounded,
+    };
+
+    return Scaffold(
+      key: const ValueKey('data-recovery-screen'),
+      backgroundColor: colors.surface,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 56, color: colors.error),
+                  const SizedBox(height: 20),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  if (artifacts.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.dataRecoveryArtifactsHint,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 24,
+                    child: isBusy
+                        ? const CircularProgressIndicator(strokeWidth: 2)
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      FilledButton.icon(
+                        key: const ValueKey('data-recovery-retry'),
+                        onPressed: isBusy ? null : onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: Text(l10n.dataRecoveryRetryAction),
+                      ),
+                      if (onShowArtifacts case final showArtifacts?)
+                        TextButton.icon(
+                          key: const ValueKey('data-recovery-show-artifacts'),
+                          onPressed: isBusy ? null : showArtifacts,
+                          icon: const Icon(Icons.folder_open_outlined),
+                          label: Text(l10n.dataRecoveryArtifactsAction),
+                        ),
+                      if (onStartFresh case final startFresh?)
+                        OutlinedButton.icon(
+                          key: const ValueKey('data-recovery-start-fresh'),
+                          onPressed: isBusy ? null : startFresh,
+                          icon: const Icon(Icons.restart_alt),
+                          label: Text(l10n.dataRecoveryStartFreshAction),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AppHomeSnapshot {
   const _AppHomeSnapshot({
     required this.isLoaded,
     required this.isStudentMode,
     required this.showFirstLaunchOnboarding,
+    required this.canWrite,
+    required this.storageLoadStatus,
+    required this.recoveryArtifacts,
   });
 
   factory _AppHomeSnapshot.from(TimetableProvider provider) {
@@ -355,28 +825,44 @@ class _AppHomeSnapshot {
       isLoaded: provider.isLoaded,
       isStudentMode: provider.isStudentMode,
       showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
+      canWrite: provider.canWrite,
+      storageLoadStatus: provider.storageLoadStatus,
+      recoveryArtifacts: provider.recoveryArtifacts,
     );
   }
 
   final bool isLoaded;
   final bool isStudentMode;
   final bool showFirstLaunchOnboarding;
+  final bool canWrite;
+  final StorageLoadStatus storageLoadStatus;
+  final List<String> recoveryArtifacts;
 
   @override
   bool operator ==(Object other) {
     return other is _AppHomeSnapshot &&
         other.isLoaded == isLoaded &&
         other.isStudentMode == isStudentMode &&
-        other.showFirstLaunchOnboarding == showFirstLaunchOnboarding;
+        other.showFirstLaunchOnboarding == showFirstLaunchOnboarding &&
+        other.canWrite == canWrite &&
+        other.storageLoadStatus == storageLoadStatus &&
+        listEquals(other.recoveryArtifacts, recoveryArtifacts);
   }
 
   @override
-  int get hashCode =>
-      Object.hash(isLoaded, isStudentMode, showFirstLaunchOnboarding);
+  int get hashCode => Object.hash(
+    isLoaded,
+    isStudentMode,
+    showFirstLaunchOnboarding,
+    canWrite,
+    storageLoadStatus,
+    Object.hashAll(recoveryArtifacts),
+  );
 }
 
 bool _shouldShowFirstLaunchOnboarding(TimetableProvider provider) {
-  return provider.acceptedPrivacyPolicyVersion == null &&
+  return provider.canWrite &&
+      provider.acceptedPrivacyPolicyVersion == null &&
       _hasDefaultFirstLaunchData(provider);
 }
 

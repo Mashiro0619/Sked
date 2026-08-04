@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,7 @@ import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_service.dart';
@@ -22,6 +24,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
 
   AppData? data;
+  int saveCount = 0;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -29,6 +32,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<void> save(AppData data) async {
+    saveCount += 1;
     this.data = data;
   }
 
@@ -71,11 +75,41 @@ class _BlockingTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://blocking-home-timetable-test';
 }
 
+class _FailingTimetableStorage implements TimetableStorage {
+  _FailingTimetableStorage(this.data);
+
+  AppData data;
+  var saveCount = 0;
+
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+
+  @override
+  Future<void> save(AppData data) async {
+    saveCount += 1;
+    throw const StorageWriteException('storage unavailable');
+  }
+
+  @override
+  Future<String?> filePath() async => 'memory://failing-home-timetable-test';
+}
+
 class _NoopPrivacyService extends PrivacyService {
   const _NoopPrivacyService();
 
   @override
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
+}
+
+class _RecordingPrivacyService extends PrivacyService {
+  var fetchCount = 0;
+
+  @override
+  Future<String?> fetchCurrentPrivacyPolicyVersion() async {
+    fetchCount += 1;
+    return null;
+  }
 }
 
 class _NoopSecretStore implements SecretStore {
@@ -86,6 +120,104 @@ class _NoopSecretStore implements SecretStore {
 
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async {}
+}
+
+class _RecoveryTimetableProvider extends TimetableProvider {
+  _RecoveryTimetableProvider({
+    required TimetableStorage storage,
+    required StorageLoadStatus status,
+    required RecoveryStatus recoveryStatus,
+    List<String> recoveryArtifacts = const [],
+    Uint8List? recoveryArtifactBytes,
+    Object? recoveryArtifactReadError,
+    bool canWrite = false,
+    PrivacyService privacyService = const _NoopPrivacyService(),
+  }) : _status = status,
+       _recoveryStatus = recoveryStatus,
+       _recoveryArtifacts = List.unmodifiable(recoveryArtifacts),
+       _recoveryArtifactBytes = recoveryArtifactBytes,
+       _recoveryArtifactReadError = recoveryArtifactReadError,
+       _canWrite = canWrite,
+       super(
+         storage: storage,
+         systemLocaleCodeResolver: () => defaultLocaleCode,
+         privacyService: privacyService,
+         secretStore: const _NoopSecretStore(),
+       );
+
+  StorageLoadStatus _status;
+  RecoveryStatus _recoveryStatus;
+  final List<String> _recoveryArtifacts;
+  final Uint8List? _recoveryArtifactBytes;
+  final Object? _recoveryArtifactReadError;
+  bool _canWrite;
+  int retryCount = 0;
+  int startFreshCount = 0;
+
+  @override
+  bool get isLoaded => true;
+
+  @override
+  bool get canWrite => _canWrite;
+
+  @override
+  StorageLoadStatus get storageLoadStatus => _status;
+
+  @override
+  RecoveryStatus get lastRecoveryStatus => _recoveryStatus;
+
+  @override
+  List<String> get recoveryArtifacts => _recoveryArtifacts;
+
+  @override
+  bool get canStartFreshAfterRecovery =>
+      !_canWrite &&
+      _status == StorageLoadStatus.corrupt &&
+      _recoveryArtifacts.isNotEmpty;
+
+  @override
+  Future<void> retryStorageLoad() async {
+    retryCount += 1;
+    _canWrite = true;
+    _status = StorageLoadStatus.success;
+    _recoveryStatus = RecoveryStatus.none;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> startFreshAfterRecovery() async {
+    startFreshCount += 1;
+    _canWrite = true;
+    _status = StorageLoadStatus.success;
+    _recoveryStatus = RecoveryStatus.none;
+    notifyListeners();
+  }
+
+  @override
+  Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
+    final error = _recoveryArtifactReadError;
+    if (error != null) throw error;
+    return _recoveryArtifactBytes;
+  }
+}
+
+class _RecordingRecoveryExportService extends ExportService {
+  String? fileName;
+  Uint8List? bytes;
+
+  @override
+  Future<ExportSaveResult> saveBytes({
+    required String fileName,
+    required Uint8List bytes,
+    String mimeType = 'application/octet-stream',
+  }) async {
+    this.fileName = fileName;
+    this.bytes = Uint8List.fromList(bytes);
+    return const ExportSaveResult(
+      status: ExportSaveStatus.saved,
+      path: 'memory://exported-recovery.json',
+    );
+  }
 }
 
 class _BlockingPrivacyService extends PrivacyService {
@@ -319,6 +451,7 @@ Future<void> _pumpAppHomeScreenWithProvider(
   WidgetTester tester,
   TimetableProvider provider, {
   UpdateService startupUpdateService = const _NoopUpdateService(),
+  ExportService recoveryExportService = const ExportService(),
   bool settle = true,
 }) async {
   await _resetWidgetTree(tester);
@@ -332,6 +465,7 @@ Future<void> _pumpAppHomeScreenWithProvider(
         home: AppHomeScreen(
           key: UniqueKey(),
           startupUpdateService: startupUpdateService,
+          recoveryExportService: recoveryExportService,
         ),
       ),
     ),
@@ -404,6 +538,252 @@ String _selectedWeekTitle(TimetableProvider provider) {
 }
 
 void main() {
+  testWidgets(
+    'corrupt recovery gate takes priority over onboarding and startup work',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+      final privacyService = _RecordingPrivacyService();
+      final updateService = _RecordingUpdateService();
+      final provider = _RecoveryTimetableProvider(
+        storage: storage,
+        status: StorageLoadStatus.corrupt,
+        recoveryStatus: RecoveryStatus.failedBackupRestore,
+        recoveryArtifacts: const ['memory://recovery/app-data.corrupt.json'],
+        privacyService: privacyService,
+      );
+
+      await _pumpAppHomeScreenWithProvider(
+        tester,
+        provider,
+        startupUpdateService: updateService,
+        settle: false,
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.byKey(const ValueKey('data-recovery-screen')),
+        findsOneWidget,
+      );
+      expect(find.text('Your data needs recovery'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('data-recovery-show-artifacts')),
+        findsOneWidget,
+      );
+      expect(find.text('Choose your starting mode'), findsNothing);
+      expect(find.byType(HomeScreen), findsNothing);
+      expect(privacyService.fetchCount, 0);
+      expect(updateService.checkCount, 0);
+      expect(storage.saveCount, 0);
+    },
+  );
+
+  testWidgets('recovery artifact action exports the protected raw bytes', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+    final rawBytes = Uint8List.fromList([0, 255, 123, 10]);
+    final provider = _RecoveryTimetableProvider(
+      storage: storage,
+      status: StorageLoadStatus.corrupt,
+      recoveryStatus: RecoveryStatus.failedBackupRestore,
+      recoveryArtifacts: const ['memory://recovery/app-data.corrupt.json'],
+      recoveryArtifactBytes: rawBytes,
+    );
+    final exports = _RecordingRecoveryExportService();
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      recoveryExportService: exports,
+      settle: false,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('data-recovery-show-artifacts')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.ios_share));
+    await tester.pumpAndSettle();
+
+    expect(exports.fileName, 'app-data.corrupt.json');
+    expect(exports.bytes, rawBytes);
+  });
+
+  testWidgets('recovery artifact paths remain visible when a read fails', (
+    tester,
+  ) async {
+    const artifact = 'memory://recovery/app-data-unreadable.json';
+    final provider = _RecoveryTimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      status: StorageLoadStatus.ioFailure,
+      recoveryStatus: RecoveryStatus.ioFailure,
+      recoveryArtifacts: const [artifact],
+      recoveryArtifactReadError: StateError('recovery storage unavailable'),
+    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+
+    await tester.tap(
+      find.byKey(const ValueKey('data-recovery-show-artifacts')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(artifact), findsOneWidget);
+    expect(find.byIcon(Icons.ios_share), findsNothing);
+  });
+
+  for (final scenario in <(StorageLoadStatus, RecoveryStatus, String)>[
+    (
+      StorageLoadStatus.ioFailure,
+      RecoveryStatus.ioFailure,
+      'Storage is unavailable',
+    ),
+    (
+      StorageLoadStatus.unsupportedVersion,
+      RecoveryStatus.unsupportedVersion,
+      'Update Sked to open this data',
+    ),
+  ]) {
+    testWidgets('${scenario.$1.name} recovery cannot force fresh data', (
+      tester,
+    ) async {
+      final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+      final provider = _RecoveryTimetableProvider(
+        storage: storage,
+        status: scenario.$1,
+        recoveryStatus: scenario.$2,
+        recoveryArtifacts: const ['memory://protected/original.json'],
+      );
+
+      await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+
+      expect(find.text(scenario.$3), findsOneWidget);
+      expect(find.byKey(const ValueKey('data-recovery-retry')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('data-recovery-start-fresh')),
+        findsNothing,
+      );
+      expect(storage.saveCount, 0);
+    });
+  }
+
+  testWidgets('corrupt recovery can start fresh after explicit confirmation', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+    final provider = _RecoveryTimetableProvider(
+      storage: storage,
+      status: StorageLoadStatus.corrupt,
+      recoveryStatus: RecoveryStatus.failedBackupRestore,
+      recoveryArtifacts: const ['memory://recovery/app-data.corrupt.json'],
+    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+
+    await tester.tap(find.byKey(const ValueKey('data-recovery-start-fresh')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Start with new data?', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(storage.saveCount, 0);
+
+    await tester.tap(
+      find.byKey(const ValueKey('data-recovery-confirm-start-fresh')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.canWrite, isTrue);
+    expect(provider.startFreshCount, 1);
+    expect(storage.saveCount, 0);
+    expect(find.byKey(const ValueKey('data-recovery-screen')), findsNothing);
+    expect(find.text('Choose your starting mode'), findsOneWidget);
+  });
+
+  testWidgets('successful recovery retry removes the write gate', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+    final provider = _RecoveryTimetableProvider(
+      storage: storage,
+      status: StorageLoadStatus.corrupt,
+      recoveryStatus: RecoveryStatus.failedBackupRestore,
+      recoveryArtifacts: const ['memory://recovery/app-data.corrupt.json'],
+    );
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+
+    await tester.tap(find.byKey(const ValueKey('data-recovery-retry')));
+    await tester.pumpAndSettle();
+
+    expect(provider.retryCount, 1);
+    expect(provider.canWrite, isTrue);
+    expect(find.byKey(const ValueKey('data-recovery-screen')), findsNothing);
+    expect(find.text('Choose your starting mode'), findsOneWidget);
+    expect(storage.saveCount, 0);
+  });
+
+  testWidgets('write gate transition clears settings child routes', (
+    tester,
+  ) async {
+    final provider = TimetableProvider(
+      storage: _FailingTimetableStorage(_buildPopulatedStudentData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    await tester.tap(find.byTooltip('Settings'));
+    await _pumpRouteTransition(tester);
+    expect(find.byType(SettingsPage), findsOneWidget);
+
+    final settingsContext = tester.element(find.byType(SettingsPage));
+    unawaited(
+      Navigator.of(settingsContext).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Nested settings route')),
+        ),
+      ),
+    );
+    await _pumpRouteTransition(tester);
+    expect(find.text('Nested settings route'), findsOneWidget);
+
+    await expectLater(
+      provider.switchMode(AppMode.general),
+      throwsA(isA<StorageWriteException>()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nested settings route'), findsNothing);
+    expect(find.byType(SettingsPage), findsNothing);
+    expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
+  });
+
+  testWidgets('backup recovery shows a dismissible restored banner', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+    final provider = _RecoveryTimetableProvider(
+      storage: storage,
+      status: StorageLoadStatus.restored,
+      recoveryStatus: RecoveryStatus.restoredFromBackup,
+      canWrite: true,
+    );
+
+    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.text(
+        'App data was restored from the previous backup because the main file failed to load.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(MaterialBanner), findsOneWidget);
+  });
+
   testWidgets('fresh launch with empty storage shows timetable onboarding', (
     tester,
   ) async {
@@ -661,6 +1041,39 @@ void main() {
     expect(storage.saveCount, 1);
     expect(provider.hasAcceptedCurrentPrivacyPolicy, isTrue);
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('privacy save failure closes its dialog and reveals recovery', (
+    tester,
+  ) async {
+    final storage = _FailingTimetableStorage(
+      _buildPopulatedStudentData().copyWith(
+        privacyPolicyAcceptedVersion: null,
+        privacyPolicyAcceptedAtIso: null,
+      ),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    provider.injectRemotePrivacyPolicyVersion('2026-05-25');
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    final agreeButton = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(FilledButton),
+    );
+    await tester.tap(agreeButton);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.canWrite, isFalse);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('startup update check waits for privacy version fetch', (

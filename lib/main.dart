@@ -47,7 +47,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didUpdateWidget(MyApp oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.provider != widget.provider) {
-      unawaited(oldWidget.provider.flushPendingUiStateSaves());
+      _flushPendingUiStateSaves(oldWidget.provider);
     }
   }
 
@@ -57,14 +57,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(widget.provider.flushPendingUiStateSaves());
+      _flushPendingUiStateSaves(widget.provider);
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(widget.provider.flushPendingUiStateSaves());
+    _flushPendingUiStateSaves(widget.provider);
     super.dispose();
   }
 
@@ -101,6 +101,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+void _flushPendingUiStateSaves(TimetableProvider provider) {
+  unawaited(
+    provider.flushPendingUiStateSaves().onError((error, stackTrace) {
+      debugPrint('Lifecycle UI state flush failed: $error\n$stackTrace');
+    }),
+  );
 }
 
 class _AppShellSnapshot {

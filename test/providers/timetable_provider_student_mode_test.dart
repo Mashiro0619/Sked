@@ -4,6 +4,8 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/services/school_site_service.dart';
+import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -46,6 +48,23 @@ class _MemorySecretStore implements SecretStore {
   Future<void> writeCustomSchoolImportApiKey(String value) async {
     this.value = value.trim();
   }
+}
+
+class _MemorySchoolSiteStore extends SchoolSiteStore {
+  _MemorySchoolSiteStore() : super.base();
+
+  String source = '[]';
+
+  @override
+  Future<String?> load() async => source;
+
+  @override
+  Future<void> save(String source) async {
+    this.source = source;
+  }
+
+  @override
+  Future<String?> filePath() async => 'memory://provider-school-sites';
 }
 
 void main() {
@@ -139,6 +158,7 @@ void main() {
       storage: _MemoryTimetableStorage(data),
       systemLocaleCodeResolver: () => defaultLocaleCode,
       secretStore: secretStore,
+      schoolSiteService: SchoolSiteService(store: _MemorySchoolSiteStore()),
     );
   }
 
@@ -419,6 +439,83 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test(
+      'shortening an in-use period set remains strict-storage compatible',
+      () async {
+        final storage = _MemoryTimetableStorage(
+          appData(
+            timetables: [
+              timetable(
+                courses: [
+                  course(periods: const [1, 2]),
+                ],
+              ),
+            ],
+            periodTimeSets: [periodSet(count: 2)],
+          ),
+        );
+        final provider = TimetableProvider(
+          storage: storage,
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+          secretStore: _MemorySecretStore(),
+          schoolSiteService: SchoolSiteService(store: _MemorySchoolSiteStore()),
+        );
+        await provider.load();
+
+        await provider.updatePeriodTimeSet(periodSet(count: 1));
+
+        expect(provider.activeTimetable.courses.single.periods, [1, 2]);
+        expect(
+          AppData.decodeStorageSnapshot(
+            storage.data!.encode(),
+          ).studentMode.timetables.single.courses.single.periods,
+          [1, 2],
+        );
+      },
+    );
+
+    test(
+      'switching to a shorter period set remains strict-storage compatible',
+      () async {
+        final storage = _MemoryTimetableStorage(
+          appData(
+            timetables: [
+              timetable(
+                courses: [
+                  course(periods: const [2]),
+                ],
+              ),
+            ],
+            periodTimeSets: [
+              periodSet(id: 'set1', count: 2),
+              periodSet(id: 'set2', count: 1),
+            ],
+          ),
+        );
+        final provider = TimetableProvider(
+          storage: storage,
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+          secretStore: _MemorySecretStore(),
+          schoolSiteService: SchoolSiteService(store: _MemorySchoolSiteStore()),
+        );
+        await provider.load();
+
+        await provider.updateTimetableConfig(
+          provider.activeTimetable.config.copyWith(periodTimeSetId: 'set2'),
+        );
+
+        expect(provider.activeTimetable.courses.single.periods, [2]);
+        final decoded = AppData.decodeStorageSnapshot(storage.data!.encode());
+        expect(
+          decoded.studentMode.timetables.single.config.periodTimeSetId,
+          'set2',
+        );
+        expect(decoded.studentMode.timetables.single.courses.single.periods, [
+          2,
+        ]);
+      },
+    );
 
     test('stores conflict display choices and removes stale choices', () async {
       final conflictKey = buildConflictKeyForCourses('table1', 1, [

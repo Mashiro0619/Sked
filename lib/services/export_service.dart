@@ -60,6 +60,53 @@ class ExportService {
     );
   }
 
+  Future<void> shareBytes({
+    required String fileName,
+    required Uint8List bytes,
+    String mimeType = 'application/octet-stream',
+  }) async {
+    final file = XFile.fromData(bytes, mimeType: mimeType, name: fileName);
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [file],
+        fileNameOverrides: [fileName],
+        subject: fileName,
+      ),
+    );
+  }
+
+  Future<ExportSaveResult> saveBytes({
+    required String fileName,
+    required Uint8List bytes,
+    String mimeType = 'application/octet-stream',
+  }) async {
+    final file = XFile.fromData(bytes, mimeType: mimeType, name: fileName);
+    if (kIsWeb) {
+      try {
+        await file.saveTo(fileName);
+        return const ExportSaveResult(status: ExportSaveStatus.saved);
+      } catch (_) {
+        return const ExportSaveResult(status: ExportSaveStatus.unsupported);
+      }
+    }
+    if (isAndroid) {
+      return const ExportSaveResult(status: ExportSaveStatus.unsupported);
+    }
+    try {
+      final location = await getSaveLocation(suggestedName: fileName);
+      if (location == null) {
+        return const ExportSaveResult(status: ExportSaveStatus.cancelled);
+      }
+      await file.saveTo(location.path);
+      return ExportSaveResult(
+        status: ExportSaveStatus.saved,
+        path: location.path,
+      );
+    } catch (_) {
+      return const ExportSaveResult(status: ExportSaveStatus.failed);
+    }
+  }
+
   Future<ExportSaveResult> saveFile(ExportPayload payload) async {
     if (kIsWeb) {
       try {

@@ -327,23 +327,58 @@ class GeneralEvent {
           ? normalizeDateOnly(start).add(const Duration(days: 1))
           : start.add(const Duration(hours: 1));
     }
+    final startDate = normalizeDateOnly(start);
+    final parsedUntilDate = tryParseStrictIsoDate(recurrenceRule.untilDateIso);
+    final normalizedUntilDate = parsedUntilDate == null
+        ? null
+        : _formatDateIso(
+            parsedUntilDate.isBefore(startDate) ? startDate : parsedUntilDate,
+          );
+    final normalizedRecurrenceRule = recurrenceRule.copyWith(
+      interval: recurrenceRule.interval.clamp(1, 999),
+      unit: switch (recurrenceRule.type) {
+        GeneralEventRecurrence.daily => GeneralEventRecurrenceUnit.day,
+        GeneralEventRecurrence.weekly => GeneralEventRecurrenceUnit.week,
+        GeneralEventRecurrence.monthly => GeneralEventRecurrenceUnit.month,
+        _ => recurrenceRule.unit,
+      },
+      untilDateIso: normalizedUntilDate,
+      count: recurrenceRule.count != null && recurrenceRule.count! > 0
+          ? recurrenceRule.count
+          : null,
+    );
+    final normalizedExceptionDates =
+        recurrenceExceptionDateIso
+            .map(_tryNormalizeDateIso)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
     return copyWith(
-      calendarId: calendarId.trim().isEmpty ? fallbackCalendarId : calendarId,
+      calendarId: calendarId.trim().isEmpty
+          ? fallbackCalendarId
+          : calendarId.trim(),
       title: title.trim().isEmpty ? 'Untitled event' : title.trim(),
       startDateTimeIso: start.toIso8601String(),
       endDateTimeIso: end.toIso8601String(),
-      recurrenceExceptionDateIso:
-          recurrenceExceptionDateIso.map(_normalizeDateIso).toSet().toList()
-            ..sort(),
+      recurrenceRule: normalizedRecurrenceRule,
+      recurrenceExceptionDateIso: normalizedExceptionDates,
       reminders: reminders.where((item) => item.minutesBefore >= 0).toList(),
+      createdAtIso: _tryNormalizeDateTimeIso(createdAtIso),
+      updatedAtIso: _tryNormalizeDateTimeIso(updatedAtIso),
     );
   }
 }
 
-String _normalizeDateIso(String value) {
+String? _tryNormalizeDateIso(String value) {
   final parsed = tryParseStrictIsoDate(value);
-  if (parsed == null) return value;
-  return normalizeDateOnly(parsed).toIso8601String().split('T').first;
+  return parsed == null ? null : _formatDateIso(parsed);
 }
+
+String _formatDateIso(DateTime value) =>
+    normalizeDateOnly(value).toIso8601String().split('T').first;
+
+String? _tryNormalizeDateTimeIso(String? value) =>
+    tryParseStrictIsoDateTime(value)?.toIso8601String();
 
 const Symbol _keepNullable = #keep;

@@ -189,6 +189,39 @@ void main() {
     );
   }
 
+  group('import/export schema matching', () {
+    const schemas = [appDataSchema, timetableDataSchema, periodTimesSchema];
+    const allowedPrefixes = ['', 'classmate-', 'KeSchedule-', 'Sked-'];
+
+    for (final expectedSchema in schemas) {
+      test('accepts only explicit aliases for $expectedSchema', () {
+        for (final prefix in allowedPrefixes) {
+          expect(
+            isImportExportSchema('$prefix$expectedSchema', expectedSchema),
+            isTrue,
+          );
+        }
+      });
+
+      test('rejects arbitrary affixes for $expectedSchema', () {
+        for (final actualSchema in [
+          'attacker-$expectedSchema',
+          '$expectedSchema-suffix',
+          'attacker-Sked-$expectedSchema',
+          'sked-$expectedSchema',
+          ' $expectedSchema',
+          '$expectedSchema ',
+        ]) {
+          expect(
+            isImportExportSchema(actualSchema, expectedSchema),
+            isFalse,
+            reason: actualSchema,
+          );
+        }
+      });
+    }
+  });
+
   group('general JSON export', () {
     test('exports only selected calendars', () {
       final source = data(
@@ -1198,6 +1231,54 @@ END:VCALENDAR
         );
       },
     );
+
+    test('drops unresolved and duplicate general acknowledgements', () {
+      const eventStart = '2026-05-25T09:00:00.000';
+      final source = AppData(
+        activeMode: AppMode.general,
+        studentMode: studentData(),
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'calendar',
+          schedules: [
+            schedule(
+              id: 'calendar',
+              name: 'Calendar',
+              events: [event(id: 'event', calendarId: 'calendar')],
+            ),
+          ],
+          reminderAcknowledgements: const [
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'calendar|event|$eventStart',
+              updatedAtIso: '2026-05-25T08:55:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'calendar|event|$eventStart',
+              isHandled: false,
+              updatedAtIso: '2026-05-25T08:56:00.000',
+            ),
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'calendar|missing|$eventStart',
+              updatedAtIso: '2026-05-25T08:57:00.000',
+            ),
+          ],
+        ),
+      );
+
+      final normalized = service.normalizeAppData(
+        source,
+        localeCode: defaultLocaleCode,
+      );
+
+      expect(normalized.generalMode.reminderAcknowledgements, hasLength(1));
+      expect(
+        normalized.generalMode.reminderAcknowledgements.single.isHandled,
+        false,
+      );
+      expect(
+        () => AppData.decodeStorageSnapshot(normalized.encode()),
+        returnsNormally,
+      );
+    });
 
     test('keeps preview ids stable for files with missing timetable ids', () {
       final source = timetableEnvelope(

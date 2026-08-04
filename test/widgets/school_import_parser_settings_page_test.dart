@@ -75,6 +75,54 @@ class _FailingSecretStore implements SecretStore {
   }
 }
 
+class _BlockingSecretStore implements SecretStore {
+  _BlockingSecretStore([this.value = '']);
+
+  String value;
+  final writeStarted = Completer<void>();
+  final releaseWrite = Completer<void>();
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    if (!writeStarted.isCompleted) {
+      writeStarted.complete();
+    }
+    await releaseWrite.future;
+    this.value = value.trim();
+  }
+}
+
+class _ControlledSecretStore implements SecretStore {
+  _ControlledSecretStore([this.value = '']);
+
+  String value;
+  final writes = <String>[];
+  final _completers = <Completer<void>>[];
+
+  @override
+  Future<String> readCustomSchoolImportApiKey() async => value;
+
+  @override
+  Future<void> writeCustomSchoolImportApiKey(String value) async {
+    final normalized = value.trim();
+    final completer = Completer<void>();
+    writes.add(normalized);
+    _completers.add(completer);
+    await completer.future;
+    this.value = normalized;
+  }
+
+  void succeed(int index) => _completers[index].complete();
+
+  void fail(int index) => _completers[index].completeError(
+    StateError('synthetic secure storage failure'),
+    StackTrace.current,
+  );
+}
+
 Future<TimetableProvider> _createProvider({SecretStore? secretStore}) async {
   final periodTimes = buildDefaultPeriodTimes();
   final data = buildInitialAppData(periodTimes, localeCode: defaultLocaleCode)
@@ -132,6 +180,36 @@ Future<void> _pumpPage(
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpPageFromHost(
+  WidgetTester tester,
+  TimetableProvider provider,
+) async {
+  await tester.pumpWidget(
+    ChangeNotifierProvider<TimetableProvider>.value(
+      value: provider,
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SchoolImportParserSettingsPage(),
+                ),
+              ),
+              child: const Text('Open parser settings'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open parser settings'));
   await tester.pumpAndSettle();
 }
 
@@ -259,6 +337,112 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.customSchoolImportApiKey, 'sk-old');
+    expect(
+      find.text('Unable to save custom school import API key.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('pending API key is flushed when the app enters background', (
+    tester,
+  ) async {
+    final secrets = _MemorySecretStore('sk-old');
+    final provider = await _createProvider(secretStore: secrets);
+    await _pumpPage(tester, provider, const SchoolImportApi());
+
+    await tester.enterText(_apiKeyTextField(), 'sk-background');
+    await tester.pump();
+    expect(secrets.writes, isEmpty);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+
+    expect(secrets.writes, ['sk-background']);
+    expect(provider.customSchoolImportApiKey, 'sk-background');
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  });
+
+  testWidgets('newer pending key drains after an in-flight write fails', (
+    tester,
+  ) async {
+    final secrets = _ControlledSecretStore('sk-old');
+    final provider = await _createProvider(secretStore: secrets);
+    await _pumpPage(tester, provider, const SchoolImportApi());
+
+    await tester.enterText(_apiKeyTextField(), 'sk-first');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    expect(secrets.writes, ['sk-first']);
+
+    await tester.enterText(_apiKeyTextField(), 'sk-second');
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    secrets.fail(0);
+    for (var frame = 0; frame < 20 && secrets.writes.length < 2; frame += 1) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(secrets.writes, ['sk-first', 'sk-second']);
+
+    secrets.succeed(1);
+    await tester.pumpAndSettle();
+
+    expect(secrets.value, 'sk-second');
+    expect(provider.customSchoolImportApiKey, 'sk-second');
+    expect(
+      find.text('Unable to save custom school import API key.'),
+      findsNothing,
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  });
+
+  testWidgets('back navigation waits for a pending API key save', (
+    tester,
+  ) async {
+    final secrets = _BlockingSecretStore('sk-old');
+    final provider = await _createProvider(secretStore: secrets);
+    await _pumpPageFromHost(tester, provider);
+
+    await tester.enterText(_apiKeyTextField(), 'sk-new');
+    await tester.pageBack();
+    await tester.pump();
+    await secrets.writeStarted.future;
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
+
+    secrets.releaseWrite.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
+    expect(secrets.value, 'sk-new');
+  });
+
+  testWidgets('route removal flushes a pending API key save', (tester) async {
+    final secrets = _MemorySecretStore('sk-old');
+    final provider = await _createProvider(secretStore: secrets);
+    await _pumpPageFromHost(tester, provider);
+
+    await tester.enterText(_apiKeyTextField(), 'sk-route-removed');
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.popUntil((route) => route.isFirst);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
+    expect(secrets.value, 'sk-route-removed');
+    expect(secrets.writes, ['sk-route-removed']);
+  });
+
+  testWidgets('failed API key flush blocks back navigation', (tester) async {
+    final provider = await _createProvider(
+      secretStore: _FailingSecretStore('sk-old'),
+    );
+    await _pumpPageFromHost(tester, provider);
+
+    await tester.enterText(_apiKeyTextField(), 'sk-new');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
     expect(
       find.text('Unable to save custom school import API key.'),
       findsOneWidget,

@@ -22,3 +22,18 @@ class MigrationException implements Exception {
   @override
   String toString() => 'MigrationException: $message';
 }
+
+/// 数据来自更新版本；这与普通格式损坏不同，绝不能尝试降级覆盖。
+class UnsupportedSchemaVersionException extends MigrationException
+    implements FormatException {
+  const UnsupportedSchemaVersionException(super.message);
+
+  @override
+  Object? get source => null;
+
+  @override
+  int? get offset => null;
+
+  @override
+  String toString() => 'UnsupportedSchemaVersionException: $message';
+}

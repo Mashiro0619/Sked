@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -6,6 +7,7 @@ import '../models/school_site_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../services/school_site_service.dart';
+import '../services/school_site_store.dart';
 import '../services/text_file_picker.dart';
 import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
@@ -15,20 +17,35 @@ import '../widgets/sked_popup_menu.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
 
-enum _SchoolSitesMenuAction { toggleEditMode, importJson, shareJson, saveJson }
+enum _SchoolSitesMenuAction {
+  toggleEditMode,
+  importJson,
+  shareJson,
+  saveJson,
+  recoveryArtifacts,
+}
 
 enum _SchoolSiteItemAction { edit, delete }
 
+enum _SchoolSiteImportAction { merge, replace }
+
+Future<String?> _pickSchoolSiteJson() {
+  return TextFilePicker.pickText(allowedExtensions: const ['json']);
+}
+
 class SchoolSitesPage extends StatefulWidget {
-  const SchoolSitesPage({
+  SchoolSitesPage({
     super.key,
     SchoolSiteService? siteService,
     ExportService? exportService,
-  }) : siteService = siteService ?? const SchoolSiteService(),
-       exportService = exportService ?? const ExportService();
+    Future<String?> Function()? pickJsonSource,
+  }) : siteService = siteService ?? SchoolSiteService(),
+       exportService = exportService ?? const ExportService(),
+       pickJsonSource = pickJsonSource ?? _pickSchoolSiteJson;
 
   final SchoolSiteService siteService;
   final ExportService exportService;
+  final Future<String?> Function() pickJsonSource;
 
   @override
   State<SchoolSitesPage> createState() => _SchoolSitesPageState();
@@ -44,7 +61,10 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
   var _jsonShareInProgress = false;
   var _jsonSaveInProgress = false;
   var _siteMutationInProgress = false;
+  var _recoveryActionInProgress = false;
   List<SchoolSite> _sites = const [];
+  List<String> _recoveryPaths = const [];
+  SchoolSiteLoadResult? _loadResult;
 
   bool get _supportsWebImport => supportsInAppWebView;
 
@@ -60,24 +80,32 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final loadResult = _loadResult;
+    final canUsePageActions = !_loading && loadResult?.canWrite == true;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.schoolSitesPageTitle),
         actions: [
           IconButton(
             tooltip: l10n.schoolSitesAdd,
-            onPressed: (_editorDialogOpen || _siteMutationInProgress)
+            onPressed:
+                !canUsePageActions ||
+                    _editorDialogOpen ||
+                    _siteMutationInProgress
                 ? null
                 : _addSite,
             icon: const Icon(Icons.add),
           ),
           IconButton(
             tooltip: l10n.schoolHtmlImportEntry,
-            onPressed: _htmlImportOpen ? null : _openHtmlImport,
+            onPressed: !canUsePageActions || _htmlImportOpen
+                ? null
+                : _openHtmlImport,
             icon: const Icon(Icons.code),
           ),
           SkedPopupMenuButton<_SchoolSitesMenuAction>(
             tooltip: l10n.importExport,
+            enabled: canUsePageActions,
             onSelected: _handleMenuAction,
             itemBuilder: (context) => [
               SkedPopupMenuItem(
@@ -99,12 +127,34 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                 enabled: !_jsonSaveInProgress,
                 child: Text(l10n.schoolSitesSaveJson),
               ),
+              if (_recoveryPaths.isNotEmpty)
+                SkedPopupMenuItem(
+                  value: _SchoolSitesMenuAction.recoveryArtifacts,
+                  child: Text(l10n.dataRecoveryArtifactsAction),
+                ),
             ],
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : loadResult?.canWrite == false
+          ? _SchoolSitesRecoveryView(
+              status: loadResult!.recoveryStatus,
+              hasArtifacts: _recoveryPaths.isNotEmpty,
+              canReplace: loadResult.canReplaceAfterRecovery,
+              isBusy: _recoveryActionInProgress,
+              onRetry: _retryRecovery,
+              onShowArtifacts: _recoveryPaths.isEmpty
+                  ? null
+                  : _showRecoveryArtifacts,
+              onImportReplacement: loadResult.canReplaceAfterRecovery
+                  ? _importRecoveryJson
+                  : null,
+              onStartFresh: loadResult.canReplaceAfterRecovery
+                  ? _confirmStartFresh
+                  : null,
+            )
           : _sites.isEmpty
           ? _SchoolSitesEmptyState(
               onAdd: (_editorDialogOpen || _siteMutationInProgress)
@@ -156,12 +206,15 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
 
   Future<void> _loadSites() async {
     try {
-      final sites = await _siteService.loadSites();
+      final result = await _siteService.loadSitesResult();
+      final recoveryPaths = await _resolveRecoveryPaths(result);
       if (!mounted) {
         return;
       }
       setState(() {
-        _sites = sites;
+        _sites = result.sites;
+        _loadResult = result;
+        _recoveryPaths = recoveryPaths;
         _loading = false;
       });
     } catch (e, st) {
@@ -171,15 +224,217 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
       }
       setState(() {
         _sites = const [];
+        _loadResult = SchoolSiteLoadResult(
+          sites: const [],
+          recoveryStatus: SchoolSiteRecoveryStatus.storageReadFailed,
+          canWrite: false,
+          error: e,
+          stackTrace: st,
+        );
+        _recoveryPaths = const [];
         _loading = false;
       });
-      _showMessage(
-        AppLocalizations.of(context).schoolWebImportSchoolLoadFailed,
+    }
+  }
+
+  Future<List<String>> _resolveRecoveryPaths(
+    SchoolSiteLoadResult result,
+  ) async {
+    return List.unmodifiable(result.recoveryArtifacts);
+  }
+
+  Future<void> _retryRecovery() async {
+    await _runRecoveryAction(_loadSites);
+  }
+
+  Future<void> _confirmStartFresh() async {
+    final result = _loadResult;
+    if (result == null || !result.canReplaceAfterRecovery || !mounted) return;
+    final confirmed = await _showRecoveryReplacementConfirmation();
+    if (confirmed != true || !mounted) return;
+    await _runRecoveryAction(() async {
+      await _siteService.replaceSitesAfterRecovery(result.sites);
+      await _loadSites();
+    });
+  }
+
+  Future<void> _importRecoveryJson() async {
+    final result = _loadResult;
+    if (result == null || !result.canReplaceAfterRecovery || !mounted) return;
+    final source = await widget.pickJsonSource();
+    if (source == null || !mounted) return;
+    late final SchoolSiteImportPreview preview;
+    try {
+      preview = decodeSchoolSitesForImport(source);
+    } on FormatException catch (error) {
+      _showMessage(error.message);
+      return;
+    }
+    final action = await _showImportPreview(preview, allowMerge: false);
+    if (action != _SchoolSiteImportAction.replace || !mounted) return;
+    final confirmed = await _confirmReplaceImport(preview.sites.length);
+    if (confirmed != true || !mounted) return;
+    await _runRecoveryAction(() async {
+      await _siteService.replaceSitesAfterRecovery(preview.sites);
+      await _loadSites();
+      if (mounted) {
+        _showMessage(AppLocalizations.of(context).schoolSitesImported);
+      }
+    });
+  }
+
+  Future<bool?> _showRecoveryReplacementConfirmation() {
+    return showExpressiveDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.schoolSitesRecoveryStartFreshConfirmTitle),
+          content: Text(l10n.schoolSitesRecoveryStartFreshConfirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey('school-sites-recovery-confirm-start-fresh'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.schoolSitesRecoveryStartFreshAction),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showRecoveryArtifacts() async {
+    if (_recoveryPaths.isEmpty || !mounted) return;
+    final exportableArtifacts = <String>{};
+    for (final artifact in _recoveryPaths) {
+      if (await _siteService.readRecoveryArtifact(artifact) != null) {
+        exportableArtifacts.add(artifact);
+      }
+    }
+    if (!mounted) return;
+    final content = _recoveryPaths.join('\n');
+    final action =
+        await showExpressiveDialog<_SchoolSiteRecoveryArtifactDialogAction>(
+          context: context,
+          builder: (dialogContext) {
+            final l10n = AppLocalizations.of(dialogContext);
+            return AlertDialog(
+              title: Text(l10n.dataRecoveryArtifactsAction),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 620,
+                  maxHeight: 360,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (
+                        var index = 0;
+                        index < _recoveryPaths.length;
+                        index++
+                      ) ...[
+                        if (index > 0) const Divider(height: 1),
+                        _SchoolSiteRecoveryArtifactRow(
+                          artifact: _recoveryPaths[index],
+                          isWeb: _exportService.isWeb,
+                          onExport:
+                              exportableArtifacts.contains(
+                                _recoveryPaths[index],
+                              )
+                              ? () => Navigator.of(dialogContext).pop(
+                                  _SchoolSiteRecoveryArtifactDialogAction.export(
+                                    _recoveryPaths[index],
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton.icon(
+                  onPressed: () => Navigator.of(dialogContext).pop(
+                    const _SchoolSiteRecoveryArtifactDialogAction.copyPaths(),
+                  ),
+                  icon: const Icon(Icons.copy_outlined),
+                  label: Text(l10n.copyText),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.confirm),
+                ),
+              ],
+            );
+          },
+        );
+    if (!mounted || action == null) return;
+    if (action.type == _SchoolSiteRecoveryArtifactDialogActionType.copyPaths) {
+      await Clipboard.setData(ClipboardData(text: content));
+      if (!mounted) return;
+      _showMessage(AppLocalizations.of(context).copiedToClipboard);
+      return;
+    }
+    final artifactPath = action.artifactPath;
+    if (artifactPath != null) {
+      await _exportRecoveryArtifact(artifactPath);
+    }
+  }
+
+  Future<void> _exportRecoveryArtifact(String artifactPath) async {
+    await _runRecoveryAction(() async {
+      final bytes = await _siteService.readRecoveryArtifact(artifactPath);
+      if (bytes == null) {
+        throw StateError('Recovery artifact is no longer available.');
+      }
+      final fileName = _schoolSiteRecoveryArtifactFileName(artifactPath);
+      final result = await _exportService.saveBytes(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/json',
       );
+      if (!mounted) return;
+      if (result.status == ExportSaveStatus.saved) {
+        _showMessage(
+          AppLocalizations.of(context).savedToPath(result.path ?? fileName),
+        );
+        return;
+      }
+      if (result.status == ExportSaveStatus.cancelled) return;
+      await _exportService.shareBytes(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/json',
+      );
+    });
+  }
+
+  Future<void> _runRecoveryAction(Future<void> Function() action) async {
+    if (_recoveryActionInProgress || !mounted) return;
+    setState(() => _recoveryActionInProgress = true);
+    try {
+      await action();
+    } catch (error, stackTrace) {
+      debugPrint('School-site recovery action failed: $error\n$stackTrace');
+      if (mounted) {
+        _showMessage(AppLocalizations.of(context).saveFailedRetry);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _recoveryActionInProgress = false);
+      }
     }
   }
 
   Future<void> _handleMenuAction(_SchoolSitesMenuAction action) async {
+    if (_loadResult?.canWrite != true) return;
     switch (action) {
       case _SchoolSitesMenuAction.toggleEditMode:
         setState(() => _isEditMode = !_isEditMode);
@@ -192,6 +447,9 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
         return;
       case _SchoolSitesMenuAction.saveJson:
         await _saveJsonToFile();
+        return;
+      case _SchoolSitesMenuAction.recoveryArtifacts:
+        await _showRecoveryArtifacts();
         return;
     }
   }
@@ -433,28 +691,56 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     return future;
   }
 
-  Future<void> _persistSites(List<SchoolSite> sites) async {
+  Future<bool> _persistSites(
+    List<SchoolSite> sites, {
+    String? successMessage,
+  }) async {
     if (_siteMutationInProgress || !mounted) {
-      return;
+      return false;
     }
     final l10n = AppLocalizations.of(context);
     setState(() => _siteMutationInProgress = true);
     try {
       await _siteService.saveSites(sites);
       if (!mounted) {
-        return;
+        return false;
       }
       setState(() {
         _sites = sites;
       });
-      _showMessage(l10n.schoolSitesSaved);
+      _showMessage(successMessage ?? l10n.schoolSitesSaved);
+      return true;
+    } on SchoolSiteStaleWriteException {
+      await _reloadAfterRejectedMutation();
+      if (mounted) {
+        _showMessage(l10n.saveFailedRetry);
+      }
+      return false;
+    } on SchoolSiteWriteBlockedException {
+      await _reloadAfterRejectedMutation();
+      if (mounted) {
+        _showMessage(l10n.saveFailedRetry);
+      }
+      return false;
+    } on SchoolSiteStoreRecoveryBlockedException {
+      await _reloadAfterRejectedMutation();
+      if (mounted) {
+        _showMessage(l10n.saveFailedRetry);
+      }
+      return false;
     } catch (_) {
       _showMessage(l10n.saveFailedRetry);
+      return false;
     } finally {
       if (mounted) {
         setState(() => _siteMutationInProgress = false);
       }
     }
+  }
+
+  Future<void> _reloadAfterRejectedMutation() async {
+    if (!mounted) return;
+    await _loadSites();
   }
 
   Future<void> _importJson() async {
@@ -464,9 +750,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     _setJsonImportInProgress(true);
     final l10n = AppLocalizations.of(context);
     try {
-      final source = await TextFilePicker.pickText(
-        allowedExtensions: const ['json'],
-      );
+      final source = await widget.pickJsonSource();
       if (!mounted) {
         return;
       }
@@ -474,15 +758,21 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
         return;
       }
       try {
-        final imported = await _siteService.importSites(source);
-        if (!mounted) {
-          return;
+        final preview = decodeSchoolSitesForImport(source);
+        final action = await _showImportPreview(preview);
+        if (!mounted || action == null) return;
+        if (action == _SchoolSiteImportAction.replace) {
+          final confirmed = await _confirmReplaceImport(preview.sites.length);
+          if (!mounted || confirmed != true) return;
         }
-        setState(() {
-          _sites = imported;
-          _isEditMode = false;
-        });
-        _showMessage(l10n.schoolSitesImported);
+        final nextSites = action == _SchoolSiteImportAction.replace
+            ? preview.sites
+            : _mergeImportedSites(_sites, preview.sites);
+        final saved = await _persistSites(
+          nextSites,
+          successMessage: l10n.schoolSitesImported,
+        );
+        if (saved && mounted) setState(() => _isEditMode = false);
       } on FormatException catch (error) {
         _showMessage(error.message);
       } catch (_) {
@@ -491,6 +781,138 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     } finally {
       _setJsonImportInProgress(false);
     }
+  }
+
+  Future<_SchoolSiteImportAction?> _showImportPreview(
+    SchoolSiteImportPreview preview, {
+    bool allowMerge = true,
+  }) {
+    return showExpressiveDialog<_SchoolSiteImportAction>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        final rowCount = preview.sites.length + preview.issues.length;
+        final listHeight = (rowCount * 64.0).clamp(0.0, 300.0).toDouble();
+        final canReplace = preview.sites.isNotEmpty || preview.issues.isEmpty;
+        return AlertDialog(
+          title: Text(l10n.schoolSitesImportPreviewTitle),
+          content: ExpressiveDialogContent(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.schoolSitesImportPreviewSummary(
+                    preview.sites.length,
+                    preview.issues.length,
+                  ),
+                ),
+                if (rowCount == 0) ...[
+                  const SizedBox(height: 12),
+                  Text(l10n.schoolSitesImportEmptyPreview),
+                ] else ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: listHeight,
+                    child: ListView(
+                      children: [
+                        for (final site in preview.sites)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.check_circle_outline),
+                            title: Text(site.name),
+                            subtitle: Text(site.loginUrl),
+                          ),
+                        for (final issue in preview.issues)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.error_outline,
+                              color: Theme.of(dialogContext).colorScheme.error,
+                            ),
+                            title: Text(
+                              l10n.schoolSitesImportInvalidEntry(
+                                issue.index + 1,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            if (allowMerge)
+              TextButton(
+                key: const ValueKey('school-sites-import-merge'),
+                onPressed: preview.sites.isEmpty
+                    ? null
+                    : () => Navigator.of(
+                        dialogContext,
+                      ).pop(_SchoolSiteImportAction.merge),
+                child: Text(l10n.schoolSitesImportMerge),
+              ),
+            FilledButton(
+              key: const ValueKey('school-sites-import-replace'),
+              onPressed: canReplace
+                  ? () => Navigator.of(
+                      dialogContext,
+                    ).pop(_SchoolSiteImportAction.replace)
+                  : null,
+              child: Text(l10n.schoolSitesImportReplace),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool?> _confirmReplaceImport(int importedCount) {
+    return showExpressiveDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.schoolSitesImportReplaceConfirmTitle),
+          content: Text(
+            l10n.schoolSitesImportReplaceConfirmMessage(
+              _sites.length,
+              importedCount,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey('school-sites-import-confirm-replace'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.schoolSitesImportReplace),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<SchoolSite> _mergeImportedSites(
+    List<SchoolSite> current,
+    List<SchoolSite> imported,
+  ) {
+    final merged = [...current];
+    final seen = {for (final site in current) _schoolSiteIdentity(site)};
+    for (final site in imported) {
+      if (seen.add(_schoolSiteIdentity(site))) merged.add(site);
+    }
+    return merged;
   }
 
   Future<void> _shareJson() async {
@@ -670,6 +1092,161 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+enum _SchoolSiteRecoveryArtifactDialogActionType { copyPaths, export }
+
+class _SchoolSiteRecoveryArtifactDialogAction {
+  const _SchoolSiteRecoveryArtifactDialogAction.copyPaths()
+    : type = _SchoolSiteRecoveryArtifactDialogActionType.copyPaths,
+      artifactPath = null;
+
+  const _SchoolSiteRecoveryArtifactDialogAction.export(this.artifactPath)
+    : type = _SchoolSiteRecoveryArtifactDialogActionType.export;
+
+  final _SchoolSiteRecoveryArtifactDialogActionType type;
+  final String? artifactPath;
+}
+
+class _SchoolSiteRecoveryArtifactRow extends StatelessWidget {
+  const _SchoolSiteRecoveryArtifactRow({
+    required this.artifact,
+    required this.isWeb,
+    required this.onExport,
+  });
+
+  final String artifact;
+  final bool isWeb;
+  final VoidCallback? onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Row(
+      children: [
+        Expanded(child: SelectionArea(child: Text(artifact))),
+        if (onExport != null)
+          IconButton(
+            tooltip: isWeb ? l10n.save : l10n.share,
+            onPressed: onExport,
+            icon: Icon(isWeb ? Icons.download_outlined : Icons.ios_share),
+          ),
+      ],
+    );
+  }
+}
+
+String _schoolSiteRecoveryArtifactFileName(String artifactPath) {
+  final segments = artifactPath.replaceAll('\\', '/').split('/');
+  final rawName = segments.isEmpty ? '' : segments.last.trim();
+  var fileName = rawName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+  if (fileName.isEmpty) fileName = 'Sked_school_sites_recovery.json';
+  if (!fileName.contains('.')) fileName = '$fileName.json';
+  return fileName;
+}
+
+String _schoolSiteIdentity(SchoolSite site) {
+  return '${site.name.trim()}\x00${site.loginUrl.trim()}';
+}
+
+class _SchoolSitesRecoveryView extends StatelessWidget {
+  const _SchoolSitesRecoveryView({
+    required this.status,
+    required this.hasArtifacts,
+    required this.canReplace,
+    required this.isBusy,
+    required this.onRetry,
+    required this.onShowArtifacts,
+    required this.onImportReplacement,
+    required this.onStartFresh,
+  });
+
+  final SchoolSiteRecoveryStatus status;
+  final bool hasArtifacts;
+  final bool canReplace;
+  final bool isBusy;
+  final VoidCallback onRetry;
+  final VoidCallback? onShowArtifacts;
+  final VoidCallback? onImportReplacement;
+  final VoidCallback? onStartFresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final (title, message, icon) = switch (status) {
+      SchoolSiteRecoveryStatus.storedDataCorrupt => (
+        l10n.schoolSitesRecoveryCorruptTitle,
+        l10n.schoolSitesRecoveryCorruptMessage,
+        Icons.folder_off_outlined,
+      ),
+      SchoolSiteRecoveryStatus.storageReadFailed ||
+      SchoolSiteRecoveryStatus.recoveryWriteFailed => (
+        l10n.schoolSitesRecoveryIoFailureTitle,
+        l10n.schoolSitesRecoveryIoFailureMessage,
+        Icons.storage_outlined,
+      ),
+      SchoolSiteRecoveryStatus.unsupportedVersion => (
+        l10n.dataRecoveryUnsupportedVersionTitle,
+        l10n.dataRecoveryUnsupportedVersionMessage,
+        Icons.system_update_outlined,
+      ),
+      SchoolSiteRecoveryStatus.none ||
+      SchoolSiteRecoveryStatus.restoredFromTemporary ||
+      SchoolSiteRecoveryStatus.restoredFromBackup => (
+        l10n.schoolSitesRecoveryIoFailureTitle,
+        l10n.schoolSitesRecoveryIoFailureMessage,
+        Icons.storage_outlined,
+      ),
+    };
+    final resolvedMessage = hasArtifacts
+        ? '$message\n\n${l10n.schoolSitesRecoveryArtifactsHint}'
+        : message;
+    final content = ExpressiveEmptyState(
+      icon: icon,
+      title: title,
+      message: resolvedMessage,
+      actions: [
+        FilledButton.tonalIcon(
+          key: const ValueKey('school-sites-recovery-retry'),
+          onPressed: isBusy ? null : onRetry,
+          icon: const Icon(Icons.refresh),
+          label: Text(l10n.dataRecoveryRetryAction),
+        ),
+        if (onShowArtifacts != null)
+          OutlinedButton.icon(
+            key: const ValueKey('school-sites-recovery-artifacts'),
+            onPressed: isBusy ? null : onShowArtifacts,
+            icon: const Icon(Icons.folder_copy_outlined),
+            label: Text(l10n.dataRecoveryArtifactsAction),
+          ),
+        if (canReplace && onImportReplacement != null)
+          OutlinedButton.icon(
+            key: const ValueKey('school-sites-recovery-import'),
+            onPressed: isBusy ? null : onImportReplacement,
+            icon: const Icon(Icons.upload_file_outlined),
+            label: Text(l10n.schoolSitesImportJson),
+          ),
+        if (canReplace && onStartFresh != null)
+          FilledButton.icon(
+            key: const ValueKey('school-sites-recovery-start-fresh'),
+            onPressed: isBusy ? null : onStartFresh,
+            icon: const Icon(Icons.restart_alt),
+            label: Text(l10n.schoolSitesRecoveryStartFreshAction),
+          ),
+      ],
+    );
+    return LayoutBuilder(
+      key: const ValueKey('school-sites-recovery-view'),
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: content,
+          ),
+        );
+      },
+    );
   }
 }
 

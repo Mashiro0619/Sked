@@ -37,71 +37,177 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     }
     _isLoading = true;
     try {
-      final fileData = await _repository.load();
-      if (fileData != null) {
-        var normalized = _importExportService.normalizeAppData(
-          fileData,
-          localeCode: fileData.localeCode,
-        );
-        final legacyApiKey =
-            normalized.studentMode.schoolImportParserSettings.customApiKey;
-        final secureApiKey = await _readSecureCustomSchoolImportApiKey();
-        final runtimeApiKey = secureApiKey.isNotEmpty
-            ? secureApiKey
-            : legacyApiKey;
-        final migratedLegacyApiKey =
-            secureApiKey.isEmpty &&
-            legacyApiKey.isNotEmpty &&
-            await _writeSecureCustomSchoolImportApiKey(legacyApiKey);
-        normalized = _withRuntimeCustomSchoolImportApiKey(
-          normalized,
-          runtimeApiKey,
-        );
-        _appData = normalized;
-        final canDropLegacyApiKey =
-            legacyApiKey.isEmpty ||
-            secureApiKey.isNotEmpty ||
-            migratedLegacyApiKey;
-        final shouldWriteBack =
-            canDropLegacyApiKey &&
-            (!_jsonLikeEquals(normalized.toJson(), fileData.toJson()) ||
-                legacyApiKey.isNotEmpty);
-        if (shouldWriteBack) {
-          try {
-            await _repository.save(normalized);
-          } catch (e, st) {
-            debugPrint(
-              'Storage normalization save failed, keeping loaded data: $e\n$st',
-            );
-          }
-        }
+      await _hydrateFromStorage(retry: false);
+      if (_repository.canWrite) {
+        await _resumePendingAppBackupRestore();
+      }
+    } catch (e, st) {
+      debugPrint(
+        'Provider initialization failed, using read-only defaults: $e\n$st',
+      );
+      _repository.blockWritesAfterInitializationFailure();
+      final loaded = _repository.current;
+      if (loaded != null) {
+        final runtimeApiKey =
+            _appData.studentMode.schoolImportParserSettings.customApiKey;
+        _appData = _withRuntimeCustomSchoolImportApiKey(loaded, runtimeApiKey);
       } else {
-        _appData = await _buildDefaultAppData();
-        _appData = _withRuntimeCustomSchoolImportApiKey(
-          _appData,
-          await _readSecureCustomSchoolImportApiKey(),
-        );
-        if (_repository.lastRecoveryStatus !=
-            RecoveryStatus.failedBackupRestore) {
-          await _save();
+        try {
+          _appData = await _buildDefaultAppData();
+        } catch (fallbackError, fallbackStackTrace) {
+          debugPrint(
+            'Provider fallback initialization failed: '
+            '$fallbackError\n$fallbackStackTrace',
+          );
         }
       }
       _storagePath = await _repository.filePath();
-    } catch (e, st) {
-      debugPrint('Storage load failed, using defaults: $e\n$st');
-      _appData = await _buildDefaultAppData();
-      try {
-        _storagePath = await _repository.filePath();
-      } catch (e2, st2) {
-        debugPrint('Storage path unavailable: $e2\n$st2');
-        _storagePath = null;
-      }
     } finally {
       _selectedWeek = _currentWeekForActiveTimetable();
       _isLoaded = true;
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> retryStorageLoad() async {
+    _ensureAppBackupRestoreMutationAllowed();
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _hydrateFromStorage(retry: true);
+      if (_repository.canWrite) {
+        await _resumePendingAppBackupRestore();
+      }
+    } catch (error, stackTrace) {
+      _repository.blockWritesAfterInitializationFailure();
+      final loaded = _repository.current;
+      if (loaded != null) {
+        final runtimeApiKey =
+            _appData.studentMode.schoolImportParserSettings.customApiKey;
+        _appData = _withRuntimeCustomSchoolImportApiKey(loaded, runtimeApiKey);
+      }
+      debugPrint('Storage retry initialization failed: $error\n$stackTrace');
+      rethrow;
+    } finally {
+      _selectedWeek = _currentWeekForActiveTimetable();
+      _isLoaded = true;
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> startFreshAfterRecovery() async {
+    _ensureAppBackupRestoreMutationAllowed();
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      if (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt) {
+        await _startFreshAfterCorruptAppBackupRestoreJournal();
+        return;
+      }
+      var fresh = await _buildDefaultAppData();
+      fresh = _withRuntimeCustomSchoolImportApiKey(
+        fresh,
+        await _readSecureCustomSchoolImportApiKey(),
+      );
+      fresh = _importExportService.normalizeAppData(
+        fresh,
+        localeCode: fresh.localeCode,
+      );
+      await _repository.startFreshAfterRecovery(fresh);
+      _appData = fresh;
+      _storagePath = await _repository.filePath();
+      try {
+        await _resumePendingAppBackupRestore();
+      } on AppBackupRestoreJournalException {
+        if (_journalRecoveryLoadStatus != StorageLoadStatus.corrupt) rethrow;
+        await _startFreshAfterCorruptAppBackupRestoreJournal();
+      }
+    } finally {
+      _selectedWeek = _currentWeekForActiveTimetable();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
+    if (_journalRecoveryArtifacts.contains(artifactPath)) {
+      final bytes = await _backupRestoreJournal.readRecoveryArtifact(
+        artifactPath,
+      );
+      if (bytes != null) return bytes;
+    }
+    return _repository.readRecoveryArtifact(artifactPath);
+  }
+
+  Future<void> _hydrateFromStorage({required bool retry}) async {
+    final fileData = retry
+        ? await _repository.retryLoad()
+        : await _repository.load();
+    if (fileData == null) {
+      var defaults = await _buildDefaultAppData();
+      defaults = _withRuntimeCustomSchoolImportApiKey(
+        defaults,
+        await _readSecureCustomSchoolImportApiKey(),
+      );
+      _appData = defaults;
+      if (_repository.canWrite) {
+        await _save();
+      }
+      _storagePath = await _repository.filePath();
+      return;
+    }
+
+    var normalized = _importExportService.normalizeAppData(
+      fileData,
+      localeCode: fileData.localeCode,
+    );
+    final legacyApiKey =
+        normalized.studentMode.schoolImportParserSettings.customApiKey;
+    final secureApiKey = await _readSecureCustomSchoolImportApiKey();
+    final secureApiKeyReadKnown = _customSchoolImportApiKeyPersistenceKnown;
+    final runtimeApiKey = secureApiKeyReadKnown && secureApiKey.isNotEmpty
+        ? secureApiKey
+        : legacyApiKey;
+    final migratedLegacyApiKey =
+        secureApiKeyReadKnown &&
+        secureApiKey.isEmpty &&
+        legacyApiKey.isNotEmpty &&
+        await _writeSecureCustomSchoolImportApiKey(legacyApiKey);
+    final legacyApiKeyMigrationBlocked =
+        legacyApiKey.isNotEmpty &&
+        (!secureApiKeyReadKnown ||
+            (secureApiKey.isEmpty && !migratedLegacyApiKey));
+    normalized = _withRuntimeCustomSchoolImportApiKey(
+      normalized,
+      runtimeApiKey,
+    );
+    _appData = normalized;
+    if (legacyApiKeyMigrationBlocked) {
+      _repository.blockWritesAfterInitializationFailure();
+    }
+    final canDropLegacyApiKey =
+        legacyApiKey.isEmpty ||
+        (secureApiKeyReadKnown &&
+            (secureApiKey.isNotEmpty || migratedLegacyApiKey));
+    final shouldWriteBack =
+        _repository.canWrite &&
+        canDropLegacyApiKey &&
+        (!_jsonLikeEquals(normalized.toJson(), fileData.toJson()) ||
+            legacyApiKey.isNotEmpty);
+    if (shouldWriteBack) {
+      try {
+        await _repository.save(normalized);
+      } catch (e, st) {
+        debugPrint(
+          'Storage normalization save failed, keeping loaded data: $e\n$st',
+        );
+      }
+    }
+    _storagePath = await _repository.filePath();
   }
 
   Future<void> acceptPrivacyPolicyCurrentVersion() async {

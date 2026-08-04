@@ -838,6 +838,67 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolSitesImported => '学校站点已导入';
 
   @override
+  String get schoolSitesImportPreviewTitle => '检查学校站点导入';
+
+  @override
+  String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
+    return '$validCount 个有效站点，$invalidCount 个无效条目。';
+  }
+
+  @override
+  String get schoolSitesImportEmptyPreview => '文件中的学校站点列表为空。';
+
+  @override
+  String schoolSitesImportInvalidEntry(int position) {
+    return '第 $position 项无效，将在导入时跳过。';
+  }
+
+  @override
+  String get schoolSitesImportMerge => '合并';
+
+  @override
+  String get schoolSitesImportReplace => '替换';
+
+  @override
+  String get schoolSitesImportReplaceConfirmTitle => '替换当前学校站点？';
+
+  @override
+  String schoolSitesImportReplaceConfirmMessage(
+    int currentCount,
+    int importedCount,
+  ) {
+    return '此操作会移除当前 $currentCount 个站点，并保存导入的 $importedCount 个站点，且无法撤销。';
+  }
+
+  @override
+  String get schoolSitesRecoveryCorruptTitle => '学校站点数据需要恢复';
+
+  @override
+  String get schoolSitesRecoveryCorruptMessage =>
+      'Sked 无法读取学校站点文件或其备份。为防止原始内容被覆盖，相关副本已在禁止写入前妥善保留。';
+
+  @override
+  String get schoolSitesRecoveryIoFailureTitle => '学校站点存储暂时不可用';
+
+  @override
+  String get schoolSitesRecoveryIoFailureMessage =>
+      'Sked 当前无法访问学校站点存储。请检查存储权限或设备状态后重试，现有站点数据不会被覆盖。';
+
+  @override
+  String get schoolSitesRecoveryArtifactsHint =>
+      '下方列出了恢复文件或受影响的存储位置。请在站点列表恢复完成前保持相关文件不变。';
+
+  @override
+  String get schoolSitesRecoveryStartFreshAction => '使用空站点列表';
+
+  @override
+  String get schoolSitesRecoveryStartFreshConfirmTitle => '使用空的学校站点列表？';
+
+  @override
+  String get schoolSitesRecoveryStartFreshConfirmMessage =>
+      '受保护的副本会继续保留，但 Sked 将创建新的空学校站点文件。仅在不准备继续尝试恢复时执行此操作。';
+
+  @override
   String get schoolSitesEmpty => '当前还没有学校站点配置。';
 
   @override
@@ -1690,6 +1751,47 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dataBackupRestoreFailedNotice => '主数据文件和备份文件均已损坏。应用已使用全新状态启动。';
+
+  @override
+  String get dataRecoveryCorruptTitle => '数据需要恢复';
+
+  @override
+  String get dataRecoveryCorruptMessage =>
+      'Sked 无法读取主数据文件或其备份。为防止原始数据被覆盖，相关副本已在禁止写入前妥善保留。';
+
+  @override
+  String get dataRecoveryIoFailureTitle => '存储暂时不可用';
+
+  @override
+  String get dataRecoveryIoFailureMessage =>
+      'Sked 当前无法访问本地存储。请检查存储权限或设备状态后重试，现有数据不会被覆盖。';
+
+  @override
+  String get dataRecoveryUnsupportedVersionTitle => '请更新 Sked 后打开数据';
+
+  @override
+  String get dataRecoveryUnsupportedVersionMessage =>
+      '这些数据由较新版本的 Sked 创建。请先更新应用再重试；为保护数据，此状态下不能使用全新数据。';
+
+  @override
+  String get dataRecoveryRetryAction => '重试';
+
+  @override
+  String get dataRecoveryArtifactsHint =>
+      '下方列出了恢复文件或受影响的存储位置。请在数据恢复完成前保持相关文件不变。';
+
+  @override
+  String get dataRecoveryArtifactsAction => '查看恢复文件和位置';
+
+  @override
+  String get dataRecoveryStartFreshAction => '使用全新数据';
+
+  @override
+  String get dataRecoveryStartFreshConfirmTitle => '使用全新数据？';
+
+  @override
+  String get dataRecoveryStartFreshConfirmMessage =>
+      '受保护的副本会继续保留，但 Sked 将创建新的本地数据文件。仅在不准备继续尝试恢复时执行此操作。';
 
   @override
   String get previousMonth => '上个月';
@@ -2569,6 +2671,67 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolSitesImported => '學校站點已匯入';
 
   @override
+  String get schoolSitesImportPreviewTitle => '檢查學校站點匯入';
+
+  @override
+  String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
+    return '$validCount 個有效站點，$invalidCount 個無效項目。';
+  }
+
+  @override
+  String get schoolSitesImportEmptyPreview => '檔案中的學校站點清單為空。';
+
+  @override
+  String schoolSitesImportInvalidEntry(int position) {
+    return '第 $position 項無效，將在匯入時略過。';
+  }
+
+  @override
+  String get schoolSitesImportMerge => '合併';
+
+  @override
+  String get schoolSitesImportReplace => '取代';
+
+  @override
+  String get schoolSitesImportReplaceConfirmTitle => '取代目前的學校站點？';
+
+  @override
+  String schoolSitesImportReplaceConfirmMessage(
+    int currentCount,
+    int importedCount,
+  ) {
+    return '此操作會移除目前 $currentCount 個站點，並儲存匯入的 $importedCount 個站點，且無法復原。';
+  }
+
+  @override
+  String get schoolSitesRecoveryCorruptTitle => '學校站點資料需要復原';
+
+  @override
+  String get schoolSitesRecoveryCorruptMessage =>
+      'Sked 無法讀取學校站點檔案或其備份。為避免原始內容遭到覆寫，相關副本已在禁止寫入前妥善保留。';
+
+  @override
+  String get schoolSitesRecoveryIoFailureTitle => '學校站點儲存空間暫時無法使用';
+
+  @override
+  String get schoolSitesRecoveryIoFailureMessage =>
+      'Sked 目前無法存取學校站點儲存空間。請檢查儲存權限或裝置狀態後重試，現有站點資料不會被覆寫。';
+
+  @override
+  String get schoolSitesRecoveryArtifactsHint =>
+      '下方列出了復原檔案或受影響的儲存位置。請在站點清單復原完成前保持相關檔案不變。';
+
+  @override
+  String get schoolSitesRecoveryStartFreshAction => '使用空站點清單';
+
+  @override
+  String get schoolSitesRecoveryStartFreshConfirmTitle => '使用空的學校站點清單？';
+
+  @override
+  String get schoolSitesRecoveryStartFreshConfirmMessage =>
+      '受保護的副本會繼續保留，但 Sked 將建立新的空學校站點檔案。僅在不準備繼續嘗試復原時執行此操作。';
+
+  @override
   String get schoolSitesEmpty => '當前還沒有學校站點設定。';
 
   @override
@@ -3421,6 +3584,47 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get dataBackupRestoreFailedNotice => '主資料檔案和備份檔案均已損壞。應用程式已使用全新狀態啟動。';
+
+  @override
+  String get dataRecoveryCorruptTitle => '資料需要復原';
+
+  @override
+  String get dataRecoveryCorruptMessage =>
+      'Sked 無法讀取主資料檔案或其備份。為避免原始資料遭到覆寫，相關副本已在禁止寫入前妥善保留。';
+
+  @override
+  String get dataRecoveryIoFailureTitle => '儲存空間暫時無法使用';
+
+  @override
+  String get dataRecoveryIoFailureMessage =>
+      'Sked 目前無法存取本機儲存空間。請檢查儲存權限或裝置狀態後重試，現有資料不會被覆寫。';
+
+  @override
+  String get dataRecoveryUnsupportedVersionTitle => '請更新 Sked 後開啟資料';
+
+  @override
+  String get dataRecoveryUnsupportedVersionMessage =>
+      '這些資料由較新版本的 Sked 建立。請先更新應用程式再重試；為保護資料，此狀態下無法使用全新資料。';
+
+  @override
+  String get dataRecoveryRetryAction => '重試';
+
+  @override
+  String get dataRecoveryArtifactsHint =>
+      '下方列出了復原檔案或受影響的儲存位置。請在資料復原完成前保持相關檔案不變。';
+
+  @override
+  String get dataRecoveryArtifactsAction => '查看復原檔案和位置';
+
+  @override
+  String get dataRecoveryStartFreshAction => '使用全新資料';
+
+  @override
+  String get dataRecoveryStartFreshConfirmTitle => '使用全新資料？';
+
+  @override
+  String get dataRecoveryStartFreshConfirmMessage =>
+      '受保護的副本會繼續保留，但 Sked 將建立新的本機資料檔案。僅在不準備繼續嘗試復原時執行此操作。';
 
   @override
   String get previousMonth => '上個月';

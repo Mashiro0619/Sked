@@ -229,6 +229,57 @@ void main() {
       expect(event.startDateTimeIso, isNot(startsWith('9999-03-03')));
       expect(DateTime.parse(event.startDateTimeIso).year, isNot(9999));
     });
+
+    test('normalized repairs recurrence and optional date fields', () {
+      final event = GeneralEvent(
+        id: 'recurrence',
+        calendarId: ' cal ',
+        title: ' Recurrence ',
+        startDateTimeIso: '2026-05-22T09:00:00.000',
+        endDateTimeIso: '2026-05-22T10:00:00.000',
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.daily,
+          interval: 1200,
+          unit: GeneralEventRecurrenceUnit.month,
+          untilDateIso: '2026-05-01',
+          count: 0,
+        ),
+        recurrenceExceptionDateIso: const [
+          '2026-05-24T00:00:00.000',
+          'invalid',
+          '2026-05-24',
+        ],
+        createdAtIso: 'invalid',
+        updatedAtIso: '2026-05-21T12:00:00.000',
+      ).normalized(fallbackCalendarId: 'fallback');
+
+      expect(event.calendarId, 'cal');
+      expect(event.title, 'Recurrence');
+      expect(event.recurrenceRule.interval, 999);
+      expect(event.recurrenceRule.unit, GeneralEventRecurrenceUnit.day);
+      expect(event.recurrenceRule.untilDateIso, '2026-05-22');
+      expect(event.recurrenceRule.count, isNull);
+      expect(event.recurrenceExceptionDateIso, ['2026-05-24']);
+      expect(event.createdAtIso, isNull);
+      expect(event.updatedAtIso, '2026-05-21T12:00:00.000');
+    });
+
+    test('normalized drops an invalid recurrence end date', () {
+      final event = GeneralEvent(
+        id: 'invalid_until',
+        title: 'Invalid until',
+        startDateTimeIso: '2026-05-22T09:00:00.000',
+        endDateTimeIso: '2026-05-22T10:00:00.000',
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.custom,
+          interval: 0,
+          untilDateIso: 'not-a-date',
+        ),
+      ).normalized(fallbackCalendarId: 'cal');
+
+      expect(event.recurrenceRule.interval, 1);
+      expect(event.recurrenceRule.untilDateIso, isNull);
+    });
   });
 
   group('GeneralSchedule', () {
@@ -337,6 +388,14 @@ void main() {
   });
 
   group('GeneralScheduleData', () {
+    GeneralEvent acknowledgementEvent(String id) => GeneralEvent(
+      id: id,
+      calendarId: 'sched1',
+      title: 'Event',
+      startDateTimeIso: '2026-05-25T09:00:00.000',
+      endDateTimeIso: '2026-05-25T10:00:00.000',
+    );
+
     test('JSON round-trip with data', () {
       final data = GeneralScheduleData(
         activeScheduleId: 'sched1',
@@ -373,7 +432,11 @@ void main() {
       final data = GeneralScheduleData(
         activeScheduleId: 'sched1',
         schedules: [
-          GeneralSchedule(id: 'sched1', name: 'My Schedule', events: const []),
+          GeneralSchedule(
+            id: 'sched1',
+            name: 'My Schedule',
+            events: [acknowledgementEvent('event1')],
+          ),
         ],
         reminderAcknowledgements: const [
           GeneralReminderAcknowledgement(
@@ -553,7 +616,11 @@ void main() {
       final original = GeneralScheduleData(
         activeScheduleId: 'sched1',
         schedules: [
-          GeneralSchedule(id: 'sched1', name: 'First', events: const []),
+          GeneralSchedule(
+            id: 'sched1',
+            name: 'First',
+            events: [acknowledgementEvent('old'), acknowledgementEvent('new')],
+          ),
         ],
         reminderAcknowledgements: const [
           GeneralReminderAcknowledgement(
@@ -585,7 +652,11 @@ void main() {
       final data = GeneralScheduleData(
         activeScheduleId: 'sched1',
         schedules: [
-          GeneralSchedule(id: 'sched1', name: 'First', events: const []),
+          GeneralSchedule(
+            id: 'sched1',
+            name: 'First',
+            events: [acknowledgementEvent('event')],
+          ),
         ],
         reminderAcknowledgements: const [
           GeneralReminderAcknowledgement(
@@ -600,6 +671,10 @@ void main() {
           GeneralReminderAcknowledgement(
             occurrenceKey: '',
             updatedAtIso: '2026-05-25T08:57:00.000',
+          ),
+          GeneralReminderAcknowledgement(
+            occurrenceKey: 'sched1|missing|2026-05-25T09:00:00.000',
+            updatedAtIso: '2026-05-25T08:58:00.000',
           ),
         ],
       );
@@ -746,6 +821,52 @@ void main() {
         );
       },
     );
+
+    test('normalizing a recurring key preserves its later occurrence', () {
+      final data = GeneralScheduleData(
+        activeScheduleId: 'cal',
+        schedules: [
+          GeneralSchedule(
+            id: 'cal',
+            name: 'Calendar',
+            events: [
+              GeneralEvent(
+                id: 'event',
+                calendarId: 'cal',
+                title: 'Weekly event',
+                startDateTimeIso: '2026-08-04T10:00:00+08:00',
+                endDateTimeIso: '2026-08-04T11:00:00+08:00',
+                recurrenceRule: const GeneralEventRecurrenceRule(
+                  type: GeneralEventRecurrence.weekly,
+                  unit: GeneralEventRecurrenceUnit.week,
+                ),
+              ),
+            ],
+          ),
+        ],
+        reminderAcknowledgements: [
+          GeneralReminderAcknowledgement(
+            occurrenceKey: buildGeneralOccurrenceKey(
+              'cal',
+              'event',
+              '2026-08-11T10:00:00+08:00',
+            ),
+            updatedAtIso: '2026-08-11T09:55:00+08:00',
+          ),
+        ],
+      );
+
+      final normalized = data.normalized();
+      final key = parseGeneralOccurrenceKey(
+        normalized.reminderAcknowledgements.single.occurrenceKey,
+      )!;
+
+      expect(key.startDateTimeIso, '2026-08-11T02:00:00.000Z');
+      expect(
+        key.startDateTimeIso,
+        isNot(normalized.schedules.single.events.single.startDateTimeIso),
+      );
+    });
 
     test('normalized data assigns stable ids for missing ids', () {
       final data = GeneralScheduleData(

@@ -36,16 +36,83 @@ void main() {
       }
     });
 
-    test('decodeSchoolSites filters invalid web URLs', () {
-      final sites = decodeSchoolSites('''
+    test(
+      'import preview preserves valid sites and reports every invalid item',
+      () {
+        final preview = decodeSchoolSitesForImport('''
 [
   {"name":"Valid","loginUrl":" https://school.example.edu/login "},
-  {"name":"Script","loginUrl":"javascript:alert(1)"}
+  {"name":"","loginUrl":"https://school.example.edu/empty-name"},
+  {"name":"Bad URL","loginUrl":"javascript:alert(1)"},
+  "not-an-object"
 ]
 ''');
 
-      expect(sites, hasLength(1));
-      expect(sites.single.loginUrl, 'https://school.example.edu/login');
+        expect(preview.sites, hasLength(1));
+        expect(preview.sites.single.name, 'Valid');
+        expect(preview.issues.map((issue) => issue.index), [1, 2, 3]);
+        expect(preview.issues.map((issue) => issue.type), [
+          SchoolSiteImportIssueType.missingOrInvalidName,
+          SchoolSiteImportIssueType.missingOrInvalidLoginUrl,
+          SchoolSiteImportIssueType.notAnObject,
+        ]);
+      },
+    );
+
+    test('import preview keeps an empty list as a valid replacement', () {
+      final preview = decodeSchoolSitesForImport('[]');
+
+      expect(preview.sites, isEmpty);
+      expect(preview.issues, isEmpty);
+    });
+
+    test('strict decoder rejects a partially invalid stored list', () {
+      expect(
+        () => decodeSchoolSitesStrict('''
+[
+  {"name":"Valid","loginUrl":"https://school.example.edu/login"},
+  {"name":"Broken","loginUrl":42}
+]
+'''),
+        throwsFormatException,
+      );
+    });
+
+    test('versioned storage snapshots round-trip without changing exports', () {
+      const sites = [
+        SchoolSite(
+          name: 'School',
+          loginUrl: 'https://school.example.edu/login',
+        ),
+      ];
+
+      final storageSource = encodeSchoolSiteStorageSnapshot(sites);
+
+      expect(decodeSchoolSitesStrict(storageSource).single.name, 'School');
+      expect(
+        decodeSchoolSitesStrict(encodeSchoolSites(sites)).single.name,
+        'School',
+      );
+      expect(
+        decodeSchoolSitesForImport(encodeSchoolSites(sites)).issues,
+        isEmpty,
+      );
+      expect(
+        () => decodeSchoolSitesForImport(storageSource),
+        throwsFormatException,
+      );
+    });
+
+    test('future storage snapshots are rejected without legacy fallback', () {
+      final source =
+          '''
+{"schema":"$schoolSiteStorageSchema","version":${schoolSiteStorageVersion + 1},"data":{"sites":[]}}
+''';
+
+      expect(
+        () => decodeSchoolSitesStrict(source),
+        throwsA(isA<UnsupportedSchoolSiteStorageVersionException>()),
+      );
     });
   });
 }

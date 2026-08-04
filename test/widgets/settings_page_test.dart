@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -13,14 +16,26 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
-class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
+class _MemoryTimetableStorage
+    implements TimetableStorage, TimetableRecoveryArtifactReader {
+  _MemoryTimetableStorage(
+    this.data, {
+    this.recoveryStatus = RecoveryStatus.none,
+    this.recoverySources = const {},
+    this.recoveryReadError,
+  });
 
   AppData? data;
+  final RecoveryStatus recoveryStatus;
+  final Map<String, String> recoverySources;
+  final Object? recoveryReadError;
 
   @override
-  Future<StorageLoadResult> load() async =>
-      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+  Future<StorageLoadResult> load() async => StorageLoadResult(
+    data: data,
+    recoveryStatus: recoveryStatus,
+    recoveryArtifacts: recoverySources.keys.toList(),
+  );
 
   @override
   Future<void> save(AppData data) async {
@@ -29,6 +44,14 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<String?> filePath() async => 'memory://settings-test';
+
+  @override
+  Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
+    final error = recoveryReadError;
+    if (error != null) throw error;
+    final source = recoverySources[artifactPath];
+    return source == null ? null : Uint8List.fromList(utf8.encode(source));
+  }
 }
 
 class _NoopPrivacyService extends PrivacyService {
@@ -76,9 +99,19 @@ AppData _buildGeneralData() {
   ).copyWith(activeMode: AppMode.general);
 }
 
-Future<TimetableProvider> _createProvider(AppData data) async {
+Future<TimetableProvider> _createProvider(
+  AppData data, {
+  RecoveryStatus recoveryStatus = RecoveryStatus.none,
+  Map<String, String> recoverySources = const {},
+  Object? recoveryReadError,
+}) async {
   final provider = TimetableProvider(
-    storage: _MemoryTimetableStorage(data),
+    storage: _MemoryTimetableStorage(
+      data,
+      recoveryStatus: recoveryStatus,
+      recoverySources: recoverySources,
+      recoveryReadError: recoveryReadError,
+    ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
   );
@@ -215,6 +248,79 @@ void main() {
       find.textContaining('are not written to backup files'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('app backup sheet exposes historical recovery artifacts', (
+    tester,
+  ) async {
+    const artifact = 'memory://recovery/historical-journal.json';
+    final provider = await _createProvider(
+      _buildGeneralData(),
+      recoverySources: const {artifact: '{broken-journal'},
+    );
+    expect(provider.recoveryArtifacts, [artifact]);
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
+    await tester.tap(find.text('App backup and restore'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    final recoveryEntry = find.text('Show recovery files and locations');
+    expect(recoveryEntry, findsOneWidget);
+    await tester.tap(recoveryEntry);
+    await tester.pumpAndSettle();
+
+    expect(find.text(artifact), findsOneWidget);
+    expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+  });
+
+  testWidgets('app backup sheet keeps paths when artifact reads fail', (
+    tester,
+  ) async {
+    const artifact = 'memory://recovery/unreadable-journal.json';
+    final provider = await _createProvider(
+      _buildGeneralData(),
+      recoverySources: const {artifact: '{unreadable'},
+      recoveryReadError: StateError('recovery storage unavailable'),
+    );
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
+    await tester.tap(find.text('App backup and restore'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Show recovery files and locations'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(artifact), findsOneWidget);
+    expect(find.byIcon(Icons.download_outlined), findsNothing);
+  });
+
+  testWidgets('zero-timetable settings keep recovery and app backup access', (
+    tester,
+  ) async {
+    final provider = await _createProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ),
+      recoveryStatus: RecoveryStatus.restoredFromBackup,
+    );
+    await _pumpSettingsPage(tester, provider);
+
+    expect(
+      find.text('No timetable is currently available for settings.'),
+      findsOneWidget,
+    );
+    expect(find.text('Period time set'), findsNothing);
+    expect(find.textContaining('previous backup'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
+    expect(find.text('App backup and restore'), findsOneWidget);
   });
 
   testWidgets('theme settings entry ignores rapid duplicate taps', (

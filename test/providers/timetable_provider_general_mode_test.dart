@@ -26,6 +26,41 @@ class _MemoryTimetableStorage implements TimetableStorage {
 }
 
 void main() {
+  test('saved general events survive strict storage decoding', () async {
+    final storage = _MemoryTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+
+    await provider.load();
+    await provider.saveGeneralEvent(
+      GeneralEvent(
+        id: 'strict_round_trip',
+        calendarId: provider.activeGeneralSchedule.id,
+        title: 'Strict round trip',
+        startDateTimeIso: '2026-05-25T09:00:00.000',
+        endDateTimeIso: '2026-05-25T10:00:00.000',
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.daily,
+          interval: 1200,
+          unit: GeneralEventRecurrenceUnit.month,
+          untilDateIso: '2026-05-01',
+          count: 0,
+        ),
+        recurrenceExceptionDateIso: const ['invalid', '2026-05-26'],
+        createdAtIso: 'invalid',
+      ),
+    );
+
+    expect(
+      () => AppData.decodeStorageSnapshot(storage.data!.encode()),
+      returnsNormally,
+    );
+  });
+
   test(
     'selected general date notifies immediately and defers persistence',
     () async {

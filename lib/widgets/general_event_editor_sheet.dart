@@ -104,6 +104,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     _untilDate = rule.untilDateIso == null
         ? null
         : tryParseStrictIsoDate(rule.untilDateIso!);
+    if (_untilDate?.isBefore(_startDate) ?? false) {
+      _untilDate = _startDate;
+    }
     _colorValue = event?.colorValue;
     _reminders =
         event?.reminders.map((item) => item.minutesBefore).toList() ?? const [];
@@ -362,6 +365,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                         if (_endDate.isBefore(_startDate)) {
                           _endDate = _startDate;
                         }
+                        if (_untilDate?.isBefore(_startDate) ?? false) {
+                          _untilDate = _startDate;
+                        }
                       });
                     },
               onPickTime: (_pickerOpen || _hasPopped)
@@ -455,6 +461,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                             context,
                             _untilDate ??
                                 _startDate.add(const Duration(days: 90)),
+                            firstDate: _startDate,
                           ),
                         );
                         if (!mounted || picked == null) {
@@ -985,18 +992,28 @@ class _ColorDot extends StatelessWidget {
   }
 }
 
-Future<DateTime?> _pickDate(BuildContext context, DateTime initialDate) {
-  final firstDate = DateTime(1970);
+Future<DateTime?> _pickDate(
+  BuildContext context,
+  DateTime initialDate, {
+  DateTime? firstDate,
+}) {
+  final supportedFirstDate = DateTime(1970);
   final lastDate = DateTime(2100);
-  final boundedInitialDate = initialDate.isBefore(firstDate)
-      ? firstDate
+  final boundedFirstDate =
+      firstDate == null || firstDate.isBefore(supportedFirstDate)
+      ? supportedFirstDate
+      : firstDate.isAfter(lastDate)
+      ? lastDate
+      : firstDate;
+  final boundedInitialDate = initialDate.isBefore(boundedFirstDate)
+      ? boundedFirstDate
       : initialDate.isAfter(lastDate)
       ? lastDate
       : initialDate;
   return showDatePicker(
     context: context,
     initialDate: boundedInitialDate,
-    firstDate: firstDate,
+    firstDate: boundedFirstDate,
     lastDate: lastDate,
   );
 }

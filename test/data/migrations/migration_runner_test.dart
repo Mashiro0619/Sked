@@ -93,7 +93,7 @@ void main() {
 
         expect(
           () => runner.run({'schemaVersion': 5}),
-          throwsA(isA<MigrationException>()),
+          throwsA(isA<UnsupportedSchemaVersionException>()),
         );
       },
     );

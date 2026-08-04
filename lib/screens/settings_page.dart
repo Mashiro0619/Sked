@@ -1,5 +1,6 @@
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -56,6 +57,7 @@ enum _AppDataAction {
   shareBackupFile,
   saveBackupFile,
   copyBackupText,
+  showRecoveryArtifacts,
 }
 
 enum _ExportFormat { json, ics }
@@ -89,17 +91,18 @@ class AppUpdateCoordinator {
     required UpdateCheckSource source,
     UpdateService updateService = _updateService,
   }) async {
+    if (!provider.canWrite) return;
     final l10n = AppLocalizations.of(context);
     final showIgnoreButton = source == UpdateCheckSource.startup;
     try {
       final result = await updateService.checkForUpdates();
-      if (!context.mounted) {
+      if (!context.mounted || !provider.canWrite) {
         return;
       }
       final latestMessage = l10n.alreadyLatestVersion(result.localVersion);
       if (!result.hasUpdate) {
         await provider.updateAvailableUpdateVersion(null);
-        if (!context.mounted) {
+        if (!context.mounted || !provider.canWrite) {
           return;
         }
         if (source == UpdateCheckSource.manual) {
@@ -108,7 +111,7 @@ class AppUpdateCoordinator {
         return;
       }
       await provider.updateAvailableUpdateVersion(result.remoteVersion);
-      if (!context.mounted) {
+      if (!context.mounted || !provider.canWrite) {
         return;
       }
       if (showIgnoreButton &&
@@ -120,7 +123,7 @@ class AppUpdateCoordinator {
         result,
         showIgnoreButton: showIgnoreButton,
       );
-      if (!context.mounted) {
+      if (!context.mounted || !provider.canWrite) {
         return;
       }
       await _handleUpdateAction(
@@ -132,14 +135,14 @@ class AppUpdateCoordinator {
         releaseUrl: result.releaseUrl,
       );
     } catch (_) {
-      if (!context.mounted) {
+      if (!context.mounted || !provider.canWrite) {
         return;
       }
       final action = await _showUpdateCheckFailedDialog(
         context,
         showIgnoreButton: showIgnoreButton,
       );
-      if (!context.mounted) {
+      if (!context.mounted || !provider.canWrite) {
         return;
       }
       await _handleUpdateAction(
@@ -358,12 +361,6 @@ class _SettingsPageState extends State<SettingsPage> {
         );
         final timetable = provider.activeTimetableOrNull;
         final hasTimetable = timetable != null;
-        if (!hasTimetable && provider.isStudentMode) {
-          return Scaffold(
-            appBar: AppBar(title: Text(l10n.settingsTitle)),
-            body: Center(child: Text(l10n.noTimetableSettings)),
-          );
-        }
         final selectedSet = _selectedPeriodTimeSetId != null
             ? provider.periodTimeSetForId(_selectedPeriodTimeSetId!)
             : provider.activePeriodTimeSetOrNull;
@@ -378,20 +375,31 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
               if (provider.isStudentMode) ...[
                 SettingsSectionHeader(title: l10n.settingsSectionTimetable),
-                SettingsListTile(
-                  leading: const Icon(Icons.schedule_outlined),
-                  title: l10n.periodTimeSets,
-                  subtitle: selectedSet == null
-                      ? l10n.noPeriodTimeAvailable
-                      : l10n.periodTimeSetSummary(
-                          selectedSet.name,
-                          selectedSet.periodTimes.length,
-                        ),
-                  trailing: const Icon(Icons.keyboard_arrow_down),
-                  onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
-                      ? null
-                      : () => _pickPeriodTimeSet(provider, timetable!.config),
-                ),
+                if (!hasTimetable)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: Text(
+                      l10n.noTimetableSettings,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                if (hasTimetable)
+                  SettingsListTile(
+                    leading: const Icon(Icons.schedule_outlined),
+                    title: l10n.periodTimeSets,
+                    subtitle: selectedSet == null
+                        ? l10n.noPeriodTimeAvailable
+                        : l10n.periodTimeSetSummary(
+                            selectedSet.name,
+                            selectedSet.periodTimes.length,
+                          ),
+                    trailing: const Icon(Icons.keyboard_arrow_down),
+                    onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
+                        ? null
+                        : () => _pickPeriodTimeSet(provider, timetable.config),
+                  ),
                 SettingsListTile(
                   leading: const Icon(Icons.language_outlined),
                   title: l10n.schoolWebImportEntry,
@@ -923,6 +931,20 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ],
                   ),
+                  if (provider.recoveryArtifacts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _ActionSheetGroup(
+                      children: [
+                        _ActionSheetTile(
+                          icon: Icons.restore_from_trash_outlined,
+                          title: l10n.dataRecoveryArtifactsAction,
+                          subtitle: l10n.dataRecoveryArtifactsHint,
+                          onTap: () =>
+                              popWith(_AppDataAction.showRecoveryArtifacts),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -941,8 +963,116 @@ class _SettingsPageState extends State<SettingsPage> {
           await _exportAppDataBackup(provider, share: false);
         case _AppDataAction.copyBackupText:
           await _exportAppDataBackupAsText(provider);
+        case _AppDataAction.showRecoveryArtifacts:
+          await _showRecoveryArtifacts(provider);
       }
     });
+  }
+
+  Future<void> _showRecoveryArtifacts(TimetableProvider provider) async {
+    final artifacts = provider.recoveryArtifacts;
+    if (artifacts.isEmpty || !mounted) return;
+    final exportableArtifacts = <String>{};
+    for (final artifact in artifacts) {
+      try {
+        if (await provider.readRecoveryArtifact(artifact) != null) {
+          exportableArtifacts.add(artifact);
+        }
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Recovery artifact read failed for $artifact: $error\n$stackTrace',
+        );
+      }
+    }
+    if (!mounted) return;
+    final action = await showExpressiveDialog<_SettingsRecoveryArtifactAction>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.dataRecoveryArtifactsAction),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620, maxHeight: 360),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var index = 0; index < artifacts.length; index++) ...[
+                    if (index > 0) const Divider(height: 1),
+                    Row(
+                      children: [
+                        Expanded(child: SelectableText(artifacts[index])),
+                        if (exportableArtifacts.contains(artifacts[index]))
+                          IconButton(
+                            tooltip: l10n.save,
+                            onPressed: () => Navigator.of(dialogContext).pop(
+                              _SettingsRecoveryArtifactAction.export(
+                                artifacts[index],
+                              ),
+                            ),
+                            icon: const Icon(Icons.download_outlined),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(const _SettingsRecoveryArtifactAction.copyPaths()),
+              icon: const Icon(Icons.copy_outlined),
+              label: Text(l10n.copyText),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || action == null) return;
+    if (action.artifactPath == null) {
+      await Clipboard.setData(ClipboardData(text: artifacts.join('\n')));
+      if (mounted) _showMessage(AppLocalizations.of(context).copiedToClipboard);
+      return;
+    }
+    await _exportRecoveryArtifact(provider, action.artifactPath!);
+  }
+
+  Future<void> _exportRecoveryArtifact(
+    TimetableProvider provider,
+    String artifactPath,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      final bytes = await provider.readRecoveryArtifact(artifactPath);
+      if (bytes == null) {
+        throw StateError('Recovery artifact is no longer available.');
+      }
+      final fileName = _settingsRecoveryArtifactFileName(artifactPath);
+      final result = await _exportService.saveBytes(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/json',
+      );
+      if (!mounted || result.status == ExportSaveStatus.cancelled) return;
+      if (result.status == ExportSaveStatus.saved) {
+        _showMessage(l10n.savedToPath(result.path ?? fileName));
+        return;
+      }
+      await _exportService.shareBytes(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: 'application/json',
+      );
+    } catch (_) {
+      if (mounted) _showMessage(l10n.saveFailedRetry);
+    }
   }
 
   Future<void> _restoreAppDataFromFile(TimetableProvider provider) async {
@@ -1018,6 +1148,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       return false;
     } catch (_) {
+      if (!provider.canWrite) return false;
       if (feedbackContext.mounted) {
         ScaffoldMessenger.of(
           feedbackContext,
@@ -1033,7 +1164,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }) async {
     final l10n = AppLocalizations.of(context);
     try {
-      final content = provider.exportAppDataJson();
+      final content = await provider.exportAppDataJson();
       final fileName = _backupFileName();
       if (share) {
         await _shareJson(fileName, content);
@@ -1050,7 +1181,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _exportAppDataBackupAsText(TimetableProvider provider) async {
     final l10n = AppLocalizations.of(context);
     try {
-      final content = provider.exportAppDataJson();
+      final content = await provider.exportAppDataJson();
+      if (!mounted) return;
       await showTextExportDialog(
         context,
         title: l10n.copyBackupTitle,
@@ -2013,6 +2145,23 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
     };
   }
+}
+
+class _SettingsRecoveryArtifactAction {
+  const _SettingsRecoveryArtifactAction.copyPaths() : artifactPath = null;
+
+  const _SettingsRecoveryArtifactAction.export(this.artifactPath);
+
+  final String? artifactPath;
+}
+
+String _settingsRecoveryArtifactFileName(String artifactPath) {
+  final segments = artifactPath.replaceAll('\\', '/').split('/');
+  final rawName = segments.isEmpty ? '' : segments.last.trim();
+  var fileName = rawName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+  if (fileName.isEmpty) fileName = 'Sked_recovery_data.json';
+  if (!fileName.contains('.')) fileName = '$fileName.json';
+  return fileName;
 }
 
 class _RecoveryNoticeTile extends StatelessWidget {

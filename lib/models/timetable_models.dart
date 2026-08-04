@@ -1,6 +1,7 @@
 export 'course_item.dart';
 export 'timetable_data.dart';
 export 'app_data.dart';
+export 'app_backup.dart';
 export 'student_mode_data.dart';
 export 'app_mode.dart';
 export 'general_event.dart';

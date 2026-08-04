@@ -9,12 +9,15 @@ import '../data/timetable_storage.dart';
 import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
+import '../services/app_backup_restore_journal.dart';
 import '../services/general_calendar_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/general_occurrence_cache.dart';
 import '../services/general_occurrence_service.dart';
 import '../services/import_export_service.dart';
 import '../services/privacy_service.dart';
+import '../services/school_site_service.dart';
+import '../services/school_site_store.dart';
 import '../services/secret_store.dart';
 import '../services/settings_service.dart';
 import '../services/student_timetable_service.dart' as student_timetable;
@@ -32,6 +35,15 @@ const _studentTimetableService = student_timetable.StudentTimetableService();
 
 enum AppImportMode { replaceAll, addAll }
 
+class AppBackupRestoreInProgressException implements Exception {
+  const AppBackupRestoreInProgressException();
+
+  @override
+  String toString() =>
+      'AppBackupRestoreInProgressException: app data cannot be changed while '
+      'a complete backup restore is queued or running.';
+}
+
 String resolveFirstLaunchLocaleCode(Locale? locale) {
   return app_locale.resolveFirstLaunchLocaleCode(locale);
 }
@@ -44,8 +56,25 @@ String _defaultSystemLocaleCodeResolver() {
 }
 
 abstract class _TimetableProviderBase extends ChangeNotifier {
+  static final Object _appBackupRestoreZoneKey = Object();
+
+  Future<void> _pendingSecretWrite = Future<void>.value();
+  String _lastPersistedCustomSchoolImportApiKey = '';
+  bool _customSchoolImportApiKeyPersistenceKnown = false;
+  var _customSchoolImportApiKeyMutationEpoch = 0;
+  var _appBackupRestoreReservationCount = 0;
+  Object? _activeAppBackupRestoreToken;
+  SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
+  StorageLoadStatus? _journalRecoveryLoadStatus;
+  List<String> _journalRecoveryArtifacts = const [];
+  String? _corruptAppBackupRestoreJournalArtifact;
+
   AppData get _appData;
   set _appData(AppData value);
+  void _replaceRuntimeCustomSchoolImportApiKey(String value);
+  void _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
+    String value,
+  );
 
   int get _selectedWeek;
   set _selectedWeek(int value);
@@ -62,6 +91,8 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   String Function() get _systemLocaleCodeResolver;
   SettingsService get _settings;
   PrivacyService get _privacy;
+  SchoolSiteService get _schoolSites;
+  AppBackupRestoreJournal get _backupRestoreJournal;
   SecretStore get _secrets;
   GeneralOccurrenceCache get _generalOccurrenceCache;
 
@@ -73,9 +104,71 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   int _currentWeekForActiveTimetable();
   Future<List<CoursePeriodTime>> _loadDefaultPeriodTimes();
   Future<AppData> _buildDefaultAppData();
+  Future<void> _resumePendingAppBackupRestore();
+  Future<void> _startFreshAfterCorruptAppBackupRestoreJournal();
   Future<void> _saveAndNotify();
   Future<void> _save();
   void _scheduleUiStateSave();
+  bool _cancelScheduledUiStateSave();
+  void _startDeferredUiStateSave();
+
+  void _ensureAppBackupRestoreMutationAllowed() {
+    if (_appBackupRestoreReservationCount == 0) return;
+    final zoneToken = Zone.current[_appBackupRestoreZoneKey];
+    if (identical(zoneToken, _activeAppBackupRestoreToken) &&
+        zoneToken != null) {
+      return;
+    }
+    throw const AppBackupRestoreInProgressException();
+  }
+
+  Object _reserveAppBackupRestore() {
+    final hadScheduledSave = _cancelScheduledUiStateSave();
+    if (hadScheduledSave) {
+      _startDeferredUiStateSave();
+    }
+    _appBackupRestoreReservationCount += 1;
+    return Object();
+  }
+
+  void _releaseAppBackupRestore() {
+    assert(_appBackupRestoreReservationCount > 0);
+    _appBackupRestoreReservationCount -= 1;
+  }
+
+  Future<T> _runWithAppBackupRestoreLease<T>(
+    Object token,
+    Future<T> Function() action, {
+    bool allowRecoveryBlocked = false,
+  }) async {
+    await _repository.waitForPendingWrites();
+    if (!allowRecoveryBlocked && !_repository.canWrite) {
+      throw RecoveryWriteBlockedException(_repository.lastLoadStatus);
+    }
+    if (_activeAppBackupRestoreToken != null) {
+      throw StateError('Another app-backup restore lease is already active.');
+    }
+
+    _activeAppBackupRestoreToken = token;
+    try {
+      return await runZoned<Future<T>>(
+        action,
+        zoneValues: {_appBackupRestoreZoneKey: token},
+      );
+    } finally {
+      if (identical(_activeAppBackupRestoreToken, token)) {
+        _activeAppBackupRestoreToken = null;
+      }
+    }
+  }
+
+  SchoolSiteRestoreLease get _schoolSiteRestoreLease {
+    final lease = _activeSchoolSiteRestoreLease;
+    if (lease == null) {
+      throw StateError('A school-site restore lease is not active.');
+    }
+    return lease;
+  }
 
   AppData _withRuntimeCustomSchoolImportApiKey(AppData data, String value) {
     final normalized = value.trim();
@@ -92,22 +185,157 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
 
   Future<String> _readSecureCustomSchoolImportApiKey() async {
     try {
-      return await _secrets.readCustomSchoolImportApiKey();
+      final value = (await _secrets.readCustomSchoolImportApiKey()).trim();
+      _lastPersistedCustomSchoolImportApiKey = value;
+      _customSchoolImportApiKeyPersistenceKnown = true;
+      return value;
     } catch (e, st) {
+      _customSchoolImportApiKeyPersistenceKnown = false;
       debugPrint('Secure API key read failed: $e\n$st');
       return '';
     }
   }
 
   Future<bool> _writeSecureCustomSchoolImportApiKey(String value) async {
+    final normalized = value.trim();
+    Object? writeError;
     try {
-      await _secrets.writeCustomSchoolImportApiKey(value);
-      return true;
+      await _secrets.writeCustomSchoolImportApiKey(normalized);
     } catch (e, st) {
+      writeError = e;
       debugPrint('Secure API key write failed: $e\n$st');
+    }
+
+    try {
+      final persisted = (await _secrets.readCustomSchoolImportApiKey()).trim();
+      _lastPersistedCustomSchoolImportApiKey = persisted;
+      _customSchoolImportApiKeyPersistenceKnown = true;
+      if (persisted == normalized) return true;
+      if (writeError == null) {
+        debugPrint('Secure API key write could not be verified.');
+      }
+      return false;
+    } catch (e, st) {
+      _customSchoolImportApiKeyPersistenceKnown = false;
+      debugPrint('Secure API key readback failed: $e\n$st');
       return false;
     }
   }
+
+  Future<void> _ensureCustomSchoolImportApiKeyPersistenceKnown() async {
+    try {
+      await _pendingSecretWrite;
+    } catch (_) {
+      // Re-read below to resolve the result of an ambiguous queued write.
+    }
+    if (_customSchoolImportApiKeyPersistenceKnown) return;
+
+    try {
+      final value = (await _secrets.readCustomSchoolImportApiKey()).trim();
+      _lastPersistedCustomSchoolImportApiKey = value;
+      _customSchoolImportApiKeyPersistenceKnown = true;
+      final current =
+          _appData.studentMode.schoolImportParserSettings.customApiKey;
+      if (current != value) {
+        _replaceRuntimeCustomSchoolImportApiKey(value);
+        notifyListeners();
+      }
+    } catch (error, stackTrace) {
+      _customSchoolImportApiKeyPersistenceKnown = false;
+      debugPrint(
+        'Secure API key state could not be confirmed: '
+        '$error\n$stackTrace',
+      );
+      throw StateError(
+        'Unable to confirm the current custom school import API key.',
+      );
+    }
+  }
+
+  Future<void> _persistCustomSchoolImportApiKey(String value) async {
+    _ensureAppBackupRestoreMutationAllowed();
+    final normalized = value.trim();
+    final current =
+        _appData.studentMode.schoolImportParserSettings.customApiKey;
+    if (current == normalized &&
+        _customSchoolImportApiKeyPersistenceKnown &&
+        _lastPersistedCustomSchoolImportApiKey == normalized) {
+      return;
+    }
+
+    _replaceRuntimeCustomSchoolImportApiKey(normalized);
+    final attemptEpoch = ++_customSchoolImportApiKeyMutationEpoch;
+    notifyListeners();
+
+    final write = _pendingSecretWrite.catchError((_) {}).then((_) async {
+      Object? writeError;
+      StackTrace? writeStackTrace;
+      try {
+        await _secrets.writeCustomSchoolImportApiKey(normalized);
+      } catch (error, stackTrace) {
+        writeError = error;
+        writeStackTrace = stackTrace;
+      }
+
+      late final String persisted;
+      try {
+        persisted = (await _secrets.readCustomSchoolImportApiKey()).trim();
+      } catch (readError, readStackTrace) {
+        _customSchoolImportApiKeyPersistenceKnown = false;
+        Error.throwWithStackTrace(
+          _SecretWriteStateUnknownException(writeError, readError),
+          readStackTrace,
+        );
+      }
+      _lastPersistedCustomSchoolImportApiKey = persisted;
+      _customSchoolImportApiKeyPersistenceKnown = true;
+      if (persisted == normalized) return;
+
+      if (writeError != null) {
+        Error.throwWithStackTrace(writeError, writeStackTrace!);
+      }
+      throw _SecretWriteVerificationException(normalized, persisted);
+    });
+    _pendingSecretWrite = write;
+    try {
+      await write;
+    } catch (error, stackTrace) {
+      debugPrint('Secure API key write failed: $error\n$stackTrace');
+      if (_customSchoolImportApiKeyMutationEpoch == attemptEpoch &&
+          _customSchoolImportApiKeyPersistenceKnown) {
+        _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
+          _lastPersistedCustomSchoolImportApiKey,
+        );
+        notifyListeners();
+      }
+      throw StateError('Unable to save custom school import API key.');
+    }
+  }
+}
+
+class _SecretWriteStateUnknownException implements Exception {
+  const _SecretWriteStateUnknownException(this.writeError, this.readError);
+
+  final Object? writeError;
+  final Object readError;
+
+  @override
+  String toString() =>
+      'Secure API key state is unknown after a failed write. '
+      'Write error: $writeError; readback error: $readError';
+}
+
+class _SecretWriteVerificationException implements Exception {
+  const _SecretWriteVerificationException(this.expected, this.persisted);
+
+  final String expected;
+  final String persisted;
+
+  @override
+  String toString() =>
+      'Secure API key write could not be verified. Expected a value with '
+      'length ${expected.length}, but storage returned length '
+      '${persisted.length}.';
 }
 
 class TimetableProvider extends _TimetableProviderBase
@@ -124,6 +352,8 @@ class TimetableProvider extends _TimetableProviderBase
     SettingsService? settingsService,
     PrivacyService? privacyService,
     SecretStore? secretStore,
+    SchoolSiteService? schoolSiteService,
+    AppBackupRestoreJournal? backupRestoreJournal,
     @visibleForTesting Duration? uiStateSaveDelay,
   }) : _repository =
            repository ?? AppRepository(storage: storage ?? TimetableStorage()),
@@ -132,6 +362,9 @@ class TimetableProvider extends _TimetableProviderBase
        _settings = settingsService ?? const SettingsService(),
        _privacy = privacyService ?? const PrivacyService(),
        _secrets = secretStore ?? SecretStore(),
+       _schoolSites = schoolSiteService ?? SchoolSiteService(),
+       _backupRestoreJournal =
+           backupRestoreJournal ?? AppBackupRestoreJournal(),
        _uiStateSaveDelay = uiStateSaveDelay ?? _defaultUiStateSaveDelay;
 
   @override
@@ -145,11 +378,44 @@ class TimetableProvider extends _TimetableProviderBase
   @override
   final SecretStore _secrets;
   @override
+  final SchoolSiteService _schoolSites;
+  @override
+  final AppBackupRestoreJournal _backupRestoreJournal;
+  @override
   final GeneralOccurrenceCache _generalOccurrenceCache =
       GeneralOccurrenceCache();
 
+  AppData _appDataValue = buildInitialAppData(buildDefaultPeriodTimes());
+  var _appDataMutationEpoch = 0;
+
   @override
-  AppData _appData = buildInitialAppData(buildDefaultPeriodTimes());
+  AppData get _appData => _appDataValue;
+
+  @override
+  set _appData(AppData value) {
+    _ensureAppBackupRestoreMutationAllowed();
+    _appDataValue = value;
+    _appDataMutationEpoch += 1;
+  }
+
+  @override
+  void _replaceRuntimeCustomSchoolImportApiKey(String value) {
+    _ensureAppBackupRestoreMutationAllowed();
+    _appDataValue = _withRuntimeCustomSchoolImportApiKey(_appDataValue, value);
+  }
+
+  void _restoreAppDataAfterPersistenceFailure(AppData value) {
+    _appDataValue = value;
+    _appDataMutationEpoch += 1;
+  }
+
+  @override
+  void _restoreRuntimeCustomSchoolImportApiKeyAfterPersistenceFailure(
+    String value,
+  ) {
+    _appDataValue = _withRuntimeCustomSchoolImportApiKey(_appDataValue, value);
+  }
+
   @override
   int _selectedWeek = 1;
   @override
@@ -160,6 +426,7 @@ class TimetableProvider extends _TimetableProviderBase
   String? _storagePath;
   Timer? _uiStateSaveTimer;
   Future<void>? _uiStateSaveInFlight;
+  var _isDisposed = false;
   final Duration _uiStateSaveDelay;
 
   static const _defaultUiStateSaveDelay = Duration(milliseconds: 450);
@@ -172,7 +439,30 @@ class TimetableProvider extends _TimetableProviderBase
   int get selectedWeek => _selectedWeek;
   String? get storagePath => _storagePath;
 
-  RecoveryStatus get lastRecoveryStatus => _repository.lastRecoveryStatus;
+  RecoveryStatus get lastRecoveryStatus {
+    return switch (_journalRecoveryLoadStatus) {
+      StorageLoadStatus.corrupt => RecoveryStatus.failedBackupRestore,
+      StorageLoadStatus.ioFailure => RecoveryStatus.ioFailure,
+      StorageLoadStatus.unsupportedVersion => RecoveryStatus.unsupportedVersion,
+      null ||
+      StorageLoadStatus.missing ||
+      StorageLoadStatus.success ||
+      StorageLoadStatus.restored => _repository.lastRecoveryStatus,
+    };
+  }
+
+  StorageLoadStatus get storageLoadStatus =>
+      _journalRecoveryLoadStatus ?? _repository.lastLoadStatus;
+  bool get canWrite => _repository.canWrite;
+  List<String> get recoveryArtifacts => List.unmodifiable({
+    ..._repository.recoveryArtifacts,
+    ..._journalRecoveryArtifacts,
+  });
+  bool get canStartFreshAfterRecovery =>
+      (_repository.lastLoadStatus == StorageLoadStatus.corrupt &&
+          _repository.recoveryArtifacts.isNotEmpty) ||
+      (_journalRecoveryLoadStatus == StorageLoadStatus.corrupt &&
+          _corruptAppBackupRestoreJournalArtifact != null);
   bool get closeCoursePopupOnOutsideTap =>
       _appData.studentMode.closeCoursePopupOnOutsideTap;
   bool get preserveTimetableGaps => _appData.studentMode.preserveTimetableGaps;
@@ -238,15 +528,12 @@ class TimetableProvider extends _TimetableProviderBase
 
   @override
   Future<void> _saveAndNotify() async {
+    _ensureAppBackupRestoreMutationAllowed();
     _cancelScheduledUiStateSave();
-    final previous = _repository.current;
     try {
       await _save();
     } catch (_) {
-      if (previous != null) {
-        _appData = previous;
-        _selectedWeek = _currentWeekForActiveTimetable();
-      }
+      _selectedWeek = _currentWeekForActiveTimetable();
       notifyListeners();
       rethrow;
     }
@@ -254,13 +541,34 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   @override
-  Future<void> _save({bool flush = true}) async {
+  Future<void> _save() async {
+    _ensureAppBackupRestoreMutationAllowed();
     final normalized = _importExportService.normalizeAppData(
       _appData,
       localeCode: _appData.localeCode,
     );
-    await _repository.save(normalized, flush: flush);
     _appData = normalized;
+    final attemptEpoch = _appDataMutationEpoch;
+    try {
+      await _repository.save(normalized);
+    } catch (error) {
+      // A write rejected before enqueue keeps the unsaved mutation visible
+      // behind the recovery gate. A previously accepted write must converge
+      // with the Repository snapshot when an earlier failure closes the gate.
+      final shouldRollback =
+          error is! RecoveryWriteBlockedException ||
+          error is AcceptedWriteBlockedException;
+      if (shouldRollback && _appDataMutationEpoch == attemptEpoch) {
+        final persisted = _repository.current;
+        if (persisted != null) {
+          final runtimeApiKey = customSchoolImportApiKey;
+          _restoreAppDataAfterPersistenceFailure(
+            _withRuntimeCustomSchoolImportApiKey(persisted, runtimeApiKey),
+          );
+        }
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -280,7 +588,7 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> flushPendingUiStateSaves() async {
     final hadScheduledSave = _cancelScheduledUiStateSave();
     if (hadScheduledSave) {
-      await _runDeferredUiStateSave();
+      _startDeferredUiStateSave();
     }
     final inFlight = _uiStateSaveInFlight;
     if (inFlight != null) {
@@ -288,6 +596,7 @@ class TimetableProvider extends _TimetableProviderBase
     }
   }
 
+  @override
   bool _cancelScheduledUiStateSave() {
     final timer = _uiStateSaveTimer;
     _uiStateSaveTimer = null;
@@ -295,32 +604,38 @@ class TimetableProvider extends _TimetableProviderBase
     return timer != null;
   }
 
+  @override
   void _startDeferredUiStateSave() {
     final future = _runDeferredUiStateSave();
     _uiStateSaveInFlight = future;
     unawaited(
-      future.whenComplete(() {
-        if (identical(_uiStateSaveInFlight, future)) {
-          _uiStateSaveInFlight = null;
-        }
-      }),
+      future.then<void>(
+        (_) {
+          if (identical(_uiStateSaveInFlight, future)) {
+            _uiStateSaveInFlight = null;
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          debugPrint('Deferred UI state save failed: $error\n$stackTrace');
+          if (identical(_uiStateSaveInFlight, future)) {
+            _uiStateSaveInFlight = null;
+          }
+          if (!_isDisposed) {
+            notifyListeners();
+          }
+        },
+      ),
     );
   }
 
-  Future<void> _runDeferredUiStateSave() async {
-    try {
-      await _save(flush: false);
-      await _repository.flush();
-    } catch (e, st) {
-      debugPrint('Deferred UI state save failed: $e\n$st');
-    }
-  }
+  Future<void> _runDeferredUiStateSave() => _save();
 
   @override
   void dispose() {
+    _isDisposed = true;
     final hadScheduledSave = _cancelScheduledUiStateSave();
     if (hadScheduledSave) {
-      unawaited(_runDeferredUiStateSave());
+      _startDeferredUiStateSave();
     }
     super.dispose();
   }

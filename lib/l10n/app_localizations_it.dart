@@ -886,6 +886,73 @@ class AppLocalizationsIt extends AppLocalizations {
   String get schoolSitesImported => 'Siti scolastici importati';
 
   @override
+  String get schoolSitesImportPreviewTitle => 'Review school-site import';
+
+  @override
+  String schoolSitesImportPreviewSummary(int validCount, int invalidCount) {
+    return '$validCount valid sites, $invalidCount invalid entries.';
+  }
+
+  @override
+  String get schoolSitesImportEmptyPreview =>
+      'The file contains an empty school-site list.';
+
+  @override
+  String schoolSitesImportInvalidEntry(int position) {
+    return 'Entry $position is invalid and will be skipped.';
+  }
+
+  @override
+  String get schoolSitesImportMerge => 'Merge';
+
+  @override
+  String get schoolSitesImportReplace => 'Replace';
+
+  @override
+  String get schoolSitesImportReplaceConfirmTitle =>
+      'Replace current school sites?';
+
+  @override
+  String schoolSitesImportReplaceConfirmMessage(
+    int currentCount,
+    int importedCount,
+  ) {
+    return 'This removes $currentCount current sites and saves $importedCount imported sites. This cannot be undone.';
+  }
+
+  @override
+  String get schoolSitesRecoveryCorruptTitle =>
+      'School-site data needs recovery';
+
+  @override
+  String get schoolSitesRecoveryCorruptMessage =>
+      'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.';
+
+  @override
+  String get schoolSitesRecoveryIoFailureTitle =>
+      'School-site storage is unavailable';
+
+  @override
+  String get schoolSitesRecoveryIoFailureMessage =>
+      'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.';
+
+  @override
+  String get schoolSitesRecoveryArtifactsHint =>
+      'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.';
+
+  @override
+  String get schoolSitesRecoveryStartFreshAction =>
+      'Start with no school sites';
+
+  @override
+  String get schoolSitesRecoveryStartFreshConfirmTitle =>
+      'Start with an empty school-site list?';
+
+  @override
+  String get schoolSitesRecoveryStartFreshConfirmMessage =>
+      'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.';
+
+  @override
   String get schoolSitesEmpty =>
       'Nessuna configurazione di sito scolastico ancora.';
 
@@ -1782,6 +1849,48 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get dataBackupRestoreFailedNotice =>
       'Both the main data file and its backup are damaged. The app is now using a fresh state.';
+
+  @override
+  String get dataRecoveryCorruptTitle => 'Your data needs recovery';
+
+  @override
+  String get dataRecoveryCorruptMessage =>
+      'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.';
+
+  @override
+  String get dataRecoveryIoFailureTitle => 'Storage is unavailable';
+
+  @override
+  String get dataRecoveryIoFailureMessage =>
+      'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.';
+
+  @override
+  String get dataRecoveryUnsupportedVersionTitle =>
+      'Update Sked to open this data';
+
+  @override
+  String get dataRecoveryUnsupportedVersionMessage =>
+      'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.';
+
+  @override
+  String get dataRecoveryRetryAction => 'Retry';
+
+  @override
+  String get dataRecoveryArtifactsHint =>
+      'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.';
+
+  @override
+  String get dataRecoveryArtifactsAction => 'Show recovery files and locations';
+
+  @override
+  String get dataRecoveryStartFreshAction => 'Start with new data';
+
+  @override
+  String get dataRecoveryStartFreshConfirmTitle => 'Start with new data?';
+
+  @override
+  String get dataRecoveryStartFreshConfirmMessage =>
+      'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.';
 
   @override
   String get previousMonth => 'Previous month';

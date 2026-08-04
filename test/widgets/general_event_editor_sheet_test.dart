@@ -281,4 +281,40 @@ void main() {
 
     expect(find.byType(DatePickerDialog), findsNothing);
   });
+
+  testWidgets('recurrence end picker starts no earlier than event start', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+          initialEvent: GeneralEvent(
+            id: 'event',
+            calendarId: 'work',
+            title: 'Meeting',
+            startDateTimeIso: '2026-05-25T09:00:00.000',
+            endDateTimeIso: '2026-05-25T10:00:00.000',
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.weekly,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final endDateButton = find.widgetWithText(FilledButton, 'End date');
+    await tester.ensureVisible(endDateButton);
+    await tester.tap(endDateButton);
+    await tester.pumpAndSettle();
+
+    final calendar = tester.widget<CalendarDatePicker>(
+      find.byType(CalendarDatePicker),
+    );
+    expect(calendar.firstDate, DateTime(2026, 5, 25));
+  });
 }

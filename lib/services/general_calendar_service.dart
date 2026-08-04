@@ -317,6 +317,9 @@ class GeneralCalendarService {
     GeneralEventOccurrence occurrence, {
     DateTime? now,
   }) {
+    if (!_occurrenceBelongsToData(data, occurrence)) {
+      return data;
+    }
     final key = occurrence.occurrenceKey;
     final acknowledgement = GeneralReminderAcknowledgement(
       occurrenceKey: key,
@@ -501,6 +504,32 @@ bool _reminderKeyMatchesOccurrence(
     eventId: occurrence.event.id,
     startDateTimeIso: occurrence.start.toIso8601String(),
   );
+}
+
+bool _occurrenceBelongsToData(
+  GeneralScheduleData data,
+  GeneralEventOccurrence occurrence,
+) {
+  final schedule = _scheduleById(data, occurrence.calendar.id);
+  if (schedule == null) {
+    return false;
+  }
+  GeneralEvent? currentEvent;
+  for (final event in schedule.events) {
+    if (event.id == occurrence.event.id) {
+      currentEvent = event;
+      break;
+    }
+  }
+  if (currentEvent == null) {
+    return false;
+  }
+  if (currentEvent.recurrenceRule.isRepeating) {
+    return true;
+  }
+  final currentStart = tryParseStrictIsoDateTime(currentEvent.startDateTimeIso);
+  return currentStart != null &&
+      currentStart.isAtSameMomentAs(occurrence.start);
 }
 
 DateTime? _legacyReminderKeyStart(

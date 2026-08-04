@@ -49,6 +49,8 @@ const maxLiveCourseOutlineWidth = 4.0;
 const maxTimetableWeeks = 100;
 
 const importExportVersion = 3;
+const appBackupVersion = 1;
+const appBackupSchema = 'app-backup';
 const appDataSchema = 'app-data';
 const timetableDataSchema = 'timetable-data';
 const periodTimesSchema = 'period-times';

@@ -1701,6 +1701,105 @@ abstract class AppLocalizations {
   /// **'School sites imported'**
   String get schoolSitesImported;
 
+  /// No description provided for @schoolSitesImportPreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review school-site import'**
+  String get schoolSitesImportPreviewTitle;
+
+  /// No description provided for @schoolSitesImportPreviewSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{validCount} valid sites, {invalidCount} invalid entries.'**
+  String schoolSitesImportPreviewSummary(int validCount, int invalidCount);
+
+  /// No description provided for @schoolSitesImportEmptyPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'The file contains an empty school-site list.'**
+  String get schoolSitesImportEmptyPreview;
+
+  /// No description provided for @schoolSitesImportInvalidEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry {position} is invalid and will be skipped.'**
+  String schoolSitesImportInvalidEntry(int position);
+
+  /// No description provided for @schoolSitesImportMerge.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get schoolSitesImportMerge;
+
+  /// No description provided for @schoolSitesImportReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get schoolSitesImportReplace;
+
+  /// No description provided for @schoolSitesImportReplaceConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace current school sites?'**
+  String get schoolSitesImportReplaceConfirmTitle;
+
+  /// No description provided for @schoolSitesImportReplaceConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.'**
+  String schoolSitesImportReplaceConfirmMessage(
+    int currentCount,
+    int importedCount,
+  );
+
+  /// No description provided for @schoolSitesRecoveryCorruptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'School-site data needs recovery'**
+  String get schoolSitesRecoveryCorruptTitle;
+
+  /// No description provided for @schoolSitesRecoveryCorruptMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked could not read the school-site file or its backup. Protected copies were created before writes were blocked.'**
+  String get schoolSitesRecoveryCorruptMessage;
+
+  /// No description provided for @schoolSitesRecoveryIoFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'School-site storage is unavailable'**
+  String get schoolSitesRecoveryIoFailureTitle;
+
+  /// No description provided for @schoolSitesRecoveryIoFailureMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked cannot access school-site storage right now. Retry after checking storage access or device availability. Current site data will not be overwritten.'**
+  String get schoolSitesRecoveryIoFailureMessage;
+
+  /// No description provided for @schoolSitesRecoveryArtifactsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery files or affected storage locations are listed below. Keep any files unchanged until the site list is recovered.'**
+  String get schoolSitesRecoveryArtifactsHint;
+
+  /// No description provided for @schoolSitesRecoveryStartFreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with no school sites'**
+  String get schoolSitesRecoveryStartFreshAction;
+
+  /// No description provided for @schoolSitesRecoveryStartFreshConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with an empty school-site list?'**
+  String get schoolSitesRecoveryStartFreshConfirmTitle;
+
+  /// No description provided for @schoolSitesRecoveryStartFreshConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Protected copies will be kept, but Sked will create a new empty school-site file. Continue only if you do not want to retry recovery first.'**
+  String get schoolSitesRecoveryStartFreshConfirmMessage;
+
   /// No description provided for @schoolSitesEmpty.
   ///
   /// In en, this message translates to:
@@ -3296,6 +3395,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Both the main data file and its backup are damaged. The app is now using a fresh state.'**
   String get dataBackupRestoreFailedNotice;
+
+  /// No description provided for @dataRecoveryCorruptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data needs recovery'**
+  String get dataRecoveryCorruptTitle;
+
+  /// No description provided for @dataRecoveryCorruptMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked could not read the main data file or its backup. Protected copies were created before writes were blocked.'**
+  String get dataRecoveryCorruptMessage;
+
+  /// No description provided for @dataRecoveryIoFailureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage is unavailable'**
+  String get dataRecoveryIoFailureTitle;
+
+  /// No description provided for @dataRecoveryIoFailureMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked cannot access local storage right now. Retry after checking storage access or device availability. Existing data will not be overwritten.'**
+  String get dataRecoveryIoFailureMessage;
+
+  /// No description provided for @dataRecoveryUnsupportedVersionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Sked to open this data'**
+  String get dataRecoveryUnsupportedVersionTitle;
+
+  /// No description provided for @dataRecoveryUnsupportedVersionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This data was created by a newer version of Sked. Update the app before trying again. Starting fresh is disabled to protect it.'**
+  String get dataRecoveryUnsupportedVersionMessage;
+
+  /// No description provided for @dataRecoveryRetryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get dataRecoveryRetryAction;
+
+  /// No description provided for @dataRecoveryArtifactsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery files or affected storage locations are listed below. Keep any files unchanged until your data is recovered.'**
+  String get dataRecoveryArtifactsHint;
+
+  /// No description provided for @dataRecoveryArtifactsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Show recovery files and locations'**
+  String get dataRecoveryArtifactsAction;
+
+  /// No description provided for @dataRecoveryStartFreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with new data'**
+  String get dataRecoveryStartFreshAction;
+
+  /// No description provided for @dataRecoveryStartFreshConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with new data?'**
+  String get dataRecoveryStartFreshConfirmTitle;
+
+  /// No description provided for @dataRecoveryStartFreshConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Protected copies will be kept, but Sked will create a new local data file. Continue only if you do not want to retry recovery first.'**
+  String get dataRecoveryStartFreshConfirmMessage;
 
   /// No description provided for @previousMonth.
   ///

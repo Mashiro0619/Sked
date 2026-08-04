@@ -29,7 +29,7 @@ class MigrationRunner {
     final currentVersion = _readVersion(input);
 
     if (currentVersion > targetVersion) {
-      throw MigrationException(
+      throw UnsupportedSchemaVersionException(
         'Data schemaVersion $currentVersion exceeds supported '
         'targetVersion $targetVersion; downgrade is not supported.',
       );

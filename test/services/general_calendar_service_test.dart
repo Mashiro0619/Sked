@@ -507,6 +507,7 @@ void main() {
       () {
         final event = buildEvent(
           id: 'repeat',
+          start: DateTime(2026, 5, 18, 9),
           recurrenceRule: const GeneralEventRecurrenceRule(
             type: GeneralEventRecurrence.weekly,
             unit: GeneralEventRecurrenceUnit.week,
@@ -547,6 +548,7 @@ void main() {
       () {
         final event = buildEvent(
           id: 'repeat',
+          start: DateTime(2026, 5, 18, 9),
           recurrenceRule: const GeneralEventRecurrenceRule(
             type: GeneralEventRecurrence.weekly,
             unit: GeneralEventRecurrenceUnit.week,
@@ -624,6 +626,47 @@ void main() {
         occurrence.occurrenceKey,
       );
       expect(restored.reminderAcknowledgements, isEmpty);
+    });
+
+    test('ignores a dismissal for an event removed from current data', () {
+      final event = buildEvent();
+      final staleCalendar = GeneralSchedule(
+        id: 'cal',
+        name: 'Work',
+        events: [event],
+      );
+      final occurrence = buildOccurrence(
+        event: event,
+        calendar: staleCalendar,
+        start: DateTime(2026, 5, 25, 9),
+      );
+      final data = buildData();
+
+      final dismissed = service.dismissReminder(data, occurrence);
+
+      expect(dismissed, same(data));
+      expect(dismissed.reminderAcknowledgements, isEmpty);
+    });
+
+    test('ignores a stale dismissal after a one-off event is rescheduled', () {
+      final staleEvent = buildEvent();
+      final currentEvent = buildEvent(start: DateTime(2026, 5, 26, 9));
+      final calendar = GeneralSchedule(
+        id: 'cal',
+        name: 'Work',
+        events: [currentEvent],
+      );
+      final occurrence = buildOccurrence(
+        event: staleEvent,
+        calendar: calendar,
+        start: DateTime(2026, 5, 25, 9),
+      );
+      final data = buildData(schedules: [calendar]);
+
+      final dismissed = service.dismissReminder(data, occurrence);
+
+      expect(dismissed, same(data));
+      expect(dismissed.reminderAcknowledgements, isEmpty);
     });
   });
 }

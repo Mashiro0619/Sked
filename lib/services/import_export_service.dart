@@ -1331,6 +1331,7 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
           scheduleId: scheduleId,
           eventId: eventId,
           startDateTimeIso: normalizedEventWithIds.startDateTimeIso,
+          isRepeating: normalizedEventWithIds.recurrenceRule.isRepeating,
         ),
       );
       events.add(normalizedEventWithIds);
@@ -1350,23 +1351,27 @@ GeneralScheduleData _normalizeGeneralScheduleData(GeneralScheduleData data) {
     );
   }
 
-  final acknowledgements = <GeneralReminderAcknowledgement>[];
+  final acknowledgementsByKey = <String, GeneralReminderAcknowledgement>{};
   for (final acknowledgement in data.reminderAcknowledgements) {
     final normalizedAcknowledgement = acknowledgement.normalized();
     if (normalizedAcknowledgement.occurrenceKey.isEmpty) {
       continue;
     }
-    acknowledgements.add(
-      GeneralReminderAcknowledgement(
-        occurrenceKey: _remapGeneralOccurrenceKey(
-          normalizedAcknowledgement.occurrenceKey,
-          occurrenceKeyRemaps,
-        ),
-        isHandled: normalizedAcknowledgement.isHandled,
-        updatedAtIso: normalizedAcknowledgement.updatedAtIso,
-      ),
+    final occurrenceKey = _remapGeneralOccurrenceKey(
+      normalizedAcknowledgement.occurrenceKey,
+      occurrenceKeyRemaps,
+    );
+    if (occurrenceKey == null) {
+      continue;
+    }
+    acknowledgementsByKey[occurrenceKey] = GeneralReminderAcknowledgement(
+      occurrenceKey: occurrenceKey,
+      isHandled: normalizedAcknowledgement.isHandled,
+      updatedAtIso: normalizedAcknowledgement.updatedAtIso,
     );
   }
+  final acknowledgements = acknowledgementsByKey.values.toList()
+    ..sort((left, right) => left.occurrenceKey.compareTo(right.occurrenceKey));
 
   return data.copyWith(
     activeScheduleId: activeScheduleId ?? schedules.first.id,
@@ -1387,7 +1392,7 @@ bool _matchesGeneralActiveScheduleId({
       normalizedScheduleId == requestedActiveScheduleId;
 }
 
-String _remapGeneralOccurrenceKey(
+String? _remapGeneralOccurrenceKey(
   String occurrenceKey,
   List<_GeneralOccurrenceKeyRemap> remaps,
 ) {
@@ -1400,19 +1405,24 @@ String _remapGeneralOccurrenceKey(
       startDateTimeIso: parsed.startDateTimeIso,
     );
     if (remap != null) {
+      final remappedStart = _remappedGeneralOccurrenceStart(
+        remap,
+        parsed.startDateTimeIso,
+      );
       if (remap.mapsToSameIds(
-        calendarId: parsed.calendarId,
-        eventId: parsed.eventId,
-      )) {
+            calendarId: parsed.calendarId,
+            eventId: parsed.eventId,
+          ) &&
+          remappedStart == parsed.startDateTimeIso) {
         return occurrenceKey;
       }
       return buildGeneralOccurrenceKey(
         remap.scheduleId,
         remap.eventId,
-        parsed.startDateTimeIso,
+        remappedStart,
       );
     }
-    return occurrenceKey;
+    return null;
   }
   final legacyCandidates = <_GeneralOccurrenceKeyRemap>[];
   String? legacyStartDateTimeIso;
@@ -1432,20 +1442,25 @@ String _remapGeneralOccurrenceKey(
       startDateTimeIso: legacyStartDateTimeIso,
     );
     if (remap != null) {
+      final remappedStart = _remappedGeneralOccurrenceStart(
+        remap,
+        legacyStartDateTimeIso,
+      );
       if (remap.mapsToSameIds(
-        calendarId: remap.rawScheduleId,
-        eventId: remap.rawEventId,
-      )) {
+            calendarId: remap.rawScheduleId,
+            eventId: remap.rawEventId,
+          ) &&
+          remappedStart == legacyStartDateTimeIso) {
         return occurrenceKey;
       }
       return buildGeneralOccurrenceKey(
         remap.scheduleId,
         remap.eventId,
-        legacyStartDateTimeIso,
+        remappedStart,
       );
     }
   }
-  return occurrenceKey;
+  return null;
 }
 
 _GeneralOccurrenceKeyRemap? _selectGeneralOccurrenceKeyRemap(
@@ -1474,6 +1489,7 @@ class _GeneralOccurrenceKeyRemap {
     required this.scheduleId,
     required this.eventId,
     required this.startDateTimeIso,
+    required this.isRepeating,
   });
 
   final String rawScheduleId;
@@ -1482,6 +1498,7 @@ class _GeneralOccurrenceKeyRemap {
   final String scheduleId;
   final String eventId;
   final String startDateTimeIso;
+  final bool isRepeating;
 
   bool matchesIds(String calendarId, String eventId) {
     final matchesRaw = calendarId == rawScheduleId && eventId == rawEventId;
@@ -1498,6 +1515,17 @@ class _GeneralOccurrenceKeyRemap {
   bool mapsToSameIds({required String calendarId, required String eventId}) {
     return scheduleId == calendarId && this.eventId == eventId;
   }
+}
+
+String _remappedGeneralOccurrenceStart(
+  _GeneralOccurrenceKeyRemap remap,
+  String occurrenceStartDateTimeIso,
+) {
+  if (!remap.isRepeating) return remap.startDateTimeIso;
+  return tryParseStrictIsoDateTime(
+        occurrenceStartDateTimeIso,
+      )?.toIso8601String() ??
+      remap.startDateTimeIso;
 }
 
 bool _sameOccurrenceStart(String left, String right) {

@@ -26,7 +26,7 @@ class SchoolWebImportPage extends StatefulWidget {
 class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   static const _pageLoadTimeout = Duration(seconds: 15);
 
-  final SchoolSiteService _siteService = const SchoolSiteService();
+  final SchoolSiteService _siteService = SchoolSiteService();
   final SchoolWebImportPageService _pageService =
       const SchoolWebImportPageService();
 
