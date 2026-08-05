@@ -658,6 +658,29 @@ class AppLocalizationsDa extends AppLocalizations {
   String get saveFailedRetry => 'Gemning mislykkedes. Prøv igen senere.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked er allerede åben';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Et andet Sked-vindue eller en anden browserfane bruger dine lokale data. Luk vinduet eller fanen, og prøv igen.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Lokale data er ikke tilgængelige';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked kunne ikke bekræfte eksklusiv adgang til lokale data. Dine data blev ikke åbnet eller ændret. Kontrollér adgangen til lageret, og prøv igen.';
+
+  @override
+  String get savingChanges => 'Gemmer ændringer...';
+
+  @override
+  String get showApiKey => 'Vis API-nøgle';
+
+  @override
+  String get hideApiKey => 'Skjul API-nøgle';
+
+  @override
   String get importFailedCheckContent =>
       'Import mislykkedes. Kontroller venligst filens indhold.';
 
@@ -1169,6 +1192,10 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Ingen modeller blev returneret ved slutpunktet.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Modellerne kunne ikke hentes. Kontrollér slutpunktet, og prøv igen.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

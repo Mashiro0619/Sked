@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,7 @@ class _BlockingTimetableStorage implements TimetableStorage {
 
   AppData? data;
   Completer<void>? _blockedSave;
+  Object? _nextSaveError;
   var saveCount = 0;
 
   void blockNextSave() {
@@ -28,6 +30,10 @@ class _BlockingTimetableStorage implements TimetableStorage {
     blockedSave?.complete();
   }
 
+  void failNextSave([Object error = const FileSystemException('save failed')]) {
+    _nextSaveError = error;
+  }
+
   @override
   Future<StorageLoadResult> load() async =>
       StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
@@ -35,11 +41,14 @@ class _BlockingTimetableStorage implements TimetableStorage {
   @override
   Future<void> save(AppData data) async {
     saveCount += 1;
-    this.data = data;
+    final saveError = _nextSaveError;
+    _nextSaveError = null;
     final blockedSave = _blockedSave;
     if (blockedSave != null) {
       await blockedSave.future;
     }
+    if (saveError != null) throw saveError;
+    this.data = data;
   }
 
   @override
@@ -58,9 +67,15 @@ Future<TimetableProvider> _createProvider(
 }
 
 class _ThemeSettingsHost extends StatelessWidget {
-  const _ThemeSettingsHost({required this.provider});
+  const _ThemeSettingsHost({
+    required this.provider,
+    this.locale = const Locale('en'),
+    this.textScaler = TextScaler.noScaling,
+  });
 
   final TimetableProvider provider;
+  final Locale locale;
+  final TextScaler textScaler;
 
   @override
   Widget build(BuildContext context) {
@@ -69,9 +84,13 @@ class _ThemeSettingsHost extends StatelessWidget {
       child: Consumer<TimetableProvider>(
         builder: (context, provider, child) {
           return MaterialApp(
-            locale: const Locale('en'),
+            locale: locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+              child: child!,
+            ),
             theme: buildAppTheme(
               seedColor: Color(provider.themeSeedColorValue),
               brightness: Brightness.light,
@@ -84,6 +103,30 @@ class _ThemeSettingsHost extends StatelessWidget {
       ),
     );
   }
+}
+
+void _expectThemePersistenceDialogBlocked(WidgetTester tester) {
+  final focusScope = tester.widget<FocusScope>(
+    find.byKey(const ValueKey('theme-persistence-dialog-focus-scope')),
+  );
+  expect(focusScope.canRequestFocus, isFalse);
+  expect(focusScope.descendantsAreFocusable, isFalse);
+  expect(focusScope.descendantsAreTraversable, isFalse);
+  expect(
+    tester
+        .widget<AbsorbPointer>(
+          find.byKey(const ValueKey('theme-persistence-dialog-pointer-guard')),
+        )
+        .absorbing,
+    isTrue,
+  );
+  expect(
+    find.descendant(
+      of: find.byKey(const ValueKey('theme-persistence-dialog-busy-indicator')),
+      matching: find.byType(LinearProgressIndicator),
+    ),
+    findsOneWidget,
+  );
 }
 
 void main() {
@@ -108,6 +151,33 @@ void main() {
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact layout supports 2x German and RTL text', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    for (final locale in const [Locale('de'), Locale('ar')]) {
+      await tester.pumpWidget(
+        _ThemeSettingsHost(
+          provider: provider,
+          locale: locale,
+          textScaler: const TextScaler.linear(2),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scaffoldContext = tester.element(find.byType(Scaffold));
+      expect(
+        Directionality.of(scaffoldContext),
+        locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      );
+      expect(tester.takeException(), isNull);
+    }
   });
 
   testWidgets('custom color dialog fits compact phone width', (tester) async {
@@ -186,6 +256,63 @@ void main() {
       materialApp.theme!.navigationBarTheme.indicatorColor,
       const Color(0xFF00897B).withValues(alpha: 0.12),
     );
+  });
+
+  testWidgets('failed theme save rolls back and remains retryable', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+    storage.failNextSave();
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    expect(provider.themeMode, 'system');
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    expect(provider.themeMode, 'dark');
+    expect(storage.saveCount, 2);
+  });
+
+  testWidgets('theme color swatches expose value and selection semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+      ).copyWith(themeSeedColorValue: 0xFF6750A4),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    final swatch = find.byKey(const ValueKey('theme-seed-color-#6750A4'));
+    expect(swatch, findsOneWidget);
+    expect(
+      tester.getSemantics(swatch),
+      matchesSemantics(
+        label: '#6750A4',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        hasTapAction: true,
+      ),
+    );
+    final swatchSize = tester.getSize(swatch);
+    expect(swatchSize.width, greaterThanOrEqualTo(48));
+    expect(swatchSize.height, greaterThanOrEqualTo(48));
+    semantics.dispose();
   });
 
   testWidgets('colorful primary setting controls the app primary color', (
@@ -323,7 +450,7 @@ void main() {
     },
   );
 
-  testWidgets('custom color apply is disabled while save is in progress', (
+  testWidgets('custom color save freezes controls and blocks dismissal', (
     tester,
   ) async {
     final storage = _BlockingTimetableStorage(
@@ -351,6 +478,12 @@ void main() {
     await tester.tap(customColor);
     await tester.pumpAndSettle();
 
+    final hexField = find.byKey(
+      const ValueKey('compact-color-picker-hex-field'),
+    );
+    await tester.enterText(hexField, '#123456');
+    await tester.pump();
+
     final applyButton = find.widgetWithText(FilledButton, 'Apply color');
     expect(applyButton, findsOneWidget);
 
@@ -359,9 +492,23 @@ void main() {
 
     expect(storage.saveCount, 1);
     expect(tester.widget<FilledButton>(applyButton).onPressed, isNull);
+    _expectThemePersistenceDialogBlocked(tester);
 
-    await tester.tap(applyButton, warnIfMissed: false);
+    await tester.binding.handlePopRoute();
     await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tap(hexField, warnIfMissed: false);
+    await tester.pump();
+    final editable = tester.widget<EditableText>(
+      find.descendant(of: hexField, matching: find.byType(EditableText)),
+    );
+    expect(editable.focusNode.hasFocus, isFalse);
+    expect(editable.controller.text, '#123456');
 
     expect(storage.saveCount, 1);
 
@@ -370,5 +517,130 @@ void main() {
 
     expect(applyButton, findsNothing);
     expect(storage.saveCount, 1);
+    expect(provider.themeSeedColorValue, 0xFF123456);
+    expect(storage.data?.themeSeedColorValue, 0xFF123456);
+  });
+
+  testWidgets('failed custom color save preserves draft for retry', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    final customColor = find.text('Custom color').last;
+    await tester.scrollUntilVisible(customColor, 200);
+    await tester.pumpAndSettle();
+    await tester.tap(customColor);
+    await tester.pumpAndSettle();
+
+    final hexField = find.byKey(
+      const ValueKey('compact-color-picker-hex-field'),
+    );
+    await tester.enterText(hexField, '#234567');
+    await tester.pump();
+    storage.blockNextSave();
+    storage.failNextSave();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Apply color'));
+    await tester.pump();
+    _expectThemePersistenceDialogBlocked(tester);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester
+          .widget<AbsorbPointer>(
+            find.byKey(
+              const ValueKey('theme-persistence-dialog-pointer-guard'),
+            ),
+          )
+          .absorbing,
+      isFalse,
+    );
+    expect(tester.widget<TextField>(hexField).controller?.text, '#234567');
+
+    await tester.enterText(hexField, '#345678');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Apply color'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(storage.saveCount, 2);
+    expect(provider.themeSeedColorValue, 0xFF345678);
+  });
+
+  testWidgets('all theme persistence dialogs share the busy guard', (
+    tester,
+  ) async {
+    Future<void> exerciseDialog({
+      required AppData data,
+      required Future<void> Function() open,
+      Future<void> Function()? edit,
+    }) async {
+      final storage = _BlockingTimetableStorage(data);
+      final provider = await _createProvider(storage);
+      await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+      await tester.pumpAndSettle();
+
+      await open();
+      await tester.pumpAndSettle();
+      await edit?.call();
+      await tester.pumpAndSettle();
+
+      storage.blockNextSave();
+      await tester.tap(find.widgetWithText(FilledButton, 'Apply settings'));
+      await tester.pump();
+
+      expect(storage.saveCount, 1);
+      _expectThemePersistenceDialogBlocked(tester);
+
+      storage.completeSave();
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    }
+
+    AppData colorfulData() => buildInitialAppData(
+      buildDefaultPeriodTimes(),
+    ).copyWith(themeColorMode: themeColorModeColorful);
+
+    await exerciseDialog(
+      data: colorfulData(),
+      open: () async {
+        final tile = find.byKey(const ValueKey('theme-ui-color-primary'));
+        await tester.scrollUntilVisible(tile, 200);
+        await tester.tap(tile);
+      },
+    );
+
+    await exerciseDialog(
+      data: colorfulData(),
+      open: () async {
+        final tile = find.byKey(
+          const ValueKey('theme-ui-color-$colorfulCourseTextColorKey'),
+        );
+        await tester.scrollUntilVisible(tile, 200);
+        await tester.tap(tile);
+      },
+      edit: () async {
+        await tester.tap(find.byTooltip('Custom color'));
+      },
+    );
+
+    await exerciseDialog(
+      data: buildInitialAppData(buildDefaultPeriodTimes()),
+      open: () async {
+        final card = find.byKey(const ValueKey('theme-outline-settings-card'));
+        await tester.scrollUntilVisible(card, 200);
+        await tester.tap(card);
+      },
+    );
   });
 }

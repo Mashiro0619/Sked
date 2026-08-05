@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../utils/general_schedule_colors.dart';
+import 'ui_command.dart';
 
 class GeneralEventDetailsSheet extends StatefulWidget {
   const GeneralEventDetailsSheet({
@@ -43,13 +44,13 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       return;
     }
     setState(() => _actionTriggered = true);
-    try {
-      await action();
-    } catch (_) {
-      if (mounted) {
-        setState(() => _actionTriggered = false);
-      }
-      rethrow;
+    final succeeded = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Run general event action',
+      command: () async => action(),
+    );
+    if (!succeeded && mounted) {
+      setState(() => _actionTriggered = false);
     }
   }
 
@@ -61,7 +62,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     final color = effectiveGeneralOccurrenceColor(context, widget.occurrence);
     final isRepeating = event.recurrenceRule.isRepeating;
 
-    return SafeArea(
+    final content = SafeArea(
       top: false,
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
@@ -69,6 +70,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            UiCommandBusyIndicator(busy: _actionTriggered),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -143,7 +145,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   FilledButton.icon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onEdit),
+                        : () {
+                            unawaited(_runAction(widget.onEdit));
+                          },
                     icon: const Icon(Icons.edit_outlined),
                     label: _ActionLabel(l10n.editEvent),
                     style: _filledActionStyle(theme),
@@ -154,7 +158,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   FilledButton.tonalIcon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onDuplicate),
+                        : () {
+                            unawaited(_runAction(widget.onDuplicate));
+                          },
                     icon: const Icon(Icons.content_copy_outlined),
                     label: _ActionLabel(l10n.duplicateEvent),
                     style: _filledActionStyle(theme),
@@ -165,7 +171,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onDismissReminder),
+                        : () {
+                            unawaited(_runAction(widget.onDismissReminder));
+                          },
                     icon: const Icon(Icons.check_circle_outline),
                     label: _ActionLabel(l10n.markReminderHandled),
                     style: _outlinedActionStyle(theme),
@@ -176,7 +184,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onRestoreReminder),
+                        : () {
+                            unawaited(_runAction(widget.onRestoreReminder));
+                          },
                     icon: const Icon(Icons.restore_outlined),
                     label: _ActionLabel(l10n.restoreReminder),
                     style: _outlinedActionStyle(theme),
@@ -187,7 +197,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onDeleteThis),
+                        : () {
+                            unawaited(_runAction(widget.onDeleteThis));
+                          },
                     icon: const Icon(Icons.delete_outline),
                     label: _ActionLabel(
                       isRepeating ? l10n.deleteThisOccurrence : l10n.delete,
@@ -201,7 +213,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onDeleteFuture),
+                        : () {
+                            unawaited(_runAction(widget.onDeleteFuture));
+                          },
                     icon: const Icon(Icons.delete_sweep_outlined),
                     label: _ActionLabel(l10n.deleteFutureOccurrences),
                     style: _outlinedActionStyle(
@@ -213,7 +227,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   OutlinedButton.icon(
                     onPressed: _actionTriggered
                         ? null
-                        : () => _runAction(widget.onDeleteAll),
+                        : () {
+                            unawaited(_runAction(widget.onDeleteAll));
+                          },
                     icon: const Icon(Icons.delete_forever_outlined),
                     label: _ActionLabel(l10n.deleteAllOccurrences),
                     style: _outlinedActionStyle(
@@ -227,6 +243,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
         ),
       ),
     );
+    return PopScope<void>(canPop: !_actionTriggered, child: content);
   }
 }
 

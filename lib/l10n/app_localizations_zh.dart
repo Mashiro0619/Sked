@@ -628,6 +628,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveFailedRetry => '保存失败，请稍后重试';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked 已在其他窗口运行';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      '另一个 Sked 窗口或浏览器标签页正在使用本地数据。请将其关闭后重试。';
+
+  @override
+  String get appInstanceLeaseFailedTitle => '无法访问本地数据';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked 无法确认对本地数据的独占访问。数据尚未打开或更改，请检查存储访问权限后重试。';
+
+  @override
+  String get savingChanges => '正在保存更改...';
+
+  @override
+  String get showApiKey => '显示 API 密钥';
+
+  @override
+  String get hideApiKey => '隐藏 API 密钥';
+
+  @override
   String get importFailedCheckContent => '导入失败，请检查文件内容';
 
   @override
@@ -1111,6 +1134,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolImportParserNoModelsFound => '该端点没有返回任何模型。';
+
+  @override
+  String get schoolImportParserFetchModelsFailed => '无法获取模型列表。请检查端点后重试。';
 
   @override
   String schoolImportParserModelsFetched(int count) {
@@ -2498,6 +2524,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get saveFailedRetry => '儲存失敗，請稍後重試';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked 已在其他視窗執行';
+
+  @override
+  String get appInstanceBlockedMessage => '另一個 Sked 視窗或瀏覽器分頁正在使用本機資料。請將其關閉後重試。';
+
+  @override
+  String get appInstanceLeaseFailedTitle => '無法存取本機資料';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked 無法確認對本機資料的獨佔存取。資料尚未開啟或變更，請檢查儲存空間存取權限後重試。';
+
+  @override
+  String get savingChanges => '正在儲存變更...';
+
+  @override
+  String get showApiKey => '顯示 API 金鑰';
+
+  @override
+  String get hideApiKey => '隱藏 API 金鑰';
+
+  @override
   String get importFailedCheckContent => '匯入失敗，請檢查檔案內容';
 
   @override
@@ -2981,6 +3029,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParserNoModelsFound => '該端點沒有回傳任何模型。';
+
+  @override
+  String get schoolImportParserFetchModelsFailed => '無法取得模型清單。請檢查端點後重試。';
 
   @override
   String schoolImportParserModelsFetched(int count) {

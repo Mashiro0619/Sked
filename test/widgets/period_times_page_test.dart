@@ -13,9 +13,11 @@ import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/services/export_service.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
-  _MemoryTimetableStorage(this.data);
+  _MemoryTimetableStorage(this.data, {this.failSaves = false});
 
   AppData? data;
+  bool failSaves;
+  int saveCount = 0;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -23,11 +25,52 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<void> save(AppData data) async {
+    saveCount += 1;
+    if (failSaves) {
+      throw StateError('period time save failed');
+    }
     this.data = data;
   }
 
   @override
   Future<String?> filePath() async => 'memory://period-times-page-test';
+}
+
+class _BlockingTimetableStorage implements TimetableStorage {
+  _BlockingTimetableStorage(this.data, {this.failAfterRelease = false});
+
+  AppData? data;
+  final bool failAfterRelease;
+  int saveCount = 0;
+  final saveStarted = Completer<void>();
+  final _allowSave = Completer<void>();
+
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+
+  @override
+  Future<void> save(AppData data) async {
+    saveCount += 1;
+    if (!saveStarted.isCompleted) {
+      saveStarted.complete();
+    }
+    await _allowSave.future;
+    if (failAfterRelease) {
+      throw StateError('period time save failed after blocking');
+    }
+    this.data = data;
+  }
+
+  @override
+  Future<String?> filePath() async =>
+      'memory://period-times-page-blocking-test';
+
+  void completeSave() {
+    if (!_allowSave.isCompleted) {
+      _allowSave.complete();
+    }
+  }
 }
 
 class _CompletingExportService extends ExportService {
@@ -43,14 +86,14 @@ class _CompletingExportService extends ExportService {
   }
 }
 
-Future<TimetableProvider> _createProvider() async {
+AppData _initialData() => buildInitialAppData(
+  buildDefaultPeriodTimes(),
+  localeCode: defaultLocaleCode,
+);
+
+Future<TimetableProvider> _createProvider({TimetableStorage? storage}) async {
   final provider = TimetableProvider(
-    storage: _MemoryTimetableStorage(
-      buildInitialAppData(
-        buildDefaultPeriodTimes(),
-        localeCode: defaultLocaleCode,
-      ),
-    ),
+    storage: storage ?? _MemoryTimetableStorage(_initialData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
   );
   await provider.load();
@@ -61,6 +104,7 @@ Future<void> _pumpPeriodTimesPage(
   WidgetTester tester,
   TimetableProvider provider, {
   ExportService? exportService,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -69,6 +113,10 @@ Future<void> _pumpPeriodTimesPage(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
         home: PeriodTimesPage(
           periodTimeSetId: defaultPeriodTimeSetId,
           exportService: exportService,
@@ -85,7 +133,11 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final provider = await _createProvider();
-    await _pumpPeriodTimesPage(tester, provider);
+    await _pumpPeriodTimesPage(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
 
     expect(find.byType(PeriodTimesPage), findsOneWidget);
     expect(find.text('Start time'), findsWidgets);
@@ -119,6 +171,147 @@ void main() {
 
     expect(find.byType(TimePickerDialog), findsNothing);
     expect(find.byType(PeriodTimesPage), findsOneWidget);
+  });
+
+  testWidgets('save blocks duplicate edits until persistence completes', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(_initialData());
+    final provider = await _createProvider(storage: storage);
+    await _pumpPeriodTimesPage(tester, provider);
+
+    await tester.tap(find.byTooltip('Save'));
+    await storage.saveStarted.future;
+    await tester.pump();
+
+    expect(storage.saveCount, 1);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    final saveButton = tester
+        .widgetList<IconButton>(find.byType(IconButton))
+        .singleWhere((button) => button.tooltip == 'Save');
+    expect(saveButton.onPressed, isNull);
+    expect(
+      tester
+          .widget<AbsorbPointer>(
+            find.byKey(const ValueKey('period-times-editor-guard')),
+          )
+          .absorbing,
+      isTrue,
+    );
+
+    await tester.tap(find.byTooltip('Save'), warnIfMissed: false);
+    await tester.pump();
+
+    expect(storage.saveCount, 1);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Period times saved'), findsOneWidget);
+    expect(storage.saveCount, 1);
+  });
+
+  testWidgets('back is blocked while a period time save is pending', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      _initialData(),
+      failAfterRelease: true,
+    );
+    final provider = await _createProvider(storage: storage);
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<TimetableProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () {
+                  unawaited(
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PeriodTimesPage(
+                          periodTimeSetId: defaultPeriodTimeSetId,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Open period editor'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open period editor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).first,
+      'Pending period draft',
+    );
+    await tester.tap(find.byTooltip('Save'));
+    await storage.saveStarted.future;
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+
+    expect(find.byType(PeriodTimesPage), findsOneWidget);
+    expect(find.text('Pending period draft'), findsOneWidget);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PeriodTimesPage), findsOneWidget);
+    expect(find.text('Pending period draft'), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed save keeps the draft on the page and allows retry', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_initialData(), failSaves: true);
+    final provider = await _createProvider(storage: storage);
+    await _pumpPeriodTimesPage(tester, provider);
+
+    final nameField = find.byType(TextField).first;
+    await tester.enterText(nameField, 'Retryable period set');
+    await tester.tap(find.byTooltip('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PeriodTimesPage), findsOneWidget);
+    expect(find.text('Retryable period set'), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester
+          .widgetList<IconButton>(find.byType(IconButton))
+          .singleWhere((button) => button.tooltip == 'Save')
+          .onPressed,
+      isNotNull,
+    );
+    expect(
+      provider.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
+      isNot('Retryable period set'),
+    );
+
+    storage.failSaves = false;
+    await tester.tap(find.byTooltip('Save'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(
+      provider.periodTimeSetForId(defaultPeriodTimeSetId)?.name,
+      'Retryable period set',
+    );
   });
 
   testWidgets('file import ignores rapid duplicate menu actions', (
@@ -160,12 +353,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Import period template'));
     await pickerStarted.future;
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(pickCalls, 1);
 
     await tester.tap(menuButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Import period template'), findsNothing);
     expect(pickCalls, 1);

@@ -18,6 +18,7 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/mode_switch_action.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/timetable_grid.dart';
+import '../widgets/ui_command.dart';
 import 'settings_page.dart';
 import 'timetable_import_flow.dart';
 
@@ -148,7 +149,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     _setAddTimetableInProgress(true);
     try {
-      await provider.addTimetable();
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Create timetable',
+        command: provider.addTimetable,
+      );
     } finally {
       _setAddTimetableInProgress(false);
     }
@@ -184,10 +189,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     _setTimetableSwitchInProgress(true);
     try {
+      var saved = true;
       if (targetTimetable.id != activeTimetable.id) {
-        await provider.switchTimetable(targetTimetable.id);
+        saved = await runUiCommandWithFeedback(
+          context: drawerContext,
+          debugLabel: 'Switch timetable',
+          command: () => provider.switchTimetable(targetTimetable.id),
+        );
       }
-      if (drawerContext.mounted) {
+      if (saved && drawerContext.mounted) {
         await Navigator.of(drawerContext).maybePop();
       }
     } finally {

@@ -191,6 +191,38 @@ void main() {
   );
 
   test(
+    'shutdown waits for a secret write appended by the completed tail',
+    () async {
+      final storage = _RecordingStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final secrets = _ControlledSecretStore('sk-old');
+      final provider = await _provider(storage: storage, secrets: secrets);
+
+      final first = provider.updateCustomSchoolImportApiKey('sk-first');
+      while (secrets.writes.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final appended = first.then(
+        (_) => provider.updateCustomSchoolImportApiKey('sk-second'),
+      );
+      final shutdown = provider.quiesceForShutdown();
+      var shutdownCompleted = false;
+      unawaited(shutdown.then((_) => shutdownCompleted = true));
+
+      secrets.succeedWrite(0);
+      while (secrets.writes.length < 2) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      expect(shutdownCompleted, isFalse);
+      secrets.succeedWrite(1);
+      await Future.wait([appended, shutdown]);
+      expect(secrets.value, 'sk-second');
+    },
+  );
+
+  test(
     'API key changes neither suppress nor get overwritten by AppData rollback',
     () async {
       final initial = buildInitialAppData(buildDefaultPeriodTimes());

@@ -668,6 +668,30 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo guardar. Inténtalo de nuevo más tarde.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked ya está abierto';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Otra ventana de Sked o pestaña del navegador está usando tus datos locales. Ciérrala y vuelve a intentarlo.';
+
+  @override
+  String get appInstanceLeaseFailedTitle =>
+      'Los datos locales no están disponibles';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked no pudo verificar el acceso exclusivo a los datos locales. Tus datos no se abrieron ni se modificaron. Comprueba el acceso al almacenamiento y vuelve a intentarlo.';
+
+  @override
+  String get savingChanges => 'Guardando cambios...';
+
+  @override
+  String get showApiKey => 'Mostrar clave de API';
+
+  @override
+  String get hideApiKey => 'Ocultar clave de API';
+
+  @override
   String get importFailedCheckContent =>
       'La importación falló. Revisa el contenido del archivo.';
 
@@ -1189,6 +1213,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'El endpoint no devolvió ningún modelo.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'No se pudieron obtener los modelos. Comprueba el punto de conexión e inténtalo de nuevo.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

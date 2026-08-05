@@ -664,6 +664,29 @@ class AppLocalizationsSv extends AppLocalizations {
   String get saveFailedRetry => 'Sparandet misslyckades. Försök igen senare.';
 
   @override
+  String get appInstanceBlockedTitle => 'Appen Sked är redan öppen';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Dina lokala data används i ett annat Sked-fönster eller en annan webbläsarflik. Stäng det andra fönstret eller fliken och försök igen.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Lokala data är inte tillgängliga';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked kunde inte verifiera exklusiv åtkomst till lokala data. Dina data har inte öppnats eller ändrats. Kontrollera åtkomsten till lagringen och försök igen.';
+
+  @override
+  String get savingChanges => 'Sparar ändringar...';
+
+  @override
+  String get showApiKey => 'Visa API-nyckel';
+
+  @override
+  String get hideApiKey => 'Dölj API-nyckel';
+
+  @override
   String get importFailedCheckContent =>
       'Importen misslyckades. Kontrollera filens innehåll.';
 
@@ -1176,6 +1199,10 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Inga modeller returnerades vid slutpunkten.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Det gick inte att hämta modeller. Kontrollera slutpunkten och försök igen.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

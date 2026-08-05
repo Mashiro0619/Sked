@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_locale.dart' as app_locale;
@@ -5,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
+import 'ui_command.dart';
 
 /// delete 单独保留成一个标记，避免和“只是点了取消”共用同一种空值语义。
 class CourseEditorResult {
@@ -26,6 +29,8 @@ class CourseEditorSheet extends StatefulWidget {
     this.initialStartMinutes,
     this.initialEndMinutes,
     this.initialPeriods,
+    this.onSave,
+    this.onDelete,
   });
 
   final List<CoursePeriodTime> periodTimes;
@@ -35,6 +40,8 @@ class CourseEditorSheet extends StatefulWidget {
   final int? initialStartMinutes;
   final int? initialEndMinutes;
   final List<int>? initialPeriods;
+  final Future<void> Function(CourseItem)? onSave;
+  final Future<void> Function()? onDelete;
 
   @override
   State<CourseEditorSheet> createState() => _CourseEditorSheetState();
@@ -55,6 +62,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   late List<int> _selectedPeriods;
   bool _hasPopped = false;
   bool _pickerOpen = false;
+  bool _actionInProgress = false;
+
+  bool get _blocked => _hasPopped || _pickerOpen || _actionInProgress;
 
   @override
   void initState() {
@@ -127,164 +137,171 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     final linkedPeriods = _selectedPeriods;
     final linkedPeriodsLabel = _formatPeriodsLabel(linkedPeriods, l10n);
 
-    return AppSheetScaffold(
-      heightFactor: 0.72,
-      title: Text(
-        widget.initialCourse == null
-            ? l10n.addCourseTitle
-            : l10n.editCourseTitle,
-      ),
-      leading: widget.initialCourse == null
-          ? null
-          : TextButton.icon(
-              onPressed: _hasPopped ? null : () => _confirmDelete(context),
-              icon: const Icon(Icons.delete_outline),
-              label: Text(l10n.delete),
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-              ),
-            ),
-      actions: [
-        TextButton(
-          onPressed: _hasPopped ? null : () => _popOnce(),
-          child: Text(l10n.cancel),
+    return PopScope(
+      canPop: !_actionInProgress && !_pickerOpen && !_hasPopped,
+      child: AppSheetScaffold(
+        heightFactor: 0.72,
+        title: Text(
+          widget.initialCourse == null
+              ? l10n.addCourseTitle
+              : l10n.editCourseTitle,
         ),
-        FilledButton.icon(
-          onPressed: _hasPopped ? null : _submit,
-          icon: const Icon(Icons.check),
-          label: Text(l10n.save),
-        ),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ResponsiveFormRow(
-            flexes: const [2, 1],
-            children: [
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.courseName,
-                  prefixIcon: const Icon(Icons.book_outlined),
+        leading: widget.initialCourse == null
+            ? null
+            : TextButton.icon(
+                onPressed: _blocked ? null : () => unawaited(_confirmDelete()),
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.delete),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
                 ),
               ),
-              TextField(
-                controller: _locationController,
-                decoration: InputDecoration(
-                  labelText: l10n.location,
-                  prefixIcon: const Icon(Icons.location_on_outlined),
-                ),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: _blocked ? null : () => _popOnce(),
+            child: Text(l10n.cancel),
           ),
-          const SizedBox(height: 12),
-          _ResponsiveFormRow(
-            breakpoint: 520,
-            children: [
-              _SelectionTile(
-                title: l10n.dayOfWeek,
-                subtitle: formatDayOfWeekLabel(
-                  _selectedDayOfWeek,
-                  localeCode: app_locale.localeCodeFromLocale(
-                    Localizations.localeOf(context),
-                  ),
-                ),
-                icon: Icons.today_outlined,
-                enabled: !_pickerOpen && !_hasPopped,
-                onTap: (_pickerOpen || _hasPopped) ? null : _pickDayOfWeek,
-              ),
-              _SelectionTile(
-                title: l10n.semesterWeeks,
-                subtitle: formatSemesterWeeksLabel(
-                  _selectedSemesterWeeks,
-                  totalWeeks: widget.totalWeeks,
-                  localeCode: app_locale.localeCodeFromLocale(
-                    Localizations.localeOf(context),
-                  ),
-                ),
-                icon: Icons.edit_calendar,
-                enabled: !_pickerOpen && !_hasPopped,
-                onTap: (_pickerOpen || _hasPopped) ? null : _pickSemesterWeeks,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _ResponsiveFormRow(
-            breakpoint: 520,
-            children: [
-              _SelectionTile(
-                title: l10n.startTime,
-                subtitle: _formatTimeOfDay(_startTime),
-                icon: Icons.schedule,
-                enabled: !_pickerOpen && !_hasPopped,
-                onTap: (_pickerOpen || _hasPopped)
-                    ? null
-                    : () => _pickTime(isStart: true),
-              ),
-              _SelectionTile(
-                title: l10n.endTime,
-                subtitle: _formatTimeOfDay(_endTime),
-                icon: Icons.schedule,
-                enabled: !_pickerOpen && !_hasPopped,
-                onTap: (_pickerOpen || _hasPopped)
-                    ? null
-                    : () => _pickTime(isStart: false),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _SelectionTile(
-            title: l10n.linkedPeriods,
-            subtitle: linkedPeriods.isEmpty
-                ? l10n.linkedPeriodsUnmatched
-                : linkedPeriodsLabel,
-            icon: Icons.tune,
-            enabled: !_pickerOpen && !_hasPopped,
-            onTap: (_pickerOpen || _hasPopped) ? null : _pickPeriods,
-          ),
-          const SizedBox(height: 12),
-          _ResponsiveFormRow(
-            children: [
-              TextField(
-                controller: _teacherController,
-                decoration: InputDecoration(
-                  labelText: l10n.teacherName,
-                  prefixIcon: const Icon(Icons.badge_outlined),
-                ),
-              ),
-              TextField(
-                controller: _creditController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: l10n.credits,
-                  prefixIcon: const Icon(Icons.payments_outlined),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _remarksController,
-            decoration: InputDecoration(
-              labelText: l10n.remarks,
-              prefixIcon: const Icon(Icons.notes_outlined),
-            ),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _customFieldsController,
-            decoration: InputDecoration(
-              labelText: l10n.customFields,
-              hintText: l10n.customFieldsHint,
-              prefixIcon: const Icon(Icons.data_object_outlined),
-            ),
-            maxLines: 3,
+          FilledButton.icon(
+            onPressed: _blocked ? null : () => unawaited(_submit()),
+            icon: const Icon(Icons.check),
+            label: Text(l10n.save),
           ),
         ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            UiCommandBusyIndicator(busy: _actionInProgress),
+            const SizedBox(height: 8),
+            _ResponsiveFormRow(
+              flexes: const [2, 1],
+              children: [
+                TextField(
+                  controller: _nameController,
+                  enabled: !_blocked,
+                  decoration: InputDecoration(
+                    labelText: l10n.courseName,
+                    prefixIcon: const Icon(Icons.book_outlined),
+                  ),
+                ),
+                TextField(
+                  controller: _locationController,
+                  enabled: !_blocked,
+                  decoration: InputDecoration(
+                    labelText: l10n.location,
+                    prefixIcon: const Icon(Icons.location_on_outlined),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _ResponsiveFormRow(
+              breakpoint: 520,
+              children: [
+                _SelectionTile(
+                  title: l10n.dayOfWeek,
+                  subtitle: formatDayOfWeekLabel(
+                    _selectedDayOfWeek,
+                    localeCode: app_locale.localeCodeFromLocale(
+                      Localizations.localeOf(context),
+                    ),
+                  ),
+                  icon: Icons.today_outlined,
+                  enabled: !_blocked,
+                  onTap: _blocked ? null : _pickDayOfWeek,
+                ),
+                _SelectionTile(
+                  title: l10n.semesterWeeks,
+                  subtitle: formatSemesterWeeksLabel(
+                    _selectedSemesterWeeks,
+                    totalWeeks: widget.totalWeeks,
+                    localeCode: app_locale.localeCodeFromLocale(
+                      Localizations.localeOf(context),
+                    ),
+                  ),
+                  icon: Icons.edit_calendar,
+                  enabled: !_blocked,
+                  onTap: _blocked ? null : _pickSemesterWeeks,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _ResponsiveFormRow(
+              breakpoint: 520,
+              children: [
+                _SelectionTile(
+                  title: l10n.startTime,
+                  subtitle: _formatTimeOfDay(_startTime),
+                  icon: Icons.schedule,
+                  enabled: !_blocked,
+                  onTap: _blocked ? null : () => _pickTime(isStart: true),
+                ),
+                _SelectionTile(
+                  title: l10n.endTime,
+                  subtitle: _formatTimeOfDay(_endTime),
+                  icon: Icons.schedule,
+                  enabled: !_blocked,
+                  onTap: _blocked ? null : () => _pickTime(isStart: false),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _SelectionTile(
+              title: l10n.linkedPeriods,
+              subtitle: linkedPeriods.isEmpty
+                  ? l10n.linkedPeriodsUnmatched
+                  : linkedPeriodsLabel,
+              icon: Icons.tune,
+              enabled: !_blocked,
+              onTap: _blocked ? null : _pickPeriods,
+            ),
+            const SizedBox(height: 12),
+            _ResponsiveFormRow(
+              children: [
+                TextField(
+                  controller: _teacherController,
+                  enabled: !_blocked,
+                  decoration: InputDecoration(
+                    labelText: l10n.teacherName,
+                    prefixIcon: const Icon(Icons.badge_outlined),
+                  ),
+                ),
+                TextField(
+                  controller: _creditController,
+                  enabled: !_blocked,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: l10n.credits,
+                    prefixIcon: const Icon(Icons.payments_outlined),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _remarksController,
+              enabled: !_blocked,
+              decoration: InputDecoration(
+                labelText: l10n.remarks,
+                prefixIcon: const Icon(Icons.notes_outlined),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _customFieldsController,
+              enabled: !_blocked,
+              decoration: InputDecoration(
+                labelText: l10n.customFields,
+                hintText: l10n.customFieldsHint,
+                prefixIcon: const Icon(Icons.data_object_outlined),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -308,7 +325,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   }
 
   Future<void> _pickDayOfWeek() async {
-    if (_pickerOpen || _hasPopped) {
+    if (_blocked) {
       return;
     }
     _setPickerOpen(true);
@@ -340,7 +357,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   }
 
   Future<void> _pickSemesterWeeks() async {
-    if (_pickerOpen || _hasPopped) {
+    if (_blocked) {
       return;
     }
     _setPickerOpen(true);
@@ -474,7 +491,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   }
 
   Future<void> _pickTime({required bool isStart}) async {
-    if (_pickerOpen || _hasPopped) {
+    if (_blocked) {
       return;
     }
     _setPickerOpen(true);
@@ -508,7 +525,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   }
 
   Future<void> _pickPeriods() async {
-    if (_pickerOpen || _hasPopped) {
+    if (_blocked) {
       return;
     }
     _setPickerOpen(true);
@@ -598,20 +615,17 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_blocked) return;
     final startMinutes = _minutesFromTimeOfDay(_startTime);
     final endMinutes = _minutesFromTimeOfDay(_endTime);
     final l10n = AppLocalizations.of(context);
     if (_nameController.text.trim().isEmpty || startMinutes >= endMinutes) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _nameController.text.trim().isEmpty
-                ? l10n.eventTitleRequired
-                : l10n.endTimeMustBeLater,
-          ),
-          duration: const Duration(seconds: 2),
-        ),
+      showUiFailureFeedback(
+        context: context,
+        message: _nameController.text.trim().isEmpty
+            ? l10n.eventTitleRequired
+            : l10n.endTimeMustBeLater,
       );
       return;
     }
@@ -636,30 +650,45 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
       remarks: _remarksController.text.trim(),
       customFields: _parseCustomFields(_customFieldsController.text),
     );
-    _popOnce(CourseEditorResult.save(course));
+    final result = CourseEditorResult.save(course);
+    final save = widget.onSave;
+    if (save == null) {
+      _popOnce(result);
+      return;
+    }
+    setState(() => _actionInProgress = true);
+    final saved = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Save course',
+      command: () => save(course),
+    );
+    if (!mounted) return;
+    if (saved) {
+      _popOnce(result);
+    } else {
+      setState(() => _actionInProgress = false);
+    }
   }
 
-  Future<void> _confirmDelete(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showExpressiveDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteCourseTitle),
-        content: Text(l10n.deleteCourseMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && !_hasPopped) {
-      _popOnce(const CourseEditorResult.delete());
+  Future<void> _confirmDelete() async {
+    if (_blocked) return;
+    setState(() => _pickerOpen = true);
+    try {
+      final confirmed = await showExpressiveDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) =>
+            _DeleteCourseConfirmationDialog(onDelete: widget.onDelete),
+      );
+      if (confirmed == true && mounted && !_hasPopped) {
+        _popOnce(const CourseEditorResult.delete());
+      }
+    } finally {
+      if (mounted && !_hasPopped) {
+        setState(() => _pickerOpen = false);
+      } else {
+        _pickerOpen = false;
+      }
     }
   }
 
@@ -750,6 +779,81 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
       result[key] = content;
     }
     return result;
+  }
+}
+
+class _DeleteCourseConfirmationDialog extends StatefulWidget {
+  const _DeleteCourseConfirmationDialog({this.onDelete});
+
+  final Future<void> Function()? onDelete;
+
+  @override
+  State<_DeleteCourseConfirmationDialog> createState() =>
+      _DeleteCourseConfirmationDialogState();
+}
+
+class _DeleteCourseConfirmationDialogState
+    extends State<_DeleteCourseConfirmationDialog> {
+  var _busy = false;
+  var _popped = false;
+
+  Future<void> _delete() async {
+    if (_busy || _popped) return;
+    final delete = widget.onDelete;
+    if (delete == null) {
+      _popped = true;
+      Navigator.of(context).pop(true);
+      return;
+    }
+    setState(() => _busy = true);
+    final deleted = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Delete course',
+      command: delete,
+    );
+    if (!mounted) return;
+    if (deleted) {
+      _popped = true;
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _busy = false);
+    }
+  }
+
+  void _cancel() {
+    if (_busy || _popped) return;
+    _popped = true;
+    Navigator.of(context).pop(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return PopScope(
+      canPop: !_busy && !_popped,
+      child: AlertDialog(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            UiCommandBusyIndicator(busy: _busy),
+            const SizedBox(height: 16),
+            Text(l10n.deleteCourseTitle),
+          ],
+        ),
+        content: Text(l10n.deleteCourseMessage),
+        actions: [
+          TextButton(
+            onPressed: _busy ? null : _cancel,
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: _busy ? null : () => unawaited(_delete()),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
   }
 }
 

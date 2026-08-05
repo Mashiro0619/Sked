@@ -640,6 +640,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get saveFailedRetry => '保存に失敗しました。後でもう一度お試しください。';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked はすでに開いています';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      '別の Sked ウィンドウまたはブラウザータブがローカルデータを使用しています。閉じてから、もう一度お試しください。';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'ローカルデータを利用できません';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked はローカルデータへの排他アクセスを確認できませんでした。データは開かれておらず、変更もされていません。ストレージへのアクセスを確認してから、もう一度お試しください。';
+
+  @override
+  String get savingChanges => '変更を保存しています…';
+
+  @override
+  String get showApiKey => 'API キーを表示';
+
+  @override
+  String get hideApiKey => 'API キーを非表示';
+
+  @override
   String get importFailedCheckContent => 'インポートに失敗しました。ファイル内容を確認してください。';
 
   @override
@@ -1140,6 +1163,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get schoolImportParserNoModelsFound => 'エンドポイントからモデルが返されませんでした。';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'モデルを取得できませんでした。エンドポイントを確認して、もう一度お試しください。';
 
   @override
   String schoolImportParserModelsFetched(int count) {

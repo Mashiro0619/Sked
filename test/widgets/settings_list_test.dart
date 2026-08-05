@@ -4,6 +4,7 @@ import 'package:sked/widgets/settings_list.dart';
 
 void main() {
   testWidgets('SettingsSwitchTile switch tap changes once', (tester) async {
+    final semantics = tester.ensureSemantics();
     var value = false;
     var changeCount = 0;
 
@@ -27,10 +28,13 @@ void main() {
       ),
     );
 
+    expect(find.bySemanticsLabel('Toggle setting'), findsOneWidget);
+
     await tester.tap(find.byType(Switch));
     await tester.pump();
 
     expect(value, isTrue);
     expect(changeCount, 1);
+    semantics.dispose();
   });
 }

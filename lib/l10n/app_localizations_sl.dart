@@ -662,6 +662,29 @@ class AppLocalizationsSl extends AppLocalizations {
       'Shranjevanje ni uspelo. Prosim, poskusite kasneje znova.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked je že odprt';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Drugo okno aplikacije Sked ali zavihek brskalnika uporablja vaše lokalne podatke. Zaprite drugo okno oziroma zavihek in poskusite znova.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Lokalni podatki niso na voljo';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked ni mogel potrditi izključnega dostopa do lokalnih podatkov. Vaši podatki niso bili odprti ali spremenjeni. Preverite dostop do shrambe in poskusite znova.';
+
+  @override
+  String get savingChanges => 'Shranjevanje sprememb...';
+
+  @override
+  String get showApiKey => 'Prikaži ključ API';
+
+  @override
+  String get hideApiKey => 'Skrij ključ API';
+
+  @override
   String get importFailedCheckContent =>
       'Uvoz ni uspel. Prosim preverite vsebino datoteke.';
 
@@ -1177,6 +1200,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Do končne točke modelov niso vrnili.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Modelov ni bilo mogoče pridobiti. Preverite končno točko in poskusite znova.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

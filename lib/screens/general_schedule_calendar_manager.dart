@@ -16,11 +16,12 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return SafeArea(
+    final content = SafeArea(
       top: false,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          _CalendarManagerBusyIndicator(busy: _actionInProgress),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
             child: LayoutBuilder(
@@ -43,7 +44,9 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
                     _CalendarManagerAddAction(
                       compact: compactHeader,
                       disabled: _actionInProgress,
-                      onPressed: () => _addCalendar(provider, l10n),
+                      onPressed: () {
+                        unawaited(_addCalendar(provider, l10n));
+                      },
                     ),
                   ],
                 );
@@ -66,17 +69,32 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
                     schedule.events.length,
                   ),
                   disabled: _actionInProgress,
-                  onSelect: () => _runCalendarAction(
-                    () => provider.switchGeneralSchedule(schedule.id),
-                  ),
-                  onToggleVisibility: () => _runCalendarAction(
-                    () => provider.updateGeneralScheduleVisibility(
-                      schedule.id,
-                      !schedule.isVisible,
-                    ),
-                  ),
-                  onRename: () => _renameCalendar(context, schedule),
-                  onDelete: () => _deleteCalendar(context, schedule),
+                  onSelect: () {
+                    unawaited(
+                      _runCalendarAction(
+                        debugLabel: 'Switch general calendar',
+                        action: () =>
+                            provider.switchGeneralSchedule(schedule.id),
+                      ),
+                    );
+                  },
+                  onToggleVisibility: () {
+                    unawaited(
+                      _runCalendarAction(
+                        debugLabel: 'Update general calendar visibility',
+                        action: () => provider.updateGeneralScheduleVisibility(
+                          schedule.id,
+                          !schedule.isVisible,
+                        ),
+                      ),
+                    );
+                  },
+                  onRename: () {
+                    unawaited(_renameCalendar(schedule));
+                  },
+                  onDelete: () {
+                    unawaited(_deleteCalendar(schedule));
+                  },
                 );
               },
             ),
@@ -84,24 +102,33 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
         ],
       ),
     );
+    return PopScope<void>(canPop: !_actionInProgress, child: content);
   }
 
   Future<void> _addCalendar(TimetableProvider provider, AppLocalizations l10n) {
     return _runCalendarAction(
-      () => provider.addGeneralSchedule(
+      debugLabel: 'Add general calendar',
+      action: () => provider.addGeneralSchedule(
         name: l10n.newCalendar,
         colorValue: _nextCalendarColor(provider.generalSchedules),
       ),
     );
   }
 
-  Future<void> _runCalendarAction(Future<void> Function() action) async {
+  Future<void> _runCalendarAction({
+    required String debugLabel,
+    required Future<void> Function() action,
+  }) async {
     if (_actionInProgress) {
       return;
     }
     setState(() => _actionInProgress = true);
     try {
-      await action();
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: debugLabel,
+        command: action,
+      );
     } finally {
       if (mounted) {
         setState(() => _actionInProgress = false);
@@ -111,94 +138,213 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
     }
   }
 
-  Future<void> _renameCalendar(
-    BuildContext context,
-    GeneralSchedule schedule,
-  ) async {
-    await _runCalendarAction(() async {
-      final provider = context.read<TimetableProvider>();
-      final controller = TextEditingController(text: schedule.name);
-      final name = await showExpressiveDialog<String>(
-        context: context,
-        builder: (dialogContext) {
-          final l10n = AppLocalizations.of(dialogContext);
-          var popped = false;
-          void popWith(String? value) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(dialogContext).pop(value);
-          }
+  Future<void> _renameCalendar(GeneralSchedule schedule) async {
+    await _runCalendarAction(
+      debugLabel: 'Rename general calendar',
+      action: () async {
+        final provider = context.read<TimetableProvider>();
+        await showExpressiveDialog<void>(
+          context: context,
+          builder: (_) =>
+              _RenameCalendarDialog(provider: provider, schedule: schedule),
+        );
+      },
+    );
+  }
 
-          return AlertDialog(
-            title: Text(l10n.renameCalendar),
-            content: TextField(
-              controller: controller,
+  Future<void> _deleteCalendar(GeneralSchedule schedule) async {
+    await _runCalendarAction(
+      debugLabel: 'Delete general calendar',
+      action: () async {
+        final provider = context.read<TimetableProvider>();
+        await showExpressiveDialog<void>(
+          context: context,
+          builder: (_) =>
+              _DeleteCalendarDialog(provider: provider, schedule: schedule),
+        );
+      },
+    );
+  }
+}
+
+class _RenameCalendarDialog extends StatefulWidget {
+  const _RenameCalendarDialog({required this.provider, required this.schedule});
+
+  final TimetableProvider provider;
+  final GeneralSchedule schedule;
+
+  @override
+  State<_RenameCalendarDialog> createState() => _RenameCalendarDialogState();
+}
+
+class _RenameCalendarDialogState extends State<_RenameCalendarDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.schedule.name,
+  );
+  var _busy = false;
+  var _popped = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _controller.text.trim();
+    if (_busy || _popped || name.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _busy = true);
+    final saved = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Rename general calendar',
+      command: () =>
+          widget.provider.renameGeneralSchedule(widget.schedule.id, name),
+    );
+    if (!mounted) return;
+    if (saved) {
+      _popped = true;
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final name = _controller.text.trim();
+    return PopScope<void>(
+      canPop: !_busy && !_popped,
+      child: AlertDialog(
+        title: Text(l10n.renameCalendar),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            UiCommandBusyIndicator(busy: _busy),
+            const SizedBox(height: 8),
+            TextField(
+              key: const ValueKey('rename-calendar-field'),
+              controller: _controller,
+              enabled: !_busy,
               autofocus: true,
               decoration: InputDecoration(
                 labelText: l10n.name,
                 prefixIcon: const Icon(Icons.edit_outlined),
               ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => unawaited(_save()),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => popWith(null),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => popWith(controller.text.trim()),
-                child: Text(l10n.save),
-              ),
-            ],
-          );
-        },
-      );
-      controller.dispose();
-      if (name != null && name.trim().isNotEmpty) {
-        await provider.renameGeneralSchedule(schedule.id, name);
-      }
-    });
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _busy || _popped
+                ? null
+                : () {
+                    _popped = true;
+                    Navigator.of(context).pop();
+                  },
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: _busy || _popped || name.isEmpty
+                ? null
+                : () => unawaited(_save()),
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeleteCalendarDialog extends StatefulWidget {
+  const _DeleteCalendarDialog({required this.provider, required this.schedule});
+
+  final TimetableProvider provider;
+  final GeneralSchedule schedule;
+
+  @override
+  State<_DeleteCalendarDialog> createState() => _DeleteCalendarDialogState();
+}
+
+class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog> {
+  var _busy = false;
+  var _popped = false;
+
+  Future<void> _delete() async {
+    if (_busy || _popped) return;
+    setState(() => _busy = true);
+    final deleted = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Delete general calendar',
+      command: () => widget.provider.deleteGeneralSchedule(widget.schedule.id),
+    );
+    if (!mounted) return;
+    if (deleted) {
+      _popped = true;
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _busy = false);
+    }
   }
 
-  Future<void> _deleteCalendar(
-    BuildContext context,
-    GeneralSchedule schedule,
-  ) async {
-    await _runCalendarAction(() async {
-      final provider = context.read<TimetableProvider>();
-      final l10n = AppLocalizations.of(context);
-      final confirmed = await showExpressiveDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          var popped = false;
-          void popWith(bool value) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(dialogContext).pop(value);
-          }
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return PopScope<void>(
+      canPop: !_busy && !_popped,
+      child: AlertDialog(
+        title: Text(l10n.deleteCalendar),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            UiCommandBusyIndicator(busy: _busy),
+            const SizedBox(height: 8),
+            Text(l10n.deleteCalendarMessage(widget.schedule.name)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _busy || _popped
+                ? null
+                : () {
+                    _popped = true;
+                    Navigator.of(context).pop();
+                  },
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: _busy || _popped ? null : () => unawaited(_delete()),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-          return AlertDialog(
-            title: Text(l10n.deleteCalendar),
-            content: Text(l10n.deleteCalendarMessage(schedule.name)),
-            actions: [
-              TextButton(
-                onPressed: () => popWith(false),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: () => popWith(true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                ),
-                child: Text(l10n.delete),
-              ),
-            ],
-          );
-        },
-      );
-      if (confirmed == true) {
-        await provider.deleteGeneralSchedule(schedule.id);
-      }
-    });
+class _CalendarManagerBusyIndicator extends StatelessWidget {
+  const _CalendarManagerBusyIndicator({required this.busy});
+
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 4,
+      child: busy
+          ? Semantics(
+              liveRegion: true,
+              label: AppLocalizations.of(context).savingChanges,
+              child: const ExcludeSemantics(child: LinearProgressIndicator()),
+            )
+          : const SizedBox.shrink(),
+    );
   }
 }
 
@@ -266,78 +412,87 @@ class _CalendarManagerTile extends StatelessWidget {
         ? colors.primary.withValues(alpha: 0.44)
         : colors.outlineVariant.withValues(alpha: 0.7);
 
-    return Material(
-      color: active
-          ? colors.primary.withValues(alpha: 0.10)
-          : colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: borderColor),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: disabled ? null : onSelect,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 360;
-              final titleBlock = _CalendarManagerTileTitle(
-                schedule: schedule,
-                active: active,
-                eventCountLabel: eventCountLabel,
-              );
-              final actions = _CalendarManagerTileActions(
-                visible: schedule.isVisible,
-                disabled: disabled,
-                showTooltip: l10n.showCalendar,
-                hideTooltip: l10n.hideCalendar,
-                renameTooltip: l10n.rename,
-                deleteTooltip: l10n.delete,
-                onToggleVisibility: onToggleVisibility,
-                onRename: onRename,
-                onDelete: onDelete,
-              );
+    return Semantics(
+      key: ValueKey('calendar-manager-tile-${schedule.id}'),
+      container: true,
+      button: true,
+      enabled: !disabled,
+      selected: active,
+      onTap: disabled ? null : onSelect,
+      child: Material(
+        color: active
+            ? colors.primary.withValues(alpha: 0.10)
+            : colors.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: borderColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          excludeFromSemantics: true,
+          onTap: disabled ? null : onSelect,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 360;
+                final titleBlock = _CalendarManagerTileTitle(
+                  schedule: schedule,
+                  active: active,
+                  eventCountLabel: eventCountLabel,
+                );
+                final actions = _CalendarManagerTileActions(
+                  visible: schedule.isVisible,
+                  disabled: disabled,
+                  showTooltip: l10n.showCalendar,
+                  hideTooltip: l10n.hideCalendar,
+                  renameTooltip: l10n.rename,
+                  deleteTooltip: l10n.delete,
+                  onToggleVisibility: onToggleVisibility,
+                  onRename: onRename,
+                  onDelete: onDelete,
+                );
 
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        _ColorDot(
-                          color: effectiveGeneralCalendarColor(
-                            context,
-                            schedule,
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _ColorDot(
+                            color: effectiveGeneralCalendarColor(
+                              context,
+                              schedule,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: titleBlock),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(child: titleBlock),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: actions,
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _ColorDot(
+                      color: effectiveGeneralCalendarColor(context, schedule),
                     ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: actions,
-                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: titleBlock),
+                    const SizedBox(width: 8),
+                    actions,
                   ],
                 );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _ColorDot(
-                    color: effectiveGeneralCalendarColor(context, schedule),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: titleBlock),
-                  const SizedBox(width: 8),
-                  actions,
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ),

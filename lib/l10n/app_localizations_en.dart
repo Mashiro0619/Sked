@@ -657,6 +657,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveFailedRetry => 'Save failed. Please try again later.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked is already open';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Another Sked window or browser tab is using your local data. Close it, then retry.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Local data is unavailable';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked could not verify exclusive access to local data. Your data was not opened or changed. Check storage access, then retry.';
+
+  @override
+  String get savingChanges => 'Saving changes...';
+
+  @override
+  String get showApiKey => 'Show API key';
+
+  @override
+  String get hideApiKey => 'Hide API key';
+
+  @override
   String get importFailedCheckContent =>
       'Import failed. Please check the file content.';
 
@@ -1168,6 +1191,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'No models were returned by the endpoint.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Unable to fetch models. Check the endpoint and try again.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

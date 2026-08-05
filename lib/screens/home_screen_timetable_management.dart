@@ -146,8 +146,10 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     );
     var selectedStartDate = timetable.config.startDate;
     var startDatePickerOpen = false;
+    var busy = false;
+    var deleteDialogOpen = false;
     try {
-      final result = await showExpressiveDialog<String>(
+      await showExpressiveDialog<String>(
         context: context,
         builder: (context) {
           final l10n = AppLocalizations.of(context);
@@ -166,231 +168,383 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
             return '$year-$month-$day';
           }
 
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AnimatedPadding(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: EdgeInsets.fromLTRB(
-                  24,
-                  24,
-                  24,
-                  viewInsets.bottom + 24,
-                ),
-                child: Center(
-                  child: Material(
-                    color: Theme.of(context).colorScheme.surface,
-                    elevation: 6,
-                    borderRadius: BorderRadius.circular(28),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    l10n.timetable,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.headlineSmall,
+          return _TimetableDialogControllerOwner(
+            nameController: nameController,
+            weeksController: weeksController,
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                final blocked = busy || startDatePickerOpen || deleteDialogOpen;
+
+                Future<void> saveChanges() async {
+                  if (busy ||
+                      startDatePickerOpen ||
+                      deleteDialogOpen ||
+                      popped) {
+                    return;
+                  }
+                  final totalWeeks = normalizeTimetableWeeks(
+                    int.tryParse(weeksController.text) ??
+                        timetable.config.totalWeeks,
+                  );
+                  weeksController.value = TextEditingValue(
+                    text: totalWeeks.toString(),
+                    selection: TextSelection.collapsed(
+                      offset: totalWeeks.toString().length,
+                    ),
+                  );
+                  setDialogState(() => busy = true);
+                  final saved = await runUiCommandWithFeedback(
+                    context: context,
+                    debugLabel: 'Update timetable',
+                    command: () => provider.updateTimetableConfigFor(
+                      timetable.id,
+                      timetable.config.copyWith(
+                        name: nameController.text.trim().isEmpty
+                            ? timetable.config.name
+                            : nameController.text.trim(),
+                        startDate: selectedStartDate,
+                        totalWeeks: totalWeeks,
+                      ),
+                    ),
+                  );
+                  if (!context.mounted) return;
+                  if (saved) {
+                    popWith('save');
+                  } else {
+                    setDialogState(() => busy = false);
+                  }
+                }
+
+                Future<void> confirmDelete() async {
+                  if (busy ||
+                      startDatePickerOpen ||
+                      deleteDialogOpen ||
+                      popped) {
+                    return;
+                  }
+                  setDialogState(() => deleteDialogOpen = true);
+                  try {
+                    final deleted = await showExpressiveDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => _DeleteTimetableConfirmationDialog(
+                        provider: provider,
+                        timetableId: timetable.id,
+                        timetableName: timetable.config.name,
+                      ),
+                    );
+                    if (!context.mounted || deleted != true) return;
+                    popWith('delete');
+                  } finally {
+                    if (context.mounted && !popped) {
+                      setDialogState(() => deleteDialogOpen = false);
+                    } else {
+                      deleteDialogOpen = false;
+                    }
+                  }
+                }
+
+                return PopScope(
+                  canPop: !blocked && !popped,
+                  child: AnimatedPadding(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      24,
+                      24,
+                      viewInsets.bottom + 24,
+                    ),
+                    child: Center(
+                      child: Material(
+                        color: Theme.of(context).colorScheme.surface,
+                        elevation: 6,
+                        borderRadius: BorderRadius.circular(28),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    24,
+                                    24,
+                                    0,
                                   ),
-                                  const SizedBox(height: 24),
-                                  TextField(
-                                    controller: nameController,
-                                    decoration: InputDecoration(
-                                      labelText: l10n.timetableName,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  TextField(
-                                    controller: weeksController,
-                                    keyboardType: TextInputType.number,
-                                    textInputAction: TextInputAction.done,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      TextInputFormatter.withFunction((
-                                        oldValue,
-                                        newValue,
-                                      ) {
-                                        final text = newValue.text;
-                                        if (text.isEmpty) {
-                                          return newValue;
-                                        }
-                                        final value = int.tryParse(text);
-                                        if (value == null) {
-                                          return oldValue;
-                                        }
-                                        final clamped = normalizeTimetableWeeks(
-                                          value,
-                                        );
-                                        if (clamped == value) {
-                                          return newValue;
-                                        }
-                                        final clampedText = clamped.toString();
-                                        return TextEditingValue(
-                                          text: clampedText,
-                                          selection: TextSelection.collapsed(
-                                            offset: clampedText.length,
-                                          ),
-                                        );
-                                      }),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      UiCommandBusyIndicator(busy: busy),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        l10n.timetable,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.headlineSmall,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      TextField(
+                                        controller: nameController,
+                                        enabled: !blocked,
+                                        decoration: InputDecoration(
+                                          labelText: l10n.timetableName,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        controller: weeksController,
+                                        enabled: !blocked,
+                                        keyboardType: TextInputType.number,
+                                        textInputAction: TextInputAction.done,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          TextInputFormatter.withFunction((
+                                            oldValue,
+                                            newValue,
+                                          ) {
+                                            final text = newValue.text;
+                                            if (text.isEmpty) {
+                                              return newValue;
+                                            }
+                                            final value = int.tryParse(text);
+                                            if (value == null) {
+                                              return oldValue;
+                                            }
+                                            final clamped =
+                                                normalizeTimetableWeeks(value);
+                                            if (clamped == value) {
+                                              return newValue;
+                                            }
+                                            final clampedText = clamped
+                                                .toString();
+                                            return TextEditingValue(
+                                              text: clampedText,
+                                              selection:
+                                                  TextSelection.collapsed(
+                                                    offset: clampedText.length,
+                                                  ),
+                                            );
+                                          }),
+                                        ],
+                                        decoration: InputDecoration(
+                                          labelText: l10n.totalWeeks,
+                                        ),
+                                      ),
                                     ],
-                                    decoration: InputDecoration(
-                                      labelText: l10n.totalWeeks,
-                                    ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _TimetableStartDateTile(
-                              title: l10n.semesterStartDate,
-                              dateLabel: formatDate(selectedStartDate),
-                              enabled: !startDatePickerOpen,
-                              onTap: startDatePickerOpen
-                                  ? null
-                                  : () async {
-                                      final firstDate = DateTime(2020);
-                                      final lastDate = DateTime(2035);
-                                      final boundedInitialDate =
-                                          selectedStartDate.isBefore(firstDate)
-                                          ? firstDate
-                                          : selectedStartDate.isAfter(lastDate)
-                                          ? lastDate
-                                          : selectedStartDate;
-                                      setDialogState(
-                                        () => startDatePickerOpen = true,
-                                      );
-                                      try {
-                                        final picked = await showDatePicker(
-                                          context: context,
-                                          firstDate: firstDate,
-                                          lastDate: lastDate,
-                                          initialDate: boundedInitialDate,
-                                        );
-                                        if (!context.mounted ||
-                                            picked == null ||
-                                            picked == selectedStartDate) {
-                                          return;
-                                        }
-                                        setDialogState(
-                                          () => selectedStartDate = picked,
-                                        );
-                                      } finally {
-                                        if (context.mounted) {
-                                          setDialogState(
-                                            () => startDatePickerOpen = false,
-                                          );
-                                        } else {
-                                          startDatePickerOpen = false;
-                                        }
-                                      }
-                                    },
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                24,
-                                24,
-                                24,
-                                24,
-                              ),
-                              child: ExpressiveActionArea(
-                                leading: TextButton(
-                                  onPressed: () => popWith('delete'),
-                                  child: Text(l10n.delete),
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => popWith(null),
-                                    child: Text(l10n.cancel),
+                                const SizedBox(height: 12),
+                                _TimetableStartDateTile(
+                                  title: l10n.semesterStartDate,
+                                  dateLabel: formatDate(selectedStartDate),
+                                  enabled: !blocked,
+                                  onTap: blocked
+                                      ? null
+                                      : () async {
+                                          if (busy ||
+                                              startDatePickerOpen ||
+                                              deleteDialogOpen ||
+                                              popped) {
+                                            return;
+                                          }
+                                          final firstDate = DateTime(2020);
+                                          final lastDate = DateTime(2035);
+                                          final boundedInitialDate =
+                                              selectedStartDate.isBefore(
+                                                firstDate,
+                                              )
+                                              ? firstDate
+                                              : selectedStartDate.isAfter(
+                                                  lastDate,
+                                                )
+                                              ? lastDate
+                                              : selectedStartDate;
+                                          setDialogState(
+                                            () => startDatePickerOpen = true,
+                                          );
+                                          try {
+                                            final picked = await showDatePicker(
+                                              context: context,
+                                              firstDate: firstDate,
+                                              lastDate: lastDate,
+                                              initialDate: boundedInitialDate,
+                                            );
+                                            if (!context.mounted ||
+                                                picked == null ||
+                                                picked == selectedStartDate) {
+                                              return;
+                                            }
+                                            setDialogState(
+                                              () => selectedStartDate = picked,
+                                            );
+                                          } finally {
+                                            if (context.mounted) {
+                                              setDialogState(
+                                                () =>
+                                                    startDatePickerOpen = false,
+                                              );
+                                            } else {
+                                              startDatePickerOpen = false;
+                                            }
+                                          }
+                                        },
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    24,
+                                    24,
+                                    24,
                                   ),
-                                  FilledButton(
-                                    onPressed: () => popWith('save'),
-                                    child: Text(l10n.save),
+                                  child: ExpressiveActionArea(
+                                    leading: TextButton(
+                                      onPressed: blocked
+                                          ? null
+                                          : () => unawaited(confirmDelete()),
+                                      child: Text(l10n.delete),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: blocked
+                                            ? null
+                                            : () => popWith(null),
+                                        child: Text(l10n.cancel),
+                                      ),
+                                      FilledButton(
+                                        onPressed: blocked
+                                            ? null
+                                            : () => unawaited(saveChanges()),
+                                        child: Text(l10n.save),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           );
         },
       );
-
-      if (result == 'save') {
-        final totalWeeks = normalizeTimetableWeeks(
-          int.tryParse(weeksController.text) ?? timetable.config.totalWeeks,
-        );
-        weeksController.value = TextEditingValue(
-          text: totalWeeks.toString(),
-          selection: TextSelection.collapsed(
-            offset: totalWeeks.toString().length,
-          ),
-        );
-        await provider.updateTimetableConfigFor(
-          timetable.id,
-          timetable.config.copyWith(
-            name: nameController.text.trim().isEmpty
-                ? timetable.config.name
-                : nameController.text.trim(),
-            startDate: selectedStartDate,
-            totalWeeks: totalWeeks,
-          ),
-        );
-      }
-      if (result == 'delete') {
-        if (!mounted) {
-          return;
-        }
-        final confirmed = await showExpressiveDialog<bool>(
-          context: this.context,
-          builder: (context) {
-            final l10n = AppLocalizations.of(context);
-            var popped = false;
-            void popWith(bool value) {
-              if (popped) return;
-              popped = true;
-              Navigator.of(context).pop(value);
-            }
-
-            return AlertDialog(
-              title: Text(l10n.deleteTimetableTitle),
-              content: Text(l10n.deleteTimetableMessage(timetable.config.name)),
-              actions: [
-                TextButton(
-                  onPressed: () => popWith(false),
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => popWith(true),
-                  child: Text(l10n.delete),
-                ),
-              ],
-            );
-          },
-        );
-        if (confirmed == true) {
-          await provider.deleteTimetable(timetable.id);
-        }
-      }
     } finally {
-      nameController.dispose();
-      weeksController.dispose();
       _setTimetableItemDialogOpen(false);
     }
+  }
+}
+
+class _TimetableDialogControllerOwner extends StatefulWidget {
+  const _TimetableDialogControllerOwner({
+    required this.nameController,
+    required this.weeksController,
+    required this.child,
+  });
+
+  final TextEditingController nameController;
+  final TextEditingController weeksController;
+  final Widget child;
+
+  @override
+  State<_TimetableDialogControllerOwner> createState() =>
+      _TimetableDialogControllerOwnerState();
+}
+
+class _TimetableDialogControllerOwnerState
+    extends State<_TimetableDialogControllerOwner> {
+  @override
+  void dispose() {
+    widget.nameController.dispose();
+    widget.weeksController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _DeleteTimetableConfirmationDialog extends StatefulWidget {
+  const _DeleteTimetableConfirmationDialog({
+    required this.provider,
+    required this.timetableId,
+    required this.timetableName,
+  });
+
+  final TimetableProvider provider;
+  final String timetableId;
+  final String timetableName;
+
+  @override
+  State<_DeleteTimetableConfirmationDialog> createState() =>
+      _DeleteTimetableConfirmationDialogState();
+}
+
+class _DeleteTimetableConfirmationDialogState
+    extends State<_DeleteTimetableConfirmationDialog> {
+  var _busy = false;
+  var _popped = false;
+
+  Future<void> _delete() async {
+    if (_busy || _popped) return;
+    setState(() => _busy = true);
+    final deleted = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Delete timetable',
+      command: () => widget.provider.deleteTimetable(widget.timetableId),
+    );
+    if (!mounted) return;
+    if (deleted) {
+      _popped = true;
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _busy = false);
+    }
+  }
+
+  void _cancel() {
+    if (_busy || _popped) return;
+    _popped = true;
+    Navigator.of(context).pop(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return PopScope(
+      canPop: !_busy && !_popped,
+      child: AlertDialog(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            UiCommandBusyIndicator(busy: _busy),
+            const SizedBox(height: 16),
+            Text(l10n.deleteTimetableTitle),
+          ],
+        ),
+        content: Text(l10n.deleteTimetableMessage(widget.timetableName)),
+        actions: [
+          TextButton(
+            onPressed: _busy ? null : _cancel,
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: _busy ? null : () => unawaited(_delete()),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
   }
 }
 

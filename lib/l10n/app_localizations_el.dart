@@ -674,6 +674,30 @@ class AppLocalizationsEl extends AppLocalizations {
       'Η αποθήκευση απέτυχε. Δοκιμάστε ξανά αργότερα.';
 
   @override
+  String get appInstanceBlockedTitle => 'Το Sked είναι ήδη ανοιχτό';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Ένα άλλο παράθυρο του Sked ή μια άλλη καρτέλα του προγράμματος περιήγησης χρησιμοποιεί τα τοπικά δεδομένα σας. Κλείστε το παράθυρο ή την καρτέλα και δοκιμάστε ξανά.';
+
+  @override
+  String get appInstanceLeaseFailedTitle =>
+      'Τα τοπικά δεδομένα δεν είναι διαθέσιμα';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Το Sked δεν μπόρεσε να επαληθεύσει την αποκλειστική πρόσβαση στα τοπικά δεδομένα. Τα δεδομένα σας δεν ανοίχτηκαν ούτε άλλαξαν. Ελέγξτε την πρόσβαση στον χώρο αποθήκευσης και δοκιμάστε ξανά.';
+
+  @override
+  String get savingChanges => 'Αποθήκευση αλλαγών...';
+
+  @override
+  String get showApiKey => 'Εμφάνιση κλειδιού API';
+
+  @override
+  String get hideApiKey => 'Απόκρυψη κλειδιού API';
+
+  @override
   String get importFailedCheckContent =>
       'Η εισαγωγή απέτυχε. Ελέγξτε το περιεχόμενο του αρχείου.';
 
@@ -1193,6 +1217,10 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Κανένα μοντέλο δεν επιστρέφηκε από το τελικό σημείο.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Δεν ήταν δυνατή η ανάκτηση των μοντέλων. Ελέγξτε το τελικό σημείο και δοκιμάστε ξανά.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

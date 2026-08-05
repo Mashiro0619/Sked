@@ -251,6 +251,132 @@ void main() {
     );
   });
 
+  testWidgets('save failure keeps the event draft for retry', (tester) async {
+    final results = <GeneralEventEditorResult?>[];
+    var saveCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                final result =
+                    await showModalBottomSheet<GeneralEventEditorResult>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => GeneralEventEditorSheet(
+                        calendars: const [
+                          GeneralSchedule(id: 'work', name: 'Work', events: []),
+                        ],
+                        activeCalendarId: 'work',
+                        onSave: (_) async {
+                          saveCount += 1;
+                          if (saveCount == 1) {
+                            throw StateError('retryable event save failed');
+                          }
+                        },
+                      ),
+                    );
+                results.add(result);
+              },
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Retry draft');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(saveCount, 1);
+    expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    expect(find.text('Retry draft'), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(results, isEmpty);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(saveCount, 2);
+    expect(find.byType(GeneralEventEditorSheet), findsNothing);
+    expect(results.single?.event?.title, 'Retry draft');
+  });
+
+  testWidgets('delete failure keeps the event editor open for retry', (
+    tester,
+  ) async {
+    final results = <GeneralEventEditorResult?>[];
+    var deleteCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                final result =
+                    await showModalBottomSheet<GeneralEventEditorResult>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => GeneralEventEditorSheet(
+                        calendars: const [
+                          GeneralSchedule(id: 'work', name: 'Work', events: []),
+                        ],
+                        activeCalendarId: 'work',
+                        initialEvent: GeneralEvent(
+                          id: 'event',
+                          calendarId: 'work',
+                          title: 'Meeting',
+                          startDateTimeIso: '2026-05-25T09:00:00.000',
+                          endDateTimeIso: '2026-05-25T10:00:00.000',
+                        ),
+                        onDelete: () async {
+                          deleteCount += 1;
+                          if (deleteCount == 1) {
+                            throw StateError('retryable event delete failed');
+                          }
+                        },
+                      ),
+                    );
+                results.add(result);
+              },
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(deleteCount, 1);
+    expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    expect(find.text('Meeting'), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(results, isEmpty);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(deleteCount, 2);
+    expect(find.byType(GeneralEventEditorSheet), findsNothing);
+    expect(results.single?.delete, isTrue);
+  });
+
   testWidgets('date picker ignores rapid duplicate taps', (tester) async {
     await tester.pumpWidget(
       _localizedApp(

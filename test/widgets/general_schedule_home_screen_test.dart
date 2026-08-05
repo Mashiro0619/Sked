@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +65,69 @@ class _BlockingTimetableStorage implements TimetableStorage {
   }
 }
 
+class _FailingTimetableStorage implements TimetableStorage {
+  _FailingTimetableStorage(this.data);
+
+  AppData? data;
+  int saveCount = 0;
+
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+
+  @override
+  Future<void> save(AppData data) async {
+    saveCount += 1;
+    throw StateError('calendar save failed');
+  }
+
+  @override
+  Future<String?> filePath() async => 'memory://general-home-failing-test';
+}
+
+class _FailOnceTimetableStorage implements TimetableStorage {
+  _FailOnceTimetableStorage(this.data);
+
+  AppData? data;
+  int saveCount = 0;
+  bool failNextSave = false;
+
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+
+  @override
+  Future<void> save(AppData data) async {
+    saveCount += 1;
+    if (failNextSave) {
+      failNextSave = false;
+      throw StateError('retryable calendar save failed');
+    }
+    this.data = data;
+  }
+
+  @override
+  Future<String?> filePath() async => 'memory://general-home-fail-once-test';
+}
+
+AppData _buildGeneralDataWithCalendars(
+  List<GeneralSchedule> calendars, {
+  required String activeId,
+}) {
+  return buildInitialAppData(
+    buildDefaultPeriodTimes(),
+    localeCode: defaultLocaleCode,
+  ).copyWith(
+    activeMode: AppMode.general,
+    generalMode: GeneralScheduleData(
+      activeScheduleId: activeId,
+      schedules: calendars,
+      selectedDateIso: '2026-06-16',
+      defaultView: generalViewWeek,
+    ),
+  );
+}
+
 Future<TimetableProvider> _createProvider() async {
   final provider = TimetableProvider(
     storage: _MemoryTimetableStorage(
@@ -105,6 +169,7 @@ Future<void> _pumpGeneralScheduleHomeScreen(
   WidgetTester tester,
   TimetableProvider provider, {
   ThemeData? theme,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   addTearDown(provider.dispose);
   PackageInfo.setMockInitialValues(
@@ -122,6 +187,10 @@ Future<void> _pumpGeneralScheduleHomeScreen(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: theme,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
         home: const GeneralScheduleHomeScreen(),
       ),
     ),
@@ -160,6 +229,9 @@ void main() {
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
     expect(find.text('Add event'), findsWidgets);
+    final editorSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(editorSheet.enableDrag, isFalse);
+    expect(editorSheet.showDragHandle, isFalse);
   });
 
   testWidgets('settings entry ignores rapid duplicate taps', (tester) async {
@@ -203,9 +275,21 @@ void main() {
     await tester.tap(addCalendarButton);
     await tester.tap(addCalendarButton, warnIfMissed: false);
     await storage.firstSaveStarted.future;
+    await tester.pump();
 
     expect(storage.saveCount, 1);
     expect(provider.generalSchedules, hasLength(2));
+    final managerSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(managerSheet.enableDrag, isFalse);
+    expect(managerSheet.showDragHandle, isFalse);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pump();
+
+    expect(find.byTooltip('Add calendar'), findsOneWidget);
+    expect(storage.saveCount, 1);
 
     storage.completeFirstSave();
     await tester.pumpAndSettle();
@@ -218,6 +302,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
+    final semantics = tester.ensureSemantics();
     final calendars = [
       const GeneralSchedule(
         id: 'cal1',
@@ -254,14 +339,147 @@ void main() {
       ),
     );
 
-    await _pumpGeneralScheduleHomeScreen(tester, provider);
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
 
     await tester.tap(find.byTooltip('Calendars'));
     await tester.pumpAndSettle();
 
     expect(find.text('Calendars'), findsWidgets);
     expect(find.byTooltip('Add calendar'), findsOneWidget);
+    final activeCalendar = tester.getSemantics(
+      find.byKey(const ValueKey('calendar-manager-tile-cal1')),
+    );
+    final flags = activeCalendar.getSemanticsData().flagsCollection;
+    expect(flags.isSelected, ui.Tristate.isTrue);
+    expect(flags.isButton, isTrue);
     expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
+  testWidgets('calendar manager reports save failure and remains usable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final storage = _FailingTimetableStorage(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ),
+    );
+    final provider = await _createProviderWithStorage(storage);
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byTooltip('Calendars'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Add calendar'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.generalSchedules, hasLength(1));
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Add calendar'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('calendar rename failure keeps the dialog draft for retry', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Original calendar',
+      events: [],
+    );
+    final storage = _FailOnceTimetableStorage(
+      _buildGeneralDataWithCalendars([calendar], activeId: calendar.id),
+    );
+    final provider = await _createProviderWithStorage(storage);
+    final baselineSaveCount = storage.saveCount;
+    storage.failNextSave = true;
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byTooltip('Calendars'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.byTooltip('Rename'));
+    await _pumpRouteTransition(tester);
+
+    final nameField = find.byKey(const ValueKey('rename-calendar-field'));
+    await tester.enterText(nameField, 'Retry draft');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _pumpRouteTransition(tester);
+
+    expect(nameField, findsOneWidget);
+    expect(find.text('Retry draft'), findsOneWidget);
+    expect(provider.generalSchedules.single.name, 'Original calendar');
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _pumpRouteTransition(tester);
+
+    expect(nameField, findsNothing);
+    expect(provider.generalSchedules.single.name, 'Retry draft');
+    expect(storage.saveCount, baselineSaveCount + 2);
+  });
+
+  testWidgets('calendar delete failure keeps confirmation open for retry', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const primary = GeneralSchedule(
+      id: 'cal1',
+      name: 'Primary calendar',
+      events: [],
+    );
+    const secondary = GeneralSchedule(
+      id: 'cal2',
+      name: 'Secondary calendar',
+      events: [],
+    );
+    final storage = _FailOnceTimetableStorage(
+      _buildGeneralDataWithCalendars([
+        primary,
+        secondary,
+      ], activeId: primary.id),
+    );
+    final provider = await _createProviderWithStorage(storage);
+    final baselineSaveCount = storage.saveCount;
+    storage.failNextSave = true;
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byTooltip('Calendars'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.byTooltip('Delete').last);
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.text('Delete calendar'), findsOneWidget);
+    expect(provider.generalSchedules, hasLength(2));
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.text('Delete calendar'), findsNothing);
+    expect(provider.generalSchedules.map((item) => item.id), [primary.id]);
+    expect(storage.saveCount, baselineSaveCount + 2);
   });
 
   testWidgets('week view swipes horizontally to change week', (tester) async {

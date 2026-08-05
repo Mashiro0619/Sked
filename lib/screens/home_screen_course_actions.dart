@@ -15,7 +15,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await showAppModalSheet<void>(
         context: context,
         isDismissible: canDismiss,
-        enableDrag: canDismiss,
+        enableDrag: false,
         maxWidth: 860,
         builder: (sheetContext) => CourseDetailsSheet(
           courseId: info.course.id,
@@ -25,7 +25,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
           onEdit: () => _openEditor(context, provider, course: info.course),
           onMissing: () {
             if (sheetContext.mounted) {
-              Navigator.of(sheetContext).maybePop();
+              unawaited(Navigator.of(sheetContext).maybePop());
             }
           },
           onSelectDisplayedCourse:
@@ -68,10 +68,10 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       final totalWeeks =
           provider.activeTimetableOrNull?.config.totalWeeks ?? 18;
       final canDismiss = provider.closeCoursePopupOnOutsideTap;
-      final result = await showAppModalSheet<CourseEditorResult>(
+      await showAppModalSheet<CourseEditorResult>(
         context: context,
         isDismissible: canDismiss,
-        enableDrag: canDismiss,
+        enableDrag: false,
         maxWidth: appSheetWidthExpanded,
         builder: (sheetContext) => CourseEditorSheet(
           periodTimes: periodTimes,
@@ -81,39 +81,12 @@ extension _HomeScreenCourseActions on _HomeScreenState {
           initialStartMinutes: emptySlot?.startMinutes,
           initialEndMinutes: emptySlot?.endMinutes,
           initialPeriods: emptySlot?.periods,
+          onSave: provider.saveCourse,
+          onDelete: course == null
+              ? null
+              : () => provider.deleteCourse(course.id),
         ),
       );
-
-      if (result == null) {
-        return;
-      }
-      if (result.delete && course != null) {
-        try {
-          await provider.deleteCourse(course.id);
-        } catch (_) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).saveFailedRetry),
-              ),
-            );
-          }
-        }
-        return;
-      }
-      if (result.course != null) {
-        try {
-          await provider.saveCourse(result.course!);
-        } catch (_) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).saveFailedRetry),
-              ),
-            );
-          }
-        }
-      }
     } finally {
       _setCourseEditorOpen(false);
     }

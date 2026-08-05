@@ -668,6 +668,29 @@ class AppLocalizationsBg extends AppLocalizations {
       'Записването се провали. Моля опитайте отново по-късно.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked вече е отворен';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Друг прозорец на Sked или раздел на браузъра използва локалните ви данни. Затворете го и опитайте отново.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Локалните данни не са достъпни';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked не можа да потвърди изключителен достъп до локалните данни. Данните ви не бяха отворени или променени. Проверете достъпа до хранилището и опитайте отново.';
+
+  @override
+  String get savingChanges => 'Запазване на промените...';
+
+  @override
+  String get showApiKey => 'Показване на API ключа';
+
+  @override
+  String get hideApiKey => 'Скриване на API ключа';
+
+  @override
   String get importFailedCheckContent =>
       'Импортирането се провали. Моля проверете съдържанието на файла.';
 
@@ -1191,6 +1214,10 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Не са върнати модели от крайната точка.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Моделите не можаха да бъдат извлечени. Проверете крайната точка и опитайте отново.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +24,7 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/ui_command.dart';
 import 'general_display_settings_page.dart';
 import 'language_settings_page.dart';
 import 'school_html_import_page.dart';
@@ -314,7 +317,9 @@ class AppUpdateCoordinator {
 }
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.packageInfoLoader});
+
+  final Future<PackageInfo> Function()? packageInfoLoader;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -331,7 +336,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentVersion();
+    unawaited(_loadCurrentVersion());
   }
 
   @override
@@ -398,7 +403,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     trailing: const Icon(Icons.keyboard_arrow_down),
                     onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
                         ? null
-                        : () => _pickPeriodTimeSet(provider, timetable.config),
+                        : () {
+                            unawaited(
+                              _pickPeriodTimeSet(provider, timetable.config),
+                            );
+                          },
                   ),
                 SettingsListTile(
                   leading: const Icon(Icons.language_outlined),
@@ -645,20 +654,32 @@ class _SettingsPageState extends State<SettingsPage> {
     TimetableProvider provider,
     TimetableConfig config,
   ) async {
-    await _guardFlow(_SettingsFlow.periodTimePicker, () async {
-      final result = await showPeriodTimeSetPickerDialog(
-        context,
-        provider: provider,
-        selectedPeriodTimeSetId: _selectedPeriodTimeSetId!,
-      );
-      if (result == null || result == _selectedPeriodTimeSetId) {
-        return;
-      }
-      setState(() => _selectedPeriodTimeSetId = result);
-      await provider.updateTimetableConfig(
-        config.copyWith(periodTimeSetId: result),
-      );
-    });
+    await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Select period time set',
+      command: () => _guardFlow(_SettingsFlow.periodTimePicker, () async {
+        final result = await showPeriodTimeSetPickerDialog(
+          context,
+          provider: provider,
+          selectedPeriodTimeSetId: _selectedPeriodTimeSetId!,
+        );
+        if (result == null || result == _selectedPeriodTimeSetId) {
+          return;
+        }
+        final previousId = _selectedPeriodTimeSetId;
+        setState(() => _selectedPeriodTimeSetId = result);
+        try {
+          await provider.updateTimetableConfig(
+            config.copyWith(periodTimeSetId: result),
+          );
+        } catch (_) {
+          if (mounted && _selectedPeriodTimeSetId == result) {
+            setState(() => _selectedPeriodTimeSetId = previousId);
+          }
+          rethrow;
+        }
+      }),
+    );
   }
 
   Future<void> _openPrivacyPolicyPage() async {
@@ -697,7 +718,15 @@ class _SettingsPageState extends State<SettingsPage> {
   String _backupFileName() => 'Sked_backup.json';
 
   Future<void> _loadCurrentVersion() async {
-    final info = await PackageInfo.fromPlatform();
+    PackageInfo info;
+    try {
+      info =
+          await (widget.packageInfoLoader?.call() ??
+              PackageInfo.fromPlatform());
+    } catch (error, stackTrace) {
+      debugPrint('Loading the current app version failed: $error\n$stackTrace');
+      return;
+    }
     if (!mounted) {
       return;
     }
@@ -722,11 +751,34 @@ class _SettingsPageState extends State<SettingsPage> {
         );
         return true;
       }());
-      await provider.updateAvailableUpdateVersion(null);
+      await _clearAvailableUpdateVersionIfUnchanged(
+        provider,
+        availableUpdateVersion,
+      );
       return;
     }
     if (comparison <= 0) {
+      await _clearAvailableUpdateVersionIfUnchanged(
+        provider,
+        availableUpdateVersion,
+      );
+    }
+  }
+
+  Future<void> _clearAvailableUpdateVersionIfUnchanged(
+    TimetableProvider provider,
+    String capturedVersion,
+  ) async {
+    if (provider.availableUpdateVersion != capturedVersion) {
+      return;
+    }
+    try {
       await provider.updateAvailableUpdateVersion(null);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Clearing the stale available update version failed: '
+        '$error\n$stackTrace',
+      );
     }
   }
 
@@ -1898,6 +1950,14 @@ class _SettingsPageState extends State<SettingsPage> {
         ).showSnackBar(SnackBar(content: Text(e.message)));
       }
       return false;
+    } catch (error, stackTrace) {
+      debugPrint('General schedule JSON import failed: $error\n$stackTrace');
+      if (feedbackContext.mounted) {
+        ScaffoldMessenger.of(
+          feedbackContext,
+        ).showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
+      }
+      return false;
     }
   }
 
@@ -1992,6 +2052,14 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(
           feedbackContext,
         ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+      return false;
+    } catch (error, stackTrace) {
+      debugPrint('General schedule ICS import failed: $error\n$stackTrace');
+      if (feedbackContext.mounted) {
+        ScaffoldMessenger.of(
+          feedbackContext,
+        ).showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
       }
       return false;
     }

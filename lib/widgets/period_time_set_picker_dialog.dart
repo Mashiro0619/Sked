@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/period_times_page.dart';
 import 'expressive_dialog.dart';
+import 'ui_command.dart';
 
 Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
@@ -34,11 +37,18 @@ Future<String?> showPeriodTimeSetPickerDialog(
         builder: (dialogContext, refreshDialog) {
           final l10n = AppLocalizations.of(dialogContext);
 
-          Future<void> runBusy(Future<void> Function() action) async {
+          Future<void> runBusy({
+            required String debugLabel,
+            required Future<void> Function() action,
+          }) async {
             if (busy || popped) return;
             refreshDialog(() => busy = true);
             try {
-              await action();
+              await runUiCommandWithFeedback(
+                context: dialogContext,
+                debugLabel: debugLabel,
+                command: action,
+              );
             } finally {
               if (dialogContext.mounted) {
                 refreshDialog(() => busy = false);
@@ -59,20 +69,29 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  UiCommandBusyIndicator(busy: busy),
                   Text(l10n.selectPeriodTimeSet),
                   Align(
                     alignment: AlignmentDirectional.centerEnd,
                     child: TextButton.icon(
                       onPressed: (busy || popped)
                           ? null
-                          : () => runBusy(() async {
-                              final created = await provider.addPeriodTimeSet();
-                              if (!dialogContext.mounted || popped) {
-                                return;
-                              }
-                              currentSelectedId = created.id;
-                              await openPeriodTimePage(created.id);
-                            }),
+                          : () {
+                              unawaited(
+                                runBusy(
+                                  debugLabel: 'Create period time set',
+                                  action: () async {
+                                    final created = await provider
+                                        .addPeriodTimeSet();
+                                    if (!dialogContext.mounted || popped) {
+                                      return;
+                                    }
+                                    currentSelectedId = created.id;
+                                    await openPeriodTimePage(created.id);
+                                  },
+                                ),
+                              );
+                            },
                       icon: const Icon(Icons.add),
                       label: Text(l10n.newItem),
                     ),
@@ -102,18 +121,29 @@ Future<String?> showPeriodTimeSetPickerDialog(
                         tooltip: l10n.editPeriodTimeSet,
                         onPressed: (busy || popped)
                             ? null
-                            : () => runBusy(() async {
-                                await openPeriodTimePage(item.id);
-                                final stillExists =
-                                    provider.periodTimeSetForId(item.id) !=
-                                    null;
-                                if (!stillExists &&
-                                    currentSelectedId == item.id) {
-                                  currentSelectedId =
-                                      provider.activePeriodTimeSetOrNull?.id ??
-                                      '';
-                                }
-                              }),
+                            : () {
+                                unawaited(
+                                  runBusy(
+                                    debugLabel: 'Edit period time set',
+                                    action: () async {
+                                      await openPeriodTimePage(item.id);
+                                      final stillExists =
+                                          provider.periodTimeSetForId(
+                                            item.id,
+                                          ) !=
+                                          null;
+                                      if (!stillExists &&
+                                          currentSelectedId == item.id) {
+                                        currentSelectedId =
+                                            provider
+                                                .activePeriodTimeSetOrNull
+                                                ?.id ??
+                                            '';
+                                      }
+                                    },
+                                  ),
+                                );
+                              },
                         icon: const Icon(Icons.edit_outlined),
                       ),
                       onTap: () => popOnce(item.id),

@@ -85,11 +85,18 @@ class AppRepository {
   /// Backup restore uses this before taking its provider-level write lease so
   /// an earlier UI save cannot finish in the middle of the restore transaction.
   Future<void> waitForPendingWrites() async {
-    try {
-      await _pendingWrite;
-    } catch (_) {
-      // The save caller observes the failure. Lease acquisition only needs to
-      // wait for completion; storage failures are enforced by the write gate.
+    while (true) {
+      final pendingWrite = _pendingWrite;
+      try {
+        await pendingWrite;
+      } catch (_) {
+        // The save caller observes the failure. Lease acquisition only needs
+        // to wait for completion; storage failures are enforced by the gate.
+      }
+      await Future<void>.microtask(() {});
+      if (identical(pendingWrite, _pendingWrite)) {
+        return;
+      }
     }
   }
 

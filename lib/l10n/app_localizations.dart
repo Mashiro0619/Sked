@@ -1335,6 +1335,48 @@ abstract class AppLocalizations {
   /// **'Save failed. Please try again later.'**
   String get saveFailedRetry;
 
+  /// No description provided for @appInstanceBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked is already open'**
+  String get appInstanceBlockedTitle;
+
+  /// No description provided for @appInstanceBlockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Another Sked window or browser tab is using your local data. Close it, then retry.'**
+  String get appInstanceBlockedMessage;
+
+  /// No description provided for @appInstanceLeaseFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local data is unavailable'**
+  String get appInstanceLeaseFailedTitle;
+
+  /// No description provided for @appInstanceLeaseFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked could not verify exclusive access to local data. Your data was not opened or changed. Check storage access, then retry.'**
+  String get appInstanceLeaseFailedMessage;
+
+  /// No description provided for @savingChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving changes...'**
+  String get savingChanges;
+
+  /// No description provided for @showApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Show API key'**
+  String get showApiKey;
+
+  /// No description provided for @hideApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide API key'**
+  String get hideApiKey;
+
   /// No description provided for @importFailedCheckContent.
   ///
   /// In en, this message translates to:
@@ -2195,6 +2237,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No models were returned by the endpoint.'**
   String get schoolImportParserNoModelsFound;
+
+  /// No description provided for @schoolImportParserFetchModelsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to fetch models. Check the endpoint and try again.'**
+  String get schoolImportParserFetchModelsFailed;
 
   /// No description provided for @schoolImportParserModelsFetched.
   ///

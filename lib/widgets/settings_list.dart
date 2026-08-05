@@ -13,9 +13,12 @@ class SettingsSectionHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 6),
-      child: Text(
-        title,
-        style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+      child: Semantics(
+        header: true,
+        child: Text(
+          title,
+          style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+        ),
       ),
     );
   }
@@ -192,61 +195,74 @@ class SettingsSwitchTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
     final enabled = onChanged != null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: ExpressiveTap(
-        onTap: enabled ? () => onChanged!(!value) : null,
-        enabled: enabled,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          decoration: ShapeDecoration(
-            color: colors.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: enabled
-                      ? colors.onSurfaceVariant
-                      : colors.onSurface.withValues(alpha: 0.38),
+    final toggle = enabled ? () => onChanged!(!value) : null;
+    return Semantics(
+      label: title,
+      hint: subtitle,
+      toggled: value,
+      enabled: enabled,
+      onTap: toggle,
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: ExpressiveTap(
+            onTap: toggle,
+            enabled: enabled,
+            borderRadius: BorderRadius.circular(18),
+            child: Ink(
+              decoration: ShapeDecoration(
+                color: colors.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: enabled
-                              ? colors.onSurface
-                              : colors.onSurface.withValues(alpha: 0.38),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: enabled
-                                ? colors.onSurfaceVariant
-                                : colors.onSurface.withValues(alpha: 0.38),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      color: enabled
+                          ? colors.onSurfaceVariant
+                          : colors.onSurface.withValues(alpha: 0.38),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: enabled
+                                  ? colors.onSurface
+                                  : colors.onSurface.withValues(alpha: 0.38),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: enabled
+                                    ? colors.onSurfaceVariant
+                                    : colors.onSurface.withValues(alpha: 0.38),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Switch(value: value, onChanged: onChanged),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Switch(value: value, onChanged: onChanged),
-              ],
+              ),
             ),
           ),
         ),
@@ -255,7 +271,7 @@ class SettingsSwitchTile extends StatelessWidget {
   }
 }
 
-class SettingsSliderTile extends StatelessWidget {
+class SettingsSliderTile extends StatefulWidget {
   const SettingsSliderTile({
     super.key,
     required this.icon,
@@ -263,8 +279,9 @@ class SettingsSliderTile extends StatelessWidget {
     required this.value,
     required this.min,
     required this.max,
-    required this.label,
-    required this.onChanged,
+    required this.labelBuilder,
+    required this.onChangeEnd,
+    this.enabled = true,
   });
 
   final IconData icon;
@@ -272,14 +289,47 @@ class SettingsSliderTile extends StatelessWidget {
   final int value;
   final int min;
   final int max;
-  final String label;
-  final ValueChanged<int> onChanged;
+  final String Function(int value) labelBuilder;
+  final ValueChanged<int> onChangeEnd;
+  final bool enabled;
+
+  @override
+  State<SettingsSliderTile> createState() => _SettingsSliderTileState();
+}
+
+class _SettingsSliderTileState extends State<SettingsSliderTile> {
+  late int _previewValue = _clamp(widget.value);
+  var _isInteracting = false;
+
+  int _clamp(int value) => value.clamp(widget.min, widget.max).toInt();
+
+  @override
+  void didUpdateWidget(covariant SettingsSliderTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final interactionCompleted = !oldWidget.enabled && widget.enabled;
+    final externalValueChanged = oldWidget.value != widget.value;
+    final rangeChanged =
+        oldWidget.min != widget.min || oldWidget.max != widget.max;
+    if (!_isInteracting &&
+        widget.enabled &&
+        (interactionCompleted || externalValueChanged || rangeChanged)) {
+      _previewValue = _clamp(widget.value);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
-    final safeValue = value.clamp(min, max).toInt();
+    final enabled = widget.enabled;
+    final safeValue = _clamp(_previewValue);
+    final foregroundColor = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    final label = widget.labelBuilder(safeValue);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Ink(
@@ -295,15 +345,15 @@ class SettingsSliderTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(icon, color: colors.onSurfaceVariant),
+                  Icon(widget.icon, color: secondaryColor),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      title,
+                      widget.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colors.onSurface,
+                        color: foregroundColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -315,20 +365,40 @@ class SettingsSliderTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                       style: theme.textTheme.labelLarge?.copyWith(
-                        color: colors.primary,
+                        color: enabled
+                            ? colors.primary
+                            : colors.onSurface.withValues(alpha: 0.38),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ],
               ),
-              Slider(
-                value: safeValue.toDouble(),
-                min: min.toDouble(),
-                max: max.toDouble(),
-                divisions: (max - min).clamp(1, 24).toInt(),
-                label: label,
-                onChanged: (value) => onChanged(value.round()),
+              Semantics(
+                label: widget.title,
+                child: Slider(
+                  value: safeValue.toDouble(),
+                  min: widget.min.toDouble(),
+                  max: widget.max.toDouble(),
+                  divisions: (widget.max - widget.min).clamp(1, 24).toInt(),
+                  label: label,
+                  semanticFormatterCallback: (_) => label,
+                  onChangeStart: enabled ? (_) => _isInteracting = true : null,
+                  onChanged: enabled
+                      ? (value) => setState(() {
+                          _previewValue = _clamp(value.round());
+                        })
+                      : null,
+                  onChangeEnd: enabled
+                      ? (value) {
+                          _isInteracting = false;
+                          final committedValue = _clamp(value.round());
+                          if (committedValue != widget.value) {
+                            widget.onChangeEnd(committedValue);
+                          }
+                        }
+                      : null,
+                ),
               ),
             ],
           ),

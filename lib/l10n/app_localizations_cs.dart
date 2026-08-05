@@ -660,6 +660,29 @@ class AppLocalizationsCs extends AppLocalizations {
       'Uložení selhalo. Zkuste to prosím znovu později.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked je již otevřený';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Vaše místní data používá jiné okno aplikace Sked nebo jiná karta prohlížeče. Zavřete je a zkuste to znovu.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Místní data nejsou dostupná';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Aplikaci Sked se nepodařilo ověřit výhradní přístup k místním datům. Vaše data nebyla otevřena ani změněna. Zkontrolujte přístup k úložišti a zkuste to znovu.';
+
+  @override
+  String get savingChanges => 'Ukládání změn...';
+
+  @override
+  String get showApiKey => 'Zobrazit klíč API';
+
+  @override
+  String get hideApiKey => 'Skrýt klíč API';
+
+  @override
   String get importFailedCheckContent =>
       'Import selhal. Zkontrolujte prosím obsah souboru.';
 
@@ -1172,6 +1195,10 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Konečným bodem nebyly vráceny žádné modely.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Modely se nepodařilo načíst. Zkontrolujte koncový bod a zkuste to znovu.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

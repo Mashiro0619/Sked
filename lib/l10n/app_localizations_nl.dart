@@ -658,6 +658,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get saveFailedRetry => 'Save failed. Please try again later.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked is al geopend';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Een ander Sked-venster of een ander browsertabblad gebruikt je lokale gegevens. Sluit het andere venster of tabblad en probeer het opnieuw.';
+
+  @override
+  String get appInstanceLeaseFailedTitle =>
+      'Lokale gegevens zijn niet beschikbaar';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked kon de exclusieve toegang tot lokale gegevens niet controleren. Je gegevens zijn niet geopend of gewijzigd. Controleer de toegang tot de opslag en probeer het opnieuw.';
+
+  @override
+  String get savingChanges => 'Wijzigingen worden opgeslagen...';
+
+  @override
+  String get showApiKey => 'API-sleutel tonen';
+
+  @override
+  String get hideApiKey => 'API-sleutel verbergen';
+
+  @override
   String get importFailedCheckContent =>
       'Import failed. Please check the file content.';
 
@@ -1170,6 +1194,10 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'No models were returned by the endpoint.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Kan modellen niet ophalen. Controleer het eindpunt en probeer het opnieuw.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

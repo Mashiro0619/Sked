@@ -655,6 +655,29 @@ class AppLocalizationsTh extends AppLocalizations {
   String get saveFailedRetry => 'บันทึกล้มเหลว กรุณาลองอีกครั้งในภายหลัง';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked เปิดอยู่แล้ว';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'หน้าต่าง Sked หรือแท็บเบราว์เซอร์อื่นกำลังใช้ข้อมูลในเครื่องของคุณ ปิดหน้าต่างหรือแท็บนั้นแล้วลองอีกครั้ง';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'ข้อมูลในเครื่องไม่พร้อมใช้งาน';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked ไม่สามารถยืนยันการเข้าถึงข้อมูลในเครื่องแต่เพียงผู้เดียวได้ ข้อมูลของคุณยังไม่ถูกเปิดหรือเปลี่ยนแปลง ตรวจสอบสิทธิ์เข้าถึงพื้นที่เก็บข้อมูลแล้วลองอีกครั้ง';
+
+  @override
+  String get savingChanges => 'กำลังบันทึกการเปลี่ยนแปลง...';
+
+  @override
+  String get showApiKey => 'แสดงคีย์ API';
+
+  @override
+  String get hideApiKey => 'ซ่อนคีย์ API';
+
+  @override
   String get importFailedCheckContent =>
       'การนำเข้าล้มเหลว กรุณาตรวจสอบเนื้อหาไฟล์';
 
@@ -1164,6 +1187,10 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'ไม่มีรูปแบบที่ได้รับการคืนโดยจุดสิ้นสุด';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'ไม่สามารถดึงรายการโมเดลได้ โปรดตรวจสอบปลายทางแล้วลองอีกครั้ง';
 
   @override
   String schoolImportParserModelsFetched(int count) {

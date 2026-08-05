@@ -291,10 +291,10 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager> {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-          widget.onJumpWeekBy(-1);
+          unawaited(widget.onJumpWeekBy(-1));
         },
         const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-          widget.onJumpWeekBy(1);
+          unawaited(widget.onJumpWeekBy(1));
         },
       },
       child: Focus(

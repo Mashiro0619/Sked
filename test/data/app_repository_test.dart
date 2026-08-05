@@ -522,6 +522,44 @@ void main() {
       },
     );
 
+    test('waiting includes a write appended by the completed tail', () async {
+      final initial = _emptyApp();
+      final firstGate = Completer<void>();
+      final secondGate = Completer<void>();
+      final storage =
+          _FakeStorage(
+              initialResult: StorageLoadResult(
+                data: initial,
+                recoveryStatus: RecoveryStatus.none,
+              ),
+            )
+            ..saveGates.add(firstGate)
+            ..saveGates.add(secondGate);
+      final repo = AppRepository(storage: storage);
+      await repo.load();
+      final firstData = initial.copyWith(themeMode: 'dark');
+      final secondData = initial.copyWith(themeMode: 'light');
+
+      final firstSave = repo.save(firstData);
+      while (storage.saveCount < 1) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final appendedSave = firstSave.then((_) => repo.save(secondData));
+      final wait = repo.waitForPendingWrites();
+      var waitCompleted = false;
+      unawaited(wait.then((_) => waitCompleted = true));
+
+      firstGate.complete();
+      while (storage.saveCount < 2) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      expect(waitCompleted, isFalse);
+      secondGate.complete();
+      await Future.wait([appendedSave, wait]);
+      expect(storage.lastSaved, same(secondData));
+    });
+
     test('older write failure does not roll back newer save', () async {
       final initial = _emptyApp();
       final firstGate = Completer<void>();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_motion.dart';
+import 'ui_command.dart';
 
 const double appSheetWidthCompact = 560;
 const double appSheetWidthMedium = 680;
@@ -21,13 +22,13 @@ Future<T?> showAppModalSheet<T>({
     isScrollControlled: true,
     isDismissible: isDismissible,
     enableDrag: enableDrag,
-    showDragHandle: true,
+    showDragHandle: enableDrag,
     useRootNavigator: useRootNavigator,
     useSafeArea: useSafeArea,
     routeSettings: routeSettings,
     constraints: BoxConstraints(maxWidth: maxWidth),
     sheetAnimationStyle: AppMotion.sheetAnimationStyle,
-    builder: builder,
+    builder: (_) => UiCommandFeedbackHost(builder: builder),
   );
 }
 

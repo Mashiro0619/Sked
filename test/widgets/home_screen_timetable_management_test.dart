@@ -23,6 +23,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
 
   AppData? data;
+  bool failSaves = false;
   int saveCount = 0;
 
   @override
@@ -32,6 +33,9 @@ class _MemoryTimetableStorage implements TimetableStorage {
   @override
   Future<void> save(AppData data) async {
     saveCount += 1;
+    if (failSaves) {
+      throw StateError('retryable home save failed');
+    }
     this.data = data;
   }
 
@@ -462,13 +466,15 @@ Future<void> _pumpHomeScreenHostPage(
               body: Center(
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            ChangeNotifierProvider<TimetableProvider>.value(
-                              value: provider,
-                              child: HomeScreen(key: UniqueKey()),
-                            ),
+                    unawaited(
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ChangeNotifierProvider<TimetableProvider>.value(
+                                value: provider,
+                                child: HomeScreen(key: UniqueKey()),
+                              ),
+                        ),
                       ),
                     );
                   },
@@ -1198,6 +1204,97 @@ void main() {
     expect(find.text('Test timetable'), findsWidgets);
   });
 
+  testWidgets('timetable edit failure preserves its draft and allows retry', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildPopulatedStudentData())
+      ..failSaves = true;
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit timetable'));
+    await tester.pumpAndSettle();
+
+    final nameField = find.byType(TextField).at(0);
+    final weeksField = find.byType(TextField).at(1);
+    await tester.enterText(nameField, 'Draft timetable');
+    await tester.enterText(weeksField, '20');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.activeTimetable.config.name, 'Test timetable');
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(nameField).controller?.text,
+      'Draft timetable',
+    );
+    expect(tester.widget<TextField>(weeksField).controller?.text, '20');
+    expect(find.widgetWithText(FilledButton, 'Save'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    storage.failSaves = false;
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(provider.activeTimetable.config.name, 'Draft timetable');
+    expect(provider.activeTimetable.config.totalWeeks, 20);
+    expect(find.widgetWithText(FilledButton, 'Save'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timetable delete failure keeps confirmation open for retry', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData())
+      ..failSaves = true;
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit timetable').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    final confirmDelete = find.widgetWithText(FilledButton, 'Delete');
+    await tester.tap(confirmDelete);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.timetables, hasLength(2));
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.widget<FilledButton>(confirmDelete).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+
+    storage.failSaves = false;
+    await tester.tap(confirmDelete);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(provider.timetables, hasLength(1));
+    expect(provider.timetables.single.config.name, 'First timetable');
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('add course entry ignores rapid duplicate taps', (tester) async {
     await _pumpHomeScreen(tester);
 
@@ -1281,6 +1378,38 @@ void main() {
     expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
   });
 
+  testWidgets('new timetable failure rolls back and can be retried', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData())
+      ..failSaves = true;
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final createButton = find.widgetWithText(FilledButton, 'New timetable');
+    await tester.tap(createButton);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.timetables, isEmpty);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    storage.failSaves = false;
+    await tester.tap(createButton);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(provider.timetables, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('drawer new timetable ignores rapid duplicate taps', (
     tester,
   ) async {
@@ -1356,6 +1485,42 @@ void main() {
     expect(storage.saveCount, 1);
     expect(provider.activeTimetable.config.name, 'Second timetable');
     expect(find.text('Second timetable'), findsOneWidget);
+  });
+
+  testWidgets('failed timetable switch keeps the drawer open for retry', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData())
+      ..failSaves = true;
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
+    await tester.pumpAndSettle();
+    final secondTimetable = find.text('Second timetable');
+    await tester.tap(secondTimetable);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.activeTimetable.config.name, 'First timetable');
+    expect(find.byType(Drawer), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    storage.failSaves = false;
+    await tester.tap(secondTimetable);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(provider.activeTimetable.config.name, 'Second timetable');
+    expect(find.byType(Drawer), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('drawer current timetable tap cannot pop parent route', (

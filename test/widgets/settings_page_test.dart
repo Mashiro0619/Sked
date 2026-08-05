@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -29,6 +30,8 @@ class _MemoryTimetableStorage
   final RecoveryStatus recoveryStatus;
   final Map<String, String> recoverySources;
   final Object? recoveryReadError;
+  bool failSaves = false;
+  int saveCount = 0;
 
   @override
   Future<StorageLoadResult> load() async => StorageLoadResult(
@@ -39,6 +42,10 @@ class _MemoryTimetableStorage
 
   @override
   Future<void> save(AppData data) async {
+    saveCount += 1;
+    if (failSaves) {
+      throw StateError('settings save failed');
+    }
     this.data = data;
   }
 
@@ -104,14 +111,17 @@ Future<TimetableProvider> _createProvider(
   RecoveryStatus recoveryStatus = RecoveryStatus.none,
   Map<String, String> recoverySources = const {},
   Object? recoveryReadError,
+  _MemoryTimetableStorage? storage,
 }) async {
   final provider = TimetableProvider(
-    storage: _MemoryTimetableStorage(
-      data,
-      recoveryStatus: recoveryStatus,
-      recoverySources: recoverySources,
-      recoveryReadError: recoveryReadError,
-    ),
+    storage:
+        storage ??
+        _MemoryTimetableStorage(
+          data,
+          recoveryStatus: recoveryStatus,
+          recoverySources: recoverySources,
+          recoveryReadError: recoveryReadError,
+        ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
   );
@@ -121,8 +131,9 @@ Future<TimetableProvider> _createProvider(
 
 Future<void> _pumpSettingsPage(
   WidgetTester tester,
-  TimetableProvider provider,
-) async {
+  TimetableProvider provider, {
+  Future<PackageInfo> Function()? packageInfoLoader,
+}) async {
   PackageInfo.setMockInitialValues(
     appName: 'Sked',
     packageName: 'com.example.sked',
@@ -133,11 +144,11 @@ Future<void> _pumpSettingsPage(
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: SettingsPage(),
+        home: SettingsPage(packageInfoLoader: packageInfoLoader),
       ),
     ),
   );
@@ -168,13 +179,15 @@ Future<void> _pumpSettingsHostPage(
               body: Center(
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            ChangeNotifierProvider<TimetableProvider>.value(
-                              value: provider,
-                              child: const SettingsPage(),
-                            ),
+                    unawaited(
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ChangeNotifierProvider<TimetableProvider>.value(
+                                value: provider,
+                                child: const SettingsPage(),
+                              ),
+                        ),
                       ),
                     );
                   },
@@ -196,6 +209,33 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('background package info failure is contained', (tester) async {
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      packageInfoLoader: () async => throw StateError('package info failed'),
+    );
+
+    expect(find.byType(SettingsPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('background stale-version cleanup failure is contained', (
+    tester,
+  ) async {
+    final data = _buildStudentData().copyWith(availableUpdateVersion: '0.9.0');
+    final storage = _MemoryTimetableStorage(data)..failSaves = true;
+    final provider = await _createProvider(data, storage: storage);
+
+    await _pumpSettingsPage(tester, provider);
+
+    expect(storage.saveCount, 1);
+    expect(provider.availableUpdateVersion, '0.9.0');
+    expect(find.byType(SettingsPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('student settings page groups entries into sections', (
     tester,
   ) async {
@@ -211,6 +251,49 @@ void main() {
 
     await tester.scrollUntilVisible(find.text('App'), 120);
     expect(find.text('App'), findsOneWidget);
+  });
+
+  testWidgets('period time set selection rolls back after save failure', (
+    tester,
+  ) async {
+    final initial = _buildStudentData();
+    final alternative = PeriodTimeSet(
+      id: 'alternative-period-set',
+      name: 'Alternative',
+      periodTimes: buildDefaultPeriodTimes(),
+    );
+    final data = initial.copyWith(
+      studentMode: initial.studentMode.copyWith(
+        periodTimeSets: [...initial.studentMode.periodTimeSets, alternative],
+      ),
+    );
+    final storage = _MemoryTimetableStorage(data)..failSaves = true;
+    final provider = await _createProvider(data, storage: storage);
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.tap(find.text('Period time set'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Alternative'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(
+      provider.activeTimetable.config.periodTimeSetId,
+      defaultPeriodTimeSetId,
+    );
+    expect(find.textContaining('Default'), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(find.byType(SettingsPage), findsOneWidget);
+
+    storage.failSaves = false;
+    await tester.tap(find.text('Period time set'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Alternative'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(provider.activeTimetable.config.periodTimeSetId, alternative.id);
+    expect(find.textContaining('Alternative'), findsOneWidget);
   });
 
   testWidgets('general settings page groups entries into sections', (
@@ -472,5 +555,94 @@ void main() {
       find.text('Open settings host', skipOffstage: false),
       findsOneWidget,
     );
+  });
+
+  testWidgets('JSON import storage failure is reported without losing text', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildGeneralData());
+    final provider = await _createProvider(
+      _buildGeneralData(),
+      storage: storage,
+    );
+    addTearDown(provider.dispose);
+    final source = provider.exportActiveGeneralScheduleJson();
+    storage.failSaves = true;
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.tap(find.text('Schedule import & export'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paste JSON'));
+    await _pumpRouteTransition(tester);
+    await tester.enterText(find.byType(TextField), source);
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.widgetWithText(TextButton, 'Add as new'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.byType(TextImportPage), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      source,
+    );
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Import'))
+          .onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ICS import storage failure is reported without losing text', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildGeneralData());
+    final provider = await _createProvider(
+      _buildGeneralData(),
+      storage: storage,
+    );
+    addTearDown(provider.dispose);
+    const source =
+        'BEGIN:VCALENDAR\r\n'
+        'VERSION:2.0\r\n'
+        'PRODID:-//Sked//Test//EN\r\n'
+        'BEGIN:VEVENT\r\n'
+        'UID:settings-import-test@sked.local\r\n'
+        'DTSTAMP:20260616T000000Z\r\n'
+        'DTSTART:20260616T090000\r\n'
+        'DTEND:20260616T100000\r\n'
+        'SUMMARY:Imported event\r\n'
+        'END:VEVENT\r\n'
+        'END:VCALENDAR';
+    storage.failSaves = true;
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.tap(find.text('Schedule import & export'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paste ICS'));
+    await _pumpRouteTransition(tester);
+    await tester.enterText(find.byType(TextField), source);
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.widgetWithText(TextButton, 'Add as new'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.byType(TextImportPage), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      source,
+    );
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Import'))
+          .onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
   });
 }

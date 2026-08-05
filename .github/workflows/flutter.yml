@@ -47,6 +47,9 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Test browser instance lease
+        run: flutter test --platform chrome test/services/app_instance_lease_web_test.dart
+
       - name: Test DST regressions in America/New_York
         env:
           TZ: America/New_York

@@ -208,6 +208,12 @@ Widget _buildLocalizedApp(Widget child, {Locale locale = const Locale('zh')}) {
   );
 }
 
+Future<void> _ensureOutlineSettingsCardVisible(WidgetTester tester) async {
+  final card = find.byKey(const ValueKey('theme-outline-settings-card'));
+  await Scrollable.ensureVisible(tester.element(card), alignment: 0.5);
+  await tester.pumpAndSettle();
+}
+
 Future<BuildContext> _pumpUpdateHarness(
   WidgetTester tester, {
   required TimetableProvider provider,
@@ -2743,13 +2749,15 @@ void main() {
             builder: (context) => Scaffold(
               body: FilledButton(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ChangeNotifierProvider<TimetableProvider>.value(
-                            value: provider,
-                            child: SchoolHtmlImportPage(api: fakeApi),
-                          ),
+                  unawaited(
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ChangeNotifierProvider<TimetableProvider>.value(
+                              value: provider,
+                              child: SchoolHtmlImportPage(api: fakeApi),
+                            ),
+                      ),
                     ),
                   );
                 },
@@ -2820,11 +2828,13 @@ void main() {
                 body: Center(
                   child: FilledButton(
                     onPressed: () {
-                      showPeriodTimeSetPickerDialog(
-                        context,
-                        provider: provider,
-                        selectedPeriodTimeSetId:
-                            provider.activePeriodTimeSet.id,
+                      unawaited(
+                        showPeriodTimeSetPickerDialog(
+                          context,
+                          provider: provider,
+                          selectedPeriodTimeSetId:
+                              provider.activePeriodTimeSet.id,
+                        ),
                       );
                     },
                     child: const Text('open'),
@@ -2870,8 +2880,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('课程描边'), 200);
-      await tester.tap(find.text('课程描边'));
+      await _ensureOutlineSettingsCardVisible(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('theme-outline-settings-card')),
+      );
       await tester.pumpAndSettle();
 
       expect(provider.liveCourseOutlineFollowTheme, isTrue);
@@ -2918,8 +2930,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('课程描边'), 200);
-      await tester.tap(find.text('课程描边'));
+      await _ensureOutlineSettingsCardVisible(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('theme-outline-settings-card')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey('live-course-outline-enabled-row')),
@@ -2955,10 +2969,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('课程描边'), 200);
+      await _ensureOutlineSettingsCardVisible(tester);
       expect(find.text('2.5 px'), findsOneWidget);
 
-      await tester.tap(find.text('课程描边'));
+      await tester.tap(
+        find.byKey(const ValueKey('theme-outline-settings-card')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('2.5 px'), findsWidgets);
@@ -3182,8 +3198,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('课程描边'), 200);
-      await tester.tap(find.text('课程描边'));
+      await _ensureOutlineSettingsCardVisible(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('theme-outline-settings-card')),
+      );
       await tester.pumpAndSettle();
 
       final slider = tester.widget<Slider>(find.byType(Slider));
@@ -3223,8 +3241,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('课程描边'), 200);
-      await tester.tap(find.text('课程描边'));
+      await _ensureOutlineSettingsCardVisible(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('theme-outline-settings-card')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(SegmentedButton<String>), findsWidgets);

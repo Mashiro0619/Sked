@@ -132,4 +132,43 @@ void main() {
 
     expect(duplicateCount, 1);
   });
+
+  testWidgets('failed action reports the error and can be retried', (
+    tester,
+  ) async {
+    var duplicateCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: GeneralEventDetailsSheet(
+            occurrence: _buildOccurrence(),
+            onDuplicate: () {
+              duplicateCount += 1;
+              throw StateError('duplicate failed');
+            },
+          ),
+        ),
+      ),
+    );
+
+    final duplicateButton = find.widgetWithText(FilledButton, 'Duplicate');
+    await tester.tap(duplicateButton);
+    await tester.pumpAndSettle();
+
+    expect(duplicateCount, 1);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.widget<FilledButton>(duplicateButton).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(duplicateButton);
+    await tester.pumpAndSettle();
+
+    expect(duplicateCount, 2);
+    expect(tester.widget<FilledButton>(duplicateButton).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
 }

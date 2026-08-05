@@ -667,6 +667,29 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось сохранить. Пожалуйста, попробуйте позже.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked уже открыт';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Локальные данные используются в другом окне Sked или вкладке браузера. Закройте другое окно или вкладку и повторите попытку.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Локальные данные недоступны';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked не удалось подтвердить монопольный доступ к локальным данным. Данные не были открыты или изменены. Проверьте доступ к хранилищу и повторите попытку.';
+
+  @override
+  String get savingChanges => 'Сохранение изменений...';
+
+  @override
+  String get showApiKey => 'Показать API-ключ';
+
+  @override
+  String get hideApiKey => 'Скрыть API-ключ';
+
+  @override
   String get importFailedCheckContent =>
       'Импорт не удался. Проверьте содержимое файла.';
 
@@ -1186,6 +1209,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Конечная точка не вернула ни одной модели.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Не удалось получить модели. Проверьте конечную точку и повторите попытку.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

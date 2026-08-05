@@ -596,6 +596,50 @@ class TimetableProvider extends _TimetableProviderBase
     }
   }
 
+  Future<void> quiesceForShutdown() async {
+    while (true) {
+      final appDataEpoch = _appDataMutationEpoch;
+      final secretEpoch = _customSchoolImportApiKeyMutationEpoch;
+      try {
+        await flushPendingUiStateSaves();
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Final deferred UI state save failed during shutdown: '
+          '$error\n$stackTrace',
+        );
+      }
+      await Future.wait<void>([
+        _repository.waitForPendingWrites(),
+        _waitForPendingSecretWrites(),
+        _schoolSites.waitForPendingOperations(),
+      ]);
+      await Future<void>.microtask(() {});
+      if (appDataEpoch == _appDataMutationEpoch &&
+          secretEpoch == _customSchoolImportApiKeyMutationEpoch &&
+          _uiStateSaveTimer == null &&
+          _uiStateSaveInFlight == null) {
+        return;
+      }
+    }
+  }
+
+  Future<void> _waitForPendingSecretWrites() async {
+    while (true) {
+      final pendingSecretWrite = _pendingSecretWrite;
+      try {
+        await pendingSecretWrite;
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Pending secret write failed during shutdown: $error\n$stackTrace',
+        );
+      }
+      await Future<void>.microtask(() {});
+      if (identical(pendingSecretWrite, _pendingSecretWrite)) {
+        return;
+      }
+    }
+  }
+
   @override
   bool _cancelScheduledUiStateSave() {
     final timer = _uiStateSaveTimer;

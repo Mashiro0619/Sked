@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -74,7 +76,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
   @override
   void initState() {
     super.initState();
-    _loadSites();
+    unawaited(_loadSites());
   }
 
   @override
@@ -684,11 +686,10 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
         );
       },
     );
-    future.whenComplete(() {
+    return future.whenComplete(() {
       nameController.dispose();
       urlController.dispose();
     });
-    return future;
   }
 
   Future<bool> _persistSites(

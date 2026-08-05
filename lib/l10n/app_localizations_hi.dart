@@ -661,6 +661,29 @@ class AppLocalizationsHi extends AppLocalizations {
       'सहेजना विफल हुआ। कृपया बाद में फिर कोशिश करें।';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked पहले से खुला है';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'कोई दूसरी Sked विंडो या ब्राउज़र टैब आपके स्थानीय डेटा का उपयोग कर रहा है। उसे बंद करें, फिर दोबारा कोशिश करें।';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'स्थानीय डेटा उपलब्ध नहीं है';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked स्थानीय डेटा की विशेष पहुँच की पुष्टि नहीं कर सका। आपका डेटा न तो खोला गया और न ही बदला गया। स्टोरेज की पहुँच जाँचें, फिर दोबारा कोशिश करें।';
+
+  @override
+  String get savingChanges => 'बदलाव सेव किए जा रहे हैं...';
+
+  @override
+  String get showApiKey => 'API कुंजी दिखाएँ';
+
+  @override
+  String get hideApiKey => 'API कुंजी छिपाएँ';
+
+  @override
   String get importFailedCheckContent =>
       'आयात विफल हुआ। कृपया फ़ाइल सामग्री जाँचें।';
 
@@ -1174,6 +1197,10 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'एंडपॉइंट ने कोई मॉडल नहीं लौटाया।';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'मॉडल प्राप्त नहीं किए जा सके। एंडपॉइंट जांचें और फिर कोशिश करें।';
 
   @override
   String schoolImportParserModelsFetched(int count) {

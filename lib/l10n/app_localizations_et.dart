@@ -662,6 +662,29 @@ class AppLocalizationsEt extends AppLocalizations {
       'Salvestamine nurjus. Palun proovige hiljem uuesti.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked on juba avatud';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Teine Skedi aken või brauseri vahekaart kasutab sinu kohalikke andmeid. Sulge see ja proovi uuesti.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Kohalikud andmed pole saadaval';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked ei saanud kinnitada ainupääsu kohalikele andmetele. Sinu andmeid ei avatud ega muudetud. Kontrolli juurdepääsu salvestusruumile ja proovi uuesti.';
+
+  @override
+  String get savingChanges => 'Muudatuste salvestamine...';
+
+  @override
+  String get showApiKey => 'Kuva API-võti';
+
+  @override
+  String get hideApiKey => 'Peida API-võti';
+
+  @override
   String get importFailedCheckContent =>
       'Importimine nurjus. Palun kontrollige faili sisu.';
 
@@ -1173,6 +1196,10 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Ükski mudel ei tagastatud lõpppunktiks.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Mudeleid ei õnnestunud laadida. Kontrollige lõpp-punkti ja proovige uuesti.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

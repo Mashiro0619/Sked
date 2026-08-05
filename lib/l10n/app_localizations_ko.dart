@@ -641,6 +641,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get saveFailedRetry => '저장에 실패했습니다. 나중에 다시 시도하세요.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked가 이미 열려 있습니다';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      '다른 Sked 창 또는 브라우저 탭에서 로컬 데이터를 사용 중입니다. 해당 창이나 탭을 닫고 다시 시도하세요.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => '로컬 데이터를 사용할 수 없습니다';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked에서 로컬 데이터에 대한 단독 접근 권한을 확인하지 못했습니다. 데이터는 열리거나 변경되지 않았습니다. 저장소 접근 권한을 확인한 후 다시 시도하세요.';
+
+  @override
+  String get savingChanges => '변경 사항을 저장하는 중...';
+
+  @override
+  String get showApiKey => 'API 키 표시';
+
+  @override
+  String get hideApiKey => 'API 키 숨기기';
+
+  @override
   String get importFailedCheckContent => '가져오기에 실패했습니다. 파일 내용을 확인하세요.';
 
   @override
@@ -1142,6 +1165,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schoolImportParserNoModelsFound => '엔드포인트에서 모델을 반환하지 않았습니다.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      '모델을 가져올 수 없습니다. 엔드포인트를 확인한 후 다시 시도하세요.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

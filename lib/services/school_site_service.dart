@@ -81,6 +81,16 @@ class SchoolSiteStorageCoordinator {
 
   Future<T> _runLoad<T>(Future<T> Function() action) => _enqueue(action);
 
+  Future<void> _waitForIdle() async {
+    while (true) {
+      await _enqueue<void>(() async {});
+      await Future<void>.microtask(() {});
+      if (!_operationActive && _operationWaiters.isEmpty) {
+        return;
+      }
+    }
+  }
+
   Future<T> _runWrite<T>({
     required int expectedGeneration,
     required Future<T> Function() action,
@@ -226,6 +236,8 @@ class SchoolSiteService {
   Future<SchoolSiteLoadResult> loadSitesResult() {
     return _coordinator._runLoad(_loadSitesResultNow);
   }
+
+  Future<void> waitForPendingOperations() => _coordinator._waitForIdle();
 
   Future<SchoolSiteRestoreLease> reserveRestore() async {
     final token = await _coordinator._reserveRestore();

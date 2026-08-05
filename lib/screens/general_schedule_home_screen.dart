@@ -17,6 +17,7 @@ import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/mode_switch_action.dart';
+import '../widgets/ui_command.dart';
 import 'settings_page.dart';
 
 part 'general_schedule_list_view.dart';
@@ -312,44 +313,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     _setUiBusyFlag(() => _editorSheetOpen = true);
     final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
     try {
-      final result = await showAppModalSheet<GeneralEventEditorResult>(
+      await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
         isDismissible: canDismiss,
-        enableDrag: canDismiss,
+        enableDrag: false,
         maxWidth: appSheetWidthMedium,
         builder: (sheetContext) => GeneralEventEditorSheet(
           initialEvent: event,
           initialDate: initialDate ?? provider.selectedGeneralDate,
           calendars: provider.generalSchedules,
           activeCalendarId: provider.activeGeneralSchedule.id,
+          onSave: provider.saveGeneralEvent,
+          onDelete: event == null
+              ? null
+              : () => provider.deleteGeneralEvent(event.id),
         ),
       );
-
-      if (result == null || !mounted || !context.mounted) return;
-
-      if (result.delete && event != null) {
-        try {
-          await provider.deleteGeneralEvent(event.id);
-        } catch (_) {
-          if (!mounted || !context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).saveFailedRetry),
-            ),
-          );
-        }
-      } else if (result.event != null) {
-        try {
-          await provider.saveGeneralEvent(result.event!);
-        } catch (_) {
-          if (!mounted || !context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).saveFailedRetry),
-            ),
-          );
-        }
-      }
     } finally {
       _setUiBusyFlag(() => _editorSheetOpen = false);
     }
@@ -369,7 +348,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<void>(
         context: context,
         isDismissible: canDismiss,
-        enableDrag: canDismiss,
+        enableDrag: false,
         maxWidth: appSheetWidthCompact,
         builder: (sheetContext) => GeneralEventDetailsSheet(
           occurrence: occurrence,
@@ -470,7 +449,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<void>(
         context: context,
         isDismissible: canDismiss,
-        enableDrag: canDismiss,
+        enableDrag: false,
         maxWidth: 620,
         builder: (sheetContext) =>
             ChangeNotifierProvider<TimetableProvider>.value(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_motion.dart';
+import 'ui_command.dart';
 
 const double expressiveDialogMaxWidth = 520;
 
@@ -19,7 +20,7 @@ Future<T?> showExpressiveDialog<T>({
     animationStyle: MediaQuery.disableAnimationsOf(context)
         ? AnimationStyle.noAnimation
         : AppMotion.dialogAnimationStyle,
-    builder: builder,
+    builder: (_) => UiCommandFeedbackHost(builder: builder),
   );
 }
 

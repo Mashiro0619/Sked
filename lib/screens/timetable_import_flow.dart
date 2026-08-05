@@ -42,6 +42,14 @@ class TimetableImportFlow {
         return;
       }
       await importTimetablesFromSource(context, provider, source);
+    } catch (error, stackTrace) {
+      debugPrint('Picking a timetable import file failed: $error\n$stackTrace');
+      if (context.mounted) {
+        _showMessage(
+          context,
+          AppLocalizations.of(context).importFailedCheckContent,
+        );
+      }
     } finally {
       _importTimetablesInProgress = false;
     }

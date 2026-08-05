@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
+import '../widgets/ui_command.dart';
 
 class LanguageSettingsPage extends StatefulWidget {
   const LanguageSettingsPage({super.key});
@@ -56,7 +59,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                 builder: (context, controller) {
                   return IconButton(
                     tooltip: MaterialLocalizations.of(context).searchFieldLabel,
-                    onPressed: controller.openView,
+                    onPressed: _isSelectingLanguage
+                        ? null
+                        : controller.openView,
                     icon: const Icon(Icons.search),
                   );
                 },
@@ -75,7 +80,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
                             ? null
                             : () {
                                 controller.closeView(option.nativeName);
-                                _selectLanguage(context, provider, option.code);
+                                unawaited(
+                                  _selectLanguage(provider, option.code),
+                                );
                               },
                       ),
                   ];
@@ -83,26 +90,35 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          body: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
+              UiCommandBusyIndicator(busy: _isSelectingLanguage),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   children: [
-                    for (final option in languageOptions)
-                      _LanguageOptionTile(
-                        key: ValueKey('language-option-${option.code}'),
-                        option: option,
-                        selected: option.code == currentCode,
-                        onTap: _isSelectingLanguage || _languageSelectionPopped
-                            ? null
-                            : () => _selectLanguage(
-                                context,
-                                provider,
-                                option.code,
-                              ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          for (final option in languageOptions)
+                            _LanguageOptionTile(
+                              key: ValueKey('language-option-${option.code}'),
+                              option: option,
+                              selected: option.code == currentCode,
+                              onTap:
+                                  _isSelectingLanguage ||
+                                      _languageSelectionPopped
+                                  ? null
+                                  : () {
+                                      unawaited(
+                                        _selectLanguage(provider, option.code),
+                                      );
+                                    },
+                            ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -130,7 +146,6 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
   }
 
   Future<void> _selectLanguage(
-    BuildContext context,
     TimetableProvider provider,
     String localeCode,
   ) async {
@@ -142,20 +157,22 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
       return;
     }
     setState(() => _isSelectingLanguage = true);
-    var shouldResetSelecting = true;
     try {
-      await provider.updateLocaleCode(normalizedCode);
-      if (!context.mounted) {
+      final saved = await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Update application language',
+        command: () => provider.updateLocaleCode(normalizedCode),
+      );
+      if (!saved || !mounted) {
         return;
       }
-      shouldResetSelecting = false;
       setState(() {
         _isSelectingLanguage = false;
         _languageSelectionPopped = true;
       });
       Navigator.of(context).pop();
     } finally {
-      if (shouldResetSelecting && mounted) {
+      if (mounted && !_languageSelectionPopped) {
         setState(() => _isSelectingLanguage = false);
       }
     }
@@ -182,56 +199,65 @@ class _LanguageOptionTile extends StatelessWidget {
     final subtitleColor = selected
         ? colorScheme.primary
         : colorScheme.onSurfaceVariant;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Material(
-        color: selected
-            ? colorScheme.primary.withValues(alpha: 0.12)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
+    return Semantics(
+      key: ValueKey('language-option-semantics-${option.code}'),
+      container: true,
+      button: true,
+      enabled: onTap != null,
+      selected: selected,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Material(
+          color: selected
+              ? colorScheme.primary.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        option.nativeName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: foreground,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      ),
-                      if (option.localizedName != option.nativeName) ...[
-                        const SizedBox(height: 2),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            excludeFromSemantics: true,
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          option.localizedName,
-                          maxLines: 1,
+                          option.nativeName,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: subtitleColor,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: foreground,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                           ),
                         ),
+                        if (option.localizedName != option.nativeName) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            option.localizedName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: subtitleColor,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 12),
-                  Icon(Icons.check, color: colorScheme.primary),
+                  if (selected) ...[
+                    const SizedBox(width: 12),
+                    Icon(Icons.check, color: colorScheme.primary),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

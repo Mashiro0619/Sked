@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
@@ -175,6 +176,151 @@ void main() {
     await tester.pump();
 
     expect(selectCount, 1);
+  });
+
+  testWidgets(
+    'pending conflict action announces progress and blocks dismissal',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final provider = await _createProvider();
+      final actionStarted = Completer<void>();
+      final allowAction = Completer<void>();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () {
+                    unawaited(
+                      showAppModalSheet<void>(
+                        context: context,
+                        enableDrag: false,
+                        builder: (sheetContext) => CourseDetailsSheet(
+                          courseId: 'course-a',
+                          weekday: 1,
+                          conflictKey: null,
+                          isFullConflict: true,
+                          onEdit: () {},
+                          onSelectDisplayedCourse: (_) async {
+                            actionStarted.complete();
+                            await allowAction.future;
+                            if (sheetContext.mounted) {
+                              Navigator.of(sheetContext).pop();
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open course details'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open course details'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.visibility_outlined),
+      );
+      await actionStarted.future;
+      await tester.pump();
+
+      final busyIndicator = find.byKey(
+        const ValueKey('course-details-busy-indicator'),
+      );
+      expect(
+        find.descendant(
+          of: busyIndicator,
+          matching: find.byType(LinearProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      final savingSemantics = find.byKey(
+        const ValueKey('course-details-busy-semantics'),
+      );
+      expect(savingSemantics, findsOneWidget);
+      expect(
+        tester.getSemantics(savingSemantics),
+        matchesSemantics(label: 'Saving changes...', isLiveRegion: true),
+      );
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.tapAt(const Offset(4, 4));
+      await tester.pump();
+
+      expect(find.byType(CourseDetailsSheet), findsOneWidget);
+
+      allowAction.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CourseDetailsSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets('failed conflict action shows feedback and allows retry', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    var failAction = true;
+    var selectCount = 0;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<TimetableProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: CourseDetailsSheet(
+              courseId: 'course-a',
+              weekday: 1,
+              conflictKey: null,
+              isFullConflict: true,
+              onEdit: () {},
+              onSelectDisplayedCourse: (_) async {
+                selectCount += 1;
+                if (failAction) {
+                  throw StateError('display selection failed');
+                }
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final setDisplayedButton = find.widgetWithIcon(
+      IconButton,
+      Icons.visibility_outlined,
+    );
+    await tester.tap(setDisplayedButton);
+    await tester.pumpAndSettle();
+
+    expect(selectCount, 1);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(tester.widget<IconButton>(setDisplayedButton).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+
+    failAction = false;
+    await tester.tap(setDisplayedButton);
+    await tester.pump();
+
+    expect(selectCount, 2);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('missing course only notifies once across rebuilds', (

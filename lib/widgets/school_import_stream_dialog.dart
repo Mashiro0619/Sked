@@ -91,23 +91,48 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    unawaited(_cancelSubscription());
     _scrollController.dispose();
     _editController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cancelSubscription() async {
+    final subscription = _subscription;
+    _subscription = null;
+    if (subscription == null) return;
+    try {
+      await subscription.cancel();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'School import stream cancellation failed: '
+        '$error\n$stackTrace',
+      );
+    }
   }
 
   void _scrollToBottom() {
     if (_isEditing) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
+        unawaited(_animateScrollToBottom());
       }
     });
+  }
+
+  Future<void> _animateScrollToBottom() async {
+    try {
+      await _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        'School import preview scrolling failed: '
+        '$error\n$stackTrace',
+      );
+    }
   }
 
   void _appendPreview(String text) {
@@ -288,7 +313,7 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                 children: [
                   TextButton(
                     onPressed: () {
-                      _subscription?.cancel();
+                      unawaited(_cancelSubscription());
                       _popOnce();
                     },
                     child: Text(l10n.cancel),

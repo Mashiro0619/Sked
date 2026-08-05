@@ -277,6 +277,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('web toolbar stays compact and labeled on a narrow viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: const SchoolWebImportPage(
+          site: SchoolSite(
+            name: 'Example University with a very long translated name',
+            loginUrl: 'https://example.edu/login',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byTooltip('Previous page'), findsOneWidget);
+    expect(find.byTooltip('Refresh'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'initial sign-in consent ignores repeated confirmation activation',
     (tester) async {
@@ -364,23 +399,25 @@ Future<void> _pumpSecurityDialogLauncher(
         builder: (rootContext) => Scaffold(
           body: FilledButton(
             onPressed: () {
-              Navigator.of(rootContext).push(
-                MaterialPageRoute<void>(
-                  builder: (pageContext) => Scaffold(
-                    key: _securityDialogLauncherKey,
-                    body: FilledButton(
-                      onPressed: () async {
-                        onResult(
-                          await showSchoolWebImportSecurityConsentDialog(
-                            context: pageContext,
-                            origin: isInitialNavigation
-                                ? 'https://school.example.test'
-                                : 'https://identity.example.test',
-                            isInitialNavigation: isInitialNavigation,
-                          ),
-                        );
-                      },
-                      child: const Text('Open consent'),
+              unawaited(
+                Navigator.of(rootContext).push(
+                  MaterialPageRoute<void>(
+                    builder: (pageContext) => Scaffold(
+                      key: _securityDialogLauncherKey,
+                      body: FilledButton(
+                        onPressed: () async {
+                          onResult(
+                            await showSchoolWebImportSecurityConsentDialog(
+                              context: pageContext,
+                              origin: isInitialNavigation
+                                  ? 'https://school.example.test'
+                                  : 'https://identity.example.test',
+                              isInitialNavigation: isInitialNavigation,
+                            ),
+                          );
+                        },
+                        child: const Text('Open consent'),
+                      ),
                     ),
                   ),
                 ),

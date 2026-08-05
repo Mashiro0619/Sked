@@ -26,6 +26,7 @@ linter:
     # Fire-and-forget futures must be explicit via unawaited(), so a dropped
     # await cannot silently swallow a failed save.
     - unawaited_futures
+    - discarded_futures
     # Deliberately NOT enabled: avoid_slow_async_io. It flags `await
     # File.exists()` in the atomic-write path and would have us switch to
     # `existsSync()`, which blocks the UI isolate on every save. Keeping the

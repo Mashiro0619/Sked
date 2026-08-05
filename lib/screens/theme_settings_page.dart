@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +11,7 @@ import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/ui_command.dart';
 
 part 'theme_settings_color_sections.dart';
 
@@ -193,8 +196,18 @@ class _ResponsiveSegmentedButton extends StatelessWidget {
   }
 }
 
-class ThemeSettingsPage extends StatelessWidget {
+class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
+
+  @override
+  State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
+}
+
+class _ThemeSettingsPageState extends State<ThemeSettingsPage>
+    with UiCommandRunner<ThemeSettingsPage> {
+  void _updateSetting(String debugLabel, Future<void> Function() command) {
+    unawaited(runUiCommand(debugLabel: debugLabel, command: command));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,166 +223,222 @@ class ThemeSettingsPage extends StatelessWidget {
         final outlineWidth = provider.liveCourseOutlineWidth;
         return Scaffold(
           appBar: AppBar(title: Text(l10n.theme)),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          body: Column(
             children: [
-              SettingsSectionHeader(title: l10n.theme),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _ResponsiveSegmentedButton(
-                  key: const ValueKey('theme-brightness-mode-segmented'),
-                  segments: [
-                    _SegmentOption(
-                      value: 'system',
-                      icon: Icons.settings_suggest_outlined,
-                      label: l10n.themeFollowSystem,
-                    ),
-                    _SegmentOption(
-                      value: 'light',
-                      icon: Icons.light_mode_outlined,
-                      label: l10n.themeLight,
-                    ),
-                    _SegmentOption(
-                      value: 'dark',
-                      icon: Icons.dark_mode_outlined,
-                      label: l10n.themeDark,
-                    ),
-                  ],
-                  selected: {provider.themeMode},
-                  onSelectionChanged: (selection) {
-                    if (selection.isEmpty) {
-                      return;
-                    }
-                    provider.updateThemeMode(selection.first);
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              SettingsSectionHeader(title: l10n.themeColor),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _ResponsiveSegmentedButton(
-                  key: const ValueKey('theme-color-mode-segmented'),
-                  segments: [
-                    _SegmentOption(
-                      value: themeColorModeSingle,
-                      icon: Icons.palette_outlined,
-                      label: l10n.themeColorModeSingle,
-                    ),
-                    _SegmentOption(
-                      value: themeColorModeColorful,
-                      icon: Icons.color_lens_outlined,
-                      label: l10n.themeColorModeColorful,
-                    ),
-                  ],
-                  selected: {provider.themeColorMode},
-                  onSelectionChanged: (selection) {
-                    if (selection.isEmpty) {
-                      return;
-                    }
-                    provider.updateThemeColorMode(selection.first);
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: provider.themeColorMode == themeColorModeSingle
-                      ? _SingleThemeColorSection(
-                          key: const ValueKey('single-theme-color-section'),
-                          provider: provider,
-                          hasCustomColor: hasCustomColor,
-                          onPickCustomColor: () =>
-                              _openCustomColorDialog(context, provider),
-                        )
-                      : _ColorfulThemeSection(
-                          key: const ValueKey('colorful-theme-section'),
-                          provider: provider,
-                          onPickUiColor: (key) {
-                            if (key == colorfulCourseTextColorKey) {
-                              _openCourseTextColorDialog(context, provider);
+              UiCommandBusyIndicator(busy: uiCommandBusy),
+              Expanded(
+                child: AbsorbPointer(
+                  absorbing: uiCommandBusy,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+                    children: [
+                      SettingsSectionHeader(title: l10n.theme),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _ResponsiveSegmentedButton(
+                          key: const ValueKey(
+                            'theme-brightness-mode-segmented',
+                          ),
+                          segments: [
+                            _SegmentOption(
+                              value: 'system',
+                              icon: Icons.settings_suggest_outlined,
+                              label: l10n.themeFollowSystem,
+                            ),
+                            _SegmentOption(
+                              value: 'light',
+                              icon: Icons.light_mode_outlined,
+                              label: l10n.themeLight,
+                            ),
+                            _SegmentOption(
+                              value: 'dark',
+                              icon: Icons.dark_mode_outlined,
+                              label: l10n.themeDark,
+                            ),
+                          ],
+                          selected: {provider.themeMode},
+                          onSelectionChanged: (selection) {
+                            if (selection.isEmpty) {
                               return;
                             }
-                            _openColorValueDialog(
-                              context,
-                              title: _uiColorLabel(context, key),
-                              previewTitle: l10n.themeColorUiColors,
-                              initialColorValue: _effectiveUiColorValue(
-                                context,
-                                provider,
-                                key,
-                              ),
-                              onApply: (colorValue) => provider
-                                  .updateColorfulUiColorValue(key, colorValue),
+                            _updateSetting(
+                              'Update theme brightness mode',
+                              () => provider.updateThemeMode(selection.first),
                             );
                           },
-                          onPickGeneralMonthTextColor: (key) {
-                            _openColorValueDialog(
-                              context,
-                              title: _generalMonthTextColorLabel(context, key),
-                              previewTitle: _generalMonthTextColorGroupTitle(
-                                context,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SettingsSectionHeader(title: l10n.themeColor),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _ResponsiveSegmentedButton(
+                          key: const ValueKey('theme-color-mode-segmented'),
+                          segments: [
+                            _SegmentOption(
+                              value: themeColorModeSingle,
+                              icon: Icons.palette_outlined,
+                              label: l10n.themeColorModeSingle,
+                            ),
+                            _SegmentOption(
+                              value: themeColorModeColorful,
+                              icon: Icons.color_lens_outlined,
+                              label: l10n.themeColorModeColorful,
+                            ),
+                          ],
+                          selected: {provider.themeColorMode},
+                          onSelectionChanged: (selection) {
+                            if (selection.isEmpty) {
+                              return;
+                            }
+                            _updateSetting(
+                              'Update theme color mode',
+                              () => provider.updateThemeColorMode(
+                                selection.first,
                               ),
-                              initialColorValue:
-                                  _effectiveGeneralMonthTextColorValue(
-                                    context,
-                                    provider,
-                                    key,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: provider.themeColorMode == themeColorModeSingle
+                              ? _SingleThemeColorSection(
+                                  key: const ValueKey(
+                                    'single-theme-color-section',
                                   ),
-                              onApply: (colorValue) => provider
-                                  .updateColorfulUiColorValue(key, colorValue),
-                            );
-                          },
-                          onPickCourseColor: (courseName) =>
-                              _openColorValueDialog(
-                                context,
-                                title: courseName,
-                                previewTitle: l10n.themeColorCourseColors,
-                                initialColorValue:
-                                    provider
-                                        .courseNameColorValues[courseName] ??
-                                    provider.themeSeedColorValue,
-                                onApply: (colorValue) =>
-                                    provider.updateCourseNameColorValue(
-                                      courseName,
+                                  provider: provider,
+                                  hasCustomColor: hasCustomColor,
+                                  onSelectColor: (colorValue) => _updateSetting(
+                                    'Update theme seed color',
+                                    () => provider.updateThemeSeedColorValue(
                                       colorValue,
                                     ),
-                              ),
-                          onPickCalendarColor: (schedule) =>
-                              _openColorValueDialog(
-                                context,
-                                title: schedule.name,
-                                previewTitle: l10n.calendars,
-                                initialColorValue:
-                                    effectiveGeneralCalendarColor(
+                                  ),
+                                  onPickCustomColor: () => unawaited(
+                                    _openCustomColorDialog(context, provider),
+                                  ),
+                                )
+                              : _ColorfulThemeSection(
+                                  key: const ValueKey('colorful-theme-section'),
+                                  provider: provider,
+                                  onPickUiColor: (key) {
+                                    if (key == colorfulCourseTextColorKey) {
+                                      unawaited(
+                                        _openCourseTextColorDialog(
+                                          context,
+                                          provider,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    unawaited(
+                                      _openColorValueDialog(
+                                        context,
+                                        title: _uiColorLabel(context, key),
+                                        previewTitle: l10n.themeColorUiColors,
+                                        initialColorValue:
+                                            _effectiveUiColorValue(
+                                              context,
+                                              provider,
+                                              key,
+                                            ),
+                                        onApply: (colorValue) =>
+                                            provider.updateColorfulUiColorValue(
+                                              key,
+                                              colorValue,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  onPickGeneralMonthTextColor: (key) {
+                                    unawaited(
+                                      _openColorValueDialog(
+                                        context,
+                                        title: _generalMonthTextColorLabel(
+                                          context,
+                                          key,
+                                        ),
+                                        previewTitle:
+                                            _generalMonthTextColorGroupTitle(
+                                              context,
+                                            ),
+                                        initialColorValue:
+                                            _effectiveGeneralMonthTextColorValue(
+                                              context,
+                                              provider,
+                                              key,
+                                            ),
+                                        onApply: (colorValue) =>
+                                            provider.updateColorfulUiColorValue(
+                                              key,
+                                              colorValue,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  onPickCourseColor: (courseName) => unawaited(
+                                    _openColorValueDialog(
                                       context,
-                                      schedule,
-                                    ).toARGB32(),
-                                onApply: (colorValue) =>
-                                    provider.updateGeneralSchedule(
-                                      schedule.copyWith(colorValue: colorValue),
+                                      title: courseName,
+                                      previewTitle: l10n.themeColorCourseColors,
+                                      initialColorValue:
+                                          provider
+                                              .courseNameColorValues[courseName] ??
+                                          provider.themeSeedColorValue,
+                                      onApply: (colorValue) =>
+                                          provider.updateCourseNameColorValue(
+                                            courseName,
+                                            colorValue,
+                                          ),
                                     ),
-                              ),
+                                  ),
+                                  onPickCalendarColor: (schedule) => unawaited(
+                                    _openColorValueDialog(
+                                      context,
+                                      title: schedule.name,
+                                      previewTitle: l10n.calendars,
+                                      initialColorValue:
+                                          effectiveGeneralCalendarColor(
+                                            context,
+                                            schedule,
+                                          ).toARGB32(),
+                                      onApply: (colorValue) =>
+                                          provider.updateGeneralSchedule(
+                                            schedule.copyWith(
+                                              colorValue: colorValue,
+                                            ),
+                                          ),
+                                    ),
+                                  ),
+                                ),
                         ),
-                ),
-              ),
-              if (provider.isStudentMode) ...[
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _OutlineSettingsCard(
-                    key: const ValueKey('theme-outline-settings-card'),
-                    provider: provider,
-                    effectiveOutlineColorValue: effectiveOutlineColorValue,
-                    outlineWidth: outlineWidth,
-                    onTap: () => _openOutlineSettingsDialog(context, provider),
+                      ),
+                      if (provider.isStudentMode) ...[
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _OutlineSettingsCard(
+                            key: const ValueKey('theme-outline-settings-card'),
+                            provider: provider,
+                            effectiveOutlineColorValue:
+                                effectiveOutlineColorValue,
+                            outlineWidth: outlineWidth,
+                            onTap: () => unawaited(
+                              _openOutlineSettingsDialog(context, provider),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         );
@@ -397,7 +466,9 @@ class ThemeSettingsPage extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             final colorValue = selectedColor.toARGB32();
-            return AlertDialog(
+            return _PersistingThemeDialog(
+              busy: busy,
+              popped: popped,
               title: Text(l10n.themeCustomColor),
               content: SingleChildScrollView(
                 child: ExpressiveDialogContent(
@@ -439,10 +510,22 @@ class ThemeSettingsPage extends StatelessWidget {
                       ? null
                       : () async {
                           if (busy || popped) return;
+                          final submittedColorValue = colorValue;
+                          FocusScope.of(context).unfocus();
                           setState(() => busy = true);
-                          await provider.updateThemeSeedColorValue(colorValue);
+                          final saved = await runUiCommandWithFeedback(
+                            context: context,
+                            debugLabel: 'Update custom theme seed color',
+                            command: () => provider.updateThemeSeedColorValue(
+                              submittedColorValue,
+                            ),
+                          );
                           if (!context.mounted) return;
-                          popOnce();
+                          if (saved) {
+                            popOnce();
+                          } else {
+                            setState(() => busy = false);
+                          }
                         },
                   child: Text(l10n.themeApplyCustomColor),
                 ),
@@ -477,7 +560,9 @@ class ThemeSettingsPage extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             final colorValue = selectedColor.toARGB32();
-            return AlertDialog(
+            return _PersistingThemeDialog(
+              busy: busy,
+              popped: popped,
               title: Text(title),
               content: SingleChildScrollView(
                 child: ExpressiveDialogContent(
@@ -519,10 +604,20 @@ class ThemeSettingsPage extends StatelessWidget {
                       ? null
                       : () async {
                           if (busy || popped) return;
+                          final submittedColorValue = colorValue;
+                          FocusScope.of(context).unfocus();
                           setState(() => busy = true);
-                          await onApply(colorValue);
+                          final saved = await runUiCommandWithFeedback(
+                            context: context,
+                            debugLabel: 'Update theme color value',
+                            command: () => onApply(submittedColorValue),
+                          );
                           if (!context.mounted) return;
-                          popOnce();
+                          if (saved) {
+                            popOnce();
+                          } else {
+                            setState(() => busy = false);
+                          }
                         },
                   child: Text(l10n.themeApplySettings),
                 ),
@@ -561,7 +656,9 @@ class ThemeSettingsPage extends StatelessWidget {
             final modeLabel = mode == colorfulCourseTextColorModeCustom
                 ? l10n.themeColorCourseTextCustom
                 : l10n.themeColorCourseTextAuto;
-            return AlertDialog(
+            return _PersistingThemeDialog(
+              busy: busy,
+              popped: popped,
               title: Text(l10n.themeColorCourseText),
               content: SingleChildScrollView(
                 child: ExpressiveDialogContent(
@@ -661,18 +758,25 @@ class ThemeSettingsPage extends StatelessWidget {
                       ? null
                       : () async {
                           if (busy || popped) return;
+                          final submittedMode = mode;
+                          final submittedColorValue = colorValue;
+                          FocusScope.of(context).unfocus();
                           setState(() => busy = true);
-                          if (mode == colorfulCourseTextColorModeCustom) {
-                            await provider.updateColorfulUiColorValue(
-                              colorfulCourseTextColorKey,
-                              colorValue,
-                            );
-                          }
-                          await provider.updateColorfulCourseTextColorMode(
-                            mode,
+                          final saved = await runUiCommandWithFeedback(
+                            context: context,
+                            debugLabel: 'Update course text color settings',
+                            command: () =>
+                                provider.updateColorfulCourseTextSettings(
+                                  mode: submittedMode,
+                                  customColorValue: submittedColorValue,
+                                ),
                           );
                           if (!context.mounted) return;
-                          popOnce();
+                          if (saved) {
+                            popOnce();
+                          } else {
+                            setState(() => busy = false);
+                          }
                         },
                   child: Text(l10n.themeApplySettings),
                 ),
@@ -715,7 +819,9 @@ class ThemeSettingsPage extends StatelessWidget {
             final effectiveColorValue = followTheme
                 ? derivedThemeColorValue
                 : customColorValue;
-            return AlertDialog(
+            return _PersistingThemeDialog(
+              busy: busy,
+              popped: popped,
               title: Text(l10n.liveCourseOutlineSettings),
               content: SingleChildScrollView(
                 child: ExpressiveDialogContent(
@@ -893,17 +999,35 @@ class ThemeSettingsPage extends StatelessWidget {
                       ? null
                       : () async {
                           if (busy || popped) return;
+                          final submittedEnabled = enabled;
+                          final submittedFollowTheme = followTheme;
+                          final submittedColorValue = customColorValue;
+                          final submittedCustomColorInitialized =
+                              customColorInitialized;
+                          final submittedMode = outlineMode;
+                          final submittedWidth = outlineWidth;
+                          FocusScope.of(context).unfocus();
                           setState(() => busy = true);
-                          await provider.updateLiveCourseOutlineSettings(
-                            enabled: enabled,
-                            followTheme: followTheme,
-                            colorValue: customColorValue,
-                            customColorInitialized: customColorInitialized,
-                            mode: outlineMode,
-                            width: outlineWidth,
+                          final saved = await runUiCommandWithFeedback(
+                            context: context,
+                            debugLabel: 'Update live course outline settings',
+                            command: () =>
+                                provider.updateLiveCourseOutlineSettings(
+                                  enabled: submittedEnabled,
+                                  followTheme: submittedFollowTheme,
+                                  colorValue: submittedColorValue,
+                                  customColorInitialized:
+                                      submittedCustomColorInitialized,
+                                  mode: submittedMode,
+                                  width: submittedWidth,
+                                ),
                           );
                           if (!context.mounted) return;
-                          popOnce();
+                          if (saved) {
+                            popOnce();
+                          } else {
+                            setState(() => busy = false);
+                          }
                         },
                   child: Text(l10n.themeApplySettings),
                 ),
@@ -916,16 +1040,70 @@ class ThemeSettingsPage extends StatelessWidget {
   }
 }
 
+class _PersistingThemeDialog extends StatelessWidget {
+  const _PersistingThemeDialog({
+    required this.busy,
+    required this.popped,
+    required this.title,
+    required this.content,
+    required this.actions,
+  });
+
+  final bool busy;
+  final bool popped;
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final blocked = busy || popped;
+    return PopScope(
+      canPop: !blocked,
+      child: FocusScope(
+        key: const ValueKey('theme-persistence-dialog-focus-scope'),
+        canRequestFocus: !blocked,
+        descendantsAreFocusable: !blocked,
+        descendantsAreTraversable: !blocked,
+        child: AbsorbPointer(
+          key: const ValueKey('theme-persistence-dialog-pointer-guard'),
+          absorbing: blocked,
+          child: AlertDialog(
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                UiCommandBusyIndicator(
+                  key: const ValueKey(
+                    'theme-persistence-dialog-busy-indicator',
+                  ),
+                  busy: busy,
+                ),
+                const SizedBox(height: 8),
+                title,
+              ],
+            ),
+            content: content,
+            actions: actions,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SingleThemeColorSection extends StatelessWidget {
   const _SingleThemeColorSection({
     super.key,
     required this.provider,
     required this.hasCustomColor,
+    required this.onSelectColor,
     required this.onPickCustomColor,
   });
 
   final TimetableProvider provider;
   final bool hasCustomColor;
+  final ValueChanged<int> onSelectColor;
   final VoidCallback onPickCustomColor;
 
   @override
@@ -954,7 +1132,7 @@ class _SingleThemeColorSection extends StatelessWidget {
                 ),
                 colorValue: colorValue,
                 selected: provider.themeSeedColorValue == colorValue,
-                onTap: () => provider.updateThemeSeedColorValue(colorValue),
+                onTap: () => onSelectColor(colorValue),
               ),
           ],
         ),
@@ -1097,29 +1275,37 @@ class _OutlineSwitchRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return ExpressiveTap(
-      onTap: () => onChanged(!value),
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, color: colors.onSurfaceVariant),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.onSurface,
-                  fontWeight: FontWeight.w500,
+    void toggle() => onChanged(!value);
+    return Semantics(
+      label: title,
+      toggled: value,
+      onTap: toggle,
+      child: ExcludeSemantics(
+        child: ExpressiveTap(
+          onTap: toggle,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon, color: colors.onSurfaceVariant),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Switch(value: value, onChanged: onChanged),
+              ],
             ),
-            const SizedBox(width: 12),
-            Switch(value: value, onChanged: onChanged),
-          ],
+          ),
         ),
       ),
     );
@@ -1202,13 +1388,23 @@ class _ThemeColorPreview extends StatelessWidget {
             )
           : null,
     );
-    if (onTap == null) {
-      return child;
-    }
-    return ExpressiveTap(
-      borderRadius: BorderRadius.circular(999),
+    return Semantics(
+      label: _formatColorHex(colorValue),
+      selected: onTap == null ? null : selected,
+      button: onTap != null,
       onTap: onTap,
-      child: child,
+      child: ExcludeSemantics(
+        child: onTap == null
+            ? child
+            : ExpressiveTap(
+                borderRadius: BorderRadius.circular(999),
+                onTap: onTap,
+                child: SizedBox.square(
+                  dimension: 48,
+                  child: Center(child: child),
+                ),
+              ),
+      ),
     );
   }
 }
@@ -1231,40 +1427,52 @@ class _ActionOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return ExpressiveTap(
+    return Semantics(
+      label: title,
+      hint: subtitle,
+      button: true,
+      selected: selected,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Material(
-        color: selected
-            ? colors.primary.withValues(alpha: 0.12)
-            : colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleSmall),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ],
-                ),
+      child: ExcludeSemantics(
+        child: ExpressiveTap(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Material(
+            color: selected
+                ? colors.primary.withValues(alpha: 0.12)
+                : colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  leading,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    selected ? Icons.check : Icons.chevron_right,
+                    color: selected ? colors.primary : null,
+                  ),
+                ],
               ),
-              Icon(
-                selected ? Icons.check : Icons.chevron_right,
-                color: selected ? colors.primary : null,
-              ),
-            ],
+            ),
           ),
         ),
       ),

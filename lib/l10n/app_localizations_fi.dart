@@ -663,6 +663,30 @@ class AppLocalizationsFi extends AppLocalizations {
       'Tallennus epäonnistui. Yritä uudelleen myöhemmin.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked on jo avoinna';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Toinen Sked-ikkuna tai selaimen välilehti käyttää paikallisia tietojasi. Sulje se ja yritä uudelleen.';
+
+  @override
+  String get appInstanceLeaseFailedTitle =>
+      'Paikalliset tiedot eivät ole käytettävissä';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked ei voinut vahvistaa yksinomaista pääsyä paikallisiin tietoihin. Tietojasi ei avattu eikä muutettu. Tarkista tallennustilan käyttöoikeus ja yritä uudelleen.';
+
+  @override
+  String get savingChanges => 'Tallennetaan muutoksia...';
+
+  @override
+  String get showApiKey => 'Näytä API-avain';
+
+  @override
+  String get hideApiKey => 'Piilota API-avain';
+
+  @override
   String get importFailedCheckContent =>
       'Tuo epäonnistui. Tarkista tiedoston sisältö.';
 
@@ -1178,6 +1202,10 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Loppupisteeseen ei palautettu malleja.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Malleja ei voitu hakea. Tarkista päätepiste ja yritä uudelleen.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

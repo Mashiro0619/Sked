@@ -402,10 +402,12 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
     _dragAnimation = Tween<double>(begin: _dragOffset, end: target).animate(
       CurvedAnimation(parent: _dragController, curve: Curves.easeOutCubic),
     );
-    _dragController.forward(from: 0).whenComplete(() {
-      if (!mounted) return;
-      onCompleted?.call();
-    });
+    unawaited(
+      _dragController.forward(from: 0).whenComplete(() {
+        if (!mounted) return;
+        onCompleted?.call();
+      }),
+    );
   }
 
   void _animateExternalMonthChange(int direction) {

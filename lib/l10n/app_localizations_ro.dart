@@ -665,6 +665,29 @@ class AppLocalizationsRo extends AppLocalizations {
       'Salvarea a eșuat. Vă rugăm să încercați din nou mai târziu.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked este deja deschis';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'O altă fereastră Sked sau o altă filă de browser folosește datele tale locale. Închide fereastra sau fila respectivă, apoi încearcă din nou.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Datele locale nu sunt disponibile';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked nu a putut verifica accesul exclusiv la datele locale. Datele tale nu au fost deschise sau modificate. Verifică accesul la spațiul de stocare, apoi încearcă din nou.';
+
+  @override
+  String get savingChanges => 'Se salvează modificările...';
+
+  @override
+  String get showApiKey => 'Afișează cheia API';
+
+  @override
+  String get hideApiKey => 'Ascunde cheia API';
+
+  @override
   String get importFailedCheckContent =>
       'Importul a eșuat. Vă rugăm să verificați conținutul fișierului.';
 
@@ -1186,6 +1209,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Nu au fost returnate modele de la punctul final.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Modelele nu au putut fi preluate. Verifică endpointul și încearcă din nou.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

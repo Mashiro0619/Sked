@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +11,7 @@ import '../services/text_file_picker.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
+import '../widgets/ui_command.dart';
 
 enum _PeriodTimesMenuAction {
   importTemplate,
@@ -40,6 +43,9 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   var _loading = true;
   var _timePickerOpen = false;
   var _menuActionInProgress = false;
+  var _saveInProgress = false;
+
+  bool get _interactionBlocked => _menuActionInProgress || _saveInProgress;
 
   ExportService get _exportService => widget.exportService;
 
@@ -81,14 +87,16 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return Scaffold(
+    final page = Scaffold(
       appBar: AppBar(
         title: Text(l10n.periodTimesTitle),
         actions: [
           SkedPopupMenuButton<_PeriodTimesMenuAction>(
             tooltip: l10n.importExport,
-            enabled: !_menuActionInProgress,
-            onSelected: _handleMenuAction,
+            enabled: !_interactionBlocked,
+            onSelected: (action) {
+              unawaited(_handleMenuAction(action));
+            },
             itemBuilder: (context) => [
               SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.importTemplate,
@@ -117,32 +125,61 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
               ),
             ],
           ),
-          TextButton(onPressed: _save, child: Text(l10n.save)),
+          IconButton(
+            tooltip: l10n.save,
+            onPressed: _interactionBlocked
+                ? null
+                : () {
+                    unawaited(_save());
+                  },
+            icon: _saveInProgress
+                ? Semantics(
+                    liveRegion: true,
+                    label: l10n.savingChanges,
+                    child: const SizedBox.square(
+                      dimension: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  )
+                : const Icon(Icons.save_outlined),
+          ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      body: Column(
         children: [
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              labelText: l10n.periodTimeSetName,
-              prefixIcon: const Icon(Icons.schedule_outlined),
+          UiCommandBusyIndicator(busy: _interactionBlocked),
+          Expanded(
+            child: AbsorbPointer(
+              key: const ValueKey('period-times-editor-guard'),
+              absorbing: _interactionBlocked,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: l10n.periodTimeSetName,
+                      prefixIcon: const Icon(Icons.schedule_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  for (var index = 0; index < _periodTimes.length; index++) ...[
+                    _buildPeriodCard(index),
+                    const SizedBox(height: 12),
+                  ],
+                  FilledButton.icon(
+                    onPressed: _addPeriod,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addOnePeriod),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          for (var index = 0; index < _periodTimes.length; index++) ...[
-            _buildPeriodCard(index),
-            const SizedBox(height: 12),
-          ],
-          FilledButton.icon(
-            onPressed: _addPeriod,
-            icon: const Icon(Icons.add),
-            label: Text(l10n.addOnePeriod),
           ),
         ],
       ),
     );
+    return PopScope<void>(canPop: !_interactionBlocked, child: page);
   }
 
   Widget _buildPeriodCard(int index) {
@@ -170,32 +207,40 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: ShapeDecoration(
-                    color: colors.primary.withValues(alpha: 0.12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    l10n.periodNumberLabel(period.index),
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: ShapeDecoration(
+                        color: colors.primary.withValues(alpha: 0.12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.periodNumberLabel(period.index),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const Spacer(),
-                if (_periodTimes.length > 1)
+                if (_periodTimes.length > 1) ...[
+                  const SizedBox(width: 8),
                   IconButton(
                     tooltip: l10n.deleteThisPeriod,
                     onPressed: () => _removePeriod(index),
                     icon: const Icon(Icons.delete_outline),
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -256,31 +301,37 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   }
 
   Future<void> _handleMenuAction(_PeriodTimesMenuAction action) async {
-    if (_menuActionInProgress) {
+    if (_interactionBlocked) {
       return;
     }
     _setMenuActionInProgress(true);
     try {
-      switch (action) {
-        case _PeriodTimesMenuAction.importTemplate:
-          await _importTemplate();
-          return;
-        case _PeriodTimesMenuAction.importTemplateText:
-          await _importTemplateFromText();
-          return;
-        case _PeriodTimesMenuAction.exportTemplate:
-          await _shareTemplate();
-          return;
-        case _PeriodTimesMenuAction.saveTemplate:
-          await _saveTemplateToFile();
-          return;
-        case _PeriodTimesMenuAction.exportTemplateText:
-          await _exportTemplateAsText();
-          return;
-        case _PeriodTimesMenuAction.deleteSet:
-          await _deleteSet();
-          return;
-      }
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Run period time menu action ${action.name}',
+        command: () async {
+          switch (action) {
+            case _PeriodTimesMenuAction.importTemplate:
+              await _importTemplate();
+              return;
+            case _PeriodTimesMenuAction.importTemplateText:
+              await _importTemplateFromText();
+              return;
+            case _PeriodTimesMenuAction.exportTemplate:
+              await _shareTemplate();
+              return;
+            case _PeriodTimesMenuAction.saveTemplate:
+              await _saveTemplateToFile();
+              return;
+            case _PeriodTimesMenuAction.exportTemplateText:
+              await _exportTemplateAsText();
+              return;
+            case _PeriodTimesMenuAction.deleteSet:
+              await _deleteSet();
+              return;
+          }
+        },
+      );
     } finally {
       _setMenuActionInProgress(false);
     }
@@ -314,20 +365,38 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   }
 
   Future<void> _save() async {
+    if (_interactionBlocked) {
+      return;
+    }
+    setState(() => _saveInProgress = true);
     final provider = context.read<TimetableProvider>();
-    final normalized = buildPeriodTimesForCount(
-      _periodTimes.length,
-      source: _periodTimes,
-    );
-    await provider.updatePeriodTimeSet(
-      PeriodTimeSet(
-        id: widget.periodTimeSetId,
-        name: _nameController.text.trim(),
-        periodTimes: normalized,
-      ),
-    );
-    if (mounted) {
-      _showMessage(AppLocalizations.of(context).periodTimesSaved);
+    try {
+      final saved = await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Save period time set',
+        command: () async {
+          final normalized = buildPeriodTimesForCount(
+            _periodTimes.length,
+            source: _periodTimes,
+          );
+          await provider.updatePeriodTimeSet(
+            PeriodTimeSet(
+              id: widget.periodTimeSetId,
+              name: _nameController.text.trim(),
+              periodTimes: normalized,
+            ),
+          );
+        },
+      );
+      if (saved && mounted) {
+        _showMessage(AppLocalizations.of(context).periodTimesSaved);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saveInProgress = false);
+      } else {
+        _saveInProgress = false;
+      }
     }
   }
 

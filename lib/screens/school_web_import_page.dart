@@ -109,17 +109,21 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       appBar: AppBar(
         title: Text(_selectedSite?.name ?? widget.site.name),
         actions: [
-          TextButton(
+          IconButton(
             onPressed: _canGoBack && !_isLoadingPage && !_isParsing
                 ? _goBackInWebView
                 : null,
-            child: Text(l10n.schoolWebImportGoBack),
+            icon: const Icon(Icons.arrow_back),
+            tooltip: l10n.schoolWebImportGoBack,
           ),
           IconButton(
             onPressed: _controller == null || _isLoadingPage || _isParsing
                 ? null
                 : _reload,
             icon: const Icon(Icons.refresh),
+            tooltip: MaterialLocalizations.of(
+              context,
+            ).refreshIndicatorSemanticLabel,
           ),
           IconButton(
             onPressed:
@@ -290,7 +294,17 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   }
 
   Widget _buildMessage(String message) {
-    return ExpressiveEmptyState(icon: Icons.language_outlined, title: message);
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: ExpressiveEmptyState(
+            icon: Icons.language_outlined,
+            title: message,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildOriginStatus(AppLocalizations l10n) {

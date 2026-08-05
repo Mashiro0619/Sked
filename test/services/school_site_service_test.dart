@@ -652,6 +652,33 @@ void main() {
       },
     );
 
+    test('idle wait includes an active coordinated write', () async {
+      final coordinator = SchoolSiteStorageCoordinator();
+      final store = _ControlledSchoolSiteStore('[]')
+        ..saveStarted = Completer<void>()
+        ..allowSave = Completer<void>();
+      final writer = SchoolSiteService(store: store, coordinator: coordinator);
+      final shutdownObserver = SchoolSiteService(
+        store: store,
+        coordinator: coordinator,
+      );
+      await writer.loadSitesResult();
+
+      final save = writer.saveSites(const [
+        SchoolSite(name: 'Writer', loginUrl: 'https://writer.test'),
+      ]);
+      await store.saveStarted!.future;
+      final wait = shutdownObserver.waitForPendingOperations();
+      var waitCompleted = false;
+      unawaited(wait.then((_) => waitCompleted = true));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(waitCompleted, isFalse);
+      store.allowSave!.complete();
+      await Future.wait([save, wait]);
+      expect(decodeSchoolSitesStrict(store.source).single.name, 'Writer');
+    });
+
     test(
       'failed rebuild after isolation blocks every coordinated writer',
       () async {

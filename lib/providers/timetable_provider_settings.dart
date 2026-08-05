@@ -56,6 +56,32 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
+  Future<void> updateColorfulCourseTextSettings({
+    required String mode,
+    required int customColorValue,
+  }) async {
+    final currentColor =
+        _appData.studentMode.colorfulUiColorValues[colorfulCourseTextColorKey];
+    final colorIsCurrent =
+        mode != colorfulCourseTextColorModeCustom ||
+        currentColor == customColorValue;
+    if (_appData.studentMode.colorfulCourseTextColorMode == mode &&
+        colorIsCurrent) {
+      return;
+    }
+
+    var next = _appData;
+    if (mode == colorfulCourseTextColorModeCustom) {
+      next = _settings.updateColorfulUiColorValue(
+        next,
+        colorfulCourseTextColorKey,
+        customColorValue,
+      );
+    }
+    _appData = _settings.updateColorfulCourseTextColorMode(next, mode);
+    await _saveAndNotify();
+  }
+
   Future<void> updateCourseNameColorValue(
     String courseName,
     int colorValue,
@@ -118,6 +144,32 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
             .studentMode
             .schoolImportParserSettings
             .copyWith(customPrompt: normalized),
+      ),
+    );
+    await _saveAndNotify();
+  }
+
+  Future<void> updateCustomSchoolImportTextSettings({
+    required String baseUrl,
+    required String model,
+    required String prompt,
+  }) async {
+    final normalizedBaseUrl = baseUrl.trim();
+    final normalizedModel = model.trim();
+    final normalizedPrompt = prompt.trim();
+    final current = _appData.studentMode.schoolImportParserSettings;
+    if (current.customBaseUrl == normalizedBaseUrl &&
+        current.customModel == normalizedModel &&
+        current.customPrompt == normalizedPrompt) {
+      return;
+    }
+    _appData = _appData.copyWith(
+      studentMode: _appData.studentMode.copyWith(
+        schoolImportParserSettings: current.copyWith(
+          customBaseUrl: normalizedBaseUrl,
+          customModel: normalizedModel,
+          customPrompt: normalizedPrompt,
+        ),
       ),
     );
     await _saveAndNotify();

@@ -8,8 +8,46 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicLong
+
+private data class AppInstanceLeaseOwner(
+    val engineId: Long,
+    val ownerId: String,
+)
+
+private object AppInstanceLeaseGuard {
+    private val nextEngineId = AtomicLong()
+    private var owner: AppInstanceLeaseOwner? = null
+
+    fun createEngineId(): Long = nextEngineId.incrementAndGet()
+
+    @Synchronized
+    fun tryAcquire(engineId: Long, ownerId: String): Boolean {
+        val candidate = AppInstanceLeaseOwner(engineId, ownerId)
+        val current = owner
+        if (current != null && current != candidate) return false
+        owner = candidate
+        return true
+    }
+
+    @Synchronized
+    fun release(engineId: Long, ownerId: String) {
+        if (owner == AppInstanceLeaseOwner(engineId, ownerId)) {
+            owner = null
+        }
+    }
+
+    @Synchronized
+    fun releaseEngine(engineId: Long) {
+        if (owner?.engineId == engineId) {
+            owner = null
+        }
+    }
+}
 
 class MainActivity : FlutterActivity() {
+    private val appInstanceLeaseEngineId = AppInstanceLeaseGuard.createEngineId()
+    private var appInstanceLeaseChannel: MethodChannel? = null
     private var pendingSaveResult: MethodChannel.Result? = null
     private var pendingSaveContent: String? = null
     private var pendingSaveFileName: String? = null
@@ -30,6 +68,38 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        appInstanceLeaseChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            APP_INSTANCE_LEASE_CHANNEL,
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                val ownerId = call.argument<String>("ownerId")
+                if (ownerId.isNullOrBlank()) {
+                    result.error("invalidArguments", "Missing lease owner ID.", null)
+                    return@setMethodCallHandler
+                }
+                when (call.method) {
+                    "tryAcquire" -> result.success(
+                        AppInstanceLeaseGuard.tryAcquire(
+                            appInstanceLeaseEngineId,
+                            ownerId,
+                        ),
+                    )
+                    "release" -> {
+                        AppInstanceLeaseGuard.release(appInstanceLeaseEngineId, ownerId)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        appInstanceLeaseChannel?.setMethodCallHandler(null)
+        appInstanceLeaseChannel = null
+        AppInstanceLeaseGuard.releaseEngine(appInstanceLeaseEngineId)
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     private fun saveTextFile(
@@ -107,6 +177,7 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val EXPORT_FILE_CHANNEL = "com.mashiro.sked/export_file"
+        const val APP_INSTANCE_LEASE_CHANNEL = "com.mashiro.sked/app_instance_lease"
         const val SAVE_TEXT_FILE_REQUEST_CODE = 1001
     }
 }

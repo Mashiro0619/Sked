@@ -660,6 +660,29 @@ class AppLocalizationsVi extends AppLocalizations {
   String get saveFailedRetry => 'Lưu thất bại. Vui lòng thử lại sau.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked đang mở';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Một cửa sổ Sked hoặc thẻ trình duyệt khác đang sử dụng dữ liệu cục bộ của bạn. Hãy đóng cửa sổ hoặc thẻ đó rồi thử lại.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'Dữ liệu cục bộ không khả dụng';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'Sked không thể xác minh quyền truy cập độc quyền vào dữ liệu cục bộ. Dữ liệu của bạn chưa được mở hoặc thay đổi. Hãy kiểm tra quyền truy cập bộ nhớ rồi thử lại.';
+
+  @override
+  String get savingChanges => 'Đang lưu thay đổi...';
+
+  @override
+  String get showApiKey => 'Hiện khóa API';
+
+  @override
+  String get hideApiKey => 'Ẩn khóa API';
+
+  @override
   String get importFailedCheckContent =>
       'Nhập không thành công. Xin vui lòng kiểm tra nội dung tập tin.';
 
@@ -1178,6 +1201,10 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'Không có mô hình nào được trả lại bởi điểm cuối.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Không thể tải danh sách mô hình. Hãy kiểm tra điểm cuối rồi thử lại.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

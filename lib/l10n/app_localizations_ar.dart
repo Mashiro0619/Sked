@@ -656,6 +656,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get saveFailedRetry => 'فشل حفظ. يرجى محاولة مرة أخرى لاحقا.';
 
   @override
+  String get appInstanceBlockedTitle => 'Sked مفتوح بالفعل';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'تستخدم نافذة أخرى من Sked أو علامة تبويب أخرى في المتصفح بياناتك المحلية. أغلقها، ثم أعد المحاولة.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'البيانات المحلية غير متاحة';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'تعذّر على Sked التحقق من الوصول الحصري إلى البيانات المحلية. لم يتم فتح بياناتك أو تغييرها. تحقّق من إمكانية الوصول إلى مساحة التخزين، ثم أعد المحاولة.';
+
+  @override
+  String get savingChanges => 'جارٍ حفظ التغييرات...';
+
+  @override
+  String get showApiKey => 'إظهار مفتاح API';
+
+  @override
+  String get hideApiKey => 'إخفاء مفتاح API';
+
+  @override
   String get importFailedCheckContent =>
       'فشل الاستيراد. يرجى التحقق من محتوى الملف.';
 
@@ -1167,6 +1190,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'لم يتم إرجاع أي نماذج من قبل نقطة النهاية.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'تعذر جلب النماذج. تحقق من نقطة النهاية وحاول مرة أخرى.';
 
   @override
   String schoolImportParserModelsFetched(int count) {

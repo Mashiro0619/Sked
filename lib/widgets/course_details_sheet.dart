@@ -15,6 +15,7 @@ import '../models/timetable_models.dart'
         isFullConflictGroup,
         pickDisplayedCourseForConflict;
 import '../providers/timetable_provider.dart';
+import 'ui_command.dart';
 
 class CourseDetailsSheet extends StatefulWidget {
   const CourseDetailsSheet({
@@ -56,8 +57,11 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     setState(() => _actionInProgress = true);
     var succeeded = false;
     try {
-      await action();
-      succeeded = true;
+      succeeded = await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Course details action',
+        command: () async => action(),
+      );
     } finally {
       if (mounted && (resetOnSuccess || !succeeded)) {
         setState(() => _actionInProgress = false);
@@ -70,7 +74,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Consumer<TimetableProvider>(
+    final content = Consumer<TimetableProvider>(
       builder: (context, provider, child) {
         final timetable = provider.activeTimetableOrNull;
         if (timetable == null) {
@@ -108,6 +112,13 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  UiCommandBusyIndicator(
+                    key: const ValueKey('course-details-busy-indicator'),
+                    busy: _actionInProgress,
+                    semanticsKey: const ValueKey(
+                      'course-details-busy-semantics',
+                    ),
+                  ),
                   Row(
                     children: [
                       Expanded(
@@ -236,6 +247,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
         );
       },
     );
+    return PopScope<void>(canPop: !_actionInProgress, child: content);
   }
 
   List<CourseItem> _resolveConflictCourses({

@@ -668,6 +668,29 @@ class AppLocalizationsHu extends AppLocalizations {
       'Mentés nem sikerült. Kérjük, próbálja meg újra később.';
 
   @override
+  String get appInstanceBlockedTitle => 'A Sked már meg van nyitva';
+
+  @override
+  String get appInstanceBlockedMessage =>
+      'Egy másik Sked-ablak vagy böngészőlap használja a helyi adatait. Zárja be, majd próbálja újra.';
+
+  @override
+  String get appInstanceLeaseFailedTitle => 'A helyi adatok nem érhetők el';
+
+  @override
+  String get appInstanceLeaseFailedMessage =>
+      'A Sked nem tudta ellenőrizni a helyi adatokhoz való kizárólagos hozzáférést. Az adatait nem nyitotta meg és nem módosította. Ellenőrizze a tárhely-hozzáférést, majd próbálja újra.';
+
+  @override
+  String get savingChanges => 'Változtatások mentése...';
+
+  @override
+  String get showApiKey => 'API-kulcs megjelenítése';
+
+  @override
+  String get hideApiKey => 'API-kulcs elrejtése';
+
+  @override
   String get importFailedCheckContent =>
       'Nem sikerült importálni. Kérjük, ellenőrizze a fájl tartalmát.';
 
@@ -1188,6 +1211,10 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get schoolImportParserNoModelsFound =>
       'A végpont nem adott vissza modellt.';
+
+  @override
+  String get schoolImportParserFetchModelsFailed =>
+      'Nem sikerült lekérni a modelleket. Ellenőrizze a végpontot, és próbálja újra.';
 
   @override
   String schoolImportParserModelsFetched(int count) {
