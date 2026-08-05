@@ -7,8 +7,47 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';
 import 'package:sked/services/import_export_service.dart';
 
+class _OverridingImportExportService extends ImportExportService {
+  const _OverridingImportExportService();
+
+  @override
+  String exportPeriodTimesJson(List<CoursePeriodTime> periodTimes) {
+    return 'overridden:${periodTimes.length}';
+  }
+
+  @override
+  TimetableExportData decodeStudentImportCandidate(
+    String source, {
+    required String localeCode,
+  }) {
+    return const TimetableExportData(timetables: [], periodTimeSets: []);
+  }
+
+  String exportPeriodTimesJsonFromSuper(List<CoursePeriodTime> periodTimes) {
+    return super.exportPeriodTimesJson(periodTimes);
+  }
+}
+
 void main() {
   const service = ImportExportService();
+
+  test('split operations preserve inherited and dynamic dispatch', () {
+    const concrete = _OverridingImportExportService();
+    const ImportExportService baseTyped = concrete;
+
+    expect(baseTyped.exportPeriodTimesJson(const []), 'overridden:0');
+    expect(
+      concrete.exportPeriodTimesJsonFromSuper(const []),
+      service.exportPeriodTimesJson(const []),
+    );
+    expect(
+      baseTyped.previewImportTimetables(
+        'the override should bypass decoding',
+        localeCode: 'en',
+      ),
+      isEmpty,
+    );
+  });
 
   GeneralEvent event({
     String id = 'event',
@@ -687,6 +726,69 @@ void main() {
   });
 
   group('general ICS import', () {
+    test('exports only selected calendars and rejects an empty selection', () {
+      final current = data(
+        schedules: [
+          schedule(id: 'work', name: 'Work'),
+          schedule(
+            id: 'home',
+            name: 'Home',
+            events: [event(calendarId: 'home', title: 'Home event')],
+          ),
+        ],
+        activeScheduleId: 'work',
+      );
+
+      final exported = service.exportSelectedGeneralSchedulesIcs(
+        current,
+        const ['home'],
+        localeCode: defaultLocaleCode,
+      );
+
+      expect(current.schedules.last.events, hasLength(1));
+      expect(exported, contains('BEGIN:VCALENDAR'));
+      expect(exported, contains('SUMMARY:Home event'));
+      expect(
+        () => service.exportSelectedGeneralSchedulesIcs(current, const [
+          'missing',
+        ], localeCode: defaultLocaleCode),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects empty previews and selections', () {
+      expect(
+        () => service.previewImportGeneralSchedules(
+          envelope(const []),
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => service.importSelectedGeneralSchedulesJson(
+          data(),
+          envelope([schedule(id: 'available')]),
+          scheduleIds: const ['missing'],
+          mode: GeneralScheduleImportMode.addAsNew,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects replacement when there is no active calendar', () {
+      expect(
+        () => service.importSelectedGeneralSchedulesJson(
+          data(schedules: const [], activeScheduleId: ''),
+          envelope([schedule(id: 'replacement')]),
+          scheduleIds: const ['replacement'],
+          mode: GeneralScheduleImportMode.replaceActive,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('imports warnings into the structured result', () {
       const source = '''
 BEGIN:VCALENDAR
@@ -735,6 +837,22 @@ END:VCALENDAR
   });
 
   group('student JSON export', () {
+    test('rejects timetable and period-time exports with no usable data', () {
+      expect(
+        () => service.exportSelectedTimetablesJson(studentData(), const [
+          'missing',
+        ], localeCode: defaultLocaleCode),
+        throwsFormatException,
+      );
+      expect(
+        () => service.importPeriodTimesJson(
+          encodePeriodTimesEnvelope(const []),
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('rejects future envelope version encoded as a string', () {
       final source = jsonEncode({
         'schema': periodTimesSchema,
@@ -851,6 +969,89 @@ END:VCALENDAR
   });
 
   group('student JSON import', () {
+    test('rejects future and mismatched student import envelopes', () {
+      final future = ImportExportEnvelope(
+        schema: timetableDataSchema,
+        version: importExportVersion + 1,
+        data: const {'timetables': [], 'periodTimeSets': []},
+      ).encode();
+      final wrongType = ImportExportEnvelope(
+        schema: periodTimesSchema,
+        version: importExportVersion,
+        data: const {'periodTimes': []},
+      ).encode();
+
+      expect(
+        () => service.decodeStudentImportCandidate(
+          future,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => service.decodeStudentImportCandidate(
+          wrongType,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('validates target, selection, and replace-active cardinality', () {
+      final source = timetableEnvelope(
+        TimetableExportData(
+          timetables: [
+            timetable(id: 'first', periodTimeSetId: 'import_set'),
+            timetable(id: 'second', periodTimeSetId: 'import_set'),
+          ],
+          periodTimeSets: [periodSet(id: 'import_set')],
+        ),
+      );
+
+      expect(
+        () => service.importSelectedTimetablesJson(
+          studentData(),
+          source,
+          timetableIds: const ['first'],
+          mode: TimetableImportMode.addAsNew,
+          localeCode: defaultLocaleCode,
+          importBundledPeriodTimeSets: false,
+          targetPeriodTimeSetId: 'missing',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => service.importSelectedTimetablesJson(
+          studentData(),
+          source,
+          timetableIds: const ['missing'],
+          mode: TimetableImportMode.addAsNew,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => service.importSelectedTimetablesJson(
+          studentData(),
+          source,
+          timetableIds: const ['first', 'second'],
+          mode: TimetableImportMode.replaceActive,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => service.importSelectedTimetablesJson(
+          studentData(timetables: const [], activeTimetableId: ''),
+          source,
+          timetableIds: const ['first'],
+          mode: TimetableImportMode.replaceActive,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('decodes app data envelope with malformed nested modes safely', () {
       final source = ImportExportEnvelope(
         schema: appDataSchema,
@@ -1488,6 +1689,43 @@ END:VCALENDAR
     });
 
     test(
+      'replace import creates fallback periods when the bundle omits them',
+      () {
+        final current = studentData(
+          timetables: [timetable(id: 'active', name: 'Current')],
+          activeTimetableId: 'active',
+        );
+        final source = timetableEnvelope(
+          TimetableExportData(
+            timetables: [
+              timetable(
+                id: 'replacement',
+                name: 'Replacement',
+                periodTimeSetId: 'omitted-set',
+              ),
+            ],
+            periodTimeSets: const [],
+          ),
+        );
+
+        final mutation = service.importSelectedTimetablesJson(
+          current,
+          source,
+          timetableIds: const ['replacement'],
+          mode: TimetableImportMode.replaceActive,
+          localeCode: defaultLocaleCode,
+        );
+
+        expect(mutation.data.periodTimeSets, hasLength(2));
+        expect(
+          mutation.selectedTimetable!.config.periodTimeSetId,
+          mutation.data.periodTimeSets.last.id,
+        );
+        expect(mutation.data.periodTimeSets.last.periodTimes, isNotEmpty);
+      },
+    );
+
+    test(
       'preserves existing course colors and adds colors for new courses',
       () {
         final current = studentData(
@@ -1528,6 +1766,36 @@ END:VCALENDAR
   });
 
   group('school import apply', () {
+    test('validates manual period targets and replace-active state', () {
+      final request = SchoolImportApplyRequest(
+        response: schoolResponse(),
+        mode: TimetableImportMode.addAsNew,
+        importBundledPeriodTimeSet: false,
+        targetPeriodTimeSetId: 'missing',
+      );
+      expect(
+        () => service.applySchoolImportRequest(
+          studentData(),
+          request,
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+
+      expect(
+        () => service.applySchoolImportRequest(
+          studentData(timetables: const [], activeTimetableId: ''),
+          SchoolImportApplyRequest(
+            response: schoolResponse(),
+            mode: TimetableImportMode.replaceActive,
+            importBundledPeriodTimeSet: true,
+          ),
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('adds as new with bundled periods and preserves custom fields', () {
       final current = studentData();
 

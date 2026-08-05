@@ -14,12 +14,12 @@ import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../services/app_update_coordinator.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
-import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
@@ -28,40 +28,10 @@ import '../widgets/ui_command.dart';
 import 'general_display_settings_page.dart';
 import 'language_settings_page.dart';
 import 'school_html_import_page.dart';
+import 'settings_data_transfer_controller.dart';
 import 'theme_settings_page.dart';
 import 'timetable_display_settings_page.dart';
 import 'timetable_import_flow.dart';
-
-enum _DataAction {
-  importTimetables,
-  importTimetablesText,
-  importSchoolHtml,
-  exportTimetablesShare,
-  exportTimetablesSave,
-  exportTimetablesText,
-}
-
-enum _GeneralDataAction {
-  importSchedulesJsonFile,
-  importSchedulesJsonText,
-  importSchedulesIcsFile,
-  importSchedulesIcsText,
-  exportSchedulesJsonShare,
-  exportSchedulesJsonSave,
-  exportSchedulesJsonText,
-  exportSchedulesIcsShare,
-  exportSchedulesIcsSave,
-  exportSchedulesIcsText,
-}
-
-enum _AppDataAction {
-  restoreBackupFile,
-  restoreBackupText,
-  shareBackupFile,
-  saveBackupFile,
-  copyBackupText,
-  showRecoveryArtifacts,
-}
 
 enum _ExportFormat { json, ics }
 
@@ -81,241 +51,6 @@ enum _SettingsFlow {
   githubRepo,
 }
 
-enum UpdateCheckSource { manual, startup }
-
-enum _UpdateAction { github, ignore, cancel }
-
-class AppUpdateCoordinator {
-  static const _updateService = UpdateService();
-
-  static Future<void> checkForUpdates(
-    BuildContext context, {
-    required TimetableProvider provider,
-    required UpdateCheckSource source,
-    UpdateService updateService = _updateService,
-  }) async {
-    if (!provider.canWrite) return;
-    final l10n = AppLocalizations.of(context);
-    final showIgnoreButton = source == UpdateCheckSource.startup;
-    try {
-      final result = await updateService.checkForUpdates();
-      if (!context.mounted || !provider.canWrite) {
-        return;
-      }
-      final latestMessage = l10n.alreadyLatestVersion(result.localVersion);
-      if (!result.hasUpdate) {
-        await provider.updateAvailableUpdateVersion(null);
-        if (!context.mounted || !provider.canWrite) {
-          return;
-        }
-        if (source == UpdateCheckSource.manual) {
-          _showMessage(context, latestMessage);
-        }
-        return;
-      }
-      await provider.updateAvailableUpdateVersion(result.remoteVersion);
-      if (!context.mounted || !provider.canWrite) {
-        return;
-      }
-      if (showIgnoreButton &&
-          provider.ignoredUpdateVersion == result.remoteVersion) {
-        return;
-      }
-      final action = await _showUpdateDialog(
-        context,
-        result,
-        showIgnoreButton: showIgnoreButton,
-      );
-      if (!context.mounted || !provider.canWrite) {
-        return;
-      }
-      await _handleUpdateAction(
-        context,
-        provider: provider,
-        action: action,
-        showIgnoreButton: showIgnoreButton,
-        remoteVersion: result.remoteVersion,
-        releaseUrl: result.releaseUrl,
-      );
-    } catch (_) {
-      if (!context.mounted || !provider.canWrite) {
-        return;
-      }
-      final action = await _showUpdateCheckFailedDialog(
-        context,
-        showIgnoreButton: showIgnoreButton,
-      );
-      if (!context.mounted || !provider.canWrite) {
-        return;
-      }
-      await _handleUpdateAction(
-        context,
-        provider: provider,
-        action: action,
-        showIgnoreButton: showIgnoreButton,
-        releaseUrl: UpdateService.latestReleaseUrl,
-      );
-    }
-  }
-
-  static Future<_UpdateAction?> _showUpdateDialog(
-    BuildContext context,
-    UpdateCheckResult result, {
-    required bool showIgnoreButton,
-  }) {
-    final l10n = AppLocalizations.of(context);
-    final updateContent = result.updateContent.trim();
-    return showExpressiveDialog<_UpdateAction>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(_UpdateAction action) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(action);
-        }
-
-        return AlertDialog(
-          title: Text(l10n.checkForUpdates),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${l10n.currentVersionLabel} ${result.localVersion}'),
-                const SizedBox(height: 8),
-                Text('${l10n.latestVersionLabel} ${result.remoteVersion}'),
-                if (updateContent.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.updateContentLabel,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  SelectableText(updateContent),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: _buildUpdateDialogActions(
-                context,
-                pop: popWith,
-                showIgnoreButton: showIgnoreButton,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  static Future<_UpdateAction?> _showUpdateCheckFailedDialog(
-    BuildContext context, {
-    required bool showIgnoreButton,
-  }) {
-    final l10n = AppLocalizations.of(context);
-    return showExpressiveDialog<_UpdateAction>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(_UpdateAction action) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(action);
-        }
-
-        return AlertDialog(
-          title: Text(l10n.updateCheckFailedTitle),
-          content: Text(l10n.updateCheckFailedMessage),
-          actions: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: _buildUpdateDialogActions(
-                context,
-                pop: popWith,
-                showIgnoreButton: showIgnoreButton,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  static List<Widget> _buildUpdateDialogActions(
-    BuildContext context, {
-    required void Function(_UpdateAction action) pop,
-    required bool showIgnoreButton,
-  }) {
-    final l10n = AppLocalizations.of(context);
-    return [
-      TextButton(
-        onPressed: () => pop(_UpdateAction.cancel),
-        child: Text(l10n.cancel),
-      ),
-      if (showIgnoreButton)
-        TextButton(
-          onPressed: () => pop(_UpdateAction.ignore),
-          child: Text(l10n.ignoreThisVersion),
-        ),
-      FilledButton(
-        onPressed: () => pop(_UpdateAction.github),
-        child: Text(l10n.githubRepository),
-      ),
-    ];
-  }
-
-  static Future<void> _handleUpdateAction(
-    BuildContext context, {
-    required TimetableProvider provider,
-    required _UpdateAction? action,
-    required bool showIgnoreButton,
-    String? remoteVersion,
-    String? releaseUrl,
-  }) async {
-    switch (action) {
-      case _UpdateAction.github:
-        await _openExternalPage(
-          context,
-          releaseUrl ?? UpdateService.latestReleaseUrl,
-        );
-        return;
-      case _UpdateAction.ignore:
-        if (showIgnoreButton &&
-            remoteVersion != null &&
-            remoteVersion.trim().isNotEmpty) {
-          await provider.ignoreUpdateVersion(remoteVersion);
-        }
-        return;
-      case _UpdateAction.cancel:
-      case null:
-        return;
-    }
-  }
-
-  static Future<void> _openExternalPage(
-    BuildContext context,
-    String url,
-  ) async {
-    final uri = Uri.parse(url);
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && context.mounted) {
-      _showMessage(context, AppLocalizations.of(context).openUpdatesFailed);
-    }
-  }
-
-  static void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.packageInfoLoader});
 
@@ -327,6 +62,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const _exportService = ExportService();
+  static const _dataTransferController = SettingsDataTransferController();
 
   String? _editingTimetableId;
   String _currentVersion = '';
@@ -815,209 +551,50 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _showDataActions(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.studentDataActions, () async {
-      final action = await showAppModalSheet<_DataAction>(
-        context: context,
-        maxWidth: appSheetWidthMedium,
-        builder: (sheetContext) {
-          final l10n = AppLocalizations.of(sheetContext);
-          var popped = false;
-          void popWith(_DataAction action) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(sheetContext).pop(action);
+      await _dataTransferController.runStudentFlow(
+        context,
+        onAction: (action) async {
+          switch (action) {
+            case SettingsStudentDataAction.importTimetables:
+              await TimetableImportFlow.importTimetables(context, provider);
+            case SettingsStudentDataAction.importTimetablesText:
+              await _importTimetablesFromText(provider);
+            case SettingsStudentDataAction.importSchoolHtml:
+              await _openSchoolHtmlImportPage(provider);
+            case SettingsStudentDataAction.exportTimetablesShare:
+              await _exportTimetables(provider, share: true);
+            case SettingsStudentDataAction.exportTimetablesSave:
+              await _exportTimetables(provider, share: false);
+            case SettingsStudentDataAction.exportTimetablesText:
+              await _exportTimetablesAsText(provider);
           }
-
-          return SafeArea(
-            top: false,
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              children: [
-                _ActionSheetHeader(
-                  icon: Icons.import_export,
-                  title: l10n.dataImportExport,
-                  subtitle: l10n.dataImportExportDesc,
-                ),
-                const SizedBox(height: 12),
-                _ActionSheetGroup(
-                  children: [
-                    _ActionSheetTile(
-                      icon: Icons.file_download_outlined,
-                      title: l10n.importTimetableFiles,
-                      subtitle: l10n.importTimetableFilesDesc,
-                      onTap: () => popWith(_DataAction.importTimetables),
-                    ),
-                    _ActionSheetTile(
-                      icon: Icons.paste_outlined,
-                      title: l10n.importTimetableText,
-                      subtitle: l10n.importTimetableTextDesc,
-                      onTap: () => popWith(_DataAction.importTimetablesText),
-                    ),
-                    _ActionSheetTile(
-                      icon: Icons.html_outlined,
-                      title: l10n.schoolHtmlImportEntry,
-                      subtitle: l10n.schoolHtmlImportEntryDesc,
-                      onTap: () => popWith(_DataAction.importSchoolHtml),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _ActionSheetGroup(
-                  children: [
-                    _ActionSheetTile(
-                      icon: Icons.share_outlined,
-                      title: l10n.shareTimetableFiles,
-                      subtitle: l10n.shareTimetableFilesDesc,
-                      onTap: () => popWith(_DataAction.exportTimetablesShare),
-                    ),
-                    _ActionSheetTile(
-                      icon: Icons.save_alt_outlined,
-                      title: l10n.saveTimetableFiles,
-                      subtitle: l10n.saveTimetableFilesDesc,
-                      onTap: () => popWith(_DataAction.exportTimetablesSave),
-                    ),
-                    _ActionSheetTile(
-                      icon: Icons.text_snippet_outlined,
-                      title: l10n.exportTimetableText,
-                      subtitle: l10n.exportTimetableTextDesc,
-                      onTap: () => popWith(_DataAction.exportTimetablesText),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
         },
       );
-      if (action == null || !mounted) {
-        return;
-      }
-      switch (action) {
-        case _DataAction.importTimetables:
-          await TimetableImportFlow.importTimetables(context, provider);
-          return;
-        case _DataAction.importTimetablesText:
-          await _importTimetablesFromText(provider);
-          return;
-        case _DataAction.importSchoolHtml:
-          await _openSchoolHtmlImportPage(provider);
-          return;
-        case _DataAction.exportTimetablesShare:
-          await _exportTimetables(provider, share: true);
-          return;
-        case _DataAction.exportTimetablesSave:
-          await _exportTimetables(provider, share: false);
-          return;
-        case _DataAction.exportTimetablesText:
-          await _exportTimetablesAsText(provider);
-          return;
-      }
     });
   }
 
   Future<void> _showAppDataActions(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.appDataActions, () async {
-      final action = await showAppModalSheet<_AppDataAction>(
-        context: context,
-        maxWidth: appSheetWidthMedium,
-        builder: (sheetContext) {
-          final l10n = AppLocalizations.of(sheetContext);
-          final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
-          var popped = false;
-          void popWith(_AppDataAction action) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(sheetContext).pop(action);
+      await _dataTransferController.runAppDataFlow(
+        context,
+        hasRecoveryArtifacts: () => provider.recoveryArtifacts.isNotEmpty,
+        onAction: (action) async {
+          switch (action) {
+            case SettingsAppDataAction.restoreBackupFile:
+              await _restoreAppDataFromFile(provider);
+            case SettingsAppDataAction.restoreBackupText:
+              await _restoreAppDataFromText(provider);
+            case SettingsAppDataAction.shareBackupFile:
+              await _exportAppDataBackup(provider, share: true);
+            case SettingsAppDataAction.saveBackupFile:
+              await _exportAppDataBackup(provider, share: false);
+            case SettingsAppDataAction.copyBackupText:
+              await _exportAppDataBackupAsText(provider);
+            case SettingsAppDataAction.showRecoveryArtifacts:
+              await _showRecoveryArtifacts(provider);
           }
-
-          return SafeArea(
-            top: false,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                children: [
-                  _ActionSheetHeader(
-                    icon: Icons.inventory_2_outlined,
-                    title: l10n.appBackupTitle,
-                    subtitle: l10n.appBackupSheetSubtitle,
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionSheetGroup(
-                    children: [
-                      _ActionSheetTile(
-                        icon: Icons.restore_page_outlined,
-                        title: l10n.restoreBackupFileTitle,
-                        subtitle: l10n.restoreBackupFileSubtitle,
-                        onTap: () => popWith(_AppDataAction.restoreBackupFile),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.content_paste_go_outlined,
-                        title: l10n.restoreBackupTextTitle,
-                        subtitle: l10n.restoreBackupTextSubtitle,
-                        onTap: () => popWith(_AppDataAction.restoreBackupText),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionSheetGroup(
-                    children: [
-                      _ActionSheetTile(
-                        icon: Icons.share_outlined,
-                        title: l10n.shareBackupTitle,
-                        subtitle: l10n.shareBackupSubtitle,
-                        onTap: () => popWith(_AppDataAction.shareBackupFile),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.save_alt_outlined,
-                        title: l10n.saveBackupTitle,
-                        subtitle: l10n.saveBackupSubtitle,
-                        onTap: () => popWith(_AppDataAction.saveBackupFile),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.text_snippet_outlined,
-                        title: l10n.copyBackupTitle,
-                        subtitle: l10n.copyBackupSubtitle,
-                        onTap: () => popWith(_AppDataAction.copyBackupText),
-                      ),
-                    ],
-                  ),
-                  if (provider.recoveryArtifacts.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _ActionSheetGroup(
-                      children: [
-                        _ActionSheetTile(
-                          icon: Icons.restore_from_trash_outlined,
-                          title: l10n.dataRecoveryArtifactsAction,
-                          subtitle: l10n.dataRecoveryArtifactsHint,
-                          onTap: () =>
-                              popWith(_AppDataAction.showRecoveryArtifacts),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
         },
       );
-      if (action == null || !mounted) return;
-      switch (action) {
-        case _AppDataAction.restoreBackupFile:
-          await _restoreAppDataFromFile(provider);
-        case _AppDataAction.restoreBackupText:
-          await _restoreAppDataFromText(provider);
-        case _AppDataAction.shareBackupFile:
-          await _exportAppDataBackup(provider, share: true);
-        case _AppDataAction.saveBackupFile:
-          await _exportAppDataBackup(provider, share: false);
-        case _AppDataAction.copyBackupText:
-          await _exportAppDataBackupAsText(provider);
-        case _AppDataAction.showRecoveryArtifacts:
-          await _showRecoveryArtifacts(provider);
-      }
     });
   }
 
@@ -1604,148 +1181,39 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _showGeneralDataActions(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.generalDataActions, () async {
-      final l10n = AppLocalizations.of(context);
-      final action = await showAppModalSheet<_GeneralDataAction>(
-        context: context,
-        maxWidth: appSheetWidthMedium,
-        builder: (sheetContext) {
-          final maxHeight = MediaQuery.of(sheetContext).size.height * 0.85;
-          var popped = false;
-          void popWith(_GeneralDataAction action) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(sheetContext).pop(action);
+      await _dataTransferController.runGeneralFlow(
+        context,
+        onAction: (action) async {
+          switch (action) {
+            case SettingsGeneralDataAction.importSchedulesJsonFile:
+              await _importGeneralSchedulesJsonFile(provider);
+            case SettingsGeneralDataAction.importSchedulesJsonText:
+              await _importGeneralSchedulesJsonText(provider);
+            case SettingsGeneralDataAction.importSchedulesIcsFile:
+              await _importGeneralSchedulesIcsFile(provider);
+            case SettingsGeneralDataAction.importSchedulesIcsText:
+              await _importGeneralSchedulesIcsText(provider);
+            case SettingsGeneralDataAction.exportSchedulesJsonShare:
+              await _exportGeneralSchedules(provider, share: true);
+            case SettingsGeneralDataAction.exportSchedulesJsonSave:
+              await _exportGeneralSchedules(provider, share: false);
+            case SettingsGeneralDataAction.exportSchedulesJsonText:
+              await _exportGeneralSchedulesAsText(
+                provider,
+                format: _ExportFormat.json,
+              );
+            case SettingsGeneralDataAction.exportSchedulesIcsShare:
+              await _exportGeneralSchedulesIcs(provider, share: true);
+            case SettingsGeneralDataAction.exportSchedulesIcsSave:
+              await _exportGeneralSchedulesIcs(provider, share: false);
+            case SettingsGeneralDataAction.exportSchedulesIcsText:
+              await _exportGeneralSchedulesAsText(
+                provider,
+                format: _ExportFormat.ics,
+              );
           }
-
-          return SafeArea(
-            top: false,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                children: [
-                  _ActionSheetHeader(
-                    icon: Icons.event_note_outlined,
-                    title: l10n.generalScheduleImportExport,
-                    subtitle: l10n.generalScheduleImportExportDesc,
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionSheetGroup(
-                    children: [
-                      _ActionSheetTile(
-                        icon: Icons.file_download_outlined,
-                        title: l10n.importJsonFile,
-                        subtitle: l10n.importGeneralSchedulesDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.importSchedulesJsonFile),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.paste_outlined,
-                        title: l10n.pasteJson,
-                        subtitle: l10n.importGeneralSchedulesJsonTextDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.importSchedulesJsonText),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.calendar_month_outlined,
-                        title: l10n.importIcsFile,
-                        subtitle: l10n.importIcsFileDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.importSchedulesIcsFile),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.event_note_outlined,
-                        title: l10n.pasteIcs,
-                        subtitle: l10n.pasteIcsDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.importSchedulesIcsText),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionSheetGroup(
-                    children: [
-                      _ActionSheetTile(
-                        icon: Icons.share_outlined,
-                        title: '${l10n.shareGeneralSchedules} JSON',
-                        subtitle: l10n.shareGeneralSchedulesDesc,
-                        onTap: () => popWith(
-                          _GeneralDataAction.exportSchedulesJsonShare,
-                        ),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.save_alt_outlined,
-                        title: '${l10n.saveGeneralSchedules} JSON',
-                        subtitle: l10n.saveGeneralSchedulesDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.exportSchedulesJsonSave),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.text_snippet_outlined,
-                        title: l10n.copyJson,
-                        subtitle: l10n.copyJsonDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.exportSchedulesJsonText),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.ios_share_outlined,
-                        title: l10n.shareIcs,
-                        subtitle: l10n.shareIcsDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.exportSchedulesIcsShare),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.event_available_outlined,
-                        title: l10n.saveIcs,
-                        subtitle: l10n.saveIcsDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.exportSchedulesIcsSave),
-                      ),
-                      _ActionSheetTile(
-                        icon: Icons.event_note_outlined,
-                        title: l10n.copyIcs,
-                        subtitle: l10n.copyIcsDesc,
-                        onTap: () =>
-                            popWith(_GeneralDataAction.exportSchedulesIcsText),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
         },
       );
-      if (action == null || !mounted) return;
-      switch (action) {
-        case _GeneralDataAction.importSchedulesJsonFile:
-          await _importGeneralSchedulesJsonFile(provider);
-        case _GeneralDataAction.importSchedulesJsonText:
-          await _importGeneralSchedulesJsonText(provider);
-        case _GeneralDataAction.importSchedulesIcsFile:
-          await _importGeneralSchedulesIcsFile(provider);
-        case _GeneralDataAction.importSchedulesIcsText:
-          await _importGeneralSchedulesIcsText(provider);
-        case _GeneralDataAction.exportSchedulesJsonShare:
-          await _exportGeneralSchedules(provider, share: true);
-        case _GeneralDataAction.exportSchedulesJsonSave:
-          await _exportGeneralSchedules(provider, share: false);
-        case _GeneralDataAction.exportSchedulesJsonText:
-          await _exportGeneralSchedulesAsText(
-            provider,
-            format: _ExportFormat.json,
-          );
-        case _GeneralDataAction.exportSchedulesIcsShare:
-          await _exportGeneralSchedulesIcs(provider, share: true);
-        case _GeneralDataAction.exportSchedulesIcsSave:
-          await _exportGeneralSchedulesIcs(provider, share: false);
-        case _GeneralDataAction.exportSchedulesIcsText:
-          await _exportGeneralSchedulesAsText(
-            provider,
-            format: _ExportFormat.ics,
-          );
-      }
     });
   }
 
@@ -2273,150 +1741,6 @@ class _RecoveryNoticeTile extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionSheetHeader extends StatelessWidget {
-  const _ActionSheetHeader({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: 40,
-          child: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionSheetGroup extends StatelessWidget {
-  const _ActionSheetGroup({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      color: colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var index = 0; index < children.length; index++) ...[
-            if (index > 0)
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 72,
-                color: colorScheme.outlineVariant.withValues(alpha: 0.48),
-              ),
-            children[index],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionSheetTile extends StatelessWidget {
-  const _ActionSheetTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return ExpressiveTap(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 72),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 10, 10),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(
-                  child: Icon(icon, color: colorScheme.onSurfaceVariant),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 32,
-                height: 48,
-                child: Icon(
-                  Icons.chevron_right,
-                  size: 28,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -210,6 +210,51 @@ void main() {
     expect(find.text('Open'), findsOneWidget);
   });
 
+  testWidgets('edit action opens the selected period set and returns', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  unawaited(
+                    showPeriodTimeSetPickerDialog(
+                      context,
+                      provider: provider,
+                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PeriodTimesPage), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
   testWidgets('barrier does not dismiss while creating period set', (
     tester,
   ) async {

@@ -8,6 +8,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/general_display_settings_page.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
+import 'package:sked/widgets/settings_list.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -27,32 +28,49 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://general-display-settings-test';
 }
 
-Future<TimetableProvider> _createProvider() async {
+Future<TimetableProvider> _createProvider({
+  String localeCode = defaultLocaleCode,
+}) async {
   final provider = TimetableProvider(
     storage: _MemoryTimetableStorage(
       buildInitialAppData(
         buildDefaultPeriodTimes(),
-        localeCode: defaultLocaleCode,
+        localeCode: localeCode,
       ).copyWith(activeMode: AppMode.general),
     ),
-    systemLocaleCodeResolver: () => defaultLocaleCode,
+    systemLocaleCodeResolver: () => localeCode,
   );
   await provider.load();
   return provider;
 }
 
-Future<void> _pumpPage(WidgetTester tester, TimetableProvider provider) async {
+Future<void> _pumpPage(
+  WidgetTester tester,
+  TimetableProvider provider, {
+  Locale locale = const Locale('en'),
+}) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: GeneralDisplaySettingsPage(),
+        home: const GeneralDisplaySettingsPage(),
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _toggleSwitch(WidgetTester tester, String title) async {
+  final titleFinder = find.text(title);
+  await tester.scrollUntilVisible(titleFinder, 120);
+  final tile = find.ancestor(
+    of: titleFinder,
+    matching: find.byType(SettingsSwitchTile),
+  );
+  await tester.tap(find.descendant(of: tile, matching: find.byType(Switch)));
   await tester.pumpAndSettle();
 }
 
@@ -103,5 +121,49 @@ void main() {
 
     expect(menuItemRect.left, closeTo(dropdownRect.left, 1));
     expect(menuItemRect.width, greaterThanOrEqualTo(dropdownRect.width - 16));
+  });
+
+  testWidgets('persists schedule, time-grid, and popup controls', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider);
+
+    await _toggleSwitch(tester, 'Show weekends');
+    expect(provider.generalShowWeekends, isFalse);
+
+    final startSlider = tester.widget<Slider>(find.byType(Slider).first);
+    startSlider.onChangeEnd!(7);
+    await tester.pumpAndSettle();
+    expect(provider.generalDayStartHour, 7);
+
+    final endSlider = tester.widget<Slider>(find.byType(Slider).last);
+    endSlider.onChangeEnd!(22);
+    await tester.pumpAndSettle();
+    expect(provider.generalDayEndHour, 22);
+
+    final gridMenu = find.byKey(const ValueKey('general-time-grid'));
+    await tester.scrollUntilVisible(gridMenu, 120);
+    await tester.tap(gridMenu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('30 min').last);
+    await tester.pumpAndSettle();
+    expect(provider.generalTimeGridMinutes, 30);
+
+    await _toggleSwitch(tester, 'Close popup on tap outside');
+    expect(provider.closeGeneralEventPopupOnOutsideTap, isFalse);
+  });
+
+  testWidgets('Chinese locale exposes and persists the lunar toggle', (
+    tester,
+  ) async {
+    final provider = await _createProvider(localeCode: 'zh');
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider, locale: const Locale('zh'));
+
+    await _toggleSwitch(tester, '显示农历');
+
+    expect(provider.generalShowLunarCalendar, isFalse);
   });
 }

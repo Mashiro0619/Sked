@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -44,8 +46,70 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Test
-        run: flutter test
+      - name: Test with coverage
+        run: flutter test --coverage
+
+      - name: Resolve coverage comparison base
+        id: coverage-base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          CURRENT_REF: ${{ github.ref }}
+        run: dart run tool/coverage_base.dart
+
+      - name: Measure base coverage
+        id: base-coverage
+        if: steps.coverage-base.outputs.is_commit == 'true'
+        env:
+          BASE_SHA: ${{ steps.coverage-base.outputs.sha }}
+        run: |
+          base_dir="$RUNNER_TEMP/sked-coverage-base"
+          base_status=0
+          git worktree add --detach "$base_dir" "$BASE_SHA" || base_status=$?
+          if [ "$base_status" -eq 0 ]; then
+            pushd "$base_dir"
+            flutter pub get && flutter test --coverage || base_status=$?
+            popd
+          fi
+          if [ "$base_status" -eq 0 ] && [ -f "$base_dir/coverage/lcov.info" ]; then
+            cp "$base_dir/coverage/lcov.info" coverage/lcov.base.info
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Base coverage could not be measured (exit $base_status). The absolute bootstrap floor and 90% diff gate remain active so a PR can repair a red base."
+            echo "Base coverage unavailable; using the bootstrap floor plus diff gate." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Enforce coverage gates
+        env:
+          BASE_SHA: ${{ steps.coverage-base.outputs.sha }}
+          BASE_COVERAGE_AVAILABLE: ${{ steps.base-coverage.outputs.available }}
+        run: |
+          baseline_args=()
+          total_floor=81.76
+          if [ "$BASE_COVERAGE_AVAILABLE" = true ]; then
+            baseline_args+=(
+              --baseline-lcov coverage/lcov.base.info
+              --baseline-root "$RUNNER_TEMP/sked-coverage-base"
+            )
+            # Both snapshots were measured on this Ubuntu runner, so their
+            # exact comparison replaces the Windows-only bootstrap floor.
+            total_floor=0
+          fi
+          set +e
+          dart run tool/coverage_gate.dart \
+            --base-ref "$BASE_SHA" \
+            --head-ref HEAD \
+            --minimum-total "$total_floor" \
+            --minimum-diff 90 \
+            --github-annotations \
+            "${baseline_args[@]}"
+          coverage_status=$?
+          set -e
+          cat coverage/coverage-summary.txt >> "$GITHUB_STEP_SUMMARY"
+          exit "$coverage_status"
 
       - name: Test browser instance lease
         run: flutter test --platform chrome test/services/app_instance_lease_web_test.dart
@@ -67,3 +131,16 @@ jobs:
 
       - name: Build Android APK
         run: flutter build apk --debug
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.run_attempt }}
+          path: |
+            coverage/lcov.info
+            coverage/lcov.base.info
+            coverage/lcov.filtered.info
+            coverage/coverage-summary.txt
+          if-no-files-found: error
+          retention-days: 14

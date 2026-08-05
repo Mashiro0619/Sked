@@ -17,6 +17,7 @@ import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
+import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_service.dart';

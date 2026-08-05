@@ -7,9 +7,9 @@ import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
-import '../services/school_import_apply_service.dart';
 import '../services/school_import_content_sanitizer.dart';
 import '../services/school_import_http_consent.dart';
+import '../services/school_import_workflow.dart';
 import '../utils/text_input_limits.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
@@ -47,9 +47,7 @@ class SchoolHtmlImportPage extends StatefulWidget {
 class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   static const int _maxRememberedTruncatedContents = 8;
 
-  late final SchoolImportApi _api;
-  final SchoolImportApplyService _applyService =
-      const SchoolImportApplyService();
+  late final SchoolImportWorkflow _workflow;
   final TextEditingController _htmlController = TextEditingController();
 
   bool _isSubmitting = false;
@@ -62,7 +60,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   final List<String> _rememberedTruncatedContents = [];
   bool _lastFormattedContentWasTruncated = false;
   bool _truncationUpdateScheduled = false;
-  http.Client? _activeHttpClient;
   int _submissionGeneration = 0;
 
   bool _isConfigured(TimetableProvider provider) {
@@ -95,7 +92,10 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   @override
   void initState() {
     super.initState();
-    _api = widget.api ?? const SchoolImportApi();
+    _workflow = SchoolImportWorkflow(
+      api: widget.api ?? const SchoolImportApi(),
+      httpClientFactory: widget.httpClientFactory,
+    );
     _codeUnitInputFormatter = const Utf16CodeUnitLimitingTextInputFormatter(
       SchoolImportContentSanitizer.maxInputLength,
     );
@@ -120,8 +120,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   @override
   void dispose() {
     _submissionGeneration += 1;
-    _activeHttpClient?.close();
-    _activeHttpClient = null;
+    _workflow.cancelActiveParse();
     _htmlController.dispose();
     super.dispose();
   }
@@ -257,9 +256,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
       _showMessage(l10n.schoolHtmlImportEmpty);
       return false;
     }
-    final sanitization = SchoolImportContentSanitizer.sanitizeWithResult(
-      sourceContent,
-    );
+    final sanitization = _workflow.prepareContent(sourceContent);
     final sanitizedContent = sanitization.content;
     if (sanitizedContent.isEmpty) {
       _showMessage(l10n.schoolHtmlImportEmpty);
@@ -430,36 +427,29 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
       return;
     }
 
-    final httpClient = widget.httpClientFactory?.call() ?? http.Client();
-    _activeHttpClient = httpClient;
     SchoolImportResponse? response;
     Object? streamError;
     try {
-      try {
-        final stream = _api.importCurrentPageStream(
-          SchoolImportPagePayload(
-            url: widget.initialUrl,
-            title: widget.initialTitle,
-            html: sanitizedContent,
-            locale: localeCode,
-            sourceHint: parserSettings.source,
-          ),
-          parserSettings: parserSettings,
-          client: httpClient,
-        );
-
-        if (!mounted || submissionGeneration != _submissionGeneration) return;
-        response = await showDialog<SchoolImportResponse>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => SchoolImportStreamDialog(stream: stream),
-        );
-      } finally {
-        httpClient.close();
-        if (identical(_activeHttpClient, httpClient)) {
-          _activeHttpClient = null;
-        }
-      }
+      response = await _workflow.parse(
+        payload: SchoolImportPagePayload(
+          url: widget.initialUrl,
+          title: widget.initialTitle,
+          html: sanitizedContent,
+          locale: localeCode,
+          sourceHint: parserSettings.source,
+        ),
+        parserSettings: parserSettings,
+        presentStream: (stream) {
+          if (!mounted || submissionGeneration != _submissionGeneration) {
+            return Future<SchoolImportResponse?>.value();
+          }
+          return showDialog<SchoolImportResponse>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => SchoolImportStreamDialog(stream: stream),
+          );
+        },
+      );
     } catch (error) {
       streamError = error;
     }
@@ -500,7 +490,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     setState(() => _isSubmitting = true);
     Object? applyError;
     try {
-      await _applyService.apply(provider, importResult);
+      await _workflow.apply(provider, importResult);
     } catch (error) {
       applyError = error;
     }
