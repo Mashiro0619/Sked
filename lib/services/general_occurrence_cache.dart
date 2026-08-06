@@ -37,6 +37,9 @@ class GeneralOccurrenceCache {
     final key = _GeneralOccurrenceQueryCacheKey.from(query);
     final cached = _queries[key];
     if (cached != null) {
+      // Map insertion order is the eviction order; reinsert hits at the end.
+      _queries.remove(key);
+      _queries[key] = cached;
       return cached;
     }
     final result = List<GeneralEventOccurrence>.unmodifiable(
@@ -105,7 +108,9 @@ class GeneralOccurrenceCache {
 class _GeneralOccurrenceQueryCacheKey {
   const _GeneralOccurrenceQueryCacheKey({
     required this.startMicros,
+    required this.startIsUtc,
     required this.endMicros,
+    required this.endIsUtc,
     required this.onlyVisibleCalendars,
     required this.searchQuery,
     required this.colorValue,
@@ -114,7 +119,9 @@ class _GeneralOccurrenceQueryCacheKey {
   factory _GeneralOccurrenceQueryCacheKey.from(GeneralOccurrenceQuery query) {
     return _GeneralOccurrenceQueryCacheKey(
       startMicros: query.startInclusive.microsecondsSinceEpoch,
+      startIsUtc: query.startInclusive.isUtc,
       endMicros: query.endExclusive.microsecondsSinceEpoch,
+      endIsUtc: query.endExclusive.isUtc,
       onlyVisibleCalendars: query.onlyVisibleCalendars,
       searchQuery: query.searchQuery.trim().toLowerCase(),
       colorValue: query.colorValue,
@@ -122,7 +129,9 @@ class _GeneralOccurrenceQueryCacheKey {
   }
 
   final int startMicros;
+  final bool startIsUtc;
   final int endMicros;
+  final bool endIsUtc;
   final bool onlyVisibleCalendars;
   final String searchQuery;
   final int? colorValue;
@@ -131,7 +140,9 @@ class _GeneralOccurrenceQueryCacheKey {
   bool operator ==(Object other) {
     return other is _GeneralOccurrenceQueryCacheKey &&
         other.startMicros == startMicros &&
+        other.startIsUtc == startIsUtc &&
         other.endMicros == endMicros &&
+        other.endIsUtc == endIsUtc &&
         other.onlyVisibleCalendars == onlyVisibleCalendars &&
         other.searchQuery == searchQuery &&
         other.colorValue == colorValue;
@@ -140,7 +151,9 @@ class _GeneralOccurrenceQueryCacheKey {
   @override
   int get hashCode => Object.hash(
     startMicros,
+    startIsUtc,
     endMicros,
+    endIsUtc,
     onlyVisibleCalendars,
     searchQuery,
     colorValue,
