@@ -12,9 +12,9 @@ class PlatformAppInstanceLease extends WebAppInstanceLease {
 
 class WebAppInstanceLease implements AppInstanceLease {
   WebAppInstanceLease({
-    required AppInstanceWebLockRequester requester,
+    required this._requester,
     this.lockName = 'com.mashiro.sked.local-data-writer',
-  }) : _requester = requester;
+  });
 
   final AppInstanceWebLockRequester _requester;
   final String lockName;

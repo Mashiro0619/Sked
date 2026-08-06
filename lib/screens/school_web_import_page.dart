@@ -889,10 +889,9 @@ typedef SchoolWebImportNavigationDecision =
 @visibleForTesting
 class SchoolWebImportNavigationDecisionQueue {
   SchoolWebImportNavigationDecisionQueue({
-    required SchoolWebImportNavigationDecision decide,
+    required this._decide,
     this.maxPendingOrigins = 8,
-  }) : assert(maxPendingOrigins > 0),
-       _decide = decide;
+  }) : assert(maxPendingOrigins > 0);
 
   final SchoolWebImportNavigationDecision _decide;
   final int maxPendingOrigins;

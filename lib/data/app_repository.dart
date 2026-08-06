@@ -15,7 +15,7 @@ import 'timetable_storage.dart';
 /// 注意：本类不持有任何业务逻辑，只负责 AppData 整体的读、合成、写。具体的
 /// 课程/事件操作应该走 Service 层，再由 Provider 提交完整快照。
 class AppRepository {
-  AppRepository({required TimetableStorage storage}) : _storage = storage;
+  AppRepository({required this._storage});
 
   final TimetableStorage _storage;
 

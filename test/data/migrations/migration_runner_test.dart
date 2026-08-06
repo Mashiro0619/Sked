@@ -178,9 +178,11 @@ void main() {
 }
 
 class _FnMigration extends Migration {
-  _FnMigration({required int from, required int to, required this.transform})
-    : _from = from,
-      _to = to;
+  _FnMigration({
+    required this._from,
+    required this._to,
+    required this.transform,
+  });
 
   final int _from;
   final int _to;

@@ -58,9 +58,7 @@ class ImportExportService extends _ImportExportServiceCore
 }
 
 class _ImportExportServiceCore {
-  const _ImportExportServiceCore({
-    required GeneralCalendarIcsService icsService,
-  }) : _icsService = icsService;
+  const _ImportExportServiceCore({required this._icsService});
 
   final GeneralCalendarIcsService _icsService;
 

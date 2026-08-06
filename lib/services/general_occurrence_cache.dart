@@ -2,9 +2,7 @@ import '../models/timetable_models.dart';
 import 'general_occurrence_service.dart';
 
 class GeneralOccurrenceCache {
-  GeneralOccurrenceCache({
-    GeneralOccurrenceService service = const GeneralOccurrenceService(),
-  }) : _service = service;
+  GeneralOccurrenceCache({this._service = const GeneralOccurrenceService()});
 
   static const _maxEntries = 64;
 

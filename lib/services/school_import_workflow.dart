@@ -14,12 +14,10 @@ typedef SchoolImportStreamPresenter =
 
 class SchoolImportWorkflow {
   SchoolImportWorkflow({
-    SchoolImportApi api = const SchoolImportApi(),
-    SchoolImportApplyService applyService = const SchoolImportApplyService(),
+    this._api = const SchoolImportApi(),
+    this._applyService = const SchoolImportApplyService(),
     http.Client Function()? httpClientFactory,
-  }) : _api = api,
-       _applyService = applyService,
-       _httpClientFactory = httpClientFactory ?? http.Client.new;
+  }) : _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   final SchoolImportApi _api;
   final SchoolImportApplyService _applyService;

@@ -16,11 +16,10 @@ class IoTimetableStorage
   IoTimetableStorage({
     Future<Directory> Function()? directoryProvider,
     DateTime Function()? clock,
-    Future<List<int>> Function(File)? fileReader,
+    this._fileReader,
   }) : _directoryProvider =
            directoryProvider ?? getApplicationDocumentsDirectory,
-       _clock = clock ?? DateTime.now,
-       _fileReader = fileReader;
+       _clock = clock ?? DateTime.now;
 
   static const _fileName = 'Sked_data.json';
   static const _backupSuffix = '.bak';

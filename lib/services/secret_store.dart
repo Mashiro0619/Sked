@@ -10,8 +10,8 @@ abstract class SecretStore {
 
 class FlutterSecureSecretStore implements SecretStore {
   const FlutterSecureSecretStore({
-    FlutterSecureStorage storage = const FlutterSecureStorage(),
-  }) : _storage = storage;
+    this._storage = const FlutterSecureStorage(),
+  });
 
   static const _customSchoolImportApiKey = 'custom_school_import_api_key';
 

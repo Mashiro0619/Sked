@@ -9,16 +9,12 @@ import 'school_site_store.dart';
 
 class PlatformSchoolSiteStore extends SchoolSiteStore {
   PlatformSchoolSiteStore({
-    Future<Directory> Function()? directoryProvider,
-    Future<void> Function()? beforeMainReplace,
-    Future<void> Function()? afterMainReplace,
-    Future<List<int>> Function(File)? fileReader,
+    this._directoryProvider,
+    this._beforeMainReplace,
+    this._afterMainReplace,
+    this._fileReader,
     DateTime Function()? clock,
-  }) : _directoryProvider = directoryProvider,
-       _beforeMainReplace = beforeMainReplace,
-       _afterMainReplace = afterMainReplace,
-       _fileReader = fileReader,
-       _clock = clock ?? DateTime.now,
+  }) : _clock = clock ?? DateTime.now,
        super.base();
 
   static const _fileName = 'Sked_school_sites.json';

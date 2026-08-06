@@ -25,10 +25,9 @@ class SchoolSiteStoreCandidate {
   const SchoolSiteStoreCandidate({
     required this.source,
     this.artifact = SchoolSiteStoreArtifact.primary,
-    Future<void> Function()? promote,
-    Future<void> Function(bool preservePrimaryAsBackup)? promoteWithContext,
-  }) : _promote = promote,
-       _promoteWithContext = promoteWithContext;
+    this._promote,
+    this._promoteWithContext,
+  });
 
   final String source;
   final SchoolSiteStoreArtifact artifact;

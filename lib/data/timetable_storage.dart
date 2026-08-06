@@ -39,9 +39,9 @@ class StorageLoadResult {
   const StorageLoadResult({
     required this.data,
     required this.recoveryStatus,
-    StorageLoadStatus? status,
+    this._status,
     this.recoveryArtifacts = const [],
-  }) : _status = status;
+  });
 
   const StorageLoadResult.empty()
     : data = null,

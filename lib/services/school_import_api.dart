@@ -218,22 +218,15 @@ class _AbortableRequestHandle {
 
 class SchoolImportApi {
   const SchoolImportApi({
-    http.Client? client,
-    Duration requestTimeout = const Duration(seconds: 30),
-    Duration streamIdleTimeout = const Duration(minutes: 2),
-    Duration streamTotalTimeout = const Duration(minutes: 5),
-    int maxModelResponseBytes = 1024 * 1024,
-    int maxImportResponseBytes = 2 * 1024 * 1024,
-    int maxStreamResponseBytes = 2 * 1024 * 1024,
-    int maxSseLineBytes = 128 * 1024,
-  }) : _client = client,
-       _requestTimeout = requestTimeout,
-       _streamIdleTimeout = streamIdleTimeout,
-       _streamTotalTimeout = streamTotalTimeout,
-       _maxModelResponseBytes = maxModelResponseBytes,
-       _maxImportResponseBytes = maxImportResponseBytes,
-       _maxStreamResponseBytes = maxStreamResponseBytes,
-       _maxSseLineBytes = maxSseLineBytes;
+    this._client,
+    this._requestTimeout = const Duration(seconds: 30),
+    this._streamIdleTimeout = const Duration(minutes: 2),
+    this._streamTotalTimeout = const Duration(minutes: 5),
+    this._maxModelResponseBytes = 1024 * 1024,
+    this._maxImportResponseBytes = 2 * 1024 * 1024,
+    this._maxStreamResponseBytes = 2 * 1024 * 1024,
+    this._maxSseLineBytes = 128 * 1024,
+  });
 
   static const _defaultCustomOpenAiSystemPrompt =
       '''You are an expert timetable extraction engine.

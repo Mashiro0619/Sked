@@ -26,7 +26,7 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       # The generated localizations under lib/l10n/ are committed on purpose,
       # so CI has to guarantee they still match the .arb sources. Regenerating
@@ -72,7 +72,7 @@ jobs:
           git worktree add --detach "$base_dir" "$BASE_SHA" || base_status=$?
           if [ "$base_status" -eq 0 ]; then
             pushd "$base_dir"
-            flutter pub get && flutter test --coverage || base_status=$?
+            flutter pub get --enforce-lockfile && flutter test --coverage || base_status=$?
             popd
           fi
           if [ "$base_status" -eq 0 ] && [ -f "$base_dir/coverage/lcov.info" ]; then
@@ -230,7 +230,7 @@ jobs:
         run: flutter config --enable-${{ matrix.target }}-desktop
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Verify Apple source configuration
         if: matrix.target == 'macos'

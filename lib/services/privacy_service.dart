@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../utils/time_utils.dart';
 
 class PrivacyService {
-  const PrivacyService({http.Client? client}) : _client = client;
+  const PrivacyService({this._client});
 
   final http.Client? _client;
 

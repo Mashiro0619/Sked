@@ -88,12 +88,10 @@ List<int> _versionParts(String value) {
 
 class UpdateService {
   const UpdateService({
-    http.Client? client,
-    Duration requestTimeout = const Duration(seconds: 10),
-    String? updateVersionUrl,
-  }) : _client = client,
-       _requestTimeout = requestTimeout,
-       _updateVersionUrl = updateVersionUrl;
+    this._client,
+    this._requestTimeout = const Duration(seconds: 10),
+    this._updateVersionUrl,
+  });
 
   static const _githubLatestApi =
       'https://api.github.com/repos/Mashiro0619/Sked/releases/latest';
