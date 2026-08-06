@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/data/migrations/app_data_migrations.dart';
+import 'package:sked/data/migrations/migration.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 
@@ -33,6 +35,84 @@ void main() {
     expect(
       decoded.appData.studentMode.schoolImportParserSettings.customApiKey,
       isEmpty,
+    );
+  });
+
+  test('keeps backup and nested AppData schema versions independent', () {
+    final source = encodeAppBackup(appData(), sites);
+    final envelope = jsonDecode(source) as Map<String, dynamic>;
+    final data = envelope['data'] as Map<String, dynamic>;
+    final nestedAppData = data['appData'] as Map<String, dynamic>;
+
+    expect(envelope['version'], appBackupVersion);
+    expect(appBackupVersion, 1);
+    expect(nestedAppData['schemaVersion'], appDataCurrentSchemaVersion);
+    expect(appDataCurrentSchemaVersion, 2);
+  });
+
+  test('migrates v1 AppData inside a version 1 composite backup', () {
+    final legacyAppData = appData().toJson()..['schemaVersion'] = 1;
+    final student = Map<String, dynamic>.from(
+      legacyAppData['studentMode'] as Map,
+    );
+    final general = Map<String, dynamic>.from(
+      legacyAppData['generalMode'] as Map,
+    );
+    for (final mode in [student, general]) {
+      mode
+        ..remove('themeMode')
+        ..remove('themeColorMode')
+        ..remove('themeSeedColorValue')
+        ..remove('colorfulUiColorValues');
+    }
+    legacyAppData
+      ..['studentMode'] = student
+      ..['generalMode'] = general
+      ..['themeMode'] = 'dark';
+    final source = ImportExportEnvelope(
+      schema: appBackupSchema,
+      version: appBackupVersion,
+      data: {
+        'appData': legacyAppData,
+        'schoolSites': sites.map((site) => site.toJson()).toList(),
+      },
+    ).encode();
+
+    final decoded = decodeAppBackup(source);
+
+    expect(decoded.appData.studentMode.themeMode, 'dark');
+    expect(decoded.appData.generalMode.themeMode, 'dark');
+    expect(decoded.appData.toJson()['schemaVersion'], 2);
+  });
+
+  test('does not accept the AppData schema version as a backup version', () {
+    final source = ImportExportEnvelope(
+      schema: appBackupSchema,
+      version: appDataCurrentSchemaVersion,
+      data: {
+        'appData': appData().toJson(),
+        'schoolSites': sites.map((site) => site.toJson()).toList(),
+      },
+    ).encode();
+
+    expect(() => decodeAppBackup(source), throwsFormatException);
+  });
+
+  test('rejects future AppData inside a supported composite backup', () {
+    final futureAppData = appData().toJson()
+      ..['schemaVersion'] = appDataCurrentSchemaVersion + 1;
+    final source = ImportExportEnvelope(
+      schema: appBackupSchema,
+      version: appBackupVersion,
+      data: {
+        'appData': futureAppData,
+        'schoolSites': sites.map((site) => site.toJson()).toList(),
+      },
+    ).encode();
+
+    expect(
+      () => decodeAppBackup(source),
+      throwsA(isA<UnsupportedSchemaVersionException>()),
     );
   });
 

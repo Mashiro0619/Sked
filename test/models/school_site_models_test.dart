@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/data/migrations/app_data_migrations.dart';
 import 'package:sked/models/school_site_models.dart';
 
 void main() {
@@ -107,6 +108,20 @@ void main() {
       final source =
           '''
 {"schema":"$schoolSiteStorageSchema","version":${schoolSiteStorageVersion + 1},"data":{"sites":[]}}
+''';
+
+      expect(
+        () => decodeSchoolSitesStrict(source),
+        throwsA(isA<UnsupportedSchoolSiteStorageVersionException>()),
+      );
+    });
+
+    test('does not use the AppData schema version for school-site storage', () {
+      expect(appDataCurrentSchemaVersion, 2);
+      expect(schoolSiteStorageVersion, 1);
+      final source =
+          '''
+{"schema":"$schoolSiteStorageSchema","version":$appDataCurrentSchemaVersion,"data":{"sites":[]}}
 ''';
 
       expect(

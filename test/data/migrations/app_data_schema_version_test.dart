@@ -9,6 +9,96 @@ import 'package:sked/utils/constants.dart';
 
 void main() {
   group('AppData schemaVersion', () {
+    test('current schema is version 2', () {
+      expect(appDataCurrentSchemaVersion, 2);
+    });
+
+    test('v1 moves legacy top-level themes into unthemed modes', () {
+      final input = <String, dynamic>{
+        'schemaVersion': 1,
+        'activeMode': 'student',
+        'studentMode': <String, dynamic>{},
+        'generalMode': <String, dynamic>{},
+        'themeMode': 'dark',
+        'themeColorMode': themeColorModeColorful,
+        'themeSeedColorValue': 0xFF00897B,
+        'colorfulUiColorValues': <String, int>{
+          colorfulUiPrimaryKey: 0xFF112233,
+        },
+      };
+
+      final migrated = appDataMigrationRunner.run(input);
+
+      expect(migrated['schemaVersion'], 2);
+      for (final modeKey in const ['studentMode', 'generalMode']) {
+        final mode = migrated[modeKey] as Map<String, dynamic>;
+        expect(mode['themeMode'], 'dark');
+        expect(mode['themeColorMode'], themeColorModeColorful);
+        expect(mode['themeSeedColorValue'], 0xFF00897B);
+        expect(mode['colorfulUiColorValues'], {
+          colorfulUiPrimaryKey: 0xFF112233,
+        });
+      }
+      for (final key in const [
+        'themeMode',
+        'themeColorMode',
+        'themeSeedColorValue',
+        'colorfulUiColorValues',
+      ]) {
+        expect(migrated, contains(key));
+      }
+      expect(
+        input,
+        equals({
+          'schemaVersion': 1,
+          'activeMode': 'student',
+          'studentMode': <String, dynamic>{},
+          'generalMode': <String, dynamic>{},
+          'themeMode': 'dark',
+          'themeColorMode': themeColorModeColorful,
+          'themeSeedColorValue': 0xFF00897B,
+          'colorfulUiColorValues': <String, int>{
+            colorfulUiPrimaryKey: 0xFF112233,
+          },
+        }),
+      );
+    });
+
+    test('v1 preserves mode-owned themes over legacy top-level themes', () {
+      final migrated = appDataMigrationRunner.run({
+        'schemaVersion': 1,
+        'studentMode': <String, dynamic>{'themeMode': 'light'},
+        'generalMode': <String, dynamic>{},
+        'themeMode': 'dark',
+        'themeColorMode': themeColorModeColorful,
+        'themeSeedColorValue': 0xFF00897B,
+      });
+
+      final student = migrated['studentMode'] as Map<String, dynamic>;
+      final general = migrated['generalMode'] as Map<String, dynamic>;
+      expect(student, {'themeMode': 'light'});
+      expect(general['themeMode'], 'dark');
+      expect(general['themeColorMode'], themeColorModeColorful);
+      expect(general['themeSeedColorValue'], 0xFF00897B);
+    });
+
+    test('v2 does not reapply the legacy top-level theme migration', () {
+      final data = AppData.fromJson({
+        'schemaVersion': 2,
+        'activeMode': 'student',
+        'studentMode': <String, dynamic>{
+          'activeTimetableId': '',
+          'timetables': <Object?>[],
+          'periodTimeSets': <Object?>[],
+        },
+        'generalMode': <String, dynamic>{},
+        'themeMode': 'dark',
+      });
+
+      expect(data.studentMode.themeMode, defaultThemeMode);
+      expect(data.generalMode.themeMode, defaultThemeMode);
+    });
+
     test('toJson always writes the current schemaVersion', () {
       final data = AppData(
         activeMode: AppMode.general,

@@ -7,8 +7,6 @@ const double defaultMinimumDiffCoverage = 90;
 // exact: a newly unmeasured source must fail until tests exercise it or a
 // reviewer documents why coverage is technically unavailable.
 const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
-  'lib/data/migrations/app_data_migrations.dart':
-      'contains compile-time migration declarations only',
   'lib/models/timetable_models.dart': 'is an export-only library',
   'lib/services/app_instance_lease.dart':
       'contains a conditional factory interface only',

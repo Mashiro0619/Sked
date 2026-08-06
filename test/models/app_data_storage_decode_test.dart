@@ -190,13 +190,79 @@ void main() {
     });
 
     test('accepts the exact v1.7.2 snapshot shape with null metadata', () {
-      final decoded = AppData.decodeStorageSnapshot(jsonEncode(v172Snapshot()));
+      final snapshot = v172Snapshot()
+        ..['themeMode'] = 'dark'
+        ..['themeColorMode'] = 'colorful'
+        ..['themeSeedColorValue'] = 0xFF00897B
+        ..['colorfulUiColorValues'] = <String, int>{'primary': 0xFF112233};
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+      final reencoded = decoded.toJson();
 
       expect(decoded.studentMode.timetables, isEmpty);
+      for (final mode in [
+        decoded.studentMode.toJson(),
+        decoded.generalMode.toJson(),
+      ]) {
+        expect(mode['themeMode'], 'dark');
+        expect(mode['themeColorMode'], 'colorful');
+        expect(mode['themeSeedColorValue'], 0xFF00897B);
+        expect(mode['colorfulUiColorValues'], {'primary': 0xFF112233});
+      }
       expect(decoded.privacyPolicyAcceptedVersion, isNull);
       expect(decoded.privacyPolicyAcceptedAtIso, isNull);
       expect(decoded.ignoredUpdateVersion, isNull);
       expect(decoded.availableUpdateVersion, isNull);
+      expect(reencoded['schemaVersion'], 2);
+      expect(reencoded, isNot(contains('themeMode')));
+    });
+
+    test('migrates v1 top-level themes into both nested modes', () {
+      final snapshot = validSnapshot()..['schemaVersion'] = 1;
+      final student = studentMode(snapshot);
+      final general = generalMode(snapshot);
+      for (final mode in [student, general]) {
+        mode
+          ..remove('themeMode')
+          ..remove('themeColorMode')
+          ..remove('themeSeedColorValue')
+          ..remove('colorfulUiColorValues');
+      }
+      snapshot
+        ..['studentMode'] = student
+        ..['generalMode'] = general
+        ..['themeMode'] = 'dark'
+        ..['themeColorMode'] = 'colorful'
+        ..['themeSeedColorValue'] = 0xFF00897B
+        ..['colorfulUiColorValues'] = <String, int>{'primary': 0xFF112233};
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+      final reencoded = decoded.toJson();
+
+      for (final mode in [
+        decoded.studentMode.toJson(),
+        decoded.generalMode.toJson(),
+      ]) {
+        expect(mode['themeMode'], 'dark');
+        expect(mode['themeColorMode'], 'colorful');
+        expect(mode['themeSeedColorValue'], 0xFF00897B);
+        expect(mode['colorfulUiColorValues'], {'primary': 0xFF112233});
+      }
+      expect(reencoded['schemaVersion'], 2);
+      expect(reencoded, isNot(contains('themeMode')));
+      expect(reencoded, isNot(contains('themeColorMode')));
+      expect(reencoded, isNot(contains('themeSeedColorValue')));
+      expect(reencoded, isNot(contains('colorfulUiColorValues')));
+    });
+
+    test('still rejects malformed legacy themes after v1 migration', () {
+      final snapshot = validSnapshot()
+        ..['schemaVersion'] = 1
+        ..['themeMode'] = 42;
+
+      expect(
+        () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+        throwsFormatException,
+      );
     });
 
     test('accepts an exact pre-versioned general mode snapshot', () {

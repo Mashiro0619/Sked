@@ -243,7 +243,6 @@ end_of_record
 String get _dartExecutable => Platform.isWindows ? 'dart.bat' : 'dart';
 
 const _coverageUnavailableSourcePaths = <String>[
-  'lib/data/migrations/app_data_migrations.dart',
   'lib/models/timetable_models.dart',
   'lib/services/app_instance_lease.dart',
   'lib/services/app_instance_lease_stub.dart',

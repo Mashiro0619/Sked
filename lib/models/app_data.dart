@@ -1644,6 +1644,9 @@ class AppData {
   };
 
   factory AppData.fromJson(Map<String, dynamic> json) {
+    final usesLegacyThemeOwnership =
+        !json.containsKey('schemaVersion') ||
+        _tryDecodeIntegerVersion(json['schemaVersion']) == 1;
     // Run schemaVersion migrations before any field decoding so legacy data
     // and future bumps are handled in one place instead of being scattered
     // across this fromJson body.
@@ -1687,17 +1690,19 @@ class AppData {
       activeMode = parseAppMode(_nullableStringValue(migrated['activeMode']));
     }
 
-    if (!_hasModeThemeFields(studentModeJson)) {
-      studentMode = _applyThemeSettingsToStudentMode(
-        studentMode,
-        legacyThemeSettings,
-      );
-    }
-    if (!_hasModeThemeFields(generalModeJson)) {
-      generalMode = _applyThemeSettingsToGeneralMode(
-        generalMode,
-        legacyThemeSettings,
-      );
+    if (isLegacy || usesLegacyThemeOwnership) {
+      if (!_hasModeThemeFields(studentModeJson)) {
+        studentMode = _applyThemeSettingsToStudentMode(
+          studentMode,
+          legacyThemeSettings,
+        );
+      }
+      if (!_hasModeThemeFields(generalModeJson)) {
+        generalMode = _applyThemeSettingsToGeneralMode(
+          generalMode,
+          legacyThemeSettings,
+        );
+      }
     }
     return AppData(
       activeMode: activeMode,
