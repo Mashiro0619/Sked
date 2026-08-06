@@ -4,6 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xml/xml.dart';
 
 const _androidNamespace = 'http://schemas.android.com/apk/res/android';
+const _androidPermissionElementNames = {
+  'uses-permission',
+  'uses-permission-sdk-23',
+  'uses-permission-sdk-m',
+};
 
 XmlDocument _readXml(String path) {
   return XmlDocument.parse(File(path).readAsStringSync());
@@ -37,6 +42,16 @@ void _expectPlistTrue(XmlDocument document, String key) {
   expect(_plistValue(document, key).localName, 'true', reason: key);
 }
 
+void _expectPlistAbsent(XmlDocument document, String key) {
+  expect(
+    document.descendants.whereType<XmlElement>().where(
+      (element) => element.localName == 'key' && element.innerText == key,
+    ),
+    isEmpty,
+    reason: key,
+  );
+}
+
 List<String> _plistArrayStrings(XmlDocument document, String key) {
   final value = _plistValue(document, key);
   expect(value.localName, 'array', reason: key);
@@ -52,7 +67,10 @@ void main() {
     final manifest = _readXml('android/app/src/main/AndroidManifest.xml');
     final permissions = manifest.descendants
         .whereType<XmlElement>()
-        .where((element) => element.localName == 'uses-permission')
+        .where(
+          (element) =>
+              _androidPermissionElementNames.contains(element.localName),
+        )
         .map(
           (element) =>
               element.getAttribute('name', namespace: _androidNamespace),
@@ -101,6 +119,30 @@ void main() {
       ),
       isNull,
     );
+    expect(
+      application.getAttribute('debuggable', namespace: _androidNamespace),
+      isNull,
+    );
+    expect(
+      application.getAttribute('testOnly', namespace: _androidNamespace),
+      isNull,
+    );
+
+    final sourceSecurityResources = Directory('android/app/src')
+        .listSync(recursive: true, followLinks: false)
+        .whereType<File>()
+        .map((file) => file.path.replaceAll('\\', '/'))
+        .where(
+          (path) =>
+              path.endsWith('/network_security_config.xml') ||
+              path.endsWith('/data_extraction_rules.xml'),
+        )
+        .map((path) => path.substring(path.indexOf('android/app/src/')))
+        .toSet();
+    expect(sourceSecurityResources, {
+      'android/app/src/main/res/xml/network_security_config.xml',
+      'android/app/src/main/res/xml/data_extraction_rules.xml',
+    });
   });
 
   test('Android cleartext policy has one explicit dynamic-endpoint source', () {
@@ -169,6 +211,14 @@ void main() {
       _plistString(macosInfo, 'NSLocalNetworkUsageDescription'),
       isNotEmpty,
     );
+    _expectPlistTrue(
+      _readXml('ios/Runner/Info.plist'),
+      'NSAllowsArbitraryLoads',
+    );
+    _expectPlistTrue(
+      _readXml('macos/Runner/Info.plist'),
+      'NSAllowsArbitraryLoads',
+    );
     expect(_plistArrayStrings(iosEntitlements, 'keychain-access-groups'), [
       '\$(AppIdentifierPrefix)\$(PRODUCT_BUNDLE_IDENTIFIER)',
     ]);
@@ -183,6 +233,25 @@ void main() {
         '\$(AppIdentifierPrefix)\$(CFBundleIdentifier)',
       ]);
     }
+    _expectPlistTrue(debugEntitlements, 'com.apple.security.cs.allow-jit');
+    _expectPlistTrue(debugEntitlements, 'com.apple.security.network.server');
+    _expectPlistAbsent(releaseEntitlements, 'com.apple.security.cs.allow-jit');
+    _expectPlistAbsent(
+      releaseEntitlements,
+      'com.apple.security.network.server',
+    );
+    const allowedReleaseEntitlements = {
+      'com.apple.security.app-sandbox',
+      'com.apple.security.network.client',
+      'com.apple.security.files.user-selected.read-write',
+      'keychain-access-groups',
+    };
+    final releaseEntitlementKeys = releaseEntitlements.descendants
+        .whereType<XmlElement>()
+        .where((element) => element.localName == 'key')
+        .map((element) => element.innerText)
+        .toSet();
+    expect(releaseEntitlementKeys, allowedReleaseEntitlements);
 
     final xcodeProject = File(
       'ios/Runner.xcodeproj/project.pbxproj',
@@ -192,6 +261,16 @@ void main() {
       r'\};\s*name = (Debug|Profile|Release);',
     ).allMatches(xcodeProject).map((match) => match.group(1)).toSet();
     expect(signedRunnerConfigurations, {'Debug', 'Profile', 'Release'});
+    final runnerBundleConfigurations = RegExp(
+      r'PRODUCT_BUNDLE_IDENTIFIER = com\.mashiro\.sked;[\s\S]*?'
+      r'\};\s*name = (Debug|Profile|Release);',
+    ).allMatches(xcodeProject).toList();
+    expect(runnerBundleConfigurations, hasLength(3));
+    expect(runnerBundleConfigurations.map((match) => match.group(1)).toSet(), {
+      'Debug',
+      'Profile',
+      'Release',
+    });
 
     final macosXcodeProject = File(
       'macos/Runner.xcodeproj/project.pbxproj',
@@ -208,5 +287,17 @@ void main() {
       'Profile',
     });
     expect(configurationsUsing('Release.entitlements'), {'Release'});
+
+    final macosAppInfo = File(
+      'macos/Runner/Configs/AppInfo.xcconfig',
+    ).readAsStringSync();
+    expect(
+      RegExp(
+        r'^PRODUCT_BUNDLE_IDENTIFIER\s*=\s*com\.mashiro\.sked\s*$',
+        multiLine: true,
+      ).hasMatch(macosAppInfo),
+      isTrue,
+    );
+    expect(macosAppInfo, isNot(contains('com.example.')));
   });
 }
