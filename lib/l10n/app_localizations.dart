@@ -1047,6 +1047,12 @@ abstract class AppLocalizations {
   /// **'Unable to open the GitHub repository link'**
   String get openGithubFailed;
 
+  /// No description provided for @openPrivacyPolicyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open the privacy policy link'**
+  String get openPrivacyPolicyFailed;
+
   /// No description provided for @selectPeriodTimeSet.
   ///
   /// In en, this message translates to:
@@ -2616,17 +2622,23 @@ abstract class AppLocalizations {
   /// **'Start with schedule'**
   String get firstLaunchStartGeneral;
 
-  /// No description provided for @firstLaunchPrivacyHint.
+  /// No description provided for @firstLaunchPrivacyConsentBefore.
   ///
   /// In en, this message translates to:
-  /// **'You will review and agree to the privacy policy before entering.'**
-  String get firstLaunchPrivacyHint;
+  /// **'By choosing a starting workspace, you confirm that you have read and agree to the '**
+  String get firstLaunchPrivacyConsentBefore;
 
-  /// No description provided for @firstLaunchPreparingPrivacy.
+  /// No description provided for @firstLaunchPrivacyConsentLink.
   ///
   /// In en, this message translates to:
-  /// **'Preparing the privacy policy check...'**
-  String get firstLaunchPreparingPrivacy;
+  /// **'Privacy Policy'**
+  String get firstLaunchPrivacyConsentLink;
+
+  /// No description provided for @firstLaunchPrivacyConsentAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'.'**
+  String get firstLaunchPrivacyConsentAfter;
 
   /// No description provided for @switchMode.
   ///

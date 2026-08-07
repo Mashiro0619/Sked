@@ -501,6 +501,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ni moč odpreti povezave za repozitorij GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Povezave do pravilnika o zasebnosti ni mogoče odpreti';
+
+  @override
   String get selectPeriodTimeSet => 'Izberite nastavljeno obdobje';
 
   @override
@@ -1419,12 +1423,14 @@ class AppLocalizationsSl extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Začni z razporedom';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Pred vstopom boste pregledali in sprejeli pravilnik o zasebnosti.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Z izbiro začetnega delovnega prostora potrjujete, da ste prebrali in sprejeli ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Priprava preverjanja pravilnika o zasebnosti...';
+  String get firstLaunchPrivacyConsentLink => 'Pravilnik o zasebnosti';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

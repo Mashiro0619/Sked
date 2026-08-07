@@ -477,6 +477,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openGithubFailed => '无法打开 GitHub 仓库链接';
 
   @override
+  String get openPrivacyPolicyFailed => '无法打开隐私政策链接';
+
+  @override
   String get selectPeriodTimeSet => '选择节次时间集';
 
   @override
@@ -1340,10 +1343,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get firstLaunchStartGeneral => '使用通用日程';
 
   @override
-  String get firstLaunchPrivacyHint => '进入应用前会先查看并同意隐私政策。';
+  String get firstLaunchPrivacyConsentBefore => '选择起始工作区，即表示你已阅读并同意';
 
   @override
-  String get firstLaunchPreparingPrivacy => '正在准备隐私政策检查...';
+  String get firstLaunchPrivacyConsentLink => '《隐私政策》';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '。';
 
   @override
   String get switchMode => '切换模式';
@@ -2373,6 +2379,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get openGithubFailed => '無法開啟 GitHub 倉庫連結';
 
   @override
+  String get openPrivacyPolicyFailed => '無法開啟隱私政策連結';
+
+  @override
   String get selectPeriodTimeSet => '選擇節次時間集';
 
   @override
@@ -3235,10 +3244,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get firstLaunchStartGeneral => '使用通用日程';
 
   @override
-  String get firstLaunchPrivacyHint => '進入應用前會先檢閱並同意隱私政策。';
+  String get firstLaunchPrivacyConsentBefore => '選擇起始工作區，即表示你已閱讀並同意';
 
   @override
-  String get firstLaunchPreparingPrivacy => '正在準備隱私政策檢查...';
+  String get firstLaunchPrivacyConsentLink => '《隱私政策》';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '。';
 
   @override
   String get switchMode => '切換模式';

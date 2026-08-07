@@ -506,6 +506,10 @@ class AppLocalizationsHu extends AppLocalizations {
       'Nem sikerült megnyitni a GitHub tároló linket';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Nem sikerült megnyitni az adatvédelmi szabályzat hivatkozását';
+
+  @override
   String get selectPeriodTimeSet => 'Válassza ki az időszak meghatározását';
 
   @override
@@ -1431,12 +1435,14 @@ class AppLocalizationsHu extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Kezdés naptárral';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Belépés előtt áttekinti és elfogadja az adatvédelmi szabályzatot.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'A kezdő munkaterület kiválasztásával megerősíti, hogy elolvasta és elfogadja az ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Adatvédelmi ellenőrzés előkészítése...';
+  String get firstLaunchPrivacyConsentLink => 'Adatvédelmi szabályzatot';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

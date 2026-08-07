@@ -500,6 +500,10 @@ class AppLocalizationsDa extends AppLocalizations {
   String get openGithubFailed => 'Kan ikke åbne linket til GitHub-repositoriet';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Kan ikke åbne linket til privatlivspolitikken';
+
+  @override
   String get selectPeriodTimeSet => 'Vælg periode tidsindstilling';
 
   @override
@@ -1410,12 +1414,14 @@ class AppLocalizationsDa extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Start med plan';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Du skal gennemgå og acceptere privatlivspolitikken, før du går ind.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Ved at vælge et startarbejdsområde bekræfter du, at du har læst og accepterer ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Forbereder kontrol af privatlivspolitikken...';
+  String get firstLaunchPrivacyConsentLink => 'privatlivspolitikken';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

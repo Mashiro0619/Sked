@@ -502,6 +502,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kan inte öppna länken till GitHub-repositoriet';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Kan inte öppna länken till integritetspolicyn';
+
+  @override
   String get selectPeriodTimeSet => 'Välj tidsinställd period';
 
   @override
@@ -1417,12 +1421,14 @@ class AppLocalizationsSv extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Börja med kalender';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Du granskar och godkänner integritetspolicyn innan du går vidare.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Genom att välja en startarbetsyta bekräftar du att du har läst och godkänner ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Förbereder kontroll av integritetspolicyn...';
+  String get firstLaunchPrivacyConsentLink => 'Integritetspolicyn';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

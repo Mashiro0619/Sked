@@ -61,7 +61,7 @@ Sked 是一个面向学生课表和日常安排的管理工具。你可以用它
 
 只有在你主动执行导入、导出、分享、打开外部链接、检查更新、获取模型列表、学校网页导入或解析课表文本 / HTML 内容时，应用才会访问相关文件、调用系统功能或连接你配置的外部接口。
 
-首次启动应用时会显示隐私政策确认。完整隐私政策可在 [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html) 查看。
+首次启动时，选择起始工作区即表示你已阅读并同意隐私政策；引导页会提供完整政策的阅读入口。完整隐私政策也可在 [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html) 查看。
 
 ## 自定义解析接口
 

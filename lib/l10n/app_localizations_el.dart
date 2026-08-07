@@ -508,6 +508,10 @@ class AppLocalizationsEl extends AppLocalizations {
       'Αδυναμία ανοίγματος του συνδέσμου αποθήκευσης GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Αδυναμία ανοίγματος του συνδέσμου πολιτικής απορρήτου';
+
+  @override
   String get selectPeriodTimeSet => 'Επιλέξτε χρονική περίοδο';
 
   @override
@@ -1436,12 +1440,14 @@ class AppLocalizationsEl extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Έναρξη με πρόγραμμα';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Θα ελέγξετε και θα αποδεχτείτε την πολιτική απορρήτου πριν εισέλθετε.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Επιλέγοντας έναν αρχικό χώρο εργασίας, επιβεβαιώνετε ότι έχετε διαβάσει και αποδέχεστε την ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Προετοιμασία ελέγχου πολιτικής απορρήτου...';
+  String get firstLaunchPrivacyConsentLink => 'Πολιτική απορρήτου';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

@@ -498,6 +498,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get openGithubFailed => 'ไม่สามารถเปิดลิงค์คลังข้อมูล GitHub ได้';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'ไม่สามารถเปิดลิงก์นโยบายความเป็นส่วนตัวได้';
+
+  @override
   String get selectPeriodTimeSet => 'เลือกช่วงเวลา';
 
   @override
@@ -1403,12 +1407,14 @@ class AppLocalizationsTh extends AppLocalizations {
   String get firstLaunchStartGeneral => 'เริ่มด้วยตารางเวลา';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'คุณจะต้องอ่านและยอมรับนโยบายความเป็นส่วนตัวก่อนเข้าใช้งาน';
+  String get firstLaunchPrivacyConsentBefore =>
+      'เมื่อเลือกพื้นที่ทำงานเริ่มต้น แสดงว่าคุณได้อ่านและยอมรับ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'กำลังเตรียมการตรวจสอบนโยบายความเป็นส่วนตัว...';
+  String get firstLaunchPrivacyConsentLink => 'นโยบายความเป็นส่วนตัว';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => 'แล้ว';
 
   @override
   String get switchMode => 'Switch mode';

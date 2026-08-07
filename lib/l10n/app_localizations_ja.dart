@@ -485,6 +485,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get openGithubFailed => 'GitHubリポジトリのリンクを開けませんでした';
 
   @override
+  String get openPrivacyPolicyFailed => 'プライバシーポリシーのリンクを開けませんでした';
+
+  @override
   String get selectPeriodTimeSet => '時限時間セットを選択';
 
   @override
@@ -1375,10 +1378,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get firstLaunchStartGeneral => '予定で開始';
 
   @override
-  String get firstLaunchPrivacyHint => '開始前にプライバシーポリシーを確認し、同意します。';
+  String get firstLaunchPrivacyConsentBefore => '開始ワークスペースを選択すると、';
 
   @override
-  String get firstLaunchPreparingPrivacy => 'プライバシーポリシーの確認を準備しています...';
+  String get firstLaunchPrivacyConsentLink => 'プライバシーポリシー';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => 'を読み、同意したものとみなされます。';
 
   @override
   String get switchMode => 'Switch mode';

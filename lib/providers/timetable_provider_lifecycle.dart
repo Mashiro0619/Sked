@@ -250,6 +250,32 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
+  Future<void> completeFirstLaunch(AppMode mode) async {
+    final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
+    if (_parsePrivacyPolicyVersion(active) == null) {
+      throw StateError('Invalid active privacy policy version: $active');
+    }
+
+    final preservesExistingAcceptance = _isPrivacyPolicyVersionAtLeast(
+      _appData.privacyPolicyAcceptedVersion,
+      active,
+    );
+    if (_appData.activeMode == mode && preservesExistingAcceptance) {
+      return;
+    }
+
+    _appData = _appData.copyWith(
+      activeMode: mode,
+      privacyPolicyAcceptedVersion: preservesExistingAcceptance
+          ? _appData.privacyPolicyAcceptedVersion
+          : active,
+      privacyPolicyAcceptedAtIso: preservesExistingAcceptance
+          ? _appData.privacyPolicyAcceptedAtIso
+          : DateTime.now().toIso8601String(),
+    );
+    await _saveAndNotify();
+  }
+
   Future<void> ignoreUpdateVersion(String version) async {
     final normalized = version.trim();
     if (normalized.isEmpty || _appData.ignoredUpdateVersion == normalized) {

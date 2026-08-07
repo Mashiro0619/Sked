@@ -499,6 +499,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get openGithubFailed => 'غير قادر على فتح رابط مخزن GitHub';
 
   @override
+  String get openPrivacyPolicyFailed => 'تعذر فتح رابط سياسة الخصوصية';
+
+  @override
   String get selectPeriodTimeSet => 'اختر فترة تعيين الوقت';
 
   @override
@@ -1407,11 +1410,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get firstLaunchStartGeneral => 'البدء بالجدول العام';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'ستراجع سياسة الخصوصية وتوافق عليها قبل الدخول.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'باختيار مساحة العمل للبدء، فإنك تؤكد أنك قرأت ووافقت على ';
 
   @override
-  String get firstLaunchPreparingPrivacy => 'جارٍ تجهيز فحص سياسة الخصوصية...';
+  String get firstLaunchPrivacyConsentLink => 'سياسة الخصوصية';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

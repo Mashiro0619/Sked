@@ -500,6 +500,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get openGithubFailed => 'GitHubi salvestuse lingi avamine nurjus';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Privaatsuspoliitika lingi avamine nurjus';
+
+  @override
   String get selectPeriodTimeSet => 'Vali perioodi aeg';
 
   @override
@@ -1413,12 +1417,14 @@ class AppLocalizationsEt extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Alusta ajakavaga';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Enne sisenemist vaatad privaatsuspoliitika üle ja nõustud sellega.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Alustava tööruumi valimisega kinnitad, et oled lugenud ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Privaatsuspoliitika kontrolli ettevalmistamine...';
+  String get firstLaunchPrivacyConsentLink => 'privaatsuspoliitikat';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => ' ja nõustud sellega.';
 
   @override
   String get switchMode => 'Switch mode';

@@ -505,6 +505,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get openGithubFailed => 'Impossible d\'ouvrir le lien du dépôt GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Impossible d\'ouvrir le lien de la politique de confidentialité';
+
+  @override
   String get selectPeriodTimeSet => 'Choisir un jeu d\'horaires des périodes';
 
   @override
@@ -1442,12 +1446,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Commencer avec le planning';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Vous devrez lire et accepter la politique de confidentialité avant d’entrer.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'En choisissant un espace de travail de départ, vous confirmez avoir lu et accepté la ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Préparation de la vérification de la politique de confidentialité...';
+  String get firstLaunchPrivacyConsentLink => 'Politique de confidentialité';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

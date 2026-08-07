@@ -505,6 +505,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось открыть ссылку на репозиторий GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Не удалось открыть ссылку на политику конфиденциальности';
+
+  @override
   String get selectPeriodTimeSet => 'Выберите набор времени пар';
 
   @override
@@ -1429,12 +1433,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Начать с графика';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Перед входом вы ознакомитесь с политикой конфиденциальности и примете ее.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Выбирая начальное рабочее пространство, вы подтверждаете, что прочитали и принимаете ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Подготовка проверки политики конфиденциальности...';
+  String get firstLaunchPrivacyConsentLink => 'Политику конфиденциальности';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

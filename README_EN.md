@@ -61,7 +61,7 @@ On desktop platforms, after confirming that the old data is backed up or no long
 
 The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, imports school webpages, or parses timetable text / HTML content only when you explicitly start the corresponding action.
 
-A privacy policy consent screen is shown on first launch. The full policy is available at [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html).
+On first launch, choosing a starting workspace confirms that you have read and agree to the privacy policy; the onboarding screen provides a link to the full policy. The full policy is also available at [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html).
 
 ## Custom Parser Endpoint
 

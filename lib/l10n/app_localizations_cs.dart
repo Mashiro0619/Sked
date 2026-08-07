@@ -500,6 +500,10 @@ class AppLocalizationsCs extends AppLocalizations {
   String get openGithubFailed => 'Nelze otevřít odkaz na úložiště GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Nelze otevřít odkaz na zásady ochrany osobních údajů';
+
+  @override
   String get selectPeriodTimeSet => 'Vyberte nastavení časového období';
 
   @override
@@ -1415,12 +1419,14 @@ class AppLocalizationsCs extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Začít s plánem';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Před vstupem si přečtete a odsouhlasíte zásady ochrany osobních údajů.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Výběrem počátečního pracovního prostoru potvrzujete, že jste si přečetli a souhlasíte se ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Připravuje se kontrola zásad ochrany osobních údajů...';
+  String get firstLaunchPrivacyConsentLink => 'zásadami ochrany osobních údajů';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

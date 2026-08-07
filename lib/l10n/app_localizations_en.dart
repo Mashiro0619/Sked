@@ -499,6 +499,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openGithubFailed => 'Unable to open the GitHub repository link';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Unable to open the privacy policy link';
+
+  @override
   String get selectPeriodTimeSet => 'Choose period time set';
 
   @override
@@ -1410,12 +1414,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Start with schedule';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'You will review and agree to the privacy policy before entering.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'By choosing a starting workspace, you confirm that you have read and agree to the ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Preparing the privacy policy check...';
+  String get firstLaunchPrivacyConsentLink => 'Privacy Policy';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

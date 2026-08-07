@@ -501,6 +501,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get openGithubFailed => 'Không thể mở liên kết kho GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Không thể mở liên kết chính sách quyền riêng tư';
+
+  @override
   String get selectPeriodTimeSet => 'Chọn thời gian thời gian';
 
   @override
@@ -1420,12 +1424,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Bắt đầu với lịch trình';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Bạn sẽ xem và đồng ý với chính sách quyền riêng tư trước khi vào.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Khi chọn không gian làm việc ban đầu, bạn xác nhận đã đọc và đồng ý với ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Đang chuẩn bị kiểm tra chính sách quyền riêng tư...';
+  String get firstLaunchPrivacyConsentLink => 'Chính sách quyền riêng tư';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

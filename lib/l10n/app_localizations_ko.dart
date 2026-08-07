@@ -486,6 +486,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get openGithubFailed => 'GitHub 저장소 링크를 열 수 없습니다';
 
   @override
+  String get openPrivacyPolicyFailed => '개인정보 처리방침 링크를 열 수 없습니다';
+
+  @override
   String get selectPeriodTimeSet => '교시 시간 세트 선택';
 
   @override
@@ -1376,10 +1379,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get firstLaunchStartGeneral => '일정으로 시작';
 
   @override
-  String get firstLaunchPrivacyHint => '들어가기 전에 개인정보 처리방침을 검토하고 동의합니다.';
+  String get firstLaunchPrivacyConsentBefore => '시작 작업 공간을 선택하면 ';
 
   @override
-  String get firstLaunchPreparingPrivacy => '개인정보 처리방침 확인을 준비하는 중...';
+  String get firstLaunchPrivacyConsentLink => '개인정보 처리방침';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '을 읽고 동의한 것으로 간주됩니다.';
 
   @override
   String get switchMode => 'Switch mode';

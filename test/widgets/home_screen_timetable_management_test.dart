@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
@@ -18,6 +19,8 @@ import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
+
+const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -420,15 +423,34 @@ Future<void> _pumpAppHomeScreenWithProvider(
   TimetableProvider provider, {
   ExportService recoveryExportService = const ExportService(),
   bool settle = true,
+  Locale locale = const Locale('en'),
+  TextDirection? textDirection,
+  TextScaler? textScaler,
 }) async {
   await _resetWidgetTree(tester);
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
       child: MaterialApp(
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) {
+          Widget result = child!;
+          if (textScaler != null) {
+            result = MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+              child: result,
+            );
+          }
+          if (textDirection != null) {
+            result = Directionality(
+              textDirection: textDirection,
+              child: result,
+            );
+          }
+          return result;
+        },
         home: AppHomeScreen(
           key: UniqueKey(),
           recoveryExportService: recoveryExportService,
@@ -441,6 +463,42 @@ Future<void> _pumpAppHomeScreenWithProvider(
   } else {
     await tester.pump();
   }
+}
+
+Future<void> _tapInlineText(
+  WidgetTester tester,
+  Finder paragraphFinder,
+  String targetText,
+) async {
+  final paragraph = tester.renderObject<RenderParagraph>(paragraphFinder);
+  final plainText = paragraph.text.toPlainText();
+  final start = plainText.indexOf(targetText);
+  expect(start, greaterThanOrEqualTo(0));
+  final boxes = paragraph.getBoxesForSelection(
+    TextSelection(baseOffset: start, extentOffset: start + targetText.length),
+  );
+  expect(boxes, isNotEmpty);
+  final paragraphOrigin = paragraph.localToGlobal(Offset.zero);
+  await tester.tapAt(boxes.first.toRect().shift(paragraphOrigin).center);
+}
+
+Rect _firstLaunchRect(WidgetTester tester, String key) {
+  return tester.getRect(find.byKey(ValueKey<String>(key)));
+}
+
+void _expectFirstLaunchCardsSideBySide(WidgetTester tester) {
+  final student = _firstLaunchRect(tester, 'first-launch-student-card');
+  final general = _firstLaunchRect(tester, 'first-launch-general-card');
+  expect((student.top - general.top).abs(), lessThan(1));
+  expect(student.right, lessThan(general.left));
+  expect((student.width - general.width).abs(), lessThan(1));
+}
+
+void _expectFirstLaunchCardsStacked(WidgetTester tester) {
+  final student = _firstLaunchRect(tester, 'first-launch-student-card');
+  final general = _firstLaunchRect(tester, 'first-launch-general-card');
+  expect((student.center.dx - general.center.dx).abs(), lessThan(1));
+  expect(student.bottom, lessThan(general.top));
 }
 
 Future<void> _pumpHomeScreenHostPage(
@@ -506,6 +564,13 @@ String _selectedWeekTitle(TimetableProvider provider) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_urlLauncherChannel, null);
+  });
+
   testWidgets(
     'corrupt recovery gate takes priority over onboarding and startup work',
     (tester) async {
@@ -775,37 +840,76 @@ void main() {
     expect(find.text('Start with timetable'), findsOneWidget);
     expect(find.text('Start with schedule'), findsOneWidget);
     expect(find.text('No timetable yet'), findsNothing);
+    expect(find.byIcon(Icons.event_available_outlined), findsNothing);
+    expect(find.text('Sked'), findsNothing);
   });
 
-  testWidgets('first launch uses bundled privacy version without networking', (
-    tester,
-  ) async {
-    final privacyService = _BlockingPrivacyService();
-    final provider = TimetableProvider(
-      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
-      systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: privacyService,
-      secretStore: const _NoopSecretStore(),
+  for (final scenario
+      in <({AppMode mode, String action, ValueKey<String> destination})>[
+        (
+          mode: AppMode.student,
+          action: 'Start with timetable',
+          destination: const ValueKey('student-home'),
+        ),
+        (
+          mode: AppMode.general,
+          action: 'Start with schedule',
+          destination: const ValueKey('general-home'),
+        ),
+      ]) {
+    testWidgets(
+      'first launch starts ${scenario.mode.name} and accepts privacy in one save',
+      (tester) async {
+        final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+        final privacyService = _BlockingPrivacyService();
+        final provider = TimetableProvider(
+          storage: storage,
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+          privacyService: privacyService,
+          secretStore: const _NoopSecretStore(),
+        );
+        await provider.load();
+
+        await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
+        await tester.pump();
+
+        expect(find.text('Choose your starting mode'), findsOneWidget);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(privacyService.fetchCount, 0);
+
+        await tester.tap(find.text(scenario.action));
+        await tester.pumpAndSettle();
+
+        expect(storage.saveCount, 1);
+        expect(storage.data?.activeMode, scenario.mode);
+        expect(
+          storage.data?.privacyPolicyAcceptedVersion,
+          bundledPrivacyPolicyVersion,
+        );
+        expect(
+          DateTime.tryParse(storage.data?.privacyPolicyAcceptedAtIso ?? ''),
+          isNotNull,
+        );
+        expect(provider.activeMode, scenario.mode);
+        expect(
+          provider.acceptedPrivacyPolicyVersion,
+          bundledPrivacyPolicyVersion,
+        );
+        expect(provider.privacyPolicyAcceptedAt, isNotNull);
+        expect(privacyService.fetchCount, 0);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          find.text('Please agree to the privacy policy before using the app'),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('first-launch-onboarding')),
+          findsNothing,
+        );
+        expect(find.byKey(scenario.destination), findsOneWidget);
+      },
     );
-    await provider.load();
-
-    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
-    await tester.pump();
-
-    expect(find.text('Choose your starting mode'), findsOneWidget);
-    expect(find.text('Preparing the privacy policy check...'), findsNothing);
-    expect(privacyService.fetchCount, 0);
-
-    await tester.tap(find.text('Start with timetable'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(
-      find.text('Please agree to the privacy policy before using the app'),
-      findsOneWidget,
-    );
-    expect(privacyService.fetchCount, 0);
-  });
+  }
 
   testWidgets('existing empty general calendars skip first launch onboarding', (
     tester,
@@ -845,10 +949,89 @@ void main() {
     expect(find.byType(HomeScreen), findsNothing);
   });
 
-  testWidgets('first launch can start with student timetable after consent', (
+  testWidgets(
+    'first launch blocks duplicate workspace choices until its save completes',
+    (tester) async {
+      final storage = _BlockingTimetableStorage(_buildDefaultFirstLaunchData());
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      await _pumpAppHomeScreenWithProvider(tester, provider);
+
+      final studentButton = find.widgetWithText(
+        FilledButton,
+        'Start with timetable',
+      );
+      final generalButton = find.widgetWithText(
+        FilledButton,
+        'Start with schedule',
+      );
+
+      await tester.tap(studentButton);
+      await storage.firstSaveStarted;
+      await tester.pump();
+
+      final studentCard = find.ancestor(
+        of: find.text('Student timetable'),
+        matching: find.byType(InkWell),
+      );
+      final generalCard = find.ancestor(
+        of: find.text('General schedule'),
+        matching: find.byType(InkWell),
+      );
+      expect(storage.saveCount, 1);
+      expect(
+        find.byKey(const ValueKey('first-launch-onboarding')),
+        findsOneWidget,
+      );
+      expect(tester.widget<FilledButton>(studentButton).onPressed, isNull);
+      expect(tester.widget<FilledButton>(generalButton).onPressed, isNull);
+      expect(tester.widget<InkWell>(studentCard).onTap, isNull);
+      expect(tester.widget<InkWell>(generalCard).onTap, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        find.descendant(
+          of: studentButton,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: generalButton,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsNothing,
+      );
+
+      await tester.tap(generalButton, warnIfMissed: false);
+      await tester.tap(studentCard, warnIfMissed: false);
+      await tester.pump();
+      expect(storage.saveCount, 1);
+
+      storage.completeSave();
+      await tester.pumpAndSettle();
+
+      expect(storage.saveCount, 1);
+      expect(storage.data?.activeMode, AppMode.student);
+      expect(
+        storage.data?.privacyPolicyAcceptedVersion,
+        bundledPrivacyPolicyVersion,
+      );
+      expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+    },
+  );
+
+  testWidgets('first launch save failure rolls back and reveals recovery', (
     tester,
   ) async {
-    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+    final initialData = _buildDefaultFirstLaunchData();
+    final storage = _FailingTimetableStorage(initialData);
     final provider = TimetableProvider(
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -856,76 +1039,442 @@ void main() {
       secretStore: const _NoopSecretStore(),
     );
     await provider.load();
-
-    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    await tester.tap(find.text('Start with timetable'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(
-      find.text('Please agree to the privacy policy before using the app'),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'Timetables, general schedules, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Student timetable'), findsOneWidget);
-
-    await tester.ensureVisible(find.text('Agree and continue'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Agree and continue'));
-    await tester.pumpAndSettle();
-
-    expect(provider.isStudentMode, isTrue);
-    expect(provider.acceptedPrivacyPolicyVersion, bundledPrivacyPolicyVersion);
-    expect(storage.data?.activeMode, AppMode.student);
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.text('No timetable yet'), findsOneWidget);
-  });
-
-  testWidgets('first launch can start with general schedule after consent', (
-    tester,
-  ) async {
-    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
-    final provider = TimetableProvider(
-      storage: storage,
-      systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
-      secretStore: const _NoopSecretStore(),
-    );
-    await provider.load();
-
-    await _pumpAppHomeScreenWithProvider(tester, provider, settle: false);
-    await tester.pump(const Duration(milliseconds: 500));
+    await _pumpAppHomeScreenWithProvider(tester, provider);
 
     await tester.tap(find.text('Start with schedule'));
     await tester.pumpAndSettle();
 
+    expect(storage.saveCount, 1);
+    expect(provider.activeMode, AppMode.student);
+    expect(provider.acceptedPrivacyPolicyVersion, isNull);
+    expect(provider.privacyPolicyAcceptedAt, isNull);
+    expect(storage.data.activeMode, AppMode.student);
+    expect(storage.data.privacyPolicyAcceptedVersion, isNull);
+    expect(storage.data.privacyPolicyAcceptedAtIso, isNull);
+    expect(provider.canWrite, isFalse);
+    expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'first launch privacy link opens without accepting and reports launch failure',
+    (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_urlLauncherChannel, (call) async {
+            calls.add(call);
+            return true;
+          });
+      final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      await _pumpAppHomeScreenWithProvider(tester, provider);
+
+      final privacyConsent = find.byKey(
+        const ValueKey('first-launch-privacy-consent'),
+      );
+      expect(privacyConsent, findsOneWidget);
+      await tester.ensureVisible(privacyConsent);
+      await tester.pumpAndSettle();
+      final consentText = tester.widget<Text>(privacyConsent);
+      final consentSpan = consentText.textSpan! as TextSpan;
+      expect(consentSpan.children, everyElement(isA<TextSpan>()));
+      final privacyLinkSpan = consentSpan.children![1] as TextSpan;
+      expect(privacyLinkSpan.style?.decoration, isNull);
+      SemanticsNode? findPrivacyLinkNode(SemanticsNode node) {
+        final data = node.getSemanticsData();
+        if (data.label == 'Privacy Policy') {
+          return node;
+        }
+        SemanticsNode? result;
+        node.visitChildren((child) {
+          result = findPrivacyLinkNode(child);
+          return result == null;
+        });
+        return result;
+      }
+
+      final privacyLinkNode = findPrivacyLinkNode(
+        tester.getSemantics(privacyConsent),
+      );
+      expect(privacyLinkNode, isNotNull);
+      final privacyLinkSemantics = privacyLinkNode!.getSemanticsData();
+      expect(privacyLinkSemantics.flagsCollection.isLink, isTrue);
+      expect(privacyLinkSemantics.hasAction(SemanticsAction.tap), isTrue);
+      expect(
+        find.descendant(
+          of: privacyConsent,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is TextButton ||
+                widget is FilledButton ||
+                widget is OutlinedButton ||
+                widget is InkWell,
+          ),
+        ),
+        findsNothing,
+      );
+
+      await _tapInlineText(
+        tester,
+        privacyConsent,
+        'By choosing a starting workspace',
+      );
+      await tester.pumpAndSettle();
+      expect(calls, isEmpty);
+
+      await _tapInlineText(tester, privacyConsent, 'Privacy Policy');
+      await tester.pumpAndSettle();
+
+      expect(
+        calls.where(
+          (call) => call.arguments.toString().contains(
+            'https://sked.mashiro.tech/privacy.html',
+          ),
+        ),
+        hasLength(1),
+      );
+      expect(storage.saveCount, 0);
+      expect(provider.acceptedPrivacyPolicyVersion, isNull);
+      expect(provider.privacyPolicyAcceptedAt, isNull);
+      expect(
+        find.byKey(const ValueKey('first-launch-onboarding')),
+        findsOneWidget,
+      );
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_urlLauncherChannel, (_) async => false);
+      await _tapInlineText(tester, privacyConsent, 'Privacy Policy');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Unable to open the privacy policy link'),
+        findsOneWidget,
+      );
+      expect(storage.saveCount, 0);
+      expect(provider.acceptedPrivacyPolicyVersion, isNull);
+      semanticsHandle.dispose();
+    },
+  );
+
+  testWidgets('first launch privacy consent is one inline sentence', (
+    tester,
+  ) async {
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      locale: const Locale('zh'),
+    );
+
+    final privacyConsent = find.byKey(
+      const ValueKey('first-launch-privacy-consent'),
+    );
+    expect(privacyConsent, findsOneWidget);
+    final paragraph = tester.renderObject<RenderParagraph>(privacyConsent);
+    final plainText = paragraph.text.toPlainText();
+    expect(plainText, '选择起始工作区，即表示你已阅读并同意《隐私政策》。');
+
+    final boxes = paragraph.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: plainText.length),
+    );
+    expect(boxes, isNotEmpty);
+    expect(boxes.map((box) => box.top.round()).toSet(), hasLength(1));
+    expect(find.byIcon(Icons.privacy_tip_outlined), findsNothing);
+  });
+
+  testWidgets('first launch centers equal-height cards on a wide window', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    _expectFirstLaunchCardsSideBySide(tester);
+    final student = _firstLaunchRect(tester, 'first-launch-student-card');
+    final general = _firstLaunchRect(tester, 'first-launch-general-card');
+    expect((student.height - general.height).abs(), lessThan(1));
+
+    final viewport = _firstLaunchRect(tester, 'first-launch-scroll-view');
+    final content = _firstLaunchRect(tester, 'first-launch-content');
+    expect(content.height, lessThan(viewport.height - 48));
+    expect((content.center.dy - viewport.center.dy).abs(), lessThan(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('first launch stacks and centers cards on a phone window', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      locale: const Locale('zh'),
+    );
+
+    _expectFirstLaunchCardsStacked(tester);
+    final student = _firstLaunchRect(tester, 'first-launch-student-card');
+    final general = _firstLaunchRect(tester, 'first-launch-general-card');
+    expect((student.width - general.width).abs(), lessThan(1));
+    expect(student.left, closeTo(24, 0.1));
+    expect(student.right, closeTo(406, 0.1));
+
+    final viewport = _firstLaunchRect(tester, 'first-launch-scroll-view');
+    final content = _firstLaunchRect(tester, 'first-launch-content');
+    expect(content.height, lessThan(viewport.height - 48));
+    expect((content.center.dy - viewport.center.dy).abs(), lessThan(1));
+
+    final privacyConsent = find.byKey(
+      const ValueKey('first-launch-privacy-consent'),
+    );
+    final paragraph = tester.renderObject<RenderParagraph>(privacyConsent);
+    final plainText = paragraph.text.toPlainText();
+    final boxes = paragraph.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: plainText.length),
+    );
+    expect(boxes.map((box) => box.top.round()).toSet(), hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'first launch switches at 576 without resetting an in-flight choice',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(575, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final storage = _BlockingTimetableStorage(_buildDefaultFirstLaunchData());
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      await _pumpAppHomeScreenWithProvider(tester, provider);
+
+      _expectFirstLaunchCardsStacked(tester);
+      await tester.tap(find.text('Start with timetable'));
+      await storage.firstSaveStarted;
+      await tester.pump();
+      expect(storage.saveCount, 1);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('first-launch-student-card')),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.binding.setSurfaceSize(const Size(576, 1000));
+      await tester.pump();
+      _expectFirstLaunchCardsSideBySide(tester);
+      expect(storage.saveCount, 1);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('first-launch-student-card')),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.binding.setSurfaceSize(const Size(575, 1000));
+      await tester.pump();
+      _expectFirstLaunchCardsStacked(tester);
+      expect(storage.saveCount, 1);
+
+      storage.completeSave();
+      await tester.pumpAndSettle();
+      expect(storage.saveCount, 1);
+      expect(provider.activeMode, AppMode.student);
+      expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
+    },
+  );
+
+  testWidgets('first launch uses compact spacing and scrolls when short', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    _expectFirstLaunchCardsSideBySide(tester);
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    final title = tester.getRect(find.text(l10n.firstLaunchTitle));
+    final subtitle = tester.getRect(find.text(l10n.firstLaunchSubtitle));
+    final student = _firstLaunchRect(tester, 'first-launch-student-card');
+    final privacy = _firstLaunchRect(tester, 'first-launch-privacy-consent');
+    expect(title.top, closeTo(32, 0.1));
+    expect(student.top - subtitle.bottom, closeTo(20, 0.1));
+    expect(privacy.top - student.bottom, closeTo(16, 0.1));
+
+    final scrollView = find.byKey(const ValueKey('first-launch-scroll-view'));
+    final scrollable = find.descendant(
+      of: scrollView,
+      matching: find.byType(Scrollable),
+    );
+    expect(scrollable, findsOneWidget);
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    await tester.drag(scrollView, const Offset(0, -160));
+    await tester.pump();
+    expect(position.pixels, greaterThan(0));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('first-launch-privacy-consent')),
+    );
+    await tester.pump();
     expect(
-      find.text('Please agree to the privacy policy before using the app'),
+      find.byKey(const ValueKey('first-launch-privacy-consent')).hitTestable(),
       findsOneWidget,
     );
-    expect(find.text('General schedule'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
-    await tester.ensureVisible(find.text('Agree and continue'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Agree and continue'));
-    await tester.pumpAndSettle();
+  testWidgets('large text forces a bounded stacked layout on wide windows', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
 
-    expect(provider.isGeneralMode, isTrue);
-    expect(provider.acceptedPrivacyPolicyVersion, bundledPrivacyPolicyVersion);
-    expect(storage.data?.activeMode, AppMode.general);
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(find.byType(HomeScreen), findsNothing);
-    expect(find.text('No timetable yet'), findsNothing);
-    expect(find.text('Sked'), findsWidgets);
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      textScaler: TextScaler.linear(1.31),
+    );
+
+    _expectFirstLaunchCardsStacked(tester);
+    final content = _firstLaunchRect(tester, 'first-launch-content');
+    expect(content.width, closeTo(560, 0.1));
+    expect(content.center.dx, closeTo(560, 0.1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('576 width keeps 1.3 text in a row with long labels', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(576, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      locale: const Locale('de'),
+      textScaler: TextScaler.linear(1.3),
+    );
+
+    _expectFirstLaunchCardsSideBySide(tester);
+    final l10n = lookupAppLocalizations(const Locale('de'));
+    final studentCard = _firstLaunchRect(tester, 'first-launch-student-card');
+    final generalCard = _firstLaunchRect(tester, 'first-launch-general-card');
+    final studentButton = tester.getRect(
+      find.widgetWithText(FilledButton, l10n.firstLaunchStartStudent),
+    );
+    final generalButton = tester.getRect(
+      find.widgetWithText(FilledButton, l10n.firstLaunchStartGeneral),
+    );
+    expect(studentCard.contains(studentButton.topLeft), isTrue);
+    expect(studentCard.contains(studentButton.bottomRight), isTrue);
+    expect(generalCard.contains(generalButton.topLeft), isTrue);
+    expect(generalCard.contains(generalButton.bottomRight), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('first launch onboarding fits narrow scaled Arabic layouts', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildDefaultFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(
+      tester,
+      provider,
+      locale: const Locale('ar'),
+      textScaler: TextScaler.linear(1.8),
+    );
+
+    final onboarding = find.byKey(const ValueKey('first-launch-onboarding'));
+    expect(onboarding, findsOneWidget);
+    expect(tester.getSize(onboarding).width, 320);
+    expect(Directionality.of(tester.element(onboarding)), TextDirection.rtl);
+    final l10n = lookupAppLocalizations(const Locale('ar'));
+    expect(find.text(l10n.firstLaunchTitle), findsOneWidget);
+    expect(find.text(l10n.firstLaunchStartStudent), findsOneWidget);
+    expect(find.text(l10n.firstLaunchStartGeneral), findsOneWidget);
+    _expectFirstLaunchCardsStacked(tester);
+    final student = _firstLaunchRect(tester, 'first-launch-student-card');
+    expect(student.left, closeTo(16, 0.1));
+    expect(student.right, closeTo(304, 0.1));
+    expect(
+      find.byKey(const ValueKey('first-launch-privacy-consent')),
+      findsOneWidget,
+    );
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('first-launch-privacy-consent')),
+    );
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('first-launch-privacy-consent')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('privacy consent waits for save before closing', (tester) async {

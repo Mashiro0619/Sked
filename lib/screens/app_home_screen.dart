@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -30,11 +31,10 @@ class AppHomeScreen extends StatefulWidget {
 
 class _AppHomeScreenState extends State<AppHomeScreen> {
   bool _isShowingPrivacyConsentDialog = false;
-  bool _isCompletingFirstLaunch = false;
   bool _isHandlingRecovery = false;
   bool _isClearingRoutesForRecovery = false;
   bool _hasShownRecoveryBanner = false;
-  AppMode? _firstLaunchSelectedMode;
+  AppMode? _firstLaunchPendingMode;
   TimetableProvider? _lastProvider;
   bool? _lastObservedCanWrite;
 
@@ -225,51 +225,26 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     return agreed ?? false;
   }
 
-  void _showFirstLaunchPrivacyStep(AppMode mode) {
-    if (_isCompletingFirstLaunch) {
+  Future<void> _completeFirstLaunch(
+    TimetableProvider provider,
+    AppMode mode,
+  ) async {
+    if (_firstLaunchPendingMode != null || !provider.canWrite) {
       return;
     }
-    setState(() => _firstLaunchSelectedMode = mode);
-  }
-
-  void _returnToFirstLaunchModeSelection() {
-    if (_isCompletingFirstLaunch) {
-      return;
-    }
-    setState(() => _firstLaunchSelectedMode = null);
-  }
-
-  Future<void> _completeFirstLaunch(TimetableProvider provider) async {
-    final selectedMode = _firstLaunchSelectedMode;
-    if (selectedMode == null ||
-        _isCompletingFirstLaunch ||
-        !provider.canWrite) {
-      return;
-    }
-    var completed = false;
-    setState(() => _isCompletingFirstLaunch = true);
+    setState(() => _firstLaunchPendingMode = mode);
     try {
-      await provider.acceptPrivacyPolicyCurrentVersion();
-      if (!mounted || !provider.canWrite) {
-        return;
-      }
-      await provider.switchMode(selectedMode);
-      completed = true;
+      await provider.completeFirstLaunch(mode);
     } catch (error, stackTrace) {
       debugPrint('First launch completion failed: $error\n$stackTrace');
-      if (mounted) {
+      if (mounted && provider.canWrite) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context).saveFailedRetry)),
         );
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isCompletingFirstLaunch = false;
-          if (completed) {
-            _firstLaunchSelectedMode = null;
-          }
-        });
+        setState(() => _firstLaunchPendingMode = null);
       }
     }
   }
@@ -486,7 +461,21 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
   Future<void> _openPrivacyPolicyPage() async {
     final uri = Uri.parse('https://sked.mashiro.tech/privacy.html');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    } catch (error, stackTrace) {
+      debugPrint('Opening privacy policy failed: $error\n$stackTrace');
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).openPrivacyPolicyFailed),
+      ),
+    );
   }
 
   Future<void> _declinePrivacyPolicy(BuildContext context) async {
@@ -534,20 +523,16 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           );
         }
         final showOnboarding =
-            _firstLaunchSelectedMode != null ||
+            _firstLaunchPendingMode != null ||
             snapshot.showFirstLaunchOnboarding;
         return ExpressiveSwitcher(
-          child: _isCompletingFirstLaunch || showOnboarding
+          child: showOnboarding
               ? _FirstLaunchOnboardingScreen(
                   key: const ValueKey('first-launch-onboarding'),
-                  canStart: true,
-                  selectedMode: _firstLaunchSelectedMode,
-                  isCompleting: _isCompletingFirstLaunch,
-                  onStartWithMode: _showFirstLaunchPrivacyStep,
-                  onBackToModeSelection: _returnToFirstLaunchModeSelection,
+                  pendingMode: _firstLaunchPendingMode,
+                  onStartWithMode: (mode) =>
+                      _completeFirstLaunch(provider, mode),
                   onViewPrivacyPolicy: _openPrivacyPolicyPage,
-                  onDeclinePrivacyPolicy: () => _declinePrivacyPolicy(context),
-                  onAgreeAndContinue: () => _completeFirstLaunch(provider),
                 )
               : snapshot.isStudentMode
               ? const HomeScreen(key: ValueKey('student-home'))
@@ -939,28 +924,17 @@ bool _hasDefaultModeTheme({
 class _FirstLaunchOnboardingScreen extends StatelessWidget {
   const _FirstLaunchOnboardingScreen({
     super.key,
-    required this.canStart,
-    required this.selectedMode,
-    required this.isCompleting,
+    required this.pendingMode,
     required this.onStartWithMode,
-    required this.onBackToModeSelection,
     required this.onViewPrivacyPolicy,
-    required this.onDeclinePrivacyPolicy,
-    required this.onAgreeAndContinue,
   });
 
-  final bool canStart;
-  final AppMode? selectedMode;
-  final bool isCompleting;
+  final AppMode? pendingMode;
   final ValueChanged<AppMode> onStartWithMode;
-  final VoidCallback onBackToModeSelection;
   final VoidCallback onViewPrivacyPolicy;
-  final VoidCallback onDeclinePrivacyPolicy;
-  final VoidCallback onAgreeAndContinue;
 
   @override
   Widget build(BuildContext context) {
-    final selectedMode = this.selectedMode;
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -968,41 +942,52 @@ class _FirstLaunchOnboardingScreen extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 720;
             final horizontalPadding = constraints.maxWidth < 360 ? 16.0 : 24.0;
-            if (selectedMode != null) {
-              return Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 16,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: _FirstLaunchPrivacyStep(
-                      selectedMode: selectedMode,
-                      isCompleting: isCompleting,
-                      onBack: onBackToModeSelection,
-                      onViewPrivacyPolicy: onViewPrivacyPolicy,
-                      onDeclinePrivacyPolicy: onDeclinePrivacyPolicy,
-                      onAgreeAndContinue: onAgreeAndContinue,
-                    ),
-                  ),
-                ),
-              );
-            }
+            final isCompactHeight = constraints.maxHeight < 640;
+            final verticalPadding = isCompactHeight ? 16.0 : 24.0;
+            final textScaler = MediaQuery.textScalerOf(context);
+            final textTheme = Theme.of(context).textTheme;
+            final relevantFontSizes = <double>[
+              textTheme.titleLarge?.fontSize ?? 22,
+              textTheme.bodyLarge?.fontSize ?? 16,
+              textTheme.bodyMedium?.fontSize ?? 14,
+              textTheme.labelLarge?.fontSize ?? 14,
+            ];
+            final usesLargeText = relevantFontSizes.any(
+              (fontSize) => textScaler.scale(fontSize) > fontSize * 1.3,
+            );
+            final useHorizontalLayout =
+                constraints.maxWidth >= 576 && !usesLargeText;
+            final minimumContentHeight =
+                constraints.hasBoundedHeight &&
+                    constraints.maxHeight > verticalPadding * 2
+                ? constraints.maxHeight - verticalPadding * 2
+                : 0.0;
             return SingleChildScrollView(
+              key: const ValueKey('first-launch-scroll-view'),
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
-                vertical: 24,
+                vertical: verticalPadding,
               ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 920),
-                  child: _FirstLaunchModeSelection(
-                    canStart: canStart,
-                    isWide: isWide,
-                    onStartWithMode: onStartWithMode,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: minimumContentHeight),
+                child: Center(
+                  child: ConstrainedBox(
+                    key: const ValueKey('first-launch-content'),
+                    constraints: BoxConstraints(
+                      maxWidth: usesLargeText ? 560 : 920,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: _FirstLaunchModeSelection(
+                        canStart: pendingMode == null,
+                        useHorizontalLayout: useHorizontalLayout,
+                        isCompactHeight: isCompactHeight,
+                        pendingMode: pendingMode,
+                        onStartWithMode: onStartWithMode,
+                        onViewPrivacyPolicy: onViewPrivacyPolicy,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1017,13 +1002,19 @@ class _FirstLaunchOnboardingScreen extends StatelessWidget {
 class _FirstLaunchModeSelection extends StatelessWidget {
   const _FirstLaunchModeSelection({
     required this.canStart,
-    required this.isWide,
+    required this.useHorizontalLayout,
+    required this.isCompactHeight,
+    required this.pendingMode,
     required this.onStartWithMode,
+    required this.onViewPrivacyPolicy,
   });
 
   final bool canStart;
-  final bool isWide;
+  final bool useHorizontalLayout;
+  final bool isCompactHeight;
+  final AppMode? pendingMode;
   final ValueChanged<AppMode> onStartWithMode;
+  final VoidCallback onViewPrivacyPolicy;
 
   @override
   Widget build(BuildContext context) {
@@ -1034,18 +1025,6 @@ class _FirstLaunchModeSelection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
-        Icon(Icons.event_available_outlined, size: 48, color: colors.primary),
-        const SizedBox(height: 18),
-        Text(
-          l10n.appTitle,
-          textAlign: TextAlign.center,
-          style: textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: colors.onSurface,
-          ),
-        ),
-        const SizedBox(height: 10),
         Text(
           l10n.firstLaunchTitle,
           textAlign: TextAlign.center,
@@ -1060,226 +1039,153 @@ class _FirstLaunchModeSelection extends StatelessWidget {
           textAlign: TextAlign.center,
           style: textTheme.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
         ),
-        const SizedBox(height: 28),
-        if (isWide)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _FirstLaunchModeCard(
-                  icon: Icons.school_outlined,
-                  title: l10n.studentTimetable,
-                  description: l10n.firstLaunchStudentDesc,
-                  buttonLabel: l10n.firstLaunchStartStudent,
-                  isEnabled: canStart,
-                  onTap: () => onStartWithMode(AppMode.student),
+        SizedBox(height: isCompactHeight ? 20 : 28),
+        if (useHorizontalLayout)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _FirstLaunchModeCard(
+                    key: const ValueKey('first-launch-student-card'),
+                    icon: Icons.school_outlined,
+                    title: l10n.studentTimetable,
+                    description: l10n.firstLaunchStudentDesc,
+                    buttonLabel: l10n.firstLaunchStartStudent,
+                    isEnabled: canStart,
+                    isPending: pendingMode == AppMode.student,
+                    onTap: () => onStartWithMode(AppMode.student),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _FirstLaunchModeCard(
-                  icon: Icons.calendar_month_outlined,
-                  title: l10n.generalSchedule,
-                  description: l10n.firstLaunchGeneralDesc,
-                  buttonLabel: l10n.firstLaunchStartGeneral,
-                  isEnabled: canStart,
-                  onTap: () => onStartWithMode(AppMode.general),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _FirstLaunchModeCard(
+                    key: const ValueKey('first-launch-general-card'),
+                    icon: Icons.calendar_month_outlined,
+                    title: l10n.generalSchedule,
+                    description: l10n.firstLaunchGeneralDesc,
+                    buttonLabel: l10n.firstLaunchStartGeneral,
+                    isEnabled: canStart,
+                    isPending: pendingMode == AppMode.general,
+                    onTap: () => onStartWithMode(AppMode.general),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           )
         else
           Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _FirstLaunchModeCard(
+                key: const ValueKey('first-launch-student-card'),
                 icon: Icons.school_outlined,
                 title: l10n.studentTimetable,
                 description: l10n.firstLaunchStudentDesc,
                 buttonLabel: l10n.firstLaunchStartStudent,
                 isEnabled: canStart,
+                isPending: pendingMode == AppMode.student,
                 onTap: () => onStartWithMode(AppMode.student),
               ),
               const SizedBox(height: 12),
               _FirstLaunchModeCard(
+                key: const ValueKey('first-launch-general-card'),
                 icon: Icons.calendar_month_outlined,
                 title: l10n.generalSchedule,
                 description: l10n.firstLaunchGeneralDesc,
                 buttonLabel: l10n.firstLaunchStartGeneral,
                 isEnabled: canStart,
+                isPending: pendingMode == AppMode.general,
                 onTap: () => onStartWithMode(AppMode.general),
               ),
             ],
           ),
-        const SizedBox(height: 20),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.privacy_tip_outlined,
-              size: 18,
-              color: colors.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                canStart
-                    ? l10n.firstLaunchPrivacyHint
-                    : l10n.firstLaunchPreparingPrivacy,
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
+        SizedBox(height: isCompactHeight ? 16 : 20),
+        _FirstLaunchPrivacyConsent(
+          beforeText: l10n.firstLaunchPrivacyConsentBefore,
+          linkText: l10n.firstLaunchPrivacyConsentLink,
+          afterText: l10n.firstLaunchPrivacyConsentAfter,
+          onOpenPolicy: onViewPrivacyPolicy,
         ),
       ],
     );
   }
 }
 
-class _FirstLaunchPrivacyStep extends StatelessWidget {
-  const _FirstLaunchPrivacyStep({
-    required this.selectedMode,
-    required this.isCompleting,
-    required this.onBack,
-    required this.onViewPrivacyPolicy,
-    required this.onDeclinePrivacyPolicy,
-    required this.onAgreeAndContinue,
+class _FirstLaunchPrivacyConsent extends StatefulWidget {
+  const _FirstLaunchPrivacyConsent({
+    required this.beforeText,
+    required this.linkText,
+    required this.afterText,
+    required this.onOpenPolicy,
   });
 
-  final AppMode selectedMode;
-  final bool isCompleting;
-  final VoidCallback onBack;
-  final VoidCallback onViewPrivacyPolicy;
-  final VoidCallback onDeclinePrivacyPolicy;
-  final VoidCallback onAgreeAndContinue;
+  final String beforeText;
+  final String linkText;
+  final String afterText;
+  final VoidCallback onOpenPolicy;
+
+  @override
+  State<_FirstLaunchPrivacyConsent> createState() =>
+      _FirstLaunchPrivacyConsentState();
+}
+
+class _FirstLaunchPrivacyConsentState
+    extends State<_FirstLaunchPrivacyConsent> {
+  late final TapGestureRecognizer _linkRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _linkRecognizer = TapGestureRecognizer()..onTap = widget.onOpenPolicy;
+  }
+
+  @override
+  void didUpdateWidget(covariant _FirstLaunchPrivacyConsent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _linkRecognizer.onTap = widget.onOpenPolicy;
+  }
+
+  @override
+  void dispose() {
+    _linkRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isStudentMode = selectedMode == AppMode.student;
-    final modeIcon = isStudentMode
-        ? Icons.school_outlined
-        : Icons.calendar_month_outlined;
-    final modeLabel = isStudentMode
-        ? l10n.studentTimetable
-        : l10n.generalSchedule;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Text.rich(
+      key: const ValueKey('first-launch-privacy-consent'),
+      TextSpan(
         children: [
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: IconButton.filledTonal(
-              onPressed: isCompleting ? null : onBack,
-              tooltip: l10n.cancel,
-              icon: const Icon(Icons.arrow_back),
-            ),
+          TextSpan(text: widget.beforeText),
+          TextSpan(
+            text: widget.linkText,
+            recognizer: _linkRecognizer,
+            mouseCursor: SystemMouseCursors.click,
+            style: TextStyle(color: colors.primary),
           ),
-          const SizedBox(height: 12),
-          Icon(Icons.privacy_tip_outlined, size: 48, color: colors.primary),
-          const SizedBox(height: 18),
-          Text(
-            l10n.privacyGateTitle,
-            textAlign: TextAlign.center,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(modeIcon, size: 18, color: colors.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  modeLabel,
-                  textAlign: TextAlign.center,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Material(
-            color: colors.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: colors.outlineVariant),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.privacyPolicyIntro,
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _PrivacySummaryRow(text: l10n.privacyGateSummaryStorage),
-                  const SizedBox(height: 10),
-                  _PrivacySummaryRow(text: l10n.privacyGateSummaryImportExport),
-                  const SizedBox(height: 10),
-                  _PrivacySummaryRow(text: l10n.privacyGateSummaryUpdates),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.end,
-            runAlignment: WrapAlignment.center,
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              TextButton(
-                onPressed: isCompleting ? null : onViewPrivacyPolicy,
-                child: Text(l10n.privacyViewFullPolicy),
-              ),
-              TextButton(
-                onPressed: isCompleting ? null : onDeclinePrivacyPolicy,
-                child: Text(l10n.privacyDecline),
-              ),
-              FilledButton.icon(
-                onPressed: isCompleting ? null : onAgreeAndContinue,
-                icon: isCompleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check),
-                label: Text(l10n.privacyAgreeAndContinue),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          TextSpan(text: widget.afterText),
         ],
       ),
+      textAlign: TextAlign.center,
+      style: textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
     );
   }
 }
 
 class _FirstLaunchModeCard extends StatelessWidget {
   const _FirstLaunchModeCard({
+    super.key,
     required this.icon,
     required this.title,
     required this.description,
     required this.buttonLabel,
     required this.isEnabled,
+    required this.isPending,
     required this.onTap,
   });
 
@@ -1288,6 +1194,7 @@ class _FirstLaunchModeCard extends StatelessWidget {
   final String description;
   final String buttonLabel;
   final bool isEnabled;
+  final bool isPending;
   final VoidCallback onTap;
 
   @override
@@ -1339,13 +1246,13 @@ class _FirstLaunchModeCard extends StatelessWidget {
                 alignment: AlignmentDirectional.centerStart,
                 child: FilledButton.icon(
                   onPressed: isEnabled ? onTap : null,
-                  icon: isEnabled
-                      ? const Icon(Icons.arrow_forward)
-                      : const SizedBox(
+                  icon: isPending
+                      ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                        )
+                      : const Icon(Icons.arrow_forward),
                   label: Text(buttonLabel),
                 ),
               ),

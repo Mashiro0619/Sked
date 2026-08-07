@@ -501,6 +501,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get openGithubFailed => 'GitHub-arkiston linkkiä ei voi avata';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Tietosuojakäytännön linkkiä ei voi avata';
+
+  @override
   String get selectPeriodTimeSet => 'Valitse ajanjaksoa';
 
   @override
@@ -1419,12 +1423,14 @@ class AppLocalizationsFi extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Aloita aikataululla';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Tarkistat ja hyväksyt tietosuojakäytännön ennen jatkamista.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Valitsemalla aloitustyötilan vahvistat, että olet lukenut ja hyväksyt ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Valmistellaan tietosuojakäytännön tarkistusta...';
+  String get firstLaunchPrivacyConsentLink => 'tietosuojakäytännön';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

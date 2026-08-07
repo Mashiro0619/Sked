@@ -503,6 +503,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не може да се отвори връзката към хранилището на GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Не може да се отвори връзката към политиката за поверителност';
+
+  @override
   String get selectPeriodTimeSet => 'Изберете определен период от време';
 
   @override
@@ -1432,12 +1436,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Започни с график';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Преди да продължите, ще прегледате и приемете политиката за поверителност.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'С избора на начално работно пространство потвърждавате, че сте прочели и приемате ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Подготвя се проверката на политиката за поверителност...';
+  String get firstLaunchPrivacyConsentLink => 'Политиката за поверителност';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

@@ -500,6 +500,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get openGithubFailed => 'GitHub रिपॉज़िटरी लिंक खोलने में असमर्थ';
 
   @override
+  String get openPrivacyPolicyFailed => 'गोपनीयता नीति का लिंक नहीं खुल सका';
+
+  @override
   String get selectPeriodTimeSet => 'अवधि समय सेट चुनें';
 
   @override
@@ -1416,12 +1419,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get firstLaunchStartGeneral => 'शेड्यूल से शुरू करें';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'प्रवेश से पहले आप गोपनीयता नीति पढ़कर स्वीकार करेंगे।';
+  String get firstLaunchPrivacyConsentBefore =>
+      'शुरुआती कार्यक्षेत्र चुनकर आप पुष्टि करते हैं कि आपने ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'गोपनीयता नीति जांच तैयार हो रही है...';
+  String get firstLaunchPrivacyConsentLink => 'गोपनीयता नीति';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => ' पढ़ ली है और उससे सहमत हैं।';
 
   @override
   String get switchMode => 'Switch mode';

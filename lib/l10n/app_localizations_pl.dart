@@ -503,6 +503,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie można otworzyć linku do repozytorium GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Nie można otworzyć linku do polityki prywatności';
+
+  @override
   String get selectPeriodTimeSet => 'Wybierz ustawienie czasu okresu';
 
   @override
@@ -1423,12 +1427,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Zacznij od harmonogramu';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Przed wejściem przeczytasz i zaakceptujesz politykę prywatności.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Wybierając początkowy obszar roboczy, potwierdzasz, że znasz i akceptujesz ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Przygotowywanie sprawdzenia polityki prywatności...';
+  String get firstLaunchPrivacyConsentLink => 'Politykę prywatności';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

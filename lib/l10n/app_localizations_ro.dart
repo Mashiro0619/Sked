@@ -501,6 +501,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Imposibil de deschis link-ul de depozit GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Nu s-a putut deschide linkul politicii de confidențialitate';
+
+  @override
   String get selectPeriodTimeSet => 'Alegeți intervalul de timp';
 
   @override
@@ -1429,12 +1433,14 @@ class AppLocalizationsRo extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Începe cu programul';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Vei citi și accepta politica de confidențialitate înainte de a intra.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Alegând un spațiu de lucru inițial, confirmi că ai citit și accepți ';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Se pregătește verificarea politicii de confidențialitate...';
+  String get firstLaunchPrivacyConsentLink => 'Politica de confidențialitate';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';

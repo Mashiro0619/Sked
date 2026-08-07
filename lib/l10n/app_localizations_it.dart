@@ -506,6 +506,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile aprire il link del repository GitHub';
 
   @override
+  String get openPrivacyPolicyFailed =>
+      'Impossibile aprire il link dell\'informativa sulla privacy';
+
+  @override
   String get selectPeriodTimeSet => 'Scegli set di orari dei periodi';
 
   @override
@@ -1428,12 +1432,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get firstLaunchStartGeneral => 'Inizia con il calendario';
 
   @override
-  String get firstLaunchPrivacyHint =>
-      'Prima di entrare dovrai leggere e accettare l’informativa sulla privacy.';
+  String get firstLaunchPrivacyConsentBefore =>
+      'Scegliendo uno spazio di lavoro iniziale, confermi di aver letto e accettato l\'';
 
   @override
-  String get firstLaunchPreparingPrivacy =>
-      'Preparazione del controllo dell’informativa sulla privacy...';
+  String get firstLaunchPrivacyConsentLink => 'Informativa sulla privacy';
+
+  @override
+  String get firstLaunchPrivacyConsentAfter => '.';
 
   @override
   String get switchMode => 'Switch mode';
