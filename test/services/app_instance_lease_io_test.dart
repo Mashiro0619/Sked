@@ -87,6 +87,11 @@ class _MemoryProcessGuard implements AppInstanceProcessGuard {
 void main() {
   late Directory directory;
 
+  File lockFile() => File(
+    '${directory.path}${Platform.pathSeparator}'
+    '${IoAppInstanceLease.lockFileName}',
+  );
+
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('sked-instance-lease-');
   });
@@ -139,6 +144,51 @@ void main() {
     );
 
     await expectLater(lease.tryAcquire(), throwsA(isA<FileSystemException>()));
+  });
+
+  test('rejects a directory at the instance-lock path', () async {
+    await Directory(lockFile().path).create();
+    final lease = _leaseFor(directory);
+
+    await expectLater(lease.tryAcquire(), throwsA(isA<FileSystemException>()));
+    expect(
+      await FileSystemEntity.type(lockFile().path, followLinks: false),
+      FileSystemEntityType.directory,
+    );
+  });
+
+  test('rejects an instance-lock symlink', () async {
+    final outsideDirectory = await Directory.systemTemp.createTemp(
+      'sked-instance-lock-target-',
+    );
+    final lease = _leaseFor(directory);
+    try {
+      final target = File(
+        '${outsideDirectory.path}${Platform.pathSeparator}lock',
+      );
+      await target.writeAsString('outside lock');
+      try {
+        await Link(lockFile().path).create(target.path);
+      } on FileSystemException {
+        // Some Windows hosts do not allow unprivileged symlink creation.
+        return;
+      }
+
+      await expectLater(
+        lease.tryAcquire(),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(await target.readAsString(), 'outside lock');
+      expect(
+        await FileSystemEntity.type(lockFile().path, followLinks: false),
+        FileSystemEntityType.link,
+      );
+    } finally {
+      await lease.release();
+      if (await outsideDirectory.exists()) {
+        await outsideDirectory.delete(recursive: true);
+      }
+    }
   });
 
   test('process guard rejects a second lease in the same process', () async {

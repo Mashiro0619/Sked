@@ -2,9 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
+import 'app_storage_layout_io.dart';
 import 'app_instance_lease.dart';
 
 class PlatformAppInstanceLease extends IoAppInstanceLease {
@@ -13,19 +12,20 @@ class PlatformAppInstanceLease extends IoAppInstanceLease {
 
 class IoAppInstanceLease implements AppInstanceLease {
   IoAppInstanceLease({
+    AppStorageLayout? layout,
     Future<Directory> Function()? directoryProvider,
     AppInstanceProcessGuard? processGuard,
-  }) : _directoryProvider =
-           directoryProvider ?? getApplicationDocumentsDirectory,
+  }) : _layout =
+           layout ?? AppStorageLayout(directoryProvider: directoryProvider),
        _processGuard =
            processGuard ??
            (Platform.isAndroid ? const AndroidAppInstanceProcessGuard() : null),
        _processGuardOwnerId = 'lease-${_nextProcessGuardOwnerId++}';
 
-  static const lockFileName = 'Sked_instance.lock';
+  static const lockFileName = AppStorageLayout.instanceLockFileName;
   static int _nextProcessGuardOwnerId = 0;
 
-  final Future<Directory> Function() _directoryProvider;
+  final AppStorageLayout _layout;
   final AppInstanceProcessGuard? _processGuard;
   final String _processGuardOwnerId;
   Future<void> _operationTail = Future<void>.value();
@@ -45,14 +45,20 @@ class IoAppInstanceLease implements AppInstanceLease {
 
     RandomAccessFile? handle;
     try {
-      final directory = await _directoryProvider();
-      await directory.create(recursive: true);
-      final file = File(path.join(directory.path, lockFileName));
-      handle = await file.open(mode: FileMode.append);
+      final file = await _layout.instanceLockFile;
+      await _regularFileOrMissing(file);
+      final opened = await file.open(mode: FileMode.append);
+      handle = opened;
+      if (await _regularFileOrMissing(file) != FileSystemEntityType.file) {
+        throw FileSystemException(
+          'App instance lock path disappeared while opening it.',
+          file.path,
+        );
+      }
       try {
-        await handle.lock(FileLock.exclusive, 0, 1);
+        await opened.lock(FileLock.exclusive, 0, 1);
       } on FileSystemException catch (error) {
-        await handle.close();
+        await opened.close();
         handle = null;
         if (_isLockContention(error)) {
           await _releaseProcessGuardIfOwned();
@@ -109,6 +115,18 @@ class IoAppInstanceLease implements AppInstanceLease {
     final errorCode = error.osError?.errorCode;
     if (Platform.isWindows) return errorCode == 33;
     return errorCode == 11 || errorCode == 13 || errorCode == 35;
+  }
+
+  Future<FileSystemEntityType> _regularFileOrMissing(File file) async {
+    final type = await FileSystemEntity.type(file.path, followLinks: false);
+    if (type == FileSystemEntityType.file ||
+        type == FileSystemEntityType.notFound) {
+      return type;
+    }
+    throw FileSystemException(
+      'App instance lock path is not a regular file.',
+      file.path,
+    );
   }
 }
 

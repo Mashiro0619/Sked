@@ -3,10 +3,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
 import 'migrations/migration.dart';
 import '../models/timetable_models.dart';
+import '../services/app_storage_layout_io.dart';
 import 'timetable_storage.dart';
 
 TimetableStorage createTimetableStorage() => IoTimetableStorage();
@@ -14,30 +14,39 @@ TimetableStorage createTimetableStorage() => IoTimetableStorage();
 class IoTimetableStorage
     implements TimetableStorage, TimetableRecoveryArtifactReader {
   IoTimetableStorage({
+    AppStorageLayout? layout,
     Future<Directory> Function()? directoryProvider,
     DateTime Function()? clock,
     this._fileReader,
-  }) : _directoryProvider =
-           directoryProvider ?? getApplicationDocumentsDirectory,
-       _clock = clock ?? DateTime.now;
+    this._beforeMainReplace,
+    Stream<FileSystemEntity> Function(Directory)? directoryLister,
+  }) : _layout =
+           layout ?? AppStorageLayout(directoryProvider: directoryProvider),
+       _clock = clock ?? DateTime.now,
+       _directoryLister =
+           directoryLister ??
+           ((directory) => directory.list(followLinks: false));
 
-  static const _fileName = 'Sked_data.json';
-  static const _backupSuffix = '.bak';
-  static const _tempSuffix = '.tmp';
-  static const _recoveryDirectoryPrefix = 'Sked_recovery_';
+  static const _fileName = AppStorageLayout.appDataFileName;
+  static const _backupSuffix = AppStorageLayout.backupSuffix;
+  static const _tempSuffix = AppStorageLayout.temporarySuffix;
+  static const _recoveryDirectoryPrefix =
+      AppStorageLayout.appDataRecoveryDirectoryPrefix;
   static final _recoveryDirectoryNamePattern = RegExp(
     r'^Sked_recovery_\d{8}T\d{9}(?:\d{3})?Z(?:_\d+)?$',
   );
 
-  final Future<Directory> Function() _directoryProvider;
+  final AppStorageLayout _layout;
   final DateTime Function() _clock;
   final Future<List<int>> Function(File)? _fileReader;
+  final Future<void> Function()? _beforeMainReplace;
+  final Stream<FileSystemEntity> Function(Directory) _directoryLister;
 
   @override
   Future<StorageLoadResult> load() async {
-    late final File main;
+    late final AppDataStoragePaths storagePaths;
     try {
-      main = await _resolveFile();
+      storagePaths = await _resolvePaths();
     } catch (_) {
       return const StorageLoadResult(
         data: null,
@@ -45,8 +54,9 @@ class IoTimetableStorage
         status: StorageLoadStatus.ioFailure,
       );
     }
-    final tmp = File('${main.path}$_tempSuffix');
-    final backup = File('${main.path}$_backupSuffix');
+    final main = storagePaths.main;
+    final tmp = storagePaths.temporary;
+    final backup = storagePaths.backup;
 
     final tmpAttempt = await _tryDecode(tmp);
     final mainAttempt = await _tryDecode(main);
@@ -61,10 +71,22 @@ class IoTimetableStorage
       mainAttempt,
       backupAttempt,
     ]);
-    final directory = main.parent;
-    final existingRecoveryArtifacts = await _safeExistingRecoveryArtifacts(
+    final directory = storagePaths.root;
+    final recoveryArtifactScan = await _scanExistingRecoveryArtifacts(
       directory,
     );
+    final existingRecoveryArtifacts = recoveryArtifactScan.artifacts;
+    if (recoveryArtifactScan.error != null) {
+      return StorageLoadResult(
+        data: safelyLoadedData,
+        recoveryStatus: RecoveryStatus.ioFailure,
+        status: StorageLoadStatus.ioFailure,
+        recoveryArtifacts: {
+          ...existingRecoveryArtifacts,
+          ...await _safeExistingActivePaths([tmp, main, backup]),
+        }.toList()..sort(),
+      );
+    }
 
     final unsupportedPaths = _pathsWithOutcome(
       attempts,
@@ -196,6 +218,7 @@ class IoTimetableStorage
         await _restoreBackupToMain(
           backup: backup,
           main: main,
+          tmp: tmp,
           expectedBackup: backupAttempt,
           expectedMain: expectedMain,
           expectedTemp: expectedTemp,
@@ -273,6 +296,7 @@ class IoTimetableStorage
         recoveryArtifacts: await _recoveryArtifactsIncludingActive(
           directory: directory,
           activeFiles: [tmp, main, backup],
+          knownArtifacts: recoveryArtifacts,
         ),
       );
     }
@@ -294,9 +318,16 @@ class IoTimetableStorage
   }
 
   Future<void> _save(AppData data) async {
-    final main = await _resolveFile();
-    final tmp = File('${main.path}$_tempSuffix');
-    final backup = File('${main.path}$_backupSuffix');
+    final storagePaths = await _resolvePaths();
+    final main = storagePaths.main;
+    final tmp = storagePaths.temporary;
+    final backup = storagePaths.backup;
+
+    // Reject links and unexpected entities before a write can follow them
+    // outside the application-support root.
+    await _regularFileOrMissing(main);
+    await _regularFileOrMissing(tmp);
+    await _regularFileOrMissing(backup);
 
     // 1. 写入 .tmp 并 flush，确保数据真的落盘。
     final raf = await tmp.open(mode: FileMode.write);
@@ -308,8 +339,20 @@ class IoTimetableStorage
     }
 
     // 2. 旋转：把现有主文件移到 .bak（覆盖旧 .bak），再把 .tmp 升为主文件。
-    if (await main.exists()) {
-      if (await backup.exists()) {
+    await _beforeMainReplace?.call();
+    // Re-check immediately before rotation. This cannot eliminate filesystem
+    // TOCTOU races, but it rejects pre-existing links and special files.
+    final writtenTempType = await _regularFileOrMissing(tmp);
+    if (writtenTempType != FileSystemEntityType.file) {
+      throw FileSystemException(
+        'AppData temporary snapshot disappeared before rotation.',
+        tmp.path,
+      );
+    }
+    final mainType = await _regularFileOrMissing(main);
+    final backupType = await _regularFileOrMissing(backup);
+    if (mainType == FileSystemEntityType.file) {
+      if (backupType == FileSystemEntityType.file) {
         await backup.delete();
       }
       await main.rename(backup.path);
@@ -320,23 +363,26 @@ class IoTimetableStorage
 
   @override
   Future<String> filePath() async {
-    final file = await _resolveFile();
-    return file.path;
+    return (await _resolvePaths()).main.path;
   }
 
   @override
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
     try {
-      final main = await _resolveFile();
+      final storagePaths = await _resolvePaths();
+      final main = storagePaths.main;
       final candidatePath = path.normalize(artifactPath);
       final activePaths = <String>{
         path.normalize(main.path),
-        path.normalize('${main.path}$_backupSuffix'),
-        path.normalize('${main.path}$_tempSuffix'),
+        path.normalize(storagePaths.backup.path),
+        path.normalize(storagePaths.temporary.path),
       };
       final recoveryDirectory = path.dirname(candidatePath);
       final isIsolatedArtifact =
-          path.equals(path.dirname(recoveryDirectory), main.parent.path) &&
+          path.equals(
+            path.dirname(recoveryDirectory),
+            storagePaths.root.path,
+          ) &&
           _recoveryDirectoryNamePattern.hasMatch(
             path.basename(recoveryDirectory),
           ) &&
@@ -357,11 +403,7 @@ class IoTimetableStorage
     }
   }
 
-  Future<File> _resolveFile() async {
-    final directory = await _directoryProvider();
-    final filePath = path.join(directory.path, _fileName);
-    return File(filePath);
-  }
+  Future<AppDataStoragePaths> _resolvePaths() => _layout.appDataPaths();
 
   Future<void> _promoteTempToMain({
     required File tmp,
@@ -380,7 +422,7 @@ class IoTimetableStorage
       return;
     }
     if (expectedMain.outcome == _Outcome.success) {
-      if (await backup.exists()) {
+      if (expectedBackup.outcome != _Outcome.missing) {
         await backup.delete();
       }
       await main.rename(backup.path);
@@ -394,19 +436,31 @@ class IoTimetableStorage
   Future<void> _restoreBackupToMain({
     required File backup,
     required File main,
+    required File tmp,
     required _DecodeAttempt expectedBackup,
     required _DecodeAttempt expectedMain,
     required _DecodeAttempt expectedTemp,
   }) async {
     await _verifyExpectedState(backup, expectedBackup);
     await _verifyExpectedState(main, expectedMain);
-    await _verifyExpectedState(File('${main.path}$_tempSuffix'), expectedTemp);
-    final tmp = File('${main.path}$_tempSuffix');
-    if (await tmp.exists()) {
+    await _verifyExpectedState(tmp, expectedTemp);
+    if (expectedTemp.outcome != _Outcome.missing) {
       await tmp.delete();
     }
+    if (await _regularFileOrMissing(tmp) != FileSystemEntityType.notFound) {
+      throw FileSystemException(
+        'AppData temporary path could not be cleared for recovery.',
+        tmp.path,
+      );
+    }
     await backup.copy(tmp.path);
-    if (await main.exists()) {
+    if (await _regularFileOrMissing(tmp) != FileSystemEntityType.file) {
+      throw FileSystemException(
+        'AppData backup copy did not create a regular temporary file.',
+        tmp.path,
+      );
+    }
+    if (expectedMain.outcome != _Outcome.missing) {
       await main.delete();
     }
     await tmp.rename(main.path);
@@ -416,7 +470,7 @@ class IoTimetableStorage
   Future<_DecodeAttempt> _tryDecode(File file) async {
     List<int>? snapshot;
     try {
-      final type = await FileSystemEntity.type(file.path);
+      final type = await FileSystemEntity.type(file.path, followLinks: false);
       if (type == FileSystemEntityType.notFound) {
         return const _DecodeAttempt(_Outcome.missing, null);
       }
@@ -478,7 +532,7 @@ class IoTimetableStorage
       // changed file from being moved while preserving already-isolated
       // sources when a later source changes during recovery.
       await _verifyExpectedState(file, expectedFiles[file]!);
-      final type = await FileSystemEntity.type(file.path);
+      final type = await FileSystemEntity.type(file.path, followLinks: false);
       if (type == FileSystemEntityType.notFound) continue;
       if (type != FileSystemEntityType.file) {
         throw FileSystemException(
@@ -511,7 +565,7 @@ class IoTimetableStorage
   }
 
   Future<void> _verifyExpectedState(File file, _DecodeAttempt expected) async {
-    final type = await FileSystemEntity.type(file.path);
+    final type = await FileSystemEntity.type(file.path, followLinks: false);
     if (expected.outcome == _Outcome.missing) {
       if (type != FileSystemEntityType.notFound) {
         throw const _StaleStorageSnapshotException();
@@ -544,46 +598,88 @@ class IoTimetableStorage
     while (true) {
       final name =
           '$_recoveryDirectoryPrefix$stamp${suffix == 0 ? '' : '_$suffix'}';
-      final candidate = Directory(path.join(parent.path, name));
-      if (!await candidate.exists()) {
-        return candidate.create();
+      final candidate = await _layout.recoveryDirectory(name);
+      if (!path.equals(candidate.parent.path, parent.path)) {
+        throw StateError(
+          'App storage directory changed while resolving recovery paths.',
+        );
+      }
+      var type = await FileSystemEntity.type(
+        candidate.path,
+        followLinks: false,
+      );
+      if (type == FileSystemEntityType.notFound) {
+        await candidate.create();
+        type = await FileSystemEntity.type(candidate.path, followLinks: false);
+        if (type != FileSystemEntityType.directory) {
+          throw FileSystemException(
+            'AppData recovery path is not a regular directory.',
+            candidate.path,
+          );
+        }
+        return candidate;
+      }
+      if (type != FileSystemEntityType.directory) {
+        throw FileSystemException(
+          'AppData recovery path is not a regular directory.',
+          candidate.path,
+        );
       }
       suffix += 1;
     }
   }
 
   Future<List<String>> _existingRecoveryArtifacts(Directory parent) async {
-    if (!await parent.exists()) return const [];
-    final artifacts = <String>[];
-    await for (final entity in parent.list(followLinks: false)) {
-      if (entity is! Directory ||
-          !_recoveryDirectoryNamePattern.hasMatch(path.basename(entity.path))) {
-        continue;
-      }
-      await for (final artifact in entity.list(followLinks: false)) {
-        if (artifact is File &&
-            _isAllowedRecoveryArtifactName(path.basename(artifact.path))) {
-          artifacts.add(artifact.path);
-        }
-      }
+    final scan = await _scanExistingRecoveryArtifacts(parent);
+    final error = scan.error;
+    if (error != null) {
+      Error.throwWithStackTrace(error, scan.stackTrace!);
     }
-    artifacts.sort();
-    return artifacts;
+    return scan.artifacts;
   }
 
-  Future<List<String>> _safeExistingRecoveryArtifacts(Directory parent) async {
+  Future<_RecoveryArtifactScan> _scanExistingRecoveryArtifacts(
+    Directory parent,
+  ) async {
+    final artifacts = <String>[];
     try {
-      return await _existingRecoveryArtifacts(parent);
-    } catch (_) {
-      return const [];
+      if (!await parent.exists()) {
+        return const _RecoveryArtifactScan.success(<String>[]);
+      }
+      await for (final entity in _directoryLister(parent)) {
+        if (await FileSystemEntity.type(entity.path, followLinks: false) !=
+                FileSystemEntityType.directory ||
+            !_recoveryDirectoryNamePattern.hasMatch(
+              path.basename(entity.path),
+            )) {
+          continue;
+        }
+        final recoveryDirectory = Directory(entity.path);
+        await for (final artifact in _directoryLister(recoveryDirectory)) {
+          if (await FileSystemEntity.type(artifact.path, followLinks: false) ==
+                  FileSystemEntityType.file &&
+              _isAllowedRecoveryArtifactName(path.basename(artifact.path))) {
+            artifacts.add(artifact.path);
+          }
+        }
+      }
+    } catch (error, stackTrace) {
+      artifacts.sort();
+      return _RecoveryArtifactScan.failure(
+        List.unmodifiable(artifacts),
+        error,
+        stackTrace,
+      );
     }
+    artifacts.sort();
+    return _RecoveryArtifactScan.success(List.unmodifiable(artifacts));
   }
 
   Future<List<String>> _safeExistingActivePaths(List<File> files) async {
     final paths = <String>[];
     for (final file in files) {
       try {
-        if (await FileSystemEntity.type(file.path) !=
+        if (await FileSystemEntity.type(file.path, followLinks: false) !=
             FileSystemEntityType.notFound) {
           paths.add(file.path);
         }
@@ -599,9 +695,12 @@ class IoTimetableStorage
     required List<File> activeFiles,
     Iterable<String> knownArtifacts = const <String>[],
   }) async {
+    final recoveryArtifactScan = await _scanExistingRecoveryArtifacts(
+      directory,
+    );
     final artifacts = <String>{
       ...knownArtifacts,
-      ...await _safeExistingRecoveryArtifacts(directory),
+      ...recoveryArtifactScan.artifacts,
       ...await _safeExistingActivePaths(activeFiles),
     }.toList()..sort();
     return artifacts;
@@ -611,6 +710,18 @@ class IoTimetableStorage
     return name == _fileName ||
         name == '$_fileName$_backupSuffix' ||
         name == '$_fileName$_tempSuffix';
+  }
+
+  Future<FileSystemEntityType> _regularFileOrMissing(File file) async {
+    final type = await FileSystemEntity.type(file.path, followLinks: false);
+    if (type == FileSystemEntityType.file ||
+        type == FileSystemEntityType.notFound) {
+      return type;
+    }
+    throw FileSystemException(
+      'AppData storage path is not a regular file.',
+      file.path,
+    );
   }
 
   Future<void> _bestEffortFlushDirectory(Directory directory) async {
@@ -639,6 +750,22 @@ class _DecodeAttempt {
   final _Outcome outcome;
   final AppData? data;
   final List<int>? bytes;
+}
+
+class _RecoveryArtifactScan {
+  const _RecoveryArtifactScan.success(this.artifacts)
+    : error = null,
+      stackTrace = null;
+
+  const _RecoveryArtifactScan.failure(
+    this.artifacts,
+    this.error,
+    this.stackTrace,
+  );
+
+  final List<String> artifacts;
+  final Object? error;
+  final StackTrace? stackTrace;
 }
 
 class _StaleStorageSnapshotException implements Exception {

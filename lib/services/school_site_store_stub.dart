@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/app_storage_keys.dart';
 import '../utils/shared_preferences_recovery.dart';
 import 'school_site_store.dart';
 
@@ -25,10 +26,11 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
            preferencesReloader ?? ((preferences) => preferences.reload()),
        super.base();
 
-  static const _storageKey = 'Sked_school_sites_json';
-  static const _recoveryKeyPrefix = 'Sked_school_sites_recovery_';
+  static const _storageKey = schoolSitesWebStorageKey;
+  static const _recoveryKeyPrefix = schoolSitesWebRecoveryKeyPrefix;
   static final _recoveryKeyPattern = RegExp(
-    r'^Sked_school_sites_recovery_\d{8}T\d{9}(?:\d{3})?Z(?:_\d+)?$',
+    '^${RegExp.escape(_recoveryKeyPrefix)}'
+    r'\d{8}T\d{9}(?:\d{3})?Z(?:_\d+)?$',
   );
   static Future<void> _writeTail = Future<void>.value();
   static var _recoveryBlocked = false;
@@ -203,13 +205,12 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     return preferences.getKeys().where(_recoveryKeyPattern.hasMatch);
   }
 
-  String _browserPath(String key) => 'browser://local-storage/$key';
+  String _browserPath(String key) => browserLocalStorageUri(key);
 
   @override
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
-    const prefix = 'browser://local-storage/';
-    if (!artifactPath.startsWith(prefix)) return null;
-    final key = artifactPath.substring(prefix.length);
+    if (!artifactPath.startsWith(browserLocalStorageUriPrefix)) return null;
+    final key = artifactPath.substring(browserLocalStorageUriPrefix.length);
     if (key != _storageKey && !_recoveryKeyPattern.hasMatch(key)) return null;
     try {
       final preferences = await _preferencesProvider();

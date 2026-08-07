@@ -3,25 +3,33 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 
+import 'app_storage_layout_io.dart';
 import 'school_site_store.dart';
 
 class PlatformSchoolSiteStore extends SchoolSiteStore {
   PlatformSchoolSiteStore({
-    this._directoryProvider,
+    AppStorageLayout? layout,
+    Future<Directory> Function()? directoryProvider,
     this._beforeMainReplace,
     this._afterMainReplace,
     this._fileReader,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now,
+    Stream<FileSystemEntity> Function(Directory)? directoryLister,
+  }) : _layout =
+           layout ?? AppStorageLayout(directoryProvider: directoryProvider),
+       _clock = clock ?? DateTime.now,
+       _directoryLister =
+           directoryLister ??
+           ((directory) => directory.list(followLinks: false)),
        super.base();
 
-  static const _fileName = 'Sked_school_sites.json';
-  static const _backupSuffix = '.bak';
-  static const _tempSuffix = '.tmp';
-  static const _failedTempSuffix = '.tmp.failed';
-  static const _recoveryDirectoryPrefix = 'Sked_school_sites_recovery_';
+  static const _fileName = AppStorageLayout.schoolSitesFileName;
+  static const _backupSuffix = AppStorageLayout.backupSuffix;
+  static const _tempSuffix = AppStorageLayout.temporarySuffix;
+  static const _failedTempSuffix = AppStorageLayout.failedTemporarySuffix;
+  static const _recoveryDirectoryPrefix =
+      AppStorageLayout.schoolSitesRecoveryDirectoryPrefix;
   static final _recoveryDirectoryNamePattern = RegExp(
     r'^Sked_school_sites_recovery_\d{8}T\d{9}(?:\d{3})?Z(?:_\d+)?$',
   );
@@ -30,11 +38,12 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
   static final Map<String, SchoolSiteStoreRecoveryBlockedException>
   _writeBlocks = {};
 
-  final Future<Directory> Function()? _directoryProvider;
+  final AppStorageLayout _layout;
   final Future<void> Function()? _beforeMainReplace;
   final Future<void> Function()? _afterMainReplace;
   final Future<List<int>> Function(File)? _fileReader;
   final DateTime Function() _clock;
+  final Stream<FileSystemEntity> Function(Directory) _directoryLister;
 
   @override
   Future<String?> load() async {
@@ -59,10 +68,11 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
   Future<SchoolSiteStoreLoadResult> loadResult() => _enqueue(_loadResultNow);
 
   Future<SchoolSiteStoreLoadResult> _loadResultNow() async {
-    final file = await _resolveFile();
-    final tmp = File('${file.path}$_tempSuffix');
-    final backup = File('${file.path}$_backupSuffix');
-    final failedTemp = File('${file.path}$_failedTempSuffix');
+    final storagePaths = await _resolvePaths();
+    final file = storagePaths.main;
+    final tmp = storagePaths.temporary;
+    final backup = storagePaths.backup;
+    final failedTemp = storagePaths.failedTemporary;
     final generation = _generation;
     final reads = await Future.wait([
       _readArtifact(
@@ -74,6 +84,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
                 tmp: tmp,
                 main: file,
                 backup: backup,
+                failedTemporary: failedTemp,
                 expectedSource: expectedSource,
                 expectedGeneration: generation,
                 preservePrimaryAsBackup: preservePrimaryAsBackup,
@@ -98,6 +109,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
           () => _restoreBackupToMain(
             backup: backup,
             main: file,
+            tmp: tmp,
             expectedSource: expectedSource,
             expectedGeneration: generation,
           ),
@@ -105,9 +117,10 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
       ),
     ]);
     final failedTempSnapshot = await _readFileSnapshot(failedTemp);
-    final existingRecoveryArtifacts = await _safeExistingRecoveryArtifacts(
-      file.parent,
+    final recoveryArtifactScan = await _scanExistingRecoveryArtifacts(
+      storagePaths.root,
     );
+    final existingRecoveryArtifacts = recoveryArtifactScan.artifacts;
     final activeArtifacts = reads
         .where((read) => read.exists)
         .map((read) => read.path)
@@ -125,6 +138,13 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
           artifact: SchoolSiteStoreArtifact.temporary,
           type: SchoolSiteStoreIssueType.recoveryArtifact,
           error: SchoolSiteStoreRecoveryArtifactException(failedTemp.path),
+        ),
+      if (recoveryArtifactScan.error case final error?)
+        SchoolSiteStoreIssue(
+          artifact: SchoolSiteStoreArtifact.primary,
+          type: SchoolSiteStoreIssueType.readFailure,
+          error: error,
+          stackTrace: recoveryArtifactScan.stackTrace,
         ),
     ];
     // Keep an explicit snapshot for every active path, including files that
@@ -149,7 +169,12 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     // A failed temporary snapshot is the only evidence of a write that could
     // not be rolled back. Keep writes blocked until the snapshot has been
     // explicitly isolated, even when the committed main is still readable.
-    if (failedTempSnapshot.exists) {
+    if (recoveryArtifactScan.error != null) {
+      _writeBlocks.putIfAbsent(
+        storageKey,
+        SchoolSiteStoreRecoveryBlockedException.new,
+      );
+    } else if (failedTempSnapshot.exists) {
       _writeBlocks.putIfAbsent(
         storageKey,
         SchoolSiteStoreRecoveryBlockedException.new,
@@ -172,7 +197,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     return SchoolSiteStoreLoadResult(
       candidates: candidates,
       issues: recoveryIssues,
-      hasArtifacts: hasActiveArtifacts,
+      hasArtifacts: hasActiveArtifacts || recoveryArtifactScan.error != null,
       recoveryArtifacts: {
         ...existingRecoveryArtifacts,
         ...activeArtifacts,
@@ -201,14 +226,16 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     String source, {
     bool allowRecoveryBlocked = false,
   }) async {
-    final file = await _resolveFile();
+    final storagePaths = await _resolvePaths();
+    final file = storagePaths.main;
     final storageKey = _storageKey(file);
     final writeBlock = _writeBlocks[storageKey];
     if (!allowRecoveryBlocked && writeBlock != null) {
       throw writeBlock;
     }
-    final tmp = File('${file.path}$_tempSuffix');
-    final backup = File('${file.path}$_backupSuffix');
+    final tmp = storagePaths.temporary;
+    final backup = storagePaths.backup;
+    final failedTemporary = storagePaths.failedTemporary;
     var ownsTemp = false;
     var hadMain = false;
     var backupReady = false;
@@ -240,7 +267,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
       mainReplaceAttempted = true;
       await _copyAndFlush(tmp, file);
       await _afterMainReplace?.call();
-      await _discardOwnedTemp(tmp);
+      await _discardOwnedTemp(tmp, failed: failedTemporary);
       await _flushParentDirectory(file);
       _writeBlocks.remove(storageKey);
     } catch (error, stackTrace) {
@@ -269,7 +296,9 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
         });
       }
       if (ownsTemp) {
-        await attemptRollback(() => _discardOwnedTemp(tmp));
+        await attemptRollback(
+          () => _discardOwnedTemp(tmp, failed: failedTemporary),
+        );
       }
       await attemptRollback(() => _flushParentDirectory(file));
       if (rollbackError != null) {
@@ -291,13 +320,12 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     }
   }
 
-  Future<void> _discardOwnedTemp(File tmp) async {
+  Future<void> _discardOwnedTemp(File tmp, {required File failed}) async {
     final type = await _regularFileOrMissing(tmp);
     if (type == FileSystemEntityType.notFound) return;
     try {
       await tmp.delete();
     } catch (_) {
-      final failed = File('${tmp.path}.failed');
       final failedType = await _regularFileOrMissing(failed);
       if (failedType == FileSystemEntityType.file) {
         await failed.delete();
@@ -308,24 +336,27 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
 
   @override
   Future<String?> filePath() async {
-    final file = await _resolveFile();
-    return file.path;
+    return (await _resolvePaths()).main.path;
   }
 
   @override
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
     try {
-      final main = await _resolveFile();
+      final storagePaths = await _resolvePaths();
+      final main = storagePaths.main;
       final candidatePath = path.normalize(artifactPath);
       final activePaths = <String>{
         path.normalize(main.path),
-        path.normalize('${main.path}$_backupSuffix'),
-        path.normalize('${main.path}$_tempSuffix'),
-        path.normalize('${main.path}$_failedTempSuffix'),
+        path.normalize(storagePaths.backup.path),
+        path.normalize(storagePaths.temporary.path),
+        path.normalize(storagePaths.failedTemporary.path),
       };
       final recoveryDirectory = path.dirname(candidatePath);
       final isIsolatedArtifact =
-          path.equals(path.dirname(recoveryDirectory), main.parent.path) &&
+          path.equals(
+            path.dirname(recoveryDirectory),
+            storagePaths.root.path,
+          ) &&
           _recoveryDirectoryNamePattern.hasMatch(
             path.basename(recoveryDirectory),
           ) &&
@@ -346,18 +377,14 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     }
   }
 
-  Future<File> _resolveFile() async {
-    final directoryProvider =
-        _directoryProvider ?? getApplicationDocumentsDirectory;
-    final directory = await directoryProvider();
-    return File(path.join(directory.path, _fileName));
-  }
+  Future<SchoolSiteStoragePaths> _resolvePaths() => _layout.schoolSitePaths();
 
   Future<List<String>> _isolateForRecoveryNow({
     int? expectedGeneration,
     Map<String, _FileSnapshot>? expectedFiles,
   }) async {
-    final main = await _resolveFile();
+    final storagePaths = await _resolvePaths();
+    final main = storagePaths.main;
     if (expectedGeneration != null && _generation != expectedGeneration) {
       throw const SchoolSiteStoreStaleCandidateException();
     }
@@ -368,9 +395,9 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     );
     final files = [
       main,
-      File('${main.path}$_backupSuffix'),
-      File('${main.path}$_tempSuffix'),
-      File('${main.path}$_failedTempSuffix'),
+      storagePaths.backup,
+      storagePaths.temporary,
+      storagePaths.failedTemporary,
     ];
     final existingFiles = <File>[];
     for (final file in files) {
@@ -391,7 +418,9 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     }
     if (existingFiles.isNotEmpty) {
       _generation += 1;
-      final recoveryDirectory = await _createRecoveryDirectory(main.parent);
+      final recoveryDirectory = await _createRecoveryDirectory(
+        storagePaths.root,
+      );
       for (final file in existingFiles) {
         await file.rename(
           path.join(recoveryDirectory.path, path.basename(file.path)),
@@ -399,7 +428,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
       }
       await _flushParentDirectory(main);
     }
-    final artifacts = await _existingRecoveryArtifacts(main.parent);
+    final artifacts = await _existingRecoveryArtifacts(storagePaths.root);
     if (artifacts.isEmpty) {
       _writeBlocks.remove(storageKey);
     }
@@ -415,39 +444,81 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     while (true) {
       final name =
           '$_recoveryDirectoryPrefix$stamp${suffix == 0 ? '' : '_$suffix'}';
-      final candidate = Directory(path.join(parent.path, name));
-      if (!await candidate.exists()) {
-        return candidate.create();
+      final candidate = await _layout.recoveryDirectory(name);
+      if (!path.equals(candidate.parent.path, parent.path)) {
+        throw StateError(
+          'App storage directory changed while resolving recovery paths.',
+        );
+      }
+      var type = await FileSystemEntity.type(
+        candidate.path,
+        followLinks: false,
+      );
+      if (type == FileSystemEntityType.notFound) {
+        await candidate.create();
+        type = await FileSystemEntity.type(candidate.path, followLinks: false);
+        if (type != FileSystemEntityType.directory) {
+          throw FileSystemException(
+            'School-site recovery path is not a regular directory.',
+            candidate.path,
+          );
+        }
+        return candidate;
+      }
+      if (type != FileSystemEntityType.directory) {
+        throw FileSystemException(
+          'School-site recovery path is not a regular directory.',
+          candidate.path,
+        );
       }
       suffix += 1;
     }
   }
 
   Future<List<String>> _existingRecoveryArtifacts(Directory parent) async {
-    if (!await parent.exists()) return const <String>[];
-    final artifacts = <String>[];
-    await for (final entity in parent.list(followLinks: false)) {
-      if (entity is! Directory ||
-          !_recoveryDirectoryNamePattern.hasMatch(path.basename(entity.path))) {
-        continue;
-      }
-      await for (final artifact in entity.list(followLinks: false)) {
-        if (artifact is File &&
-            _isAllowedRecoveryArtifactName(path.basename(artifact.path))) {
-          artifacts.add(artifact.path);
-        }
-      }
+    final scan = await _scanExistingRecoveryArtifacts(parent);
+    final error = scan.error;
+    if (error != null) {
+      Error.throwWithStackTrace(error, scan.stackTrace!);
     }
-    artifacts.sort();
-    return artifacts;
+    return scan.artifacts;
   }
 
-  Future<List<String>> _safeExistingRecoveryArtifacts(Directory parent) async {
+  Future<_RecoveryArtifactScan> _scanExistingRecoveryArtifacts(
+    Directory parent,
+  ) async {
+    final artifacts = <String>[];
     try {
-      return await _existingRecoveryArtifacts(parent);
-    } catch (_) {
-      return const <String>[];
+      if (!await parent.exists()) {
+        return const _RecoveryArtifactScan.success(<String>[]);
+      }
+      await for (final entity in _directoryLister(parent)) {
+        if (await FileSystemEntity.type(entity.path, followLinks: false) !=
+                FileSystemEntityType.directory ||
+            !_recoveryDirectoryNamePattern.hasMatch(
+              path.basename(entity.path),
+            )) {
+          continue;
+        }
+        final recoveryDirectory = Directory(entity.path);
+        await for (final artifact in _directoryLister(recoveryDirectory)) {
+          if (await FileSystemEntity.type(artifact.path, followLinks: false) ==
+                  FileSystemEntityType.file &&
+              _isAllowedRecoveryArtifactName(path.basename(artifact.path))) {
+            artifacts.add(artifact.path);
+          }
+        }
+      }
+    } catch (error, stackTrace) {
+      artifacts.sort();
+      return _RecoveryArtifactScan.failure(
+        List.unmodifiable(artifacts),
+        error,
+        stackTrace,
+      );
     }
+    artifacts.sort();
+    return _RecoveryArtifactScan.success(List.unmodifiable(artifacts));
   }
 
   Future<_ArtifactRead> _readArtifact(
@@ -554,6 +625,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
     required File tmp,
     required File main,
     required File backup,
+    required File failedTemporary,
     required String expectedSource,
     required int expectedGeneration,
     required bool preservePrimaryAsBackup,
@@ -572,7 +644,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
       await _copyAndFlush(main, backup);
     }
     await _copyAndFlush(tmp, main);
-    await _discardOwnedTemp(tmp);
+    await _discardOwnedTemp(tmp, failed: failedTemporary);
     await _flushParentDirectory(main);
     _writeBlocks.remove(_storageKey(main));
   }
@@ -580,6 +652,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
   Future<void> _restoreBackupToMain({
     required File backup,
     required File main,
+    required File tmp,
     required String expectedSource,
     required int expectedGeneration,
   }) async {
@@ -588,7 +661,6 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
       expectedSource: expectedSource,
       expectedGeneration: expectedGeneration,
     );
-    final tmp = File('${main.path}$_tempSuffix');
     final tmpType = await _regularFileOrMissing(tmp);
     final mainType = await _regularFileOrMissing(main);
     _generation += 1;
@@ -752,4 +824,20 @@ class _FileSnapshot {
 
   final bool exists;
   final List<int>? bytes;
+}
+
+class _RecoveryArtifactScan {
+  const _RecoveryArtifactScan.success(this.artifacts)
+    : error = null,
+      stackTrace = null;
+
+  const _RecoveryArtifactScan.failure(
+    this.artifacts,
+    this.error,
+    this.stackTrace,
+  );
+
+  final List<String> artifacts;
+  final Object? error;
+  final StackTrace? stackTrace;
 }

@@ -570,7 +570,7 @@
   "@privacyPolicyIntro": {},
   "privacyPolicyLocalStorageTitle": "本機儲存",
   "@privacyPolicyLocalStorageTitle": {},
-  "privacyPolicyLocalStorageBody": "課表資料、通用日程、相關設定和完整應用備份內容會儲存在你的裝置本機或瀏覽器本機儲存中，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。",
+  "privacyPolicyLocalStorageBody": "在原生平台上，Sked 會將課表資料、通用日程、相關設定和可編輯的學校站點設定儲存在作業系統管理的應用程式支援目錄中；瀏覽器版本使用瀏覽器本機儲存。舊版本寫入使用者「文件 / Documents」目錄的檔案會繼續留在原處，但不會被自動讀取或遷移；如需保留這些資料，請在升級前從舊版本匯出完整應用備份，並在升級後還原。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。",
   "@privacyPolicyLocalStorageBody": {},
   "privacyPolicyImportExportTitle": "匯入與匯出",
   "@privacyPolicyImportExportTitle": {},

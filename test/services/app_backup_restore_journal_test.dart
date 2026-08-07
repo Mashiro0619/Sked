@@ -2,11 +2,50 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sked/data/migrations/migration.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
+import 'package:sked/utils/app_storage_keys.dart';
 import 'package:sked/utils/shared_preferences_recovery.dart';
 
 AppData _appData() => buildInitialAppData(buildDefaultPeriodTimes());
+
+String _journalSource(String backupSource) {
+  return ImportExportEnvelope(
+    schema: 'app-backup-restore-journal',
+    version: 2,
+    data: {
+      'backupSource': backupSource,
+      'apiKeyPolicy': 'clear',
+      'phase': 'prepared',
+      'recoveryArtifacts': const <String>[],
+    },
+  ).encode();
+}
+
+Map<String, String> _futureRestorePayloads() {
+  final futureAppDataEnvelope = ImportExportEnvelope(
+    schema: appDataSchema,
+    version: importExportVersion + 1,
+    data: _appData().toJson(),
+  );
+  return {
+    'future app-backup envelope': ImportExportEnvelope(
+      schema: appBackupSchema,
+      version: appBackupVersion + 1,
+      data: const {},
+    ).encode(),
+    'future raw app-data envelope': futureAppDataEnvelope.encode(),
+    'future nested app-data envelope': ImportExportEnvelope(
+      schema: appBackupSchema,
+      version: appBackupVersion,
+      data: {
+        'appData': futureAppDataEnvelope.toJson(),
+        'schoolSites': const [],
+      },
+    ).encode(),
+  };
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -28,9 +67,39 @@ void main() {
   });
 
   test(
+    'uses only the sked namespace and ignores legacy browser keys',
+    () async {
+      const legacyKey = 'Sked_pending_app_backup_restore';
+      const legacyRecoveryKey =
+          'Sked_app_backup_restore_recovery_legacy-artifact';
+      SharedPreferences.setMockInitialValues({
+        legacyKey: 'legacy journal',
+        legacyRecoveryKey: 'legacy recovery',
+      });
+      final preferences = await SharedPreferences.getInstance();
+      final journal = SharedPreferencesAppBackupRestoreJournal(
+        preferencesProvider: () async => preferences,
+      );
+
+      expect(await journal.read(), isNull);
+      expect(await journal.listRecoveryArtifacts(), isEmpty);
+      expect(
+        journal.pendingArtifactPath,
+        browserLocalStorageUri(appBackupRestoreJournalWebStorageKey),
+      );
+      expect(
+        preferences.containsKey(appBackupRestoreJournalWebStorageKey),
+        isFalse,
+      );
+      expect(preferences.getString(legacyKey), 'legacy journal');
+      expect(preferences.getString(legacyRecoveryKey), 'legacy recovery');
+    },
+  );
+
+  test(
     'write failure restores the durable value instead of cached data',
     () async {
-      const key = 'Sked_pending_app_backup_restore';
+      const key = appBackupRestoreJournalWebStorageKey;
       const oldSource = 'old journal';
       SharedPreferences.setMockInitialValues({key: oldSource});
       final preferences = await SharedPreferences.getInstance();
@@ -60,7 +129,7 @@ void main() {
   );
 
   test('write reloads storage even when the writer reports success', () async {
-    const key = 'Sked_pending_app_backup_restore';
+    const key = appBackupRestoreJournalWebStorageKey;
     const oldSource = 'old journal';
     SharedPreferences.setMockInitialValues({key: oldSource});
     final preferences = await SharedPreferences.getInstance();
@@ -88,7 +157,7 @@ void main() {
   });
 
   test('write exposes state unknown when durable verification fails', () async {
-    const key = 'Sked_pending_app_backup_restore';
+    const key = appBackupRestoreJournalWebStorageKey;
     final preferences = await SharedPreferences.getInstance();
     var failRefresh = false;
     final journal = SharedPreferencesAppBackupRestoreJournal(
@@ -126,7 +195,7 @@ void main() {
   });
 
   test('clear failure reloads the journal removed from the cache', () async {
-    const key = 'Sked_pending_app_backup_restore';
+    const key = appBackupRestoreJournalWebStorageKey;
     const source = 'pending journal';
     SharedPreferences.setMockInitialValues({key: source});
     final preferences = await SharedPreferences.getInstance();
@@ -149,7 +218,7 @@ void main() {
   });
 
   test('clear reloads storage even when removal reports success', () async {
-    const key = 'Sked_pending_app_backup_restore';
+    const key = appBackupRestoreJournalWebStorageKey;
     const source = 'pending journal';
     SharedPreferences.setMockInitialValues({key: source});
     final preferences = await SharedPreferences.getInstance();
@@ -196,7 +265,7 @@ void main() {
 
       expect(
         preferences.getKeys().where(
-          (key) => key.startsWith('Sked_app_backup_restore_recovery_'),
+          (key) => key.startsWith(appBackupRestoreJournalWebRecoveryKeyPrefix),
         ),
         isEmpty,
       );
@@ -253,6 +322,12 @@ void main() {
       await journal.write(corruptSource);
 
       final artifact = await journal.preserveForRecovery(corruptSource);
+      expect(
+        artifact,
+        startsWith(
+          browserLocalStorageUri(appBackupRestoreJournalWebRecoveryKeyPrefix),
+        ),
+      );
       expect(
         utf8.decode((await journal.readRecoveryArtifact(artifact))!),
         corruptSource,
@@ -415,6 +490,32 @@ void main() {
     }
   });
 
+  test('v2 journals keep future restore payloads upgrade-blocked', () async {
+    final journal = SharedPreferencesAppBackupRestoreJournal();
+
+    for (final entry in _futureRestorePayloads().entries) {
+      final source = _journalSource(entry.value);
+      await journal.write(source);
+
+      final result = await journal.load();
+
+      expect(
+        result.status,
+        AppBackupRestoreJournalLoadStatus.unsupportedVersion,
+        reason: entry.key,
+      );
+      expect(result.source, source, reason: entry.key);
+      expect(result.recoveryArtifacts, [
+        journal.pendingArtifactPath,
+      ], reason: entry.key);
+      expect(
+        result.error,
+        isA<UnsupportedSchemaVersionException>(),
+        reason: entry.key,
+      );
+    }
+  });
+
   test('enumerates preserved artifacts after clear and restart', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
     const source = '{historical-broken-journal';
@@ -453,7 +554,7 @@ void main() {
     final result = await journal.load();
 
     expect(result.status, AppBackupRestoreJournalLoadStatus.ioFailure);
-    expect(result.recoveryArtifacts, [artifact, journal.pendingArtifactPath]);
+    expect(result.recoveryArtifacts, [journal.pendingArtifactPath, artifact]);
   });
 
   test('classifies a future nested AppData schema as unsupported', () async {
@@ -479,7 +580,7 @@ void main() {
   });
 
   test('isolates a wrongly typed pending journal as an artifact', () async {
-    const key = 'Sked_pending_app_backup_restore';
+    const key = appBackupRestoreJournalWebStorageKey;
     SharedPreferences.setMockInitialValues({key: 42});
     final preferences = await SharedPreferences.getInstance();
     final journal = SharedPreferencesAppBackupRestoreJournal(

@@ -49,11 +49,15 @@ Sked helps manage student timetables and everyday schedules in one place. Use it
 - **Text / HTML parsing import**: open school sites in-app, or paste plain timetable text, page text, or HTML source, then parse timetable data through your own OpenAI-compatible endpoint.
 - **Import preview**: review parsed results before saving, choose the period-time set, and decide whether to import as a new timetable or replace the current one.
 - **Appearance**: supports light mode, dark mode, system mode, theme colors, colorful UI settings, and an ongoing Material 3 Expressive migration.
-- **Data control**: timetables, schedules, and settings are stored on the current device by default, and full backups do not include custom parser API keys.
+- **Data control**: native builds keep timetables, schedules, and settings in the operating system's application-support directory, while browser builds use browser storage; full backups do not include custom parser API keys.
 
 ## Data And Privacy
 
-Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration on your device or in browser storage. Full app backups export this data, but they do not include custom parser API keys.
+On native platforms, Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration in the operating system's application-support directory; browser builds use browser storage. Full app backups export this data, but they do not include custom parser API keys.
+
+When upgrading from an earlier version, files previously written to the user Documents directory remain in place, but the new version does not read or migrate them automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward.
+
+On desktop platforms, after confirming that the old data is backed up or no longer needed and closing Sked, you may selectively delete the old Sked data files, sidecar files, lock files, and recovery directories inside the user Documents directory. The new version does not remove these legacy items for you. On Android, do not manually search for or delete the app's private directories; use **Clear storage / Clear data** in system settings or uninstall the app to remove legacy data. These actions also remove the current version's local data, so create a backup first.
 
 The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, imports school webpages, or parses timetable text / HTML content only when you explicitly start the corresponding action.
 

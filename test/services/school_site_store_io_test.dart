@@ -32,6 +32,57 @@ void main() {
     File failedTempFile() =>
         File(path.join(tempDir.path, 'Sked_school_sites.json.tmp.failed'));
 
+    test(
+      'recovery enumeration failure blocks an otherwise empty store',
+      () async {
+        final recoveryDirectory = await Directory(
+          path.join(
+            tempDir.path,
+            'Sked_school_sites_recovery_20260807T000000000Z',
+          ),
+        ).create();
+        final historicalArtifact = File(
+          path.join(recoveryDirectory.path, 'Sked_school_sites.json'),
+        );
+        await historicalArtifact.writeAsString('{historical-corrupt');
+
+        Stream<FileSystemEntity> listDirectory(Directory directory) async* {
+          if (path.equals(directory.path, recoveryDirectory.path)) {
+            yield historicalArtifact;
+            throw FileSystemException(
+              'simulated recovery enumeration failure',
+              directory.path,
+            );
+          }
+          yield* directory.list(followLinks: false);
+        }
+
+        final failingStore = PlatformSchoolSiteStore(
+          directoryProvider: () async => tempDir,
+          directoryLister: listDirectory,
+        );
+        final service = SchoolSiteService(store: failingStore);
+
+        final result = await service.loadSitesResult();
+
+        expect(
+          result.recoveryStatus,
+          SchoolSiteRecoveryStatus.storageReadFailed,
+        );
+        expect(result.canWrite, isFalse);
+        expect(result.storageIssues, hasLength(1));
+        expect(
+          result.storageIssues.single.type,
+          SchoolSiteStoreIssueType.readFailure,
+        );
+        expect(result.recoveryArtifacts, contains(historicalArtifact.path));
+        await expectLater(
+          failingStore.save('[]'),
+          throwsA(isA<SchoolSiteStoreRecoveryBlockedException>()),
+        );
+      },
+    );
+
     test('saves with a backup of the previous content', () async {
       await store.save('[{"name":"A","loginUrl":"https://a.test"}]');
       await store.save('[{"name":"B","loginUrl":"https://b.test"}]');
@@ -434,8 +485,19 @@ void main() {
         );
 
         final result = await store.loadResult();
+        expect(result.hasArtifacts, isFalse);
         expect(result.recoveryArtifacts, unorderedEquals(artifacts));
         expect(result.historicalRecoveryArtifacts, unorderedEquals(artifacts));
+
+        final serviceResult = await SchoolSiteService(
+          store: store,
+        ).loadSitesResult();
+        expect(
+          serviceResult.recoveryStatus,
+          SchoolSiteRecoveryStatus.storedDataCorrupt,
+        );
+        expect(serviceResult.canWrite, isFalse);
+        expect(serviceResult.recoveryArtifacts, unorderedEquals(artifacts));
       },
     );
 

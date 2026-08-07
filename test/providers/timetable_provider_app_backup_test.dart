@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -33,7 +34,11 @@ class _MemoryTimetableStorage implements TimetableStorage {
       final error = saveFailures.removeAt(0);
       if (error != null) throw error;
     }
-    this.data = data;
+    // Mirror the production storage boundary: runtime-only secrets are not
+    // serialized into AppData snapshots. Keeping the original object here
+    // would make a restarted provider see a legacy plaintext API key and
+    // perform a normalization write that cannot occur with the file backend.
+    this.data = AppData.decodeStorageSnapshot(data.encode());
     structuredLoadResult = null;
   }
 
@@ -121,6 +126,7 @@ class _MemoryBackupRestoreJournal extends AppBackupRestoreJournal {
   final preserveFailures = <Object>[];
   final recoverySources = <String, String>{};
   final writes = <String>[];
+  final scriptedLoadResults = <AppBackupRestoreJournalLoadResult>[];
   var writeAttemptCount = 0;
   AppBackupRestoreJournalLoadResult? structuredLoadResult;
 
@@ -161,6 +167,9 @@ class _MemoryBackupRestoreJournal extends AppBackupRestoreJournal {
   Future<AppBackupRestoreJournalLoadResult> load({
     String localeCode = 'zh',
   }) async {
+    if (scriptedLoadResults.isNotEmpty) {
+      return scriptedLoadResults.removeAt(0);
+    }
     return structuredLoadResult ?? super.load(localeCode: localeCode);
   }
 
@@ -978,7 +987,7 @@ void main() {
   );
 
   test(
-    'terminal journal cleanup failure stays writable and never replays data',
+    'terminal journal cleanup failure stays blocked and never replays data',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
       final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
@@ -992,12 +1001,21 @@ void main() {
         journal: journal,
       );
 
-      await provider.importAppDataJson(
-        encodeAppBackup(_appData('zh'), newSites),
-        mode: AppImportMode.replaceAll,
+      await expectLater(
+        provider.importAppDataJson(
+          encodeAppBackup(_appData('zh'), newSites),
+          mode: AppImportMode.replaceAll,
+        ),
+        throwsA(
+          isA<AppBackupRestoreException>().having(
+            (error) => error.recoveryPending,
+            'recoveryPending',
+            true,
+          ),
+        ),
       );
 
-      expect(provider.canWrite, isTrue);
+      expect(provider.canWrite, isFalse);
       expect(provider.localeCode, 'zh');
       expect(
         decodeSchoolSitesStrict(siteStore.source!).single.name,
@@ -1010,9 +1028,12 @@ void main() {
         AppBackupRestoreJournalPhase.secretPolicyApplied,
       );
 
-      await provider.updateLocaleCode('ja');
       final appSavesBeforeRestart = appStorage.saveCount;
       final siteSavesBeforeRestart = siteStore.saveCount;
+      await expectLater(
+        provider.updateLocaleCode('ja'),
+        throwsA(isA<RecoveryWriteBlockedException>()),
+      );
       final restarted = await _provider(
         appStorage: appStorage,
         siteStore: siteStore,
@@ -1021,7 +1042,7 @@ void main() {
       );
 
       expect(restarted.canWrite, isTrue);
-      expect(restarted.localeCode, 'ja');
+      expect(restarted.localeCode, 'zh');
       expect(appStorage.saveCount, appSavesBeforeRestart);
       expect(siteStore.saveCount, siteSavesBeforeRestart);
       expect(journal.source, isNull);
@@ -1409,6 +1430,51 @@ void main() {
     expect(provider.canWrite, isTrue);
     expect(provider.storageLoadStatus, StorageLoadStatus.success);
   });
+
+  test(
+    'a valid preflight that disappears is blocked once and never replayed',
+    () async {
+      final appStorage = _MemoryTimetableStorage(_appData('en'));
+      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final secrets = _MemorySecretStore('sk-old');
+      final journal = _MemoryBackupRestoreJournal();
+      final stalePreflight = await journal.writePrepared(
+        encodeAppBackup(_appData('zh'), newSites),
+      );
+      journal
+        ..source = null
+        ..scriptedLoadResults.add(stalePreflight);
+      final appWritesBeforeLoad = appStorage.saveCount;
+      final siteWritesBeforeLoad = siteStore.saveCount;
+      final journalWritesBeforeLoad = journal.writeAttemptCount;
+
+      final provider = await _provider(
+        appStorage: appStorage,
+        siteStore: siteStore,
+        secrets: secrets,
+        journal: journal,
+      );
+
+      expect(provider.canWrite, isFalse);
+      expect(provider.storageLoadStatus, StorageLoadStatus.ioFailure);
+      expect(provider.localeCode, 'en');
+      expect(appStorage.saveCount, appWritesBeforeLoad);
+      expect(siteStore.saveCount, siteWritesBeforeLoad);
+      expect(journal.writeAttemptCount, journalWritesBeforeLoad);
+      expect(secrets.value, 'sk-old');
+      expect(journal.source, isNull);
+
+      await provider.retryStorageLoad();
+
+      expect(provider.canWrite, isTrue);
+      expect(provider.storageLoadStatus, StorageLoadStatus.success);
+      expect(provider.localeCode, 'en');
+      expect(appStorage.saveCount, appWritesBeforeLoad);
+      expect(siteStore.saveCount, siteWritesBeforeLoad);
+      expect(journal.writeAttemptCount, journalWritesBeforeLoad);
+      expect(secrets.value, 'sk-old');
+    },
+  );
 
   test(
     'interrupted explicit corrupt-journal recovery preserves key and resumes',

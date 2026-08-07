@@ -1045,8 +1045,8 @@ void main() {
       final provider = TimetableProvider(
         storage: _MemoryTimetableStorage(
           _buildPopulatedStudentData().copyWith(
-            privacyPolicyAcceptedVersion: '2026-07-01',
-            privacyPolicyAcceptedAtIso: '2026-07-01T08:30:00.000Z',
+            privacyPolicyAcceptedVersion: '2026-09-01',
+            privacyPolicyAcceptedAtIso: '2026-09-01T08:30:00.000Z',
           ),
         ),
         systemLocaleCodeResolver: () => defaultLocaleCode,
@@ -1069,8 +1069,8 @@ void main() {
   test(
     'accepting the current policy does not downgrade newer acceptance',
     () async {
-      const acceptedVersion = '2026-07-01';
-      const acceptedAt = '2026-07-01T08:30:00.000Z';
+      const acceptedVersion = '2026-09-01';
+      const acceptedAt = '2026-09-01T08:30:00.000Z';
       final storage = _MemoryTimetableStorage(
         _buildPopulatedStudentData().copyWith(
           privacyPolicyAcceptedVersion: acceptedVersion,
@@ -1120,8 +1120,8 @@ void main() {
     final older = await providerWithAcceptedVersion('2026-05-01');
     expect(older.hasAcceptedCurrentPrivacyPolicy, isFalse);
 
-    final accepted = await providerWithAcceptedVersion('2026-07-01');
-    accepted.injectRemotePrivacyPolicyVersion('2026-08-01');
+    final accepted = await providerWithAcceptedVersion('2026-08-07');
+    accepted.injectRemotePrivacyPolicyVersion('2026-09-01');
     expect(accepted.hasAcceptedCurrentPrivacyPolicy, isFalse);
   });
 
@@ -1139,14 +1139,14 @@ void main() {
     await provider.fetchRemotePrivacyPolicyVersion();
     expect(provider.activePrivacyPolicyVersion, bundledPrivacyPolicyVersion);
 
-    privacyService.version = '2026-08-01';
+    privacyService.version = '2026-09-01';
     await provider.fetchRemotePrivacyPolicyVersion();
-    expect(provider.activePrivacyPolicyVersion, '2026-08-01');
+    expect(provider.activePrivacyPolicyVersion, '2026-09-01');
 
-    privacyService.version = '2026-07-01';
+    privacyService.version = '2026-08-20';
     await provider.fetchRemotePrivacyPolicyVersion();
-    provider.injectRemotePrivacyPolicyVersion('2026-06-15');
-    expect(provider.activePrivacyPolicyVersion, '2026-08-01');
+    provider.injectRemotePrivacyPolicyVersion('2026-08-15');
+    expect(provider.activePrivacyPolicyVersion, '2026-09-01');
   });
 
   test('invalid active privacy policy version cannot be accepted', () async {

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/school_site_store_stub.dart' as browser_store;
+import 'package:sked/utils/app_storage_keys.dart';
 import 'package:sked/utils/shared_preferences_recovery.dart';
 
 void main() {
@@ -27,8 +28,38 @@ void main() {
     );
   });
 
+  test(
+    'uses only the sked namespace and ignores legacy browser keys',
+    () async {
+      const legacyKey = 'Sked_school_sites_json';
+      const legacyRecoveryKey =
+          'Sked_school_sites_recovery_20260803T000000000Z';
+      SharedPreferences.setMockInitialValues({
+        legacyKey: '[{"name":"Legacy"}]',
+        legacyRecoveryKey: 'legacy recovery',
+      });
+      final preferences = await SharedPreferences.getInstance();
+      final store = browser_store.PlatformSchoolSiteStore(
+        preferencesProvider: () async => preferences,
+      );
+
+      final result = await store.loadResult();
+
+      expect(result.candidates, isEmpty);
+      expect(result.hasArtifacts, isFalse);
+      expect(result.recoveryArtifacts, isEmpty);
+      expect(
+        await store.filePath(),
+        browserLocalStorageUri(schoolSitesWebStorageKey),
+      );
+      expect(preferences.containsKey(schoolSitesWebStorageKey), isFalse);
+      expect(preferences.getString(legacyKey), isNotNull);
+      expect(preferences.getString(legacyRecoveryKey), 'legacy recovery');
+    },
+  );
+
   test('failed save reloads an optimistically changed cache', () async {
-    const key = 'Sked_school_sites_json';
+    const key = schoolSitesWebStorageKey;
     SharedPreferences.setMockInitialValues({key: 'old sites'});
     final preferences = await SharedPreferences.getInstance();
     final store = browser_store.PlatformSchoolSiteStore(
@@ -50,7 +81,7 @@ void main() {
   });
 
   test('unverifiable failed save blocks later writes', () async {
-    const key = 'Sked_school_sites_json';
+    const key = schoolSitesWebStorageKey;
     SharedPreferences.setMockInitialValues({key: 'old sites'});
     final preferences = await SharedPreferences.getInstance();
     var failWrite = true;
@@ -89,14 +120,14 @@ void main() {
   });
 
   test('failed recovery copy discards its optimistic cache value', () async {
-    const key = 'Sked_school_sites_json';
+    const key = schoolSitesWebStorageKey;
     SharedPreferences.setMockInitialValues({key: '{ broken json'});
     final preferences = await SharedPreferences.getInstance();
     final store = browser_store.PlatformSchoolSiteStore(
       clock: () => DateTime.utc(2026, 8, 3),
       preferencesProvider: () async => preferences,
       stringWriter: (target, targetKey, value) async {
-        if (!targetKey.contains('_recovery_')) {
+        if (!targetKey.startsWith(schoolSitesWebRecoveryKeyPrefix)) {
           return target.setString(targetKey, value);
         }
         await target.setString(targetKey, value);
@@ -112,7 +143,9 @@ void main() {
 
     expect(preferences.getString(key), '{ broken json');
     expect(
-      preferences.getKeys().where((item) => item.contains('_recovery_')),
+      preferences.getKeys().where(
+        (item) => item.startsWith(schoolSitesWebRecoveryKeyPrefix),
+      ),
       isEmpty,
     );
     await expectLater(
@@ -123,8 +156,8 @@ void main() {
   });
 
   test('failed recovery removal preserves both durable snapshots', () async {
-    const key = 'Sked_school_sites_json';
-    const recoveryKey = 'Sked_school_sites_recovery_20260803T000000000Z';
+    const key = schoolSitesWebStorageKey;
+    const recoveryKey = '${schoolSitesWebRecoveryKeyPrefix}20260803T000000000Z';
     SharedPreferences.setMockInitialValues({key: '{ broken json'});
     final preferences = await SharedPreferences.getInstance();
     final store = browser_store.PlatformSchoolSiteStore(
@@ -158,8 +191,9 @@ void main() {
   test(
     'partial typed-value isolation reports every durable artifact',
     () async {
-      const key = 'Sked_school_sites_json';
-      const recoveryKey = 'Sked_school_sites_recovery_20260803T000000000Z';
+      const key = schoolSitesWebStorageKey;
+      const recoveryKey =
+          '${schoolSitesWebRecoveryKeyPrefix}20260803T000000000Z';
       SharedPreferences.setMockInitialValues({key: 42});
       final preferences = await SharedPreferences.getInstance();
       final store = browser_store.PlatformSchoolSiteStore(
@@ -180,9 +214,9 @@ void main() {
 
       expect(result.recoveryStatus, SchoolSiteRecoveryStatus.storageReadFailed);
       expect(result.canWrite, isFalse);
-      expect(result.recoveryArtifacts, const [
-        'browser://local-storage/Sked_school_sites_json',
-        'browser://local-storage/$recoveryKey',
+      expect(result.recoveryArtifacts, [
+        browserLocalStorageUri(schoolSitesWebStorageKey),
+        browserLocalStorageUri(recoveryKey),
       ]);
       expect(preferences.get(key), 42);
       expect(preferences.getString(recoveryKey), 'copy');
@@ -192,9 +226,10 @@ void main() {
   );
 
   test('isolates corrupt browser data under a recovery key', () async {
+    const lookalikeKey = '${schoolSitesWebRecoveryKeyPrefix}notes';
     SharedPreferences.setMockInitialValues({
-      'Sked_school_sites_json': '{ broken json',
-      'Sked_school_sites_recovery_notes': 'unrelated value',
+      schoolSitesWebStorageKey: '{ broken json',
+      lookalikeKey: 'unrelated value',
     });
     final preferences = await SharedPreferences.getInstance();
     final store = browser_store.PlatformSchoolSiteStore(
@@ -205,9 +240,10 @@ void main() {
     final artifacts = await store.isolateForRecovery();
     final result = await store.loadResult();
 
-    expect(artifacts, const [
-      'browser://local-storage/'
-          'Sked_school_sites_recovery_20260803T000000000Z',
+    expect(artifacts, [
+      browserLocalStorageUri(
+        '${schoolSitesWebRecoveryKeyPrefix}20260803T000000000Z',
+      ),
     ]);
     expect(result.candidates, isEmpty);
     expect(result.hasArtifacts, isFalse);
@@ -217,9 +253,7 @@ void main() {
       '{ broken json',
     );
     expect(
-      await store.readRecoveryArtifact(
-        'browser://local-storage/Sked_school_sites_recovery_notes',
-      ),
+      await store.readRecoveryArtifact(browserLocalStorageUri(lookalikeKey)),
       isNull,
     );
     await expectLater(
@@ -230,7 +264,7 @@ void main() {
   });
 
   test('isolates a wrongly typed value before recovery replacement', () async {
-    const key = 'Sked_school_sites_json';
+    const key = schoolSitesWebStorageKey;
     SharedPreferences.setMockInitialValues({key: 42});
     final preferences = await SharedPreferences.getInstance();
     final store = browser_store.PlatformSchoolSiteStore(

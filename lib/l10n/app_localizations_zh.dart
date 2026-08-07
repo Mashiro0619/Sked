@@ -770,7 +770,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '课表数据、通用日程、相关设置和完整应用备份内容会保存在你的设备本地或浏览器本地存储中，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。';
+      '在原生平台上，Sked 会将课表数据、通用日程、相关设置和可编辑的学校站点配置保存在操作系统管理的应用支持目录中；浏览器版本使用浏览器本地存储。旧版本写入用户“文档 / Documents”目录的文件会继续留在原处，但不会被自动读取或迁移；如需保留这些数据，请在升级前从旧版本导出完整应用备份，并在升级后恢复。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。';
 
   @override
   String get privacyPolicyImportExportTitle => '导入与导出';
@@ -2665,7 +2665,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '課表資料、通用日程、相關設定和完整應用備份內容會儲存在你的裝置本機或瀏覽器本機儲存中，可編輯的學校站點設定會單獨儲存在 Sked_school_sites.json。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
+      '在原生平台上，Sked 會將課表資料、通用日程、相關設定和可編輯的學校站點設定儲存在作業系統管理的應用程式支援目錄中；瀏覽器版本使用瀏覽器本機儲存。舊版本寫入使用者「文件 / Documents」目錄的檔案會繼續留在原處，但不會被自動讀取或遷移；如需保留這些資料，請在升級前從舊版本匯出完整應用備份，並在升級後還原。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
 
   @override
   String get privacyPolicyImportExportTitle => '匯入與匯出';

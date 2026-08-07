@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/migrations/migration.dart';
@@ -9,7 +10,28 @@ import '../l10n/app_locale.dart';
 import '../models/app_backup.dart';
 import '../models/app_data.dart';
 import '../utils/constants.dart';
+import '../utils/app_storage_keys.dart';
 import '../utils/shared_preferences_recovery.dart';
+import 'app_backup_restore_journal_factory_stub.dart'
+    if (dart.library.io) 'app_backup_restore_journal_factory_io.dart';
+
+typedef AppBackupRestoreJournalFactory = AppBackupRestoreJournal Function();
+
+AppBackupRestoreJournalFactory? _debugAppBackupRestoreJournalFactory;
+
+/// Replaces the default platform journal factory in tests.
+///
+/// Widget tests run inside a fake-async zone, where native file operations can
+/// wait forever unless they are explicitly moved outside that zone. Keeping
+/// the override here lets the test harness install an in-memory/preferences
+/// journal without changing production constructor call sites. Directly
+/// constructed [FileAppBackupRestoreJournal] instances remain unaffected.
+@visibleForTesting
+void debugSetAppBackupRestoreJournalFactory(
+  AppBackupRestoreJournalFactory? factory,
+) {
+  _debugAppBackupRestoreJournalFactory = factory;
+}
 
 enum AppBackupRestoreJournalLoadStatus {
   missing,
@@ -82,7 +104,9 @@ class AppBackupRestoreJournalStateUnknownException
 }
 
 abstract class AppBackupRestoreJournal {
-  factory AppBackupRestoreJournal() = SharedPreferencesAppBackupRestoreJournal;
+  factory AppBackupRestoreJournal() =>
+      _debugAppBackupRestoreJournalFactory?.call() ??
+      createPlatformAppBackupRestoreJournal();
 
   const AppBackupRestoreJournal.base();
 
@@ -106,12 +130,12 @@ abstract class AppBackupRestoreJournal {
     late final String? source;
     try {
       source = await read();
-    } on _StoredJournalValueCorruptException catch (error) {
+    } on StoredAppBackupRestoreJournalValueCorruptException catch (error) {
       final historicalArtifacts = await _tryListRecoveryArtifacts();
       return AppBackupRestoreJournalLoadResult(
         status: AppBackupRestoreJournalLoadStatus.corrupt,
         source: error.source,
-        recoveryArtifacts: _mergeRecoveryArtifacts([
+        recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
           error.recoveryArtifact,
           ...historicalArtifacts,
         ]),
@@ -121,7 +145,7 @@ abstract class AppBackupRestoreJournal {
       final historicalArtifacts = await _tryListRecoveryArtifacts();
       return AppBackupRestoreJournalLoadResult(
         status: AppBackupRestoreJournalLoadStatus.ioFailure,
-        recoveryArtifacts: _mergeRecoveryArtifacts([
+        recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
           pendingArtifactPath,
           ...historicalArtifacts,
         ]),
@@ -137,37 +161,40 @@ abstract class AppBackupRestoreJournal {
     }
 
     try {
-      final result = _decodeJournalSource(
+      final result = decodeAppBackupRestoreJournalSource(
         source,
         localeCode: localeCode,
         pendingArtifactPath: pendingArtifactPath,
       );
-      return _withRecoveryArtifacts(result, historicalArtifacts);
+      return withAppBackupRestoreJournalRecoveryArtifacts(
+        result,
+        historicalArtifacts,
+      );
     } on UnsupportedSchemaVersionException catch (error) {
       return AppBackupRestoreJournalLoadResult(
         status: AppBackupRestoreJournalLoadStatus.unsupportedVersion,
         source: source,
-        recoveryArtifacts: _mergeRecoveryArtifacts([
+        recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
           pendingArtifactPath,
           ...historicalArtifacts,
         ]),
         error: error,
       );
-    } on _UnsupportedJournalVersionException catch (error) {
+    } on UnsupportedAppBackupRestoreJournalVersionException catch (error) {
       return AppBackupRestoreJournalLoadResult(
         status: AppBackupRestoreJournalLoadStatus.unsupportedVersion,
         source: source,
-        recoveryArtifacts: _mergeRecoveryArtifacts([
+        recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
           pendingArtifactPath,
           ...historicalArtifacts,
         ]),
         error: error,
       );
-    } on _UnsupportedJournalPhaseException catch (error) {
+    } on UnsupportedAppBackupRestoreJournalPhaseException catch (error) {
       return AppBackupRestoreJournalLoadResult(
         status: AppBackupRestoreJournalLoadStatus.unsupportedVersion,
         source: source,
-        recoveryArtifacts: _mergeRecoveryArtifacts([
+        recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
           pendingArtifactPath,
           ...historicalArtifacts,
         ]),
@@ -177,7 +204,7 @@ abstract class AppBackupRestoreJournal {
       return AppBackupRestoreJournalLoadResult(
         status: AppBackupRestoreJournalLoadStatus.corrupt,
         source: source,
-        recoveryArtifacts: _mergeRecoveryArtifacts([
+        recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
           pendingArtifactPath,
           ...historicalArtifacts,
         ]),
@@ -297,9 +324,10 @@ class SharedPreferencesAppBackupRestoreJournal extends AppBackupRestoreJournal {
            preferencesReloader ?? ((preferences) => preferences.reload()),
        super.base();
 
-  static const _storageKey = 'Sked_pending_app_backup_restore';
-  static const _recoveryStoragePrefix = 'Sked_app_backup_restore_recovery_';
-  static const _artifactPrefix = 'shared-preferences://sked/';
+  static const _storageKey = appBackupRestoreJournalWebStorageKey;
+  static const _recoveryStoragePrefix =
+      appBackupRestoreJournalWebRecoveryKeyPrefix;
+  static const _artifactPrefix = browserLocalStorageUriPrefix;
   final Future<SharedPreferences> Function() _preferencesProvider;
   final Future<bool> Function(SharedPreferences, String, String) _stringWriter;
   final Future<bool> Function(SharedPreferences, String) _keyRemover;
@@ -330,7 +358,7 @@ class SharedPreferencesAppBackupRestoreJournal extends AppBackupRestoreJournal {
         rejectionMessage:
             'Storage rejected the invalid restore-journal recovery marker.',
       );
-      throw _StoredJournalValueCorruptException(
+      throw StoredAppBackupRestoreJournalValueCorruptException(
         source: source,
         recoveryArtifact: recoveryArtifact,
       );
@@ -567,9 +595,9 @@ class SharedPreferencesAppBackupRestoreJournal extends AppBackupRestoreJournal {
   }
 }
 
-class _StoredJournalValueCorruptException
+class StoredAppBackupRestoreJournalValueCorruptException
     extends AppBackupRestoreJournalException {
-  const _StoredJournalValueCorruptException({
+  const StoredAppBackupRestoreJournalValueCorruptException({
     required this.source,
     required this.recoveryArtifact,
   }) : super(
@@ -589,7 +617,7 @@ const _preparedPhase = 'prepared';
 const _dataCommittedPhase = 'dataCommitted';
 const _secretPolicyAppliedPhase = 'secretPolicyApplied';
 
-AppBackupRestoreJournalLoadResult _withRecoveryArtifacts(
+AppBackupRestoreJournalLoadResult withAppBackupRestoreJournalRecoveryArtifacts(
   AppBackupRestoreJournalLoadResult result,
   Iterable<String> historicalArtifacts,
 ) {
@@ -601,7 +629,7 @@ AppBackupRestoreJournalLoadResult _withRecoveryArtifacts(
     apiKeyPolicy: result.apiKeyPolicy,
     phase: result.phase,
     journalRecoveryArtifacts: result.journalRecoveryArtifacts,
-    recoveryArtifacts: _mergeRecoveryArtifacts([
+    recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
       ...result.recoveryArtifacts,
       ...historicalArtifacts,
     ]),
@@ -609,11 +637,13 @@ AppBackupRestoreJournalLoadResult _withRecoveryArtifacts(
   );
 }
 
-List<String> _mergeRecoveryArtifacts(Iterable<String> artifacts) {
+List<String> mergeAppBackupRestoreJournalRecoveryArtifacts(
+  Iterable<String> artifacts,
+) {
   return List.unmodifiable(artifacts.toSet().toList()..sort());
 }
 
-AppBackupRestoreJournalLoadResult _decodeJournalSource(
+AppBackupRestoreJournalLoadResult decodeAppBackupRestoreJournalSource(
   String source, {
   required String localeCode,
   required String pendingArtifactPath,
@@ -623,10 +653,13 @@ AppBackupRestoreJournalLoadResult _decodeJournalSource(
   var apiKeyPolicy = AppBackupRestoreApiKeyPolicy.clear;
   var phase = AppBackupRestoreJournalPhase.prepared;
   var recoveryArtifacts = const <String>[];
+  late final ImportExportEnvelope backupEnvelope;
 
   if (envelope.schema.trim() == _journalSchema) {
     if (envelope.version > _journalVersion) {
-      throw _UnsupportedJournalVersionException(envelope.version);
+      throw UnsupportedAppBackupRestoreJournalVersionException(
+        envelope.version,
+      );
     }
     if (envelope.version < _legacyJournalVersion) {
       throw const FormatException('Restore journal version is invalid.');
@@ -659,14 +692,16 @@ AppBackupRestoreJournalLoadResult _decodeJournalSource(
         _dataCommittedPhase => AppBackupRestoreJournalPhase.dataCommitted,
         _secretPolicyAppliedPhase =>
           AppBackupRestoreJournalPhase.secretPolicyApplied,
-        final Object? value => throw _UnsupportedJournalPhaseException(value),
+        final Object? value =>
+          throw UnsupportedAppBackupRestoreJournalPhaseException(value),
       };
     }
-  } else if (isImportExportSchema(envelope.schema, appBackupSchema) &&
-      envelope.version > appBackupVersion) {
-    throw _UnsupportedJournalVersionException(envelope.version);
+    backupEnvelope = ImportExportEnvelope.decode(backupSource);
+  } else {
+    backupEnvelope = envelope;
   }
 
+  _ensureSupportedAppBackupRestoreEnvelope(backupEnvelope);
   final backup = decodeAppBackup(backupSource, localeCode: localeCode);
   if (!backup.includesSchoolSites) {
     throw const FormatException(
@@ -683,6 +718,61 @@ AppBackupRestoreJournalLoadResult _decodeJournalSource(
     journalRecoveryArtifacts: recoveryArtifacts,
     recoveryArtifacts: recoveryArtifacts,
   );
+}
+
+void _ensureSupportedAppBackupRestoreEnvelope(ImportExportEnvelope envelope) {
+  if (isImportExportSchema(envelope.schema, appBackupSchema)) {
+    _ensureSupportedAppBackupRestoreVersion(
+      schema: appBackupSchema,
+      version: envelope.version,
+      supportedVersion: appBackupVersion,
+    );
+    final nestedAppDataEnvelope = _nestedAppDataEnvelope(
+      envelope.data['appData'],
+    );
+    if (nestedAppDataEnvelope != null) {
+      _ensureSupportedAppBackupRestoreVersion(
+        schema: appDataSchema,
+        version: nestedAppDataEnvelope.version,
+        supportedVersion: importExportVersion,
+      );
+    }
+    return;
+  }
+
+  if (isImportExportSchema(envelope.schema, appDataSchema)) {
+    _ensureSupportedAppBackupRestoreVersion(
+      schema: appDataSchema,
+      version: envelope.version,
+      supportedVersion: importExportVersion,
+    );
+  }
+}
+
+ImportExportEnvelope? _nestedAppDataEnvelope(Object? value) {
+  if (value is! Map) return null;
+  final json = <String, dynamic>{};
+  for (final entry in value.entries) {
+    if (entry.key is! String) return null;
+    json[entry.key as String] = entry.value;
+  }
+  final schema = json['schema'];
+  if (schema is! String || !isImportExportSchema(schema, appDataSchema)) {
+    return null;
+  }
+  return ImportExportEnvelope.fromJson(json);
+}
+
+void _ensureSupportedAppBackupRestoreVersion({
+  required String schema,
+  required int version,
+  required int supportedVersion,
+}) {
+  if (version > supportedVersion) {
+    throw UnsupportedSchemaVersionException(
+      'Pending restore payload $schema version $version is unsupported.',
+    );
+  }
 }
 
 String _encodeJournalSource(
@@ -711,8 +801,8 @@ String _encodeJournalSource(
   ).encode();
 }
 
-class _UnsupportedJournalVersionException implements Exception {
-  const _UnsupportedJournalVersionException(this.version);
+class UnsupportedAppBackupRestoreJournalVersionException implements Exception {
+  const UnsupportedAppBackupRestoreJournalVersionException(this.version);
 
   final int version;
 
@@ -721,8 +811,8 @@ class _UnsupportedJournalVersionException implements Exception {
       'App-backup restore journal version $version is not supported.';
 }
 
-class _UnsupportedJournalPhaseException implements Exception {
-  const _UnsupportedJournalPhaseException(this.phase);
+class UnsupportedAppBackupRestoreJournalPhaseException implements Exception {
+  const UnsupportedAppBackupRestoreJournalPhaseException(this.phase);
 
   final Object? phase;
 

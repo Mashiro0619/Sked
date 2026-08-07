@@ -327,17 +327,62 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   }
 
   @override
-  Future<void> _resumePendingAppBackupRestore() {
+  Future<void> _resumePendingAppBackupRestore() async {
+    assert(_isLoading);
+    assert(_appBackupRestoreReservationCount == 0);
+    final preflight = await _backupRestoreJournal.load(
+      localeCode: _appData.localeCode,
+    );
+    if (preflight.status == AppBackupRestoreJournalLoadStatus.missing) {
+      // Startup/retry owns the provider while _isLoading is true, so a clean
+      // journal needs neither an app-data reservation nor a school-site lease.
+      _clearAppBackupRestoreJournalTracking(
+        retainedArtifacts: preflight.recoveryArtifacts,
+      );
+      return;
+    }
     return _enqueueAppBackupRestore(
-      _resumePendingAppBackupRestoreNow,
+      () => _resumePendingAppBackupRestoreNow(preflight),
       allowWhileLoading: true,
     );
   }
 
-  Future<void> _resumePendingAppBackupRestoreNow() async {
-    final result = await _backupRestoreJournal.load(
+  Future<void> _resumePendingAppBackupRestoreNow(
+    AppBackupRestoreJournalLoadResult preflight,
+  ) async {
+    // Never apply the preflight snapshot. Another process or a preceding
+    // queued operation may have advanced the journal before this lease was
+    // acquired, so the authoritative state must be read inside the queue.
+    final authoritative = await _backupRestoreJournal.load(
       localeCode: _appData.localeCode,
     );
+    final changedToMissing =
+        authoritative.status == AppBackupRestoreJournalLoadStatus.missing &&
+        preflight.status != AppBackupRestoreJournalLoadStatus.missing;
+    // A non-missing snapshot that disappears while the recovery lease is
+    // acquired is an unknown state, regardless of its preflight status. Never
+    // reuse its source or decoded backup: they may already be stale. Keep this
+    // attempt fail-closed; a later retry with a clean missing preflight can
+    // safely release the gate without replaying any data.
+    final result = changedToMissing
+        ? AppBackupRestoreJournalLoadResult(
+            status: AppBackupRestoreJournalLoadStatus.ioFailure,
+            recoveryArtifacts: mergeAppBackupRestoreJournalRecoveryArtifacts([
+              _backupRestoreJournal.pendingArtifactPath,
+              ...preflight.recoveryArtifacts,
+              ...authoritative.recoveryArtifacts,
+            ]),
+            error: AppBackupRestoreJournalStateUnknownException(
+              operationError: StateError(
+                'The preflight journal status was ${preflight.status.name}.',
+              ),
+              verificationError: StateError(
+                'The journal was missing after the recovery lease was '
+                'acquired.',
+              ),
+            ),
+          )
+        : authoritative;
     switch (result.status) {
       case AppBackupRestoreJournalLoadStatus.missing:
         _clearAppBackupRestoreJournalTracking(
@@ -566,21 +611,20 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       await _backupRestoreJournal.clear();
     } catch (error, stackTrace) {
       _trackAppBackupRestoreJournal(
+        status: StorageLoadStatus.ioFailure,
         artifacts: [_backupRestoreJournal.pendingArtifactPath],
       );
-      if (error is AppBackupRestoreJournalException && error.stateUnknown) {
-        _trackAppBackupRestoreJournal(status: StorageLoadStatus.ioFailure);
-        _repository.blockWritesAfterInitializationFailure();
-        notifyListeners();
-        Error.throwWithStackTrace(error, stackTrace);
-      }
-      // A confirmed terminal journal is safe to retain: startup will only
-      // retry its cleanup and will never replay the restored snapshots.
+      // A terminal journal is safe to retain only while the application is
+      // write-blocked. Until cleanup is confirmed, a later launch must retry
+      // cleanup and must never allow edits that could be confused with a
+      // still-pending restore transaction.
+      _repository.blockWritesAfterInitializationFailure();
+      notifyListeners();
       debugPrint(
         'Completed app-backup restore journal cleanup was deferred: '
         '$error\n$stackTrace',
       );
-      return;
+      Error.throwWithStackTrace(error, stackTrace);
     }
     _clearAppBackupRestoreJournalTracking();
   }

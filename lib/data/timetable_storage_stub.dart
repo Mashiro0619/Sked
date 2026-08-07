@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'migrations/migration.dart';
 import '../models/timetable_models.dart';
+import '../utils/app_storage_keys.dart';
 import '../utils/shared_preferences_recovery.dart';
 import 'timetable_storage.dart';
 
@@ -30,10 +31,11 @@ class BrowserTimetableStorage
            preferencesReloader ?? ((preferences) => preferences.reload()),
        _clock = clock ?? DateTime.now;
 
-  static const _storageKey = 'Sked_app_data';
-  static const _recoveryKeyPrefix = 'Sked_app_data_recovery_';
+  static const _storageKey = appDataWebStorageKey;
+  static const _recoveryKeyPrefix = appDataWebRecoveryKeyPrefix;
   static final _recoveryKeyPattern = RegExp(
-    r'^Sked_app_data_recovery_\d{8}T\d{9}(?:\d{3})?Z(?:_\d+)?$',
+    '^${RegExp.escape(_recoveryKeyPrefix)}'
+    r'\d{8}T\d{9}(?:\d{3})?Z(?:_\d+)?$',
   );
 
   final Future<SharedPreferences> Function() _preferencesProvider;
@@ -153,7 +155,7 @@ class BrowserTimetableStorage
           recoveryStatus: RecoveryStatus.ioFailure,
           status: StorageLoadStatus.ioFailure,
           recoveryArtifacts: [
-            'browser://local-storage/Sked_app_data',
+            _browserPath(_storageKey),
             ..._recoveryArtifactKeys(preferences).map(_browserPath),
           ],
         );
@@ -184,13 +186,12 @@ class BrowserTimetableStorage
   }
 
   @override
-  Future<String?> filePath() async => 'browser://local-storage/Sked_app_data';
+  Future<String?> filePath() async => _browserPath(_storageKey);
 
   @override
   Future<Uint8List?> readRecoveryArtifact(String artifactPath) async {
-    const prefix = 'browser://local-storage/';
-    if (!artifactPath.startsWith(prefix)) return null;
-    final key = artifactPath.substring(prefix.length);
+    if (!artifactPath.startsWith(browserLocalStorageUriPrefix)) return null;
+    final key = artifactPath.substring(browserLocalStorageUriPrefix.length);
     if (key != _storageKey && !_recoveryKeyPattern.hasMatch(key)) return null;
     try {
       final preferences = await _preferencesProvider();
@@ -316,5 +317,5 @@ class BrowserTimetableStorage
     return keys;
   }
 
-  String _browserPath(String key) => 'browser://local-storage/$key';
+  String _browserPath(String key) => browserLocalStorageUri(key);
 }

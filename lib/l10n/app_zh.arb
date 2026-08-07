@@ -568,7 +568,7 @@
   "@privacyPolicyIntro": {},
   "privacyPolicyLocalStorageTitle": "本地存储",
   "@privacyPolicyLocalStorageTitle": {},
-  "privacyPolicyLocalStorageBody": "课表数据、通用日程、相关设置和完整应用备份内容会保存在你的设备本地或浏览器本地存储中，可编辑的学校站点配置会单独保存在 Sked_school_sites.json。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。",
+  "privacyPolicyLocalStorageBody": "在原生平台上，Sked 会将课表数据、通用日程、相关设置和可编辑的学校站点配置保存在操作系统管理的应用支持目录中；浏览器版本使用浏览器本地存储。旧版本写入用户“文档 / Documents”目录的文件会继续留在原处，但不会被自动读取或迁移；如需保留这些数据，请在升级前从旧版本导出完整应用备份，并在升级后恢复。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。",
   "@privacyPolicyLocalStorageBody": {},
   "privacyPolicyImportExportTitle": "导入与导出",
   "@privacyPolicyImportExportTitle": {},

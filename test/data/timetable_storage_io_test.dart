@@ -140,6 +140,43 @@ void main() {
       expect(result.canWrite, isTrue);
     });
 
+    test(
+      'recovery enumeration failure is not treated as first launch',
+      () async {
+        final recoveryDirectory = await Directory(
+          path.join(tempDir.path, 'Sked_recovery_20260807T000000000Z'),
+        ).create();
+        final historicalArtifact = File(
+          path.join(recoveryDirectory.path, 'Sked_data.json'),
+        );
+        await historicalArtifact.writeAsString('{historical-corrupt');
+
+        Stream<FileSystemEntity> listDirectory(Directory directory) async* {
+          if (path.equals(directory.path, recoveryDirectory.path)) {
+            yield historicalArtifact;
+            throw FileSystemException(
+              'simulated recovery enumeration failure',
+              directory.path,
+            );
+          }
+          yield* directory.list(followLinks: false);
+        }
+
+        final failingStorage = IoTimetableStorage(
+          directoryProvider: () async => tempDir,
+          directoryLister: listDirectory,
+        );
+
+        final result = await failingStorage.load();
+
+        expect(result.data, isNull);
+        expect(result.status, StorageLoadStatus.ioFailure);
+        expect(result.recoveryStatus, RecoveryStatus.ioFailure);
+        expect(result.canWrite, isFalse);
+        expect(result.recoveryArtifacts, contains(historicalArtifact.path));
+      },
+    );
+
     test('write then read returns identical AppData', () async {
       final data = buildAppData(AppMode.student);
 
@@ -295,6 +332,75 @@ void main() {
         ),
       );
     });
+
+    for (final entry in <String, File Function()>{
+      'main': mainFile,
+      'temporary': tempFile,
+      'backup': backupFile,
+    }.entries) {
+      test('save rejects a directory at the ${entry.key} path', () async {
+        final occupied = entry.value();
+        await Directory(occupied.path).create();
+
+        await expectLater(
+          storage.save(buildAppData(AppMode.general)),
+          throwsA(
+            isA<StorageWriteException>().having(
+              (error) => error.cause,
+              'cause',
+              isA<FileSystemException>(),
+            ),
+          ),
+        );
+
+        expect(
+          await FileSystemEntity.type(occupied.path, followLinks: false),
+          FileSystemEntityType.directory,
+        );
+      });
+    }
+
+    test(
+      'save rejects a temporary-file symlink without touching its target',
+      () async {
+        final outsideDirectory = await Directory.systemTemp.createTemp(
+          'sked-storage-link-target-',
+        );
+        try {
+          final target = File(path.join(outsideDirectory.path, 'target.json'));
+          await target.writeAsString('outside data');
+          try {
+            await Link(tempFile().path).create(target.path);
+          } on FileSystemException {
+            // Windows installations without Developer Mode may not permit test
+            // symlink creation. Directory-path tests still cover the rejection
+            // branch deterministically on those hosts.
+            return;
+          }
+
+          await expectLater(
+            storage.save(buildAppData(AppMode.general)),
+            throwsA(
+              isA<StorageWriteException>().having(
+                (error) => error.cause,
+                'cause',
+                isA<FileSystemException>(),
+              ),
+            ),
+          );
+
+          expect(await target.readAsString(), 'outside data');
+          expect(
+            await FileSystemEntity.type(tempFile().path, followLinks: false),
+            FileSystemEntityType.link,
+          );
+        } finally {
+          if (await outsideDirectory.exists()) {
+            await outsideDirectory.delete(recursive: true);
+          }
+        }
+      },
+    );
 
     test('promotes valid .tmp when save crashed before rotation', () async {
       final mainData = buildAppData(AppMode.student);
@@ -726,21 +832,29 @@ void main() {
       },
     );
 
-    test('main read I/O failure does not fall back to backup', () async {
-      await mainFile().create(recursive: true);
-      await mainFile().delete();
-      await Directory(mainFile().path).create();
-      final backup = buildAppData(AppMode.student);
-      await backupFile().writeAsString(backup.encode());
+    test(
+      'does not treat an active directory as data or fall back to backup',
+      () async {
+        await mainFile().create(recursive: true);
+        await mainFile().delete();
+        await Directory(mainFile().path).create();
+        final backup = buildAppData(AppMode.student);
+        await backupFile().writeAsString(backup.encode());
 
-      final result = await storage.load();
+        expect(
+          await FileSystemEntity.type(mainFile().path, followLinks: false),
+          FileSystemEntityType.directory,
+        );
 
-      expect(result.data, isNull);
-      expect(result.status, equals(StorageLoadStatus.ioFailure));
-      expect(result.recoveryStatus, equals(RecoveryStatus.ioFailure));
-      expect(result.canWrite, isFalse);
-      expect(await backupFile().readAsString(), backup.encode());
-    });
+        final result = await storage.load();
+
+        expect(result.data, isNull);
+        expect(result.status, equals(StorageLoadStatus.ioFailure));
+        expect(result.recoveryStatus, equals(RecoveryStatus.ioFailure));
+        expect(result.canWrite, isFalse);
+        expect(await backupFile().readAsString(), backup.encode());
+      },
+    );
 
     test(
       'FileSystemException without an OSError is still an I/O failure',

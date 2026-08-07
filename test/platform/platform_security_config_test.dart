@@ -52,6 +52,24 @@ void _expectPlistAbsent(XmlDocument document, String key) {
   );
 }
 
+String _windowsResourceValue(String source, String key) {
+  final match = RegExp(
+    'VALUE\\s+"${RegExp.escape(key)}",\\s+"([^"]*)"',
+  ).firstMatch(source);
+  if (match == null) {
+    throw StateError('Missing Windows resource value for $key.');
+  }
+  return match.group(1)!;
+}
+
+String _requiredMatch(String source, RegExp pattern, String description) {
+  final value = pattern.firstMatch(source)?.group(1);
+  if (value == null) {
+    throw StateError('Missing $description.');
+  }
+  return value;
+}
+
 List<String> _plistArrayStrings(XmlDocument document, String key) {
   final value = _plistValue(document, key);
   expect(value.localName, 'array', reason: key);
@@ -299,5 +317,44 @@ void main() {
       isTrue,
     );
     expect(macosAppInfo, isNot(contains('com.example.')));
+  });
+
+  test('Windows version resources expose the production identity', () {
+    final runnerResources = File('windows/runner/Runner.rc').readAsStringSync();
+
+    expect(_windowsResourceValue(runnerResources, 'CompanyName'), 'Mashiro');
+    expect(_windowsResourceValue(runnerResources, 'FileDescription'), 'Sked');
+    expect(_windowsResourceValue(runnerResources, 'InternalName'), 'sked');
+    expect(
+      _windowsResourceValue(runnerResources, 'LegalCopyright'),
+      'Copyright (C) 2026 Mashiro. All rights reserved.',
+    );
+    expect(
+      _windowsResourceValue(runnerResources, 'OriginalFilename'),
+      'sked.exe',
+    );
+    expect(_windowsResourceValue(runnerResources, 'ProductName'), 'Sked');
+    expect(runnerResources, isNot(contains('com.example')));
+  });
+
+  test('bundled privacy version matches the published policy page', () {
+    final privacyPage = File('web/privacy.html').readAsStringSync();
+    final providerLifecycle = File(
+      'lib/providers/timetable_provider_lifecycle.dart',
+    ).readAsStringSync();
+    final publishedVersion = _requiredMatch(
+      privacyPage,
+      RegExp(
+        r'<meta\s+name="privacy-policy-version"\s+content="([^"]+)"\s*/?>',
+      ),
+      'published privacy policy version',
+    );
+    final bundledVersion = _requiredMatch(
+      providerLifecycle,
+      RegExp(r"bundledPrivacyPolicyVersion\s*=\s*'([^']+)'"),
+      'bundled privacy policy version',
+    );
+
+    expect(publishedVersion, bundledVersion);
   });
 }

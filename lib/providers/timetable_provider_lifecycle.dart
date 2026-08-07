@@ -1,6 +1,6 @@
 part of 'timetable_provider.dart';
 
-const bundledPrivacyPolicyVersion = '2026-06-02';
+const bundledPrivacyPolicyVersion = '2026-08-07';
 
 mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   String? _remotePrivacyPolicyVersion = bundledPrivacyPolicyVersion;
