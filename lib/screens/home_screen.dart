@@ -222,7 +222,16 @@ class _HomeScreenState extends State<HomeScreen> {
           return Scaffold(
             appBar: AppBar(
               title: Text(l10n.appTitle),
-              actions: const [ModeSwitchAction()],
+              actions: [
+                const ModeSwitchAction(),
+                IconButton(
+                  onPressed: _settingsPageOpen
+                      ? null
+                      : () => _openSettingsPage(provider),
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: l10n.settings,
+                ),
+              ],
             ),
             body: _EmptyTimetableState(
               onCreate: _addTimetableInProgress

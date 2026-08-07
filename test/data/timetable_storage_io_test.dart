@@ -190,6 +190,40 @@ void main() {
       expect(result.canWrite, isTrue);
     });
 
+    test('reports the app data path in the injected support root', () async {
+      expect(path.equals(await storage.filePath(), mainFile().path), isTrue);
+    });
+
+    test(
+      'save fails closed when its flushed temporary snapshot disappears',
+      () async {
+        final original = buildAppData(AppMode.student);
+        await storage.save(original);
+        final interruptedStorage = IoTimetableStorage(
+          directoryProvider: () async => tempDir,
+          beforeMainReplace: () => tempFile().delete(),
+        );
+
+        await expectLater(
+          interruptedStorage.save(buildAppData(AppMode.general)),
+          throwsA(
+            isA<StorageWriteException>().having(
+              (error) => error.cause,
+              'cause',
+              isA<FileSystemException>().having(
+                (error) => error.path,
+                'path',
+                tempFile().path,
+              ),
+            ),
+          ),
+        );
+
+        expect(await tempFile().exists(), isFalse);
+        expect(await mainFile().readAsString(), original.encode());
+      },
+    );
+
     test('stale recovery refuses to move a newer snapshot', () async {
       await mainFile().writeAsString('{corrupt snapshot');
       final firstRead = Completer<void>();

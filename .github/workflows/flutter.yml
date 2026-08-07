@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -136,6 +136,7 @@ jobs:
         run: flutter build apk --debug
 
       - name: Generate release Android security artifacts
+        id: android-security-artifacts
         working-directory: android
         run: |
           ./gradlew \
@@ -152,8 +153,8 @@ jobs:
             --target-sdk 36
 
       - name: Upload release Android security artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.android-security-artifacts.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-security-artifacts-${{ github.run_attempt }}
           path: |
@@ -166,7 +167,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ github.run_attempt }}
           path: |
@@ -194,7 +195,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Linux desktop dependencies
         if: matrix.target == 'linux'
@@ -211,7 +212,7 @@ jobs:
 
       - name: Install NuGet
         if: matrix.target == 'windows'
-        uses: NuGet/setup-nuget@v2
+        uses: NuGet/setup-nuget@v4
         with:
           nuget-version: '7.6.0'
 

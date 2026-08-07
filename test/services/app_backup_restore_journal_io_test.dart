@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:sked/data/migrations/migration.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
+import 'package:sked/services/app_backup_restore_journal_factory_io.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/app_storage_layout_io.dart';
 
@@ -101,6 +102,13 @@ void main() {
   FileAppBackupRestoreJournal journal() =>
       FileAppBackupRestoreJournal(layout: layout);
 
+  test('platform factory selects the native file journal', () {
+    expect(
+      createPlatformAppBackupRestoreJournal(),
+      isA<FileAppBackupRestoreJournal>(),
+    );
+  });
+
   test(
     'missing storage is classified as missing and creates the root',
     () async {
@@ -108,6 +116,7 @@ void main() {
 
       expect(result.status, AppBackupRestoreJournalLoadStatus.missing);
       expect(result.source, isNull);
+      expect(await journal().read(), isNull);
       expect(supportDirectory.existsSync(), isTrue);
     },
   );

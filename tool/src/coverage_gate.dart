@@ -8,6 +8,8 @@ const double defaultMinimumDiffCoverage = 90;
 // reviewer documents why coverage is technically unavailable.
 const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/models/timetable_models.dart': 'is an export-only library',
+  'lib/services/app_backup_restore_journal_factory_stub.dart':
+      'is selected only when dart:io is unavailable',
   'lib/services/app_instance_lease.dart':
       'contains a conditional factory interface only',
   'lib/services/app_instance_lease_stub.dart':
@@ -15,6 +17,9 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/services/app_instance_web_lock.dart': 'contains interfaces only',
   'lib/services/app_instance_web_lock_browser.dart':
       'is browser-only and is exercised by the separate Chrome CI test',
+  'lib/services/app_storage_layout.dart': 'is an export-only library',
+  'lib/services/app_storage_layout_stub.dart':
+      'is selected only when dart:io is unavailable',
   'lib/theme/app_motion.dart': 'contains compile-time theme constants only',
   'lib/utils/constants.dart': 'contains compile-time constants only',
   'lib/widgets/app_layout_tokens.dart':

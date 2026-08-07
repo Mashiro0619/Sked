@@ -1922,6 +1922,26 @@ void main() {
     expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
   });
 
+  testWidgets('empty timetable keeps the settings entry available', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(null);
+    final provider = await _createEmptyProvider(storage);
+
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    expect(provider.timetables, isEmpty);
+    expect(find.text('No timetable yet'), findsOneWidget);
+    final settingsButton = find.byTooltip('Settings');
+    expect(settingsButton, findsOneWidget);
+
+    await tester.tap(settingsButton);
+    await tester.tap(settingsButton, warnIfMissed: false);
+    await _pumpRouteTransition(tester);
+
+    expect(find.byType(SettingsPage, skipOffstage: false), findsOneWidget);
+  });
+
   testWidgets('new timetable failure rolls back and can be retried', (
     tester,
   ) async {

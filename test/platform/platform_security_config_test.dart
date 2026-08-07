@@ -305,6 +305,22 @@ void main() {
       'Profile',
     });
     expect(configurationsUsing('Release.entitlements'), {'Release'});
+    final runnerReleaseSettings = RegExp(
+      r'buildSettings = \{((?:(?!\};\s*name = )[\s\S])*?'
+      r'CODE_SIGN_ENTITLEMENTS = Runner/Release\.entitlements;'
+      r'(?:(?!\};\s*name = )[\s\S])*?)\};\s*name = Release;',
+    ).firstMatch(macosXcodeProject)?.group(1);
+    expect(runnerReleaseSettings, isNotNull);
+    expect(
+      runnerReleaseSettings,
+      contains('CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;'),
+    );
+    expect(
+      RegExp(
+        r'CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;',
+      ).allMatches(macosXcodeProject),
+      hasLength(1),
+    );
 
     final macosAppInfo = File(
       'macos/Runner/Configs/AppInfo.xcconfig',
@@ -335,6 +351,50 @@ void main() {
     );
     expect(_windowsResourceValue(runnerResources, 'ProductName'), 'Sked');
     expect(runnerResources, isNot(contains('com.example')));
+  });
+
+  test('Windows WebView compatibility workaround stays target-scoped', () {
+    final cmake = File('windows/CMakeLists.txt').readAsStringSync();
+
+    expect(
+      RegExp(
+        r'target_compile_definitions\(\s*'
+        r'flutter_inappwebview_windows_plugin\s+PRIVATE\s+'
+        r'"_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"\s*\)',
+      ).hasMatch(cmake),
+      isTrue,
+    );
+    expect(
+      cmake,
+      isNot(
+        contains(
+          'add_compile_definitions('
+          '_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS',
+        ),
+      ),
+    );
+  });
+
+  test('CI uses Node 24 actions and guards generated Android artifacts', () {
+    final workflow = File('.github/workflows/flutter.yml').readAsStringSync();
+
+    expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(2));
+    expect(
+      RegExp(r'actions/upload-artifact@v7').allMatches(workflow),
+      hasLength(2),
+    );
+    expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
+    expect(workflow, isNot(contains('actions/checkout@v4')));
+    expect(workflow, isNot(contains('actions/upload-artifact@v4')));
+    expect(workflow, isNot(contains('NuGet/setup-nuget@v2')));
+    expect(workflow, contains('id: android-security-artifacts'));
+    expect(
+      workflow,
+      contains(
+        r"if: ${{ !cancelled() && "
+        r"steps.android-security-artifacts.outcome != 'skipped' }}",
+      ),
+    );
   });
 
   test('bundled privacy version matches the published policy page', () {

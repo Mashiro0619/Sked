@@ -244,10 +244,13 @@ String get _dartExecutable => Platform.isWindows ? 'dart.bat' : 'dart';
 
 const _coverageUnavailableSourcePaths = <String>[
   'lib/models/timetable_models.dart',
+  'lib/services/app_backup_restore_journal_factory_stub.dart',
   'lib/services/app_instance_lease.dart',
   'lib/services/app_instance_lease_stub.dart',
   'lib/services/app_instance_web_lock.dart',
   'lib/services/app_instance_web_lock_browser.dart',
+  'lib/services/app_storage_layout.dart',
+  'lib/services/app_storage_layout_stub.dart',
   'lib/theme/app_motion.dart',
   'lib/utils/constants.dart',
   'lib/widgets/app_layout_tokens.dart',
