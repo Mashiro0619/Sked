@@ -61,4 +61,69 @@ void main() {
     expect(find.byType(ExpressiveDialogOption), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'ExpressiveDialogOption keeps a trailing action inline without leading',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(260, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 220,
+                child: ExpressiveDialogOption(
+                  title: const Text('Period set'),
+                  subtitle: const Text('8 periods'),
+                  trailing: IconButton(
+                    tooltip: 'Edit',
+                    onPressed: () {},
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final titleRect = tester.getRect(find.text('Period set'));
+      final editRect = tester.getRect(find.byTooltip('Edit'));
+      expect(editRect.top, lessThan(titleRect.bottom + 20));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('ExpressiveDialogOption keeps compact rows touchable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 220,
+              child: ExpressiveDialogOption(
+                title: const Text('Weekly'),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSize(find.byType(ExpressiveDialogOption)).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

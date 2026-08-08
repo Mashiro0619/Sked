@@ -6,6 +6,7 @@ import 'package:sked/models/app_data.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/services/import_export_service.dart';
+import 'package:sked/utils/constants.dart';
 
 void main() {
   group('AppData storage snapshot decoding', () {
@@ -177,6 +178,34 @@ void main() {
       final source = jsonEncode(validSnapshot());
 
       expect(AppData.decodeStorageSnapshot(source).toJson(), isNotEmpty);
+    });
+
+    test('preserves stored theme modes and legacy missing-field fallback', () {
+      for (final themeMode in const ['system', 'light', 'dark']) {
+        final snapshot = validSnapshot();
+        final student = studentMode(snapshot)..['themeMode'] = themeMode;
+        final general = generalMode(snapshot)..['themeMode'] = themeMode;
+        snapshot
+          ..['studentMode'] = student
+          ..['generalMode'] = general;
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+
+        expect(decoded.studentMode.themeMode, themeMode);
+        expect(decoded.generalMode.themeMode, themeMode);
+      }
+
+      final snapshot = validSnapshot();
+      final student = studentMode(snapshot)..remove('themeMode');
+      final general = generalMode(snapshot)..remove('themeMode');
+      snapshot
+        ..['studentMode'] = student
+        ..['generalMode'] = general;
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+
+      expect(decoded.studentMode.themeMode, defaultThemeMode);
+      expect(decoded.generalMode.themeMode, defaultThemeMode);
     });
 
     test('accepts semantically valid current timetable references', () {

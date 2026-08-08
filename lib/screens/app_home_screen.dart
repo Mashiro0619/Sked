@@ -915,7 +915,8 @@ bool _hasDefaultModeTheme({
   required int themeSeedColorValue,
   required Map<String, int> colorfulUiColorValues,
 }) {
-  return themeMode == defaultThemeMode &&
+  return (themeMode == newUserDefaultThemeMode ||
+          themeMode == defaultThemeMode) &&
       themeColorMode == defaultThemeColorMode &&
       themeSeedColorValue == defaultThemeSeedColorValue &&
       colorfulUiColorValues.isEmpty;
@@ -977,16 +978,13 @@ class _FirstLaunchOnboardingScreen extends StatelessWidget {
                     constraints: BoxConstraints(
                       maxWidth: usesLargeText ? 560 : 920,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: _FirstLaunchModeSelection(
-                        canStart: pendingMode == null,
-                        useHorizontalLayout: useHorizontalLayout,
-                        isCompactHeight: isCompactHeight,
-                        pendingMode: pendingMode,
-                        onStartWithMode: onStartWithMode,
-                        onViewPrivacyPolicy: onViewPrivacyPolicy,
-                      ),
+                    child: _FirstLaunchModeSelection(
+                      canStart: pendingMode == null,
+                      useHorizontalLayout: useHorizontalLayout,
+                      isCompactHeight: isCompactHeight,
+                      pendingMode: pendingMode,
+                      onStartWithMode: onStartWithMode,
+                      onViewPrivacyPolicy: onViewPrivacyPolicy,
                     ),
                   ),
                 ),
@@ -1051,7 +1049,6 @@ class _FirstLaunchModeSelection extends StatelessWidget {
                     icon: Icons.school_outlined,
                     title: l10n.studentTimetable,
                     description: l10n.firstLaunchStudentDesc,
-                    buttonLabel: l10n.firstLaunchStartStudent,
                     isEnabled: canStart,
                     isPending: pendingMode == AppMode.student,
                     onTap: () => onStartWithMode(AppMode.student),
@@ -1064,7 +1061,6 @@ class _FirstLaunchModeSelection extends StatelessWidget {
                     icon: Icons.calendar_month_outlined,
                     title: l10n.generalSchedule,
                     description: l10n.firstLaunchGeneralDesc,
-                    buttonLabel: l10n.firstLaunchStartGeneral,
                     isEnabled: canStart,
                     isPending: pendingMode == AppMode.general,
                     onTap: () => onStartWithMode(AppMode.general),
@@ -1082,7 +1078,6 @@ class _FirstLaunchModeSelection extends StatelessWidget {
                 icon: Icons.school_outlined,
                 title: l10n.studentTimetable,
                 description: l10n.firstLaunchStudentDesc,
-                buttonLabel: l10n.firstLaunchStartStudent,
                 isEnabled: canStart,
                 isPending: pendingMode == AppMode.student,
                 onTap: () => onStartWithMode(AppMode.student),
@@ -1093,7 +1088,6 @@ class _FirstLaunchModeSelection extends StatelessWidget {
                 icon: Icons.calendar_month_outlined,
                 title: l10n.generalSchedule,
                 description: l10n.firstLaunchGeneralDesc,
-                buttonLabel: l10n.firstLaunchStartGeneral,
                 isEnabled: canStart,
                 isPending: pendingMode == AppMode.general,
                 onTap: () => onStartWithMode(AppMode.general),
@@ -1183,7 +1177,6 @@ class _FirstLaunchModeCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
-    required this.buttonLabel,
     required this.isEnabled,
     required this.isPending,
     required this.onTap,
@@ -1192,71 +1185,111 @@ class _FirstLaunchModeCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
-  final String buttonLabel;
   final bool isEnabled;
   final bool isPending;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final radius = BorderRadius.circular(24);
-    return Material(
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: isEnabled ? onTap : null,
-        borderRadius: radius,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, color: colors.onPrimaryContainer, size: 28),
+    final radius = BorderRadius.circular(16);
+    final semanticLabel = '$title, $description';
+    final isUnavailable = !isEnabled && !isPending;
+    final foregroundColor = isUnavailable
+        ? colors.onSurface.withValues(alpha: 0.38)
+        : colors.onSurface;
+    final secondaryForegroundColor = isUnavailable
+        ? colors.onSurfaceVariant.withValues(alpha: 0.38)
+        : colors.onSurfaceVariant;
+    final cardColor = isUnavailable
+        ? colors.surfaceContainerLow.withValues(alpha: 0.60)
+        : colors.surfaceContainerLow;
+
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: isEnabled,
+      label: semanticLabel,
+      value: isPending ? l10n.savingChanges : null,
+      liveRegion: isPending,
+      onTap: isEnabled ? onTap : null,
+      child: ExcludeSemantics(
+        child: Material(
+          color: cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: radius,
+            side: BorderSide(
+              color: isUnavailable
+                  ? colors.outlineVariant.withValues(alpha: 0.60)
+                  : colors.outlineVariant,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: isEnabled ? onTap : null,
+            borderRadius: radius,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                textDirection: Directionality.of(context),
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isUnavailable
+                          ? colors.onSurface.withValues(alpha: 0.08)
+                          : colors.primaryContainer,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: isUnavailable
+                          ? colors.onSurface.withValues(alpha: 0.38)
+                          : colors.onPrimaryContainer,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: foregroundColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          description,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: secondaryForegroundColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: isPending
+                        ? const CircularProgressIndicator(strokeWidth: 2)
+                        : Icon(
+                            Icons.arrow_forward,
+                            color: secondaryForegroundColor,
+                          ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: FilledButton.icon(
-                  onPressed: isEnabled ? onTap : null,
-                  icon: isPending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.arrow_forward),
-                  label: Text(buttonLabel),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

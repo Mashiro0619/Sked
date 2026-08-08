@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -108,7 +109,183 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
+    expect(find.byTooltip(l10n.newItem), findsOneWidget);
+    expect(find.byIcon(Icons.schedule_outlined), findsNothing);
+    expect(
+      find.text(
+        l10n.schoolWebImportPeriodCount(
+          provider.periodTimeSets.first.periodTimes.length,
+        ),
+      ),
+      findsOneWidget,
+    );
+    final titleRect = tester.getRect(find.text(l10n.selectPeriodTimeSet));
+    final addRect = tester.getRect(find.byTooltip(l10n.newItem));
+    expect(addRect.top, lessThan(titleRect.bottom + 20));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selected period set stays inline and long lists scroll', (
+    tester,
+  ) async {
+    final semanticsHandle = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final initialData = buildInitialAppData(buildDefaultPeriodTimes());
+    final defaultSet = initialData.studentMode.periodTimeSets.first;
+    final periodTimeSets = <PeriodTimeSet>[
+      defaultSet,
+      for (var index = 1; index < 12; index++)
+        defaultSet.copyWith(id: 'set_$index', name: 'Set $index'),
+    ];
+    final provider = await _createProvider(
+      storage: _MemoryTimetableStorage(
+        initialData.copyWith(
+          studentMode: initialData.studentMode.copyWith(
+            periodTimeSets: periodTimeSets,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  unawaited(
+                    showPeriodTimeSetPickerDialog(
+                      context,
+                      provider: provider,
+                      selectedPeriodTimeSetId: defaultSet.id,
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
+    final selectedOption = find.byType(ExpressiveDialogOption).first;
+    final selectedSemantics = tester
+        .getSemantics(selectedOption)
+        .getSemanticsData();
+    expect(selectedSemantics.flagsCollection.isSelected, ui.Tristate.isTrue);
+
+    final optionTexts = tester
+        .widgetList<Text>(
+          find.descendant(of: selectedOption, matching: find.byType(Text)),
+        )
+        .map((text) => text.data)
+        .whereType<String>()
+        .toList();
+    expect(optionTexts.where((text) => text == defaultSet.name), hasLength(1));
+    final countText = l10n.schoolWebImportPeriodCount(
+      defaultSet.periodTimes.length,
+    );
+    expect(optionTexts, contains(countText));
+    expect(
+      optionTexts,
+      isNot(
+        contains(
+          l10n.periodTimeSetSummary(
+            defaultSet.name,
+            defaultSet.periodTimes.length,
+          ),
+        ),
+      ),
+    );
+
+    final editButton = find.descendant(
+      of: selectedOption,
+      matching: find.byTooltip(l10n.editPeriodTimeSet),
+    );
+    final subtitle = find.descendant(
+      of: selectedOption,
+      matching: find.text(countText),
+    );
+    expect(
+      tester.getRect(editButton).center.dy,
+      lessThanOrEqualTo(tester.getRect(subtitle).bottom),
+    );
+
+    final listView = find.descendant(
+      of: find.byType(ExpressiveDialogContent),
+      matching: find.byType(ListView),
+    );
+    expect(listView, findsOneWidget);
+    final scrollable = find.descendant(
+      of: listView,
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    await tester.drag(listView, const Offset(0, -300));
+    await tester.pump();
+    expect(
+      tester.state<ScrollableState>(scrollable).position.pixels,
+      greaterThan(0),
+    );
+    expect(tester.takeException(), isNull);
+    semanticsHandle.dispose();
+  });
+
+  testWidgets('barrier dismisses the idle period set picker', (tester) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final results = <String?>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  results.add(
+                    await showPeriodTimeSetPickerDialog(
+                      context,
+                      provider: provider,
+                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(results, [isNull]);
   });
 
   testWidgets('cancel button cannot pop twice when tapped rapidly', (
@@ -299,7 +476,7 @@ void main() {
     final newText = AppLocalizations.of(
       tester.element(find.byType(AlertDialog)),
     ).newItem;
-    await tester.tap(find.widgetWithText(TextButton, newText));
+    await tester.tap(find.byTooltip(newText));
     await tester.pump();
     await tester.runAsync(
       () => saveStarted.future.timeout(const Duration(seconds: 5)),
@@ -357,8 +534,8 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    final newButton = find.widgetWithText(TextButton, 'New');
-    tester.widget<TextButton>(newButton).onPressed!();
+    final newButton = find.widgetWithIcon(IconButton, Icons.add);
+    tester.widget<IconButton>(newButton).onPressed!();
     await tester.pump();
     await tester.runAsync(
       () => saveStarted.future.timeout(const Duration(seconds: 5)),
@@ -366,7 +543,7 @@ void main() {
     for (var attempt = 0; attempt < 200; attempt += 1) {
       final saveAttempted = storage.saveCount == 1;
       final actionReady =
-          tester.widget<TextButton>(newButton).onPressed != null;
+          tester.widget<IconButton>(newButton).onPressed != null;
       if (saveAttempted && actionReady) break;
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -375,11 +552,11 @@ void main() {
     expect(provider.periodTimeSets, hasLength(1));
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
-    expect(tester.widget<TextButton>(newButton).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(newButton).onPressed, isNotNull);
     expect(tester.takeException(), isNull);
 
     storage.failSaves = false;
-    tester.widget<TextButton>(newButton).onPressed!();
+    tester.widget<IconButton>(newButton).onPressed!();
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);

@@ -14,6 +14,7 @@ import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 
 part 'theme_settings_color_sections.dart';
+part 'theme_settings_outline_page.dart';
 
 const _themeSeedOptions = <int>[
   0xFF6750A4,
@@ -205,8 +206,30 @@ class ThemeSettingsPage extends StatefulWidget {
 
 class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     with UiCommandRunner<ThemeSettingsPage> {
+  var _outlineSettingsPageOpen = false;
+
   void _updateSetting(String debugLabel, Future<void> Function() command) {
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
+  }
+
+  Future<void> _openOutlineSettingsPage(
+    BuildContext context,
+    TimetableProvider provider,
+  ) async {
+    if (_outlineSettingsPageOpen || uiCommandBusy) return;
+    _outlineSettingsPageOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: const _ThemeSettingsOutlinePage(),
+          ),
+        ),
+      );
+    } finally {
+      _outlineSettingsPageOpen = false;
+    }
   }
 
   @override
@@ -430,7 +453,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 effectiveOutlineColorValue,
                             outlineWidth: outlineWidth,
                             onTap: () => unawaited(
-                              _openOutlineSettingsDialog(context, provider),
+                              _openOutlineSettingsPage(context, provider),
                             ),
                           ),
                         ),
@@ -769,257 +792,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 provider.updateColorfulCourseTextSettings(
                                   mode: submittedMode,
                                   customColorValue: submittedColorValue,
-                                ),
-                          );
-                          if (!context.mounted) return;
-                          if (saved) {
-                            popOnce();
-                          } else {
-                            setState(() => busy = false);
-                          }
-                        },
-                  child: Text(l10n.themeApplySettings),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _openOutlineSettingsDialog(
-    BuildContext context,
-    TimetableProvider provider,
-  ) async {
-    final l10n = AppLocalizations.of(context);
-    final derivedThemeColorValue = _derivedOutlineColorValue(
-      provider.themeSeedColorValue,
-    );
-    var enabled = provider.liveCourseOutlineEnabled;
-    var followTheme = provider.liveCourseOutlineFollowTheme;
-    var customColorValue = provider.liveCourseOutlineColorValue;
-    var customColorInitialized =
-        provider.liveCourseOutlineCustomColorInitialized;
-    var outlineMode = provider.liveCourseOutlineMode;
-    var outlineWidth = provider.liveCourseOutlineWidth;
-    await showExpressiveDialog<void>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        var busy = false;
-        void popOnce() {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop();
-        }
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final effectiveColorValue = followTheme
-                ? derivedThemeColorValue
-                : customColorValue;
-            return _PersistingThemeDialog(
-              busy: busy,
-              popped: popped,
-              title: Text(l10n.liveCourseOutlineSettings),
-              content: SingleChildScrollView(
-                child: ExpressiveDialogContent(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _PreviewBanner(
-                        title: l10n.liveCourseOutlineEffectiveColor,
-                        value:
-                            '${_formatColorHex(effectiveColorValue)} - ${l10n.liveCourseOutlineWidth} ${_formatOutlineWidthValue(context, outlineWidth)}',
-                        preview: _OutlineColorPreview(
-                          colorValue: effectiveColorValue,
-                          borderWidth: outlineWidth,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _SurfacePanel(
-                        padding: EdgeInsets.zero,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _OutlineSwitchRow(
-                              key: const ValueKey(
-                                'live-course-outline-enabled-row',
-                              ),
-                              icon: Icons.line_weight,
-                              value: enabled,
-                              title: l10n.liveCourseOutlineEnabled,
-                              onChanged: (value) => setState(() {
-                                enabled = value;
-                              }),
-                            ),
-                            Divider(
-                              height: 1,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.4),
-                            ),
-                            _OutlineSwitchRow(
-                              key: const ValueKey(
-                                'live-course-outline-follow-theme-row',
-                              ),
-                              icon: Icons.palette_outlined,
-                              value: followTheme,
-                              title: l10n.liveCourseOutlineFollowTheme,
-                              onChanged: (value) => setState(() {
-                                final initializingCustomColor =
-                                    followTheme &&
-                                    !value &&
-                                    !customColorInitialized;
-                                followTheme = value;
-                                if (initializingCustomColor) {
-                                  customColorValue = derivedThemeColorValue;
-                                  customColorInitialized = true;
-                                }
-                              }),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _SurfacePanel(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.liveCourseOutlineTarget,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 12),
-                            _ResponsiveSegmentedButton(
-                              segments: [
-                                _SegmentOption(
-                                  value: liveCourseOutlineModeCurrentOrNext,
-                                  icon: Icons.event_available_outlined,
-                                  label:
-                                      l10n.liveCourseOutlineTargetCurrentOrNext,
-                                ),
-                                _SegmentOption(
-                                  value: liveCourseOutlineModeAllDisplayed,
-                                  icon: Icons.view_timeline_outlined,
-                                  label:
-                                      l10n.liveCourseOutlineTargetAllDisplayed,
-                                ),
-                              ],
-                              selected: {outlineMode},
-                              onSelectionChanged: (selection) {
-                                if (selection.isEmpty) {
-                                  return;
-                                }
-                                setState(() {
-                                  outlineMode = selection.first;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _SurfacePanel(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _OutlineWidthSummaryRow(width: outlineWidth),
-                            Slider(
-                              value: outlineWidth,
-                              min: minLiveCourseOutlineWidth,
-                              max: maxLiveCourseOutlineWidth,
-                              divisions: 6,
-                              label: _formatOutlineWidthValue(
-                                context,
-                                outlineWidth,
-                              ),
-                              onChanged: (value) => setState(() {
-                                outlineWidth = value;
-                              }),
-                            ),
-                            const SizedBox(height: 8),
-                            _ColorValueRow(
-                              title: l10n.liveCourseOutlineCustomColor,
-                              colorValue: customColorValue,
-                              preview: _OutlineColorPreview(
-                                colorValue: customColorValue,
-                                borderWidth: outlineWidth,
-                              ),
-                            ),
-                            AnimatedSize(
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeInOut,
-                              alignment: Alignment.topCenter,
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 180),
-                                switchInCurve: Curves.easeOut,
-                                switchOutCurve: Curves.easeIn,
-                                child: followTheme
-                                    ? const SizedBox.shrink(
-                                        key: ValueKey('outline-custom-hidden'),
-                                      )
-                                    : Padding(
-                                        key: const ValueKey(
-                                          'outline-custom-picker',
-                                        ),
-                                        padding: const EdgeInsets.only(top: 12),
-                                        child: Center(
-                                          child: _CompactColorPicker(
-                                            colorValue: customColorValue,
-                                            onColorChanged: (colorValue) =>
-                                                setState(() {
-                                                  customColorValue = colorValue;
-                                                  customColorInitialized = true;
-                                                }),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: (busy || popped) ? null : popOnce,
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: (busy || popped)
-                      ? null
-                      : () async {
-                          if (busy || popped) return;
-                          final submittedEnabled = enabled;
-                          final submittedFollowTheme = followTheme;
-                          final submittedColorValue = customColorValue;
-                          final submittedCustomColorInitialized =
-                              customColorInitialized;
-                          final submittedMode = outlineMode;
-                          final submittedWidth = outlineWidth;
-                          FocusScope.of(context).unfocus();
-                          setState(() => busy = true);
-                          final saved = await runUiCommandWithFeedback(
-                            context: context,
-                            debugLabel: 'Update live course outline settings',
-                            command: () =>
-                                provider.updateLiveCourseOutlineSettings(
-                                  enabled: submittedEnabled,
-                                  followTheme: submittedFollowTheme,
-                                  colorValue: submittedColorValue,
-                                  customColorInitialized:
-                                      submittedCustomColorInitialized,
-                                  mode: submittedMode,
-                                  width: submittedWidth,
                                 ),
                           );
                           if (!context.mounted) return;

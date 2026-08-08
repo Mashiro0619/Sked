@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -367,6 +368,14 @@ AppData _buildDefaultFirstLaunchData() {
     buildDefaultPeriodTimes(),
     localeCode: defaultLocaleCode,
   ).copyWith(activeMode: AppMode.student);
+}
+
+AppData _buildLegacySystemFirstLaunchData() {
+  final data = _buildDefaultFirstLaunchData();
+  return data.copyWith(
+    studentMode: data.studentMode.copyWith(themeMode: defaultThemeMode),
+    generalMode: data.generalMode.copyWith(themeMode: defaultThemeMode),
+  );
 }
 
 Future<TimetableProvider> _createProvider() async {
@@ -818,6 +827,7 @@ void main() {
   testWidgets('fresh launch with empty storage shows timetable onboarding', (
     tester,
   ) async {
+    final semanticsHandle = tester.ensureSemantics();
     final storage = _MemoryTimetableStorage(null);
     final provider = TimetableProvider(
       storage: storage,
@@ -831,29 +841,73 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(provider.isStudentMode, isTrue);
+    expect(provider.studentMode.themeMode, newUserDefaultThemeMode);
+    expect(provider.generalMode.themeMode, newUserDefaultThemeMode);
     expect(storage.data?.activeMode, AppMode.student);
     expect(provider.acceptedPrivacyPolicyVersion, isNull);
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.text('Choose your starting mode'), findsOneWidget);
     expect(find.text('Student timetable'), findsOneWidget);
     expect(find.text('General schedule'), findsOneWidget);
-    expect(find.text('Start with timetable'), findsOneWidget);
-    expect(find.text('Start with schedule'), findsOneWidget);
+    expect(find.text('Start with timetable'), findsNothing);
+    expect(find.text('Start with schedule'), findsNothing);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(
+      find.text(
+        'Manage timetables, courses, weeks, period times, and imports.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Manage calendars, events, reminders, and JSON / ICS data.'),
+      findsOneWidget,
+    );
+    final studentSemantics = tester
+        .getSemantics(find.byKey(const ValueKey('first-launch-student-card')))
+        .getSemanticsData();
+    expect(studentSemantics.flagsCollection.isButton, isTrue);
+    expect(studentSemantics.hasAction(SemanticsAction.tap), isTrue);
+    expect(studentSemantics.label, contains('Student timetable'));
+    expect(studentSemantics.label, contains('Manage timetables'));
     expect(find.text('No timetable yet'), findsNothing);
     expect(find.byIcon(Icons.event_available_outlined), findsNothing);
     expect(find.text('Sked'), findsNothing);
+    semanticsHandle.dispose();
+  });
+
+  testWidgets('legacy system-themed initial data still shows onboarding', (
+    tester,
+  ) async {
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(_buildLegacySystemFirstLaunchData()),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    expect(provider.studentMode.themeMode, defaultThemeMode);
+    expect(provider.generalMode.themeMode, defaultThemeMode);
+    expect(
+      find.byKey(const ValueKey('first-launch-onboarding')),
+      findsOneWidget,
+    );
   });
 
   for (final scenario
-      in <({AppMode mode, String action, ValueKey<String> destination})>[
+      in <
+        ({AppMode mode, ValueKey<String> card, ValueKey<String> destination})
+      >[
         (
           mode: AppMode.student,
-          action: 'Start with timetable',
+          card: ValueKey('first-launch-student-card'),
           destination: const ValueKey('student-home'),
         ),
         (
           mode: AppMode.general,
-          action: 'Start with schedule',
+          card: ValueKey('first-launch-general-card'),
           destination: const ValueKey('general-home'),
         ),
       ]) {
@@ -877,7 +931,7 @@ void main() {
         expect(find.byType(AlertDialog), findsNothing);
         expect(privacyService.fetchCount, 0);
 
-        await tester.tap(find.text(scenario.action));
+        await tester.tap(find.byKey(scenario.card));
         await tester.pumpAndSettle();
 
         expect(storage.saveCount, 1);
@@ -952,6 +1006,7 @@ void main() {
   testWidgets(
     'first launch blocks duplicate workspace choices until its save completes',
     (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
       final storage = _BlockingTimetableStorage(_buildDefaultFirstLaunchData());
       final provider = TimetableProvider(
         storage: storage,
@@ -962,53 +1017,85 @@ void main() {
       await provider.load();
       await _pumpAppHomeScreenWithProvider(tester, provider);
 
-      final studentButton = find.widgetWithText(
-        FilledButton,
-        'Start with timetable',
+      final studentCard = find.byKey(
+        const ValueKey('first-launch-student-card'),
       );
-      final generalButton = find.widgetWithText(
-        FilledButton,
-        'Start with schedule',
+      final generalCard = find.byKey(
+        const ValueKey('first-launch-general-card'),
       );
+      final l10n = AppLocalizations.of(tester.element(studentCard));
+      final enabledGeneralArrowColor = tester
+          .widget<Icon>(
+            find.descendant(
+              of: generalCard,
+              matching: find.byIcon(Icons.arrow_forward),
+            ),
+          )
+          .color!;
 
-      await tester.tap(studentButton);
+      await tester.tap(studentCard);
       await storage.firstSaveStarted;
       await tester.pump();
 
-      final studentCard = find.ancestor(
-        of: find.text('Student timetable'),
-        matching: find.byType(InkWell),
-      );
-      final generalCard = find.ancestor(
-        of: find.text('General schedule'),
-        matching: find.byType(InkWell),
-      );
       expect(storage.saveCount, 1);
       expect(
         find.byKey(const ValueKey('first-launch-onboarding')),
         findsOneWidget,
       );
-      expect(tester.widget<FilledButton>(studentButton).onPressed, isNull);
-      expect(tester.widget<FilledButton>(generalButton).onPressed, isNull);
-      expect(tester.widget<InkWell>(studentCard).onTap, isNull);
-      expect(tester.widget<InkWell>(generalCard).onTap, isNull);
+      expect(
+        tester
+            .widget<InkWell>(
+              find.descendant(of: studentCard, matching: find.byType(InkWell)),
+            )
+            .onTap,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<InkWell>(
+              find.descendant(of: generalCard, matching: find.byType(InkWell)),
+            )
+            .onTap,
+        isNull,
+      );
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(
         find.descendant(
-          of: studentButton,
+          of: studentCard,
           matching: find.byType(CircularProgressIndicator),
         ),
         findsOneWidget,
       );
       expect(
         find.descendant(
-          of: generalButton,
+          of: generalCard,
           matching: find.byType(CircularProgressIndicator),
         ),
         findsNothing,
       );
+      final pendingSemantics = tester
+          .getSemantics(studentCard)
+          .getSemanticsData();
+      expect(pendingSemantics.flagsCollection.isLiveRegion, isTrue);
+      expect(pendingSemantics.value, l10n.savingChanges);
+      final disabledGeneralSemantics = tester
+          .getSemantics(generalCard)
+          .getSemanticsData();
+      expect(
+        disabledGeneralSemantics.flagsCollection.isEnabled,
+        ui.Tristate.isFalse,
+      );
+      final disabledGeneralArrowColor = tester
+          .widget<Icon>(
+            find.descendant(
+              of: generalCard,
+              matching: find.byIcon(Icons.arrow_forward),
+            ),
+          )
+          .color!;
+      expect(disabledGeneralArrowColor.a, lessThan(enabledGeneralArrowColor.a));
 
-      await tester.tap(generalButton, warnIfMissed: false);
+      await tester.tap(generalCard, warnIfMissed: false);
       await tester.tap(studentCard, warnIfMissed: false);
       await tester.pump();
       expect(storage.saveCount, 1);
@@ -1024,6 +1111,7 @@ void main() {
       );
       expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
+      semanticsHandle.dispose();
     },
   );
 
@@ -1041,7 +1129,7 @@ void main() {
     await provider.load();
     await _pumpAppHomeScreenWithProvider(tester, provider);
 
-    await tester.tap(find.text('Start with schedule'));
+    await tester.tap(find.byKey(const ValueKey('first-launch-general-card')));
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
@@ -1282,7 +1370,7 @@ void main() {
       await _pumpAppHomeScreenWithProvider(tester, provider);
 
       _expectFirstLaunchCardsStacked(tester);
-      await tester.tap(find.text('Start with timetable'));
+      await tester.tap(find.byKey(const ValueKey('first-launch-student-card')));
       await storage.firstSaveStarted;
       await tester.pump();
       expect(storage.saveCount, 1);
@@ -1319,7 +1407,7 @@ void main() {
     },
   );
 
-  testWidgets('first launch uses compact spacing and scrolls when short', (
+  testWidgets('first launch uses compact spacing on a short wide window', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 360));
@@ -1340,7 +1428,7 @@ void main() {
     final subtitle = tester.getRect(find.text(l10n.firstLaunchSubtitle));
     final student = _firstLaunchRect(tester, 'first-launch-student-card');
     final privacy = _firstLaunchRect(tester, 'first-launch-privacy-consent');
-    expect(title.top, closeTo(32, 0.1));
+    expect(title.top, greaterThanOrEqualTo(16));
     expect(student.top - subtitle.bottom, closeTo(20, 0.1));
     expect(privacy.top - student.bottom, closeTo(16, 0.1));
 
@@ -1351,10 +1439,7 @@ void main() {
     );
     expect(scrollable, findsOneWidget);
     final position = tester.state<ScrollableState>(scrollable).position;
-    expect(position.maxScrollExtent, greaterThan(0));
-    await tester.drag(scrollView, const Offset(0, -160));
-    await tester.pump();
-    expect(position.pixels, greaterThan(0));
+    expect(position.maxScrollExtent, lessThanOrEqualTo(0.1));
     await tester.ensureVisible(
       find.byKey(const ValueKey('first-launch-privacy-consent')),
     );
@@ -1392,7 +1477,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('576 width keeps 1.3 text in a row with long labels', (
+  testWidgets('576 width keeps 1.3 text in a row with long descriptions', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(576, 1200));
@@ -1416,16 +1501,9 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('de'));
     final studentCard = _firstLaunchRect(tester, 'first-launch-student-card');
     final generalCard = _firstLaunchRect(tester, 'first-launch-general-card');
-    final studentButton = tester.getRect(
-      find.widgetWithText(FilledButton, l10n.firstLaunchStartStudent),
-    );
-    final generalButton = tester.getRect(
-      find.widgetWithText(FilledButton, l10n.firstLaunchStartGeneral),
-    );
-    expect(studentCard.contains(studentButton.topLeft), isTrue);
-    expect(studentCard.contains(studentButton.bottomRight), isTrue);
-    expect(generalCard.contains(generalButton.topLeft), isTrue);
-    expect(generalCard.contains(generalButton.bottomRight), isTrue);
+    expect(find.text(l10n.firstLaunchStartStudent), findsNothing);
+    expect(find.text(l10n.firstLaunchStartGeneral), findsNothing);
+    expect((studentCard.height - generalCard.height).abs(), lessThan(1));
     expect(tester.takeException(), isNull);
   });
 
@@ -1455,8 +1533,12 @@ void main() {
     expect(Directionality.of(tester.element(onboarding)), TextDirection.rtl);
     final l10n = lookupAppLocalizations(const Locale('ar'));
     expect(find.text(l10n.firstLaunchTitle), findsOneWidget);
-    expect(find.text(l10n.firstLaunchStartStudent), findsOneWidget);
-    expect(find.text(l10n.firstLaunchStartGeneral), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text(l10n.firstLaunchTitle)).dy,
+      greaterThanOrEqualTo(16),
+    );
+    expect(find.text(l10n.firstLaunchStartStudent), findsNothing);
+    expect(find.text(l10n.firstLaunchStartGeneral), findsNothing);
     _expectFirstLaunchCardsStacked(tester);
     final student = _firstLaunchRect(tester, 'first-launch-student-card');
     expect(student.left, closeTo(16, 0.1));
@@ -1851,6 +1933,19 @@ void main() {
 
     expect(find.byType(CourseEditorSheet), findsOneWidget);
     expect(find.text('Add course'), findsWidgets);
+    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(bottomSheet.enableDrag, isFalse);
+    expect(bottomSheet.showDragHandle, isFalse);
+    final title = find.descendant(
+      of: find.byType(CourseEditorSheet),
+      matching: find.text('Add course'),
+    );
+    expect(title, findsOneWidget);
+    final sheetRect = tester.getRect(find.byType(BottomSheet));
+    expect(
+      tester.getTopLeft(title).dy - sheetRect.top,
+      greaterThanOrEqualTo(20),
+    );
   });
 
   testWidgets('student timetable fits narrow width with long course text', (

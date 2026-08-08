@@ -1,6 +1,7 @@
 const defaultPeriodTimesAssetPath = 'assets/default_period_times.json';
 const defaultPeriodTimeSetId = 'period_set_default';
 const defaultThemeMode = 'system';
+const newUserDefaultThemeMode = 'light';
 const defaultThemeColorMode = 'single';
 const themeColorModeSingle = 'single';
 const themeColorModeColorful = 'colorful';

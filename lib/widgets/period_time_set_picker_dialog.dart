@@ -16,7 +16,6 @@ Future<String?> showPeriodTimeSetPickerDialog(
 }) {
   return showExpressiveDialog<String>(
     context: context,
-    barrierDismissible: false,
     builder: (dialogContext) {
       var currentSelectedId = selectedPeriodTimeSetId;
       var popped = false;
@@ -70,31 +69,33 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   UiCommandBusyIndicator(busy: busy),
-                  Text(l10n.selectPeriodTimeSet),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton.icon(
-                      onPressed: (busy || popped)
-                          ? null
-                          : () {
-                              unawaited(
-                                runBusy(
-                                  debugLabel: 'Create period time set',
-                                  action: () async {
-                                    final created = await provider
-                                        .addPeriodTimeSet();
-                                    if (!dialogContext.mounted || popped) {
-                                      return;
-                                    }
-                                    currentSelectedId = created.id;
-                                    await openPeriodTimePage(created.id);
-                                  },
-                                ),
-                              );
-                            },
-                      icon: const Icon(Icons.add),
-                      label: Text(l10n.newItem),
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(child: Text(l10n.selectPeriodTimeSet)),
+                      IconButton(
+                        tooltip: l10n.newItem,
+                        onPressed: (busy || popped)
+                            ? null
+                            : () {
+                                unawaited(
+                                  runBusy(
+                                    debugLabel: 'Create period time set',
+                                    action: () async {
+                                      final created = await provider
+                                          .addPeriodTimeSet();
+                                      if (!dialogContext.mounted || popped) {
+                                        return;
+                                      }
+                                      currentSelectedId = created.id;
+                                      await openPeriodTimePage(created.id);
+                                    },
+                                  ),
+                                );
+                              },
+                        icon: const Icon(Icons.add),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -103,19 +104,21 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: provider.periodTimeSets.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
                   itemBuilder: (context, index) {
                     final item = provider.periodTimeSets[index];
                     final selected = item.id == currentSelectedId;
                     return ExpressiveDialogOption(
                       selected: selected,
-                      leading: const Icon(Icons.schedule_outlined),
                       title: Text(item.name),
                       subtitle: Text(
-                        l10n.periodTimeSetSummary(
-                          item.name,
+                        l10n.schoolWebImportPeriodCount(
                           item.periodTimes.length,
                         ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
                       trailing: IconButton(
                         tooltip: l10n.editPeriodTimeSet,

@@ -232,6 +232,17 @@ void main() {
     final editorSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
     expect(editorSheet.enableDrag, isFalse);
     expect(editorSheet.showDragHandle, isFalse);
+    expect(editorSheet.clipBehavior, Clip.antiAlias);
+    final title = find.descendant(
+      of: find.byType(GeneralEventEditorSheet),
+      matching: find.text('Add event'),
+    );
+    expect(title, findsOneWidget);
+    final sheetRect = tester.getRect(find.byType(BottomSheet));
+    expect(
+      tester.getTopLeft(title).dy - sheetRect.top,
+      greaterThanOrEqualTo(20),
+    );
   });
 
   testWidgets('settings entry ignores rapid duplicate taps', (tester) async {

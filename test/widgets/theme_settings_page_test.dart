@@ -105,6 +105,28 @@ class _ThemeSettingsHost extends StatelessWidget {
   }
 }
 
+Future<void> _openOutlineSettingsPage(WidgetTester tester) async {
+  final outlineCard = find.byKey(const ValueKey('theme-outline-settings-card'));
+  for (
+    var attempt = 0;
+    attempt < 12 && outlineCard.evaluate().isEmpty;
+    attempt++
+  ) {
+    await tester.drag(find.byType(ListView), const Offset(0, -240));
+    await tester.pump();
+  }
+  expect(outlineCard, findsOneWidget);
+  await tester.scrollUntilVisible(outlineCard, 200);
+  await tester.pumpAndSettle();
+  final tapTarget = find.descendant(
+    of: outlineCard,
+    matching: find.byType(InkWell),
+  );
+  expect(tapTarget, findsOneWidget);
+  tester.widget<InkWell>(tapTarget).onTap!();
+  await tester.pumpAndSettle();
+}
+
 void _expectThemePersistenceDialogBlocked(WidgetTester tester) {
   final focusScope = tester.widget<FocusScope>(
     find.byKey(const ValueKey('theme-persistence-dialog-focus-scope')),
@@ -203,7 +225,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('course outline dialog fits compact phone width', (tester) async {
+  testWidgets('course outline opens as a compact responsive page', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -215,18 +239,245 @@ void main() {
     await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
     await tester.pumpAndSettle();
 
-    final outlineCard = find.byKey(
-      const ValueKey('theme-outline-settings-card'),
+    await _openOutlineSettingsPage(tester);
+
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsOneWidget,
     );
-    await tester.scrollUntilVisible(outlineCard, 200);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Apply settings'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('theme-outline-page-scroll-view')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('course outline page cancel discards its draft', (tester) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+    final initialEnabled = provider.liveCourseOutlineEnabled;
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
     await tester.pumpAndSettle();
-    expect(outlineCard, findsOneWidget);
-    await tester.tap(outlineCard);
+    await _openOutlineSettingsPage(tester);
+
+    await tester.tap(
+      find.byKey(const ValueKey('live-course-outline-enabled-row')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Switch>(
+            find.descendant(
+              of: find.byKey(const ValueKey('live-course-outline-enabled-row')),
+              matching: find.byType(Switch),
+            ),
+          )
+          .value,
+      !initialEnabled,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('theme-outline-page-cancel')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Apply settings'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsNothing,
+    );
+    expect(provider.liveCourseOutlineEnabled, initialEnabled);
+    expect(storage.saveCount, 0);
+  });
+
+  testWidgets('course outline page cannot pop twice on rapid cancel', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+    await _openOutlineSettingsPage(tester);
+
+    final cancel = tester.widget<TextButton>(
+      find.byKey(const ValueKey('theme-outline-page-cancel')),
+    );
+    cancel.onPressed!();
+    cancel.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsNothing,
+    );
+    expect(find.byType(ThemeSettingsPage), findsOneWidget);
+    expect(storage.saveCount, 0);
+  });
+
+  testWidgets('course outline page applies one atomic save and blocks exit', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+    final derivedColor = deriveLiveCourseOutlineColorFromSeed(
+      Color(provider.themeSeedColorValue),
+    ).toARGB32();
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+    await _openOutlineSettingsPage(tester);
+
+    await tester.tap(
+      find.byKey(const ValueKey('live-course-outline-follow-theme-row')),
+    );
+    await tester.pumpAndSettle();
+    storage.blockNextSave();
+    await tester.tap(find.byKey(const ValueKey('theme-outline-page-apply')));
+    await tester.pump();
+
+    expect(storage.saveCount, 1);
+    expect(
+      tester
+          .widget<AbsorbPointer>(
+            find.byKey(const ValueKey('theme-outline-page-pointer-guard')),
+          )
+          .absorbing,
+      isTrue,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('theme-outline-page-busy-indicator')),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('theme-outline-page-apply')),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsOneWidget,
+    );
+    expect(storage.saveCount, 1);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsNothing,
+    );
+    expect(provider.liveCourseOutlineFollowTheme, isFalse);
+    expect(provider.liveCourseOutlineColorValue, derivedColor);
+    expect(provider.liveCourseOutlineCustomColorInitialized, isTrue);
+    expect(storage.data?.studentMode.liveCourseOutlineFollowTheme, isFalse);
+    expect(storage.saveCount, 1);
+  });
+
+  testWidgets('failed course outline save preserves its draft for retry', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+    final initialEnabled = provider.liveCourseOutlineEnabled;
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+    await _openOutlineSettingsPage(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('live-course-outline-enabled-row')),
+    );
+    await tester.pumpAndSettle();
+    storage.failNextSave();
+
+    await tester.tap(find.byKey(const ValueKey('theme-outline-page-apply')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsOneWidget,
+    );
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(provider.liveCourseOutlineEnabled, initialEnabled);
+    expect(
+      tester
+          .widget<Switch>(
+            find.descendant(
+              of: find.byKey(const ValueKey('live-course-outline-enabled-row')),
+              matching: find.byType(Switch),
+            ),
+          )
+          .value,
+      !initialEnabled,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('theme-outline-page-apply')));
+    await tester.pumpAndSettle();
+
+    expect(provider.liveCourseOutlineEnabled, !initialEnabled);
+    expect(storage.saveCount, 2);
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-page')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('course outline page supports large German and RTL text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final locale in const [Locale('de'), Locale('ar')]) {
+      final storage = _BlockingTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _createProvider(storage);
+      await tester.pumpWidget(
+        _ThemeSettingsHost(
+          provider: provider,
+          locale: locale,
+          textScaler: const TextScaler.linear(2),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _openOutlineSettingsPage(tester);
+
+      expect(
+        Directionality.of(
+          tester.element(
+            find.byKey(const ValueKey('theme-outline-settings-page')),
+          ),
+        ),
+        locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      );
+      expect(find.byType(SingleChildScrollView), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('theme-outline-page-apply')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('theme-outline-page-cancel')));
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('preset seed color updates the app theme immediately', (
@@ -273,7 +524,7 @@ void main() {
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
 
-    expect(provider.themeMode, 'system');
+    expect(provider.themeMode, newUserDefaultThemeMode);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
 
     await tester.tap(find.text('Dark'));
@@ -631,15 +882,6 @@ void main() {
       },
       edit: () async {
         await tester.tap(find.byTooltip('Custom color'));
-      },
-    );
-
-    await exerciseDialog(
-      data: buildInitialAppData(buildDefaultPeriodTimes()),
-      open: () async {
-        final card = find.byKey(const ValueKey('theme-outline-settings-card'));
-        await tester.scrollUntilVisible(card, 200);
-        await tester.tap(card);
       },
     );
   });

@@ -1,7 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
+import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 
 class _NoopSecretStore implements SecretStore {
@@ -12,6 +15,13 @@ class _NoopSecretStore implements SecretStore {
 
   @override
   Future<void> writeCustomSchoolImportApiKey(String value) async {}
+}
+
+class _NoopPrivacyService extends PrivacyService {
+  const _NoopPrivacyService();
+
+  @override
+  Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
 }
 
 class _ControllableStorage implements TimetableStorage {
@@ -42,6 +52,7 @@ Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
   final provider = TimetableProvider(
     storage: storage,
     systemLocaleCodeResolver: () => 'en',
+    privacyService: const _NoopPrivacyService(),
     secretStore: const _NoopSecretStore(),
   );
   addTearDown(provider.dispose);
@@ -64,6 +75,44 @@ AppData _initialApp({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('new app data uses light theme without changing legacy fallbacks', () {
+    final data = buildInitialAppData(buildDefaultPeriodTimes());
+
+    expect(defaultThemeMode, 'system');
+    expect(data.studentMode.themeMode, newUserDefaultThemeMode);
+    expect(data.generalMode.themeMode, newUserDefaultThemeMode);
+    expect(
+      StudentModeData(
+        activeTimetableId: '',
+        timetables: const [],
+        periodTimeSets: data.studentMode.periodTimeSets,
+      ).themeMode,
+      defaultThemeMode,
+    );
+    expect(GeneralScheduleData.createDefault().themeMode, defaultThemeMode);
+  });
+
+  testWidgets('fresh launch stays light when the system is dark', (
+    tester,
+  ) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    final storage = _ControllableStorage(null);
+    final provider = await _providerFor(storage);
+
+    await tester.pumpWidget(MyApp(provider: provider));
+    await tester.pumpAndSettle();
+
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.themeMode, ThemeMode.light);
+    expect(
+      Theme.of(
+        tester.element(find.byKey(const ValueKey('first-launch-onboarding'))),
+      ).brightness,
+      Brightness.light,
+    );
+  });
 
   test('first launch commits mode and privacy acceptance once', () async {
     final storage = _ControllableStorage(_initialApp());

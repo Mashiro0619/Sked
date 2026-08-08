@@ -141,6 +141,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
       canPop: !_actionInProgress && !_pickerOpen && !_hasPopped,
       child: AppSheetScaffold(
         heightFactor: 0.72,
+        contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
         title: Text(
           widget.initialCourse == null
               ? l10n.addCourseTitle

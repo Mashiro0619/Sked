@@ -110,6 +110,10 @@ class ExpressiveDialogOption extends StatelessWidget {
     this.trailing,
     this.selected = false,
     this.enabled = true,
+    this.contentPadding = const EdgeInsets.symmetric(
+      horizontal: 14,
+      vertical: 12,
+    ),
   });
 
   final Widget title;
@@ -119,6 +123,7 @@ class ExpressiveDialogOption extends StatelessWidget {
   final VoidCallback? onTap;
   final bool selected;
   final bool enabled;
+  final EdgeInsetsGeometry contentPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -142,102 +147,117 @@ class ExpressiveDialogOption extends StatelessWidget {
               )
             : null);
 
-    return Material(
-      color: selected
-          ? colors.primary.withValues(alpha: 0.12)
-          : Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
+    return Semantics(
+      selected: selected,
+      enabled: enabled,
+      child: Material(
+        color: selected
+            ? colors.primary.withValues(alpha: 0.12)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final leadingWidget = leading == null
-                  ? null
-                  : SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Center(
-                        child: IconTheme.merge(
-                          data: IconThemeData(color: secondaryColor),
-                          child: leading!,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: contentPadding,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final leadingWidget = leading == null
+                      ? null
+                      : SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Center(
+                            child: IconTheme.merge(
+                              data: IconThemeData(color: secondaryColor),
+                              child: leading!,
+                            ),
+                          ),
+                        );
+                  final textContent = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DefaultTextStyle.merge(
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w500,
                         ),
+                        child: title,
                       ),
-                    );
-              final textContent = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DefaultTextStyle.merge(
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    child: title,
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    DefaultTextStyle.merge(
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: secondaryColor,
-                      ),
-                      child: subtitle!,
-                    ),
-                  ],
-                ],
-              );
-              final trailingContent = trailingWidget == null
-                  ? null
-                  : IconTheme.merge(
-                      data: IconThemeData(color: secondaryColor),
-                      child: trailingWidget,
-                    );
-
-              if (constraints.maxWidth < 300 && trailingContent != null) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (leadingWidget != null) ...[
-                          leadingWidget,
-                          const SizedBox(width: 12),
-                        ],
-                        Expanded(child: textContent),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        DefaultTextStyle.merge(
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: secondaryColor,
+                          ),
+                          child: subtitle!,
+                        ),
                       ],
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: trailingContent,
-                    ),
-                  ],
-                );
-              }
+                    ],
+                  );
+                  final trailingContent = trailingWidget == null
+                      ? null
+                      : IconTheme.merge(
+                          data: IconThemeData(color: secondaryColor),
+                          child: trailingWidget,
+                        );
 
-              return Row(
-                children: [
-                  if (leadingWidget != null) ...[
-                    leadingWidget,
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(child: textContent),
-                  if (trailingContent != null) ...[
-                    const SizedBox(width: 10),
-                    trailingContent,
-                  ],
-                ],
-              );
-            },
+                  // Keep an edit/action control alongside text whenever a compact
+                  // row can still provide a useful text column. Rows with a
+                  // leading icon need more room; without one, only very narrow
+                  // dialogs fall back to a second line for the trailing control.
+                  final stackTrailing =
+                      trailingContent != null &&
+                      constraints.maxWidth <
+                          (leadingWidget == null ? 160 : 300);
+                  if (stackTrailing) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (leadingWidget != null) ...[
+                              leadingWidget,
+                              const SizedBox(width: 12),
+                            ],
+                            Expanded(child: textContent),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: trailingContent,
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      if (leadingWidget != null) ...[
+                        leadingWidget,
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(child: textContent),
+                      if (trailingContent != null) ...[
+                        const SizedBox(width: 10),
+                        trailingContent,
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),

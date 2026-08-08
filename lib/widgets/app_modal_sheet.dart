@@ -27,6 +27,7 @@ Future<T?> showAppModalSheet<T>({
     useSafeArea: useSafeArea,
     routeSettings: routeSettings,
     constraints: BoxConstraints(maxWidth: maxWidth),
+    clipBehavior: Clip.antiAlias,
     sheetAnimationStyle: AppMotion.sheetAnimationStyle,
     builder: (_) => UiCommandFeedbackHost(builder: builder),
   );

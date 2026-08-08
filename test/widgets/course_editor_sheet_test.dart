@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 
 Widget _localizedApp(Widget child) {
@@ -53,6 +54,76 @@ Future<void> _pumpEditorHost(
 }
 
 void main() {
+  testWidgets('real course sheet offsets title from its top edge', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _localizedApp(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () {
+              unawaited(
+                showAppModalSheet<void>(
+                  context: context,
+                  enableDrag: false,
+                  builder: (_) => CourseEditorSheet(
+                    periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+                    totalWeeks: 18,
+                    dayOfWeek: 1,
+                  ),
+                ),
+              );
+            },
+            child: const Text('Open course sheet'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open course sheet'));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(BottomSheet);
+    expect(sheet, findsOneWidget);
+    final sheetWidget = tester.widget<BottomSheet>(sheet);
+    expect(sheetWidget.showDragHandle, isFalse);
+    final title = find.descendant(
+      of: find.byType(CourseEditorSheet),
+      matching: find.text('Add course'),
+    );
+    expect(title, findsOneWidget);
+    expect(
+      tester.getTopLeft(title).dy - tester.getRect(sheet).top,
+      greaterThanOrEqualTo(20),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the editor title below the sheet top edge', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _localizedApp(
+        CourseEditorSheet(
+          periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+          totalWeeks: 18,
+          dayOfWeek: 1,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final titleTop = tester.getTopLeft(find.text('Add course')).dy;
+    expect(titleTop, greaterThanOrEqualTo(20));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('lays out on narrow screens', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));

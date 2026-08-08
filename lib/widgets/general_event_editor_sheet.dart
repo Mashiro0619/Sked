@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../utils/general_schedule_colors.dart';
 import 'app_modal_sheet.dart';
+import 'expressive_dialog.dart';
 import 'sked_dropdown_menu.dart';
 import 'ui_command.dart';
 
@@ -42,7 +43,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   late final TextEditingController _titleController;
   late final TextEditingController _locationController;
   late final TextEditingController _notesController;
-  late final TextEditingController _repeatCountController;
   late DateTime _startDate;
   late DateTime _endDate;
   late TimeOfDay _startTime;
@@ -59,13 +59,15 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   late List<GeneralSchedule> _calendarOptions;
   bool _hasPopped = false;
   bool _pickerOpen = false;
+  bool _selectionDialogOpen = false;
   bool _actionInProgress = false;
 
   final _formKey = GlobalKey<FormState>();
 
   bool get _isEditing => widget.initialEvent != null;
   bool get _showCalendarPicker => _calendarOptions.length > 1;
-  bool get _blocked => _hasPopped || _pickerOpen || _actionInProgress;
+  bool get _blocked =>
+      _hasPopped || _pickerOpen || _selectionDialogOpen || _actionInProgress;
 
   @override
   void initState() {
@@ -98,9 +100,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     _locationController = TextEditingController(text: event?.location ?? '');
     _notesController = TextEditingController(text: event?.notes ?? '');
     _repeatCount = rule.count;
-    _repeatCountController = TextEditingController(
-      text: _repeatCount == null ? '' : _repeatCount.toString(),
-    );
     _startDate = normalizeDateOnly(startDt);
     _endDate = normalizeDateOnly(displayEndDt);
     _startTime = TimeOfDay(hour: startDt.hour, minute: startDt.minute);
@@ -139,7 +138,6 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     _titleController.dispose();
     _locationController.dispose();
     _notesController.dispose();
-    _repeatCountController.dispose();
     super.dispose();
   }
 
@@ -210,8 +208,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     final startDt = _buildStartDateTime();
     final endDt = _buildEndDateTime();
     final now = DateTime.now().toIso8601String();
-    final repeatCount = int.tryParse(_repeatCountController.text.trim());
-    final rule = _buildRecurrenceRule(repeatCount);
+    final rule = _buildRecurrenceRule(_repeatCount);
     final event = GeneralEvent(
       id: widget.initialEvent?.id ?? _generateId(),
       calendarId: _calendarId,
@@ -315,6 +312,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
         key: _formKey,
         child: AppSheetScaffold(
           heightFactor: 0.84,
+          contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           title: Text(_isEditing ? l10n.editEvent : l10n.addEvent),
           leading: _isEditing
               ? OutlinedButton.icon(
@@ -364,7 +362,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       TextFormField(
                         controller: _locationController,
                         decoration: InputDecoration(
@@ -373,7 +371,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                         ),
                       ),
                       if (_showCalendarPicker) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         SkedDropdownMenu<String>(
                           initialSelection: _calendarId,
                           label: Text(l10n.calendar),
@@ -410,157 +408,115 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                           }
                         }),
                       ),
-                      _DateTimeRow(
-                        icon: Icons.play_arrow_outlined,
-                        label: l10n.eventStartTime,
-                        date: _startDate,
-                        time: _startTime,
-                        showTime: !_isAllDay,
-                        onPickDate: (_pickerOpen || _hasPopped)
-                            ? null
-                            : () async {
-                                final picked = await _runPicker(
-                                  () => _pickDate(context, _startDate),
-                                );
-                                if (!mounted || picked == null) {
-                                  return;
-                                }
-                                setState(() {
-                                  _startDate = picked;
-                                  if (_endDate.isBefore(_startDate)) {
-                                    _endDate = _startDate;
-                                  }
-                                  if (_untilDate?.isBefore(_startDate) ??
-                                      false) {
-                                    _untilDate = _startDate;
-                                  }
-                                });
-                              },
-                        onPickTime: (_pickerOpen || _hasPopped)
-                            ? null
-                            : () async {
-                                final picked = await _runPicker(
-                                  () => _pickTime(context, _startTime),
-                                );
-                                if (!mounted || picked == null) {
-                                  return;
-                                }
-                                setState(() => _startTime = picked);
-                              },
-                      ),
-                      _DateTimeRow(
-                        icon: Icons.stop_outlined,
-                        label: l10n.eventEndTime,
-                        date: _endDate,
-                        time: _endTime,
-                        showTime: !_isAllDay,
-                        onPickDate: (_pickerOpen || _hasPopped)
-                            ? null
-                            : () async {
-                                final picked = await _runPicker(
-                                  () => _pickDate(context, _endDate),
-                                );
-                                if (!mounted || picked == null) {
-                                  return;
-                                }
-                                setState(() => _endDate = picked);
-                              },
-                        onPickTime: (_pickerOpen || _hasPopped)
-                            ? null
-                            : () async {
-                                final picked = await _runPicker(
-                                  () => _pickTime(context, _endTime),
-                                );
-                                if (!mounted || picked == null) {
-                                  return;
-                                }
-                                setState(() => _endTime = picked);
-                              },
-                      ),
-                      const SizedBox(height: 12),
-                      SkedDropdownMenu<GeneralEventRecurrence>(
-                        initialSelection: _recurrence,
-                        label: Text(l10n.eventRecurrence),
-                        leadingIcon: const Icon(Icons.repeat),
-                        expandedInsets: EdgeInsets.zero,
-                        dropdownMenuEntries: [
-                          DropdownMenuEntry(
-                            value: GeneralEventRecurrence.none,
-                            label: l10n.recurrenceNone,
-                          ),
-                          DropdownMenuEntry(
-                            value: GeneralEventRecurrence.daily,
-                            label: l10n.recurrenceDaily,
-                          ),
-                          DropdownMenuEntry(
-                            value: GeneralEventRecurrence.weekly,
-                            label: l10n.recurrenceWeekly,
-                          ),
-                          DropdownMenuEntry(
-                            value: GeneralEventRecurrence.monthly,
-                            label: l10n.recurrenceMonthly,
-                          ),
-                          DropdownMenuEntry(
-                            value: GeneralEventRecurrence.custom,
-                            label: l10n.recurrenceCustom,
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value != null) {
-                            setState(() => _recurrence = value);
-                          }
-                        },
-                      ),
-                      if (_recurrence != GeneralEventRecurrence.none) ...[
-                        const SizedBox(height: 12),
-                        _RepeatOptions(
-                          recurrence: _recurrence,
-                          interval: _interval,
-                          customUnit: _customUnit,
-                          untilDate: _untilDate,
-                          repeatCountController: _repeatCountController,
-                          onIntervalChanged: (value) =>
-                              setState(() => _interval = value),
-                          onUnitChanged: (value) =>
-                              setState(() => _customUnit = value),
-                          onPickUntil: (_pickerOpen || _hasPopped)
+                      _DateTimeRange(
+                        start: _DateTimeRow(
+                          icon: Icons.play_arrow_outlined,
+                          label: l10n.eventStartTime,
+                          date: _startDate,
+                          time: _startTime,
+                          showTime: !_isAllDay,
+                          onPickDate: (_pickerOpen || _hasPopped)
                               ? null
                               : () async {
                                   final picked = await _runPicker(
-                                    () => _pickDate(
-                                      context,
-                                      _untilDate ??
-                                          addCalendarDays(_startDate, 90),
-                                      firstDate: _startDate,
-                                    ),
+                                    () => _pickDate(context, _startDate),
                                   );
                                   if (!mounted || picked == null) {
                                     return;
                                   }
-                                  setState(() => _untilDate = picked);
+                                  setState(() {
+                                    _startDate = picked;
+                                    if (_endDate.isBefore(_startDate)) {
+                                      _endDate = _startDate;
+                                    }
+                                    if (_untilDate?.isBefore(_startDate) ??
+                                        false) {
+                                      _untilDate = _startDate;
+                                    }
+                                  });
                                 },
-                          onClearUntil: () => setState(() => _untilDate = null),
+                          onPickTime: (_pickerOpen || _hasPopped)
+                              ? null
+                              : () async {
+                                  final picked = await _runPicker(
+                                    () => _pickTime(context, _startTime),
+                                  );
+                                  if (!mounted || picked == null) {
+                                    return;
+                                  }
+                                  setState(() => _startTime = picked);
+                                },
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      _ReminderPicker(
-                        reminders: _reminders,
-                        onChanged: (values) =>
-                            setState(() => _reminders = values),
+                        end: _DateTimeRow(
+                          icon: Icons.stop_outlined,
+                          label: l10n.eventEndTime,
+                          date: _endDate,
+                          time: _endTime,
+                          showTime: !_isAllDay,
+                          onPickDate: (_pickerOpen || _hasPopped)
+                              ? null
+                              : () async {
+                                  final picked = await _runPicker(
+                                    () => _pickDate(context, _endDate),
+                                  );
+                                  if (!mounted || picked == null) {
+                                    return;
+                                  }
+                                  setState(() => _endDate = picked);
+                                },
+                          onPickTime: (_pickerOpen || _hasPopped)
+                              ? null
+                              : () async {
+                                  final picked = await _runPicker(
+                                    () => _pickTime(context, _endTime),
+                                  );
+                                  if (!mounted || picked == null) {
+                                    return;
+                                  }
+                                  setState(() => _endTime = picked);
+                                },
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
+                      _EventOptionField(
+                        key: const ValueKey('event-recurrence-field'),
+                        icon: Icons.repeat,
+                        label: l10n.eventRecurrence,
+                        value: _recurrenceSummary(
+                          recurrence: _recurrence,
+                          interval: _interval,
+                          unit: _customUnit,
+                          untilDate: _untilDate,
+                          repeatCount: _repeatCount,
+                          l10n: l10n,
+                        ),
+                        onTap: _blocked
+                            ? null
+                            : () => unawaited(_openRecurrenceDialog()),
+                      ),
+                      const SizedBox(height: 8),
+                      _EventOptionField(
+                        key: const ValueKey('event-reminder-field'),
+                        icon: Icons.notifications_outlined,
+                        label: l10n.reminder,
+                        value: _reminderSummary(_reminders, l10n),
+                        onTap: _blocked
+                            ? null
+                            : () => unawaited(_openReminderDialog()),
+                      ),
+                      const SizedBox(height: 8),
                       TextFormField(
                         controller: _notesController,
                         decoration: InputDecoration(
                           labelText: l10n.eventNotes,
                           prefixIcon: const Icon(Icons.notes_outlined),
                         ),
-                        minLines: 3,
-                        maxLines: 5,
+                        minLines: 2,
+                        maxLines: 4,
                       ),
-                      const SizedBox(height: 16),
-                      Text(l10n.eventColor, style: theme.textTheme.labelLarge),
                       const SizedBox(height: 8),
+                      Text(l10n.eventColor, style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -588,6 +544,65 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     );
   }
 
+  Future<void> _openRecurrenceDialog() async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _selectionDialogOpen = true);
+    _RecurrenceDialogValue? result;
+    try {
+      result = await showExpressiveDialog<_RecurrenceDialogValue>(
+        context: context,
+        builder: (_) => _RecurrencePickerDialog(
+          initialValue: _RecurrenceDialogValue(
+            recurrence: _recurrence,
+            interval: _interval,
+            unit: _customUnit,
+            untilDate: _untilDate,
+            repeatCount: _repeatCount,
+          ),
+          firstDate: _startDate,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _selectionDialogOpen = false);
+      } else {
+        _selectionDialogOpen = false;
+      }
+    }
+    if (!mounted) return;
+    final selected = result;
+    if (selected == null) return;
+    setState(() {
+      _recurrence = selected.recurrence;
+      _interval = selected.interval;
+      _customUnit = selected.unit;
+      _untilDate = selected.untilDate;
+      _repeatCount = selected.repeatCount;
+    });
+  }
+
+  Future<void> _openReminderDialog() async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _selectionDialogOpen = true);
+    List<int>? result;
+    try {
+      result = await showExpressiveDialog<List<int>>(
+        context: context,
+        builder: (_) => _ReminderPickerDialog(initialReminders: _reminders),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _selectionDialogOpen = false);
+      } else {
+        _selectionDialogOpen = false;
+      }
+    }
+    if (!mounted || result == null) return;
+    setState(() => _reminders = result!);
+  }
+
   Future<T?> _runPicker<T>(Future<T?> Function() picker) async {
     if (_blocked) {
       return null;
@@ -602,6 +617,406 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
         _pickerOpen = false;
       }
     }
+  }
+}
+
+class _EventOptionField extends StatelessWidget {
+  const _EventOptionField({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final enabled = onTap != null;
+    final foreground = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondary = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: enabled,
+      label: label,
+      value: value,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: Material(
+          color: colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    SizedBox.square(
+                      dimension: 40,
+                      child: Center(child: Icon(icon, color: secondary)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: secondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            value,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: foreground,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right, color: secondary),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecurrenceDialogValue {
+  const _RecurrenceDialogValue({
+    required this.recurrence,
+    required this.interval,
+    required this.unit,
+    required this.untilDate,
+    required this.repeatCount,
+  });
+
+  final GeneralEventRecurrence recurrence;
+  final int interval;
+  final GeneralEventRecurrenceUnit unit;
+  final DateTime? untilDate;
+  final int? repeatCount;
+}
+
+class _RecurrencePickerDialog extends StatefulWidget {
+  const _RecurrencePickerDialog({
+    required this.initialValue,
+    required this.firstDate,
+  });
+
+  final _RecurrenceDialogValue initialValue;
+  final DateTime firstDate;
+
+  @override
+  State<_RecurrencePickerDialog> createState() =>
+      _RecurrencePickerDialogState();
+}
+
+class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _repeatCountController;
+  late GeneralEventRecurrence _recurrence;
+  late int _interval;
+  late GeneralEventRecurrenceUnit _unit;
+  DateTime? _untilDate;
+  bool _pickerOpen = false;
+  bool _hasPopped = false;
+
+  bool get _blocked => _pickerOpen || _hasPopped;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialValue;
+    _recurrence = initial.recurrence;
+    _interval = initial.interval;
+    _unit = initial.unit;
+    _untilDate = initial.untilDate;
+    _repeatCountController = TextEditingController(
+      text: initial.repeatCount?.toString() ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _repeatCountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final contentMaxHeight = _eventDialogContentMaxHeight(mediaQuery);
+    return PopScope(
+      canPop: !_hasPopped,
+      child: AlertDialog(
+        constraints: const BoxConstraints(maxWidth: expressiveDialogMaxWidth),
+        insetPadding: _eventDialogInsetPadding(mediaQuery.size.width),
+        title: Text(l10n.eventRecurrence),
+        contentPadding: EdgeInsetsDirectional.fromSTEB(
+          mediaQuery.size.width < 480 ? 16 : 24,
+          12,
+          mediaQuery.size.width < 480 ? 16 : 24,
+          0,
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: contentMaxHeight),
+          child: SizedBox(
+            width: expressiveDialogMaxWidth,
+            child: SingleChildScrollView(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final option in GeneralEventRecurrence.values) ...[
+                      ExpressiveDialogOption(
+                        title: Text(_recurrenceOptionLabel(option, l10n)),
+                        selected: _recurrence == option,
+                        enabled: !_blocked,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        onTap: () => setState(() => _recurrence = option),
+                      ),
+                      if (option != GeneralEventRecurrence.values.last)
+                        const SizedBox(height: 4),
+                    ],
+                    if (_recurrence != GeneralEventRecurrence.none) ...[
+                      const SizedBox(height: 12),
+                      Divider(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      const SizedBox(height: 12),
+                      _RepeatOptions(
+                        recurrence: _recurrence,
+                        interval: _interval,
+                        customUnit: _unit,
+                        untilDate: _untilDate,
+                        repeatCountController: _repeatCountController,
+                        onIntervalChanged: (value) =>
+                            setState(() => _interval = value),
+                        onUnitChanged: (value) => setState(() => _unit = value),
+                        onPickUntil: _blocked ? null : _pickUntilDate,
+                        onClearUntil: () => setState(() => _untilDate = null),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _blocked ? null : () => _popOnce(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: _blocked ? null : _submit,
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickUntilDate() async {
+    if (_blocked) return;
+    setState(() => _pickerOpen = true);
+    try {
+      final picked = await _pickDate(
+        context,
+        _untilDate ?? addCalendarDays(widget.firstDate, 90),
+        firstDate: widget.firstDate,
+      );
+      if (mounted && picked != null) {
+        setState(() => _untilDate = picked);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _pickerOpen = false);
+      } else {
+        _pickerOpen = false;
+      }
+    }
+  }
+
+  void _submit() {
+    if (_blocked) return;
+    if (_recurrence != GeneralEventRecurrence.none &&
+        !(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    final countText = _repeatCountController.text.trim();
+    _popOnce(
+      _RecurrenceDialogValue(
+        recurrence: _recurrence,
+        interval: _interval,
+        unit: _unit,
+        untilDate: _untilDate,
+        repeatCount: countText.isEmpty ? null : int.tryParse(countText),
+      ),
+    );
+  }
+
+  void _popOnce([_RecurrenceDialogValue? value]) {
+    if (_hasPopped) return;
+    setState(() => _hasPopped = true);
+    Navigator.of(context).pop(value);
+  }
+}
+
+class _ReminderPickerDialog extends StatefulWidget {
+  const _ReminderPickerDialog({required this.initialReminders});
+
+  final List<int> initialReminders;
+
+  @override
+  State<_ReminderPickerDialog> createState() => _ReminderPickerDialogState();
+}
+
+class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
+  late Set<int> _reminders;
+  bool _hasPopped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reminders = widget.initialReminders.toSet();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    return PopScope(
+      canPop: !_hasPopped,
+      child: AlertDialog(
+        scrollable: true,
+        constraints: const BoxConstraints(maxWidth: expressiveDialogMaxWidth),
+        insetPadding: _eventDialogInsetPadding(mediaQuery.size.width),
+        title: Text(l10n.reminder),
+        contentPadding: EdgeInsetsDirectional.fromSTEB(
+          mediaQuery.size.width < 480 ? 16 : 24,
+          12,
+          mediaQuery.size.width < 480 ? 16 : 24,
+          0,
+        ),
+        content: SizedBox(
+          width: expressiveDialogMaxWidth,
+          child: _ReminderPicker(
+            reminders: _reminders.toList()..sort(),
+            onOptionChanged: (minutes, selected) => setState(() {
+              if (minutes == null) {
+                _reminders.clear();
+              } else if (selected) {
+                _reminders.add(minutes);
+              } else {
+                _reminders.remove(minutes);
+              }
+            }),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _hasPopped ? null : () => _popOnce(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: _hasPopped
+                ? null
+                : () => _popOnce(_reminders.toList()..sort()),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _popOnce([List<int>? value]) {
+    if (_hasPopped) return;
+    setState(() => _hasPopped = true);
+    Navigator.of(context).pop(value);
+  }
+}
+
+EdgeInsets _eventDialogInsetPadding(double width) =>
+    EdgeInsets.symmetric(horizontal: width < 480 ? 16 : 40, vertical: 24);
+
+double _eventDialogContentMaxHeight(MediaQueryData mediaQuery) {
+  final available =
+      mediaQuery.size.height -
+      mediaQuery.viewInsets.bottom -
+      mediaQuery.viewPadding.vertical -
+      180;
+  return available.clamp(180.0, 640.0).toDouble();
+}
+
+class _DateTimeRange extends StatelessWidget {
+  const _DateTimeRange({required this.start, required this.end});
+
+  final Widget start;
+  final Widget end;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            start,
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 68, end: 12),
+              child: Divider(
+                height: 1,
+                thickness: 1,
+                color: colors.outlineVariant,
+              ),
+            ),
+            end,
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -632,106 +1047,109 @@ class _DateTimeRow extends StatelessWidget {
     final value = showTime
         ? '${_fmtDate(date)} ${time.format(context)}'
         : _fmtDate(date);
+    final actionStyle = IconButton.styleFrom(
+      minimumSize: const Size.square(48),
+      tapTargetSize: MaterialTapTargetSize.padded,
+    );
     final actionButtons = [
       IconButton(
         tooltip: l10n.pickDate,
         onPressed: onPickDate,
+        style: actionStyle,
         icon: const Icon(Icons.calendar_today_outlined),
       ),
       if (showTime)
         IconButton(
           tooltip: l10n.pickTime,
           onPressed: onPickTime,
+          style: actionStyle,
           icon: const Icon(Icons.access_time),
         ),
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Material(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final leading = Container(
-                width: 42,
-                height: 42,
-                decoration: ShapeDecoration(
-                  color: colors.primary.withValues(alpha: 0.10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final leading = Container(
+            width: 40,
+            height: 40,
+            decoration: ShapeDecoration(
+              color: colors.primary.withValues(alpha: 0.10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Icon(icon, color: colors.primary),
+          );
+          final text = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w500,
                 ),
-                child: Icon(icon, color: colors.primary),
-              );
-              final text = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              );
-              final actions = Wrap(
-                spacing: 2,
-                runSpacing: 2,
-                children: actionButtons,
-              );
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          );
+          final actions = Wrap(
+            spacing: 2,
+            runSpacing: 2,
+            children: actionButtons,
+          );
 
-              if (constraints.maxWidth < 340 && actionButtons.length > 1) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
+          final bodyFontSize = theme.textTheme.bodyLarge?.fontSize ?? 16;
+          final usesLargeText =
+              MediaQuery.textScalerOf(context).scale(bodyFontSize) >
+              bodyFontSize * 1.3;
+          if (actionButtons.length > 1 &&
+              (constraints.maxWidth < 280 || usesLargeText)) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        leading,
-                        const SizedBox(width: 16),
-                        Expanded(child: text),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: actions,
-                    ),
+                    leading,
+                    const SizedBox(width: 12),
+                    Expanded(child: text),
                   ],
-                );
-              }
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: actions,
+                ),
+              ],
+            );
+          }
 
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  leading,
-                  const SizedBox(width: 16),
-                  Expanded(child: text),
-                  const SizedBox(width: 8),
-                  actions,
-                ],
-              );
-            },
-          ),
-        ),
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              leading,
+              const SizedBox(width: 12),
+              Expanded(child: text),
+              const SizedBox(width: 8),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
@@ -767,11 +1185,11 @@ class _EventSwitchRow extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               children: [
                 Icon(icon, color: colors.onSurfaceVariant),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
@@ -882,7 +1300,7 @@ class _RepeatOptions extends StatelessWidget {
             ],
           ),
         if (recurrence == GeneralEventRecurrence.custom)
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
         _ResponsiveFormRow(
           breakpoint: 420,
           children: [
@@ -913,44 +1331,33 @@ class _RepeatOptions extends StatelessWidget {
 }
 
 class _ReminderPicker extends StatelessWidget {
-  const _ReminderPicker({required this.reminders, required this.onChanged});
+  const _ReminderPicker({
+    required this.reminders,
+    required this.onOptionChanged,
+  });
 
   final List<int> reminders;
-  final ValueChanged<List<int>> onChanged;
+  final void Function(int? minutes, bool selected) onOptionChanged;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: l10n.reminder,
-        prefixIcon: const Icon(Icons.notifications_outlined),
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        FilterChip(
+          label: Text(l10n.none),
+          selected: reminders.isEmpty,
+          onSelected: (selected) => onOptionChanged(null, selected),
+        ),
+        for (final option in _reminderOptions)
           FilterChip(
-            label: Text(l10n.none),
-            selected: reminders.isEmpty,
-            onSelected: (_) => onChanged(const []),
+            label: Text(_reminderLabel(option, l10n)),
+            selected: reminders.contains(option),
+            onSelected: (selected) => onOptionChanged(option, selected),
           ),
-          for (final option in _reminderOptions)
-            FilterChip(
-              label: Text(_reminderLabel(option, l10n)),
-              selected: reminders.contains(option),
-              onSelected: (selected) {
-                final next = reminders.toSet();
-                if (selected) {
-                  next.add(option);
-                } else {
-                  next.remove(option);
-                }
-                onChanged(next.toList()..sort());
-              },
-            ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -971,18 +1378,29 @@ class _ColorOption extends StatelessWidget {
     final theme = Theme.of(context);
     return Tooltip(
       message: '#${colorValue.toRadixString(16).padLeft(8, '0').toUpperCase()}',
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: Color(colorValue),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: selected ? theme.colorScheme.primary : theme.dividerColor,
-              width: selected ? 3 : 1,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox.square(
+            dimension: 48,
+            child: Center(
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Color(colorValue),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? theme.colorScheme.primary
+                        : theme.dividerColor,
+                    width: selected ? 3 : 1,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -994,7 +1412,7 @@ class _ColorOption extends StatelessWidget {
 class _ResponsiveFormRow extends StatelessWidget {
   const _ResponsiveFormRow({required this.children, this.breakpoint = 480});
 
-  static const double _spacing = 12;
+  static const double _spacing = 8;
 
   final List<Widget> children;
   final double breakpoint;
@@ -1100,6 +1518,65 @@ Future<TimeOfDay?> _pickTime(BuildContext context, TimeOfDay initialTime) {
 
 String _fmtDate(DateTime date) {
   return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+}
+
+String _recurrenceOptionLabel(
+  GeneralEventRecurrence recurrence,
+  AppLocalizations l10n,
+) {
+  return switch (recurrence) {
+    GeneralEventRecurrence.none => l10n.recurrenceNone,
+    GeneralEventRecurrence.daily => l10n.recurrenceDaily,
+    GeneralEventRecurrence.weekly => l10n.recurrenceWeekly,
+    GeneralEventRecurrence.monthly => l10n.recurrenceMonthly,
+    GeneralEventRecurrence.custom => l10n.recurrenceCustom,
+  };
+}
+
+String _recurrenceSummary({
+  required GeneralEventRecurrence recurrence,
+  required int interval,
+  required GeneralEventRecurrenceUnit unit,
+  required DateTime? untilDate,
+  required int? repeatCount,
+  required AppLocalizations l10n,
+}) {
+  if (recurrence == GeneralEventRecurrence.none) {
+    return l10n.recurrenceNone;
+  }
+  final base = switch (recurrence) {
+    GeneralEventRecurrence.daily => l10n.repeatsDaily,
+    GeneralEventRecurrence.weekly => l10n.repeatsWeekly,
+    GeneralEventRecurrence.monthly => l10n.repeatsMonthly,
+    GeneralEventRecurrence.custom => l10n.repeatsEvery(
+      interval.clamp(1, 30).toInt(),
+      _recurrenceUnitLabel(unit, l10n),
+    ),
+    GeneralEventRecurrence.none => l10n.recurrenceNone,
+  };
+  final suffix = [
+    if (untilDate != null) l10n.recurrenceUntil(_fmtDate(untilDate)),
+    if (repeatCount != null && repeatCount > 0)
+      l10n.recurrenceCountTimes(repeatCount),
+  ].join(', ');
+  return suffix.isEmpty ? base : '$base, $suffix';
+}
+
+String _recurrenceUnitLabel(
+  GeneralEventRecurrenceUnit unit,
+  AppLocalizations l10n,
+) {
+  return switch (unit) {
+    GeneralEventRecurrenceUnit.day => l10n.recurrenceDays,
+    GeneralEventRecurrenceUnit.week => l10n.recurrenceWeeks,
+    GeneralEventRecurrenceUnit.month => l10n.recurrenceMonths,
+  };
+}
+
+String _reminderSummary(List<int> reminders, AppLocalizations l10n) {
+  if (reminders.isEmpty) return l10n.none;
+  final sorted = reminders.toSet().toList()..sort();
+  return sorted.map((minutes) => _reminderLabel(minutes, l10n)).join(', ');
 }
 
 String _reminderLabel(int minutes, AppLocalizations l10n) {

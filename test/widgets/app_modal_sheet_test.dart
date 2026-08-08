@@ -47,6 +47,7 @@ void main() {
     final sheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
     expect(sheet.enableDrag, isFalse);
     expect(sheet.showDragHandle, isFalse);
+    expect(sheet.clipBehavior, Clip.antiAlias);
     expect(tester.takeException(), isNull);
   });
 

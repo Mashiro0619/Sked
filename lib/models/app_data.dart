@@ -1996,8 +1996,11 @@ AppData buildInitialAppData(
       activeTimetableId: '',
       timetables: const [],
       periodTimeSets: [defaultSet],
+      themeMode: newUserDefaultThemeMode,
     ),
-    generalMode: GeneralScheduleData.createDefault(),
+    generalMode: GeneralScheduleData.createDefault().copyWith(
+      themeMode: newUserDefaultThemeMode,
+    ),
     localeCode: localeCode,
   );
 }
