@@ -346,55 +346,105 @@ List<String> remapLegacyElapsedGeneralRecurrenceExceptionDates({
   required GeneralEventRecurrenceRule recurrenceRule,
   required Iterable<String> exceptionDateIso,
 }) {
-  final exceptions = exceptionDateIso
-      .map(tryParseStrictIsoDate)
-      .whereType<DateTime>()
-      .map(_dateIso)
-      .toSet();
-  if (exceptions.isEmpty || !recurrenceRule.isRepeating) {
-    return exceptions.toList()..sort();
+  final exceptionDatesByKey = <String, DateTime>{};
+  for (final value in exceptionDateIso) {
+    final date = tryParseStrictIsoDate(value);
+    if (date != null) {
+      exceptionDatesByKey.putIfAbsent(_dateIso(date), () => date);
+    }
+  }
+  if (exceptionDatesByKey.isEmpty || !recurrenceRule.isRepeating) {
+    return exceptionDatesByKey.keys.toList()..sort();
   }
   final unit = _effectiveUnit(recurrenceRule);
   if (unit == GeneralEventRecurrenceUnit.month) {
-    return exceptions.toList()..sort();
+    return exceptionDatesByKey.keys.toList()..sort();
   }
 
   final until = _parseUntil(recurrenceRule.untilDateIso);
   final maxCount = recurrenceRule.count == null || recurrenceRule.count! < 1
       ? null
       : recurrenceRule.count!;
-  final maxIterations = maxCount ?? 3700;
+  final stepDays =
+      recurrenceRule.normalizedInterval *
+      (unit == GeneralEventRecurrenceUnit.week ? 7 : 1);
+  final stepMicroseconds = Duration(days: stepDays).inMicroseconds;
   final legacyToCivil = <String, String>{};
-  for (var index = 0; index < maxIterations; index += 1) {
-    final legacyStart = _legacyElapsedRecurrenceStart(
-      rawEventStart,
-      recurrenceRule,
-      index,
+  for (final exception in exceptionDatesByKey.entries) {
+    final legacyDateUtc = DateTime.utc(
+      exception.value.year,
+      exception.value.month,
+      exception.value.day,
     );
-    final civilStart = _addRecurrenceSteps(
-      normalizedEventStart,
-      recurrenceRule,
-      index,
+    // Include every instant that can display this civil date, including zones
+    // whose offset changes at midnight. Exact date-key matching below removes
+    // the deliberately broad candidates.
+    final candidateWindowStart = legacyDateUtc.subtract(
+      const Duration(hours: 24),
     );
-    if (legacyStart == null || civilStart == null) {
-      break;
-    }
-    if (until != null && calendarDaysBetween(until, civilStart) > 0) {
-      break;
-    }
-    final legacyKey = _dateIso(legacyStart);
-    if (exceptions.contains(legacyKey)) {
-      legacyToCivil[legacyKey] = _dateIso(civilStart);
-      if (legacyToCivil.length == exceptions.length) {
-        break;
+    final candidateWindowEnd = addCalendarDays(
+      legacyDateUtc,
+      1,
+    ).add(const Duration(hours: 24));
+    final firstSequence = _firstLegacySequenceAtOrAfter(
+      boundary: candidateWindowStart,
+      eventStart: rawEventStart,
+      stepMicroseconds: stepMicroseconds,
+    );
+    final endSequenceExclusive = _firstLegacySequenceAtOrAfter(
+      boundary: candidateWindowEnd,
+      eventStart: rawEventStart,
+      stepMicroseconds: stepMicroseconds,
+    );
+    for (
+      var index = firstSequence;
+      index < endSequenceExclusive && (maxCount == null || index < maxCount);
+      index += 1
+    ) {
+      final legacyStart = _legacyElapsedRecurrenceStart(
+        rawEventStart,
+        recurrenceRule,
+        index,
+      );
+      final civilStart = _addRecurrenceSteps(
+        normalizedEventStart,
+        recurrenceRule,
+        index,
+      );
+      if (legacyStart == null ||
+          civilStart == null ||
+          _dateIso(legacyStart) != exception.key ||
+          (until != null && calendarDaysBetween(until, civilStart) > 0) ||
+          civilStart.year < 1 ||
+          civilStart.year > 9999) {
+        continue;
       }
+      final civilKey = _dateIso(civilStart);
+      final existing = legacyToCivil[exception.key] ?? '';
+      // Legacy date-only data cannot distinguish occurrences that shared a
+      // key during fall-back. Prefer the later civil date deterministically.
+      legacyToCivil[exception.key] = civilKey.compareTo(existing) > 0
+          ? civilKey
+          : existing;
     }
   }
   final migrated = <String>{};
-  for (final exception in exceptions) {
+  for (final exception in exceptionDatesByKey.keys) {
     migrated.add(legacyToCivil[exception] ?? exception);
   }
   return migrated.toList()..sort();
+}
+
+int _firstLegacySequenceAtOrAfter({
+  required DateTime boundary,
+  required DateTime eventStart,
+  required int stepMicroseconds,
+}) {
+  if (!boundary.isAfter(eventStart)) {
+    return 0;
+  }
+  final elapsedMicroseconds = boundary.difference(eventStart).inMicroseconds;
+  return (elapsedMicroseconds + stepMicroseconds - 1) ~/ stepMicroseconds;
 }
 
 /// Maps an exact start produced by the legacy elapsed-day recurrence logic to

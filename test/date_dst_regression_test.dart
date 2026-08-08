@@ -229,30 +229,42 @@ void main() {
       'legacy fall-back exception migrates without overdeleting new data',
       () {
         final start = normalizeDateOnly(scenario.fallBefore);
+        final firstLegacyOccurrenceStart = start.add(const Duration(days: 1));
         final legacyOccurrenceStart = start.add(const Duration(days: 2));
         final civilOccurrenceStart = addCalendarDays(start, 2);
-        final event = _allDayEvent(
-          id: 'legacy-exception',
-          start: start,
-          end: nextCalendarDate(start),
-          recurrenceRule: const GeneralEventRecurrenceRule(
-            type: GeneralEventRecurrence.daily,
-            unit: GeneralEventRecurrenceUnit.day,
-            count: 4,
-          ),
-          exceptions: [_dateIso(legacyOccurrenceStart)],
-        );
-        final migrated = GeneralScheduleData.fromJson({
-          'schemaVersion': 3,
-          'activeScheduleId': 'cal',
-          'schedules': [
-            GeneralSchedule(
-              id: 'cal',
-              name: 'Calendar',
-              events: [event],
-            ).toJson(),
-          ],
-        });
+        GeneralScheduleData migrateLegacyExceptions(
+          List<String> exceptions, {
+          int count = 4,
+          String? untilDateIso,
+        }) {
+          final event = _allDayEvent(
+            id: 'legacy-exception',
+            start: start,
+            end: nextCalendarDate(start),
+            recurrenceRule: GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.daily,
+              unit: GeneralEventRecurrenceUnit.day,
+              count: count,
+              untilDateIso: untilDateIso,
+            ),
+            exceptions: exceptions,
+          );
+          return GeneralScheduleData.fromJson({
+            'schemaVersion': 3,
+            'activeScheduleId': 'cal',
+            'schedules': [
+              GeneralSchedule(
+                id: 'cal',
+                name: 'Calendar',
+                events: [event],
+              ).toJson(),
+            ],
+          });
+        }
+
+        final migrated = migrateLegacyExceptions([
+          _dateIso(legacyOccurrenceStart),
+        ]);
         final migratedEvent = migrated.activeSchedule.events.single;
 
         final occurrences = expandGeneralEventOccurrences(
@@ -290,7 +302,21 @@ void main() {
           startInclusive: start,
           endExclusive: addCalendarDays(start, 4),
         );
+        final migratedWithUnrelatedException = migrateLegacyExceptions([
+          _dateIso(legacyOccurrenceStart),
+          _dateIso(start.add(const Duration(days: 3))),
+        ]);
+        final countBounded = migrateLegacyExceptions([
+          _dateIso(legacyOccurrenceStart),
+        ], count: 2);
+        final untilBounded = migrateLegacyExceptions([
+          _dateIso(legacyOccurrenceStart),
+        ], untilDateIso: _dateIso(legacyOccurrenceStart));
 
+        expect(
+          _dateIso(firstLegacyOccurrenceStart),
+          _dateIso(legacyOccurrenceStart),
+        );
         expect(legacyOccurrenceStart.day, isNot(civilOccurrenceStart.day));
         expect(migratedEvent.recurrenceExceptionDateIso, [
           _dateIso(civilOccurrenceStart),
@@ -309,6 +335,22 @@ void main() {
         expect(
           currentOccurrences.map((item) => item.start),
           contains(addCalendarDays(start, 3)),
+        );
+        expect(
+          migratedWithUnrelatedException
+              .activeSchedule
+              .events
+              .single
+              .recurrenceExceptionDateIso,
+          [_dateIso(civilOccurrenceStart), _dateIso(addCalendarDays(start, 3))],
+        );
+        expect(
+          countBounded.activeSchedule.events.single.recurrenceExceptionDateIso,
+          [_dateIso(legacyOccurrenceStart)],
+        );
+        expect(
+          untilBounded.activeSchedule.events.single.recurrenceExceptionDateIso,
+          [_dateIso(legacyOccurrenceStart)],
         );
       },
     );

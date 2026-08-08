@@ -1153,6 +1153,177 @@ void main() {
       expect(occurrences.map((item) => item.start.day), [20, 24, 26]);
     });
 
+    test(
+      'bounds legacy exception migration for a very large count',
+      () {
+        final rawStart = DateTime(2026, 1, 1, 23);
+        final normalizedStart = DateTime(2026, 1, 2);
+
+        final migrated = remapLegacyElapsedGeneralRecurrenceExceptionDates(
+          rawEventStart: rawStart,
+          normalizedEventStart: normalizedStart,
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+            count: 1 << 30,
+          ),
+          exceptionDateIso: const ['2026-01-01', '2026-01-03'],
+        );
+        final countBounded = remapLegacyElapsedGeneralRecurrenceExceptionDates(
+          rawEventStart: rawStart,
+          normalizedEventStart: normalizedStart,
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+            count: 2,
+          ),
+          exceptionDateIso: const ['2026-01-03'],
+        );
+        final countBoundaryIncluded =
+            remapLegacyElapsedGeneralRecurrenceExceptionDates(
+              rawEventStart: rawStart,
+              normalizedEventStart: normalizedStart,
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.daily,
+                unit: GeneralEventRecurrenceUnit.day,
+                count: 2,
+              ),
+              exceptionDateIso: const ['2026-01-02'],
+            );
+        final untilBounded = remapLegacyElapsedGeneralRecurrenceExceptionDates(
+          rawEventStart: rawStart,
+          normalizedEventStart: normalizedStart,
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+            count: 1 << 30,
+            untilDateIso: '2026-01-03',
+          ),
+          exceptionDateIso: const ['2026-01-03'],
+        );
+        final untilBoundaryIncluded =
+            remapLegacyElapsedGeneralRecurrenceExceptionDates(
+              rawEventStart: rawStart,
+              normalizedEventStart: normalizedStart,
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.daily,
+                unit: GeneralEventRecurrenceUnit.day,
+                count: 1 << 30,
+                untilDateIso: '2026-01-03',
+              ),
+              exceptionDateIso: const ['2026-01-02'],
+            );
+
+        expect(migrated, ['2026-01-02', '2026-01-04']);
+        expect(countBounded, ['2026-01-03']);
+        expect(countBoundaryIncluded, ['2026-01-03']);
+        expect(untilBounded, ['2026-01-03']);
+        expect(untilBoundaryIncluded, ['2026-01-03']);
+      },
+      timeout: const Timeout(Duration(seconds: 2)),
+    );
+
+    test(
+      'bounds legacy exception migration at the supported year limit',
+      () {
+        final start = DateTime.utc(9999, 12, 31);
+
+        final migrated = remapLegacyElapsedGeneralRecurrenceExceptionDates(
+          rawEventStart: start,
+          normalizedEventStart: start,
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+            count: 1 << 30,
+          ),
+          exceptionDateIso: const ['9999-12-31'],
+        );
+        final shiftedPastSupportedYear =
+            remapLegacyElapsedGeneralRecurrenceExceptionDates(
+              rawEventStart: start,
+              normalizedEventStart: DateTime.utc(10000),
+              recurrenceRule: const GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.daily,
+                unit: GeneralEventRecurrenceUnit.day,
+                count: 1 << 30,
+              ),
+              exceptionDateIso: const ['9999-12-31'],
+            );
+
+        expect(migrated, ['9999-12-31']);
+        expect(shiftedPastSupportedYear, ['9999-12-31']);
+      },
+      timeout: const Timeout(Duration(seconds: 2)),
+    );
+
+    test('indexes far and custom-interval legacy exceptions directly', () {
+      final rawStart = DateTime.utc(2000, 1, 1, 23);
+      final normalizedStart = DateTime.utc(2000, 1, 2);
+
+      List<String> migrate({
+        required GeneralEventRecurrenceRule rule,
+        required int stepDays,
+        required int index,
+      }) {
+        return remapLegacyElapsedGeneralRecurrenceExceptionDates(
+          rawEventStart: rawStart,
+          normalizedEventStart: normalizedStart,
+          recurrenceRule: rule,
+          exceptionDateIso: [
+            _testDateIso(rawStart.add(Duration(days: stepDays * index))),
+          ],
+        );
+      }
+
+      expect(
+        migrate(
+          rule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+          ),
+          stepDays: 1,
+          index: 4000,
+        ),
+        [_testDateIso(normalizedStart.add(const Duration(days: 4000)))],
+      );
+      expect(
+        migrate(
+          rule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.custom,
+            unit: GeneralEventRecurrenceUnit.day,
+            interval: 3,
+          ),
+          stepDays: 3,
+          index: 7,
+        ),
+        [_testDateIso(normalizedStart.add(const Duration(days: 21)))],
+      );
+      expect(
+        migrate(
+          rule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.custom,
+            unit: GeneralEventRecurrenceUnit.week,
+            interval: 2,
+          ),
+          stepDays: 14,
+          index: 3,
+        ),
+        [_testDateIso(normalizedStart.add(const Duration(days: 42)))],
+      );
+      expect(
+        remapLegacyElapsedGeneralRecurrenceExceptionDates(
+          rawEventStart: rawStart,
+          normalizedEventStart: normalizedStart,
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.monthly,
+            unit: GeneralEventRecurrenceUnit.month,
+          ),
+          exceptionDateIso: const ['2000-02-01'],
+        ),
+        ['2000-02-01'],
+      );
+    });
+
     test('far future recurrence query starts near visible range', () {
       final event = GeneralEvent(
         id: 'future',
@@ -1183,3 +1354,5 @@ void main() {
     });
   });
 }
+
+String _testDateIso(DateTime value) => value.toIso8601String().split('T').first;
