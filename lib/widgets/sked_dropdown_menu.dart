@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/sked_expressive_theme.dart';
+
 class SkedDropdownMenu<T> extends StatefulWidget {
   const SkedDropdownMenu({
     super.key,
@@ -47,13 +49,15 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
         dropdownTheme.menuStyle ?? MenuTheme.of(context).style;
     final selectedEntry = _entryForValue(_selectedValue);
     final expand = widget.expandedInsets == EdgeInsets.zero;
+    final motion = SkedMotionPolicy.of(context);
+    final shapes = skedShapeSchemeOf(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final anchorWidth = constraints.maxWidth;
         final menuStyle = _menuStyleForAnchor(baseMenuStyle, anchorWidth);
         return MenuAnchor(
-          animated: !MediaQuery.disableAnimationsOf(context),
+          animated: motion.spatialAnimationsEnabled,
           style: menuStyle,
           alignmentOffset: const Offset(0, _menuOffsetY),
           crossAxisUnconstrained: false,
@@ -85,7 +89,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
                         }
                       }
                     : null,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: shapes.fieldRadius,
                 child: InputDecorator(
                   isEmpty: selectedEntry == null,
                   decoration: InputDecoration(
@@ -94,8 +98,10 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
                     enabled: widget.enabled,
                     suffixIcon: AnimatedRotation(
                       turns: controller.isOpen ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 160),
-                      curve: Curves.easeOutCubic,
+                      duration: motion.spatialAnimationsEnabled
+                          ? motion.effects(SkedMotionSpeed.fast)
+                          : Duration.zero,
+                      curve: motion.scheme.enterCurve,
                       child: const Icon(Icons.arrow_drop_down),
                     ),
                   ).applyDefaults(effectiveInputDecorationTheme),
@@ -170,13 +176,11 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
         style:
             entry.style ??
             ButtonStyle(
-              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(44)),
+              minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
               padding: const WidgetStatePropertyAll(
                 EdgeInsets.symmetric(horizontal: 12),
               ),
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              shape: WidgetStatePropertyAll(skedShapeSchemeOf(context).compact),
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.focused)) {
                   return colors.primary.withValues(alpha: 0.12);

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppMotion {
-  static const short = Duration(milliseconds: 160);
-  static const medium = Duration(milliseconds: 280);
-  static const long = Duration(milliseconds: 450);
+  // Flutter's official Material motion tokens are the non-spring fallback for
+  // components that have not migrated to an Expressive spring API.
+  static const short = Durations.short3;
+  static const medium = Durations.medium2;
+  static const long = Durations.long1;
 
-  static const standard = Curves.easeInOutCubicEmphasized;
+  static const standard = Easing.standard;
   static const emphasized = Curves.easeInOutCubicEmphasized;
-  static const enter = Curves.easeOutCubic;
-  static const exit = Curves.easeInCubic;
+  static const enter = Easing.emphasizedDecelerate;
+  static const exit = Easing.emphasizedAccelerate;
 
   static const themeAnimationStyle = AnimationStyle(
     duration: medium,

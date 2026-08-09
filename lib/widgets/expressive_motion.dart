@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_motion.dart';
+import '../theme/sked_expressive_theme.dart';
 
 class ExpressiveTap extends StatefulWidget {
   const ExpressiveTap({
@@ -42,9 +42,9 @@ class _ExpressiveTapState extends State<ExpressiveTap> {
 
   @override
   Widget build(BuildContext context) {
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final motion = SkedMotionPolicy.of(context);
     final borderRadius = widget.borderRadius ?? BorderRadius.circular(16);
-    if (disableAnimations) {
+    if (!motion.spatialAnimationsEnabled) {
       return Material(
         type: MaterialType.transparency,
         shape: RoundedRectangleBorder(borderRadius: borderRadius),
@@ -58,8 +58,8 @@ class _ExpressiveTapState extends State<ExpressiveTap> {
     }
     return AnimatedScale(
       scale: _pressed ? widget.scale : 1,
-      duration: AppMotion.short,
-      curve: AppMotion.enter,
+      duration: motion.effects(SkedMotionSpeed.fast),
+      curve: motion.scheme.enterCurve,
       child: Material(
         type: MaterialType.transparency,
         shape: RoundedRectangleBorder(borderRadius: borderRadius),
@@ -85,20 +85,36 @@ class ExpressiveSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
+    final motion = SkedMotionPolicy.of(context);
+    if (!motion.animationsEnabled) {
       return child;
     }
     return AnimatedSwitcher(
-      duration: duration ?? AppMotion.medium,
-      reverseDuration: AppMotion.short,
-      switchInCurve: AppMotion.enter,
-      switchOutCurve: AppMotion.exit,
+      duration: duration ?? motion.effects(SkedMotionSpeed.standard),
+      reverseDuration: motion.effects(SkedMotionSpeed.fast),
+      switchInCurve: motion.scheme.enterCurve,
+      switchOutCurve: motion.scheme.exitCurve,
+      // Outgoing children stay alive during the transition. Keep them out of
+      // the accessibility tree so a state change is announced only once.
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            for (final previousChild in previousChildren)
+              ExcludeSemantics(child: previousChild),
+            ?currentChild,
+          ],
+        );
+      },
       transitionBuilder: (child, animation) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: AppMotion.enter,
-          reverseCurve: AppMotion.exit,
+          curve: motion.scheme.enterCurve,
+          reverseCurve: motion.scheme.exitCurve,
         );
+        if (motion.reduceMotion) {
+          return FadeTransition(opacity: curved, child: child);
+        }
         return FadeTransition(
           opacity: curved,
           child: ScaleTransition(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import 'app_motion.dart';
 import 'general_calendar_color_theme.dart';
+import 'sked_expressive_theme.dart';
 
 ThemeMode themeModeFromValue(String value) {
   switch (value) {
@@ -36,14 +37,13 @@ ThemeData buildAppTheme({
       ? colorfulUiColorValues
       : const <String, int>{};
   final theme = ThemeData(useMaterial3: true, colorScheme: colorScheme);
+  final shapes = SkedShapeScheme.standard;
+  final motion = SkedMotionScheme.standard;
   final textTheme = theme.textTheme;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
   final menuSurface = colorScheme.surfaceContainer;
   final menuOutline = colorScheme.outlineVariant.withValues(alpha: 0.72);
-  final menuShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(18),
-    side: BorderSide(color: menuOutline),
-  );
+  final menuShape = shapes.menu.copyWith(side: BorderSide(color: menuOutline));
   final menuOverlayColor = WidgetStateProperty.resolveWith<Color?>((states) {
     if (states.contains(WidgetState.disabled)) {
       return Colors.transparent;
@@ -61,7 +61,11 @@ ThemeData buildAppTheme({
   });
 
   return theme.copyWith(
-    extensions: [GeneralCalendarColorTheme.fromValues(colorfulExtensionValues)],
+    extensions: [
+      GeneralCalendarColorTheme.fromValues(colorfulExtensionValues),
+      shapes,
+      motion,
+    ],
     scaffoldBackgroundColor: colorScheme.surface,
     pageTransitionsTheme: PageTransitionsTheme(
       builders: {
@@ -93,13 +97,13 @@ ThemeData buildAppTheme({
       elevation: 0,
       color: colorScheme.surfaceContainerLow,
       surfaceTintColor: colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: shapes.card,
     ),
     listTileTheme: ListTileThemeData(
       iconColor: colorScheme.onSurfaceVariant,
       selectedColor: colorScheme.primary,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: shapes.compact,
       titleTextStyle: textTheme.bodyLarge?.copyWith(
         color: colorScheme.onSurface,
         fontWeight: FontWeight.w500,
@@ -111,15 +115,15 @@ ThemeData buildAppTheme({
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-        minimumSize: const Size(64, 44),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        minimumSize: const Size(64, 48),
+        shape: shapes.control,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-        minimumSize: const Size(64, 44),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        minimumSize: const Size(64, 48),
+        shape: shapes.control,
         side: BorderSide(color: colorScheme.outlineVariant),
       ),
     ),
@@ -134,16 +138,14 @@ ThemeData buildAppTheme({
       highlightElevation: 6,
       backgroundColor: colorScheme.primary,
       foregroundColor: colorScheme.onPrimary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: shapes.fab,
     ),
     navigationBarTheme: NavigationBarThemeData(
       height: 76,
       elevation: 0,
       backgroundColor: colorScheme.surfaceContainer,
       indicatorColor: selectedSurface,
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
+      indicatorShape: shapes.selectionIndicator,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return textTheme.labelMedium?.copyWith(
@@ -186,14 +188,13 @@ ThemeData buildAppTheme({
       showDragHandle: true,
       constraints: const BoxConstraints(minWidth: 280),
       dragHandleColor: colorScheme.outlineVariant,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      shape: shapes.bottomSheet,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: shapes.dialog,
       titleTextStyle: textTheme.headlineSmall?.copyWith(
         color: colorScheme.onSurface,
         fontWeight: FontWeight.w700,
@@ -206,23 +207,23 @@ ThemeData buildAppTheme({
       filled: true,
       fillColor: colorScheme.surfaceContainerLow,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.primary, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.error, width: 2),
       ),
     ),
@@ -278,9 +279,7 @@ ThemeData buildAppTheme({
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
+        shape: WidgetStatePropertyAll(shapes.control),
         side: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return BorderSide(
@@ -308,15 +307,15 @@ ThemeData buildAppTheme({
         filled: true,
         fillColor: colorScheme.surfaceContainerLow,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: shapes.fieldRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: shapes.fieldRadius,
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: shapes.fieldRadius,
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
       ),
@@ -359,13 +358,11 @@ ThemeData buildAppTheme({
     ),
     menuButtonTheme: MenuButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const WidgetStatePropertyAll(Size.fromHeight(44)),
+        minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 12),
         ),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+        shape: WidgetStatePropertyAll(shapes.compact),
         overlayColor: menuOverlayColor,
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.focused)) {
@@ -417,7 +414,7 @@ ThemeData buildAppTheme({
       contentTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.onInverseSurface,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: shapes.control,
       showCloseIcon: true,
       closeIconColor: colorScheme.onInverseSurface,
     ),
@@ -427,13 +424,14 @@ ThemeData buildAppTheme({
       overlayColor: WidgetStatePropertyAll(
         colorScheme.primary.withValues(alpha: 0.12),
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: shapes.container,
       itemClipBehavior: Clip.antiAlias,
     ),
   );
 }
 
-AnimationStyle get appThemeAnimationStyle => AppMotion.themeAnimationStyle;
+AnimationStyle get appThemeAnimationStyle =>
+    SkedMotionPolicy.systemAwareStyle(AppMotion.themeAnimationStyle);
 
 ColorScheme _withColorfulFamilies(
   ColorScheme baseScheme,

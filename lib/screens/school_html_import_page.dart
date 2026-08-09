@@ -12,6 +12,7 @@ import '../services/school_import_http_consent.dart';
 import '../services/school_import_workflow.dart';
 import '../utils/text_input_limits.dart';
 import '../widgets/app_modal_sheet.dart';
+import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
@@ -443,9 +444,13 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
           if (!mounted || submissionGeneration != _submissionGeneration) {
             return Future<SchoolImportResponse?>.value();
           }
-          return showDialog<SchoolImportResponse>(
+          return showExpressiveDialog<SchoolImportResponse>(
             context: context,
             barrierDismissible: false,
+            // The result flow immediately opens a sheet. Wait for the stream
+            // dialog to leave the route tree so the two modal semantics and
+            // focus scopes never overlap.
+            waitForTransitionComplete: true,
             builder: (_) => SchoolImportStreamDialog(stream: stream),
           );
         },

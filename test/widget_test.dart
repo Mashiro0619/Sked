@@ -2695,15 +2695,15 @@ void main() {
       await tester.ensureVisible(confirmText);
       await tester.pump();
       await tester.tap(confirmText);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
       final cancelText = find.text('取消');
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(cancelText, findsOneWidget);
       await tester.ensureVisible(cancelText);
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(cancelText);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('文本 / HTML 解析页成功后会把导入结果写入 provider', (tester) async {
@@ -2784,14 +2784,14 @@ void main() {
       await tester.ensureVisible(confirmText);
       await tester.pump();
       await tester.tap(confirmText);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
       final importAsNewText = find.text('作为新课表导入');
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(importAsNewText, findsOneWidget);
       await tester.ensureVisible(importAsNewText);
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(importAsNewText);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
       expect(fakeApi.callCount, 1);
       expect(fakeApi.lastPayload?.html, '星期一 第三、四节 语文');

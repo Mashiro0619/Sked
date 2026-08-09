@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/sked_expressive_theme.dart';
+
 class ExpressiveEmptyState extends StatelessWidget {
   const ExpressiveEmptyState({
     super.key,
@@ -20,6 +22,8 @@ class ExpressiveEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final motion = SkedMotionPolicy.of(context);
+    final shapes = skedShapeSchemeOf(context);
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
@@ -30,10 +34,10 @@ class ExpressiveEmptyState extends StatelessWidget {
             children: [
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.96, end: 1),
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOutCubic,
+                duration: motion.effects(SkedMotionSpeed.standard),
+                curve: motion.scheme.enterCurve,
                 builder: (context, scale, child) {
-                  if (MediaQuery.disableAnimationsOf(context)) return child!;
+                  if (!motion.spatialAnimationsEnabled) return child!;
                   return Transform.scale(scale: scale, child: child);
                 },
                 child: Container(
@@ -41,7 +45,7 @@ class ExpressiveEmptyState extends StatelessWidget {
                   height: 76,
                   decoration: ShapeDecoration(
                     color: colors.primary.withValues(alpha: 0.10),
-                    shape: const StadiumBorder(),
+                    shape: shapes.selection,
                   ),
                   child: Icon(icon, size: 36, color: colors.primary),
                 ),

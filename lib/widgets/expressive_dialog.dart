@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_motion.dart';
+import '../theme/sked_expressive_theme.dart';
 import 'ui_command.dart';
 
 const double expressiveDialogMaxWidth = 520;
@@ -10,18 +11,35 @@ Future<T?> showExpressiveDialog<T>({
   required WidgetBuilder builder,
   bool barrierDismissible = true,
   bool useRootNavigator = true,
+  bool waitForTransitionComplete = false,
   RouteSettings? routeSettings,
-}) {
-  return showDialog<T>(
+}) async {
+  final animationStyle = SkedMotionPolicy.of(
+    context,
+  ).routeStyle(AppMotion.dialogAnimationStyle);
+  final transitionAnchor = waitForTransitionComplete
+      ? GlobalKey(debugLabel: 'expressive-dialog-transition-anchor')
+      : null;
+  final result = await showDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
-    animationStyle: MediaQuery.disableAnimationsOf(context)
-        ? AnimationStyle.noAnimation
-        : AppMotion.dialogAnimationStyle,
-    builder: (_) => UiCommandFeedbackHost(builder: builder),
+    animationStyle: animationStyle,
+    builder: (_) {
+      final dialog = UiCommandFeedbackHost(builder: builder);
+      return transitionAnchor == null
+          ? dialog
+          : KeyedSubtree(key: transitionAnchor, child: dialog);
+    },
   );
+  // showDialog completes when pop begins, before its route leaves the overlay.
+  // A caller that immediately chains another modal can opt into waiting for
+  // the actual dialog subtree to unmount instead of guessing a duration.
+  while (transitionAnchor?.currentContext != null) {
+    await WidgetsBinding.instance.endOfFrame;
+  }
+  return result;
 }
 
 class ExpressiveDialogContent extends StatelessWidget {
@@ -38,7 +56,7 @@ class ExpressiveDialogContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final availableWidth =
-        mediaQuery.size.width - mediaQuery.viewPadding.horizontal - 128;
+        mediaQuery.size.width - mediaQuery.viewPadding.horizontal - 32;
     final width = availableWidth.clamp(0.0, maxWidth).toDouble();
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -154,11 +172,11 @@ class ExpressiveDialogOption extends StatelessWidget {
         color: selected
             ? colors.primary.withValues(alpha: 0.12)
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: skedShapeSchemeOf(context).fieldRadius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: skedShapeSchemeOf(context).fieldRadius,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Padding(

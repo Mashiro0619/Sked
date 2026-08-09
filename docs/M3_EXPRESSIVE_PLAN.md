@@ -12,7 +12,14 @@
   - https://m3.material.io/blog/m3-expressive-motion-theming
   - https://docs.flutter.dev/ui/widgets/material
 
-当前基线为 1232 项测试通过、1 项跳过，工作树应在每个大阶段开始前保持干净。
+### Flutter API 边界
+
+- Flutter 3.44.9 提供官方 Material 组件、`Durations`、`Easing`、`RoundedSuperellipseBorder`、`StarBorder` 和 `SpringSimulation` 等基础能力，但没有 Compose M3 Expressive 中同名且数值等价的 `MotionScheme`、`ButtonGroup`、`SplitButton` 或 `LoadingIndicator` API。
+- `DynamicSchemeVariant.expressive` 只是一种动态配色方案，不是 Expressive 形状或动效系统；为保留用户精确主题色，本项目不使用它。
+- Sked 的 shape 与 motion token 是应用内部实现。非弹簧过渡以 Flutter 官方 `Durations` / `Easing` 为 Material fallback，但不宣称与 Compose Expressive 的内部参数完全等价。
+- Flutter 官方 `SegmentedButton` 不开放单个分段的 shape 插值：通用封装只负责官方语义、48dp 触控区和 Sked 样式；真正的移动形状指示器在阶段三的具体模式/视图选择器中实现。
+
+阶段一基线为 1232 项测试通过、1 项跳过；阶段二验收当前为 1260 项测试通过、1 项跳过。工作树应在每个大阶段开始前保持干净。
 
 ## 阶段一：升级工具链
 
@@ -57,7 +64,7 @@
 
 | M3 Expressive 概念 | Sked 实现 | 使用位置 |
 | --- | --- | --- |
-| Button groups | SkedMorphingSegmentedButton，底层仍为官方 SegmentedButton | 日/周/月/列表、主题选项 |
+| Button groups | SkedExpressiveSegmentedButton，底层仍为官方 SegmentedButton；移动形状指示器由具体选择器实现 | 日/周/月/列表、主题选项 |
 | App bars/toolbars | SkedWorkspaceToolbar | 两种首页上下文与时间导航 |
 | FAB / Extended FAB | SkedPrimaryFab | 唯一新增课程/事件操作 |
 | Loading indicator | SkedExpressiveLoadingIndicator，关闭动画时回退官方进度指示器 | 启动、导入、长时间保存 |

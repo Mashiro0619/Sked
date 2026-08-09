@@ -12,6 +12,7 @@ import 'models/timetable_models.dart';
 import 'providers/timetable_provider.dart';
 import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
+import 'widgets/sked_expressive_loading_indicator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -246,7 +247,7 @@ class _AppBootstrapGate extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
                           if (acquiring)
-                            const CircularProgressIndicator()
+                            const SkedExpressiveLoadingIndicator()
                           else ...[
                             Text(
                               failed
@@ -317,6 +318,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.detached) {
       _flushPendingUiStateSaves(widget.provider);
     }
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    if (mounted) setState(() {});
   }
 
   @override

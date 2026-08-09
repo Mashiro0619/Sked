@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_motion.dart';
+import '../theme/sked_expressive_theme.dart';
 import 'ui_command.dart';
 
 const double appSheetWidthCompact = 560;
@@ -28,7 +29,9 @@ Future<T?> showAppModalSheet<T>({
     routeSettings: routeSettings,
     constraints: BoxConstraints(maxWidth: maxWidth),
     clipBehavior: Clip.antiAlias,
-    sheetAnimationStyle: AppMotion.sheetAnimationStyle,
+    sheetAnimationStyle: SkedMotionPolicy.of(
+      context,
+    ).routeStyle(AppMotion.sheetAnimationStyle),
     builder: (_) => UiCommandFeedbackHost(builder: builder),
   );
 }

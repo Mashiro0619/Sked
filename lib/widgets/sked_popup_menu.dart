@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_motion.dart';
+import '../theme/sked_expressive_theme.dart';
 
 class SkedPopupMenuButton<T> extends StatelessWidget {
   const SkedPopupMenuButton({
@@ -36,7 +37,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final motion = SkedMotionPolicy.of(context);
     return PopupMenuButton<T>(
       initialValue: initialValue,
       onOpened: onOpened,
@@ -51,9 +52,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       constraints: constraints,
       menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       clipBehavior: Clip.antiAlias,
-      popUpAnimationStyle: disableAnimations
-          ? AnimationStyle.noAnimation
-          : AppMotion.menuAnimationStyle,
+      popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
       itemBuilder: itemBuilder,
       child: child,
     );
@@ -66,7 +65,7 @@ class SkedPopupMenuItem<T> extends PopupMenuItem<T> {
     super.value,
     super.onTap,
     super.enabled = true,
-    super.height = 44,
+    super.height = 48,
     super.padding = EdgeInsets.zero,
     super.textStyle,
     super.labelTextStyle,
@@ -100,11 +99,11 @@ class _SkedPopupMenuItemState<T>
         popupMenuTheme.textStyle ??
         fallbackStyle ??
         DefaultTextStyle.of(context).style;
-    final radius = BorderRadius.circular(12);
+    final radius = skedShapeSchemeOf(context).fieldRadius;
 
     Widget item = AnimatedDefaultTextStyle(
       style: style,
-      duration: kThemeChangeDuration,
+      duration: SkedMotionPolicy.of(context).effects(SkedMotionSpeed.fast),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: widget.height),
         child: Padding(
