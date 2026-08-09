@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -7,6 +8,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/sked_expressive_loading_indicator.dart';
+import '../widgets/sked_spring_builder.dart';
 import '../widgets/ui_command.dart';
 import 'general_schedule_home_screen.dart';
 import 'home_screen.dart';
@@ -724,6 +726,35 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+    final motion = SkedMotionPolicy.of(context);
+    final navigationHeight = textScale > 1.3 ? 80 + (textScale - 1) * 40 : null;
+    final navigationAnimationDuration = motion.spatialAnimationsEnabled
+        ? motion.effects(SkedMotionSpeed.standard)
+        : Duration.zero;
+    final navigationBar = NavigationBar(
+      key: const ValueKey('adaptive-shell-navigation-bar'),
+      height: navigationHeight,
+      animationDuration: navigationAnimationDuration,
+      selectedIndex: selectedIndex,
+      onDestinationSelected: busy || !enabled ? null : onDestinationSelected,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      destinations: [
+        NavigationDestination(
+          icon: const Icon(Icons.school_outlined),
+          selectedIcon: const Icon(Icons.school),
+          label: l10n.studentTimetable,
+          enabled: enabled && !busy,
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.event_note_outlined),
+          selectedIcon: const Icon(Icons.event_note),
+          label: l10n.generalSchedule,
+          enabled: enabled && !busy,
+        ),
+      ],
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -731,27 +762,89 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
           busy: busy,
           semanticsKey: const ValueKey('workspace-switch-busy'),
         ),
-        NavigationBar(
-          key: const ValueKey('adaptive-shell-navigation-bar'),
-          selectedIndex: selectedIndex,
-          onDestinationSelected: busy || !enabled
-              ? null
-              : onDestinationSelected,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.school_outlined),
-              selectedIcon: const Icon(Icons.school),
-              label: l10n.studentTimetable,
-              enabled: enabled && !busy,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.event_note_outlined),
-              selectedIcon: const Icon(Icons.event_note),
-              label: l10n.generalSchedule,
-              enabled: enabled && !busy,
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final indicatorHeight = textScale > 1.3 ? 24.0 : 32.0;
+            final baseIndicatorTop = constraints.maxHeight.isFinite
+                ? ((constraints.maxHeight - indicatorHeight) / 2) * 0.35 + 2
+                : 0.0;
+            final largeTextLift = math.min(
+              math.max(0.0, (textScale - 1) * 20),
+              math.max(0.0, baseIndicatorTop),
+            );
+            return Material(
+              color: colors.surfaceContainer,
+              child: Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  // Paint the shared indicator underneath the official
+                  // NavigationBar so icons, labels, focus rings and ripples
+                  // remain legible and interactive.
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: ExcludeSemantics(
+                        child: Transform.translate(
+                          offset: Offset(0, -largeTextLift),
+                          child: SkedSpringBuilder(
+                            key: const ValueKey(
+                              'adaptive-shell-mode-selection-spring',
+                            ),
+                            value: selectedIndex.toDouble(),
+                            builder: (context, value, child) {
+                              final alignment = AlignmentDirectional(
+                                -1 + value.clamp(0.0, 1.0) * 2,
+                                -0.65,
+                              );
+                              return Align(
+                                alignment: alignment,
+                                child: SizedBox(
+                                  width: math
+                                      .min(
+                                        96.0,
+                                        math.max(
+                                          64.0,
+                                          constraints.maxWidth / 2 - 24,
+                                        ),
+                                      )
+                                      .toDouble(),
+                                  height: indicatorHeight,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
+                                    child: DecoratedBox(
+                                      key: const ValueKey(
+                                        'adaptive-shell-mode-selection-indicator',
+                                      ),
+                                      decoration: ShapeDecoration(
+                                        color: colors.primary.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        shape: skedShapeSchemeOf(
+                                          context,
+                                        ).selectionIndicator,
+                                      ),
+                                      child: child,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  NavigationBarTheme(
+                    data: NavigationBarTheme.of(context).copyWith(
+                      backgroundColor: Colors.transparent,
+                      indicatorColor: Colors.transparent,
+                    ),
+                    child: navigationBar,
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );

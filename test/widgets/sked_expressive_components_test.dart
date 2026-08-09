@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/sked_expressive_loading_indicator.dart';
+import 'package:sked/widgets/expressive_motion.dart';
 
 void main() {
   testWidgets(
@@ -87,6 +88,362 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('single-selection indicator travels between equal segments', (
+    tester,
+  ) async {
+    Set<String> selected = {'day'};
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return SkedExpressiveSegmentedButton<String>(
+              key: const ValueKey('moving-selector'),
+              segments: const [
+                ButtonSegment(value: 'day', label: Text('Day')),
+                ButtonSegment(value: 'week', label: Text('Week')),
+              ],
+              selected: selected,
+              expandedInsets: EdgeInsets.zero,
+              movingIndicator: true,
+              onSelectionChanged: (value) => setState(() => selected = value),
+            );
+          },
+        ),
+      ),
+    );
+    final indicator = find.byKey(
+      const ValueKey('sked-segmented-selection-indicator'),
+    );
+    final initialRect = tester.getRect(indicator);
+
+    rebuild(() => selected = {'week'});
+    await tester.pump();
+    final inFlightRect = tester.getRect(indicator);
+    await tester.pump(const Duration(milliseconds: 200));
+    final settledRect = tester.getRect(indicator);
+
+    expect(inFlightRect.left, greaterThanOrEqualTo(initialRect.left));
+    expect(settledRect.left, greaterThan(initialRect.left));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('directional transition preserves the mounted child', (
+    tester,
+  ) async {
+    var trigger = 0;
+    final childKey = GlobalKey();
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return SkedDirectionalTransition(
+              trigger: trigger,
+              direction: trigger == 0 ? 0 : 1,
+              child: SizedBox(key: childKey, child: const Text('Period')),
+            );
+          },
+        ),
+      ),
+    );
+    final before = childKey.currentContext;
+    rebuild(() => trigger = 1);
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(childKey.currentContext, same(before));
+    await tester.pumpAndSettle();
+    expect(find.text('Period'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('direction zero settles even when the trigger is unchanged', (
+    tester,
+  ) async {
+    var trigger = 0;
+    var direction = 0;
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return SkedDirectionalTransition(
+              trigger: trigger,
+              direction: direction,
+              child: const SizedBox(width: 100, height: 40),
+            );
+          },
+        ),
+      ),
+    );
+
+    rebuild(() {
+      trigger = 1;
+      direction = 1;
+    });
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(
+      tester
+          .widget<Transform>(
+            find.byKey(const ValueKey('sked-directional-transition-offset')),
+          )
+          .transform
+          .getTranslation()
+          .x,
+      greaterThan(0.1),
+    );
+
+    rebuild(() => direction = 0);
+    await tester.pump();
+    final translation = tester
+        .widget<Transform>(
+          find.byKey(const ValueKey('sked-directional-transition-offset')),
+        )
+        .transform
+        .getTranslation();
+    expect(translation.x, 0);
+    expect(translation.y, 0);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('directional transition uses a visible logical-pixel distance', (
+    tester,
+  ) async {
+    var trigger = 0;
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return SkedDirectionalTransition(
+              trigger: trigger,
+              direction: 1,
+              distance: 16,
+              child: const SizedBox(width: 100, height: 40),
+            );
+          },
+        ),
+      ),
+    );
+
+    rebuild(() => trigger = 1);
+    await tester.pump();
+    final offset = tester
+        .widget<Transform>(
+          find.byKey(const ValueKey('sked-directional-transition-offset')),
+        )
+        .transform
+        .getTranslation();
+
+    expect(offset.x, closeTo(16, 0.01));
+    expect(offset.y, 0);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'directional transition retargets without a visible progress jump',
+    (tester) async {
+      var trigger = 0;
+      var direction = 1;
+      late void Function(void Function()) rebuild;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return SkedDirectionalTransition(
+                trigger: trigger,
+                direction: direction,
+                child: const SizedBox(width: 100, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+
+      rebuild(() => trigger = 1);
+      await tester.pump(const Duration(milliseconds: 90));
+      final opacityBefore = tester
+          .widget<Opacity>(
+            find.byKey(const ValueKey('sked-directional-transition-opacity')),
+          )
+          .opacity;
+      final offsetBefore = tester
+          .widget<Transform>(
+            find.byKey(const ValueKey('sked-directional-transition-offset')),
+          )
+          .transform
+          .getTranslation();
+
+      rebuild(() {
+        trigger = 2;
+        direction = -1;
+      });
+      await tester.pump();
+      final opacityAfter = tester
+          .widget<Opacity>(
+            find.byKey(const ValueKey('sked-directional-transition-opacity')),
+          )
+          .opacity;
+      final offsetAfter = tester
+          .widget<Transform>(
+            find.byKey(const ValueKey('sked-directional-transition-offset')),
+          )
+          .transform
+          .getTranslation();
+
+      expect((opacityAfter - opacityBefore).abs(), lessThan(0.02));
+      expect((offsetAfter.x - offsetBefore.x).abs(), lessThan(0.02));
+      await tester.pump(const Duration(milliseconds: 180));
+      final reversedOffset = tester
+          .widget<Transform>(
+            find.byKey(const ValueKey('sked-directional-transition-offset')),
+          )
+          .transform
+          .getTranslation();
+      expect(reversedOffset.x, lessThan(0));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('vertical directional motion is not mirrored by text direction', (
+    tester,
+  ) async {
+    var trigger = 0;
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return SkedDirectionalTransition(
+                trigger: trigger,
+                direction: 1,
+                axis: Axis.vertical,
+                distance: 16,
+                child: const SizedBox(width: 100, height: 40),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    rebuild(() => trigger = 1);
+    await tester.pump();
+    final offset = tester
+        .widget<Transform>(
+          find.byKey(const ValueKey('sked-directional-transition-offset')),
+        )
+        .transform
+        .getTranslation();
+
+    expect(offset.x, 0);
+    expect(offset.y, closeTo(16, 0.01));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'runtime reduced motion clears spatial state without a rebound jump',
+    (tester) async {
+      tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures();
+      addTearDown(
+        tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      var trigger = 0;
+      late void Function(void Function()) rebuild;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return SkedDirectionalTransition(
+                trigger: trigger,
+                direction: 1,
+                child: const SizedBox(width: 100, height: 40),
+              );
+            },
+          ),
+        ),
+      );
+
+      rebuild(() => trigger = 1);
+      await tester.pump(const Duration(milliseconds: 40));
+      Offset renderedOffset() {
+        final translation = tester
+            .widget<Transform>(
+              find.byKey(const ValueKey('sked-directional-transition-offset')),
+            )
+            .transform
+            .getTranslation();
+        return Offset(translation.x, translation.y);
+      }
+
+      expect(renderedOffset().dx.abs(), greaterThan(0.1));
+
+      tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(reduceMotion: true);
+      tester.binding.handleAccessibilityFeaturesChanged();
+      await tester.pump();
+      expect(renderedOffset(), Offset.zero);
+
+      tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures();
+      tester.binding.handleAccessibilityFeaturesChanged();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(renderedOffset(), Offset.zero);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('directional transition snaps when system animations are off', (
+    tester,
+  ) async {
+    var trigger = 0;
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return SkedDirectionalTransition(
+                trigger: trigger,
+                direction: 1,
+                child: const Text('Period'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    rebuild(() => trigger = 1);
+    await tester.pump();
+    final opacity = tester.widget<Opacity>(
+      find.byKey(const ValueKey('sked-directional-transition-opacity')),
+    );
+    final transform = tester.widget<Transform>(
+      find.byKey(const ValueKey('sked-directional-transition-offset')),
+    );
+    expect(opacity.opacity, 1);
+    final translation = transform.transform.getTranslation();
+    expect(translation.x, 0);
+    expect(translation.y, 0);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('workspace toolbar reflows its actions on a compact surface', (
     tester,

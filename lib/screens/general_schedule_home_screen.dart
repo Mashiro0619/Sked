@@ -63,6 +63,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   bool _moreOccurrencesSheetOpen = false;
   bool _calendarManagerOpen = false;
   bool _settingsPageOpen = false;
+  DateTime? _dateNavigationTarget;
+  int _dateNavigationGeneration = 0;
+  int _dateNavigationDirection = 0;
 
   @override
   void didChangeDependencies() {
@@ -82,6 +85,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final l10n = AppLocalizations.of(context);
     final selectedDate = snapshot.selectedDate;
     final view = normalizeGeneralView(_view ?? snapshot.defaultView);
+    final dateNavigationDirection =
+        _dateNavigationTarget != null &&
+            _calendarDateKey(_dateNavigationTarget!) ==
+                _calendarDateKey(selectedDate)
+        ? _dateNavigationDirection
+        : 0;
     const filter = _GeneralOccurrenceFilter(query: '', colorValue: null);
 
     final activeCalendar = provider.activeGeneralScheduleOrNull;
@@ -121,10 +130,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             navigation: _GeneralWorkspaceNavigation(
               view: view,
               selectedDate: selectedDate,
+              dateNavigationDirection: dateNavigationDirection,
               compact: compact,
               narrow: narrowNavigation,
               interactive: widget.interactive,
-              onViewChanged: (nextView) => setState(() => _view = nextView),
+              onViewChanged: (nextView) => setState(() {
+                _view = nextView;
+                _dateNavigationTarget = null;
+                _dateNavigationDirection = 0;
+              }),
               onPrevious: () => unawaited(_navigateDate(provider, view, -1)),
               onNext: () => unawaited(_navigateDate(provider, view, 1)),
               onToday: () => unawaited(_goToToday(provider)),
@@ -134,7 +148,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ),
           );
           final selectDate = widget.interactive
-              ? provider.setSelectedGeneralDate
+              ? (DateTime date) => _selectDate(provider, date)
               : (DateTime _) async {};
           final content = Column(
             children: [
@@ -157,63 +171,81 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                       PointerDeviceKind.invertedStylus,
                     },
                   ),
-                  child: ExpressiveSwitcher(
-                    child: KeyedSubtree(
-                      key: ValueKey(view),
-                      child: switch (view) {
-                        generalViewDay => _DayCalendarView(
-                          date: selectedDate,
-                          provider: provider,
-                          filter: filter,
-                          active: widget.active,
-                          onDaySelected: selectDate,
-                          onEmptySlotTap: (date) =>
-                              _openEditor(context, provider, initialDate: date),
-                          onOccurrenceTap: (occurrence) =>
-                              _openDetails(context, provider, occurrence),
-                          onMoreOccurrencesTap: (occurrences) =>
-                              _openMoreOccurrences(
-                                context,
-                                provider,
-                                occurrences,
-                              ),
-                        ),
-                        generalViewList => _ListCalendarView(
-                          date: selectedDate,
-                          provider: provider,
-                          filter: filter,
-                          onOccurrenceTap: (occurrence) =>
-                              _openDetails(context, provider, occurrence),
-                        ),
-                        generalViewMonth => _MonthCalendarView(
-                          date: selectedDate,
-                          provider: provider,
-                          filter: filter,
-                          active: widget.active,
-                          onDaySelected: selectDate,
-                          onEmptySlotTap: (date) =>
-                              _openEditor(context, provider, initialDate: date),
-                          onOccurrenceTap: (occurrence) =>
-                              _openDetails(context, provider, occurrence),
-                        ),
-                        _ => _WeekCalendarView(
-                          date: selectedDate,
-                          provider: provider,
-                          filter: filter,
-                          active: widget.active,
-                          onDaySelected: selectDate,
-                          onEmptySlotTap: (date) =>
-                              _openEditor(context, provider, initialDate: date),
-                          onOccurrenceTap: (occurrence) =>
-                              _openDetails(context, provider, occurrence),
-                          onMoreOccurrencesTap: (occurrences) =>
-                              _openMoreOccurrences(
-                                context,
-                                provider,
-                                occurrences,
-                              ),
-                        ),
-                      },
+                  child: SkedDirectionalTransition(
+                    // View changes already use the switcher's fade-through;
+                    // this transition is reserved for date navigation so the
+                    // two spatial effects never stack on the same frame.
+                    trigger: _calendarDateKey(selectedDate),
+                    direction: dateNavigationDirection,
+                    fade: false,
+                    scale: false,
+                    child: ExpressiveSwitcher(
+                      child: KeyedSubtree(
+                        key: ValueKey(view),
+                        child: switch (view) {
+                          generalViewDay => _DayCalendarView(
+                            date: selectedDate,
+                            provider: provider,
+                            filter: filter,
+                            active: widget.active,
+                            onDaySelected: selectDate,
+                            onEmptySlotTap: (date) => _openEditor(
+                              context,
+                              provider,
+                              initialDate: date,
+                            ),
+                            onOccurrenceTap: (occurrence) =>
+                                _openDetails(context, provider, occurrence),
+                            onMoreOccurrencesTap: (occurrences) =>
+                                _openMoreOccurrences(
+                                  context,
+                                  provider,
+                                  occurrences,
+                                ),
+                          ),
+                          generalViewList => _ListCalendarView(
+                            date: selectedDate,
+                            provider: provider,
+                            filter: filter,
+                            onOccurrenceTap: (occurrence) =>
+                                _openDetails(context, provider, occurrence),
+                          ),
+                          generalViewMonth => _MonthCalendarView(
+                            date: selectedDate,
+                            provider: provider,
+                            filter: filter,
+                            active: widget.active,
+                            onDaySelected: selectDate,
+                            onEmptySlotTap: (date) => _openEditor(
+                              context,
+                              provider,
+                              initialDate: date,
+                            ),
+                            onOccurrenceTap: (occurrence) =>
+                                _openDetails(context, provider, occurrence),
+                          ),
+                          _ => _WeekCalendarView(
+                            date: selectedDate,
+                            provider: provider,
+                            filter: filter,
+                            active: widget.active,
+                            onDaySelected: selectDate,
+                            onEmptySlotTap: (date) => _openEditor(
+                              context,
+                              provider,
+                              initialDate: date,
+                            ),
+                            onOccurrenceTap: (occurrence) =>
+                                _openDetails(context, provider, occurrence),
+                            onMoreOccurrencesTap: (occurrences) =>
+                                _openMoreOccurrences(
+                                  context,
+                                  provider,
+                                  occurrences,
+                                ),
+                          ),
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -249,9 +281,59 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   }
 
   Future<void> _goToToday(TimetableProvider provider) async {
-    await provider.setSelectedGeneralDate(
-      _visibleGeneralDate(provider, DateTime.now()),
+    await _selectDate(provider, _visibleGeneralDate(provider, DateTime.now()));
+  }
+
+  Future<void> _selectDate(
+    TimetableProvider provider,
+    DateTime requestedDate,
+  ) async {
+    final current = normalizeDateOnly(
+      _dateNavigationTarget ?? provider.selectedGeneralDate,
     );
+    final requested = normalizeDateOnly(requestedDate);
+    final requestedDirection = requested.compareTo(current).sign;
+    final next = _visibleGeneralDate(
+      provider,
+      requested,
+      direction: requestedDirection < 0 ? -1 : 1,
+    );
+    final direction = next.compareTo(current).sign;
+    if (direction == 0) return;
+
+    final navigationGeneration = ++_dateNavigationGeneration;
+    if (mounted) {
+      setState(() {
+        _dateNavigationTarget = next;
+        _dateNavigationDirection = direction;
+      });
+    } else {
+      _dateNavigationTarget = next;
+      _dateNavigationDirection = direction;
+    }
+    try {
+      await provider.setSelectedGeneralDate(next);
+    } finally {
+      if (navigationGeneration == _dateNavigationGeneration) {
+        if (!mounted) {
+          _dateNavigationTarget = null;
+          _dateNavigationDirection = 0;
+        } else {
+          // `setSelectedGeneralDate` publishes its snapshot synchronously.
+          // Keep the direction through the first frame so the transition
+          // observes the new date before the pending intent is cleared.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || navigationGeneration != _dateNavigationGeneration) {
+              return;
+            }
+            setState(() {
+              _dateNavigationTarget = null;
+              _dateNavigationDirection = 0;
+            });
+          });
+        }
+      }
+    }
   }
 
   DateTime _visibleGeneralDate(
@@ -295,7 +377,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         direction < 0 ? DateTime.friday - next.weekday : 8 - next.weekday,
       );
     }
-    await provider.setSelectedGeneralDate(next);
+    await _selectDate(provider, next);
   }
 
   Widget _wrapStandalone(Widget workspace) {
@@ -338,13 +420,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       if (!mounted || picked == null) {
         return;
       }
-      await provider.setSelectedGeneralDate(
-        _visibleGeneralDate(
-          provider,
-          picked,
-          direction: picked.isBefore(provider.selectedGeneralDate) ? -1 : 1,
-        ),
-      );
+      await _selectDate(provider, picked);
     } finally {
       _setUiBusyFlag(() => _datePickerOpen = false);
     }
@@ -573,6 +649,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
   const _GeneralWorkspaceNavigation({
     required this.view,
     required this.selectedDate,
+    required this.dateNavigationDirection,
     required this.compact,
     required this.narrow,
     required this.interactive,
@@ -585,6 +662,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
 
   final String view;
   final DateTime selectedDate;
+  final int dateNavigationDirection;
   final bool compact;
   final bool narrow;
   final bool interactive;
@@ -628,6 +706,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
       segments: segments,
       selected: {view},
       showSelectedIcon: false,
+      movingIndicator: true,
       onSelectionChanged: interactive
           ? (selection) {
               if (selection.isNotEmpty) onViewChanged(selection.first);
@@ -667,11 +746,17 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.pickDate, maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(
-                dateLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall,
+              SkedDirectionalTransition(
+                trigger: dateLabel,
+                direction: dateNavigationDirection,
+                distance: 16,
+                child: Text(
+                  dateLabel,
+                  key: ValueKey('general-date-label-$dateLabel'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ),
             ],
           ),

@@ -199,6 +199,37 @@ void main() {
     expect(policy!.spatialAnimationsEnabled, isFalse);
   });
 
+  testWidgets('motion policy scope publishes runtime accessibility changes', (
+    tester,
+  ) async {
+    var reduceMotion = false;
+    SkedMotionPolicy? policy;
+    late void Function(void Function()) rebuild;
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, setState) {
+          rebuild = setState;
+          return SkedMotionPolicyScope(
+            disableAnimations: false,
+            reduceMotion: reduceMotion,
+            child: Builder(
+              builder: (context) {
+                policy = SkedMotionPolicy.of(context);
+                return const SizedBox();
+              },
+            ),
+          );
+        },
+      ),
+    );
+    expect(policy!.reduceMotion, isFalse);
+
+    rebuild(() => reduceMotion = true);
+    await tester.pump();
+    expect(policy!.reduceMotion, isTrue);
+    expect(policy!.spatialAnimationsEnabled, isFalse);
+  });
+
   testWidgets('motion policy reads platform fallback without a MediaQuery', (
     tester,
   ) async {

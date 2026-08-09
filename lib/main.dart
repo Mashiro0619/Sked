@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'theme/app_theme.dart';
+import 'theme/sked_expressive_theme.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_localizations.dart';
 import 'models/timetable_models.dart';
@@ -337,34 +338,41 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<TimetableProvider>.value(
-      value: widget.provider,
-      child: Selector<TimetableProvider, _AppShellSnapshot>(
-        selector: (_, provider) => _AppShellSnapshot.from(provider),
-        builder: (context, snapshot, child) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-            locale: appLocaleFromCode(snapshot.localeCode),
-            supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            themeMode: themeModeFromValue(snapshot.themeMode),
-            themeAnimationStyle: appThemeAnimationStyle,
-            theme: buildAppTheme(
-              seedColor: Color(snapshot.themeSeedColorValue),
-              brightness: Brightness.light,
-              themeColorMode: snapshot.themeColorMode,
-              colorfulUiColorValues: snapshot.colorfulUiColorValues,
-            ),
-            darkTheme: buildAppTheme(
-              seedColor: Color(snapshot.themeSeedColorValue),
-              brightness: Brightness.dark,
-              themeColorMode: snapshot.themeColorMode,
-              colorfulUiColorValues: snapshot.colorfulUiColorValues,
-            ),
-            home: const AppHomeScreen(),
-          );
-        },
+    final features =
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
+    return SkedMotionPolicyScope(
+      disableAnimations: features.disableAnimations,
+      reduceMotion: features.reduceMotion,
+      child: ChangeNotifierProvider<TimetableProvider>.value(
+        value: widget.provider,
+        child: Selector<TimetableProvider, _AppShellSnapshot>(
+          selector: (_, provider) => _AppShellSnapshot.from(provider),
+          builder: (context, snapshot, child) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context).appTitle,
+              locale: appLocaleFromCode(snapshot.localeCode),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              themeMode: themeModeFromValue(snapshot.themeMode),
+              themeAnimationStyle: appThemeAnimationStyle,
+              theme: buildAppTheme(
+                seedColor: Color(snapshot.themeSeedColorValue),
+                brightness: Brightness.light,
+                themeColorMode: snapshot.themeColorMode,
+                colorfulUiColorValues: snapshot.colorfulUiColorValues,
+              ),
+              darkTheme: buildAppTheme(
+                seedColor: Color(snapshot.themeSeedColorValue),
+                brightness: Brightness.dark,
+                themeColorMode: snapshot.themeColorMode,
+                colorfulUiColorValues: snapshot.colorfulUiColorValues,
+              ),
+              home: const AppHomeScreen(),
+            );
+          },
+        ),
       ),
     );
   }

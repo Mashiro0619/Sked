@@ -215,6 +215,24 @@ class SkedMotionScheme extends ThemeExtension<SkedMotionScheme> {
 }
 
 /// Runtime motion decision derived from theme, accessibility, and TickerMode.
+class SkedMotionPolicyScope extends InheritedWidget {
+  const SkedMotionPolicyScope({
+    super.key,
+    required this.disableAnimations,
+    required this.reduceMotion,
+    required super.child,
+  });
+
+  final bool disableAnimations;
+  final bool reduceMotion;
+
+  @override
+  bool updateShouldNotify(SkedMotionPolicyScope oldWidget) {
+    return oldWidget.disableAnimations != disableAnimations ||
+        oldWidget.reduceMotion != reduceMotion;
+  }
+}
+
 @immutable
 class SkedMotionPolicy {
   const SkedMotionPolicy({
@@ -229,14 +247,19 @@ class SkedMotionPolicy {
     final mediaQueryDisables = MediaQuery.maybeDisableAnimationsOf(context);
     final features =
         WidgetsBinding.instance.platformDispatcher.accessibilityFeatures;
-    final disableAnimations = mediaQueryDisables ?? features.disableAnimations;
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<SkedMotionPolicyScope>();
+    final disableAnimations =
+        mediaQueryDisables ??
+        scope?.disableAnimations ??
+        features.disableAnimations;
     final tickerEnabled = TickerMode.valuesOf(context).enabled;
     return SkedMotionPolicy(
       scheme: skedMotionSchemeOf(context),
       animationsEnabled: !disableAnimations && tickerEnabled,
       tickerEnabled: tickerEnabled,
       disableAnimations: disableAnimations,
-      reduceMotion: features.reduceMotion,
+      reduceMotion: scope?.reduceMotion ?? features.reduceMotion,
     );
   }
 

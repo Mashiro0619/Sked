@@ -16,6 +16,7 @@ import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/expressive_motion.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/timetable_grid.dart';
@@ -86,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _selectedWeekday;
   int? _weekNavigationTarget;
   int _weekNavigationGeneration = 0;
+  int _weekNavigationDirection = 0;
   bool _weekPickerOpen = false;
   bool _timetablePickerOpen = false;
   bool _courseEditorOpen = false;
@@ -401,6 +403,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           _StudentWorkspaceToolbar(
                             timetable: timetable,
                             week: week,
+                            weekNavigationDirection:
+                                _weekNavigationTarget == week
+                                ? _weekNavigationDirection
+                                : 0,
                             viewMode: viewMode,
                             compactHeight: constraints.maxHeight < 600,
                             interactive: widget.interactive,
@@ -583,17 +589,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _animateToWeek(TimetableProvider provider, int week) async {
     final navigationGeneration = ++_weekNavigationGeneration;
+    final direction = week.compareTo(provider.selectedWeek).sign;
+    if (direction != 0 && mounted) {
+      setState(() => _weekNavigationDirection = direction);
+    }
     _weekNavigationTarget = week;
     // Publish the latest target before animating. This makes repeated next/
     // previous commands advance from the user's visible intent, while the
     // generation token prevents an interrupted animation from restoring an
     // older page.
-    await provider.setSelectedWeek(week);
-    if (!mounted || navigationGeneration != _weekNavigationGeneration) return;
-
-    final controller = _pageController;
-    final targetPage = week - 1;
     try {
+      await provider.setSelectedWeek(week);
+      if (!mounted || navigationGeneration != _weekNavigationGeneration) return;
+
+      final controller = _pageController;
+      final targetPage = week - 1;
       if (controller == null || !controller.hasClients) return;
       final motion = SkedMotionPolicy.of(context);
       if (!motion.spatialAnimationsEnabled) {
@@ -608,6 +618,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (navigationGeneration == _weekNavigationGeneration) {
         _weekNavigationTarget = null;
+        if (mounted && _weekNavigationDirection != 0) {
+          setState(() => _weekNavigationDirection = 0);
+        }
       }
     }
   }

@@ -455,6 +455,83 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('date navigation keeps its direction through the first frame', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byTooltip('Next page'));
+    await tester.pump();
+    final translations = tester
+        .widgetList<Transform>(
+          find.byKey(const ValueKey('sked-directional-transition-offset')),
+        )
+        .map((transform) => transform.transform.getTranslation())
+        .toList();
+
+    expect(translations, isNotEmpty);
+    expect(translations.any((translation) => translation.x > 0), isTrue);
+    expect(translations.every((translation) => translation.y == 0), isTrue);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'switching views settles an in-flight date transition before fade-through',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final base = _buildGeneralDataWithCalendars([
+        const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+      ], activeId: 'cal1');
+      final provider = await _createGeneralProvider(
+        base.copyWith(
+          generalMode: base.generalMode.copyWith(
+            selectedDateIso: '2026-06-16',
+            defaultView: generalViewWeek,
+          ),
+        ),
+      );
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+      await tester.tap(find.byTooltip('Next page'));
+      await tester.pump(const Duration(milliseconds: 40));
+      final inFlight = tester
+          .widgetList<Transform>(
+            find.byKey(const ValueKey('sked-directional-transition-offset')),
+          )
+          .map((transform) => transform.transform.getTranslation().x)
+          .toList();
+      expect(inFlight.any((offset) => offset.abs() > 0.1), isTrue);
+
+      await tester.tap(find.byTooltip('Month'));
+      await tester.pump();
+      final settled = tester
+          .widgetList<Transform>(
+            find.byKey(const ValueKey('sked-directional-transition-offset')),
+          )
+          .map((transform) => transform.transform.getTranslation().x)
+          .toList();
+      expect(settled.every((offset) => offset == 0), isTrue);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Previous month'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('empty list view renders its empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));

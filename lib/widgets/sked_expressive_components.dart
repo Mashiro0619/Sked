@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/sked_expressive_theme.dart';
+import 'sked_spring_builder.dart';
 
 /// An official [SegmentedButton] styled with Sked's expressive shape, motion,
 /// and Material 48 dp touch sizing.
@@ -22,6 +23,7 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
     this.showSelectedIcon = false,
     this.selectedIcon,
     this.direction = Axis.horizontal,
+    this.movingIndicator = false,
   });
 
   final List<ButtonSegment<T>> segments;
@@ -34,6 +36,13 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
   final bool showSelectedIcon;
   final Widget? selectedIcon;
   final Axis direction;
+
+  /// Paints one shared selection shape that travels between segments.
+  ///
+  /// The official [SegmentedButton] remains the interaction and semantics
+  /// owner. This opt-in layer is used only for the two primary workspace
+  /// selectors; multi-select callers retain the stock rendering.
+  final bool movingIndicator;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +71,7 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
               animationDuration: motion.effects(SkedMotionSpeed.fast),
             );
 
-    return SegmentedButton<T>(
+    final segmentedButton = SegmentedButton<T>(
       segments: segments,
       selected: selected,
       onSelectionChanged: onSelectionChanged,
@@ -73,6 +82,112 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
       showSelectedIcon: showSelectedIcon,
       selectedIcon: selectedIcon,
       direction: direction,
+    );
+
+    if (!movingIndicator ||
+        multiSelectionEnabled ||
+        selected.length > 1 ||
+        segments.length < 2) {
+      return segmentedButton;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final axisExtent = direction == Axis.horizontal
+            ? constraints.maxWidth
+            : constraints.maxHeight;
+        if (!axisExtent.isFinite || axisExtent <= 0) {
+          return segmentedButton;
+        }
+        final selectedIndex = selected.isEmpty
+            ? -1
+            : segments.indexWhere(
+                (segment) => selected.contains(segment.value),
+              );
+        if (selectedIndex < 0) return segmentedButton;
+
+        final indicatorColor = colors.primary.withValues(alpha: 0.12);
+        final indicator = SkedSpringBuilder(
+          key: const ValueKey('sked-segmented-selection-spring'),
+          value: selectedIndex.toDouble(),
+          speed: SkedMotionSpeed.standard,
+          builder: (context, value, child) {
+            final index = value.clamp(0.0, segments.length - 1.0);
+            final alignment = direction == Axis.horizontal
+                ? AlignmentDirectional(
+                    segments.length == 1
+                        ? 0
+                        : -1 + 2 * index / (segments.length - 1),
+                    0,
+                  )
+                : Alignment(
+                    0,
+                    segments.length == 1
+                        ? 0
+                        : -1 + 2 * index / (segments.length - 1),
+                  );
+            return Align(
+              alignment: alignment,
+              child: FractionallySizedBox(
+                widthFactor: direction == Axis.horizontal
+                    ? 1 / segments.length
+                    : 1,
+                heightFactor: direction == Axis.vertical
+                    ? 1 / segments.length
+                    : 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: DecoratedBox(
+                    key: const ValueKey('sked-segmented-selection-indicator'),
+                    decoration: ShapeDecoration(
+                      color: indicatorColor,
+                      shape: shapes.selectionIndicator,
+                    ),
+                    child: child,
+                  ),
+                ),
+              ),
+            );
+          },
+          child: const SizedBox.expand(),
+        );
+
+        final movingStyle = effectiveStyle.copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.transparent;
+            }
+            return Colors.transparent;
+          }),
+        );
+        final movingButton = SegmentedButton<T>(
+          segments: segments,
+          selected: selected,
+          onSelectionChanged: onSelectionChanged,
+          multiSelectionEnabled: multiSelectionEnabled,
+          emptySelectionAllowed: emptySelectionAllowed,
+          expandedInsets: expandedInsets,
+          style: movingStyle,
+          showSelectedIcon: showSelectedIcon,
+          selectedIcon: selectedIcon,
+          direction: direction,
+        );
+        return Material(
+          type: MaterialType.transparency,
+          color: colors.surfaceContainerLow,
+          shape: shapes.control,
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.passthrough,
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(child: ExcludeSemantics(child: indicator)),
+              ),
+              movingButton,
+            ],
+          ),
+        );
+      },
     );
   }
 }

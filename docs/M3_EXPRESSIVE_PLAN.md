@@ -212,6 +212,13 @@ flutter build windows --debug
 flutter build web --debug
 ~~~
 
+### 完成记录（2026-08-10）
+
+- 首页工作区与视图选择器、学生周次和通用日程日期导航已完成形状移动、弹簧过渡和方向性内容过渡；快速反向、首帧、视图切换竞态、RTL 轴向、系统关闭/减少动效和运行时无障碍设置均有回归覆盖。
+- Android 紧凑导航在大字体下动态保留标签空间，移动指示器与图标区域保持对齐；Flutter 原生 `NavigationBar` 的目的地动画现在遵循 Sked 动效策略，关闭或减少动效时立即完成。
+- 独立 review 发现并修复了方向为零但触发值不变时未清理空间动画、日期过渡与视图切换叠加，以及原生导航栏忽略系统动效设置三项问题；未发现新的 P0/P1 阻断项。
+- 阶段七验收：`dart format`、`flutter analyze` 通过；`flutter test --coverage` 为 1355 项通过、1 项按环境跳过；总覆盖率 85.8124%，改动行覆盖率 94.4290%，覆盖率门禁通过；Android Debug APK、Release App Bundle、Windows Debug 和 Web Debug 构建通过。Windows 构建仅保留第三方 WebView 插件的 CMake 开发警告。
+
 ## 约束与交付
 
 - 不修改数据 schema、Provider 持久化接口、备份/恢复协议、导入导出格式或网络行为。

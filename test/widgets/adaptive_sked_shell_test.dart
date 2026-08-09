@@ -486,6 +486,74 @@ void main() {
     },
   );
 
+  testWidgets('compact mode indicator follows the committed workspace', (
+    tester,
+  ) async {
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    final indicator = find.byKey(
+      const ValueKey('adaptive-shell-mode-selection-indicator'),
+    );
+    final initialRect = tester.getRect(indicator);
+    await tester.tap(find.text('General schedule'));
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pumpAndSettle();
+    final settledRect = tester.getRect(indicator);
+
+    expect(settledRect.left, greaterThan(initialRect.left));
+    expect(tester.getSize(indicator).height, greaterThanOrEqualTo(24));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'compact mode indicator stays above labels on a narrow large-text phone',
+    (tester) async {
+      final provider = await _providerFor(_MemoryStorage(_shellData()));
+      addTearDown(provider.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      await tester.pumpWidget(
+        _appFor(provider, textScaler: const TextScaler.linear(2)),
+      );
+      await tester.pumpAndSettle();
+
+      final indicator = tester.getRect(
+        find.byKey(const ValueKey('adaptive-shell-mode-selection-indicator')),
+      );
+      final navigationBar = tester.getRect(
+        find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
+      );
+      final selectedIcon = tester.getRect(find.byIcon(Icons.school));
+      for (final label in [
+        find.text('Student timetable'),
+        find.text('General schedule'),
+      ]) {
+        final labelRect = tester.getRect(label);
+        expect(
+          indicator.bottom,
+          lessThanOrEqualTo(labelRect.top),
+          reason: 'the moving indicator must remain in the icon region',
+        );
+        expect(labelRect.top, greaterThanOrEqualTo(navigationBar.top));
+        expect(labelRect.bottom, lessThanOrEqualTo(navigationBar.bottom));
+      }
+      expect(indicator.top, greaterThanOrEqualTo(navigationBar.top));
+      expect(indicator.bottom, lessThanOrEqualTo(navigationBar.bottom));
+      expect(indicator.height, greaterThanOrEqualTo(20));
+      expect(
+        indicator.overlaps(selectedIcon),
+        isTrue,
+        reason: 'the shared indicator must stay in the icon region',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('fade-through scale remains continuous when direction reverses', (
     tester,
   ) async {
@@ -528,6 +596,14 @@ void main() {
 
     await tester.pumpWidget(_appFor(provider, disableAnimations: true));
     await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<NavigationBar>(
+            find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
+          )
+          .animationDuration,
+      Duration.zero,
+    );
     await tester.tap(find.text('General schedule'));
     await tester.pump();
 
@@ -547,6 +623,31 @@ void main() {
           .index,
       1,
     );
+  });
+
+  testWidgets('compact navigation honors reduced motion', (tester) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<NavigationBar>(
+            find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
+          )
+          .animationDuration,
+      Duration.zero,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('general workspace view state survives a mode round trip', (

@@ -34,6 +34,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   const _StudentWorkspaceToolbar({
     required this.timetable,
     required this.week,
+    required this.weekNavigationDirection,
     required this.viewMode,
     required this.compactHeight,
     required this.interactive,
@@ -51,6 +52,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
 
   final TimetableData timetable;
   final int week;
+  final int weekNavigationDirection;
   final _StudentTimetableView viewMode;
   final bool compactHeight;
   final bool interactive;
@@ -146,6 +148,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               ),
             ],
             selected: {viewMode},
+            movingIndicator: true,
+            expandedInsets: EdgeInsets.zero,
             onSelectionChanged: onViewChanged == null
                 ? null
                 : (selection) => onViewChanged!(selection.single),
@@ -172,7 +176,12 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                   shape: controlShape,
                 ),
                 icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                label: Text(l10n.weekLabel(week)),
+                label: SkedDirectionalTransition(
+                  trigger: week,
+                  direction: weekNavigationDirection,
+                  distance: 12,
+                  child: Text(l10n.weekLabel(week)),
+                ),
               ),
               if (compactHeight)
                 IconButton(
@@ -219,7 +228,13 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               children: [selector, weekControls],
             );
           }
-          return Row(children: [selector, const Spacer(), weekControls]);
+          return Row(
+            children: [
+              Flexible(child: selector),
+              const Spacer(),
+              weekControls,
+            ],
+          );
         },
       ),
     );

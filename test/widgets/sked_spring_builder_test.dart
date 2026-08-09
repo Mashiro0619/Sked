@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/sked_spring_builder.dart';
 
 void main() {
@@ -182,5 +183,48 @@ void main() {
     expect(latest, 42);
     await tester.pump();
     expect(endCount, 1);
+  });
+
+  testWidgets('motion policy scope stops a running spring immediately', (
+    tester,
+  ) async {
+    var target = 0.0;
+    var reduceMotion = false;
+    late void Function(void Function()) rebuild;
+    double latest = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return SkedMotionPolicyScope(
+              disableAnimations: false,
+              reduceMotion: reduceMotion,
+              child: SkedSpringBuilder(
+                value: target,
+                builder: (context, value, child) {
+                  latest = value;
+                  return const SizedBox();
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    rebuild(() => target = 100);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(latest, greaterThan(0));
+    expect(latest, lessThan(100));
+
+    rebuild(() => reduceMotion = true);
+    await tester.pump();
+    expect(latest, 100);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(latest, 100);
+    expect(tester.takeException(), isNull);
   });
 }
