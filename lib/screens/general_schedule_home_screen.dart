@@ -28,7 +28,24 @@ part 'general_schedule_calendar_manager.dart';
 part 'general_schedule_month_view.dart';
 
 class GeneralScheduleHomeScreen extends StatefulWidget {
-  const GeneralScheduleHomeScreen({super.key});
+  const GeneralScheduleHomeScreen({
+    super.key,
+    this.embedded = false,
+    this.active = true,
+    this.showSettingsAction = true,
+    this.settingsEnabled = true,
+    this.settingsAction,
+    this.settingsFocusNode,
+    this.scaffoldKey,
+  });
+
+  final bool embedded;
+  final bool active;
+  final bool showSettingsAction;
+  final VoidCallback? settingsAction;
+  final bool settingsEnabled;
+  final FocusNode? settingsFocusNode;
+  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   @override
   State<GeneralScheduleHomeScreen> createState() =>
@@ -66,6 +83,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     const filter = _GeneralOccurrenceFilter(query: '', colorValue: null);
 
     return Scaffold(
+      key: widget.scaffoldKey,
       appBar: AppBar(
         titleSpacing: 12,
         title: InkWell(
@@ -93,7 +111,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           ),
         ),
         actions: [
-          const ModeSwitchAction(),
+          if (!widget.embedded) const ModeSwitchAction(),
           _CalendarManagerAction(
             expanded: MediaQuery.sizeOf(context).width >= 1000,
             disabled: _calendarManagerOpen,
@@ -106,13 +124,18 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 ? null
                 : () => _openEditor(context, provider),
           ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: l10n.settings,
-            onPressed: _settingsPageOpen
-                ? null
-                : () => _openSettingsPage(context, provider),
-          ),
+          if (widget.showSettingsAction)
+            IconButton(
+              focusNode: widget.settingsFocusNode,
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: l10n.settings,
+              onPressed: !widget.settingsEnabled
+                  ? null
+                  : widget.settingsAction ??
+                        (_settingsPageOpen
+                            ? null
+                            : () => _openSettingsPage(context, provider)),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -179,6 +202,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               _ReminderStrip(
                 provider: provider,
                 filter: filter,
+                active: widget.active,
                 onOccurrenceTap: (occurrence) =>
                     _openDetails(context, provider, occurrence),
               ),
@@ -201,6 +225,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                         date: selectedDate,
                         provider: provider,
                         filter: filter,
+                        active: widget.active,
                         onDaySelected: provider.setSelectedGeneralDate,
                         onEmptySlotTap: (date) =>
                             _openEditor(context, provider, initialDate: date),
@@ -226,6 +251,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                         date: selectedDate,
                         provider: provider,
                         filter: filter,
+                        active: widget.active,
                         onDaySelected: provider.setSelectedGeneralDate,
                         onEmptySlotTap: (date) =>
                             _openEditor(context, provider, initialDate: date),
@@ -236,6 +262,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                         date: selectedDate,
                         provider: provider,
                         filter: filter,
+                        active: widget.active,
                         onDaySelected: provider.setSelectedGeneralDate,
                         onEmptySlotTap: (date) =>
                             _openEditor(context, provider, initialDate: date),

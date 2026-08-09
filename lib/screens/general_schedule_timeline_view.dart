@@ -15,6 +15,7 @@ class _WeekCalendarView extends StatefulWidget {
     required this.date,
     required this.provider,
     required this.filter,
+    required this.active,
     required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -24,6 +25,7 @@ class _WeekCalendarView extends StatefulWidget {
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
+  final bool active;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
@@ -44,13 +46,13 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
     _baseWeekStart = startOfWeekMonday(_visibleDayForDate(widget.date));
     _currentPage = _generalTimelineInitialPage;
     _controller = PageController(initialPage: _currentPage);
-    _syncVisibleSelectedDate();
+    if (widget.active) _syncVisibleSelectedDate();
   }
 
   @override
   void didUpdateWidget(covariant _WeekCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncVisibleSelectedDate();
+    if (widget.active) _syncVisibleSelectedDate();
     final targetPage = _pageForWeek(
       startOfWeekMonday(_visibleDayForDate(widget.date)),
     );
@@ -97,7 +99,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && widget.active) {
         widget.onDaySelected(visibleDate);
       }
     });
@@ -110,6 +112,7 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 
   void _handlePageChanged(int page) {
     _currentPage = page;
+    if (!widget.active) return;
     final nextDate = _weekStartForPage(page);
     widget.onDaySelected(addCalendarDays(nextDate, _selectedWeekdayOffset()));
   }
@@ -184,6 +187,7 @@ class _DayCalendarView extends StatefulWidget {
     required this.date,
     required this.provider,
     required this.filter,
+    required this.active,
     required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -193,6 +197,7 @@ class _DayCalendarView extends StatefulWidget {
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
+  final bool active;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
@@ -221,13 +226,13 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     _dayController = PageController(initialPage: _currentDayPage);
     _weekController = PageController(initialPage: _currentWeekPage);
     _dayController.addListener(_syncWeekPickerToDayPage);
-    _syncVisibleSelectedDate();
+    if (widget.active) _syncVisibleSelectedDate();
   }
 
   @override
   void didUpdateWidget(covariant _DayCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncVisibleSelectedDate();
+    if (widget.active) _syncVisibleSelectedDate();
     final selectedDate = _visibleDayForDate(widget.date);
     final targetDayPage = _pageForDay(selectedDate);
     if (targetDayPage != _currentDayPage) {
@@ -356,7 +361,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && widget.active) {
         widget.onDaySelected(visibleDate);
       }
     });
@@ -392,6 +397,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
 
   void _handleDayPageChanged(int page) {
     _currentDayPage = page;
+    if (!widget.active) return;
     widget.onDaySelected(_dayForPage(page));
   }
 
@@ -400,6 +406,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
       return;
     }
     _currentWeekPage = page;
+    if (!widget.active) return;
     final nextDate = _weekStartForPage(page);
     widget.onDaySelected(addCalendarDays(nextDate, _selectedWeekdayOffset()));
   }

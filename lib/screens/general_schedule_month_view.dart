@@ -20,6 +20,7 @@ class _MonthCalendarView extends StatefulWidget {
     required this.date,
     required this.provider,
     required this.filter,
+    required this.active,
     required this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -28,6 +29,7 @@ class _MonthCalendarView extends StatefulWidget {
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
+  final bool active;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
@@ -85,9 +87,9 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
     final today = normalizeDateOnly(DateTime.now());
     final requestedDate = normalizeDateOnly(widget.date);
     final selectedDate = _visibleDayForDate(requestedDate);
-    if (!_sameDay(selectedDate, requestedDate)) {
+    if (widget.active && !_sameDay(selectedDate, requestedDate)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onDaySelected(selectedDate);
+        if (mounted && widget.active) widget.onDaySelected(selectedDate);
       });
     }
     final model = _MonthGridModel.build(

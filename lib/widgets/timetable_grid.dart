@@ -155,15 +155,27 @@ class TimetableGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final metrics = _TimetableMetrics.fromWidth(constraints.maxWidth);
-        final headerHeight = metrics.compact
+        final baseHeaderHeight = metrics.compact
             ? _compactHeaderHeight
             : _regularHeaderHeight;
+        // The day header contains two stacked labels. Measure their actual
+        // scaled line heights so large accessibility text gets room instead
+        // of overflowing the fixed-size inner slot.
+        final headerHeight = math.max(
+          baseHeaderHeight,
+          _scaledDayHeaderHeight(
+            context,
+            compact: metrics.compact,
+            localeCode: localeCode,
+          ),
+        );
 
         return SizedBox(
           width: constraints.maxWidth,
           child: Column(
             children: [
               SizedBox(
+                key: const ValueKey('timetable-day-header'),
                 height: headerHeight,
                 child: Row(
                   children: [
@@ -411,6 +423,46 @@ class _TimetableMetrics {
   }
 }
 
+double _scaledDayHeaderHeight(
+  BuildContext context, {
+  required bool compact,
+  required String localeCode,
+}) {
+  final theme = Theme.of(context);
+  final textScaler = MediaQuery.textScalerOf(context);
+  final textDirection = Directionality.of(context);
+  final weekdayStyle = compact
+      ? theme.textTheme.labelMedium
+      : theme.textTheme.titleSmall;
+  final dateStyle = compact
+      ? theme.textTheme.labelSmall
+      : theme.textTheme.bodySmall;
+  var maxWeekdayHeight = 0.0;
+  for (var weekday = DateTime.monday; weekday <= DateTime.sunday; weekday++) {
+    final weekdayPainter = TextPainter(
+      text: TextSpan(
+        text: formatWeekdayShortLabel(weekday, localeCode: localeCode),
+        style: weekdayStyle,
+      ),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    maxWeekdayHeight = math.max(maxWeekdayHeight, weekdayPainter.height);
+    weekdayPainter.dispose();
+  }
+  final datePainter = TextPainter(
+    text: TextSpan(text: '88', style: dateStyle),
+    textDirection: textDirection,
+    textScaler: textScaler,
+    maxLines: 1,
+  )..layout();
+  final maxDateHeight = datePainter.height;
+  datePainter.dispose();
+  final datePadding = compact ? 4.0 : 6.0;
+  return maxWeekdayHeight + 2 + maxDateHeight + datePadding + 16;
+}
+
 class _MonthHeader extends StatelessWidget {
   const _MonthHeader({
     required this.date,
@@ -476,7 +528,7 @@ class _DayHeader extends StatelessWidget {
           Container(
             constraints: BoxConstraints(minWidth: compact ? 24 : 28),
             padding: EdgeInsets.symmetric(
-              horizontal: compact ? 4 : 6,
+              horizontal: compact ? 2 : 6,
               vertical: compact ? 2 : 3,
             ),
             decoration: isToday
@@ -491,6 +543,9 @@ class _DayHeader extends StatelessWidget {
             child: Text(
               '${date.day}',
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+              softWrap: false,
               style:
                   (compact
                           ? Theme.of(context).textTheme.labelSmall

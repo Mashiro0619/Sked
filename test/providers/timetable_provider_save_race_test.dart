@@ -104,7 +104,77 @@ void main() {
   );
 
   test(
-    'slow failed save does not roll back a newer date before debounce fires',
+    'pending mode save does not leak target theme through provider getters',
+    () async {
+      final base = _initialApp().copyWith(activeMode: AppMode.student);
+      final initial = base.copyWith(
+        studentMode: base.studentMode.copyWith(
+          themeMode: 'dark',
+          themeSeedColorValue: 0xFF112233,
+        ),
+        generalMode: base.generalMode.copyWith(
+          themeMode: 'light',
+          themeSeedColorValue: 0xFF445566,
+        ),
+      );
+      final storage = _ControlledTimetableStorage(initial);
+      final provider = _providerWith(storage);
+      await provider.load();
+      storage.saveCount = 0;
+      final saveGate = Completer<void>();
+      storage.saveGates.add(saveGate);
+      storage.saveErrors.add(null);
+
+      final modeSave = provider.switchMode(AppMode.general);
+      await _waitForSaveCount(storage, 1);
+
+      expect(provider.activeMode, AppMode.student);
+      expect(provider.themeMode, 'dark');
+      expect(provider.themeSeedColorValue, 0xFF112233);
+      provider.notifyListeners();
+      expect(provider.activeMode, AppMode.student);
+      expect(provider.themeMode, 'dark');
+
+      saveGate.complete();
+      await modeSave;
+      expect(provider.activeMode, AppMode.general);
+      expect(provider.themeMode, 'light');
+      expect(provider.themeSeedColorValue, 0xFF445566);
+    },
+  );
+
+  test('direct overlapping mode requests are serialized', () async {
+    final storage = _ControlledTimetableStorage(_initialApp());
+    final provider = _providerWith(storage);
+    await provider.load();
+    storage.saveCount = 0;
+    storage.writeLog.clear();
+    final firstGate = Completer<void>();
+    final secondGate = Completer<void>();
+    storage.saveGates.addAll([firstGate, secondGate]);
+    storage.saveErrors.addAll([null, null]);
+
+    final first = provider.switchMode(AppMode.student);
+    await _waitForSaveCount(storage, 1);
+    final second = provider.switchMode(AppMode.general);
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.saveCount, 1);
+    expect(provider.activeMode, AppMode.general);
+
+    firstGate.complete();
+    await first;
+    await _waitForSaveCount(storage, 2);
+    expect(provider.activeMode, AppMode.student);
+
+    secondGate.complete();
+    await second;
+    expect(provider.activeMode, AppMode.general);
+    expect(storage.data!.activeMode, AppMode.general);
+    expect(storage.saveCount, 2);
+  });
+
+  test(
+    'slow failed mode save preserves a newer date and committed mode',
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
@@ -126,18 +196,49 @@ void main() {
       saveGate.complete();
       await modeSaveExpectation;
 
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.activeMode, AppMode.general);
       expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
 
       await provider.flushPendingUiStateSaves();
       expect(storage.saveCount, 2);
-      expect(storage.data!.activeMode, AppMode.student);
+      expect(storage.data!.activeMode, AppMode.general);
       expect(storage.data!.generalMode.selectedDateIso, '2026-06-02');
     },
   );
 
   test(
-    'storage failure gate does not roll back a newer debounced mutation',
+    'failed mode save preserves UI state scheduled before the switch',
+    () async {
+      final storage = _ControlledTimetableStorage(_initialApp());
+      final provider = _providerWith(storage);
+      await provider.load();
+      storage.saveCount = 0;
+      storage.writeLog.clear();
+      final saveGate = Completer<void>();
+      storage.saveGates.add(saveGate);
+      storage.saveErrors.add(Exception('mode write failed'));
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      final modeSaveExpectation = expectLater(
+        provider.switchMode(AppMode.student),
+        throwsException,
+      );
+      await _waitForSaveCount(storage, 1);
+      saveGate.complete();
+      await modeSaveExpectation;
+
+      expect(provider.activeMode, AppMode.general);
+      expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
+
+      await provider.flushPendingUiStateSaves();
+      expect(storage.saveCount, 2);
+      expect(storage.data!.activeMode, AppMode.general);
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-02');
+    },
+  );
+
+  test(
+    'storage failure gate keeps a newer debounced mutation read-only',
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
@@ -161,7 +262,7 @@ void main() {
       await modeSaveExpectation;
 
       expect(provider.canWrite, isFalse);
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.activeMode, AppMode.general);
       expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
 
       await expectLater(
@@ -169,13 +270,13 @@ void main() {
         throwsA(isA<RecoveryWriteBlockedException>()),
       );
       expect(storage.saveCount, 1);
-      expect(provider.activeMode, AppMode.student);
+      expect(provider.activeMode, AppMode.general);
       expect(provider.selectedGeneralDate, DateTime(2026, 6, 2));
     },
   );
 
   test(
-    'two overlapping failed saves restore the last persisted snapshot',
+    'mode failure lets an overlapping settings save use the committed mode',
     () async {
       final storage = _ControlledTimetableStorage(_initialApp());
       final provider = _providerWith(storage);
@@ -185,33 +286,26 @@ void main() {
       final firstGate = Completer<void>();
       final secondGate = Completer<void>();
       storage.saveGates.addAll([firstGate, secondGate]);
-      storage.saveErrors.addAll([
-        Exception('first write failed'),
-        Exception('second write failed'),
-      ]);
+      storage.saveErrors.addAll([Exception('first write failed'), null]);
 
       final firstSaveExpectation = expectLater(
         provider.switchMode(AppMode.student),
         throwsException,
       );
       await _waitForSaveCount(storage, 1);
-      final secondSaveExpectation = expectLater(
-        provider.updateGeneralDisplaySettings(dayStartHour: 5),
-        throwsException,
-      );
+      final secondSave = provider.updateGeneralDisplaySettings(dayStartHour: 5);
 
       firstGate.complete();
       await firstSaveExpectation;
       await _waitForSaveCount(storage, 2);
       secondGate.complete();
-      await secondSaveExpectation;
+      await secondSave;
 
       expect(provider.activeMode, AppMode.general);
-      expect(
-        provider.generalDayStartHour,
-        storage.data!.generalMode.dayStartHour,
-      );
-      expect(storage.writeLog, isEmpty);
+      expect(provider.generalDayStartHour, 5);
+      expect(storage.data!.activeMode, AppMode.general);
+      expect(storage.data!.generalMode.dayStartHour, 5);
+      expect(storage.writeLog, hasLength(1));
     },
   );
 
@@ -237,7 +331,7 @@ void main() {
       await _waitForSaveCount(storage, 1);
       final secondSaveExpectation = expectLater(
         provider.updateGeneralDisplaySettings(dayStartHour: 5),
-        throwsA(isA<AcceptedWriteBlockedException>()),
+        throwsA(isA<RecoveryWriteBlockedException>()),
       );
 
       firstGate.complete();
@@ -246,9 +340,13 @@ void main() {
 
       expect(provider.canWrite, isFalse);
       expect(provider.activeMode, initial.activeMode);
-      expect(provider.generalDayStartHour, initial.generalMode.dayStartHour);
+      expect(provider.generalDayStartHour, 5);
       expect(storage.saveCount, 1);
       expect(storage.writeLog, isEmpty);
+      expect(
+        storage.data!.generalMode.dayStartHour,
+        initial.generalMode.dayStartHour,
+      );
     },
   );
 

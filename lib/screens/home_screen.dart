@@ -28,7 +28,48 @@ part 'home_screen_timetable_management.dart';
 part 'home_screen_widgets.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    super.key,
+    this.embedded = false,
+    this.active = true,
+    this.interactive = true,
+    this.showSettingsAction = true,
+    this.settingsEnabled = true,
+    this.settingsAction,
+    this.settingsFocusNode,
+    this.scaffoldKey,
+    this.weekShortcutFocusNode,
+  });
+
+  /// Whether this screen is hosted by the adaptive application shell.
+  final bool embedded;
+
+  /// Whether this workspace is currently active in the adaptive shell.
+  final bool active;
+
+  /// Whether input may mutate this workspace while it remains visible.
+  final bool interactive;
+
+  /// Keeps the compact shell's single settings action in the workspace bar.
+  final bool showSettingsAction;
+
+  /// Optional shell-owned settings action. When omitted, this screen opens
+  /// settings itself for backwards-compatible standalone use.
+  final VoidCallback? settingsAction;
+
+  /// Preserves logical focus for the shell-owned global settings action.
+  final FocusNode? settingsFocusNode;
+
+  /// Allows the adaptive shell to close the settings entry while a command is
+  /// persisting, without changing the standalone screen behavior.
+  final bool settingsEnabled;
+
+  /// Lets the adaptive shell close a workspace drawer before switching modes.
+  final GlobalKey<ScaffoldState>? scaffoldKey;
+
+  /// Lets the adaptive shell restore the timetable's keyboard shortcuts after
+  /// a workspace transition without rebuilding the persistent page view.
+  final FocusNode? weekShortcutFocusNode;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -220,17 +261,23 @@ class _HomeScreenState extends State<HomeScreen> {
         final timetable = snapshot.activeTimetable;
         if (timetable == null) {
           return Scaffold(
+            key: widget.scaffoldKey,
             appBar: AppBar(
               title: Text(l10n.appTitle),
               actions: [
-                const ModeSwitchAction(),
-                IconButton(
-                  onPressed: _settingsPageOpen
-                      ? null
-                      : () => _openSettingsPage(provider),
-                  icon: const Icon(Icons.settings_outlined),
-                  tooltip: l10n.settings,
-                ),
+                if (!widget.embedded) const ModeSwitchAction(),
+                if (widget.showSettingsAction)
+                  IconButton(
+                    focusNode: widget.settingsFocusNode,
+                    onPressed: !widget.settingsEnabled
+                        ? null
+                        : widget.settingsAction ??
+                              (_settingsPageOpen
+                                  ? null
+                                  : () => _openSettingsPage(provider)),
+                    icon: const Icon(Icons.settings_outlined),
+                    tooltip: l10n.settings,
+                  ),
               ],
             ),
             body: _EmptyTimetableState(
@@ -255,10 +302,14 @@ class _HomeScreenState extends State<HomeScreen> {
         _ensurePageController(week);
 
         return Scaffold(
+          key: widget.scaffoldKey,
           appBar: _StudentHomeAppBar(
             provider: provider,
             timetable: timetable,
             week: week,
+            showModeSwitch: !widget.embedded,
+            showSettings: widget.showSettingsAction,
+            settingsFocusNode: widget.settingsFocusNode,
             onTitleTap: _weekPickerOpen
                 ? null
                 : () => _showWeekPicker(
@@ -270,9 +321,12 @@ class _HomeScreenState extends State<HomeScreen> {
             onAddCourse: _courseEditorOpen
                 ? null
                 : () => _openEditor(context, provider),
-            onOpenSettings: _settingsPageOpen
+            onOpenSettings: !widget.settingsEnabled
                 ? null
-                : () => _openSettingsPage(provider),
+                : widget.settingsAction ??
+                      (_settingsPageOpen
+                          ? null
+                          : () => _openSettingsPage(provider)),
           ),
           drawer: _TimetableDrawer(
             provider: provider,
@@ -301,6 +355,9 @@ class _HomeScreenState extends State<HomeScreen> {
             provider: provider,
             timetable: timetable,
             config: config,
+            active: widget.active,
+            interactive: widget.interactive,
+            shortcutFocusNode: widget.weekShortcutFocusNode,
             onJumpWeekBy: (offset) => _jumpWeekBy(provider, offset),
             onCourseTap: (info) => _openDetails(context, provider, info),
             onEmptySlotTap: (slotInfo) => _openEditor(

@@ -387,6 +387,14 @@ class TimetableProvider extends _TimetableProviderBase
 
   AppData _appDataValue = buildInitialAppData(buildDefaultPeriodTimes());
   var _appDataMutationEpoch = 0;
+  // A mode switch is persisted as a single command.  Keep the mode exposed to
+  // the rest of the app on the previously committed value until that command
+  // has completed; otherwise an unrelated notifyListeners() (for example a
+  // privacy/update refresh) can make MyApp rebuild with the target mode's
+  // theme while the write is still pending.
+  AppMode? _visibleActiveModeOverride;
+  Future<void>? _modeSwitchInFlight;
+  Completer<void>? _modeSwitchBarrier;
 
   @override
   AppData get _appData => _appDataValue;
@@ -514,34 +522,112 @@ class TimetableProvider extends _TimetableProviderBase
   String? get ignoredUpdateVersion => _appData.ignoredUpdateVersion;
   String? get availableUpdateVersion => _appData.availableUpdateVersion;
 
-  AppMode get activeMode => _appData.activeMode;
-  bool get isGeneralMode => _appData.activeMode == AppMode.general;
-  bool get isStudentMode => _appData.activeMode == AppMode.student;
+  AppMode get activeMode => _visibleActiveModeOverride ?? _appData.activeMode;
+  bool get isGeneralMode => activeMode == AppMode.general;
+  bool get isStudentMode => activeMode == AppMode.student;
   StudentModeData get studentMode => _appData.studentMode;
   GeneralScheduleData get generalMode => _appData.generalMode;
 
   Future<void> switchMode(AppMode mode) async {
-    if (_appData.activeMode == mode) return;
+    // Serialize direct callers as well as the shell's navigation command. A
+    // second request waits for the first transaction and then observes the
+    // newly committed mode instead of racing two full snapshots.
+    while (_modeSwitchInFlight != null) {
+      try {
+        await _modeSwitchInFlight;
+      } catch (_) {
+        // The caller that initiated the failed transaction receives its
+        // error. A later explicit request is still allowed to retry.
+      }
+    }
+
+    if (activeMode == mode) return;
+    final previousMode = activeMode;
+    final operation = _switchModeTransaction(mode, previousMode);
+    _modeSwitchInFlight = operation;
+    try {
+      await operation;
+    } finally {
+      if (identical(_modeSwitchInFlight, operation)) {
+        _modeSwitchInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _switchModeTransaction(
+    AppMode mode,
+    AppMode previousMode,
+  ) async {
+    _ensureAppBackupRestoreMutationAllowed();
+    final barrier = Completer<void>();
+    _modeSwitchBarrier = barrier;
+    _visibleActiveModeOverride = previousMode;
     _appData = _appData.copyWith(activeMode: mode);
-    await _saveAndNotify();
+    try {
+      await _saveAndNotify(
+        notify: false,
+        allowDuringModeSwitch: true,
+        rollbackOnFailure: false,
+      );
+    } catch (_) {
+      // Preserve any newer non-mode edits, but never leave a failed mode
+      // mutation visible or eligible for a later debounced save.
+      if (_appData.activeMode != previousMode) {
+        _restoreAppDataAfterPersistenceFailure(
+          _appData.copyWith(activeMode: previousMode),
+        );
+      }
+      rethrow;
+    } finally {
+      _visibleActiveModeOverride = null;
+      // Publish only after the write result and any failure rollback are
+      // settled. This keeps MyApp's mode-dependent theme snapshot atomic.
+      if (!_isDisposed) {
+        notifyListeners();
+      }
+      if (identical(_modeSwitchBarrier, barrier)) {
+        _modeSwitchBarrier = null;
+        barrier.complete();
+      }
+    }
   }
 
   @override
-  Future<void> _saveAndNotify() async {
+  Future<void> _saveAndNotify({
+    bool notify = true,
+    bool allowDuringModeSwitch = false,
+    bool rollbackOnFailure = true,
+  }) async {
     _ensureAppBackupRestoreMutationAllowed();
-    _cancelScheduledUiStateSave();
+    final hadScheduledUiStateSave = _cancelScheduledUiStateSave();
     try {
-      await _save();
+      await _save(
+        allowDuringModeSwitch: allowDuringModeSwitch,
+        rollbackOnFailure: rollbackOnFailure,
+      );
     } catch (_) {
       _selectedWeek = _currentWeekForActiveTimetable();
-      notifyListeners();
+      if (hadScheduledUiStateSave && !rollbackOnFailure) {
+        _scheduleUiStateSave();
+      }
+      if (notify) notifyListeners();
       rethrow;
     }
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
   @override
-  Future<void> _save() async {
+  Future<void> _save({
+    bool allowDuringModeSwitch = false,
+    bool rollbackOnFailure = true,
+  }) async {
+    if (!allowDuringModeSwitch) {
+      while (true) {
+        final barrier = _modeSwitchBarrier;
+        if (barrier == null) break;
+        await barrier.future;
+      }
+    }
     _ensureAppBackupRestoreMutationAllowed();
     final normalized = _importExportService.normalizeAppData(
       _appData,
@@ -558,7 +644,9 @@ class TimetableProvider extends _TimetableProviderBase
       final shouldRollback =
           error is! RecoveryWriteBlockedException ||
           error is AcceptedWriteBlockedException;
-      if (shouldRollback && _appDataMutationEpoch == attemptEpoch) {
+      if (rollbackOnFailure &&
+          shouldRollback &&
+          _appDataMutationEpoch == attemptEpoch) {
         final persisted = _repository.current;
         if (persisted != null) {
           final runtimeApiKey = customSchoolImportApiKey;
@@ -617,7 +705,9 @@ class TimetableProvider extends _TimetableProviderBase
       if (appDataEpoch == _appDataMutationEpoch &&
           secretEpoch == _customSchoolImportApiKeyMutationEpoch &&
           _uiStateSaveTimer == null &&
-          _uiStateSaveInFlight == null) {
+          _uiStateSaveInFlight == null &&
+          _modeSwitchInFlight == null &&
+          _modeSwitchBarrier == null) {
         return;
       }
     }

@@ -1,11 +1,44 @@
 part of 'home_screen.dart';
 
+typedef TimetableLiveRefreshTimerFactory =
+    Timer Function(Duration delay, VoidCallback callback);
+
+@visibleForTesting
+class TimetableLiveRefreshScope extends InheritedWidget {
+  const TimetableLiveRefreshScope({
+    super.key,
+    required this.now,
+    required this.createTimer,
+    required super.child,
+  });
+
+  final DateTime Function() now;
+  final TimetableLiveRefreshTimerFactory createTimer;
+
+  static TimetableLiveRefreshScope? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<TimetableLiveRefreshScope>();
+  }
+
+  @override
+  bool updateShouldNotify(TimetableLiveRefreshScope oldWidget) {
+    return now != oldWidget.now || createTimer != oldWidget.createTimer;
+  }
+}
+
+Timer _createTimetableLiveRefreshTimer(Duration delay, VoidCallback callback) {
+  return Timer(delay, callback);
+}
+
 class _StudentHomeAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   const _StudentHomeAppBar({
     required this.provider,
     required this.timetable,
     required this.week,
+    required this.showModeSwitch,
+    required this.showSettings,
+    this.settingsFocusNode,
     required this.onTitleTap,
     required this.onAddCourse,
     required this.onOpenSettings,
@@ -14,6 +47,9 @@ class _StudentHomeAppBar extends StatelessWidget
   final TimetableProvider provider;
   final TimetableData timetable;
   final int week;
+  final bool showModeSwitch;
+  final bool showSettings;
+  final FocusNode? settingsFocusNode;
   final VoidCallback? onTitleTap;
   final VoidCallback? onAddCourse;
   final VoidCallback? onOpenSettings;
@@ -53,17 +89,19 @@ class _StudentHomeAppBar extends StatelessWidget
         ),
       ),
       actions: [
-        const ModeSwitchAction(),
+        if (showModeSwitch) const ModeSwitchAction(),
         IconButton(
           onPressed: onAddCourse,
           icon: const Icon(Icons.add),
           tooltip: l10n.addCourse,
         ),
-        IconButton(
-          onPressed: onOpenSettings,
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: l10n.settings,
-        ),
+        if (showSettings)
+          IconButton(
+            focusNode: settingsFocusNode,
+            onPressed: onOpenSettings,
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.settings,
+          ),
       ],
     );
   }
@@ -250,6 +288,9 @@ class _TimetableWeekPager extends StatefulWidget {
     required this.provider,
     required this.timetable,
     required this.config,
+    required this.active,
+    required this.interactive,
+    this.shortcutFocusNode,
     required this.onJumpWeekBy,
     required this.onCourseTap,
     required this.onEmptySlotTap,
@@ -259,6 +300,9 @@ class _TimetableWeekPager extends StatefulWidget {
   final TimetableProvider provider;
   final TimetableData timetable;
   final TimetableConfig config;
+  final bool active;
+  final bool interactive;
+  final FocusNode? shortcutFocusNode;
   final Future<void> Function(int offset) onJumpWeekBy;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
   final ValueChanged<TimetableEmptySlotTapInfo> onEmptySlotTap;
@@ -267,116 +311,207 @@ class _TimetableWeekPager extends StatefulWidget {
   State<_TimetableWeekPager> createState() => _TimetableWeekPagerState();
 }
 
-class _TimetableWeekPagerState extends State<_TimetableWeekPager> {
+class _TimetableWeekPagerState extends State<_TimetableWeekPager>
+    with WidgetsBindingObserver {
   Timer? _liveCourseTimer;
+  late final FocusNode _shortcutFocusNode;
+  DateTime Function() _now = DateTime.now;
+  TimetableLiveRefreshTimerFactory _createTimer =
+      _createTimetableLiveRefreshTimer;
+  bool _isForeground = true;
+  bool _tickerEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    _liveCourseTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _shortcutFocusNode =
+        widget.shortcutFocusNode ??
+        FocusNode(debugLabel: 'Student timetable week shortcuts');
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    _isForeground =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
+    _restartLiveCourseTimer(refreshImmediately: false);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final timeScope = TimetableLiveRefreshScope.maybeOf(context);
+    final nextNow = timeScope?.now ?? DateTime.now;
+    final nextCreateTimer =
+        timeScope?.createTimer ?? _createTimetableLiveRefreshTimer;
+    final nextTickerEnabled = TickerMode.valuesOf(context).enabled;
+    final timingChanged = _now != nextNow || _createTimer != nextCreateTimer;
+    if (!timingChanged && _tickerEnabled == nextTickerEnabled) return;
+    _now = nextNow;
+    _createTimer = nextCreateTimer;
+    _tickerEnabled = nextTickerEnabled;
+    _restartLiveCourseTimer(refreshImmediately: _canRefresh);
+  }
+
+  @override
+  void didUpdateWidget(covariant _TimetableWeekPager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active) {
+      _restartLiveCourseTimer(refreshImmediately: _canRefresh);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final wasForeground = _isForeground;
+    _isForeground = state == AppLifecycleState.resumed;
+    if (_isForeground != wasForeground) {
+      _restartLiveCourseTimer(refreshImmediately: _canRefresh);
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _liveCourseTimer?.cancel();
+    if (widget.shortcutFocusNode == null) _shortcutFocusNode.dispose();
     super.dispose();
+  }
+
+  bool get _canRefresh =>
+      mounted && widget.active && _tickerEnabled && _isForeground;
+
+  bool get _shortcutsEnabled => mounted && widget.active && _tickerEnabled;
+
+  void _restartLiveCourseTimer({required bool refreshImmediately}) {
+    _liveCourseTimer?.cancel();
+    _liveCourseTimer = null;
+    if (!_canRefresh) return;
+    if (refreshImmediately) setState(() {});
+    _scheduleLiveCourseTimer();
+  }
+
+  void _scheduleLiveCourseTimer() {
+    if (!_canRefresh) return;
+    final now = _now();
+    _liveCourseTimer = _createTimer(
+      timetableLiveRefreshDelayUntilNextMinute(now),
+      () {
+        _liveCourseTimer = null;
+        if (!_canRefresh) return;
+        setState(() {});
+        _scheduleLiveCourseTimer();
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-          unawaited(widget.onJumpWeekBy(-1));
+    final pageView = ScrollConfiguration(
+      behavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.invertedStylus,
         },
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-          unawaited(widget.onJumpWeekBy(1));
+      ),
+      child: PageView.builder(
+        key: const ValueKey('student-week-pager'),
+        controller: widget.controller,
+        itemCount: widget.config.totalWeeks,
+        onPageChanged: (index) {
+          if (widget.active && widget.interactive) {
+            unawaited(widget.provider.setSelectedWeek(index + 1));
+          }
         },
-      },
-      child: Focus(
-        autofocus: true,
-        child: ScrollConfiguration(
-          behavior: const MaterialScrollBehavior().copyWith(
-            dragDevices: {
-              PointerDeviceKind.touch,
-              PointerDeviceKind.mouse,
-              PointerDeviceKind.trackpad,
-              PointerDeviceKind.stylus,
-              PointerDeviceKind.invertedStylus,
-            },
-          ),
-          child: PageView.builder(
-            controller: widget.controller,
-            itemCount: widget.config.totalWeeks,
-            onPageChanged: (index) =>
-                widget.provider.setSelectedWeek(index + 1),
-            itemBuilder: (context, index) {
-              final pageWeek = index + 1;
-              final weekStart = startOfWeekFor(widget.config, pageWeek);
-              final realCurrentWeek = currentWeekFor(widget.config);
-              final liveCourseTarget = currentOrNextCourseTargetFor(
+        itemBuilder: (context, index) {
+          final pageWeek = index + 1;
+          final weekStart = startOfWeekFor(widget.config, pageWeek);
+          final realCurrentWeek = currentWeekFor(widget.config);
+          final liveCourseTarget = currentOrNextCourseTargetFor(
+            timetable: widget.timetable,
+            selectedWeek: pageWeek,
+            realCurrentWeek: realCurrentWeek,
+            now: _now(),
+            displayedCourseIdForConflict:
+                widget.provider.displayedCourseIdForConflict,
+          );
+          final liveCourseOutlineColorValue =
+              widget.provider.liveCourseOutlineFollowTheme
+              ? deriveLiveCourseOutlineColorFromSeed(
+                  Color(widget.provider.themeSeedColorValue),
+                ).toARGB32()
+              : widget.provider.liveCourseOutlineColorValue;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(2, 8, 0, AppSpacing.md),
+            child: RepaintBoundary(
+              child: TimetableGrid(
                 timetable: widget.timetable,
+                periodTimes: widget.provider.periodTimesForTimetable(
+                  widget.timetable,
+                ),
+                weekDateStart: weekStart,
                 selectedWeek: pageWeek,
                 realCurrentWeek: realCurrentWeek,
-                now: DateTime.now(),
+                localeCode: widget.provider.localeCode,
+                preserveGaps: widget.provider.preserveTimetableGaps,
+                showPastEndedCourses: widget.provider.showPastEndedCourses,
+                showFutureCourses: widget.provider.showFutureCourses,
+                showGridLines: widget.provider.showTimetableGridLines,
+                themeColorMode: widget.provider.themeColorMode,
+                courseNameColorValues: widget.provider.courseNameColorValues,
+                colorfulCourseTextColorMode:
+                    widget.provider.colorfulCourseTextColorMode,
+                colorfulCourseTextColorValue: widget
+                    .provider
+                    .colorfulUiColorValues[colorfulCourseTextColorKey],
                 displayedCourseIdForConflict:
                     widget.provider.displayedCourseIdForConflict,
-              );
-              final liveCourseOutlineColorValue =
-                  widget.provider.liveCourseOutlineFollowTheme
-                  ? deriveLiveCourseOutlineColorFromSeed(
-                      Color(widget.provider.themeSeedColorValue),
-                    ).toARGB32()
-                  : widget.provider.liveCourseOutlineColorValue;
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(2, 8, 0, AppSpacing.md),
-                child: RepaintBoundary(
-                  child: TimetableGrid(
-                    timetable: widget.timetable,
-                    periodTimes: widget.provider.periodTimesForTimetable(
-                      widget.timetable,
-                    ),
-                    weekDateStart: weekStart,
-                    selectedWeek: pageWeek,
-                    realCurrentWeek: realCurrentWeek,
-                    localeCode: widget.provider.localeCode,
-                    preserveGaps: widget.provider.preserveTimetableGaps,
-                    showPastEndedCourses: widget.provider.showPastEndedCourses,
-                    showFutureCourses: widget.provider.showFutureCourses,
-                    showGridLines: widget.provider.showTimetableGridLines,
-                    themeColorMode: widget.provider.themeColorMode,
-                    courseNameColorValues:
-                        widget.provider.courseNameColorValues,
-                    colorfulCourseTextColorMode:
-                        widget.provider.colorfulCourseTextColorMode,
-                    colorfulCourseTextColorValue: widget
-                        .provider
-                        .colorfulUiColorValues[colorfulCourseTextColorKey],
-                    displayedCourseIdForConflict:
-                        widget.provider.displayedCourseIdForConflict,
-                    liveCourseTarget: liveCourseTarget,
-                    liveCourseOutlineEnabled:
-                        widget.provider.liveCourseOutlineEnabled,
-                    liveCourseOutlineMode:
-                        widget.provider.liveCourseOutlineMode,
-                    liveCourseOutlineColorValue: liveCourseOutlineColorValue,
-                    liveCourseOutlineWidth:
-                        widget.provider.liveCourseOutlineWidth,
-                    onCourseTap: widget.onCourseTap,
-                    onEmptySlotTap: widget.onEmptySlotTap,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+                liveCourseTarget: liveCourseTarget,
+                liveCourseOutlineEnabled:
+                    widget.provider.liveCourseOutlineEnabled,
+                liveCourseOutlineMode: widget.provider.liveCourseOutlineMode,
+                liveCourseOutlineColorValue: liveCourseOutlineColorValue,
+                liveCourseOutlineWidth: widget.provider.liveCourseOutlineWidth,
+                onCourseTap: widget.onCourseTap,
+                onEmptySlotTap: widget.onEmptySlotTap,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    final shortcutsEnabled = _shortcutsEnabled && widget.interactive;
+    return CallbackShortcuts(
+      bindings: shortcutsEnabled
+          ? {
+              const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+                unawaited(widget.onJumpWeekBy(-1));
+              },
+              const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+                unawaited(widget.onJumpWeekBy(1));
+              },
+            }
+          : const <ShortcutActivator, VoidCallback>{},
+      child: Focus(
+        focusNode: _shortcutFocusNode,
+        autofocus: widget.shortcutFocusNode == null && shortcutsEnabled,
+        canRequestFocus: shortcutsEnabled,
+        descendantsAreFocusable: shortcutsEnabled,
+        descendantsAreTraversable: shortcutsEnabled,
+        child: pageView,
       ),
     );
   }
+}
+
+@visibleForTesting
+Duration timetableLiveRefreshDelayUntilNextMinute(DateTime now) {
+  final elapsedInMinute = Duration(
+    seconds: now.second,
+    milliseconds: now.millisecond,
+    microseconds: now.microsecond,
+  );
+  return const Duration(minutes: 1) - elapsedInMinute;
 }
 
 class _EmptyTimetableState extends StatelessWidget {

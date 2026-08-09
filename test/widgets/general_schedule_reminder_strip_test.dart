@@ -191,4 +191,51 @@ void main() {
     expect(find.text('In progress - Exam'), findsOneWidget);
     expect(timers.cancellationCount, cancellationsAfterPause);
   });
+
+  testWidgets('refreshes immediately when its workspace ticker is reenabled', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final clock = _MutableClock(DateTime(2026, 6, 16, 9, 55));
+    final timers = _TrackingTimerFactory();
+    final tickerEnabled = ValueNotifier(true);
+    addTearDown(tickerEnabled.dispose);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<TimetableProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: GeneralReminderTimeScope(
+            now: clock.now,
+            createTimer: timers.create,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: tickerEnabled,
+              child: const GeneralScheduleHomeScreen(active: true),
+              builder: (context, enabled, child) =>
+                  TickerMode(enabled: enabled, child: child!),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Upcoming - Exam'), findsOneWidget);
+
+    tickerEnabled.value = false;
+    await tester.pump();
+    final cancellationsWhileHidden = timers.cancellationCount;
+    expect(cancellationsWhileHidden, greaterThan(0));
+
+    clock.value = DateTime(2026, 6, 16, 10, 5);
+    tickerEnabled.value = true;
+    await tester.pump();
+
+    expect(find.text('Upcoming - Exam'), findsNothing);
+    expect(find.text('In progress - Exam'), findsOneWidget);
+    expect(timers.cancellationCount, cancellationsWhileHidden);
+  });
 }

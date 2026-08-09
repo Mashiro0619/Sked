@@ -5,6 +5,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';
 import 'package:sked/services/import_export_service.dart';
+import 'package:sked/screens/home_screen.dart';
 
 void main() {
   final scenario = _scenarioFor(Platform.environment['SKED_DST_TEST_ZONE']);
@@ -58,6 +59,61 @@ void main() {
       );
 
       expect(startOfWeekFor(config, 2), scenario.fallSemesterWeekTwo);
+    });
+
+    test('live timetable refresh stays minute-aligned across fall-back', () {
+      final transitionDay = addCalendarDays(scenario.fallBefore, 1);
+      const expectedDelay = Duration(
+        seconds: 29,
+        milliseconds: 749,
+        microseconds: 500,
+      );
+      DateTime? legacyFailureCandidate;
+
+      for (var hour = 0; hour <= 4; hour += 1) {
+        final candidate = DateTime(
+          transitionDay.year,
+          transitionDay.month,
+          transitionDay.day,
+          hour,
+          59,
+          30,
+          250,
+          500,
+        );
+        final legacyNextMinute = DateTime(
+          candidate.year,
+          candidate.month,
+          candidate.day,
+          candidate.hour,
+          candidate.minute + 1,
+        );
+        if (legacyNextMinute.difference(candidate) != expectedDelay) {
+          legacyFailureCandidate = candidate;
+          break;
+        }
+      }
+
+      expect(
+        legacyFailureCandidate,
+        isNotNull,
+        reason: 'The configured timezone must expose the fall-back bug.',
+      );
+      expect(
+        timetableLiveRefreshDelayUntilNextMinute(legacyFailureCandidate!),
+        expectedDelay,
+      );
+      expect(
+        timetableLiveRefreshDelayUntilNextMinute(
+          DateTime(
+            transitionDay.year,
+            transitionDay.month,
+            transitionDay.day,
+            12,
+          ),
+        ),
+        const Duration(minutes: 1),
+      );
     });
 
     test('daily and weekly recurrences retain their local start time', () {

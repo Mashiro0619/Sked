@@ -14,8 +14,8 @@ import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
-import 'general_schedule_home_screen.dart';
-import 'home_screen.dart';
+import 'adaptive_sked_shell.dart';
+import 'settings_page.dart';
 
 class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({
@@ -34,6 +34,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   bool _isHandlingRecovery = false;
   bool _isClearingRoutesForRecovery = false;
   bool _hasShownRecoveryBanner = false;
+  bool _settingsPageOpen = false;
   AppMode? _firstLaunchPendingMode;
   TimetableProvider? _lastProvider;
   bool? _lastObservedCanWrite;
@@ -246,6 +247,23 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       if (mounted) {
         setState(() => _firstLaunchPendingMode = null);
       }
+    }
+  }
+
+  Future<void> _openSettingsPage(TimetableProvider provider) async {
+    if (_settingsPageOpen || !mounted) return;
+    setState(() => _settingsPageOpen = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _settingsPageOpen = false);
     }
   }
 
@@ -534,9 +552,15 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                       _completeFirstLaunch(provider, mode),
                   onViewPrivacyPolicy: _openPrivacyPolicyPage,
                 )
-              : snapshot.isStudentMode
-              ? const HomeScreen(key: ValueKey('student-home'))
-              : const GeneralScheduleHomeScreen(key: ValueKey('general-home')),
+              : AdaptiveSkedShell(
+                  key: const ValueKey('adaptive-shell'),
+                  provider: provider,
+                  activeMode: snapshot.isStudentMode
+                      ? AppMode.student
+                      : AppMode.general,
+                  enabled: snapshot.hasAcceptedCurrentPrivacyPolicy,
+                  onOpenSettings: () => _openSettingsPage(provider),
+                ),
         );
       },
     );
@@ -726,6 +750,7 @@ class _AppHomeSnapshot {
   const _AppHomeSnapshot({
     required this.isLoaded,
     required this.isStudentMode,
+    required this.hasAcceptedCurrentPrivacyPolicy,
     required this.showFirstLaunchOnboarding,
     required this.canWrite,
     required this.storageLoadStatus,
@@ -736,6 +761,7 @@ class _AppHomeSnapshot {
     return _AppHomeSnapshot(
       isLoaded: provider.isLoaded,
       isStudentMode: provider.isStudentMode,
+      hasAcceptedCurrentPrivacyPolicy: provider.hasAcceptedCurrentPrivacyPolicy,
       showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
       canWrite: provider.canWrite,
       storageLoadStatus: provider.storageLoadStatus,
@@ -745,6 +771,7 @@ class _AppHomeSnapshot {
 
   final bool isLoaded;
   final bool isStudentMode;
+  final bool hasAcceptedCurrentPrivacyPolicy;
   final bool showFirstLaunchOnboarding;
   final bool canWrite;
   final StorageLoadStatus storageLoadStatus;
@@ -755,6 +782,8 @@ class _AppHomeSnapshot {
     return other is _AppHomeSnapshot &&
         other.isLoaded == isLoaded &&
         other.isStudentMode == isStudentMode &&
+        other.hasAcceptedCurrentPrivacyPolicy ==
+            hasAcceptedCurrentPrivacyPolicy &&
         other.showFirstLaunchOnboarding == showFirstLaunchOnboarding &&
         other.canWrite == canWrite &&
         other.storageLoadStatus == storageLoadStatus &&
@@ -765,6 +794,7 @@ class _AppHomeSnapshot {
   int get hashCode => Object.hash(
     isLoaded,
     isStudentMode,
+    hasAcceptedCurrentPrivacyPolicy,
     showFirstLaunchOnboarding,
     canWrite,
     storageLoadStatus,

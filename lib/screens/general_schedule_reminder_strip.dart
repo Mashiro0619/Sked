@@ -34,11 +34,13 @@ class _ReminderStrip extends StatefulWidget {
   const _ReminderStrip({
     required this.provider,
     required this.filter,
+    required this.active,
     required this.onOccurrenceTap,
   });
 
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
+  final bool active;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
   @override
@@ -51,6 +53,7 @@ class _ReminderStripState extends State<_ReminderStrip>
   DateTime Function() _now = DateTime.now;
   GeneralReminderTimerFactory _createTimer = _createGeneralReminderTimer;
   bool _isForeground = true;
+  bool _tickerEnabled = true;
 
   @override
   void initState() {
@@ -72,7 +75,19 @@ class _ReminderStripState extends State<_ReminderStrip>
       _now = nextNow;
       _createTimer = nextCreateTimer;
     }
-    _restartRefreshTimer();
+    final wasTickerEnabled = _tickerEnabled;
+    _tickerEnabled = TickerMode.valuesOf(context).enabled;
+    _restartRefreshTimer(
+      refreshImmediately: !wasTickerEnabled && _tickerEnabled && _canRefresh,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReminderStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active) {
+      _restartRefreshTimer(refreshImmediately: _canRefresh);
+    }
   }
 
   @override
@@ -97,26 +112,30 @@ class _ReminderStripState extends State<_ReminderStrip>
   void _refreshNow() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
-    if (!mounted) {
+    if (!_canRefresh) {
       return;
     }
     setState(() {});
     _scheduleRefreshTimer();
   }
 
-  void _restartRefreshTimer() {
+  void _restartRefreshTimer({bool refreshImmediately = false}) {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    if (refreshImmediately && _canRefresh) setState(() {});
     _scheduleRefreshTimer();
   }
 
+  bool get _canRefresh =>
+      mounted && widget.active && _tickerEnabled && _isForeground;
+
   void _scheduleRefreshTimer() {
-    if (!_isForeground || !mounted) {
+    if (!_canRefresh) {
       return;
     }
     _refreshTimer = _createTimer(_delayUntilNextMinute(_now()), () {
       _refreshTimer = null;
-      if (!mounted || !_isForeground) {
+      if (!_canRefresh) {
         return;
       }
       setState(() {});
