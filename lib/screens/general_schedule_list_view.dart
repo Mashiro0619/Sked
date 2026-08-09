@@ -5,16 +5,12 @@ class _ListCalendarView extends StatelessWidget {
     required this.date,
     required this.provider,
     required this.filter,
-    required this.onToday,
-    required this.onPickDate,
     required this.onOccurrenceTap,
   });
 
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final VoidCallback onToday;
-  final VoidCallback onPickDate;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
   @override
@@ -27,10 +23,7 @@ class _ListCalendarView extends StatelessWidget {
       ),
     );
     if (occurrences.isEmpty) {
-      return _GeneralEmptyListState(
-        onToday: onToday,
-        filtered: filter.isActive,
-      );
+      return _GeneralEmptyListState(filtered: filter.isActive);
     }
     final groups = <String, List<GeneralEventOccurrence>>{};
     for (final occurrence in occurrences) {
@@ -40,12 +33,9 @@ class _ListCalendarView extends StatelessWidget {
     final entries = groups.entries.toList();
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 88),
-      itemCount: entries.length + 1,
+      itemCount: entries.length,
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return _ListJumpBar(onToday: onToday, onPickDate: onPickDate);
-        }
-        final group = entries[index - 1];
+        final group = entries[index];
         final date = DateTime.parse(group.key);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,37 +55,6 @@ class _ListCalendarView extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _ListJumpBar extends StatelessWidget {
-  const _ListJumpBar({required this.onToday, required this.onPickDate});
-
-  final VoidCallback onToday;
-  final VoidCallback onPickDate;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 2),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          OutlinedButton.icon(
-            onPressed: onToday,
-            icon: const Icon(Icons.today_outlined),
-            label: Text(l10n.today),
-          ),
-          OutlinedButton.icon(
-            onPressed: onPickDate,
-            icon: const Icon(Icons.event_outlined),
-            label: Text(l10n.pickDate),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -186,9 +145,8 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
 }
 
 class _GeneralEmptyListState extends StatelessWidget {
-  const _GeneralEmptyListState({required this.onToday, required this.filtered});
+  const _GeneralEmptyListState({required this.filtered});
 
-  final VoidCallback onToday;
   final bool filtered;
 
   @override
@@ -197,13 +155,6 @@ class _GeneralEmptyListState extends StatelessWidget {
     return ExpressiveEmptyState(
       icon: Icons.event_available_outlined,
       title: filtered ? l10n.noMatchingEvents : l10n.noUpcomingEvents,
-      actions: [
-        OutlinedButton.icon(
-          onPressed: onToday,
-          icon: const Icon(Icons.today_outlined),
-          label: Text(l10n.today),
-        ),
-      ],
     );
   }
 }

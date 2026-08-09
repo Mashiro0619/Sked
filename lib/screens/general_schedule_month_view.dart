@@ -7,6 +7,9 @@ const _monthGridSpacing = 1.0;
 const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
   'general-month-compact-selected-day-feedback',
 );
+const _generalMonthCompactAgendaKey = ValueKey<String>(
+  'general-month-compact-agenda',
+);
 
 double _monthCellHeightForWidth(double cellWidth, {required bool compact}) {
   final preferred = cellWidth * (compact ? 0.58 : 0.62);
@@ -41,45 +44,82 @@ class _MonthCalendarView extends StatefulWidget {
 class _MonthCalendarViewState extends State<_MonthCalendarView> {
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
+  final GlobalKey _agendaKey = GlobalKey();
 
-  DateTime _visibleDayForDate(DateTime date) {
+  DateTime _visibleDayForDate(DateTime date, {int direction = 1}) {
     final normalized = normalizeDateOnly(date);
     if (widget.provider.generalShowWeekends ||
         normalized.weekday <= DateTime.friday) {
       return normalized;
     }
-    return addCalendarDays(normalized, 8 - normalized.weekday);
+    return addCalendarDays(
+      normalized,
+      direction < 0
+          ? DateTime.friday - normalized.weekday
+          : 8 - normalized.weekday,
+    );
   }
 
   void _selectDay(DateTime nextDate) {
-    widget.onDaySelected(_visibleDayForDate(nextDate));
+    final selectedDate = _visibleDayForDate(nextDate);
+    widget.onDaySelected(selectedDate);
+    _scheduleAgendaReveal();
   }
 
-  DateTime _monthWithDay(DateTime baseDate, int year, int month) {
+  void _scheduleAgendaReveal() {
+    if (!widget.active) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final agendaContext = _agendaKey.currentContext;
+      if (!mounted || agendaContext == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          agendaContext,
+          alignment: 0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _MonthCalendarView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !_sameDay(widget.date, oldWidget.date)) {
+      _scheduleAgendaReveal();
+    }
+  }
+
+  DateTime _monthWithDay(
+    DateTime baseDate,
+    int year,
+    int month, {
+    int direction = 1,
+  }) {
     final target = DateTime(
       year,
       month,
       baseDate.day.clamp(1, _daysInMonth(year, month)),
     );
-    return _visibleDayForDate(target);
+    return _visibleDayForDate(target, direction: direction);
   }
 
   void _goToPreviousMonth() {
     final selectedDate = _visibleDayForDate(widget.date);
-    final prevMonth = widget.date.month == 1 ? 12 : widget.date.month - 1;
-    final prevYear = widget.date.month == 1
-        ? widget.date.year - 1
-        : widget.date.year;
-    _selectDay(_monthWithDay(selectedDate, prevYear, prevMonth));
+    final prevMonth = selectedDate.month == 1 ? 12 : selectedDate.month - 1;
+    final prevYear = selectedDate.month == 1
+        ? selectedDate.year - 1
+        : selectedDate.year;
+    _selectDay(_monthWithDay(selectedDate, prevYear, prevMonth, direction: -1));
   }
 
   void _goToNextMonth() {
     final selectedDate = _visibleDayForDate(widget.date);
-    final nextMonth = widget.date.month == 12 ? 1 : widget.date.month + 1;
-    final nextYear = widget.date.month == 12
-        ? widget.date.year + 1
-        : widget.date.year;
-    _selectDay(_monthWithDay(selectedDate, nextYear, nextMonth));
+    final nextMonth = selectedDate.month == 12 ? 1 : selectedDate.month + 1;
+    final nextYear = selectedDate.month == 12
+        ? selectedDate.year + 1
+        : selectedDate.year;
+    _selectDay(_monthWithDay(selectedDate, nextYear, nextMonth, direction: 1));
   }
 
   @override
@@ -119,7 +159,6 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           filter: widget.filter,
           onPreviousMonth: _goToPreviousMonth,
           onNextMonth: _goToNextMonth,
-          onToday: () => _selectDay(today),
           onDaySelected: _selectDay,
         );
         final agenda = _MonthAgendaPanel(
@@ -168,9 +207,19 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(12, 6, 12, 88),
           children: [
-            calendar,
+            // On a phone the selected-day agenda is the actionable content;
+            // keep it in the first viewport and let the full month grid follow
+            // in the same scroll surface.
+            SizedBox(
+              key: _agendaKey,
+              height: 188,
+              child: KeyedSubtree(
+                key: _generalMonthCompactAgendaKey,
+                child: agenda,
+              ),
+            ),
             const SizedBox(height: 10),
-            SizedBox(height: 188, child: agenda),
+            calendar,
           ],
         );
       },
@@ -233,7 +282,6 @@ class _MonthCalendarPanel extends StatefulWidget {
     required this.filter,
     required this.onPreviousMonth,
     required this.onNextMonth,
-    required this.onToday,
     required this.onDaySelected,
   });
 
@@ -245,7 +293,6 @@ class _MonthCalendarPanel extends StatefulWidget {
   final _GeneralOccurrenceFilter filter;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
-  final VoidCallback onToday;
   final ValueChanged<DateTime> onDaySelected;
 
   @override
@@ -494,10 +541,6 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
-    final monthLabel = MaterialLocalizations.of(
-      context,
-    ).formatMonthYear(widget.selectedDate);
     final compact = MediaQuery.sizeOf(context).width < 600;
 
     return LayoutBuilder(
@@ -537,47 +580,6 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
                 ? MainAxisSize.max
                 : MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      tooltip: l10n.previousMonth,
-                      onPressed: widget.onPreviousMonth,
-                    ),
-                    Expanded(
-                      child: Text(
-                        monthLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ),
-                    if (!_sameDay(
-                      DateTime(
-                        widget.selectedDate.year,
-                        widget.selectedDate.month,
-                      ),
-                      DateTime(widget.today.year, widget.today.month),
-                    ))
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
-                        onPressed: widget.onToday,
-                        child: Text(l10n.today),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      tooltip: l10n.nextMonth,
-                      onPressed: widget.onNextMonth,
-                    ),
-                  ],
-                ),
-              ),
               _MonthWeekdayHeaderRow(
                 showWeekends: widget.provider.generalShowWeekends,
               ),

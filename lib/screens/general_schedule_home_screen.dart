@@ -16,7 +16,7 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';
-import '../widgets/mode_switch_action.dart';
+import '../widgets/sked_expressive_components.dart';
 import '../widgets/ui_command.dart';
 import 'settings_page.dart';
 
@@ -32,6 +32,7 @@ class GeneralScheduleHomeScreen extends StatefulWidget {
     super.key,
     this.embedded = false,
     this.active = true,
+    this.interactive = true,
     this.showSettingsAction = true,
     this.settingsEnabled = true,
     this.settingsAction,
@@ -41,6 +42,7 @@ class GeneralScheduleHomeScreen extends StatefulWidget {
 
   final bool embedded;
   final bool active;
+  final bool interactive;
   final bool showSettingsAction;
   final VoidCallback? settingsAction;
   final bool settingsEnabled;
@@ -82,123 +84,61 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final view = normalizeGeneralView(_view ?? snapshot.defaultView);
     const filter = _GeneralOccurrenceFilter(query: '', colorValue: null);
 
-    return Scaffold(
-      key: widget.scaffoldKey,
-      appBar: AppBar(
-        titleSpacing: 12,
-        title: InkWell(
-          key: const ValueKey('general-date-title-button'),
-          borderRadius: BorderRadius.circular(24),
-          onTap: _datePickerOpen ? null : () => _pickDate(context, provider),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.appTitle,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Text(
-                  _yearLabel(selectedDate, view, context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          if (!widget.embedded) const ModeSwitchAction(),
-          _CalendarManagerAction(
-            expanded: MediaQuery.sizeOf(context).width >= 1000,
-            disabled: _calendarManagerOpen,
-            onPressed: () => _openCalendarManager(context, provider),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: l10n.addEvent,
-            onPressed: _editorSheetOpen
-                ? null
-                : () => _openEditor(context, provider),
-          ),
-          if (widget.showSettingsAction)
-            IconButton(
-              focusNode: widget.settingsFocusNode,
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: l10n.settings,
-              onPressed: !widget.settingsEnabled
+    final activeCalendar = provider.activeGeneralScheduleOrNull;
+    final settingsAction = !widget.settingsEnabled || !widget.interactive
+        ? null
+        : widget.settingsAction ??
+              (_settingsPageOpen
                   ? null
-                  : widget.settingsAction ??
-                        (_settingsPageOpen
-                            ? null
-                            : () => _openSettingsPage(context, provider)),
+                  : () => _openSettingsPage(context, provider));
+    final body = SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+          final compact = width < 520;
+          final narrowNavigation = width < 760 || textScale > 1.3;
+          final toolbar = SkedWorkspaceToolbar(
+            key: const ValueKey('general-workspace-toolbar'),
+            padding: EdgeInsets.symmetric(
+              horizontal: width < 600 ? 12 : 16,
+              vertical: constraints.maxHeight < 600 ? 8 : 12,
             ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _editorSheetOpen
-            ? null
-            : () => _openEditor(context, provider),
-        tooltip: l10n.addEvent,
-        child: const Icon(Icons.add),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 420;
-                  Widget? label(String text) => compact ? null : Text(text);
-                  return SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(
-                        value: generalViewWeek,
-                        icon: const Icon(Icons.view_week_outlined),
-                        label: label(l10n.viewWeek),
-                        tooltip: l10n.viewWeek,
-                      ),
-                      ButtonSegment(
-                        value: generalViewDay,
-                        icon: const Icon(Icons.view_day_outlined),
-                        label: label(l10n.viewDay),
-                        tooltip: l10n.viewDay,
-                      ),
-                      ButtonSegment(
-                        value: generalViewList,
-                        icon: const Icon(Icons.list_alt_outlined),
-                        label: label(l10n.viewList),
-                        tooltip: l10n.viewList,
-                      ),
-                      ButtonSegment(
-                        value: generalViewMonth,
-                        icon: const Icon(Icons.calendar_view_month_outlined),
-                        label: label(l10n.viewMonth),
-                        tooltip: l10n.viewMonth,
-                      ),
-                    ],
-                    selected: {view},
-                    showSelectedIcon: false,
-                    style: compact
-                        ? SegmentedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                          )
-                        : null,
-                    onSelectionChanged: (selection) {
-                      setState(() {
-                        _view = selection.first;
-                      });
-                    },
-                  );
-                },
-              ),
+            title: _GeneralCalendarSelector(
+              schedule: activeCalendar,
+              disabled: _calendarManagerOpen || !widget.interactive,
+              onPressed: () => _openCalendarManager(context, provider),
             ),
-            if (view != generalViewMonth)
+            actions: [
+              if (widget.showSettingsAction)
+                IconButton(
+                  focusNode: widget.settingsFocusNode,
+                  onPressed: settingsAction,
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: l10n.settings,
+                ),
+            ],
+            navigation: _GeneralWorkspaceNavigation(
+              view: view,
+              selectedDate: selectedDate,
+              compact: compact,
+              narrow: narrowNavigation,
+              interactive: widget.interactive,
+              onViewChanged: (nextView) => setState(() => _view = nextView),
+              onPrevious: () => unawaited(_navigateDate(provider, view, -1)),
+              onNext: () => unawaited(_navigateDate(provider, view, 1)),
+              onToday: () => unawaited(_goToToday(provider)),
+              onPickDate: _datePickerOpen
+                  ? null
+                  : () => unawaited(_pickDate(context, provider)),
+            ),
+          );
+          final selectDate = widget.interactive
+              ? provider.setSelectedGeneralDate
+              : (DateTime _) async {};
+          final content = Column(
+            children: [
+              toolbar,
               _ReminderStrip(
                 provider: provider,
                 filter: filter,
@@ -206,88 +146,161 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 onOccurrenceTap: (occurrence) =>
                     _openDetails(context, provider, occurrence),
               ),
-            Expanded(
-              child: ScrollConfiguration(
-                behavior: const MaterialScrollBehavior().copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.trackpad,
-                    PointerDeviceKind.stylus,
-                    PointerDeviceKind.invertedStylus,
-                  },
-                ),
-                child: ExpressiveSwitcher(
-                  child: KeyedSubtree(
-                    key: ValueKey(view),
-                    child: switch (view) {
-                      generalViewDay => _DayCalendarView(
-                        date: selectedDate,
-                        provider: provider,
-                        filter: filter,
-                        active: widget.active,
-                        onDaySelected: provider.setSelectedGeneralDate,
-                        onEmptySlotTap: (date) =>
-                            _openEditor(context, provider, initialDate: date),
-                        onOccurrenceTap: (occurrence) =>
-                            _openDetails(context, provider, occurrence),
-                        onMoreOccurrencesTap: (occurrences) =>
-                            _openMoreOccurrences(
-                              context,
-                              provider,
-                              occurrences,
-                            ),
-                      ),
-                      generalViewList => _ListCalendarView(
-                        date: selectedDate,
-                        provider: provider,
-                        filter: filter,
-                        onToday: () => _goToToday(provider),
-                        onPickDate: () => _pickDate(context, provider),
-                        onOccurrenceTap: (occurrence) =>
-                            _openDetails(context, provider, occurrence),
-                      ),
-                      generalViewMonth => _MonthCalendarView(
-                        date: selectedDate,
-                        provider: provider,
-                        filter: filter,
-                        active: widget.active,
-                        onDaySelected: provider.setSelectedGeneralDate,
-                        onEmptySlotTap: (date) =>
-                            _openEditor(context, provider, initialDate: date),
-                        onOccurrenceTap: (occurrence) =>
-                            _openDetails(context, provider, occurrence),
-                      ),
-                      _ => _WeekCalendarView(
-                        date: selectedDate,
-                        provider: provider,
-                        filter: filter,
-                        active: widget.active,
-                        onDaySelected: provider.setSelectedGeneralDate,
-                        onEmptySlotTap: (date) =>
-                            _openEditor(context, provider, initialDate: date),
-                        onOccurrenceTap: (occurrence) =>
-                            _openDetails(context, provider, occurrence),
-                        onMoreOccurrencesTap: (occurrences) =>
-                            _openMoreOccurrences(
-                              context,
-                              provider,
-                              occurrences,
-                            ),
-                      ),
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.trackpad,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.invertedStylus,
                     },
+                  ),
+                  child: ExpressiveSwitcher(
+                    child: KeyedSubtree(
+                      key: ValueKey(view),
+                      child: switch (view) {
+                        generalViewDay => _DayCalendarView(
+                          date: selectedDate,
+                          provider: provider,
+                          filter: filter,
+                          active: widget.active,
+                          onDaySelected: selectDate,
+                          onEmptySlotTap: (date) =>
+                              _openEditor(context, provider, initialDate: date),
+                          onOccurrenceTap: (occurrence) =>
+                              _openDetails(context, provider, occurrence),
+                          onMoreOccurrencesTap: (occurrences) =>
+                              _openMoreOccurrences(
+                                context,
+                                provider,
+                                occurrences,
+                              ),
+                        ),
+                        generalViewList => _ListCalendarView(
+                          date: selectedDate,
+                          provider: provider,
+                          filter: filter,
+                          onOccurrenceTap: (occurrence) =>
+                              _openDetails(context, provider, occurrence),
+                        ),
+                        generalViewMonth => _MonthCalendarView(
+                          date: selectedDate,
+                          provider: provider,
+                          filter: filter,
+                          active: widget.active,
+                          onDaySelected: selectDate,
+                          onEmptySlotTap: (date) =>
+                              _openEditor(context, provider, initialDate: date),
+                          onOccurrenceTap: (occurrence) =>
+                              _openDetails(context, provider, occurrence),
+                        ),
+                        _ => _WeekCalendarView(
+                          date: selectedDate,
+                          provider: provider,
+                          filter: filter,
+                          active: widget.active,
+                          onDaySelected: selectDate,
+                          onEmptySlotTap: (date) =>
+                              _openEditor(context, provider, initialDate: date),
+                          onOccurrenceTap: (occurrence) =>
+                              _openDetails(context, provider, occurrence),
+                          onMoreOccurrencesTap: (occurrences) =>
+                              _openMoreOccurrences(
+                                context,
+                                provider,
+                                occurrences,
+                              ),
+                        ),
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+          final showFab =
+              widget.interactive &&
+              !_editorSheetOpen &&
+              MediaQuery.viewInsetsOf(context).bottom == 0;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              content,
+              if (showFab)
+                PositionedDirectional(
+                  end: 12,
+                  bottom: 16,
+                  child: SkedPrimaryFab(
+                    heroTag: 'general-add-event',
+                    tooltip: l10n.addEvent,
+                    onPressed: () => _openEditor(context, provider),
+                    icon: const Icon(Icons.add),
+                    label: width >= 760 ? Text(l10n.addEvent) : null,
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
+    return _wrapStandalone(body);
   }
 
   Future<void> _goToToday(TimetableProvider provider) async {
-    await provider.setSelectedGeneralDate(DateTime.now());
+    await provider.setSelectedGeneralDate(
+      _visibleGeneralDate(provider, DateTime.now()),
+    );
+  }
+
+  DateTime _visibleGeneralDate(
+    TimetableProvider provider,
+    DateTime date, {
+    int direction = 1,
+  }) {
+    final normalized = normalizeDateOnly(date);
+    if (provider.generalShowWeekends || normalized.weekday <= DateTime.friday) {
+      return normalized;
+    }
+    return addCalendarDays(
+      normalized,
+      direction < 0
+          ? DateTime.friday - normalized.weekday
+          : 8 - normalized.weekday,
+    );
+  }
+
+  Future<void> _navigateDate(
+    TimetableProvider provider,
+    String view,
+    int direction,
+  ) async {
+    if (!widget.interactive || direction == 0) return;
+    final current = normalizeDateOnly(provider.selectedGeneralDate);
+    DateTime next;
+    if (view == generalViewMonth) {
+      final month = DateTime(current.year, current.month + direction, 1);
+      final lastDay = DateTime(month.year, month.month + 1, 0).day;
+      next = DateTime(month.year, month.month, current.day.clamp(1, lastDay));
+    } else {
+      next = addCalendarDays(
+        current,
+        view == generalViewWeek ? direction * 7 : direction,
+      );
+    }
+    if (!provider.generalShowWeekends && next.weekday > DateTime.friday) {
+      next = addCalendarDays(
+        next,
+        direction < 0 ? DateTime.friday - next.weekday : 8 - next.weekday,
+      );
+    }
+    await provider.setSelectedGeneralDate(next);
+  }
+
+  Widget _wrapStandalone(Widget workspace) {
+    if (widget.embedded) return workspace;
+    return Scaffold(key: widget.scaffoldKey, body: workspace);
   }
 
   void _setUiBusyFlag(void Function() update) {
@@ -302,27 +315,36 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext context,
     TimetableProvider provider,
   ) async {
-    if (_datePickerOpen) {
+    if (_datePickerOpen || !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _datePickerOpen = true);
     final firstDate = DateTime(1970);
     final lastDate = DateTime(2100);
     try {
+      final initialDate = _visibleGeneralDate(
+        provider,
+        _clampDate(provider.selectedGeneralDate, firstDate, lastDate),
+      );
       final picked = await showDatePicker(
         context: context,
-        initialDate: _clampDate(
-          provider.selectedGeneralDate,
-          firstDate,
-          lastDate,
-        ),
+        initialDate: initialDate,
         firstDate: firstDate,
         lastDate: lastDate,
+        selectableDayPredicate: provider.generalShowWeekends
+            ? null
+            : (date) => date.weekday <= DateTime.friday,
       );
       if (!mounted || picked == null) {
         return;
       }
-      await provider.setSelectedGeneralDate(picked);
+      await provider.setSelectedGeneralDate(
+        _visibleGeneralDate(
+          provider,
+          picked,
+          direction: picked.isBefore(provider.selectedGeneralDate) ? -1 : 1,
+        ),
+      );
     } finally {
       _setUiBusyFlag(() => _datePickerOpen = false);
     }
@@ -334,7 +356,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     DateTime? initialDate,
     GeneralEvent? event,
   }) async {
-    if (_editorSheetOpen) {
+    if (_editorSheetOpen || !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _editorSheetOpen = true);
@@ -366,7 +388,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     TimetableProvider provider,
     GeneralEventOccurrence occurrence,
   ) async {
-    if (_detailsSheetOpen) {
+    if (_detailsSheetOpen || !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _detailsSheetOpen = true);
@@ -437,7 +459,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     TimetableProvider provider,
     List<GeneralEventOccurrence> occurrences,
   ) async {
-    if (_moreOccurrencesSheetOpen || occurrences.isEmpty) {
+    if (_moreOccurrencesSheetOpen ||
+        occurrences.isEmpty ||
+        !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _moreOccurrencesSheetOpen = true);
@@ -467,7 +491,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext context,
     TimetableProvider provider,
   ) async {
-    if (_calendarManagerOpen) {
+    if (_calendarManagerOpen || !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _calendarManagerOpen = true);
@@ -493,7 +517,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext context,
     TimetableProvider provider,
   ) async {
-    if (_settingsPageOpen) {
+    if (_settingsPageOpen || !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _settingsPageOpen = true);
@@ -512,10 +536,183 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   }
 }
 
+class _GeneralCalendarSelector extends StatelessWidget {
+  const _GeneralCalendarSelector({
+    required this.schedule,
+    required this.disabled,
+    required this.onPressed,
+  });
+
+  final GeneralSchedule? schedule;
+  final bool disabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Tooltip(
+      message: l10n.calendars,
+      child: OutlinedButton.icon(
+        key: const ValueKey('general-calendar-selector'),
+        onPressed: disabled ? null : onPressed,
+        icon: const Icon(Icons.calendar_month_outlined),
+        label: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 240),
+          child: Text(
+            schedule?.name ?? l10n.calendars,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GeneralWorkspaceNavigation extends StatelessWidget {
+  const _GeneralWorkspaceNavigation({
+    required this.view,
+    required this.selectedDate,
+    required this.compact,
+    required this.narrow,
+    required this.interactive,
+    required this.onViewChanged,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onToday,
+    required this.onPickDate,
+  });
+
+  final String view;
+  final DateTime selectedDate;
+  final bool compact;
+  final bool narrow;
+  final bool interactive;
+  final ValueChanged<String> onViewChanged;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onToday;
+  final VoidCallback? onPickDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final segments = [
+      ButtonSegment<String>(
+        value: generalViewWeek,
+        icon: const Icon(Icons.view_week_outlined),
+        label: compact ? null : Text(l10n.viewWeek),
+        tooltip: l10n.viewWeek,
+      ),
+      ButtonSegment<String>(
+        value: generalViewDay,
+        icon: const Icon(Icons.view_day_outlined),
+        label: compact ? null : Text(l10n.viewDay),
+        tooltip: l10n.viewDay,
+      ),
+      ButtonSegment<String>(
+        value: generalViewList,
+        icon: const Icon(Icons.list_alt_outlined),
+        label: compact ? null : Text(l10n.viewList),
+        tooltip: l10n.viewList,
+      ),
+      ButtonSegment<String>(
+        value: generalViewMonth,
+        icon: const Icon(Icons.calendar_view_month_outlined),
+        label: compact ? null : Text(l10n.viewMonth),
+        tooltip: l10n.viewMonth,
+      ),
+    ];
+    final selector = SkedExpressiveSegmentedButton<String>(
+      key: const ValueKey('general-view-selector'),
+      segments: segments,
+      selected: {view},
+      showSelectedIcon: false,
+      onSelectionChanged: interactive
+          ? (selection) {
+              if (selection.isNotEmpty) onViewChanged(selection.first);
+            }
+          : null,
+      expandedInsets: EdgeInsets.zero,
+      direction: Axis.horizontal,
+    );
+    final dateLabel = _dateNavigationLabel(selectedDate, view, context);
+    final materialL10n = MaterialLocalizations.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final previousTooltip = view == generalViewMonth
+        ? l10n.previousMonth
+        : materialL10n.previousPageTooltip;
+    final nextTooltip = view == generalViewMonth
+        ? l10n.nextMonth
+        : materialL10n.nextPageTooltip;
+    final navigation = Wrap(
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        IconButton(
+          tooltip: previousTooltip,
+          onPressed: interactive ? onPrevious : null,
+          icon: Icon(
+            isRtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+          ),
+        ),
+        OutlinedButton.icon(
+          key: const ValueKey('general-date-title-button'),
+          onPressed: interactive ? onPickDate : null,
+          icon: const Icon(Icons.event_outlined),
+          label: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.pickDate, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(
+                dateLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ],
+          ),
+        ),
+        TextButton.icon(
+          onPressed: interactive ? onToday : null,
+          icon: const Icon(Icons.today_outlined),
+          label: Text(l10n.today),
+        ),
+        IconButton(
+          tooltip: nextTooltip,
+          onPressed: interactive ? onNext : null,
+          icon: Icon(
+            isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+          ),
+        ),
+      ],
+    );
+
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [selector, const SizedBox(height: 8), navigation],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: selector),
+        const SizedBox(width: 12),
+        Flexible(child: navigation),
+      ],
+    );
+  }
+}
+
 class _GeneralHomeSnapshot {
   const _GeneralHomeSnapshot({
     required this.selectedDate,
     required this.defaultView,
+    required this.activeScheduleId,
     required this.schedules,
     required this.reminderAcknowledgements,
     required this.showWeekends,
@@ -530,6 +727,7 @@ class _GeneralHomeSnapshot {
     return _GeneralHomeSnapshot(
       selectedDate: data.selectedDate,
       defaultView: data.defaultView,
+      activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
       reminderAcknowledgements: data.reminderAcknowledgements,
       showWeekends: data.showWeekends,
@@ -542,6 +740,7 @@ class _GeneralHomeSnapshot {
 
   final DateTime selectedDate;
   final String defaultView;
+  final String activeScheduleId;
   final List<GeneralSchedule> schedules;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
   final bool showWeekends;
@@ -555,6 +754,7 @@ class _GeneralHomeSnapshot {
     return other is _GeneralHomeSnapshot &&
         _sameDay(other.selectedDate, selectedDate) &&
         other.defaultView == defaultView &&
+        other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
         identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
         other.showWeekends == showWeekends &&
@@ -570,6 +770,7 @@ class _GeneralHomeSnapshot {
     selectedDate.month,
     selectedDate.day,
     defaultView,
+    activeScheduleId,
     identityHashCode(schedules),
     identityHashCode(reminderAcknowledgements),
     showWeekends,
@@ -614,43 +815,6 @@ class _MoreGeneralOccurrencesSheet extends StatelessWidget {
               onTap: () => onOccurrenceTap(occurrence),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _CalendarManagerAction extends StatelessWidget {
-  const _CalendarManagerAction({
-    required this.expanded,
-    required this.disabled,
-    required this.onPressed,
-  });
-
-  final bool expanded;
-  final bool disabled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final callback = disabled ? null : onPressed;
-    if (!expanded) {
-      return IconButton(
-        icon: const Icon(Icons.calendar_month_outlined),
-        tooltip: l10n.calendars,
-        onPressed: callback,
-      );
-    }
-
-    return Tooltip(
-      message: l10n.calendars,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: TextButton.icon(
-          onPressed: callback,
-          icon: const Icon(Icons.calendar_month_outlined),
-          label: Text(l10n.calendars),
-        ),
       ),
     );
   }
@@ -708,19 +872,19 @@ class _GeneralOccurrenceFilter {
   }
 }
 
-String _yearLabel(DateTime date, String view, BuildContext context) {
+String _dateNavigationLabel(DateTime date, String view, BuildContext context) {
   if (view == generalViewMonth) {
     final localizations = MaterialLocalizations.of(context);
     return localizations.formatMonthYear(date);
   }
+  final localizations = MaterialLocalizations.of(context);
   if (view != generalViewWeek) {
-    return date.year.toString();
+    return localizations.formatShortDate(date);
   }
   final start = startOfWeekMonday(date);
   final end = addCalendarDays(start, 6);
-  return start.year == end.year
-      ? '${start.year}'
-      : '${start.year} / ${end.year}';
+  return '${localizations.formatShortDate(start)} - '
+      '${localizations.formatShortDate(end)}';
 }
 
 String _formatDate(DateTime date) {

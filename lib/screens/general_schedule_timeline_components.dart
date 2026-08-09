@@ -13,10 +13,8 @@ class _TimelineTimeRailLabel extends StatelessWidget {
       width: width,
       decoration: BoxDecoration(
         color: colors.surfaceContainerLow.withValues(alpha: 0.72),
-        border: Border(
-          right: BorderSide(
-            color: colors.outlineVariant.withValues(alpha: 0.55),
-          ),
+        border: BorderDirectional(
+          end: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.55)),
         ),
       ),
       alignment: Alignment.center,
@@ -45,8 +43,8 @@ class _AllDayColumn extends StatelessWidget {
     return Container(
       width: width,
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
+        border: BorderDirectional(
+          start: BorderSide(
             color: Theme.of(
               context,
             ).colorScheme.outlineVariant.withValues(alpha: 0.55),
@@ -145,33 +143,35 @@ class _GridBackground extends StatelessWidget {
     final gridStep = gridMinutes.clamp(15, 60).toInt();
     return Stack(
       children: [
-        Positioned.fill(
-          right: null,
+        PositionedDirectional(
+          start: 0,
+          top: 0,
+          bottom: 0,
           child: Container(
             width: timeColumnWidth,
             decoration: BoxDecoration(
               color: colors.surfaceContainerLow.withValues(alpha: 0.72),
-              border: Border(right: BorderSide(color: lineColor)),
+              border: BorderDirectional(end: BorderSide(color: lineColor)),
             ),
           ),
         ),
         for (var hour = startHour; hour <= endHour; hour++)
-          Positioned(
-            left: timeColumnWidth,
-            right: 0,
+          PositionedDirectional(
+            start: timeColumnWidth,
+            end: 0,
             top: topOffset + (hour - startHour) * hourHeight,
             child: Divider(height: 1, color: lineColor),
           ),
         for (var hour = startHour; hour <= endHour; hour++)
-          Positioned(
-            left: 0,
+          PositionedDirectional(
+            start: 0,
             top: topOffset + (hour - startHour) * hourHeight - 9,
             width: timeColumnWidth,
             height: 18,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Align(
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerEnd,
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
@@ -192,17 +192,17 @@ class _GridBackground extends StatelessWidget {
           minute += gridStep
         )
           if (minute % 60 != 0)
-            Positioned(
-              left: timeColumnWidth,
-              right: 0,
+            PositionedDirectional(
+              start: timeColumnWidth,
+              end: 0,
               top: topOffset + minute / 60 * hourHeight,
               child: Divider(height: 1, color: minorColor),
             ),
         for (var day = 0; day <= dayCount; day++)
-          Positioned(
+          PositionedDirectional(
             top: topOffset,
             bottom: topOffset,
-            left: timeColumnWidth + day * dayWidth,
+            start: timeColumnWidth + day * dayWidth,
             child: VerticalDivider(width: 1, color: lineColor),
           ),
       ],

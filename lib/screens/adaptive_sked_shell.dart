@@ -51,7 +51,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   final _workspaceStackKey = GlobalKey<_AdaptiveWorkspaceStackState>();
   final _navigationFocusBridgeKey =
       GlobalKey<_AdaptiveNavigationFocusBridgeState>();
-  final _generalScaffoldKey = GlobalKey<ScaffoldState>();
   final _studentWeekShortcutFocusNode = FocusNode(
     debugLabel: 'Student timetable week shortcuts',
   );
@@ -96,7 +95,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     }
     final target = index == 0 ? AppMode.student : AppMode.general;
     FocusManager.instance.primaryFocus?.unfocus();
-    _generalScaffoldKey.currentState?.closeDrawer();
     _modeSwitchInFlight = true;
     try {
       final saved = await runUiCommand(
@@ -172,11 +170,11 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             key: const ValueKey('general-home'),
             embedded: true,
             active: active,
+            interactive: interactive,
             showSettingsAction: compact,
             settingsEnabled: compactSettingsEnabled,
             settingsAction: compact ? _openSettingsFromWorkspace : null,
             settingsFocusNode: compact && active ? _settingsFocusNode : null,
-            scaffoldKey: _generalScaffoldKey,
           ),
         );
 
