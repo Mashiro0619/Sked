@@ -1449,7 +1449,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get mySchedule => 'My schedule';
 
   @override
-  String get today => 'Today';
+  String get today => 'Dzisiaj';
 
   @override
   String get addEvent => 'Add event';
@@ -1599,10 +1599,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get calendar => 'Calendar';
 
   @override
-  String get viewWeek => 'Week';
+  String get viewWeek => 'Tydzień';
 
   @override
-  String get viewDay => 'Day';
+  String get viewDay => 'Dzień';
 
   @override
   String get viewList => 'List';

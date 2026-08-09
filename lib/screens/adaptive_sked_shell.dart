@@ -51,7 +51,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   final _workspaceStackKey = GlobalKey<_AdaptiveWorkspaceStackState>();
   final _navigationFocusBridgeKey =
       GlobalKey<_AdaptiveNavigationFocusBridgeState>();
-  final _studentScaffoldKey = GlobalKey<ScaffoldState>();
   final _generalScaffoldKey = GlobalKey<ScaffoldState>();
   final _studentWeekShortcutFocusNode = FocusNode(
     debugLabel: 'Student timetable week shortcuts',
@@ -97,7 +96,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     }
     final target = index == 0 ? AppMode.student : AppMode.general;
     FocusManager.instance.primaryFocus?.unfocus();
-    _studentScaffoldKey.currentState?.closeDrawer();
     _generalScaffoldKey.currentState?.closeDrawer();
     _modeSwitchInFlight = true;
     try {
@@ -169,7 +167,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             settingsEnabled: compactSettingsEnabled,
             settingsAction: compact ? _openSettingsFromWorkspace : null,
             settingsFocusNode: compact && active ? _settingsFocusNode : null,
-            scaffoldKey: _studentScaffoldKey,
           ),
           generalBuilder: (active, interactive) => GeneralScheduleHomeScreen(
             key: const ValueKey('general-home'),
@@ -826,13 +823,19 @@ class _WorkspaceRail extends StatelessWidget {
                   NavigationRailDestination(
                     icon: const Icon(Icons.school_outlined),
                     selectedIcon: const Icon(Icons.school),
-                    label: Text(l10n.studentTimetable),
+                    label: _WorkspaceRailLabel(
+                      label: l10n.studentTimetable,
+                      extended: extended,
+                    ),
                     disabled: !enabled || busy,
                   ),
                   NavigationRailDestination(
                     icon: const Icon(Icons.event_note_outlined),
                     selectedIcon: const Icon(Icons.event_note),
-                    label: Text(l10n.generalSchedule),
+                    label: _WorkspaceRailLabel(
+                      label: l10n.generalSchedule,
+                      extended: extended,
+                    ),
                     disabled: !enabled || busy,
                   ),
                 ],
@@ -872,6 +875,26 @@ class _WorkspaceRail extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WorkspaceRailLabel extends StatelessWidget {
+  const _WorkspaceRailLabel({required this.label, required this.extended});
+
+  final String label;
+  final bool extended;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: extended ? 156 : 72),
+      child: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: extended ? TextAlign.start : TextAlign.center,
       ),
     );
   }

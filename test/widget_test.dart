@@ -26,6 +26,7 @@ import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
+import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/timetable_entry.dart';
 import 'package:sked/widgets/timetable_grid.dart';
 import 'package:flutter/material.dart';
@@ -3414,7 +3415,7 @@ void main() {
       expect(find.text('第 ${provider.selectedWeek} 周'), findsOneWidget);
     });
 
-    testWidgets('主页显示精简标题、右上角添加课程且无 FAB', (tester) async {
+    testWidgets('主页显示精简标题、右上角添加课程并保留唯一主操作', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
       );
@@ -3441,14 +3442,15 @@ void main() {
       expect(find.text('第 ${provider.selectedWeek} 周'), findsOneWidget);
       expect(find.text(provider.activeTimetable.config.name), findsOneWidget);
       expect(find.byTooltip('添加课程'), findsOneWidget);
-      expect(find.byType(FloatingActionButton), findsNothing);
+      expect(find.byType(SkedPrimaryFab), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
       expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SingleChildScrollView &&
-              widget.scrollDirection == Axis.horizontal,
-        ),
-        findsNothing,
+        find.byKey(const ValueKey('timetable-day-header-horizontal-scroll')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('timetable-grid-horizontal-scroll')),
+        findsOneWidget,
       );
     });
 
@@ -4129,7 +4131,7 @@ void main() {
       );
     });
 
-    testWidgets('TimetableGrid narrow course cards keep legacy text wrapping', (
+    testWidgets('TimetableGrid narrow course cards clip visual text safely', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(360, 640));
@@ -4212,15 +4214,15 @@ void main() {
       final titleText = tester.widget<Text>(find.text(title));
       final locationText = tester.widget<Text>(find.text(location));
       final teacherText = tester.widget<Text>(find.text(teacher));
-      expect(titleText.maxLines, isNull);
-      expect(locationText.maxLines, isNull);
-      expect(teacherText.maxLines, isNull);
-      expect(titleText.overflow, TextOverflow.visible);
-      expect(locationText.overflow, TextOverflow.visible);
-      expect(teacherText.overflow, TextOverflow.visible);
-      expect(titleText.softWrap, isTrue);
-      expect(locationText.softWrap, isTrue);
-      expect(teacherText.softWrap, isTrue);
+      expect(titleText.maxLines, 1);
+      expect(locationText.maxLines, 1);
+      expect(teacherText.maxLines, 1);
+      expect(titleText.overflow, TextOverflow.ellipsis);
+      expect(locationText.overflow, TextOverflow.ellipsis);
+      expect(teacherText.overflow, TextOverflow.ellipsis);
+      expect(titleText.softWrap, isFalse);
+      expect(locationText.softWrap, isFalse);
+      expect(teacherText.softWrap, isFalse);
     });
 
     testWidgets('TimetableGrid 会在全部描边时继续突出当前或下一节课程', (tester) async {
@@ -4318,7 +4320,7 @@ void main() {
             .map(
               (element) =>
                   (tester.widget<Card>(find.byWidget(element.widget)).shape
-                          as RoundedRectangleBorder)
+                          as OutlinedBorder)
                       .side,
             )
             .where((side) => side.width >= 0)

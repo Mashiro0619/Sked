@@ -3,12 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/timetable_models.dart';
+import '../theme/sked_expressive_theme.dart';
 import 'timetable_entry.dart';
 
 const _minuteHeight = 1.4;
-const _courseVerticalGap = 4.0;
 const _compactHeaderHeight = 56.0;
 const _regularHeaderHeight = 64.0;
+const _minimumCourseHitExtent = 48.0;
 
 class TimetableCourseTapInfo {
   const TimetableCourseTapInfo({
@@ -53,7 +54,7 @@ class TimetableEmptySlotTapInfo {
 }
 
 /// 这里按真实时间排版课程块，这样换一套节次时间后，视觉位置也会跟着对齐。
-class TimetableGrid extends StatelessWidget {
+class TimetableGrid extends StatefulWidget {
   const TimetableGrid({
     super.key,
     required this.timetable,
@@ -80,7 +81,9 @@ class TimetableGrid extends StatelessWidget {
     required this.liveCourseOutlineWidth,
     this.entries,
     this.onEntryTap,
-  });
+    this.visibleWeekdays = const <int>[1, 2, 3, 4, 5, 6, 7],
+    this.showDayHeader = true,
+  }) : assert(visibleWeekdays.length > 0);
 
   final TimetableData timetable;
   final List<CoursePeriodTime> periodTimes;
@@ -106,47 +109,162 @@ class TimetableGrid extends StatelessWidget {
   final double liveCourseOutlineWidth;
   final List<TimetableEntry>? entries;
   final ValueChanged<TimetableEntry>? onEntryTap;
+  final List<int> visibleWeekdays;
+  final bool showDayHeader;
+
+  @override
+  State<TimetableGrid> createState() => _TimetableGridState();
+}
+
+class _TimetableGridState extends State<TimetableGrid> {
+  final ScrollController _headerHorizontalController = ScrollController();
+  final ScrollController _bodyHorizontalController = ScrollController();
+  bool _syncingHorizontalScroll = false;
+  bool _horizontalSyncScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _headerHorizontalController.addListener(_syncHeaderToBody);
+    _bodyHorizontalController.addListener(_syncBodyToHeader);
+  }
+
+  @override
+  void didUpdateWidget(covariant TimetableGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _scheduleHorizontalSync();
+  }
+
+  @override
+  void dispose() {
+    _headerHorizontalController
+      ..removeListener(_syncHeaderToBody)
+      ..dispose();
+    _bodyHorizontalController
+      ..removeListener(_syncBodyToHeader)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _syncHeaderToBody() {
+    _syncHorizontalOffset(
+      source: _headerHorizontalController,
+      target: _bodyHorizontalController,
+    );
+  }
+
+  void _syncBodyToHeader() {
+    _syncHorizontalOffset(
+      source: _bodyHorizontalController,
+      target: _headerHorizontalController,
+    );
+  }
+
+  void _syncHorizontalOffset({
+    required ScrollController source,
+    required ScrollController target,
+  }) {
+    if (_syncingHorizontalScroll || !source.hasClients || !target.hasClients) {
+      return;
+    }
+    final targetOffset = source.offset.clamp(
+      target.position.minScrollExtent,
+      target.position.maxScrollExtent,
+    );
+    if ((target.offset - targetOffset).abs() < 0.5) return;
+    _syncingHorizontalScroll = true;
+    target.jumpTo(targetOffset);
+    _syncingHorizontalScroll = false;
+  }
+
+  void _clampHorizontalOffsets() {
+    final controllers = <ScrollController>[
+      _headerHorizontalController,
+      _bodyHorizontalController,
+    ].where((controller) => controller.hasClients).toList();
+    if (controllers.isEmpty) return;
+    final hasCollapsedViewport = controllers.any(
+      (controller) => controller.position.maxScrollExtent <= 0,
+    );
+    final desiredOffset = hasCollapsedViewport
+        ? 0.0
+        : controllers.map((controller) => controller.offset).reduce(math.min);
+    _syncingHorizontalScroll = true;
+    for (final controller in controllers) {
+      final clamped = desiredOffset.clamp(
+        controller.position.minScrollExtent,
+        controller.position.maxScrollExtent,
+      );
+      if ((controller.offset - clamped).abs() >= 0.5) {
+        controller.jumpTo(clamped);
+      }
+    }
+    _syncingHorizontalScroll = false;
+  }
+
+  void _scheduleHorizontalSync() {
+    if (_horizontalSyncScheduled) return;
+    _horizontalSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _horizontalSyncScheduled = false;
+      if (!mounted) return;
+      _clampHorizontalOffsets();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final slots = periodTimes.isEmpty
+    _scheduleHorizontalSync();
+    _validateVisibleWeekdays(widget.visibleWeekdays);
+    final slots = widget.periodTimes.isEmpty
         ? buildPeriodTimesForCount(1)
-        : periodTimes;
+        : widget.periodTimes;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
     final layout = _TimetableVerticalLayout(
       slots: slots,
-      preserveGaps: preserveGaps || entries != null,
+      preserveGaps: widget.preserveGaps || widget.entries != null,
+      minuteHeight: _minuteHeight * textScale.clamp(1.0, 1.8),
     );
     final colors = Theme.of(context).colorScheme;
-    final useEntries = entries != null;
+    final useEntries = widget.entries != null;
     assert(
-      entries == null || onEntryTap != null,
+      widget.entries == null || widget.onEntryTap != null,
       'onEntryTap must be provided when entries is provided',
     );
+    // Resolve automatic colorful text against the complete week so switching
+    // the day view cannot make the same course palette change text color.
     final dayLayoutsByWeekday = <int, List<CourseLayout>>{
-      for (var weekday = 1; weekday <= 7; weekday++)
+      for (var weekday = DateTime.monday; weekday <= DateTime.sunday; weekday++)
         weekday: useEntries
-            ? _buildDayLayoutsFromEntries(entries: entries!, weekday: weekday)
-            : _buildDayLayouts(
-                timetable: timetable,
-                courses: timetable.courses,
+            ? _buildDayLayoutsFromEntries(
+                entries: widget.entries!,
                 weekday: weekday,
-                selectedWeek: selectedWeek,
-                realCurrentWeek: realCurrentWeek,
-                showPastEndedCourses: showPastEndedCourses,
-                showFutureCourses: showFutureCourses,
-                displayedCourseIdForConflict: displayedCourseIdForConflict,
-                liveCourseTarget: liveCourseTarget,
-                liveCourseOutlineEnabled: liveCourseOutlineEnabled,
-                liveCourseOutlineMode: liveCourseOutlineMode,
+              )
+            : _buildDayLayouts(
+                timetable: widget.timetable,
+                courses: widget.timetable.courses,
+                periodTimes: slots,
+                weekday: weekday,
+                selectedWeek: widget.selectedWeek,
+                realCurrentWeek: widget.realCurrentWeek,
+                showPastEndedCourses: widget.showPastEndedCourses,
+                showFutureCourses: widget.showFutureCourses,
+                displayedCourseIdForConflict:
+                    widget.displayedCourseIdForConflict,
+                liveCourseTarget: widget.liveCourseTarget,
+                liveCourseOutlineEnabled: widget.liveCourseOutlineEnabled,
+                liveCourseOutlineMode: widget.liveCourseOutlineMode,
+                preserveGaps: layout.preserveGaps,
               ),
     };
-    final colorfulTextColor = themeColorMode == themeColorModeColorful
-        ? colorfulCourseTextColorMode == colorfulCourseTextColorModeCustom &&
-                  colorfulCourseTextColorValue != null
-              ? Color(colorfulCourseTextColorValue!)
+    final colorfulTextColor = widget.themeColorMode == themeColorModeColorful
+        ? widget.colorfulCourseTextColorMode ==
+                      colorfulCourseTextColorModeCustom &&
+                  widget.colorfulCourseTextColorValue != null
+              ? Color(widget.colorfulCourseTextColorValue!)
               : resolveSharedColorfulTextColor(
                   layouts: dayLayoutsByWeekday.values.expand((items) => items),
-                  courseNameColorValues: courseNameColorValues,
+                  courseNameColorValues: widget.courseNameColorValues,
                   surfaceColor: colors.surface,
                   fallbackColor: colors.onSecondaryContainer,
                 )
@@ -154,7 +272,11 @@ class TimetableGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final metrics = _TimetableMetrics.fromWidth(constraints.maxWidth);
+        final metrics = _TimetableMetrics.fromWidth(
+          constraints.maxWidth,
+          visibleDayCount: widget.visibleWeekdays.length,
+          textScale: textScale,
+        );
         final baseHeaderHeight = metrics.compact
             ? _compactHeaderHeight
             : _regularHeaderHeight;
@@ -166,7 +288,8 @@ class TimetableGrid extends StatelessWidget {
           _scaledDayHeaderHeight(
             context,
             compact: metrics.compact,
-            localeCode: localeCode,
+            localeCode: widget.localeCode,
+            weekdays: widget.visibleWeekdays,
           ),
         );
 
@@ -174,32 +297,55 @@ class TimetableGrid extends StatelessWidget {
           width: constraints.maxWidth,
           child: Column(
             children: [
-              SizedBox(
-                key: const ValueKey('timetable-day-header'),
-                height: headerHeight,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: metrics.timeLabelWidth,
-                      child: _MonthHeader(
-                        date: weekDateStart,
-                        compact: metrics.compact,
-                        localeCode: localeCode,
-                      ),
-                    ),
-                    for (var weekday = 1; weekday <= 7; weekday++)
+              if (widget.showDayHeader)
+                SizedBox(
+                  key: const ValueKey('timetable-day-header'),
+                  height: headerHeight,
+                  child: Row(
+                    children: [
                       SizedBox(
-                        width: metrics.dayColumnWidth,
-                        child: _DayHeader(
-                          weekday: weekday,
-                          date: addCalendarDays(weekDateStart, weekday - 1),
+                        width: metrics.timeLabelWidth,
+                        child: _MonthHeader(
+                          date: widget.weekDateStart,
                           compact: metrics.compact,
-                          localeCode: localeCode,
+                          localeCode: widget.localeCode,
                         ),
                       ),
-                  ],
+                      Expanded(
+                        child: SingleChildScrollView(
+                          key: const ValueKey(
+                            'timetable-day-header-horizontal-scroll',
+                          ),
+                          controller: _headerHorizontalController,
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(
+                            width: metrics.daysContentWidth,
+                            child: Row(
+                              children: [
+                                for (final weekday in widget.visibleWeekdays)
+                                  SizedBox(
+                                    key: ValueKey(
+                                      'timetable-day-header-$weekday',
+                                    ),
+                                    width: metrics.dayColumnWidth,
+                                    child: _DayHeader(
+                                      weekday: weekday,
+                                      date: addCalendarDays(
+                                        widget.weekDateStart,
+                                        weekday - 1,
+                                      ),
+                                      compact: metrics.compact,
+                                      localeCode: widget.localeCode,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               Expanded(
                 child: SingleChildScrollView(
                   child: SizedBox(
@@ -208,129 +354,103 @@ class TimetableGrid extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
+                          key: const ValueKey('timetable-time-rail'),
                           width: metrics.timeLabelWidth,
-                          child: Stack(
-                            children: [
-                              for (final slot in slots)
-                                Positioned(
-                                  top: layout.slotTop(slot),
-                                  left: 0,
-                                  right: 0,
-                                  child: SizedBox(
-                                    height: layout.slotHeight(slot),
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: metrics.sidePadding,
-                                      ),
-                                      child: Center(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                slot.index.toString(),
-                                                textAlign: TextAlign.center,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleSmall
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                    ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '${formatMinutes(slot.startMinutes)}\n${formatMinutes(slot.endMinutes)}',
-                                                textAlign: TextAlign.center,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelSmall
-                                                    ?.copyWith(height: 1.05),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
+                          child: _TimeRail(
+                            slots: slots,
+                            layout: layout,
+                            sidePadding: metrics.sidePadding,
                           ),
                         ),
-                        for (var weekday = 1; weekday <= 7; weekday++)
-                          _DayColumn(
-                            width: metrics.dayColumnWidth,
-                            borderColor: showGridLines
-                                ? colors.outlineVariant.withValues(alpha: 0.25)
-                                : Colors.transparent,
-                            onLongPressAt: (localPosition) {
-                              final matchedPeriod = layout.slotForY(
-                                localPosition.dy,
-                              );
-                              onEmptySlotTap(
-                                TimetableEmptySlotTapInfo(
-                                  weekday: weekday,
-                                  startMinutes: matchedPeriod.startMinutes,
-                                  endMinutes: matchedPeriod.endMinutes,
-                                  periods: [matchedPeriod.index],
+                        Expanded(
+                          child: Scrollbar(
+                            controller: _bodyHorizontalController,
+                            notificationPredicate: (notification) =>
+                                notification.metrics.axis == Axis.horizontal,
+                            child: SingleChildScrollView(
+                              key: const ValueKey(
+                                'timetable-grid-horizontal-scroll',
+                              ),
+                              controller: _bodyHorizontalController,
+                              scrollDirection: Axis.horizontal,
+                              child: SizedBox(
+                                key: const ValueKey(
+                                  'timetable-grid-horizontal-content',
                                 ),
-                              );
-                            },
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                if (showGridLines)
-                                  for (final slot in slots)
-                                    Positioned(
-                                      top: layout.slotTop(slot),
-                                      left: 0,
-                                      right: 0,
-                                      child: Container(
-                                        height: layout.slotHeight(slot),
-                                        decoration: BoxDecoration(
-                                          border: Border(
-                                            top: BorderSide(
-                                              color: colors.outlineVariant
-                                                  .withValues(alpha: 0.18),
-                                            ),
-                                          ),
+                                width: metrics.daysContentWidth,
+                                height: layout.totalHeight,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (final weekday
+                                        in widget.visibleWeekdays)
+                                      _DayColumn(
+                                        weekday: weekday,
+                                        width: metrics.dayColumnWidth,
+                                        borderColor: widget.showGridLines
+                                            ? colors.outlineVariant.withValues(
+                                                alpha: 0.25,
+                                              )
+                                            : Colors.transparent,
+                                        showGridLines: widget.showGridLines,
+                                        slots: slots,
+                                        layouts: dayLayoutsByWeekday[weekday]!,
+                                        verticalLayout: layout,
+                                        metrics: metrics,
+                                        themeColorMode: widget.themeColorMode,
+                                        courseNameColorValues:
+                                            widget.courseNameColorValues,
+                                        colorfulTextColor: colorfulTextColor,
+                                        liveCourseOutlineMode:
+                                            widget.liveCourseOutlineMode,
+                                        outlineColor: Color(
+                                          widget.liveCourseOutlineColorValue,
                                         ),
-                                      ),
-                                    ),
-                                ...dayLayoutsByWeekday[weekday]!.map(
-                                  (item) => _CourseCard(
-                                    layout: item,
-                                    verticalLayout: layout,
-                                    metrics: metrics,
-                                    themeColorMode: themeColorMode,
-                                    courseNameColorValues:
-                                        courseNameColorValues,
-                                    colorfulTextColor: colorfulTextColor,
-                                    liveCourseOutlineMode:
-                                        liveCourseOutlineMode,
-                                    outlineColor: Color(
-                                      liveCourseOutlineColorValue,
-                                    ),
-                                    outlineWidth: liveCourseOutlineWidth,
-                                    onTap: useEntries && item.entry != null
-                                        ? () => onEntryTap!(item.entry!)
-                                        : () => onCourseTap(
+                                        outlineWidth:
+                                            widget.liveCourseOutlineWidth,
+                                        onLongPressAt: (localPosition) {
+                                          final matchedPeriod = layout.slotForY(
+                                            localPosition.dy,
+                                          );
+                                          widget.onEmptySlotTap(
+                                            TimetableEmptySlotTapInfo(
+                                              weekday: weekday,
+                                              startMinutes:
+                                                  matchedPeriod.startMinutes,
+                                              endMinutes:
+                                                  matchedPeriod.endMinutes,
+                                              periods: [matchedPeriod.index],
+                                            ),
+                                          );
+                                        },
+                                        onLayoutTap: (item) {
+                                          if (useEntries &&
+                                              item.entry != null) {
+                                            widget.onEntryTap!(item.entry!);
+                                            return;
+                                          }
+                                          widget.onCourseTap(
                                             TimetableCourseTapInfo(
                                               course: item.course!,
                                               courses: item.conflictCourses
-                                                  .map((e) => e as CourseItem)
+                                                  .map(
+                                                    (course) =>
+                                                        course as CourseItem,
+                                                  )
                                                   .toList(),
                                               isFullConflict:
                                                   item.isFullConflict,
                                               conflictKey: item.conflictKey,
                                             ),
-                                          ),
-                                  ),
+                                          );
+                                        },
+                                      ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -345,31 +465,239 @@ class TimetableGrid extends StatelessWidget {
 }
 
 /// 这些阈值先保证整周能塞进当前宽度，再去调留白和可读性。
+void _validateVisibleWeekdays(List<int> weekdays) {
+  if (weekdays.isEmpty ||
+      weekdays.any(
+        (weekday) => weekday < DateTime.monday || weekday > DateTime.sunday,
+      ) ||
+      weekdays.length != weekdays.toSet().length) {
+    throw ArgumentError.value(
+      weekdays,
+      'visibleWeekdays',
+      'must contain unique weekday values from 1 through 7',
+    );
+  }
+}
+
 class _DayColumn extends StatelessWidget {
   const _DayColumn({
+    required this.weekday,
     required this.width,
     required this.borderColor,
+    required this.showGridLines,
+    required this.slots,
+    required this.layouts,
+    required this.verticalLayout,
+    required this.metrics,
+    required this.themeColorMode,
+    required this.courseNameColorValues,
+    required this.colorfulTextColor,
+    required this.liveCourseOutlineMode,
+    required this.outlineColor,
+    required this.outlineWidth,
     required this.onLongPressAt,
-    required this.child,
+    required this.onLayoutTap,
   });
 
+  final int weekday;
   final double width;
   final Color borderColor;
+  final bool showGridLines;
+  final List<CoursePeriodTime> slots;
+  final List<CourseLayout> layouts;
+  final _TimetableVerticalLayout verticalLayout;
+  final _TimetableMetrics metrics;
+  final String themeColorMode;
+  final Map<String, int> courseNameColorValues;
+  final Color? colorfulTextColor;
+  final String liveCourseOutlineMode;
+  final Color outlineColor;
+  final double outlineWidth;
   final ValueChanged<Offset> onLongPressAt;
-  final Widget child;
+  final ValueChanged<CourseLayout> onLayoutTap;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final geometries = _buildCourseGeometries(
+      layouts: layouts,
+      verticalLayout: verticalLayout,
+    );
+    final hasDenseHitTargets = geometries.any(
+      (geometry) => geometry.hitHeight < _minimumCourseHitExtent,
+    );
     return Container(
+      key: ValueKey('timetable-day-column-$weekday'),
       width: width,
       decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: borderColor)),
+        border: BorderDirectional(start: BorderSide(color: borderColor)),
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onLongPressStart: (details) => onLongPressAt(details.localPosition),
-        child: Material(color: Colors.transparent, child: child),
+        onLongPressStart: (details) {
+          final y = details.localPosition.dy;
+          _CourseGeometry? matchedCourse;
+          for (final geometry in geometries) {
+            if (y >= geometry.hitTop &&
+                y < geometry.hitTop + geometry.hitHeight) {
+              // Match the same topmost item that the stacked tap targets use.
+              matchedCourse = geometry;
+            }
+          }
+          if (matchedCourse != null) {
+            onLayoutTap(matchedCourse.layout);
+          } else {
+            onLongPressAt(details.localPosition);
+          }
+        },
+        onTapUp: hasDenseHitTargets
+            ? (details) {
+                final y = details.localPosition.dy;
+                // Dense adjacent courses cannot each own a non-overlapping
+                // 48dp pointer rectangle. Route their physical tap by the
+                // real visual interval while keeping their semantic actions
+                // independently focusable below.
+                for (final geometry in geometries.reversed) {
+                  if (geometry.hitHeight >= _minimumCourseHitExtent) continue;
+                  if (y >= geometry.visualTop &&
+                      y < geometry.visualTop + geometry.visualHeight) {
+                    onLayoutTap(geometry.layout);
+                    return;
+                  }
+                }
+              }
+            : null,
+        child: Material(
+          color: Colors.transparent,
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              if (showGridLines)
+                for (final slot in slots)
+                  Positioned(
+                    top: verticalLayout.slotTop(slot),
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: verticalLayout.slotHeight(slot),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: colors.outlineVariant.withValues(
+                              alpha: 0.18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              for (final geometry in geometries)
+                _CourseCard(
+                  geometry: geometry,
+                  metrics: metrics,
+                  themeColorMode: themeColorMode,
+                  courseNameColorValues: courseNameColorValues,
+                  colorfulTextColor: colorfulTextColor,
+                  liveCourseOutlineMode: liveCourseOutlineMode,
+                  outlineColor: outlineColor,
+                  outlineWidth: outlineWidth,
+                ),
+              for (final geometry in geometries)
+                _CourseHitTarget(
+                  geometry: geometry,
+                  metrics: metrics,
+                  onTap: () => onLayoutTap(geometry.layout),
+                  ignorePointer:
+                      hasDenseHitTargets &&
+                      geometry.hitHeight < _minimumCourseHitExtent,
+                  includeSemantics:
+                      geometry.hitHeight >= _minimumCourseHitExtent,
+                ),
+              for (final geometry in geometries)
+                if (geometry.hitHeight < _minimumCourseHitExtent)
+                  _CourseSemanticTarget(
+                    geometry: geometry,
+                    totalHeight: verticalLayout.totalHeight,
+                    onTap: () => onLayoutTap(geometry.layout),
+                  ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _TimeRail extends StatelessWidget {
+  const _TimeRail({
+    required this.slots,
+    required this.layout,
+    required this.sidePadding,
+  });
+
+  final List<CoursePeriodTime> slots;
+  final _TimetableVerticalLayout layout;
+  final double sidePadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Stack(
+      clipBehavior: Clip.hardEdge,
+      children: [
+        for (final slot in slots)
+          Positioned(
+            top: layout.slotTop(slot),
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: layout.slotHeight(slot),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: sidePadding),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showTimes =
+                        constraints.maxHeight >=
+                        MediaQuery.textScalerOf(context).scale(42);
+                    return ClipRect(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            slot.index.toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (showTimes) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              formatMinutes(slot.startMinutes),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: textTheme.labelSmall?.copyWith(height: 1),
+                            ),
+                            Text(
+                              formatMinutes(slot.endMinutes),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: textTheme.labelSmall?.copyWith(height: 1),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -378,6 +706,7 @@ class _TimetableMetrics {
   const _TimetableMetrics({
     required this.timeLabelWidth,
     required this.dayColumnWidth,
+    required this.daysContentWidth,
     required this.courseGap,
     required this.cardPadding,
     required this.sidePadding,
@@ -386,38 +715,42 @@ class _TimetableMetrics {
 
   final double timeLabelWidth;
   final double dayColumnWidth;
+  final double daysContentWidth;
   final double courseGap;
   final double cardPadding;
   final double sidePadding;
   final bool compact;
 
-  factory _TimetableMetrics.fromWidth(double width) {
+  factory _TimetableMetrics.fromWidth(
+    double width, {
+    required int visibleDayCount,
+    required double textScale,
+  }) {
     final safeWidth = width.isFinite && width > 0 ? width : 980.0;
-    final compact = safeWidth < 920;
-    final timeLabelWidth = safeWidth < 600
-        ? 34.0
-        : safeWidth < 840
-        ? 42.0
-        : 52.0;
+    final timeLabelWidth =
+        (safeWidth < 600 ? 56.0 : 64.0) +
+        ((textScale - 1).clamp(0.0, 1.0) * 18);
     final availableDaysWidth = math.max(safeWidth - timeLabelWidth, 0.0);
+    final minimumDayWidth = visibleDayCount == 1
+        ? 0.0
+        : textScale > 1.7
+        ? 156.0
+        : textScale > 1.3
+        ? 136.0
+        : 112.0;
+    final daysContentWidth = math.max(
+      availableDaysWidth,
+      minimumDayWidth * visibleDayCount,
+    );
+    final dayColumnWidth = daysContentWidth / visibleDayCount;
+    final compact = dayColumnWidth < 140;
     return _TimetableMetrics(
       timeLabelWidth: timeLabelWidth,
-      dayColumnWidth: availableDaysWidth / 7,
-      courseGap: safeWidth < 600
-          ? 2.0
-          : compact
-          ? 4.0
-          : 6.0,
-      cardPadding: safeWidth < 600
-          ? 3.0
-          : compact
-          ? 5.0
-          : 8.0,
-      sidePadding: safeWidth < 600
-          ? 1.0
-          : compact
-          ? 2.0
-          : 4.0,
+      dayColumnWidth: dayColumnWidth,
+      daysContentWidth: daysContentWidth,
+      courseGap: compact ? 4.0 : 6.0,
+      cardPadding: compact ? 6.0 : 8.0,
+      sidePadding: textScale > 1.3 ? 2.0 : 4.0,
       compact: compact,
     );
   }
@@ -427,6 +760,7 @@ double _scaledDayHeaderHeight(
   BuildContext context, {
   required bool compact,
   required String localeCode,
+  required List<int> weekdays,
 }) {
   final theme = Theme.of(context);
   final textScaler = MediaQuery.textScalerOf(context);
@@ -438,7 +772,7 @@ double _scaledDayHeaderHeight(
       ? theme.textTheme.labelSmall
       : theme.textTheme.bodySmall;
   var maxWeekdayHeight = 0.0;
-  for (var weekday = DateTime.monday; weekday <= DateTime.sunday; weekday++) {
+  for (final weekday in weekdays) {
     final weekdayPainter = TextPainter(
       text: TextSpan(
         text: formatWeekdayShortLabel(weekday, localeCode: localeCode),
@@ -532,12 +866,13 @@ class _DayHeader extends StatelessWidget {
               vertical: compact ? 2 : 3,
             ),
             decoration: isToday
-                ? BoxDecoration(
+                ? ShapeDecoration(
                     color: colorScheme.primary.withValues(alpha: 0.10),
-                    border: Border.all(
-                      color: colorScheme.primary.withValues(alpha: 0.65),
+                    shape: skedShapeSchemeOf(context).compact.copyWith(
+                      side: BorderSide(
+                        color: colorScheme.primary.withValues(alpha: 0.65),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(6),
                   )
                 : null,
             child: Text(
@@ -563,23 +898,33 @@ class _DayHeader extends StatelessWidget {
 }
 
 class _TimetableVerticalLayout {
-  _TimetableVerticalLayout({required this.slots, required this.preserveGaps})
-    : _slotTops = _buildSlotTops(slots, preserveGaps) {
+  static const _collapsedRangeHeight = 28.0;
+
+  _TimetableVerticalLayout({
+    required this.slots,
+    required this.preserveGaps,
+    required this.minuteHeight,
+  }) : _slotTops = _buildSlotTops(slots, preserveGaps, minuteHeight) {
     totalHeight = slots.isEmpty
         ? 0
         : preserveGaps
-        ? (slots.last.endMinutes - slots.first.startMinutes) * _minuteHeight
-        : slots.fold<double>(0, (sum, slot) => sum + _slotHeightFor(slot));
+        ? (slots.last.endMinutes - slots.first.startMinutes) * minuteHeight
+        : slots.fold<double>(
+            0,
+            (sum, slot) => sum + _slotHeightFor(slot, minuteHeight),
+          );
   }
 
   final List<CoursePeriodTime> slots;
   final bool preserveGaps;
+  final double minuteHeight;
   final List<double> _slotTops;
   late final double totalHeight;
 
   static List<double> _buildSlotTops(
     List<CoursePeriodTime> slots,
     bool preserveGaps,
+    double minuteHeight,
   ) {
     if (slots.isEmpty) {
       return const [];
@@ -588,20 +933,20 @@ class _TimetableVerticalLayout {
       final startMinutes = slots.first.startMinutes;
       return [
         for (final slot in slots)
-          (slot.startMinutes - startMinutes) * _minuteHeight,
+          (slot.startMinutes - startMinutes) * minuteHeight,
       ];
     }
     var currentTop = 0.0;
     final tops = <double>[];
     for (final slot in slots) {
       tops.add(currentTop);
-      currentTop += _slotHeightFor(slot);
+      currentTop += _slotHeightFor(slot, minuteHeight);
     }
     return tops;
   }
 
-  static double _slotHeightFor(CoursePeriodTime slot) {
-    return math.max(0, slot.endMinutes - slot.startMinutes) * _minuteHeight;
+  static double _slotHeightFor(CoursePeriodTime slot, double minuteHeight) {
+    return math.max(0, slot.endMinutes - slot.startMinutes) * minuteHeight;
   }
 
   int _slotIndex(CoursePeriodTime slot) {
@@ -611,7 +956,8 @@ class _TimetableVerticalLayout {
 
   double slotTop(CoursePeriodTime slot) => _slotTops[_slotIndex(slot)];
 
-  double slotHeight(CoursePeriodTime slot) => _slotHeightFor(slot);
+  double slotHeight(CoursePeriodTime slot) =>
+      _slotHeightFor(slot, minuteHeight);
 
   double minuteToY(int minute) {
     if (slots.isEmpty) {
@@ -621,7 +967,7 @@ class _TimetableVerticalLayout {
     final lastEnd = slots.last.endMinutes;
     final clampedMinute = minute.clamp(firstStart, lastEnd).toInt();
     if (preserveGaps) {
-      return (clampedMinute - firstStart) * _minuteHeight;
+      return (clampedMinute - firstStart) * minuteHeight;
     }
     for (var index = 0; index < slots.length; index++) {
       final slot = slots[index];
@@ -630,25 +976,42 @@ class _TimetableVerticalLayout {
         return top;
       }
       if (clampedMinute <= slot.endMinutes) {
-        return top + (clampedMinute - slot.startMinutes) * _minuteHeight;
+        return top + (clampedMinute - slot.startMinutes) * minuteHeight;
       }
     }
     return totalHeight;
   }
 
-  double courseTop(CourseItem course) => minuteToY(course.startMinutes);
-
-  double courseHeight(CourseItem course) {
-    final visualHeight =
-        minuteToY(course.endMinutes) - minuteToY(course.startMinutes);
-    return math.max(88.0, visualHeight - _courseVerticalGap);
+  double rangeTop(int startMinutes) {
+    final top = minuteToY(startMinutes);
+    if (!preserveGaps &&
+        startMinutes > slots.last.endMinutes &&
+        top >= totalHeight) {
+      return _slotTops.last;
+    }
+    return top;
   }
 
-  double entryTop(int startMinutes) => minuteToY(startMinutes);
+  double rangeHeight(int startMinutes, int endMinutes) {
+    final top = rangeTop(startMinutes);
+    final mappedBottom = minuteToY(endMinutes);
+    final height = math.max(0.0, mappedBottom - top).toDouble();
+    if (height > 0 || endMinutes <= startMinutes || preserveGaps) {
+      return height;
+    }
+    final anchorIndex = _slotIndexForCollapsedTop(top);
+    final anchorHeight = slotHeight(slots[anchorIndex]);
+    final fallbackHeight = math.max(_collapsedRangeHeight, anchorHeight);
+    return math
+        .min(fallbackHeight, math.max(0.0, totalHeight - top))
+        .toDouble();
+  }
 
-  double entryHeight(int startMinutes, int endMinutes) {
-    final visualHeight = minuteToY(endMinutes) - minuteToY(startMinutes);
-    return math.max(88.0, visualHeight - _courseVerticalGap);
+  int _slotIndexForCollapsedTop(double top) {
+    for (var index = 0; index < _slotTops.length; index++) {
+      if (_slotTops[index] >= top - 0.001) return index;
+    }
+    return _slotTops.length - 1;
   }
 
   CoursePeriodTime slotForY(double y) {
@@ -670,10 +1033,117 @@ class _TimetableVerticalLayout {
 
 enum CourseDisplayState { active, futureInactive, pastEnded }
 
+class _CourseGeometry {
+  const _CourseGeometry({
+    required this.layout,
+    required this.startMinutes,
+    required this.endMinutes,
+    required this.visualTop,
+    required this.visualHeight,
+    required this.hitTop,
+    required this.hitHeight,
+  });
+
+  final CourseLayout layout;
+  final int startMinutes;
+  final int endMinutes;
+  final double visualTop;
+  final double visualHeight;
+  final double hitTop;
+  final double hitHeight;
+}
+
+List<_CourseGeometry> _buildCourseGeometries({
+  required List<CourseLayout> layouts,
+  required _TimetableVerticalLayout verticalLayout,
+}) {
+  final ranges =
+      <
+        ({
+          CourseLayout layout,
+          int startMinutes,
+          int endMinutes,
+          double top,
+          double bottom,
+        })
+      >[];
+  for (final layout in layouts) {
+    final timeRange = _resolvedLayoutTimeRange(layout, verticalLayout);
+    final top = verticalLayout.rangeTop(timeRange.startMinutes);
+    ranges.add((
+      layout: layout,
+      startMinutes: timeRange.startMinutes,
+      endMinutes: timeRange.endMinutes,
+      top: top,
+      bottom:
+          top +
+          verticalLayout.rangeHeight(
+            timeRange.startMinutes,
+            timeRange.endMinutes,
+          ),
+    ));
+  }
+
+  return [
+    for (final range in ranges)
+      (() {
+        final visualHeight = math.max(0.0, range.bottom - range.top);
+        final center = range.top + (visualHeight / 2);
+        double? previousBottom;
+        double? nextTop;
+        for (final other in ranges) {
+          if (identical(other.layout, range.layout)) continue;
+          if (other.bottom <= range.top &&
+              (previousBottom == null || other.bottom > previousBottom)) {
+            previousBottom = other.bottom;
+          }
+          if (other.top >= range.bottom &&
+              (nextTop == null || other.top < nextTop)) {
+            nextTop = other.top;
+          }
+        }
+        final previousBoundary = previousBottom == null
+            ? 0.0
+            : (previousBottom + range.top) / 2;
+        final nextBoundary = nextTop == null
+            ? verticalLayout.totalHeight
+            : (range.bottom + nextTop) / 2;
+        final desiredTop = math.min(
+          range.top,
+          center - (_minimumCourseHitExtent / 2),
+        );
+        final desiredBottom = math.max(
+          range.bottom,
+          center + (_minimumCourseHitExtent / 2),
+        );
+        var hitTop = desiredTop.clamp(previousBoundary, nextBoundary);
+        var hitBottom = desiredBottom.clamp(hitTop, nextBoundary);
+        final missingExtent = _minimumCourseHitExtent - (hitBottom - hitTop);
+        if (missingExtent > 0) {
+          final growAfter = math.min(missingExtent, nextBoundary - hitBottom);
+          hitBottom += growAfter;
+          final growBefore = math.min(
+            missingExtent - growAfter,
+            hitTop - previousBoundary,
+          );
+          hitTop -= growBefore;
+        }
+        return _CourseGeometry(
+          layout: range.layout,
+          startMinutes: range.startMinutes,
+          endMinutes: range.endMinutes,
+          visualTop: range.top,
+          visualHeight: visualHeight,
+          hitTop: hitTop,
+          hitHeight: math.max(0.0, hitBottom - hitTop),
+        );
+      })(),
+  ];
+}
+
 class _CourseCard extends StatelessWidget {
   const _CourseCard({
-    required this.layout,
-    required this.verticalLayout,
+    required this.geometry,
     required this.metrics,
     required this.themeColorMode,
     required this.courseNameColorValues,
@@ -681,11 +1151,9 @@ class _CourseCard extends StatelessWidget {
     required this.liveCourseOutlineMode,
     required this.outlineColor,
     required this.outlineWidth,
-    required this.onTap,
   });
 
-  final CourseLayout layout;
-  final _TimetableVerticalLayout verticalLayout;
+  final _CourseGeometry geometry;
   final _TimetableMetrics metrics;
   final String themeColorMode;
   final Map<String, int> courseNameColorValues;
@@ -693,7 +1161,8 @@ class _CourseCard extends StatelessWidget {
   final String liveCourseOutlineMode;
   final Color outlineColor;
   final double outlineWidth;
-  final VoidCallback onTap;
+
+  CourseLayout get layout => geometry.layout;
 
   bool get _isInactiveForCurrentWeek =>
       layout.entry?.isInactive ??
@@ -714,18 +1183,12 @@ class _CourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final entry = layout.entry;
-    final top = entry != null
-        ? verticalLayout.entryTop(entry.startMinutes)
-        : verticalLayout.courseTop(layout.course!);
-    final height = entry != null
-        ? verticalLayout.entryHeight(entry.startMinutes, entry.endMinutes)
-        : verticalLayout.courseHeight(layout.course!);
     final width = math.max(
       0.0,
       metrics.dayColumnWidth - (metrics.courseGap * 2),
     );
-    final compact = width < 96 || height < 112;
+    final cardHeight = geometry.visualHeight;
+    final compact = width < 140 || cardHeight < 96;
     final normalizedColorName =
         layout.entry?.colorName ??
         (layout.course != null
@@ -786,29 +1249,30 @@ class _CourseCard extends StatelessWidget {
             layout.isPrimaryLiveTarget
         ? effectiveOutlineWidth + (compact ? 1.2 : 1.6)
         : effectiveOutlineWidth;
+    final side = layout.isLiveHighlighted
+        ? BorderSide(
+            color: outlineColor,
+            width: layout.isPrimaryLiveTarget
+                ? effectivePrimaryOutlineWidth
+                : effectiveOutlineWidth,
+          )
+        : BorderSide.none;
+    final shape = skedShapeSchemeOf(context).compact.copyWith(side: side);
+    final itemId = layout.entry?.id ?? layout.course?.id ?? _title;
 
-    return Positioned(
-      top: top,
-      left: metrics.courseGap,
+    return PositionedDirectional(
+      top: geometry.visualTop,
+      start: metrics.courseGap,
       width: width,
-      height: height,
-      child: Card.filled(
-        color: color,
-        clipBehavior: Clip.antiAlias,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(compact ? 8 : 10),
-          side: layout.isLiveHighlighted
-              ? BorderSide(
-                  color: outlineColor,
-                  width: layout.isPrimaryLiveTarget
-                      ? effectivePrimaryOutlineWidth
-                      : effectiveOutlineWidth,
-                )
-              : BorderSide.none,
-        ),
-        child: InkWell(
-          onTap: onTap,
+      height: geometry.visualHeight,
+      child: ExcludeSemantics(
+        child: Card.filled(
+          key: ValueKey('timetable-course-visual-$itemId'),
+          margin: EdgeInsets.zero,
+          color: color,
+          clipBehavior: Clip.antiAlias,
+          elevation: 0,
+          shape: shape,
           child: Padding(
             padding: EdgeInsets.all(metrics.cardPadding),
             child: LayoutBuilder(
@@ -844,62 +1308,93 @@ class _CourseCard extends StatelessWidget {
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         );
+                final textScale = MediaQuery.textScalerOf(context);
+                final availableHeight = constraints.maxHeight;
+                final titleHeight = _singleLineTextHeight(
+                  context,
+                  text: _title,
+                  style: titleStyle,
+                  textScaler: textScale,
+                );
+                final locationHeight = _singleLineTextHeight(
+                  context,
+                  text: _location,
+                  style: bodyStyle,
+                  textScaler: textScale,
+                );
+                final teacherHeight = _singleLineTextHeight(
+                  context,
+                  text: _teacher,
+                  style: teacherStyle,
+                  textScaler: textScale,
+                );
+                final showTitle = titleHeight <= availableHeight;
+                final showLocation =
+                    showTitle &&
+                    _location.isNotEmpty &&
+                    titleHeight + locationHeight <= availableHeight;
+                final showTeacher =
+                    showTitle &&
+                    _teacher.isNotEmpty &&
+                    titleHeight +
+                            (showLocation ? locationHeight : 0) +
+                            teacherHeight <=
+                        availableHeight;
                 return Stack(
                   children: [
                     Positioned.fill(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          bottom: layout.isFullConflict
-                              ? (compact ? 18.0 : 22.0)
-                              : 0.0,
-                        ),
-                        child: ClipRect(
-                          child: OverflowBox(
-                            alignment: Alignment.topLeft,
-                            minWidth: constraints.maxWidth,
-                            maxWidth: constraints.maxWidth,
-                            minHeight: 0,
-                            maxHeight: double.infinity,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
+                      child: ClipRect(
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.only(
+                            end: layout.isFullConflict && cardHeight >= 24
+                                ? 22
+                                : 0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (showTitle)
                                 Text(
                                   _title,
-                                  softWrap: true,
-                                  overflow: TextOverflow.visible,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
                                   style: titleStyle,
                                 ),
-                                if (_location.isNotEmpty)
-                                  Text(
-                                    _location,
-                                    softWrap: true,
-                                    overflow: TextOverflow.visible,
-                                    style: bodyStyle,
-                                  ),
-                                if (_teacher.isNotEmpty)
-                                  Text(
-                                    _teacher,
-                                    softWrap: true,
-                                    overflow: TextOverflow.visible,
-                                    style: teacherStyle,
-                                  ),
-                              ],
-                            ),
+                              if (showLocation)
+                                Text(
+                                  _location,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: bodyStyle,
+                                ),
+                              if (showTeacher)
+                                Text(
+                                  _teacher,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: teacherStyle,
+                                ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    if (layout.isFullConflict)
-                      Positioned(
-                        right: 0,
+                    if (layout.isFullConflict &&
+                        cardHeight >= 24 &&
+                        width >= 32)
+                      PositionedDirectional(
+                        end: 0,
                         bottom: 0,
                         child: Container(
                           padding: EdgeInsets.all(compact ? 2 : 3),
-                          decoration: BoxDecoration(
+                          decoration: ShapeDecoration(
                             color: colorScheme.primary.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(999),
+                            shape: skedShapeSchemeOf(
+                              context,
+                            ).selectionIndicator,
                           ),
                           child: Icon(
                             Icons.layers_outlined,
@@ -917,6 +1412,164 @@ class _CourseCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CourseHitTarget extends StatelessWidget {
+  const _CourseHitTarget({
+    required this.geometry,
+    required this.metrics,
+    required this.onTap,
+    this.ignorePointer = false,
+    this.includeSemantics = true,
+  });
+
+  final _CourseGeometry geometry;
+  final _TimetableMetrics metrics;
+  final VoidCallback onTap;
+  final bool ignorePointer;
+  final bool includeSemantics;
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = geometry.layout;
+    final itemId = layout.entry?.id ?? layout.course?.id ?? 'unknown';
+    final width = math.max(
+      0.0,
+      metrics.dayColumnWidth - (metrics.courseGap * 2),
+    );
+    final visual = ExcludeSemantics(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: ValueKey('timetable-course-hit-$itemId'),
+          onTap: ignorePointer ? null : onTap,
+          customBorder: skedShapeSchemeOf(context).compact,
+          overlayColor: WidgetStatePropertyAll(
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+    );
+    final interactive = ignorePointer
+        ? Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerUp: (_) {},
+            child: visual,
+          )
+        : visual;
+    return PositionedDirectional(
+      top: geometry.hitTop,
+      start: metrics.courseGap,
+      width: width,
+      height: geometry.hitHeight,
+      child: includeSemantics
+          ? Semantics(
+              container: true,
+              button: true,
+              enabled: true,
+              label: _semanticLabelForGeometry(geometry),
+              onTap: onTap,
+              child: interactive,
+            )
+          : ExcludeSemantics(child: interactive),
+    );
+  }
+}
+
+/// Dense adjacent courses share the available physical pixels. Keep their
+/// pointer routing disjoint, but expose a full-size semantic action target so
+/// keyboard and assistive-technology users retain a reliable 48dp action.
+class _CourseSemanticTarget extends StatelessWidget {
+  const _CourseSemanticTarget({
+    required this.geometry,
+    required this.totalHeight,
+    required this.onTap,
+  });
+
+  final _CourseGeometry geometry;
+  final double totalHeight;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final height = math.min(_minimumCourseHitExtent, totalHeight).toDouble();
+    final top = (geometry.visualTop + (geometry.visualHeight / 2) - height / 2)
+        .clamp(0.0, math.max(0.0, totalHeight - height))
+        .toDouble();
+    return PositionedDirectional(
+      top: top,
+      start: 0,
+      end: 0,
+      height: height,
+      child: Semantics(
+        container: true,
+        button: true,
+        enabled: true,
+        label: _semanticLabelForGeometry(geometry),
+        onTap: onTap,
+        child: IgnorePointer(child: const SizedBox.expand()),
+      ),
+    );
+  }
+}
+
+double _singleLineTextHeight(
+  BuildContext context, {
+  required String text,
+  required TextStyle? style,
+  required TextScaler textScaler,
+}) {
+  if (text.isEmpty) return 0;
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: textScaler,
+    maxLines: 1,
+  )..layout(maxWidth: double.infinity);
+  final height = painter.height;
+  painter.dispose();
+  return height;
+}
+
+String _semanticLabelForGeometry(_CourseGeometry geometry) {
+  final layout = geometry.layout;
+  final title = layout.entry?.title ?? layout.course?.name ?? '';
+  final location = layout.entry?.location ?? layout.course?.location ?? '';
+  final teacher = layout.entry?.teacher ?? layout.course?.teacher ?? '';
+  return <String>[
+    title,
+    if (location.isNotEmpty) location,
+    if (teacher.isNotEmpty) teacher,
+    '${formatMinutes(geometry.startMinutes)}–${formatMinutes(geometry.endMinutes)}',
+  ].join(', ');
+}
+
+({int startMinutes, int endMinutes}) _resolvedLayoutTimeRange(
+  CourseLayout layout,
+  _TimetableVerticalLayout verticalLayout,
+) {
+  final entry = layout.entry;
+  if (entry != null) {
+    return (startMinutes: entry.startMinutes, endMinutes: entry.endMinutes);
+  }
+  final course = layout.course!;
+  if (course.endMinutes > course.startMinutes) {
+    return (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
+  }
+
+  final periodIndexes = course.periods.toSet();
+  final matchedSlots = verticalLayout.slots
+      .where((slot) => periodIndexes.contains(slot.index))
+      .toList();
+  if (matchedSlots.isNotEmpty) {
+    return (
+      startMinutes: matchedSlots
+          .map((slot) => slot.startMinutes)
+          .reduce(math.min),
+      endMinutes: matchedSlots.map((slot) => slot.endMinutes).reduce(math.max),
+    );
+  }
+  return (startMinutes: course.startMinutes, endMinutes: course.endMinutes);
 }
 
 class CourseLayout {
@@ -1014,6 +1667,7 @@ Color resolveSharedColorfulTextColor({
 List<CourseLayout> _buildDayLayouts({
   required TimetableData timetable,
   required List<CourseItem> courses,
+  required List<CoursePeriodTime> periodTimes,
   required int weekday,
   required int selectedWeek,
   required int realCurrentWeek,
@@ -1023,28 +1677,40 @@ List<CourseLayout> _buildDayLayouts({
   required TimetableLiveCourseTarget? liveCourseTarget,
   required bool liveCourseOutlineEnabled,
   required String liveCourseOutlineMode,
+  required bool preserveGaps,
 }) {
   final dayCourses =
-      courses.where((item) => item.dayOfWeek == weekday).where((item) {
-        return _displayStateForCourse(
-              item,
-              selectedWeek: selectedWeek,
-              realCurrentWeek: realCurrentWeek,
-              showPastEndedCourses: showPastEndedCourses,
-              showFutureCourses: showFutureCourses,
-            ) !=
-            null;
-      }).toList()..sort((a, b) {
-        final startCompare = a.startMinutes.compareTo(b.startMinutes);
-        if (startCompare != 0) {
-          return startCompare;
-        }
-        final endCompare = a.endMinutes.compareTo(b.endMinutes);
-        if (endCompare != 0) {
-          return endCompare;
-        }
-        return a.id.compareTo(b.id);
-      });
+      courses
+          .where((item) => item.dayOfWeek == weekday)
+          .where((item) {
+            return _displayStateForCourse(
+                  item,
+                  selectedWeek: selectedWeek,
+                  realCurrentWeek: realCurrentWeek,
+                  showPastEndedCourses: showPastEndedCourses,
+                  showFutureCourses: showFutureCourses,
+                ) !=
+                null;
+          })
+          .map(
+            (course) => _courseWithResolvedPeriodTime(
+              course,
+              periodTimes,
+              preserveGaps: preserveGaps,
+            ),
+          )
+          .toList()
+        ..sort((a, b) {
+          final startCompare = a.startMinutes.compareTo(b.startMinutes);
+          if (startCompare != 0) {
+            return startCompare;
+          }
+          final endCompare = a.endMinutes.compareTo(b.endMinutes);
+          if (endCompare != 0) {
+            return endCompare;
+          }
+          return a.id.compareTo(b.id);
+        });
 
   final layouts = <CourseLayout>[];
   for (final group in buildOverlapGroups(dayCourses)) {
@@ -1135,6 +1801,48 @@ List<CourseLayout> _buildDayLayouts({
     }
   }
   return layouts;
+}
+
+CourseItem _courseWithResolvedPeriodTime(
+  CourseItem course,
+  List<CoursePeriodTime> periodTimes, {
+  required bool preserveGaps,
+}) {
+  if (periodTimes.isEmpty) {
+    return course;
+  }
+  final matched = course.periods.isEmpty
+      ? const <CoursePeriodTime>[]
+      : periodTimes
+            .where((slot) => course.periods.contains(slot.index))
+            .toList();
+  if (matched.isNotEmpty && course.endMinutes <= course.startMinutes) {
+    return course.copyWith(
+      startMinutes: matched.map((slot) => slot.startMinutes).reduce(math.min),
+      endMinutes: matched.map((slot) => slot.endMinutes).reduce(math.max),
+    );
+  }
+  if (preserveGaps || course.endMinutes <= course.startMinutes) {
+    return course;
+  }
+
+  // When gaps are collapsed, a course entirely inside a gap maps to zero
+  // height. Anchor it to the nearest configured period so it remains visible
+  // and participates in the same overlap group as the period it occupies.
+  final start = course.startMinutes;
+  final end = course.endMinutes;
+  final overlapsSlot = periodTimes.where(
+    (slot) => start < slot.endMinutes && end > slot.startMinutes,
+  );
+  if (overlapsSlot.isNotEmpty) return course;
+  final anchor = periodTimes.firstWhere(
+    (slot) => end <= slot.startMinutes,
+    orElse: () => periodTimes.last,
+  );
+  return course.copyWith(
+    startMinutes: anchor.startMinutes,
+    endMinutes: anchor.endMinutes,
+  );
 }
 
 List<CourseLayout> _buildDayLayoutsFromEntries({

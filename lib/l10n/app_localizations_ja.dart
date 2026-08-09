@@ -1399,7 +1399,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mySchedule => 'My schedule';
 
   @override
-  String get today => 'Today';
+  String get today => '今日';
 
   @override
   String get addEvent => 'Add event';
@@ -1549,10 +1549,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get calendar => 'Calendar';
 
   @override
-  String get viewWeek => 'Week';
+  String get viewWeek => '週';
 
   @override
-  String get viewDay => 'Day';
+  String get viewDay => '日';
 
   @override
   String get viewList => 'List';

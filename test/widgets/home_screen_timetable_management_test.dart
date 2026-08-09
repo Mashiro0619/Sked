@@ -19,6 +19,7 @@ import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
+import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
@@ -410,21 +411,42 @@ Future<TimetableProvider> _createEmptyProvider(
 
 Future<void> _pumpHomeScreenWithProvider(
   WidgetTester tester,
-  TimetableProvider provider,
-) async {
+  TimetableProvider provider, {
+  TextScaler textScaler = TextScaler.noScaling,
+  Locale locale = const Locale('en'),
+  TextDirection? textDirection,
+  bool settle = true,
+}) async {
   await _resetWidgetTree(tester);
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
       child: MaterialApp(
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) {
+          Widget result = MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+            child: child ?? const SizedBox.shrink(),
+          );
+          if (textDirection != null) {
+            result = Directionality(
+              textDirection: textDirection,
+              child: result,
+            );
+          }
+          return result;
+        },
         home: HomeScreen(key: UniqueKey()),
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
 }
 
 Future<void> _pumpAppHomeScreenWithProvider(
@@ -566,6 +588,13 @@ Future<TimetableProvider> _pumpHomeScreen(WidgetTester tester) async {
 Future<void> _pumpRouteTransition(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
+}
+
+Future<void> _openTimetablePicker(WidgetTester tester) async {
+  await tester.tap(
+    find.byKey(const ValueKey('student-timetable-picker-button')),
+  );
+  await tester.pumpAndSettle();
 }
 
 String _selectedWeekTitle(TimetableProvider provider) {
@@ -1802,9 +1831,7 @@ void main() {
   testWidgets('start date picker ignores rapid duplicate taps', (tester) async {
     await _pumpHomeScreen(tester);
 
-    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-    scaffoldState.openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
 
     await tester.tap(find.byTooltip('Edit timetable'));
     await tester.pumpAndSettle();
@@ -1844,8 +1871,7 @@ void main() {
     await provider.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
     await tester.tap(find.byTooltip('Edit timetable'));
     await tester.pumpAndSettle();
 
@@ -1892,8 +1918,7 @@ void main() {
     await provider.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
     await tester.tap(find.byTooltip('Edit timetable').last);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
@@ -1926,6 +1951,7 @@ void main() {
 
     final addCourseButton = find.byTooltip('Add course');
     expect(addCourseButton, findsOneWidget);
+    expect(find.byType(SkedPrimaryFab), findsOneWidget);
 
     await tester.tap(addCourseButton);
     await tester.tap(addCourseButton, warnIfMissed: false);
@@ -1948,6 +1974,149 @@ void main() {
     );
   });
 
+  testWidgets('student workspace chooses its initial day or week view once', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
+
+    await tester.tap(find.text('Week'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
+
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide student workspace initially uses week view', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
+    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large text makes the initial wide workspace use day view', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(1.8),
+    );
+
+    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact large-text toolbar keeps every week action visible', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(1.8),
+    );
+
+    final viewport = Offset.zero & const Size(320, 568);
+    for (final key in const [
+      'student-day-week-selector',
+      'student-previous-week',
+      'student-week-picker-button',
+      'student-today-button',
+      'student-next-week',
+    ]) {
+      final rect = tester.getRect(find.byKey(ValueKey(key)));
+      expect(viewport.contains(rect.topLeft), isTrue, reason: key);
+      expect(viewport.contains(rect.bottomRight), isTrue, reason: key);
+      expect(rect.height, greaterThanOrEqualTo(48), reason: key);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rapid week commands settle on the latest requested week', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final next = find.byKey(const ValueKey('student-next-week'));
+    final previous = find.byKey(const ValueKey('student-previous-week'));
+    await tester.tap(next);
+    await tester.tap(next);
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 6);
+    expect(find.text('Week 6'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('RTL week shortcuts follow the visible spatial direction', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(
+      tester,
+      provider,
+      textDirection: TextDirection.rtl,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(provider.selectedWeek, 6);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(provider.selectedWeek, 5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reduced motion reveals the selected day without scrolling', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+
+    await _pumpHomeScreenWithProvider(tester, provider, settle: false);
+
+    final scrollable = find.descendant(
+      of: find.byKey(const ValueKey('student-day-strip')),
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.pixels, closeTo(position.maxScrollExtent, 0.01));
+  });
+
   testWidgets('student timetable fits narrow width with long course text', (
     tester,
   ) async {
@@ -1965,6 +2134,17 @@ void main() {
     await _pumpHomeScreenWithProvider(tester, provider);
 
     expect(find.byType(HomeScreen), findsOneWidget);
+    final monday = find.byKey(const ValueKey('student-day-1'));
+    if (monday.evaluate().isEmpty) {
+      await tester.drag(
+        find.byKey(const ValueKey('student-day-strip')),
+        const Offset(600, 0),
+      );
+      await tester.pumpAndSettle();
+    }
+    expect(monday, findsOneWidget);
+    await tester.tap(monday);
+    await tester.pumpAndSettle();
     expect(
       find.text(
         'Advanced interdisciplinary seminar with an extremely long course name',
@@ -1988,6 +2168,26 @@ void main() {
     expect(find.text('Jump to week'), findsOneWidget);
   });
 
+  testWidgets('week picker exposes the selected week to semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    await tester.tap(find.byKey(const ValueKey('student-week-picker-button')));
+    await tester.pumpAndSettle();
+
+    final data = tester
+        .getSemantics(find.byKey(const ValueKey('student-week-option-5')))
+        .getSemanticsData();
+    expect(data.flagsCollection.isButton, isTrue);
+    expect(data.flagsCollection.isSelected, ui.Tristate.isTrue);
+    expect(data.label, 'Week 5');
+    semantics.dispose();
+  });
+
   testWidgets('empty state new timetable ignores rapid duplicate taps', (
     tester,
   ) async {
@@ -1998,6 +2198,12 @@ void main() {
 
     expect(provider.timetables, isEmpty);
     expect(find.text('No timetable yet'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'New timetable'), findsOneWidget);
+    expect(
+      find.widgetWithText(OutlinedButton, 'Import timetable'),
+      findsOneWidget,
+    );
+    expect(find.byType(MenuItemButton), findsNothing);
 
     final createButton = find.widgetWithText(FilledButton, 'New timetable');
     expect(createButton, findsOneWidget);
@@ -2069,7 +2275,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('drawer new timetable ignores rapid duplicate taps', (
+  testWidgets('timetable picker new action ignores rapid duplicate taps', (
     tester,
   ) async {
     final storage = _BlockingTimetableStorage(_buildPopulatedStudentData());
@@ -2085,9 +2291,7 @@ void main() {
 
     expect(provider.timetables, hasLength(1));
 
-    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-    scaffoldState.openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
 
     final createButton = find.widgetWithText(FilledButton, 'New timetable');
     expect(createButton, findsOneWidget);
@@ -2095,9 +2299,12 @@ void main() {
     await tester.tap(createButton);
     await tester.tap(createButton, warnIfMissed: false);
     await storage.firstSaveStarted;
+    await tester.pump();
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(2));
+    expect(find.byKey(const ValueKey('timetable-picker-busy')), findsOneWidget);
+    expect(tester.widget<FilledButton>(createButton).onPressed, isNull);
 
     storage.completeSave();
     await tester.pumpAndSettle();
@@ -2106,7 +2313,44 @@ void main() {
     expect(provider.timetables, hasLength(2));
   });
 
-  testWidgets('drawer timetable switch ignores rapid duplicate taps', (
+  testWidgets('failed timetable creation reports inside the picker', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildPopulatedStudentData())
+      ..failSaves = true;
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await _openTimetablePicker(tester);
+
+    final createButton = find.widgetWithText(FilledButton, 'New timetable');
+    await tester.tap(createButton);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.timetables, hasLength(1));
+    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('ui-command-failure-notice')),
+      findsOneWidget,
+    );
+
+    storage.failSaves = false;
+    await tester.tap(createButton);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 2);
+    expect(provider.timetables, hasLength(2));
+    expect(find.text('Switch timetables'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timetable picker switch ignores rapid duplicate taps', (
     tester,
   ) async {
     final storage = _BlockingTimetableStorage(
@@ -2124,9 +2368,7 @@ void main() {
 
     expect(provider.activeTimetable.config.name, 'First timetable');
 
-    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-    scaffoldState.openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
 
     final secondTimetable = find.text('Second timetable');
     expect(secondTimetable, findsOneWidget);
@@ -2146,7 +2388,71 @@ void main() {
     expect(find.text('Second timetable'), findsOneWidget);
   });
 
-  testWidgets('failed timetable switch keeps the drawer open for retry', (
+  testWidgets('compact timetable picker cannot close while saving', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final storage = _BlockingTimetableStorage(
+      _buildMultiTimetableStudentData(),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await _openTimetablePicker(tester);
+
+    final sheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
+    expect(sheet.enableDrag, isFalse);
+    await tester.tap(find.text('Second timetable'));
+    await storage.firstSaveStarted;
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pump();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Switch timetables'), findsOneWidget);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(provider.activeTimetable.config.name, 'Second timetable');
+  });
+
+  testWidgets('timetable picker exposes its selected item to semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData());
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await _openTimetablePicker(tester);
+
+    final data = tester
+        .getSemantics(
+          find.byKey(const ValueKey('timetable-picker-item-table-1')),
+        )
+        .getSemanticsData();
+    expect(data.flagsCollection.isSelected, ui.Tristate.isTrue);
+    expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
+    expect(data.label, contains('First timetable'));
+    semantics.dispose();
+  });
+
+  testWidgets('failed timetable switch keeps the picker open for retry', (
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData())
@@ -2160,15 +2466,14 @@ void main() {
     await provider.load();
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
     final secondTimetable = find.text('Second timetable');
     await tester.tap(secondTimetable);
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
     expect(provider.activeTimetable.config.name, 'First timetable');
-    expect(find.byType(Drawer), findsOneWidget);
+    expect(find.text('Switch timetables'), findsOneWidget);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -2178,11 +2483,11 @@ void main() {
 
     expect(storage.saveCount, 2);
     expect(provider.activeTimetable.config.name, 'Second timetable');
-    expect(find.byType(Drawer), findsNothing);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('drawer current timetable tap cannot pop parent route', (
+  testWidgets('picker current timetable tap cannot pop parent route', (
     tester,
   ) async {
     final provider = await _createProvider();
@@ -2193,9 +2498,7 @@ void main() {
 
     expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
 
-    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-    scaffoldState.openDrawer();
-    await tester.pumpAndSettle();
+    await _openTimetablePicker(tester);
 
     final currentTimetable = find.text('Test timetable').last;
     expect(currentTimetable, findsOneWidget);
@@ -2205,7 +2508,7 @@ void main() {
     await _pumpRouteTransition(tester);
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.byType(Drawer), findsNothing);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
     expect(find.text('Open home host'), findsNothing);
     expect(find.text('Open home host', skipOffstage: false), findsOneWidget);
@@ -2232,8 +2535,12 @@ void main() {
 
     await _pumpHomeScreenWithProvider(tester, provider);
 
+    await tester.tap(
+      find.byKey(const ValueKey('empty-timetable-import-button')),
+    );
+    await tester.pumpAndSettle();
     final textImportButton = find.widgetWithText(
-      OutlinedButton,
+      MenuItemButton,
       'Import timetable from JSON text',
     );
     expect(textImportButton, findsOneWidget);
@@ -2253,8 +2560,12 @@ void main() {
 
     await _pumpHomeScreenWithProvider(tester, provider);
 
+    await tester.tap(
+      find.byKey(const ValueKey('empty-timetable-import-button')),
+    );
+    await tester.pumpAndSettle();
     final webImportButton = find.widgetWithText(
-      OutlinedButton,
+      MenuItemButton,
       'Import from school webpage',
     );
     expect(webImportButton, findsOneWidget);

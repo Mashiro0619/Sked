@@ -30,157 +30,501 @@ Timer _createTimetableLiveRefreshTimer(Duration delay, VoidCallback callback) {
   return Timer(delay, callback);
 }
 
-class _StudentHomeAppBar extends StatelessWidget
-    implements PreferredSizeWidget {
-  const _StudentHomeAppBar({
-    required this.provider,
+class _StudentWorkspaceToolbar extends StatelessWidget {
+  const _StudentWorkspaceToolbar({
     required this.timetable,
     required this.week,
-    required this.showModeSwitch,
+    required this.viewMode,
+    required this.compactHeight,
+    required this.interactive,
     required this.showSettings,
     this.settingsFocusNode,
-    required this.onTitleTap,
-    required this.onAddCourse,
+    required this.onOpenTimetablePicker,
+    required this.onOpenWeekPicker,
+    required this.onPreviousWeek,
+    required this.onNextWeek,
+    required this.onToday,
+    required this.onViewChanged,
+    required this.onOpenDisplaySettings,
     required this.onOpenSettings,
   });
 
-  final TimetableProvider provider;
   final TimetableData timetable;
   final int week;
-  final bool showModeSwitch;
+  final _StudentTimetableView viewMode;
+  final bool compactHeight;
+  final bool interactive;
   final bool showSettings;
   final FocusNode? settingsFocusNode;
-  final VoidCallback? onTitleTap;
-  final VoidCallback? onAddCourse;
+  final VoidCallback? onOpenTimetablePicker;
+  final VoidCallback? onOpenWeekPicker;
+  final VoidCallback? onPreviousWeek;
+  final VoidCallback? onNextWeek;
+  final VoidCallback? onToday;
+  final ValueChanged<_StudentTimetableView>? onViewChanged;
+  final VoidCallback? onOpenDisplaySettings;
   final VoidCallback? onOpenSettings;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AppBar(
-      titleSpacing: AppSpacing.md,
-      title: InkWell(
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        onTap: onTitleTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: 6,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.weekLabel(week),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              Text(
-                timetable.config.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ],
-          ),
+    final theme = Theme.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final controlShape = skedShapeSchemeOf(context).control;
+    final titleButtonStyle = TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      minimumSize: const Size(48, 48),
+      shape: controlShape,
+      alignment: AlignmentDirectional.centerStart,
+      textStyle: theme.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    final timetableSelector = TextButton.icon(
+      key: const ValueKey('student-timetable-picker-button'),
+      onPressed: interactive ? onOpenTimetablePicker : null,
+      style: titleButtonStyle,
+      iconAlignment: IconAlignment.end,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+      label: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Text(
+          timetable.config.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
-      actions: [
-        if (showModeSwitch) const ModeSwitchAction(),
-        IconButton(
-          onPressed: onAddCourse,
-          icon: const Icon(Icons.add),
-          tooltip: l10n.addCourse,
-        ),
-        if (showSettings)
-          IconButton(
-            focusNode: settingsFocusNode,
-            onPressed: onOpenSettings,
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: l10n.settings,
-          ),
-      ],
+    );
+    final displaySettingsAction = IconButton(
+      key: const ValueKey('student-display-settings-button'),
+      onPressed: onOpenDisplaySettings,
+      icon: const Icon(Icons.tune_rounded),
+      tooltip: l10n.timetableDisplaySettings,
+    );
+    final settingsAction = IconButton(
+      focusNode: settingsFocusNode,
+      onPressed: onOpenSettings,
+      icon: const Icon(Icons.settings_outlined),
+      tooltip: l10n.settings,
+    );
+    return SkedWorkspaceToolbar(
+      key: const ValueKey('student-workspace-toolbar'),
+      padding: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: compactHeight ? 8 : 12,
+      ),
+      title: compactHeight
+          ? Row(
+              children: [
+                Expanded(child: timetableSelector),
+                displaySettingsAction,
+                if (showSettings) settingsAction,
+              ],
+            )
+          : timetableSelector,
+      actions: compactHeight
+          ? const []
+          : [displaySettingsAction, if (showSettings) settingsAction],
+      navigation: LayoutBuilder(
+        builder: (context, constraints) {
+          final selector = SkedExpressiveSegmentedButton<_StudentTimetableView>(
+            key: const ValueKey('student-day-week-selector'),
+            segments: [
+              ButtonSegment(
+                value: _StudentTimetableView.day,
+                icon: compactHeight
+                    ? null
+                    : const Icon(Icons.view_day_outlined),
+                label: Text(l10n.viewDay),
+              ),
+              ButtonSegment(
+                value: _StudentTimetableView.week,
+                icon: compactHeight
+                    ? null
+                    : const Icon(Icons.view_week_outlined),
+                label: Text(l10n.viewWeek),
+              ),
+            ],
+            selected: {viewMode},
+            onSelectionChanged: onViewChanged == null
+                ? null
+                : (selection) => onViewChanged!(selection.single),
+          );
+          final weekControls = Wrap(
+            spacing: 2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              IconButton(
+                key: const ValueKey('student-previous-week'),
+                onPressed: onPreviousWeek,
+                icon: Icon(
+                  isRtl
+                      ? Icons.chevron_right_rounded
+                      : Icons.chevron_left_rounded,
+                ),
+                tooltip: l10n.weekLabel(math.max(1, week - 1)),
+              ),
+              TextButton.icon(
+                key: const ValueKey('student-week-picker-button'),
+                onPressed: interactive ? onOpenWeekPicker : null,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  shape: controlShape,
+                ),
+                icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                label: Text(l10n.weekLabel(week)),
+              ),
+              if (compactHeight)
+                IconButton(
+                  key: const ValueKey('student-today-button'),
+                  onPressed: onToday,
+                  icon: const Icon(Icons.today_outlined),
+                  tooltip: l10n.today,
+                )
+              else
+                OutlinedButton.icon(
+                  key: const ValueKey('student-today-button'),
+                  onPressed: onToday,
+                  icon: const Icon(Icons.today_outlined),
+                  label: Text(l10n.today),
+                ),
+              IconButton(
+                key: const ValueKey('student-next-week'),
+                onPressed: onNextWeek,
+                icon: Icon(
+                  isRtl
+                      ? Icons.chevron_left_rounded
+                      : Icons.chevron_right_rounded,
+                ),
+                tooltip: l10n.weekLabel(
+                  math.min(timetable.config.totalWeeks, week + 1),
+                ),
+              ),
+            ],
+          );
+          if (compactHeight) {
+            return Wrap(
+              key: const ValueKey('student-toolbar-compact-navigation'),
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [selector, weekControls],
+            );
+          }
+          if (constraints.maxWidth < 720) {
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [selector, weekControls],
+            );
+          }
+          return Row(children: [selector, const Spacer(), weekControls]);
+        },
+      ),
     );
   }
 }
 
-class _TimetableDrawer extends StatelessWidget {
-  const _TimetableDrawer({
-    required this.provider,
-    required this.activeTimetable,
-    required this.switchingTimetable,
-    required this.onSwitchTimetable,
-    required this.onEditTimetable,
-    required this.onCreateTimetable,
+class _StudentDayStrip extends StatefulWidget {
+  const _StudentDayStrip({
+    required this.weekStart,
+    required this.selectedWeekday,
+    required this.enabled,
+    required this.onSelected,
   });
 
-  final TimetableProvider provider;
-  final TimetableData activeTimetable;
-  final bool switchingTimetable;
-  final void Function(BuildContext context, TimetableData timetable)?
-  onSwitchTimetable;
-  final ValueChanged<TimetableData>? onEditTimetable;
-  final Future<void> Function()? onCreateTimetable;
+  final DateTime weekStart;
+  final int selectedWeekday;
+  final bool enabled;
+  final ValueChanged<int> onSelected;
+
+  @override
+  State<_StudentDayStrip> createState() => _StudentDayStripState();
+}
+
+class _StudentDayStripState extends State<_StudentDayStrip> {
+  static const _itemExtent = 64.0;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleRevealSelected();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StudentDayStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedWeekday != widget.selectedWeekday ||
+        oldWidget.weekStart != widget.weekStart) {
+      _scheduleRevealSelected();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scheduleRevealSelected() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      final selectedCenter = ((widget.selectedWeekday - 1) * _itemExtent) + 29;
+      final target = (selectedCenter - (position.viewportDimension / 2)).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if ((position.pixels - target).abs() < 0.5) return;
+      final motion = SkedMotionPolicy.of(context);
+      final duration = motion.effects(SkedMotionSpeed.fast);
+      if (!motion.spatialAnimationsEnabled || duration == Duration.zero) {
+        _scrollController.jumpTo(target);
+      } else {
+        unawaited(
+          _scrollController.animateTo(
+            target,
+            duration: duration,
+            curve: motion.scheme.standardCurve,
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = Theme.of(context).colorScheme;
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  l10n.multiTimetableSwitch,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w700,
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final motion = SkedMotionPolicy.of(context);
+    final shape = skedShapeSchemeOf(context).selectionIndicator;
+    final today = DateTime.now();
+    final textScaler = MediaQuery.textScalerOf(context);
+    final stripHeight = math
+        .max(68.0, textScaler.scale(40) + 20)
+        .ceilToDouble();
+    return SizedBox(
+      height: stripHeight,
+      child: ListView.separated(
+        key: const ValueKey('student-day-strip'),
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: 7,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final weekday = index + 1;
+          final date = addCalendarDays(widget.weekStart, index);
+          final selected = weekday == widget.selectedWeekday;
+          final isToday = DateUtils.isSameDay(date, today);
+          final foreground = selected
+              ? colors.onPrimaryContainer
+              : colors.onSurface;
+          return Semantics(
+            button: true,
+            selected: selected,
+            label: MaterialLocalizations.of(context).formatFullDate(date),
+            child: AnimatedContainer(
+              key: ValueKey('student-day-$weekday'),
+              duration: motion.effects(SkedMotionSpeed.fast),
+              curve: motion.scheme.standardCurve,
+              width: 58,
+              decoration: ShapeDecoration(
+                shape: shape.copyWith(
+                  side: BorderSide(
+                    color: selected || isToday
+                        ? colors.primary
+                        : colors.outlineVariant,
+                  ),
+                ),
+                color: selected
+                    ? colors.primaryContainer
+                    : colors.surfaceContainerLow,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                shape: shape,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  customBorder: shape,
+                  onTap: widget.enabled
+                      ? () => widget.onSelected(weekday)
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          formatWeekdayShortLabel(
+                            weekday,
+                            localeCode: Localizations.localeOf(
+                              context,
+                            ).toLanguageTag(),
+                          ),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: foreground,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                        ),
+                        Text(
+                          '${date.day}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: foreground,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  for (final item in provider.timetables)
-                    _TimetableDrawerItem(
-                      timetable: item,
-                      selected: item.id == activeTimetable.id,
-                      enabled: !switchingTimetable,
-                      currentLabel: l10n.currentTimetableWeeks(
-                        item.config.totalWeeks,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TimetablePickerPanel extends StatefulWidget {
+  const _TimetablePickerPanel({
+    required this.provider,
+    required this.activeTimetable,
+    required this.onSwitch,
+    required this.onEdit,
+    required this.onCreate,
+  });
+
+  final TimetableProvider provider;
+  final TimetableData activeTimetable;
+  final Future<bool> Function(BuildContext context, TimetableData timetable)
+  onSwitch;
+  final Future<bool> Function(TimetableData timetable) onEdit;
+  final Future<bool> Function(BuildContext context) onCreate;
+
+  @override
+  State<_TimetablePickerPanel> createState() => _TimetablePickerPanelState();
+}
+
+class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
+  bool _busy = false;
+
+  Future<void> _run(
+    Future<bool> Function() command, {
+    bool showBusy = true,
+  }) async {
+    if (_busy) return;
+    if (showBusy) setState(() => _busy = true);
+    final completed = await command();
+    if (!mounted) return;
+    if (completed) {
+      Navigator.of(context).pop();
+    } else if (showBusy) {
+      setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final height = math.min(MediaQuery.sizeOf(context).height * 0.72, 640.0);
+    return PopScope(
+      canPop: !_busy,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: height,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.multiTimetableSwitch,
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      switchLabel: l10n.tapToSwitchWeeks(
-                        item.config.totalWeeks,
-                      ),
-                      editTooltip: l10n.editTimetable,
-                      onEdit: onEditTimetable == null || switchingTimetable
-                          ? null
-                          : () => onEditTimetable!(item),
-                      onTap: switchingTimetable || onSwitchTimetable == null
-                          ? null
-                          : () => onSwitchTimetable!(context, item),
                     ),
-                ],
+                    IconButton(
+                      onPressed: _busy
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: l10n.cancel,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: FilledButton.icon(
-                onPressed: onCreateTimetable,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.createTimetable),
+              UiCommandBusyIndicator(
+                busy: _busy,
+                semanticsKey: const ValueKey('timetable-picker-busy'),
               ),
-            ),
-          ],
+              Expanded(
+                child: ListenableBuilder(
+                  listenable: widget.provider,
+                  builder: (context, _) {
+                    final selectedId =
+                        widget.provider.activeTimetableOrNull?.id ??
+                        widget.activeTimetable.id;
+                    return ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      children: [
+                        for (final item in widget.provider.timetables)
+                          _TimetableDrawerItem(
+                            timetable: item,
+                            selected: item.id == selectedId,
+                            enabled: !_busy,
+                            currentLabel: l10n.currentTimetableWeeks(
+                              item.config.totalWeeks,
+                            ),
+                            switchLabel: l10n.tapToSwitchWeeks(
+                              item.config.totalWeeks,
+                            ),
+                            editTooltip: l10n.editTimetable,
+                            onTap: _busy
+                                ? null
+                                : () => _run(
+                                    () => widget.onSwitch(context, item),
+                                  ),
+                            onEdit: _busy
+                                ? null
+                                : () => _run(
+                                    () => widget.onEdit(item),
+                                    showBusy: false,
+                                  ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _run(() => widget.onCreate(context)),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.createTimetable),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -218,62 +562,68 @@ class _TimetableDrawerItem extends StatelessWidget {
     final secondaryColor = enabled
         ? (selected ? colors.primary : colors.onSurfaceVariant)
         : colors.onSurface.withValues(alpha: 0.38);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Material(
-        color: selected
-            ? colors.primary.withValues(alpha: 0.12)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: enabled ? onTap : null,
+    return Semantics(
+      key: ValueKey('timetable-picker-item-${timetable.id}'),
+      container: true,
+      selected: selected,
+      enabled: enabled,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Material(
+          color: selected
+              ? colors.primary.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-            child: Row(
-              children: [
-                Icon(
-                  selected ? Icons.check_circle : Icons.calendar_view_week,
-                  color: secondaryColor,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        timetable.config.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: contentColor,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        selected ? currentLabel : switchLabel,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: secondaryColor,
-                        ),
-                      ),
-                    ],
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+              child: Row(
+                children: [
+                  Icon(
+                    selected ? Icons.check_circle : Icons.calendar_view_week,
+                    color: secondaryColor,
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: editTooltip,
-                  icon: const Icon(Icons.edit_outlined),
-                  color: secondaryColor,
-                  onPressed: onEdit,
-                ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          timetable.config.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: contentColor,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          selected ? currentLabel : switchLabel,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: secondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: editTooltip,
+                    icon: const Icon(Icons.edit_outlined),
+                    color: secondaryColor,
+                    onPressed: onEdit,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -290,6 +640,8 @@ class _TimetableWeekPager extends StatefulWidget {
     required this.config,
     required this.active,
     required this.interactive,
+    required this.viewMode,
+    required this.selectedWeekday,
     this.shortcutFocusNode,
     required this.onJumpWeekBy,
     required this.onCourseTap,
@@ -302,6 +654,8 @@ class _TimetableWeekPager extends StatefulWidget {
   final TimetableConfig config;
   final bool active;
   final bool interactive;
+  final _StudentTimetableView viewMode;
+  final int selectedWeekday;
   final FocusNode? shortcutFocusNode;
   final Future<void> Function(int offset) onJumpWeekBy;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
@@ -417,12 +771,8 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
       child: PageView.builder(
         key: const ValueKey('student-week-pager'),
         controller: widget.controller,
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: widget.config.totalWeeks,
-        onPageChanged: (index) {
-          if (widget.active && widget.interactive) {
-            unawaited(widget.provider.setSelectedWeek(index + 1));
-          }
-        },
         itemBuilder: (context, index) {
           final pageWeek = index + 1;
           final weekStart = startOfWeekFor(widget.config, pageWeek);
@@ -472,6 +822,10 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                 liveCourseOutlineMode: widget.provider.liveCourseOutlineMode,
                 liveCourseOutlineColorValue: liveCourseOutlineColorValue,
                 liveCourseOutlineWidth: widget.provider.liveCourseOutlineWidth,
+                visibleWeekdays: widget.viewMode == _StudentTimetableView.day
+                    ? [widget.selectedWeekday]
+                    : const <int>[1, 2, 3, 4, 5, 6, 7],
+                showDayHeader: widget.viewMode != _StudentTimetableView.day,
                 onCourseTap: widget.onCourseTap,
                 onEmptySlotTap: widget.onEmptySlotTap,
               ),
@@ -480,15 +834,21 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
         },
       ),
     );
-    final shortcutsEnabled = _shortcutsEnabled && widget.interactive;
+    final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+    final horizontalGridMayScroll =
+        widget.viewMode == _StudentTimetableView.week &&
+        (MediaQuery.sizeOf(context).width < 760 || textScale > 1.3);
+    final shortcutsEnabled =
+        _shortcutsEnabled && widget.interactive && !horizontalGridMayScroll;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return CallbackShortcuts(
       bindings: shortcutsEnabled
           ? {
               const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-                unawaited(widget.onJumpWeekBy(-1));
+                unawaited(widget.onJumpWeekBy(isRtl ? 1 : -1));
               },
               const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-                unawaited(widget.onJumpWeekBy(1));
+                unawaited(widget.onJumpWeekBy(isRtl ? -1 : 1));
               },
             }
           : const <ShortcutActivator, VoidCallback>{},
@@ -530,32 +890,56 @@ class _EmptyTimetableState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ExpressiveEmptyState(
-      icon: Icons.event_busy_outlined,
-      title: l10n.noTimetableTitle,
-      message: l10n.noTimetableMessage,
-      actions: [
-        FilledButton.icon(
-          onPressed: onCreate,
-          icon: const Icon(Icons.add),
-          label: Text(l10n.createTimetable),
+    final importEnabled =
+        onImport != null || onImportFromText != null || onImportFromWeb != null;
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: ExpressiveEmptyState(
+            icon: Icons.event_busy_outlined,
+            title: l10n.noTimetableTitle,
+            message: l10n.noTimetableMessage,
+            actions: [
+              FilledButton.icon(
+                onPressed: onCreate,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.createTimetable),
+              ),
+              MenuAnchor(
+                key: const ValueKey('empty-timetable-import-menu'),
+                menuChildren: [
+                  MenuItemButton(
+                    onPressed: onImport,
+                    leadingIcon: const Icon(Icons.file_download_outlined),
+                    child: Text(l10n.importTimetableFiles),
+                  ),
+                  MenuItemButton(
+                    onPressed: onImportFromText,
+                    leadingIcon: const Icon(Icons.paste_outlined),
+                    child: Text(l10n.importTimetableText),
+                  ),
+                  MenuItemButton(
+                    onPressed: onImportFromWeb,
+                    leadingIcon: const Icon(Icons.language_outlined),
+                    child: Text(l10n.schoolWebImportEntry),
+                  ),
+                ],
+                builder: (context, controller, child) => OutlinedButton.icon(
+                  key: const ValueKey('empty-timetable-import-button'),
+                  onPressed: !importEnabled
+                      ? null
+                      : () => controller.isOpen
+                            ? controller.close()
+                            : controller.open(),
+                  icon: const Icon(Icons.file_download_outlined),
+                  label: Text(l10n.importTimetable),
+                ),
+              ),
+            ],
+          ),
         ),
-        OutlinedButton.icon(
-          onPressed: onImport,
-          icon: const Icon(Icons.file_download_outlined),
-          label: Text(l10n.importTimetable),
-        ),
-        OutlinedButton.icon(
-          onPressed: onImportFromText,
-          icon: const Icon(Icons.paste_outlined),
-          label: Text(l10n.importTimetableText),
-        ),
-        OutlinedButton.icon(
-          onPressed: onImportFromWeb,
-          icon: const Icon(Icons.language_outlined),
-          label: Text(l10n.schoolWebImportEntry),
-        ),
-      ],
+      ),
     );
   }
 }

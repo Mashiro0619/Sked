@@ -950,7 +950,7 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('workspace switch closes the nested timetable drawer', (
+  testWidgets('student workspace is hosted by the shell scaffold', (
     tester,
   ) async {
     final provider = await _providerFor(
@@ -962,18 +962,13 @@ void main() {
 
     await tester.pumpWidget(_appFor(provider));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
-    expect(find.byType(Drawer), findsOneWidget);
-
-    await tester.tap(find.text('General schedule'));
-    await tester.pumpAndSettle();
-    expect(provider.activeMode, AppMode.general);
-
-    await tester.tap(find.text('Student timetable'));
-    await tester.pumpAndSettle();
-    expect(provider.activeMode, AppMode.student);
+    expect(find.byType(Scaffold), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('student-workspace-toolbar')),
+      findsOneWidget,
+    );
     expect(find.byType(Drawer), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('failed mode save keeps the committed workspace selected', (
@@ -1055,6 +1050,21 @@ void main() {
       find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
     );
     expect(rail.scrollable, isTrue);
+    final viewport = Offset.zero & const Size(600, 360);
+    for (final key in const [
+      'student-day-week-selector',
+      'student-previous-week',
+      'student-week-picker-button',
+      'student-today-button',
+      'student-next-week',
+    ]) {
+      final rect = tester.getRect(find.byKey(ValueKey(key)));
+      expect(rect.left, greaterThanOrEqualTo(viewport.left), reason: key);
+      expect(rect.top, greaterThanOrEqualTo(viewport.top), reason: key);
+      expect(rect.right, lessThanOrEqualTo(viewport.right), reason: key);
+      expect(rect.bottom, lessThanOrEqualTo(viewport.bottom), reason: key);
+      expect(rect.height, greaterThanOrEqualTo(48), reason: key);
+    }
     expect(tester.takeException(), isNull);
   });
 }

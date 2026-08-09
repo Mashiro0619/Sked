@@ -1429,7 +1429,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get mySchedule => 'My schedule';
 
   @override
-  String get today => 'Today';
+  String get today => 'วันนี้';
 
   @override
   String get addEvent => 'Add event';
@@ -1579,10 +1579,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get calendar => 'Calendar';
 
   @override
-  String get viewWeek => 'Week';
+  String get viewWeek => 'สัปดาห์';
 
   @override
-  String get viewDay => 'Day';
+  String get viewDay => 'วัน';
 
   @override
   String get viewList => 'List';

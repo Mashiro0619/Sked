@@ -1400,7 +1400,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mySchedule => 'My schedule';
 
   @override
-  String get today => 'Today';
+  String get today => '오늘';
 
   @override
   String get addEvent => 'Add event';
@@ -1550,10 +1550,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get calendar => 'Calendar';
 
   @override
-  String get viewWeek => 'Week';
+  String get viewWeek => '주';
 
   @override
-  String get viewDay => 'Day';
+  String get viewDay => '일';
 
   @override
   String get viewList => 'List';

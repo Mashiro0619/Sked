@@ -9,23 +9,27 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
-import '../widgets/mode_switch_action.dart';
+import '../widgets/sked_expressive_components.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/timetable_grid.dart';
 import '../widgets/ui_command.dart';
 import 'settings_page.dart';
+import 'timetable_display_settings_page.dart';
 import 'timetable_import_flow.dart';
 
 part 'home_screen_course_actions.dart';
 part 'home_screen_imports.dart';
 part 'home_screen_timetable_management.dart';
 part 'home_screen_widgets.dart';
+
+enum _StudentTimetableView { day, week }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -64,7 +68,8 @@ class HomeScreen extends StatefulWidget {
   /// persisting, without changing the standalone screen behavior.
   final bool settingsEnabled;
 
-  /// Lets the adaptive shell close a workspace drawer before switching modes.
+  /// Optional key for the compatibility scaffold used outside the app shell.
+  /// Embedded workspaces never create a second scaffold.
   final GlobalKey<ScaffoldState>? scaffoldKey;
 
   /// Lets the adaptive shell restore the timetable's keyboard shortcuts after
@@ -77,13 +82,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   PageController? _pageController;
+  _StudentTimetableView? _viewMode;
+  int? _selectedWeekday;
+  int? _weekNavigationTarget;
+  int _weekNavigationGeneration = 0;
   bool _weekPickerOpen = false;
+  bool _timetablePickerOpen = false;
   bool _courseEditorOpen = false;
   bool _courseDetailsOpen = false;
   bool _timetableItemDialogOpen = false;
   bool _timetableSwitchInProgress = false;
   bool _addTimetableInProgress = false;
   bool _settingsPageOpen = false;
+  bool _displaySettingsPageOpen = false;
   bool _fileImportInProgress = false;
   bool _textImportPageOpen = false;
   bool _schoolWebImportPageOpen = false;
@@ -100,6 +111,15 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _weekPickerOpen = value);
     } else {
       _weekPickerOpen = value;
+    }
+  }
+
+  void _setTimetablePickerOpen(bool value) {
+    if (_timetablePickerOpen == value) return;
+    if (mounted) {
+      setState(() => _timetablePickerOpen = value);
+    } else {
+      _timetablePickerOpen = value;
     }
   }
 
@@ -157,6 +177,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _setDisplaySettingsPageOpen(bool value) {
+    if (_displaySettingsPageOpen == value) return;
+    if (mounted) {
+      setState(() => _displaySettingsPageOpen = value);
+    } else {
+      _displaySettingsPageOpen = value;
+    }
+  }
+
   void _setFileImportInProgress(bool value) {
     if (_fileImportInProgress == value) return;
     if (mounted) {
@@ -184,14 +213,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _addTimetableOnce(TimetableProvider provider) async {
+  Future<bool> _addTimetableOnce(
+    TimetableProvider provider, {
+    BuildContext? feedbackContext,
+  }) async {
     if (_addTimetableInProgress || !mounted) {
-      return;
+      return false;
     }
     _setAddTimetableInProgress(true);
     try {
-      await runUiCommandWithFeedback(
-        context: context,
+      return await runUiCommandWithFeedback(
+        context: feedbackContext ?? context,
         debugLabel: 'Create timetable',
         command: provider.addTimetable,
       );
@@ -219,28 +251,45 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _switchTimetableFromDrawer(
-    BuildContext drawerContext,
+  Future<void> _openDisplaySettingsPage(TimetableProvider provider) async {
+    if (_displaySettingsPageOpen || !mounted) {
+      return;
+    }
+    _setDisplaySettingsPageOpen(true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: const TimetableDisplaySettingsPage(),
+          ),
+        ),
+      );
+    } finally {
+      _setDisplaySettingsPageOpen(false);
+    }
+  }
+
+  Future<bool> _switchTimetableFromPicker(
+    BuildContext pickerContext,
     TimetableProvider provider,
     TimetableData activeTimetable,
     TimetableData targetTimetable,
   ) async {
     if (_timetableSwitchInProgress) {
-      return;
+      return false;
     }
     _setTimetableSwitchInProgress(true);
     try {
       var saved = true;
       if (targetTimetable.id != activeTimetable.id) {
         saved = await runUiCommandWithFeedback(
-          context: drawerContext,
+          context: pickerContext,
           debugLabel: 'Switch timetable',
           command: () => provider.switchTimetable(targetTimetable.id),
         );
       }
-      if (saved && drawerContext.mounted) {
-        await Navigator.of(drawerContext).maybePop();
-      }
+      return saved;
     } finally {
       _setTimetableSwitchInProgress(false);
     }
@@ -254,122 +303,234 @@ class _HomeScreenState extends State<HomeScreen> {
         final provider = context.read<TimetableProvider>();
         final l10n = AppLocalizations.of(context);
         if (!snapshot.isLoaded) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return _wrapStandalone(
+            const SafeArea(child: Center(child: CircularProgressIndicator())),
           );
         }
-        final timetable = snapshot.activeTimetable;
-        if (timetable == null) {
-          return Scaffold(
-            key: widget.scaffoldKey,
-            appBar: AppBar(
-              title: Text(l10n.appTitle),
-              actions: [
-                if (!widget.embedded) const ModeSwitchAction(),
-                if (widget.showSettingsAction)
-                  IconButton(
-                    focusNode: widget.settingsFocusNode,
-                    onPressed: !widget.settingsEnabled
-                        ? null
-                        : widget.settingsAction ??
-                              (_settingsPageOpen
-                                  ? null
-                                  : () => _openSettingsPage(provider)),
-                    icon: const Icon(Icons.settings_outlined),
-                    tooltip: l10n.settings,
-                  ),
-              ],
-            ),
-            body: _EmptyTimetableState(
-              onCreate: _addTimetableInProgress
-                  ? null
-                  : () => _addTimetableOnce(provider),
-              onImport: _fileImportInProgress
-                  ? null
-                  : () => _importTimetableData(context, provider),
-              onImportFromText: _textImportPageOpen
-                  ? null
-                  : () => _importTimetablesFromText(context, provider),
-              onImportFromWeb: _schoolWebImportPageOpen
-                  ? null
-                  : () => _importTimetableFromWeb(context, provider),
-            ),
-          );
-        }
+        return _wrapStandalone(
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final timetable = snapshot.activeTimetable;
+                final horizontalInset = constraints.maxWidth < 600 ? 8.0 : 16.0;
+                final settingsAction = !widget.settingsEnabled
+                    ? null
+                    : widget.settingsAction ??
+                          (_settingsPageOpen
+                              ? null
+                              : () => _openSettingsPage(provider));
 
-        final config = timetable.config;
-        final week = snapshot.selectedWeek;
-        _ensurePageController(week);
+                if (timetable == null) {
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalInset,
+                      8,
+                      horizontalInset,
+                      0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SkedWorkspaceToolbar(
+                          key: const ValueKey('student-workspace-toolbar'),
+                          title: Text(l10n.appTitle),
+                          actions: [
+                            if (widget.showSettingsAction)
+                              IconButton(
+                                focusNode: widget.settingsFocusNode,
+                                onPressed: settingsAction,
+                                icon: const Icon(Icons.settings_outlined),
+                                tooltip: l10n.settings,
+                              ),
+                          ],
+                        ),
+                        Expanded(
+                          child: _EmptyTimetableState(
+                            onCreate: _addTimetableInProgress
+                                ? null
+                                : () => _addTimetableOnce(provider),
+                            onImport: _fileImportInProgress
+                                ? null
+                                : () => _importTimetableData(context, provider),
+                            onImportFromText: _textImportPageOpen
+                                ? null
+                                : () => _importTimetablesFromText(
+                                    context,
+                                    provider,
+                                  ),
+                            onImportFromWeb: _schoolWebImportPageOpen
+                                ? null
+                                : () => _importTimetableFromWeb(
+                                    context,
+                                    provider,
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-        return Scaffold(
-          key: widget.scaffoldKey,
-          appBar: _StudentHomeAppBar(
-            provider: provider,
-            timetable: timetable,
-            week: week,
-            showModeSwitch: !widget.embedded,
-            showSettings: widget.showSettingsAction,
-            settingsFocusNode: widget.settingsFocusNode,
-            onTitleTap: _weekPickerOpen
-                ? null
-                : () => _showWeekPicker(
-                    context,
-                    provider,
-                    config.totalWeeks,
-                    currentWeekFor(config),
+                final config = timetable.config;
+                final week = snapshot.selectedWeek;
+                _ensurePageController(week);
+                _ensureLocalViewState(
+                  availableWidth: constraints.maxWidth,
+                  config: config,
+                  selectedWeek: week,
+                );
+                final viewMode = _viewMode!;
+                final selectedWeekday = _selectedWeekday!;
+                final realCurrentWeek = currentWeekFor(config);
+                final canGoBack = widget.interactive && week > 1;
+                final canGoForward =
+                    widget.interactive && week < config.totalWeeks;
+
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalInset,
+                    8,
+                    horizontalInset,
+                    0,
                   ),
-            onAddCourse: _courseEditorOpen
-                ? null
-                : () => _openEditor(context, provider),
-            onOpenSettings: !widget.settingsEnabled
-                ? null
-                : widget.settingsAction ??
-                      (_settingsPageOpen
-                          ? null
-                          : () => _openSettingsPage(provider)),
-          ),
-          drawer: _TimetableDrawer(
-            provider: provider,
-            activeTimetable: timetable,
-            switchingTimetable: _timetableSwitchInProgress,
-            onSwitchTimetable: _timetableSwitchInProgress
-                ? null
-                : (drawerContext, item) => _switchTimetableFromDrawer(
-                    drawerContext,
-                    provider,
-                    timetable,
-                    item,
+                  child: Stack(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _StudentWorkspaceToolbar(
+                            timetable: timetable,
+                            week: week,
+                            viewMode: viewMode,
+                            compactHeight: constraints.maxHeight < 600,
+                            interactive: widget.interactive,
+                            showSettings: widget.showSettingsAction,
+                            settingsFocusNode: widget.settingsFocusNode,
+                            onOpenTimetablePicker: _timetablePickerOpen
+                                ? null
+                                : () => _showTimetablePicker(
+                                    context,
+                                    provider,
+                                    timetable,
+                                    availableWidth: constraints.maxWidth,
+                                  ),
+                            onOpenWeekPicker: _weekPickerOpen
+                                ? null
+                                : () => _showWeekPicker(
+                                    context,
+                                    provider,
+                                    config.totalWeeks,
+                                    realCurrentWeek,
+                                  ),
+                            onPreviousWeek: canGoBack
+                                ? () => unawaited(_jumpWeekBy(provider, -1))
+                                : null,
+                            onNextWeek: canGoForward
+                                ? () => unawaited(_jumpWeekBy(provider, 1))
+                                : null,
+                            onToday: widget.interactive
+                                ? () => unawaited(
+                                    _jumpToToday(provider, realCurrentWeek),
+                                  )
+                                : null,
+                            onViewChanged: widget.interactive
+                                ? (value) => setState(() => _viewMode = value)
+                                : null,
+                            onOpenDisplaySettings:
+                                _displaySettingsPageOpen || !widget.interactive
+                                ? null
+                                : () => _openDisplaySettingsPage(provider),
+                            onOpenSettings: settingsAction,
+                          ),
+                          if (viewMode == _StudentTimetableView.day) ...[
+                            const SizedBox(height: 8),
+                            _StudentDayStrip(
+                              weekStart: startOfWeekFor(config, week),
+                              selectedWeekday: selectedWeekday,
+                              enabled: widget.interactive,
+                              onSelected: (weekday) {
+                                if (_selectedWeekday == weekday) return;
+                                setState(() => _selectedWeekday = weekday);
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 72),
+                              child: _TimetableWeekPager(
+                                controller: _pageController!,
+                                provider: provider,
+                                timetable: timetable,
+                                config: config,
+                                active: widget.active,
+                                interactive: widget.interactive,
+                                viewMode: viewMode,
+                                selectedWeekday: selectedWeekday,
+                                shortcutFocusNode: widget.weekShortcutFocusNode,
+                                onJumpWeekBy: (offset) =>
+                                    _jumpWeekBy(provider, offset),
+                                onCourseTap: (info) =>
+                                    _openDetails(context, provider, info),
+                                onEmptySlotTap: (slotInfo) => _openEditor(
+                                  context,
+                                  provider,
+                                  weekday: slotInfo.weekday,
+                                  emptySlot: slotInfo,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      PositionedDirectional(
+                        end: 12,
+                        bottom: 16,
+                        child: SkedPrimaryFab(
+                          heroTag: 'student-add-course',
+                          tooltip: l10n.addCourse,
+                          onPressed: !_courseEditorOpen && widget.interactive
+                              ? () => _openEditor(context, provider)
+                              : null,
+                          icon: const Icon(Icons.add),
+                          label: constraints.maxWidth >= 760
+                              ? Text(l10n.addCourse)
+                              : null,
+                        ),
+                      ),
+                    ],
                   ),
-            onEditTimetable:
-                _timetableItemDialogOpen || _timetableSwitchInProgress
-                ? null
-                : (item) =>
-                      _openTimetableItemDialog(this.context, provider, item),
-            onCreateTimetable:
-                _addTimetableInProgress || _timetableSwitchInProgress
-                ? null
-                : () => _addTimetableOnce(provider),
-          ),
-          body: _TimetableWeekPager(
-            controller: _pageController!,
-            provider: provider,
-            timetable: timetable,
-            config: config,
-            active: widget.active,
-            interactive: widget.interactive,
-            shortcutFocusNode: widget.weekShortcutFocusNode,
-            onJumpWeekBy: (offset) => _jumpWeekBy(provider, offset),
-            onCourseTap: (info) => _openDetails(context, provider, info),
-            onEmptySlotTap: (slotInfo) => _openEditor(
-              context,
-              provider,
-              weekday: slotInfo.weekday,
-              emptySlot: slotInfo,
+                );
+              },
             ),
           ),
         );
       },
     );
+  }
+
+  Widget _wrapStandalone(Widget workspace) {
+    if (widget.embedded) return workspace;
+    return Scaffold(key: widget.scaffoldKey, body: workspace);
+  }
+
+  void _ensureLocalViewState({
+    required double availableWidth,
+    required TimetableConfig config,
+    required int selectedWeek,
+  }) {
+    if (_viewMode == null) {
+      final textTheme = Theme.of(context).textTheme;
+      final scaler = MediaQuery.textScalerOf(context);
+      final fontSize = textTheme.bodyLarge?.fontSize ?? 16;
+      final usesLargeText = scaler.scale(fontSize) > fontSize * 1.3;
+      _viewMode = availableWidth < 760 || usesLargeText
+          ? _StudentTimetableView.day
+          : _StudentTimetableView.week;
+    }
+    _selectedWeekday ??= selectedWeek == currentWeekFor(config)
+        ? normalizeDayOfWeek(DateTime.now().weekday)
+        : DateTime.monday;
   }
 
   void _ensurePageController(int week) {
@@ -379,8 +540,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _pageController = PageController(initialPage: targetPage);
       return;
     }
+    if (_weekNavigationTarget != null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _pageController == null || !_pageController!.hasClients) {
+      if (!mounted ||
+          _weekNavigationTarget != null ||
+          _pageController == null ||
+          !_pageController!.hasClients) {
         return;
       }
       final currentPage = _pageController!.page?.round() ?? targetPage;
@@ -405,18 +570,46 @@ class _HomeScreenState extends State<HomeScreen> {
     await _animateToWeek(provider, targetWeek);
   }
 
+  Future<void> _jumpToToday(
+    TimetableProvider provider,
+    int realCurrentWeek,
+  ) async {
+    final todayWeekday = normalizeDayOfWeek(DateTime.now().weekday);
+    if (_selectedWeekday != todayWeekday && mounted) {
+      setState(() => _selectedWeekday = todayWeekday);
+    }
+    await _animateToWeek(provider, realCurrentWeek);
+  }
+
   Future<void> _animateToWeek(TimetableProvider provider, int week) async {
+    final navigationGeneration = ++_weekNavigationGeneration;
+    _weekNavigationTarget = week;
+    // Publish the latest target before animating. This makes repeated next/
+    // previous commands advance from the user's visible intent, while the
+    // generation token prevents an interrupted animation from restoring an
+    // older page.
+    await provider.setSelectedWeek(week);
+    if (!mounted || navigationGeneration != _weekNavigationGeneration) return;
+
     final controller = _pageController;
     final targetPage = week - 1;
-    if (controller == null || !controller.hasClients) {
-      await provider.setSelectedWeek(week);
-      return;
+    try {
+      if (controller == null || !controller.hasClients) return;
+      final motion = SkedMotionPolicy.of(context);
+      if (!motion.spatialAnimationsEnabled) {
+        controller.jumpToPage(targetPage);
+        return;
+      }
+      await controller.animateToPage(
+        targetPage,
+        duration: motion.effects(SkedMotionSpeed.standard),
+        curve: motion.scheme.standardCurve,
+      );
+    } finally {
+      if (navigationGeneration == _weekNavigationGeneration) {
+        _weekNavigationTarget = null;
+      }
     }
-    await controller.animateToPage(
-      targetPage,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
-    );
   }
 }
 

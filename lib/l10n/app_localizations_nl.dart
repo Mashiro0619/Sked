@@ -1440,7 +1440,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get mySchedule => 'My schedule';
 
   @override
-  String get today => 'Today';
+  String get today => 'Vandaag';
 
   @override
   String get addEvent => 'Add event';
@@ -1593,7 +1593,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get viewWeek => 'Week';
 
   @override
-  String get viewDay => 'Day';
+  String get viewDay => 'Dag';
 
   @override
   String get viewList => 'List';

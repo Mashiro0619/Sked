@@ -1457,7 +1457,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String get mySchedule => 'My schedule';
 
   @override
-  String get today => 'Today';
+  String get today => 'Ma';
 
   @override
   String get addEvent => 'Add event';
@@ -1607,10 +1607,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get calendar => 'Calendar';
 
   @override
-  String get viewWeek => 'Week';
+  String get viewWeek => 'Hét';
 
   @override
-  String get viewDay => 'Day';
+  String get viewDay => 'Nap';
 
   @override
   String get viewList => 'List';

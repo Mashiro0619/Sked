@@ -1,6 +1,58 @@
 part of 'home_screen.dart';
 
 extension _HomeScreenTimetableManagement on _HomeScreenState {
+  Future<void> _showTimetablePicker(
+    BuildContext context,
+    TimetableProvider provider,
+    TimetableData activeTimetable, {
+    required double availableWidth,
+  }) async {
+    if (_timetablePickerOpen || !mounted) return;
+    _setTimetablePickerOpen(true);
+    try {
+      final panel = _TimetablePickerPanel(
+        provider: provider,
+        activeTimetable: activeTimetable,
+        onSwitch: (pickerContext, timetable) => _switchTimetableFromPicker(
+          pickerContext,
+          provider,
+          activeTimetable,
+          timetable,
+        ),
+        onEdit: (timetable) =>
+            _openTimetableItemDialog(context, provider, timetable),
+        onCreate: (pickerContext) =>
+            _addTimetableOnce(provider, feedbackContext: pickerContext),
+      );
+      if (availableWidth < 720) {
+        await showAppModalSheet<void>(
+          context: context,
+          maxWidth: appSheetWidthCompact,
+          enableDrag: false,
+          useSafeArea: true,
+          builder: (_) => panel,
+        );
+      } else {
+        await showExpressiveDialog<void>(
+          context: context,
+          builder: (_) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Material(
+                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                shape: skedShapeSchemeOf(context).dialog,
+                clipBehavior: Clip.antiAlias,
+                child: panel,
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      _setTimetablePickerOpen(false);
+    }
+  }
+
   Future<void> _showWeekPicker(
     BuildContext context,
     TimetableProvider provider,
@@ -15,11 +67,12 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       final week = await showExpressiveDialog<int>(
         context: context,
         builder: (context) {
+          final l10n = AppLocalizations.of(context);
           final theme = Theme.of(context);
           final mediaQuery = MediaQuery.of(context);
           final dialogWidth = math.min(mediaQuery.size.width - 32, 360.0);
           const spacing = 10.0;
-          const chipHeight = 40.0;
+          const chipHeight = 48.0;
           final maxGridHeight = mediaQuery.size.height * 0.5;
           var popped = false;
           void popWith(int value) {
@@ -29,7 +82,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           }
 
           return AlertDialog(
-            title: Text(AppLocalizations.of(context).jumpToWeek),
+            title: Text(l10n.jumpToWeek),
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
             content: SizedBox(
               width: dialogWidth,
@@ -77,33 +130,46 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                     : isRealCurrentWeek
                                     ? theme.colorScheme.surfaceContainerHighest
                                     : theme.colorScheme.surface;
-                                return SizedBox(
-                                  width: chipWidth,
-                                  height: chipHeight,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: () => popWith(weekNumber),
-                                      child: Ink(
-                                        decoration: BoxDecoration(
-                                          color: backgroundColor,
+                                return Semantics(
+                                  key: ValueKey(
+                                    'student-week-option-$weekNumber',
+                                  ),
+                                  button: true,
+                                  selected: isSelected,
+                                  label: l10n.weekLabel(weekNumber),
+                                  onTap: () => popWith(weekNumber),
+                                  child: ExcludeSemantics(
+                                    child: SizedBox(
+                                      width: chipWidth,
+                                      height: chipHeight,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? theme.colorScheme.primary
-                                                : theme
-                                                      .colorScheme
-                                                      .outlineVariant,
-                                          ),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            '$weekNumber',
-                                            style: theme.textTheme.titleMedium,
-                                            textAlign: TextAlign.center,
+                                          onTap: () => popWith(weekNumber),
+                                          child: Ink(
+                                            decoration: BoxDecoration(
+                                              color: backgroundColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? theme.colorScheme.primary
+                                                    : theme
+                                                          .colorScheme
+                                                          .outlineVariant,
+                                              ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '$weekNumber',
+                                                style:
+                                                    theme.textTheme.titleMedium,
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -131,13 +197,13 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     }
   }
 
-  Future<void> _openTimetableItemDialog(
+  Future<bool> _openTimetableItemDialog(
     BuildContext context,
     TimetableProvider provider,
     TimetableData timetable,
   ) async {
     if (_timetableItemDialogOpen || !mounted) {
-      return;
+      return false;
     }
     _setTimetableItemDialogOpen(true);
     final nameController = TextEditingController(text: timetable.config.name);
@@ -149,7 +215,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     var busy = false;
     var deleteDialogOpen = false;
     try {
-      await showExpressiveDialog<String>(
+      final result = await showExpressiveDialog<String>(
         context: context,
         builder: (context) {
           final l10n = AppLocalizations.of(context);
@@ -438,6 +504,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           );
         },
       );
+      return result != null;
     } finally {
       _setTimetableItemDialogOpen(false);
     }
