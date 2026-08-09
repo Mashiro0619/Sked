@@ -138,71 +138,79 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : loadResult?.canWrite == false
-          ? _SchoolSitesRecoveryView(
-              status: loadResult!.recoveryStatus,
-              hasArtifacts: _recoveryPaths.isNotEmpty,
-              canReplace: loadResult.canReplaceAfterRecovery,
-              isBusy: _recoveryActionInProgress,
-              onRetry: _retryRecovery,
-              onShowArtifacts: _recoveryPaths.isEmpty
-                  ? null
-                  : _showRecoveryArtifacts,
-              onImportReplacement: loadResult.canReplaceAfterRecovery
-                  ? _importRecoveryJson
-                  : null,
-              onStartFresh: loadResult.canReplaceAfterRecovery
-                  ? _confirmStartFresh
-                  : null,
-            )
-          : _sites.isEmpty
-          ? _SchoolSitesEmptyState(
-              onAdd: (_editorDialogOpen || _siteMutationInProgress)
-                  ? null
-                  : _addSite,
-              onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              itemCount: _sites.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final site = _sites[index];
-                return _SchoolSiteRow(
-                  site: site,
-                  enabled: _supportsWebImport && !_webImportOpen,
-                  onTap: _supportsWebImport && !_webImportOpen
-                      ? () => _openWebImportForSite(site)
-                      : null,
-                  trailing: _isEditMode
-                      ? SkedPopupMenuButton<_SchoolSiteItemAction>(
-                          onSelected: (action) async {
-                            switch (action) {
-                              case _SchoolSiteItemAction.edit:
-                                await _editSite(index);
-                                return;
-                              case _SchoolSiteItemAction.delete:
-                                await _deleteSite(index);
-                                return;
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            SkedPopupMenuItem(
-                              value: _SchoolSiteItemAction.edit,
-                              child: Text(l10n.schoolSitesEdit),
-                            ),
-                            SkedPopupMenuItem(
-                              value: _SchoolSiteItemAction.delete,
-                              child: Text(l10n.delete),
-                            ),
-                          ],
-                        )
-                      : null,
-                );
-              },
-            ),
+      body: SafeArea(
+        top: false,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : loadResult?.canWrite == false
+            ? _SchoolSitesRecoveryView(
+                status: loadResult!.recoveryStatus,
+                hasArtifacts: _recoveryPaths.isNotEmpty,
+                canReplace: loadResult.canReplaceAfterRecovery,
+                isBusy: _recoveryActionInProgress,
+                onRetry: _retryRecovery,
+                onShowArtifacts: _recoveryPaths.isEmpty
+                    ? null
+                    : _showRecoveryArtifacts,
+                onImportReplacement: loadResult.canReplaceAfterRecovery
+                    ? _importRecoveryJson
+                    : null,
+                onStartFresh: loadResult.canReplaceAfterRecovery
+                    ? _confirmStartFresh
+                    : null,
+              )
+            : _sites.isEmpty
+            ? _SchoolSitesEmptyState(
+                onAdd: (_editorDialogOpen || _siteMutationInProgress)
+                    ? null
+                    : _addSite,
+                onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
+              )
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    itemCount: _sites.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final site = _sites[index];
+                      return _SchoolSiteRow(
+                        site: site,
+                        enabled: _supportsWebImport && !_webImportOpen,
+                        onTap: _supportsWebImport && !_webImportOpen
+                            ? () => _openWebImportForSite(site)
+                            : null,
+                        trailing: _isEditMode
+                            ? SkedPopupMenuButton<_SchoolSiteItemAction>(
+                                onSelected: (action) async {
+                                  switch (action) {
+                                    case _SchoolSiteItemAction.edit:
+                                      await _editSite(index);
+                                      return;
+                                    case _SchoolSiteItemAction.delete:
+                                      await _deleteSite(index);
+                                      return;
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  SkedPopupMenuItem(
+                                    value: _SchoolSiteItemAction.edit,
+                                    child: Text(l10n.schoolSitesEdit),
+                                  ),
+                                  SkedPopupMenuItem(
+                                    value: _SchoolSiteItemAction.delete,
+                                    child: Text(l10n.delete),
+                                  ),
+                                ],
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ),
+      ),
     );
   }
 

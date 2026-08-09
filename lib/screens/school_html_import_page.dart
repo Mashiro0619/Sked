@@ -142,93 +142,112 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
             ),
         ],
       ),
-      body: !isConfigured
-          ? _buildConfigMissingState(provider, l10n)
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _ParserSettingsTile(
-                  summary: _buildParserSummary(provider, l10n),
-                  enabled: !_parserSettingsPageOpen,
-                  onTap: _parserSettingsPageOpen
-                      ? null
-                      : _openParserSettingsPage,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _htmlController,
-                  enabled: !_isSubmitting,
-                  inputFormatters: [_boundedInputFormatter],
-                  onChanged: _handleContentChanged,
-                  minLines: 12,
-                  maxLines: 20,
-                  decoration: InputDecoration(
-                    labelText: l10n.schoolHtmlImportHtmlLabel,
-                    hintText: l10n.schoolHtmlImportHtmlHint,
-                    prefixIcon: const Icon(Icons.code),
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                if (_contentWasTruncated) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.tertiary,
+      body: SafeArea(
+        top: false,
+        child: !isConfigured
+            ? _buildConfigMissingState(provider, l10n)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ParserSettingsTile(
+                            summary: _buildParserSummary(provider, l10n),
+                            enabled: !_parserSettingsPageOpen,
+                            onTap: _parserSettingsPageOpen
+                                ? null
+                                : _openParserSettingsPage,
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _htmlController,
+                            enabled: !_isSubmitting,
+                            inputFormatters: [_boundedInputFormatter],
+                            onChanged: _handleContentChanged,
+                            minLines: 12,
+                            maxLines: 20,
+                            decoration: InputDecoration(
+                              labelText: l10n.schoolHtmlImportHtmlLabel,
+                              hintText: l10n.schoolHtmlImportHtmlHint,
+                              prefixIcon: const Icon(Icons.code),
+                              alignLabelWithHint: true,
+                            ),
+                          ),
+                          if (_contentWasTruncated) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.tertiary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    l10n.schoolImportContentTruncated,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.schoolHtmlImportNonHtmlHint,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                          const SizedBox(height: 20),
+                          FilledButton.tonalIcon(
+                            onPressed: _isSubmitting ? null : _prepareContent,
+                            icon: Icon(
+                              _isContentPrepared
+                                  ? Icons.check_circle_outline
+                                  : Icons.auto_fix_high_outlined,
+                            ),
+                            label: Text(
+                              _isContentPrepared
+                                  ? l10n.schoolHtmlImportCompressed
+                                  : l10n.schoolHtmlImportCompress,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: _isSubmitting ? null : _submit,
+                            icon: _isSubmitting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.file_download_outlined),
+                            label: Text(l10n.schoolHtmlImportSubmit),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l10n.schoolImportContentTruncated,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Text(
-                  l10n.schoolHtmlImportNonHtmlHint,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton.tonalIcon(
-                  onPressed: _isSubmitting ? null : _prepareContent,
-                  icon: Icon(
-                    _isContentPrepared
-                        ? Icons.check_circle_outline
-                        : Icons.auto_fix_high_outlined,
-                  ),
-                  label: Text(
-                    _isContentPrepared
-                        ? l10n.schoolHtmlImportCompressed
-                        : l10n.schoolHtmlImportCompress,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: _isSubmitting ? null : _submit,
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.file_download_outlined),
-                  label: Text(l10n.schoolHtmlImportSubmit),
-                ),
-              ],
-            ),
+              ),
+      ),
     );
   }
 

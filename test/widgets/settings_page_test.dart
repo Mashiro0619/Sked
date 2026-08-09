@@ -15,6 +15,7 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/widgets/expressive_motion.dart';
+import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
 class _MemoryTimetableStorage
@@ -133,6 +134,10 @@ Future<void> _pumpSettingsPage(
   WidgetTester tester,
   TimetableProvider provider, {
   Future<PackageInfo> Function()? packageInfoLoader,
+  Locale locale = const Locale('en'),
+  TextScaler textScaler = TextScaler.noScaling,
+  EdgeInsets viewPadding = EdgeInsets.zero,
+  EdgeInsets viewInsets = EdgeInsets.zero,
 }) async {
   PackageInfo.setMockInitialValues(
     appName: 'Sked',
@@ -145,14 +150,34 @@ Future<void> _pumpSettingsPage(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
       child: MaterialApp(
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: SettingsPage(packageInfoLoader: packageInfoLoader),
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: textScaler,
+              padding: viewPadding,
+              viewPadding: viewPadding,
+              viewInsets: viewInsets,
+            ),
+            child: SettingsPage(packageInfoLoader: packageInfoLoader),
+          ),
+        ),
       ),
     ),
   );
   await tester.pumpAndSettle();
+}
+
+void _setTestViewport(WidgetTester tester, Size size) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+}
+
+void _resetTestViewport(WidgetTester tester) {
+  tester.view.resetPhysicalSize();
+  tester.view.resetDevicePixelRatio();
 }
 
 Future<void> _pumpSettingsHostPage(
@@ -242,15 +267,21 @@ void main() {
     final provider = await _createProvider(_buildStudentData());
     await _pumpSettingsPage(tester, provider);
 
-    expect(find.text('Timetable'), findsOneWidget);
-    expect(find.text('Appearance'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('settings-group-current-workspace')),
+      findsOneWidget,
+    );
+    expect(find.text('Current timetable / calendar'), findsOneWidget);
+    expect(find.text('Appearance & language'), findsOneWidget);
+    expect(find.text('Data & security'), findsOneWidget);
+    expect(find.text('About Sked'), findsOneWidget);
     expect(find.text('General schedule'), findsNothing);
     expect(find.text('Period time set'), findsOneWidget);
     expect(find.text('Timetable display and interaction'), findsOneWidget);
     expect(find.text('Import and export data'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('App'), 120);
-    expect(find.text('App'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('About Sked'), 120);
+    expect(find.text('About Sked'), findsOneWidget);
   });
 
   testWidgets('period time set selection rolls back after save failure', (
@@ -302,14 +333,122 @@ void main() {
     final provider = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, provider);
 
-    expect(find.text('General schedule'), findsOneWidget);
-    expect(find.text('Appearance'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('settings-group-current-workspace')),
+      findsOneWidget,
+    );
+    expect(find.text('Current timetable / calendar'), findsOneWidget);
+    expect(find.text('Appearance & language'), findsOneWidget);
+    expect(find.text('Data & security'), findsOneWidget);
+    expect(find.text('About Sked'), findsOneWidget);
     expect(find.text('Timetable'), findsNothing);
     expect(find.text('General display settings'), findsOneWidget);
     expect(find.text('Schedule import & export'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('App'), 120);
-    expect(find.text('App'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('About Sked'), 120);
+    expect(find.text('About Sked'), findsOneWidget);
+  });
+
+  testWidgets('settings page keeps compact rows reachable at 2x text scale', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(320, 568));
+    addTearDown(() => _resetTestViewport(tester));
+
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+      viewPadding: const EdgeInsets.only(bottom: 24),
+      viewInsets: const EdgeInsets.only(bottom: 180),
+    );
+
+    expect(
+      find.byKey(const ValueKey('settings-groups-single-column')),
+      findsOneWidget,
+    );
+    final list = tester.widget<ListView>(find.byType(ListView).first);
+    final listPadding = list.padding! as EdgeInsets;
+    expect(listPadding.bottom, greaterThanOrEqualTo(208));
+    expect(
+      tester.getSize(find.byType(SettingsConnectedTile).first).height,
+      greaterThanOrEqualTo(48),
+    );
+
+    await tester.scrollUntilVisible(find.text('About Sked'), 400);
+    expect(find.text('About Sked'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'settings page uses two columns only when text comfortably fits',
+    (tester) async {
+      _setTestViewport(tester, const Size(1024, 768));
+      addTearDown(() => _resetTestViewport(tester));
+
+      final provider = await _createProvider(_buildStudentData());
+      await _pumpSettingsPage(tester, provider);
+      expect(
+        find.byKey(const ValueKey('settings-groups-two-column')),
+        findsOneWidget,
+      );
+
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        textScaler: const TextScaler.linear(2),
+      );
+      expect(
+        find.byKey(const ValueKey('settings-groups-single-column')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('settings page switches columns at the real 840dp boundary', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(839, 768));
+    addTearDown(() => _resetTestViewport(tester));
+    final provider = await _createProvider(_buildStudentData());
+
+    await _pumpSettingsPage(tester, provider);
+    expect(
+      find.byKey(const ValueKey('settings-groups-single-column')),
+      findsOneWidget,
+    );
+
+    _setTestViewport(tester, const Size(840, 768));
+    await _pumpSettingsPage(tester, provider);
+    expect(
+      find.byKey(const ValueKey('settings-groups-two-column')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings navigation chevrons point forward', (tester) async {
+    _setTestViewport(tester, const Size(430, 776));
+    addTearDown(() => _resetTestViewport(tester));
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(tester, provider, locale: const Locale('en'));
+
+    final navigationTile = find.byType(SettingsConnectedTile).at(1);
+    final chevron = find.descendant(
+      of: navigationTile,
+      matching: find.byIcon(Icons.chevron_right),
+    );
+    final title = find
+        .descendant(of: navigationTile, matching: find.byType(Text))
+        .first;
+    expect(tester.widget<Icon>(chevron).icon?.matchTextDirection, isTrue);
+    expect(
+      tester.getRect(chevron).center.dx,
+      greaterThan(tester.getRect(title).center.dx),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('app backup entry opens restore and export actions', (

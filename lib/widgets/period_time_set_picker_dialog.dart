@@ -35,6 +35,8 @@ Future<String?> showPeriodTimeSetPickerDialog(
       return StatefulBuilder(
         builder: (dialogContext, refreshDialog) {
           final l10n = AppLocalizations.of(dialogContext);
+          final mediaQuery = MediaQuery.of(dialogContext);
+          final compactHeader = mediaQuery.textScaler.scale(20) > 26;
 
           Future<void> runBusy({
             required String debugLabel,
@@ -61,42 +63,59 @@ Future<String?> showPeriodTimeSetPickerDialog(
             Navigator.of(dialogContext).pop(result);
           }
 
+          final createButton = IconButton(
+            tooltip: l10n.newItem,
+            onPressed: (busy || popped)
+                ? null
+                : () {
+                    unawaited(
+                      runBusy(
+                        debugLabel: 'Create period time set',
+                        action: () async {
+                          final created = await provider.addPeriodTimeSet();
+                          if (!dialogContext.mounted || popped) {
+                            return;
+                          }
+                          currentSelectedId = created.id;
+                          await openPeriodTimePage(created.id);
+                        },
+                      ),
+                    );
+                  },
+            icon: const Icon(Icons.add),
+          );
+
           return PopScope(
             canPop: !busy && !popped,
             child: AlertDialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: mediaQuery.size.width < 480 ? 16 : 40,
+                vertical: 24,
+              ),
+              contentPadding: EdgeInsetsDirectional.fromSTEB(
+                mediaQuery.size.width < 480 ? 12 : 24,
+                0,
+                mediaQuery.size.width < 480 ? 12 : 24,
+                0,
+              ),
+              titleTextStyle: Theme.of(
+                dialogContext,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   UiCommandBusyIndicator(busy: busy),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(child: Text(l10n.selectPeriodTimeSet)),
-                      IconButton(
-                        tooltip: l10n.newItem,
-                        onPressed: (busy || popped)
-                            ? null
-                            : () {
-                                unawaited(
-                                  runBusy(
-                                    debugLabel: 'Create period time set',
-                                    action: () async {
-                                      final created = await provider
-                                          .addPeriodTimeSet();
-                                      if (!dialogContext.mounted || popped) {
-                                        return;
-                                      }
-                                      currentSelectedId = created.id;
-                                      await openPeriodTimePage(created.id);
-                                    },
-                                  ),
-                                );
-                              },
-                        icon: const Icon(Icons.add),
-                      ),
-                    ],
-                  ),
+                  if (compactHeader)
+                    Text(l10n.selectPeriodTimeSet)
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(child: Text(l10n.selectPeriodTimeSet)),
+                        createButton,
+                      ],
+                    ),
                 ],
               ),
               content: ExpressiveDialogContent(
@@ -156,6 +175,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 ),
               ),
               actions: [
+                if (compactHeader) createButton,
                 TextButton(
                   onPressed: (busy || popped) ? null : () => popOnce(),
                   child: Text(l10n.cancel),

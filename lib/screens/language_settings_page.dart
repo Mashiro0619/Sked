@@ -94,32 +94,47 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
             children: [
               UiCommandBusyIndicator(busy: _isSelectingLanguage),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
+                child: SafeArea(
+                  top: false,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         children: [
-                          for (final option in languageOptions)
-                            _LanguageOptionTile(
-                              key: ValueKey('language-option-${option.code}'),
-                              option: option,
-                              selected: option.code == currentCode,
-                              onTap:
-                                  _isSelectingLanguage ||
-                                      _languageSelectionPopped
-                                  ? null
-                                  : () {
-                                      unawaited(
-                                        _selectLanguage(provider, option.code),
-                                      );
-                                    },
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              children: [
+                                for (final option in languageOptions)
+                                  _LanguageOptionTile(
+                                    key: ValueKey(
+                                      'language-option-${option.code}',
+                                    ),
+                                    option: option,
+                                    selected: option.code == currentCode,
+                                    onTap:
+                                        _isSelectingLanguage ||
+                                            _languageSelectionPopped
+                                        ? null
+                                        : () {
+                                            unawaited(
+                                              _selectLanguage(
+                                                provider,
+                                                option.code,
+                                              ),
+                                            );
+                                          },
+                                  ),
+                              ],
                             ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -220,43 +235,62 @@ class _LanguageOptionTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final textScale = MediaQuery.textScalerOf(context).scale(1);
+                  final text = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        option.nativeName,
+                        softWrap: true,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: foreground,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      if (option.localizedName != option.nativeName) ...[
+                        const SizedBox(height: 2),
                         Text(
-                          option.nativeName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: foreground,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+                          option.localizedName,
+                          softWrap: true,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: subtitleColor,
                           ),
                         ),
-                        if (option.localizedName != option.nativeName) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            option.localizedName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: subtitleColor,
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
-                  ),
-                  if (selected) ...[
-                    const SizedBox(width: 12),
-                    Icon(Icons.check, color: colorScheme.primary),
-                  ],
-                ],
+                    ],
+                  );
+                  final check = selected
+                      ? Icon(Icons.check, color: colorScheme.primary)
+                      : null;
+                  final stack =
+                      selected &&
+                      (constraints.maxWidth < 360 || textScale > 1.3);
+                  if (stack) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        text,
+                        const SizedBox(height: 4),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: check,
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: text),
+                      if (check != null) ...[const SizedBox(width: 12), check],
+                    ],
+                  );
+                },
               ),
             ),
           ),

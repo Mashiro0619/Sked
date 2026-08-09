@@ -80,6 +80,7 @@ Future<void> _pumpHostPage(
   WidgetTester tester,
   TimetableProvider provider, {
   TextScaler textScaler = TextScaler.noScaling,
+  EdgeInsets viewPadding = EdgeInsets.zero,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -89,7 +90,11 @@ Future<void> _pumpHostPage(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          data: MediaQuery.of(context).copyWith(
+            textScaler: textScaler,
+            padding: viewPadding,
+            viewPadding: viewPadding,
+          ),
           child: child!,
         ),
         home: Builder(
@@ -123,6 +128,34 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('caps the language list on Android tablets', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ),
+    );
+    final provider = await _createProvider(storage);
+    await _pumpHostPage(
+      tester,
+      provider,
+      viewPadding: const EdgeInsets.only(bottom: 48),
+    );
+
+    await tester.tap(find.text('Open language settings'));
+    await _pumpRouteTransition(tester);
+
+    final list = find.byType(ListView);
+    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
+    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('language selection ignores rapid duplicate taps', (
     tester,
   ) async {
@@ -231,8 +264,10 @@ void main() {
   testWidgets('language options expose selection at large text scale', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 640);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final semantics = tester.ensureSemantics();
     final storage = _BlockingTimetableStorage(
       buildInitialAppData(

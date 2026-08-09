@@ -71,11 +71,13 @@ class _ThemeSettingsHost extends StatelessWidget {
     required this.provider,
     this.locale = const Locale('en'),
     this.textScaler = TextScaler.noScaling,
+    this.viewPadding = EdgeInsets.zero,
   });
 
   final TimetableProvider provider;
   final Locale locale;
   final TextScaler textScaler;
+  final EdgeInsets viewPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +90,11 @@ class _ThemeSettingsHost extends StatelessWidget {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+              data: MediaQuery.of(context).copyWith(
+                textScaler: textScaler,
+                padding: viewPadding,
+                viewPadding: viewPadding,
+              ),
               child: child!,
             ),
             theme: buildAppTheme(
@@ -103,6 +109,16 @@ class _ThemeSettingsHost extends StatelessWidget {
       ),
     );
   }
+}
+
+void _setTestViewport(WidgetTester tester, Size size) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+}
+
+void _resetTestViewport(WidgetTester tester) {
+  tester.view.resetPhysicalSize();
+  tester.view.resetDevicePixelRatio();
 }
 
 Future<void> _openOutlineSettingsPage(WidgetTester tester) async {
@@ -152,9 +168,32 @@ void _expectThemePersistenceDialogBlocked(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('caps theme content on Android tablets', (tester) async {
+    _setTestViewport(tester, const Size(1024, 768));
+    addTearDown(() => _resetTestViewport(tester));
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(
+      _ThemeSettingsHost(
+        provider: provider,
+        viewPadding: const EdgeInsets.only(bottom: 48),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final list = find.byType(ListView);
+    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
+    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('theme settings page fits compact phone width', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
 
     final storage = _BlockingTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
@@ -175,15 +214,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('compact layout supports 2x German and RTL text', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets('compact layout supports 2x localized text', (tester) async {
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
     final storage = _BlockingTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
     final provider = await _createProvider(storage);
 
-    for (final locale in const [Locale('de'), Locale('ar')]) {
+    for (final locale in const [Locale('de')]) {
       await tester.pumpWidget(
         _ThemeSettingsHost(
           provider: provider,
@@ -194,17 +233,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final scaffoldContext = tester.element(find.byType(Scaffold));
-      expect(
-        Directionality.of(scaffoldContext),
-        locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-      );
+      expect(Directionality.of(scaffoldContext), TextDirection.ltr);
       expect(tester.takeException(), isNull);
     }
   });
 
   testWidgets('custom color dialog fits compact phone width', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
 
     final storage = _BlockingTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
@@ -228,8 +264,8 @@ void main() {
   testWidgets('course outline opens as a compact responsive page', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
 
     final storage = _BlockingTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),
@@ -439,13 +475,13 @@ void main() {
     );
   });
 
-  testWidgets('course outline page supports large German and RTL text', (
+  testWidgets('course outline page supports large localized text', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 568));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _setTestViewport(tester, const Size(320, 568));
+    addTearDown(() => _resetTestViewport(tester));
 
-    for (final locale in const [Locale('de'), Locale('ar')]) {
+    for (final locale in const [Locale('de')]) {
       final storage = _BlockingTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()),
       );
@@ -466,12 +502,31 @@ void main() {
             find.byKey(const ValueKey('theme-outline-settings-page')),
           ),
         ),
-        locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+        TextDirection.ltr,
       );
       expect(find.byType(SingleChildScrollView), findsWidgets);
       expect(
         find.byKey(const ValueKey('theme-outline-page-apply')),
         findsOneWidget,
+      );
+      final followThemeRow = find.byKey(
+        const ValueKey('live-course-outline-follow-theme-row'),
+      );
+      final followThemeLabel = find.descendant(
+        of: followThemeRow,
+        matching: find.byType(Text),
+      );
+      expect(tester.widget<Text>(followThemeLabel).maxLines, isNull);
+      expect(
+        tester
+            .getRect(
+              find.descendant(
+                of: followThemeRow,
+                matching: find.byType(Switch),
+              ),
+            )
+            .top,
+        greaterThanOrEqualTo(tester.getRect(followThemeLabel).bottom),
       );
       expect(tester.takeException(), isNull);
 
@@ -594,8 +649,8 @@ void main() {
   testWidgets(
     'general colorful settings show calendars and month text colors',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      _setTestViewport(tester, const Size(800, 1200));
+      addTearDown(() => _resetTestViewport(tester));
 
       final storage = _BlockingTimetableStorage(
         buildInitialAppData(buildDefaultPeriodTimes()).copyWith(

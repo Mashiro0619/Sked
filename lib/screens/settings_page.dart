@@ -105,169 +105,260 @@ class _SettingsPageState extends State<SettingsPage> {
         final selectedSet = _selectedPeriodTimeSetId != null
             ? provider.periodTimeSetForId(_selectedPeriodTimeSetId!)
             : provider.activePeriodTimeSetOrNull;
+        final currentWorkspaceChildren = <Widget>[];
+        if (provider.isStudentMode) {
+          if (!hasTimetable) {
+            currentWorkspaceChildren.add(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                child: Text(
+                  l10n.noTimetableSettings,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            );
+          } else {
+            currentWorkspaceChildren.add(
+              SettingsConnectedTile(
+                leading: const Icon(Icons.schedule_outlined),
+                title: l10n.periodTimeSets,
+                subtitle: selectedSet == null
+                    ? l10n.noPeriodTimeAvailable
+                    : l10n.periodTimeSetSummary(
+                        selectedSet.name,
+                        selectedSet.periodTimes.length,
+                      ),
+                trailing: const Icon(Icons.keyboard_arrow_down),
+                onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
+                    ? null
+                    : () => unawaited(
+                        _pickPeriodTimeSet(provider, timetable.config),
+                      ),
+              ),
+            );
+          }
+          currentWorkspaceChildren.addAll([
+            SettingsConnectedTile(
+              leading: const Icon(Icons.language_outlined),
+              title: l10n.schoolWebImportEntry,
+              subtitle: l10n.schoolWebImportEntryDesc,
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _isFlowOpen(_SettingsFlow.schoolSitesPage)
+                  ? null
+                  : () => _openSchoolSitesPage(provider),
+            ),
+            SettingsConnectedTile(
+              leading: const Icon(Icons.grid_view_outlined),
+              title: l10n.timetableDisplaySettings,
+              subtitle: l10n.timetableDisplaySettingsDesc,
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _isFlowOpen(_SettingsFlow.timetableDisplaySettingsPage)
+                  ? null
+                  : () => _openTimetableDisplaySettingsPage(provider),
+            ),
+            SettingsConnectedTile(
+              leading: const Icon(Icons.import_export),
+              title: l10n.dataImportExport,
+              subtitle: l10n.dataImportExportDesc,
+              trailing: const Icon(Icons.keyboard_arrow_up),
+              onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
+                  ? null
+                  : () => _showDataActions(provider),
+            ),
+          ]);
+        } else {
+          currentWorkspaceChildren.addAll([
+            SettingsConnectedTile(
+              leading: const Icon(Icons.grid_view_outlined),
+              title: l10n.generalDisplaySettings,
+              subtitle: l10n.generalDisplaySettingsDesc,
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _isFlowOpen(_SettingsFlow.generalDisplaySettingsPage)
+                  ? null
+                  : () => _openGeneralDisplaySettingsPage(provider),
+            ),
+            SettingsConnectedTile(
+              leading: const Icon(Icons.import_export),
+              title: l10n.generalScheduleImportExport,
+              subtitle: l10n.generalScheduleImportExportDesc,
+              trailing: const Icon(Icons.keyboard_arrow_up),
+              onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
+                  ? null
+                  : () => _showGeneralDataActions(provider),
+            ),
+          ]);
+        }
+        final appearanceChildren = [
+          SettingsConnectedTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: l10n.theme,
+            subtitle: _themeSettingsSummary(provider, l10n),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.themeSettingsPage)
+                ? null
+                : () => _openThemeSettingsPage(provider),
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.translate_outlined),
+            title: l10n.language,
+            subtitle: currentLanguageLabel,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.languageSettingsPage)
+                ? null
+                : () => _openLanguageSettingsPage(provider),
+          ),
+        ];
+        final dataChildren = [
+          SettingsConnectedTile(
+            leading: const Icon(Icons.inventory_2_outlined),
+            title: l10n.appBackupTitle,
+            subtitle: l10n.appBackupSubtitle,
+            trailing: const Icon(Icons.keyboard_arrow_up),
+            onTap: _isFlowOpen(_SettingsFlow.appDataActions)
+                ? null
+                : () => _showAppDataActions(provider),
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: l10n.privacyPolicyTitle,
+            subtitle: provider.acceptedPrivacyPolicyVersion == null
+                ? l10n.privacyPolicyEntryDesc
+                : l10n.privacyPolicyAcceptedVersionLabel(
+                    provider.acceptedPrivacyPolicyVersion!,
+                  ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.privacyPolicy)
+                ? null
+                : _openPrivacyPolicyPage,
+          ),
+        ];
+        final aboutChildren = [
+          SettingsConnectedTile(
+            leading: const Icon(Icons.description_outlined),
+            title: l10n.openSourceLicenses,
+            subtitle: l10n.openSourceLicensesDesc,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.licensesPage)
+                ? null
+                : _openLicensesPage,
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.update_outlined),
+            title: l10n.checkForUpdates,
+            subtitle: _buildUpdateSubtitle(provider, l10n),
+            onTap: _isFlowOpen(_SettingsFlow.updateCheck)
+                ? null
+                : _checkForUpdates,
+          ),
+          SettingsConnectedTile(
+            leading: const FaIcon(FontAwesomeIcons.github),
+            title: l10n.githubRepository,
+            subtitle: l10n.githubRepositoryUrl,
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _isFlowOpen(_SettingsFlow.githubRepo)
+                ? null
+                : _openGithubRepo,
+          ),
+        ];
+        final currentTitle = l10n.settingsSectionCurrentWorkspace;
+        // Scaffold removes the IME inset from its body when it resizes. Keep
+        // the value captured above the Scaffold so the final row still gets a
+        // scrollable tail while the keyboard is visible.
+        final rootImeInset = MediaQuery.viewInsetsOf(context).bottom;
         return Scaffold(
           appBar: AppBar(title: Text(l10n.settingsTitle)),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              if (provider.lastRecoveryStatus != RecoveryStatus.none) ...[
-                _RecoveryNoticeTile(status: provider.lastRecoveryStatus),
-                const SizedBox(height: 8),
-              ],
-              if (provider.isStudentMode) ...[
-                SettingsSectionHeader(title: l10n.settingsSectionTimetable),
-                if (!hasTimetable)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                    child: Text(
-                      l10n.noTimetableSettings,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+          body: SafeArea(
+            top: false,
+            bottom: true,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final textScale =
+                    MediaQuery.textScalerOf(context).scale(14) / 14;
+                final horizontalPadding = constraints.maxWidth < 600
+                    ? 16.0
+                    : 24.0;
+                final maxContentWidth = constraints.maxWidth >= 840
+                    ? 1120.0
+                    : 720.0;
+                final contentWidth =
+                    (constraints.maxWidth - horizontalPadding * 2)
+                        .clamp(0, maxContentWidth)
+                        .toDouble();
+                final availableColumnWidth = (contentWidth - 20) / 2;
+                final useTwoColumns =
+                    constraints.maxWidth >= 840 &&
+                    textScale <= 1.3 &&
+                    availableColumnWidth >= 360;
+                final currentGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-current-workspace'),
+                  title: currentTitle,
+                  children: currentWorkspaceChildren,
+                );
+                final appearanceGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-appearance-language'),
+                  title: l10n.settingsSectionAppearanceLanguage,
+                  children: appearanceChildren,
+                );
+                final dataGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-data-security'),
+                  title: l10n.settingsSectionDataSecurity,
+                  children: dataChildren,
+                );
+                final aboutGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-about'),
+                  title: l10n.settingsSectionAbout,
+                  children: aboutChildren,
+                );
+                final left = [currentGroup, appearanceGroup];
+                final right = [dataGroup, aboutGroup];
+                final groups = useTwoColumns
+                    ? KeyedSubtree(
+                        key: const ValueKey('settings-groups-two-column'),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: Column(children: left)),
+                            const SizedBox(width: 20),
+                            Expanded(child: Column(children: right)),
+                          ],
+                        ),
+                      )
+                    : KeyedSubtree(
+                        key: const ValueKey('settings-groups-single-column'),
+                        child: Column(children: [...left, ...right]),
+                      );
+                return ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    12,
+                    horizontalPadding,
+                    28 + rootImeInset,
+                  ),
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: maxContentWidth),
+                        child: Column(
+                          children: [
+                            if (provider.lastRecoveryStatus !=
+                                RecoveryStatus.none)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _RecoveryNoticeTile(
+                                  status: provider.lastRecoveryStatus,
+                                ),
+                              ),
+                            groups,
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                if (hasTimetable)
-                  SettingsListTile(
-                    leading: const Icon(Icons.schedule_outlined),
-                    title: l10n.periodTimeSets,
-                    subtitle: selectedSet == null
-                        ? l10n.noPeriodTimeAvailable
-                        : l10n.periodTimeSetSummary(
-                            selectedSet.name,
-                            selectedSet.periodTimes.length,
-                          ),
-                    trailing: const Icon(Icons.keyboard_arrow_down),
-                    onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
-                        ? null
-                        : () {
-                            unawaited(
-                              _pickPeriodTimeSet(provider, timetable.config),
-                            );
-                          },
-                  ),
-                SettingsListTile(
-                  leading: const Icon(Icons.language_outlined),
-                  title: l10n.schoolWebImportEntry,
-                  subtitle: l10n.schoolWebImportEntryDesc,
-                  trailing: const Icon(Icons.keyboard_arrow_right),
-                  onTap: _isFlowOpen(_SettingsFlow.schoolSitesPage)
-                      ? null
-                      : () => _openSchoolSitesPage(provider),
-                ),
-              ],
-              if (provider.isStudentMode) ...[
-                SettingsListTile(
-                  leading: const Icon(Icons.grid_view_outlined),
-                  title: l10n.timetableDisplaySettings,
-                  subtitle: l10n.timetableDisplaySettingsDesc,
-                  trailing: const Icon(Icons.keyboard_arrow_right),
-                  onTap: _isFlowOpen(_SettingsFlow.timetableDisplaySettingsPage)
-                      ? null
-                      : () => _openTimetableDisplaySettingsPage(provider),
-                ),
-                SettingsListTile(
-                  leading: const Icon(Icons.import_export),
-                  title: l10n.dataImportExport,
-                  subtitle: l10n.dataImportExportDesc,
-                  trailing: const Icon(Icons.keyboard_arrow_up),
-                  onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
-                      ? null
-                      : () => _showDataActions(provider),
-                ),
-              ],
-              if (provider.isGeneralMode) ...[
-                SettingsSectionHeader(
-                  title: l10n.settingsSectionGeneralSchedule,
-                ),
-                SettingsListTile(
-                  leading: const Icon(Icons.grid_view_outlined),
-                  title: l10n.generalDisplaySettings,
-                  subtitle: l10n.generalDisplaySettingsDesc,
-                  trailing: const Icon(Icons.keyboard_arrow_right),
-                  onTap: _isFlowOpen(_SettingsFlow.generalDisplaySettingsPage)
-                      ? null
-                      : () => _openGeneralDisplaySettingsPage(provider),
-                ),
-                SettingsListTile(
-                  leading: const Icon(Icons.import_export),
-                  title: l10n.generalScheduleImportExport,
-                  subtitle: l10n.generalScheduleImportExportDesc,
-                  trailing: const Icon(Icons.keyboard_arrow_up),
-                  onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
-                      ? null
-                      : () => _showGeneralDataActions(provider),
-                ),
-              ],
-              SettingsSectionHeader(title: l10n.settingsSectionAppearance),
-              SettingsListTile(
-                leading: const Icon(Icons.palette_outlined),
-                title: l10n.theme,
-                subtitle: _themeSettingsSummary(provider, l10n),
-                trailing: const Icon(Icons.keyboard_arrow_right),
-                onTap: _isFlowOpen(_SettingsFlow.themeSettingsPage)
-                    ? null
-                    : () => _openThemeSettingsPage(provider),
-              ),
-              SettingsListTile(
-                leading: const Icon(Icons.translate_outlined),
-                title: l10n.language,
-                subtitle: currentLanguageLabel,
-                trailing: const Icon(Icons.keyboard_arrow_right),
-                onTap: _isFlowOpen(_SettingsFlow.languageSettingsPage)
-                    ? null
-                    : () => _openLanguageSettingsPage(provider),
-              ),
-              SettingsSectionHeader(title: l10n.settingsSectionApp),
-              SettingsListTile(
-                leading: const Icon(Icons.inventory_2_outlined),
-                title: l10n.appBackupTitle,
-                subtitle: l10n.appBackupSubtitle,
-                trailing: const Icon(Icons.keyboard_arrow_up),
-                onTap: _isFlowOpen(_SettingsFlow.appDataActions)
-                    ? null
-                    : () => _showAppDataActions(provider),
-              ),
-              SettingsListTile(
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: l10n.privacyPolicyTitle,
-                subtitle: provider.acceptedPrivacyPolicyVersion == null
-                    ? l10n.privacyPolicyEntryDesc
-                    : l10n.privacyPolicyAcceptedVersionLabel(
-                        provider.acceptedPrivacyPolicyVersion!,
-                      ),
-                trailing: const Icon(Icons.keyboard_arrow_right),
-                onTap: _isFlowOpen(_SettingsFlow.privacyPolicy)
-                    ? null
-                    : _openPrivacyPolicyPage,
-              ),
-              SettingsListTile(
-                leading: const Icon(Icons.description_outlined),
-                title: l10n.openSourceLicenses,
-                subtitle: l10n.openSourceLicensesDesc,
-                trailing: const Icon(Icons.keyboard_arrow_right),
-                onTap: _isFlowOpen(_SettingsFlow.licensesPage)
-                    ? null
-                    : _openLicensesPage,
-              ),
-              SettingsListTile(
-                leading: const Icon(Icons.update_outlined),
-                title: l10n.checkForUpdates,
-                subtitle: _buildUpdateSubtitle(provider, l10n),
-                onTap: _isFlowOpen(_SettingsFlow.updateCheck)
-                    ? null
-                    : _checkForUpdates,
-              ),
-              SettingsListTile(
-                leading: const FaIcon(FontAwesomeIcons.github),
-                title: l10n.githubRepository,
-                subtitle: l10n.githubRepositoryUrl,
-                trailing: const Icon(Icons.open_in_new),
-                onTap: _isFlowOpen(_SettingsFlow.githubRepo)
-                    ? null
-                    : _openGithubRepo,
-              ),
-              const SizedBox(height: 16),
-            ],
+                  ],
+                );
+              },
+            ),
           ),
         );
       },

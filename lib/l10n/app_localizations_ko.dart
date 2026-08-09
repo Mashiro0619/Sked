@@ -190,6 +190,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsSectionApp => 'App';
 
   @override
+  String get settingsSectionCurrentWorkspace => 'Current timetable / calendar';
+
+  @override
+  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+
+  @override
+  String get settingsSectionDataSecurity => 'Data & security';
+
+  @override
+  String get settingsSectionAbout => 'About Sked';
+
+  @override
   String get noTimetableSettings => '설정할 수 있는 시간표가 현재 없습니다.';
 
   @override

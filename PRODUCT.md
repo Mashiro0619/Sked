@@ -32,7 +32,7 @@ Sked combines a purpose-built student timetable model and a general calendar mod
 - Treat the student and general-schedule workspaces as equal primary destinations.
 - New users start in the light theme; existing users retain their saved theme mode.
 - Recovery gates, save-failure feedback, first-launch privacy consent, and fail-closed data protections remain higher priority than visual transitions.
-- The interface is localized across the existing ARB locale set and must continue to work with long translations and RTL text direction.
+- The interface is localized across the currently registered ARB locale set and must continue to work with long LTR translations.
 
 ## Brand Commitments
 
@@ -61,4 +61,4 @@ Sked combines a purpose-built student timetable model and a general calendar mod
 
 - Honor Android's system animation setting and Flutter accessibility features; reduced-motion users receive an immediate or non-spatial transition.
 - Keep primary interactive targets at least 48×48 dp with visible keyboard focus and valid screen-reader labels, values, selected states, and live regions.
-- Support compact phones, large screens, keyboard and pointer input, up to 2.0× text scaling, and RTL layouts without clipping or unreachable content.
+- Support compact phones, large screens, keyboard and pointer input, and up to 2.0× text scaling without clipping or unreachable content.

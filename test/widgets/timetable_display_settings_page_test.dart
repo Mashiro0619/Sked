@@ -42,15 +42,25 @@ Future<TimetableProvider> _createProvider() async {
   return provider;
 }
 
-Future<void> _pumpPage(WidgetTester tester, TimetableProvider provider) async {
+Future<void> _pumpPage(
+  WidgetTester tester,
+  TimetableProvider provider, {
+  EdgeInsets viewPadding = EdgeInsets.zero,
+}) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: TimetableDisplaySettingsPage(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(padding: viewPadding, viewPadding: viewPadding),
+          child: child!,
+        ),
+        home: const TimetableDisplaySettingsPage(),
       ),
     ),
   );
@@ -59,7 +69,14 @@ Future<void> _pumpPage(WidgetTester tester, TimetableProvider provider) async {
 
 Future<void> _toggleSetting(WidgetTester tester, String title) async {
   final titleFinder = find.text(title);
-  await tester.scrollUntilVisible(titleFinder, 120);
+  await tester.scrollUntilVisible(
+    titleFinder,
+    120,
+    scrollable: find.descendant(
+      of: find.byKey(const ValueKey('timetable-display-settings-list')),
+      matching: find.byType(Scrollable),
+    ),
+  );
   final tile = find.ancestor(
     of: titleFinder,
     matching: find.byType(SettingsSwitchTile),
@@ -69,6 +86,59 @@ Future<void> _toggleSetting(WidgetTester tester, String title) async {
 }
 
 void main() {
+  testWidgets('caps wide content and consumes Android navigation inset once', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+
+    await _pumpPage(
+      tester,
+      provider,
+      viewPadding: const EdgeInsets.only(bottom: 48),
+    );
+
+    final list = find.byType(ListView);
+    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
+    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps the long title reachable on a compact Android viewport', (
+    tester,
+  ) async {
+    // Use physical dimensions equivalent to a 320x568dp phone at 2x density.
+    tester.view.devicePixelRatio = 2;
+    tester.view.physicalSize = const Size(640, 1136);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+
+    await _pumpPage(tester, provider);
+
+    final title = find.text('Timetable display and interaction');
+    final titleScroll = find.byKey(
+      const ValueKey('timetable-display-settings-title-scroll'),
+    );
+    expect(title, findsOneWidget);
+    expect(titleScroll, findsOneWidget);
+    expect(
+      tester.getSize(title).width,
+      greaterThan(tester.getSize(titleScroll).width),
+    );
+    await tester.drag(titleScroll, const Offset(-160, 0));
+    await tester.pumpAndSettle();
+    final horizontalScrollable = tester.state<ScrollableState>(
+      find.descendant(of: titleScroll, matching: find.byType(Scrollable)),
+    );
+    expect(horizontalScrollable.position.pixels, greaterThan(0));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('persists every timetable display and interaction toggle', (
     tester,
   ) async {

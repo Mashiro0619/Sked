@@ -204,6 +204,9 @@ class _AppBootstrapGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // The bootstrap gate has no loaded user locale yet. Keep this transient
+      // screen deterministic and LTR until the persisted locale is available.
+      locale: const Locale('en'),
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,

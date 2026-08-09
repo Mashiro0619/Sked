@@ -190,6 +190,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionApp => '应用';
 
   @override
+  String get settingsSectionCurrentWorkspace => '当前课表 / 日历';
+
+  @override
+  String get settingsSectionAppearanceLanguage => '外观与语言';
+
+  @override
+  String get settingsSectionDataSecurity => '数据与安全';
+
+  @override
+  String get settingsSectionAbout => '关于 Sked';
+
+  @override
   String get noTimetableSettings => '当前没有可设置的课表';
 
   @override

@@ -246,223 +246,266 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         final outlineWidth = provider.liveCourseOutlineWidth;
         return Scaffold(
           appBar: AppBar(title: Text(l10n.theme)),
-          body: Column(
-            children: [
-              UiCommandBusyIndicator(busy: uiCommandBusy),
-              Expanded(
-                child: AbsorbPointer(
-                  absorbing: uiCommandBusy,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-                    children: [
-                      SettingsSectionHeader(title: l10n.theme),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _ResponsiveSegmentedButton(
-                          key: const ValueKey(
-                            'theme-brightness-mode-segmented',
-                          ),
-                          segments: [
-                            _SegmentOption(
-                              value: 'system',
-                              icon: Icons.settings_suggest_outlined,
-                              label: l10n.themeFollowSystem,
-                            ),
-                            _SegmentOption(
-                              value: 'light',
-                              icon: Icons.light_mode_outlined,
-                              label: l10n.themeLight,
-                            ),
-                            _SegmentOption(
-                              value: 'dark',
-                              icon: Icons.dark_mode_outlined,
-                              label: l10n.themeDark,
-                            ),
-                          ],
-                          selected: {provider.themeMode},
-                          onSelectionChanged: (selection) {
-                            if (selection.isEmpty) {
-                              return;
-                            }
-                            _updateSetting(
-                              'Update theme brightness mode',
-                              () => provider.updateThemeMode(selection.first),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SettingsSectionHeader(title: l10n.themeColor),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _ResponsiveSegmentedButton(
-                          key: const ValueKey('theme-color-mode-segmented'),
-                          segments: [
-                            _SegmentOption(
-                              value: themeColorModeSingle,
-                              icon: Icons.palette_outlined,
-                              label: l10n.themeColorModeSingle,
-                            ),
-                            _SegmentOption(
-                              value: themeColorModeColorful,
-                              icon: Icons.color_lens_outlined,
-                              label: l10n.themeColorModeColorful,
-                            ),
-                          ],
-                          selected: {provider.themeColorMode},
-                          onSelectionChanged: (selection) {
-                            if (selection.isEmpty) {
-                              return;
-                            }
-                            _updateSetting(
-                              'Update theme color mode',
-                              () => provider.updateThemeColorMode(
-                                selection.first,
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                UiCommandBusyIndicator(busy: uiCommandBusy),
+                Expanded(
+                  child: AbsorbPointer(
+                    absorbing: uiCommandBusy,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          children: [
+                            SettingsSectionHeader(title: l10n.theme),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          child: provider.themeColorMode == themeColorModeSingle
-                              ? _SingleThemeColorSection(
-                                  key: const ValueKey(
-                                    'single-theme-color-section',
+                              child: _ResponsiveSegmentedButton(
+                                key: const ValueKey(
+                                  'theme-brightness-mode-segmented',
+                                ),
+                                segments: [
+                                  _SegmentOption(
+                                    value: 'system',
+                                    icon: Icons.settings_suggest_outlined,
+                                    label: l10n.themeFollowSystem,
                                   ),
-                                  provider: provider,
-                                  hasCustomColor: hasCustomColor,
-                                  onSelectColor: (colorValue) => _updateSetting(
-                                    'Update theme seed color',
-                                    () => provider.updateThemeSeedColorValue(
-                                      colorValue,
+                                  _SegmentOption(
+                                    value: 'light',
+                                    icon: Icons.light_mode_outlined,
+                                    label: l10n.themeLight,
+                                  ),
+                                  _SegmentOption(
+                                    value: 'dark',
+                                    icon: Icons.dark_mode_outlined,
+                                    label: l10n.themeDark,
+                                  ),
+                                ],
+                                selected: {provider.themeMode},
+                                onSelectionChanged: (selection) {
+                                  if (selection.isEmpty) {
+                                    return;
+                                  }
+                                  _updateSetting(
+                                    'Update theme brightness mode',
+                                    () => provider.updateThemeMode(
+                                      selection.first,
                                     ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SettingsSectionHeader(title: l10n.themeColor),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: _ResponsiveSegmentedButton(
+                                key: const ValueKey(
+                                  'theme-color-mode-segmented',
+                                ),
+                                segments: [
+                                  _SegmentOption(
+                                    value: themeColorModeSingle,
+                                    icon: Icons.palette_outlined,
+                                    label: l10n.themeColorModeSingle,
                                   ),
-                                  onPickCustomColor: () => unawaited(
-                                    _openCustomColorDialog(context, provider),
+                                  _SegmentOption(
+                                    value: themeColorModeColorful,
+                                    icon: Icons.color_lens_outlined,
+                                    label: l10n.themeColorModeColorful,
                                   ),
-                                )
-                              : _ColorfulThemeSection(
-                                  key: const ValueKey('colorful-theme-section'),
-                                  provider: provider,
-                                  onPickUiColor: (key) {
-                                    if (key == colorfulCourseTextColorKey) {
-                                      unawaited(
-                                        _openCourseTextColorDialog(
-                                          context,
-                                          provider,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    unawaited(
-                                      _openColorValueDialog(
-                                        context,
-                                        title: _uiColorLabel(context, key),
-                                        previewTitle: l10n.themeColorUiColors,
-                                        initialColorValue:
-                                            _effectiveUiColorValue(
-                                              context,
-                                              provider,
-                                              key,
-                                            ),
-                                        onApply: (colorValue) =>
-                                            provider.updateColorfulUiColorValue(
-                                              key,
-                                              colorValue,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                  onPickGeneralMonthTextColor: (key) {
-                                    unawaited(
-                                      _openColorValueDialog(
-                                        context,
-                                        title: _generalMonthTextColorLabel(
-                                          context,
-                                          key,
-                                        ),
-                                        previewTitle:
-                                            _generalMonthTextColorGroupTitle(
-                                              context,
-                                            ),
-                                        initialColorValue:
-                                            _effectiveGeneralMonthTextColorValue(
-                                              context,
-                                              provider,
-                                              key,
-                                            ),
-                                        onApply: (colorValue) =>
-                                            provider.updateColorfulUiColorValue(
-                                              key,
-                                              colorValue,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                  onPickCourseColor: (courseName) => unawaited(
-                                    _openColorValueDialog(
-                                      context,
-                                      title: courseName,
-                                      previewTitle: l10n.themeColorCourseColors,
-                                      initialColorValue:
-                                          provider
-                                              .courseNameColorValues[courseName] ??
-                                          provider.themeSeedColorValue,
-                                      onApply: (colorValue) =>
-                                          provider.updateCourseNameColorValue(
-                                            courseName,
-                                            colorValue,
-                                          ),
+                                ],
+                                selected: {provider.themeColorMode},
+                                onSelectionChanged: (selection) {
+                                  if (selection.isEmpty) {
+                                    return;
+                                  }
+                                  _updateSetting(
+                                    'Update theme color mode',
+                                    () => provider.updateThemeColorMode(
+                                      selection.first,
                                     ),
-                                  ),
-                                  onPickCalendarColor: (schedule) => unawaited(
-                                    _openColorValueDialog(
-                                      context,
-                                      title: schedule.name,
-                                      previewTitle: l10n.calendars,
-                                      initialColorValue:
-                                          effectiveGeneralCalendarColor(
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 180),
+                                switchInCurve: Curves.easeOut,
+                                switchOutCurve: Curves.easeIn,
+                                child:
+                                    provider.themeColorMode ==
+                                        themeColorModeSingle
+                                    ? _SingleThemeColorSection(
+                                        key: const ValueKey(
+                                          'single-theme-color-section',
+                                        ),
+                                        provider: provider,
+                                        hasCustomColor: hasCustomColor,
+                                        onSelectColor: (colorValue) =>
+                                            _updateSetting(
+                                              'Update theme seed color',
+                                              () => provider
+                                                  .updateThemeSeedColorValue(
+                                                    colorValue,
+                                                  ),
+                                            ),
+                                        onPickCustomColor: () => unawaited(
+                                          _openCustomColorDialog(
                                             context,
-                                            schedule,
-                                          ).toARGB32(),
-                                      onApply: (colorValue) =>
-                                          provider.updateGeneralSchedule(
-                                            schedule.copyWith(
-                                              colorValue: colorValue,
-                                            ),
+                                            provider,
                                           ),
-                                    ),
+                                        ),
+                                      )
+                                    : _ColorfulThemeSection(
+                                        key: const ValueKey(
+                                          'colorful-theme-section',
+                                        ),
+                                        provider: provider,
+                                        onPickUiColor: (key) {
+                                          if (key ==
+                                              colorfulCourseTextColorKey) {
+                                            unawaited(
+                                              _openCourseTextColorDialog(
+                                                context,
+                                                provider,
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          unawaited(
+                                            _openColorValueDialog(
+                                              context,
+                                              title: _uiColorLabel(
+                                                context,
+                                                key,
+                                              ),
+                                              previewTitle:
+                                                  l10n.themeColorUiColors,
+                                              initialColorValue:
+                                                  _effectiveUiColorValue(
+                                                    context,
+                                                    provider,
+                                                    key,
+                                                  ),
+                                              onApply: (colorValue) => provider
+                                                  .updateColorfulUiColorValue(
+                                                    key,
+                                                    colorValue,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        onPickGeneralMonthTextColor: (key) {
+                                          unawaited(
+                                            _openColorValueDialog(
+                                              context,
+                                              title:
+                                                  _generalMonthTextColorLabel(
+                                                    context,
+                                                    key,
+                                                  ),
+                                              previewTitle:
+                                                  _generalMonthTextColorGroupTitle(
+                                                    context,
+                                                  ),
+                                              initialColorValue:
+                                                  _effectiveGeneralMonthTextColorValue(
+                                                    context,
+                                                    provider,
+                                                    key,
+                                                  ),
+                                              onApply: (colorValue) => provider
+                                                  .updateColorfulUiColorValue(
+                                                    key,
+                                                    colorValue,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        onPickCourseColor: (courseName) => unawaited(
+                                          _openColorValueDialog(
+                                            context,
+                                            title: courseName,
+                                            previewTitle:
+                                                l10n.themeColorCourseColors,
+                                            initialColorValue:
+                                                provider
+                                                    .courseNameColorValues[courseName] ??
+                                                provider.themeSeedColorValue,
+                                            onApply: (colorValue) => provider
+                                                .updateCourseNameColorValue(
+                                                  courseName,
+                                                  colorValue,
+                                                ),
+                                          ),
+                                        ),
+                                        onPickCalendarColor: (schedule) =>
+                                            unawaited(
+                                              _openColorValueDialog(
+                                                context,
+                                                title: schedule.name,
+                                                previewTitle: l10n.calendars,
+                                                initialColorValue:
+                                                    effectiveGeneralCalendarColor(
+                                                      context,
+                                                      schedule,
+                                                    ).toARGB32(),
+                                                onApply: (colorValue) =>
+                                                    provider
+                                                        .updateGeneralSchedule(
+                                                          schedule.copyWith(
+                                                            colorValue:
+                                                                colorValue,
+                                                          ),
+                                                        ),
+                                              ),
+                                            ),
+                                      ),
+                              ),
+                            ),
+                            if (provider.isStudentMode) ...[
+                              const SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: _OutlineSettingsCard(
+                                  key: const ValueKey(
+                                    'theme-outline-settings-card',
+                                  ),
+                                  provider: provider,
+                                  effectiveOutlineColorValue:
+                                      effectiveOutlineColorValue,
+                                  outlineWidth: outlineWidth,
+                                  onTap: () => unawaited(
+                                    _openOutlineSettingsPage(context, provider),
                                   ),
                                 ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      if (provider.isStudentMode) ...[
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _OutlineSettingsCard(
-                            key: const ValueKey('theme-outline-settings-card'),
-                            provider: provider,
-                            effectiveOutlineColorValue:
-                                effectiveOutlineColorValue,
-                            outlineWidth: outlineWidth,
-                            onTap: () => unawaited(
-                              _openOutlineSettingsPage(context, provider),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1058,24 +1101,57 @@ class _OutlineSwitchRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(icon, color: colors.onSurfaceVariant),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
+                final label = Text(
+                  title,
+                  softWrap: true,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w500,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Switch(value: value, onChanged: onChanged),
-              ],
+                );
+                final leading = SizedBox.square(
+                  dimension: 40,
+                  child: Center(
+                    child: Icon(icon, color: colors.onSurfaceVariant),
+                  ),
+                );
+                final toggleControl = Switch(
+                  value: value,
+                  onChanged: onChanged,
+                );
+                if (constraints.maxWidth < 240 || textScale > 1.3) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          leading,
+                          const SizedBox(width: 12),
+                          Expanded(child: label),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: toggleControl,
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    leading,
+                    const SizedBox(width: 12),
+                    Expanded(child: label),
+                    const SizedBox(width: 12),
+                    toggleControl,
+                  ],
+                );
+              },
             ),
           ),
         ),

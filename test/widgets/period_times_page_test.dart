@@ -128,9 +128,26 @@ Future<void> _pumpPeriodTimesPage(
 }
 
 void main() {
+  testWidgets('caps the period editor on Android tablets', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+
+    await _pumpPeriodTimesPage(tester, provider);
+
+    final list = find.byType(ListView).last;
+    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('period time cards fit narrow phone width', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 640);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     final provider = await _createProvider();
     await _pumpPeriodTimesPage(
@@ -141,6 +158,34 @@ void main() {
 
     expect(find.byType(PeriodTimesPage), findsOneWidget);
     expect(find.text('Start time'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('period time editor remains reachable on a short scaled phone', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final provider = await _createProvider();
+    await _pumpPeriodTimesPage(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    final list = find.byType(ListView).last;
+    await tester.fling(list, const Offset(0, -1200), 5000);
+    await tester.pumpAndSettle();
+    final scrollable = tester.state<ScrollableState>(
+      find.byType(Scrollable).last,
+    );
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, 'Add period'), findsOneWidget);
+    expect(tester.getRect(list).bottom, lessThanOrEqualTo(568));
     expect(tester.takeException(), isNull);
   });
 

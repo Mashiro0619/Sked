@@ -1001,7 +1001,7 @@ void main() {
     expect(find.byType(SnackBar), findsOneWidget);
   });
 
-  testWidgets('compact navigation remains usable with RTL large text', (
+  testWidgets('compact navigation remains usable with large text', (
     tester,
   ) async {
     final provider = await _providerFor(
@@ -1014,7 +1014,7 @@ void main() {
     await tester.pumpWidget(
       _appFor(
         provider,
-        locale: const Locale('ar'),
+        locale: const Locale('de'),
         textScaler: const TextScaler.linear(1.8),
       ),
     );
@@ -1040,7 +1040,7 @@ void main() {
     await tester.pumpWidget(
       _appFor(
         provider,
-        locale: const Locale('ar'),
+        locale: const Locale('de'),
         textScaler: const TextScaler.linear(2),
       ),
     );

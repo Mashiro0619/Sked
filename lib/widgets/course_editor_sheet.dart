@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 import 'ui_command.dart';
@@ -63,6 +64,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   bool _hasPopped = false;
   bool _pickerOpen = false;
   bool _actionInProgress = false;
+  late bool _scheduleSectionExpanded;
+  late bool _detailsSectionExpanded;
 
   bool get _blocked => _hasPopped || _pickerOpen || _actionInProgress;
 
@@ -118,6 +121,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
               initial?.endMinutes ?? defaultEndMinutes,
             ),
     );
+    _scheduleSectionExpanded = true;
+    _detailsSectionExpanded =
+        _teacherController.text.trim().isNotEmpty ||
+        _creditController.text.trim().isNotEmpty ||
+        _remarksController.text.trim().isNotEmpty ||
+        _customFieldsController.text.trim().isNotEmpty;
   }
 
   @override
@@ -136,11 +145,21 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     final l10n = AppLocalizations.of(context);
     final linkedPeriods = _selectedPeriods;
     final linkedPeriodsLabel = _formatPeriodsLabel(linkedPeriods, l10n);
+    final mediaQuery = MediaQuery.of(context);
+    final compactSheet =
+        mediaQuery.size.height < 700 && mediaQuery.viewInsets.bottom == 0;
+    final sheetHeightFactor = mediaQuery.viewInsets.bottom > 0
+        ? 1.0
+        : compactSheet
+        ? 0.96
+        : 0.72;
 
     return PopScope(
       canPop: !_actionInProgress && !_pickerOpen && !_hasPopped,
       child: AppSheetScaffold(
-        heightFactor: 0.72,
+        // Short Android windows and the IME need enough room for both the
+        // fixed action area and a useful scrollable form viewport.
+        heightFactor: sheetHeightFactor,
         contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
         title: Text(
           widget.initialCourse == null
@@ -196,114 +215,151 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            _ResponsiveFormRow(
-              breakpoint: 520,
-              children: [
-                _SelectionTile(
-                  title: l10n.dayOfWeek,
-                  subtitle: formatDayOfWeekLabel(
-                    _selectedDayOfWeek,
-                    localeCode: app_locale.localeCodeFromLocale(
-                      Localizations.localeOf(context),
-                    ),
-                  ),
-                  icon: Icons.today_outlined,
-                  enabled: !_blocked,
-                  onTap: _blocked ? null : _pickDayOfWeek,
-                ),
-                _SelectionTile(
-                  title: l10n.semesterWeeks,
-                  subtitle: formatSemesterWeeksLabel(
-                    _selectedSemesterWeeks,
-                    totalWeeks: widget.totalWeeks,
-                    localeCode: app_locale.localeCodeFromLocale(
-                      Localizations.localeOf(context),
-                    ),
-                  ),
-                  icon: Icons.edit_calendar,
-                  enabled: !_blocked,
-                  onTap: _blocked ? null : _pickSemesterWeeks,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _ResponsiveFormRow(
-              breakpoint: 520,
-              children: [
-                _SelectionTile(
-                  title: l10n.startTime,
-                  subtitle: _formatTimeOfDay(_startTime),
-                  icon: Icons.schedule,
-                  enabled: !_blocked,
-                  onTap: _blocked ? null : () => _pickTime(isStart: true),
-                ),
-                _SelectionTile(
-                  title: l10n.endTime,
-                  subtitle: _formatTimeOfDay(_endTime),
-                  icon: Icons.schedule,
-                  enabled: !_blocked,
-                  onTap: _blocked ? null : () => _pickTime(isStart: false),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _SelectionTile(
-              title: l10n.linkedPeriods,
+            _EditorSection(
+              icon: Icons.event_note_outlined,
+              title: '${l10n.dayOfWeek} · ${l10n.time}',
               subtitle: linkedPeriods.isEmpty
                   ? l10n.linkedPeriodsUnmatched
                   : linkedPeriodsLabel,
-              icon: Icons.tune,
+              initiallyExpanded: _scheduleSectionExpanded,
+              onExpansionChanged: (expanded) =>
+                  setState(() => _scheduleSectionExpanded = expanded),
               enabled: !_blocked,
-              onTap: _blocked ? null : _pickPeriods,
+              child: _buildScheduleFields(l10n),
             ),
-            const SizedBox(height: 12),
-            _ResponsiveFormRow(
-              children: [
-                TextField(
-                  controller: _teacherController,
-                  enabled: !_blocked,
-                  decoration: InputDecoration(
-                    labelText: l10n.teacherName,
-                    prefixIcon: const Icon(Icons.badge_outlined),
-                  ),
-                ),
-                TextField(
-                  controller: _creditController,
-                  enabled: !_blocked,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: l10n.credits,
-                    prefixIcon: const Icon(Icons.payments_outlined),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _remarksController,
+            const SizedBox(height: 8),
+            _EditorSection(
+              icon: Icons.notes_outlined,
+              title: '${l10n.teacherName} · ${l10n.remarks}',
+              subtitle: _detailsSectionExpanded ? null : l10n.customFields,
+              initiallyExpanded: _detailsSectionExpanded,
+              onExpansionChanged: (expanded) =>
+                  setState(() => _detailsSectionExpanded = expanded),
               enabled: !_blocked,
-              decoration: InputDecoration(
-                labelText: l10n.remarks,
-                prefixIcon: const Icon(Icons.notes_outlined),
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _customFieldsController,
-              enabled: !_blocked,
-              decoration: InputDecoration(
-                labelText: l10n.customFields,
-                hintText: l10n.customFieldsHint,
-                prefixIcon: const Icon(Icons.data_object_outlined),
-              ),
-              maxLines: 3,
+              child: _buildDetailsFields(l10n),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildScheduleFields(AppLocalizations l10n) {
+    final localeCode = app_locale.localeCodeFromLocale(
+      Localizations.localeOf(context),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ResponsiveFormRow(
+          breakpoint: 520,
+          children: [
+            _SelectionTile(
+              title: l10n.dayOfWeek,
+              subtitle: formatDayOfWeekLabel(
+                _selectedDayOfWeek,
+                localeCode: localeCode,
+              ),
+              icon: Icons.today_outlined,
+              enabled: !_blocked,
+              onTap: _blocked ? null : _pickDayOfWeek,
+            ),
+            _SelectionTile(
+              title: l10n.semesterWeeks,
+              subtitle: formatSemesterWeeksLabel(
+                _selectedSemesterWeeks,
+                totalWeeks: widget.totalWeeks,
+                localeCode: localeCode,
+              ),
+              icon: Icons.edit_calendar,
+              enabled: !_blocked,
+              onTap: _blocked ? null : _pickSemesterWeeks,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _ResponsiveFormRow(
+          breakpoint: 520,
+          children: [
+            _SelectionTile(
+              title: l10n.startTime,
+              subtitle: _formatTimeOfDay(_startTime),
+              icon: Icons.schedule,
+              enabled: !_blocked,
+              onTap: _blocked ? null : () => _pickTime(isStart: true),
+            ),
+            _SelectionTile(
+              title: l10n.endTime,
+              subtitle: _formatTimeOfDay(_endTime),
+              icon: Icons.schedule,
+              enabled: !_blocked,
+              onTap: _blocked ? null : () => _pickTime(isStart: false),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _SelectionTile(
+          title: l10n.linkedPeriods,
+          subtitle: _selectedPeriods.isEmpty
+              ? l10n.linkedPeriodsUnmatched
+              : _formatPeriodsLabel(_selectedPeriods, l10n),
+          icon: Icons.tune,
+          enabled: !_blocked,
+          onTap: _blocked ? null : _pickPeriods,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsFields(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ResponsiveFormRow(
+          children: [
+            TextField(
+              controller: _teacherController,
+              enabled: !_blocked,
+              decoration: InputDecoration(
+                labelText: l10n.teacherName,
+                prefixIcon: const Icon(Icons.badge_outlined),
+              ),
+            ),
+            TextField(
+              controller: _creditController,
+              enabled: !_blocked,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: l10n.credits,
+                prefixIcon: const Icon(Icons.payments_outlined),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _remarksController,
+          enabled: !_blocked,
+          decoration: InputDecoration(
+            labelText: l10n.remarks,
+            prefixIcon: const Icon(Icons.notes_outlined),
+          ),
+          maxLines: 2,
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _customFieldsController,
+          enabled: !_blocked,
+          decoration: InputDecoration(
+            labelText: l10n.customFields,
+            hintText: l10n.customFieldsHint,
+            prefixIcon: const Icon(Icons.data_object_outlined),
+          ),
+          maxLines: 3,
+        ),
+      ],
     );
   }
 
@@ -379,6 +435,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
               }
 
               return AlertDialog(
+                insetPadding: _editorDialogInsetPadding(context),
                 title: Text(l10n.selectSemesterWeeks),
                 content: ExpressiveDialogContent(
                   maxWidth: 360,
@@ -417,41 +474,52 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                                 crossAxisCount: 4,
                                 mainAxisSpacing: 8,
                                 crossAxisSpacing: 8,
-                                childAspectRatio: 1.6,
+                                mainAxisExtent: 48,
                               ),
                           itemBuilder: (context, index) {
                             final week = index + 1;
                             final selected = draft.contains(week);
                             final colorScheme = Theme.of(context).colorScheme;
-                            return Material(
-                              color: selected
-                                  ? colorScheme.primary.withValues(alpha: 0.12)
-                                  : colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(12),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () {
-                                  setState(() {
-                                    if (selected) {
-                                      draft.remove(week);
-                                    } else {
-                                      draft.add(week);
-                                    }
-                                  });
-                                },
-                                child: Center(
-                                  child: Text(
-                                    '$week',
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge
-                                        ?.copyWith(
-                                          color: selected
-                                              ? colorScheme.primary
-                                              : colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                            return Semantics(
+                              key: ValueKey('course-semester-week-$week'),
+                              button: true,
+                              selected: selected,
+                              label: l10n.weekLabel(week),
+                              child: ExcludeSemantics(
+                                child: Material(
+                                  color: selected
+                                      ? colorScheme.primary.withValues(
+                                          alpha: 0.12,
+                                        )
+                                      : colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      setState(() {
+                                        if (selected) {
+                                          draft.remove(week);
+                                        } else {
+                                          draft.add(week);
+                                        }
+                                      });
+                                    },
+                                    child: Center(
+                                      child: Text(
+                                        '$week',
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelLarge
+                                            ?.copyWith(
+                                              color: selected
+                                                  ? colorScheme.primary
+                                                  : colorScheme
+                                                        .onSurfaceVariant,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -547,6 +615,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
               }
 
               return AlertDialog(
+                insetPadding: _editorDialogInsetPadding(context),
                 title: Text(l10n.selectLinkedPeriods),
                 content: ExpressiveDialogContent(
                   maxWidth: 360,
@@ -833,6 +902,7 @@ class _DeleteCourseConfirmationDialogState
     return PopScope(
       canPop: !_busy && !_popped,
       child: AlertDialog(
+        insetPadding: _editorDialogInsetPadding(context),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -875,6 +945,7 @@ class _WeekdayPickerDialog extends StatelessWidget {
     );
 
     return AlertDialog(
+      insetPadding: _editorDialogInsetPadding(context),
       title: Text(l10n.selectDayOfWeek),
       titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
       contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -1043,6 +1114,56 @@ class _ResponsiveFormRow extends StatelessWidget {
   }
 }
 
+/// A persistent, keyboard-friendly disclosure section for the course sheet.
+/// ExpansionTile keeps its children alive so collapsing a section never clears
+/// a text controller or a pending picker selection.
+class _EditorSection extends StatelessWidget {
+  const _EditorSection({
+    required this.icon,
+    required this.title,
+    required this.initiallyExpanded,
+    required this.onExpansionChanged,
+    required this.enabled,
+    required this.child,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool initiallyExpanded;
+  final ValueChanged<bool> onExpansionChanged;
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = skedShapeSchemeOf(context).field;
+    return Material(
+      color: colors.surfaceContainerLow,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
+        maintainState: true,
+        enabled: enabled,
+        onExpansionChanged: enabled ? onExpansionChanged : null,
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        tilePadding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
+        childrenPadding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+        shape: shape,
+        collapsedShape: shape,
+        backgroundColor: colors.surfaceContainerLow,
+        collapsedBackgroundColor: colors.surfaceContainerLow,
+        children: [child],
+      ),
+    );
+  }
+}
+
 class _SelectionTile extends StatelessWidget {
   const _SelectionTile({
     required this.title,
@@ -1130,4 +1251,12 @@ class _SelectionTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Keep secondary editor dialogs usable on Android's narrow portrait widths.
+/// The platform AlertDialog default inset is 40dp, which leaves only 240dp on
+/// a 320dp viewport before content padding and trailing actions are measured.
+EdgeInsets _editorDialogInsetPadding(BuildContext context) {
+  final width = MediaQuery.sizeOf(context).width;
+  return EdgeInsets.symmetric(horizontal: width < 480 ? 16 : 40, vertical: 24);
 }

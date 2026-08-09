@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,8 +58,10 @@ void main() {
   testWidgets('real course sheet offsets title from its top edge', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(430, 776));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(430, 776);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       _localizedApp(
@@ -105,8 +108,10 @@ void main() {
   testWidgets('keeps the editor title below the sheet top edge', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(430, 776));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(430, 776);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       _localizedApp(
@@ -125,8 +130,10 @@ void main() {
   });
 
   testWidgets('lays out on narrow screens', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 640);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       _localizedApp(
@@ -156,6 +163,127 @@ void main() {
 
     expect(find.byType(CourseEditorSheet), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps an editable form viewport above the Android IME', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(2),
+            viewInsets: const EdgeInsets.only(bottom: 220),
+          ),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => unawaited(
+                showAppModalSheet<void>(
+                  context: context,
+                  enableDrag: false,
+                  builder: (_) => CourseEditorSheet(
+                    periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+                    totalWeeks: 18,
+                    dayOfWeek: 1,
+                    initialCourse: CourseItem(
+                      id: 'course-ime',
+                      name: 'Android editing',
+                      teacher: 'Teacher',
+                      location: 'Room 101',
+                      dayOfWeek: 1,
+                      semesterWeeks: buildAllSemesterWeeks(18),
+                      periods: const [1],
+                      startMinutes: 8 * 60,
+                      endMinutes: 8 * 60 + 45,
+                      timeRange: '08:00-08:45',
+                      credit: 2,
+                      remarks: 'Keep this draft reachable',
+                      customFields: const {},
+                    ),
+                  ),
+                ),
+              ),
+              child: const Text('Open course sheet'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open course sheet'));
+    await tester.pumpAndSettle();
+
+    final editor = find.byType(CourseEditorSheet);
+    final scrollView = find.descendant(
+      of: editor,
+      matching: find.byType(SingleChildScrollView),
+    );
+    expect(scrollView, findsOneWidget);
+    expect(tester.getSize(scrollView).height, greaterThanOrEqualTo(48));
+    expect(find.widgetWithText(FilledButton, 'Save'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('semester week cells keep Android size and selected semantics', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      _localizedApp(
+        CourseEditorSheet(
+          periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+          totalWeeks: 18,
+          dayOfWeek: 1,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final weeks = find.text('Weeks').last;
+    await tester.ensureVisible(weeks);
+    await tester.pumpAndSettle();
+    await tester.tap(weeks);
+    await tester.pumpAndSettle();
+
+    final firstWeek = find.byKey(const ValueKey('course-semester-week-1'));
+    expect(tester.getSize(firstWeek).height, greaterThanOrEqualTo(48));
+    expect(
+      tester
+          .getSemantics(firstWeek)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected,
+      ui.Tristate.isTrue,
+    );
+
+    await tester.tap(firstWeek);
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(firstWeek)
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected,
+      ui.Tristate.isFalse,
+    );
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 
   testWidgets('secondary picker ignores rapid duplicate taps', (tester) async {

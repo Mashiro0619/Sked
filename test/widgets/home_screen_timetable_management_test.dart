@@ -1536,7 +1536,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('first launch onboarding fits narrow scaled Arabic layouts', (
+  testWidgets('first launch onboarding fits narrow scaled localized layouts', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -1552,15 +1552,15 @@ void main() {
     await _pumpAppHomeScreenWithProvider(
       tester,
       provider,
-      locale: const Locale('ar'),
+      locale: const Locale('de'),
       textScaler: TextScaler.linear(1.8),
     );
 
     final onboarding = find.byKey(const ValueKey('first-launch-onboarding'));
     expect(onboarding, findsOneWidget);
     expect(tester.getSize(onboarding).width, 320);
-    expect(Directionality.of(tester.element(onboarding)), TextDirection.rtl);
-    final l10n = lookupAppLocalizations(const Locale('ar'));
+    expect(Directionality.of(tester.element(onboarding)), TextDirection.ltr);
+    final l10n = lookupAppLocalizations(const Locale('de'));
     expect(find.text(l10n.firstLaunchTitle), findsOneWidget);
     expect(
       tester.getTopLeft(find.text(l10n.firstLaunchTitle)).dy,
@@ -2106,6 +2106,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
+    final selectedWeekday = normalizeDayOfWeek(DateTime.now().weekday);
 
     await _pumpHomeScreenWithProvider(tester, provider, settle: false);
 
@@ -2114,7 +2115,10 @@ void main() {
       matching: find.byType(Scrollable),
     );
     final position = tester.state<ScrollableState>(scrollable).position;
-    expect(position.pixels, closeTo(position.maxScrollExtent, 0.01));
+    final selectedCenter = ((selectedWeekday - 1) * 64) + 29;
+    final expectedTarget = (selectedCenter - position.viewportDimension / 2)
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    expect(position.pixels, closeTo(expectedTarget, 0.01));
   });
 
   testWidgets('student timetable fits narrow width with long course text', (

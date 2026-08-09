@@ -508,6 +508,7 @@ void main() {
         'fr',
       );
       expect(app_locale.resolveFirstLaunchLocaleCode(const Locale('ru')), 'ru');
+      expect(app_locale.resolveFirstLaunchLocaleCode(const Locale('ar')), 'en');
       expect(
         app_locale.resolveFirstLaunchLocaleCode(const Locale('tlh')),
         'en',
@@ -1357,7 +1358,23 @@ void main() {
       expect(app_locale.normalizeLocaleCode('zh_TW'), 'zh-Hant');
       expect(app_locale.normalizeLocaleCode('zh-CN'), 'zh');
       expect(app_locale.normalizeLocaleCode('ja'), 'ja');
+      // Arabic is intentionally not a supported UI locale; old values fail
+      // closed to the default LTR locale instead of re-enabling RTL layout.
+      expect(
+        app_locale.normalizeLocaleCode('ar'),
+        app_locale.defaultLocaleCode,
+      );
+      expect(app_locale.isSupportedLocaleCode('ar'), isFalse);
+      expect(
+        app_locale
+            .supportedLanguageOptions(
+              lookupAppLocalizations(const Locale('en')),
+            )
+            .any((option) => option.code == 'ar'),
+        isFalse,
+      );
       expect(app_locale.appLocaleFromCode('en-US'), const Locale('en'));
+      expect(app_locale.appLocaleFromCode('ar'), const Locale('en'));
       expect(
         app_locale.appLocaleFromCode('zh_TW'),
         const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
@@ -3468,7 +3485,9 @@ void main() {
       expect(find.text('周次'), findsOneWidget);
       expect(find.text('第 1-18 周'), findsOneWidget);
       expect(find.text('关联节次'), findsOneWidget);
-      expect(find.text('第 1-2 节'), findsOneWidget);
+      // The expanded schedule section keeps the linked-period summary in
+      // its header as well as in the editable selection tile.
+      expect(find.text('第 1-2 节'), findsNWidgets(2));
     });
 
     testWidgets('课程详情优先展示地点和时间卡片', (tester) async {

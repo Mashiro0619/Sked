@@ -50,33 +50,42 @@ class _TextImportPageState extends State<TextImportPage> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _controller,
-            enabled: !_isSubmitting,
-            minLines: 12,
-            maxLines: 20,
-            decoration: InputDecoration(
-              labelText: widget.labelText ?? l10n.jsonContent,
-              hintText: widget.hintText ?? l10n.pasteJsonContentHint,
-              alignLabelWithHint: true,
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              children: [
+                TextField(
+                  controller: _controller,
+                  enabled: !_isSubmitting,
+                  minLines: 12,
+                  maxLines: 20,
+                  decoration: InputDecoration(
+                    labelText: widget.labelText ?? l10n.jsonContent,
+                    hintText: widget.hintText ?? l10n.pasteJsonContentHint,
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _isSubmitting ? null : _submit,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.file_download_outlined),
+                  label: Text(widget.submitText ?? l10n.importAction),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _isSubmitting ? null : _submit,
-            icon: _isSubmitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.file_download_outlined),
-            label: Text(widget.submitText ?? l10n.importAction),
-          ),
-        ],
+        ),
       ),
     );
   }

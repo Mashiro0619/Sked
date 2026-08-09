@@ -29,83 +29,122 @@ class _TimetableDisplaySettingsPageState
       builder: (context, provider, child) {
         final l10n = AppLocalizations.of(context);
         return Scaffold(
-          appBar: AppBar(title: Text(l10n.timetableDisplaySettings)),
+          appBar: AppBar(
+            title: Semantics(
+              header: true,
+              label: l10n.timetableDisplaySettings,
+              child: SingleChildScrollView(
+                key: const ValueKey('timetable-display-settings-title-scroll'),
+                scrollDirection: Axis.horizontal,
+                physics: const ClampingScrollPhysics(),
+                child: ExcludeSemantics(
+                  child: Text(
+                    l10n.timetableDisplaySettings,
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
+                ),
+              ),
+            ),
+          ),
           body: Column(
             children: [
               UiCommandBusyIndicator(busy: uiCommandBusy),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: [
-                    SettingsSectionHeader(title: l10n.generalPopupSection),
-                    SettingsSwitchTile(
-                      icon: Icons.open_in_full_outlined,
-                      value: provider.closeCoursePopupOnOutsideTap,
-                      title: l10n.coursePopupDismissSetting,
-                      subtitle: l10n.coursePopupDismissSettingHint,
-                      onChanged: uiCommandBusy
-                          ? null
-                          : (value) => _updateSetting(
-                              'Update course popup dismissal',
-                              () => provider.updateCloseCoursePopupOnOutsideTap(
-                                value,
-                              ),
-                            ),
+                child: SafeArea(
+                  top: false,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: ListView(
+                        key: const ValueKey('timetable-display-settings-list'),
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        children: [
+                          SettingsSectionHeader(
+                            title: l10n.generalPopupSection,
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.open_in_full_outlined,
+                            value: provider.closeCoursePopupOnOutsideTap,
+                            title: l10n.coursePopupDismissSetting,
+                            subtitle: l10n.coursePopupDismissSettingHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update course popup dismissal',
+                                    () => provider
+                                        .updateCloseCoursePopupOnOutsideTap(
+                                          value,
+                                        ),
+                                  ),
+                          ),
+                          SettingsSectionHeader(
+                            title: l10n.generalScheduleDisplaySection,
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.view_timeline_outlined,
+                            value: provider.preserveTimetableGaps,
+                            title: l10n.preserveTimetableGaps,
+                            subtitle: l10n.preserveTimetableGapsHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update timetable gap preservation',
+                                    () => provider.updatePreserveTimetableGaps(
+                                      value,
+                                    ),
+                                  ),
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.history_outlined,
+                            value: provider.showPastEndedCourses,
+                            title: l10n.showPastEndedCourses,
+                            subtitle: l10n.showPastEndedCoursesHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update past course visibility',
+                                    () => provider.updateShowPastEndedCourses(
+                                      value,
+                                    ),
+                                  ),
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.upcoming_outlined,
+                            value: provider.showFutureCourses,
+                            title: l10n.showFutureCourses,
+                            subtitle: l10n.showFutureCoursesHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update future course visibility',
+                                    () =>
+                                        provider.updateShowFutureCourses(value),
+                                  ),
+                          ),
+                          SettingsSectionHeader(
+                            title: l10n.generalTimeGridSection,
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.grid_4x4_outlined,
+                            value: provider.showTimetableGridLines,
+                            title: l10n.showTimetableGridLines,
+                            subtitle: l10n.showTimetableGridLinesHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update timetable grid line visibility',
+                                    () => provider.updateShowTimetableGridLines(
+                                      value,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SettingsSectionHeader(
-                      title: l10n.generalScheduleDisplaySection,
-                    ),
-                    SettingsSwitchTile(
-                      icon: Icons.view_timeline_outlined,
-                      value: provider.preserveTimetableGaps,
-                      title: l10n.preserveTimetableGaps,
-                      subtitle: l10n.preserveTimetableGapsHint,
-                      onChanged: uiCommandBusy
-                          ? null
-                          : (value) => _updateSetting(
-                              'Update timetable gap preservation',
-                              () => provider.updatePreserveTimetableGaps(value),
-                            ),
-                    ),
-                    SettingsSwitchTile(
-                      icon: Icons.history_outlined,
-                      value: provider.showPastEndedCourses,
-                      title: l10n.showPastEndedCourses,
-                      subtitle: l10n.showPastEndedCoursesHint,
-                      onChanged: uiCommandBusy
-                          ? null
-                          : (value) => _updateSetting(
-                              'Update past course visibility',
-                              () => provider.updateShowPastEndedCourses(value),
-                            ),
-                    ),
-                    SettingsSwitchTile(
-                      icon: Icons.upcoming_outlined,
-                      value: provider.showFutureCourses,
-                      title: l10n.showFutureCourses,
-                      subtitle: l10n.showFutureCoursesHint,
-                      onChanged: uiCommandBusy
-                          ? null
-                          : (value) => _updateSetting(
-                              'Update future course visibility',
-                              () => provider.updateShowFutureCourses(value),
-                            ),
-                    ),
-                    SettingsSectionHeader(title: l10n.generalTimeGridSection),
-                    SettingsSwitchTile(
-                      icon: Icons.grid_4x4_outlined,
-                      value: provider.showTimetableGridLines,
-                      title: l10n.showTimetableGridLines,
-                      subtitle: l10n.showTimetableGridLinesHint,
-                      onChanged: uiCommandBusy
-                          ? null
-                          : (value) => _updateSetting(
-                              'Update timetable grid line visibility',
-                              () =>
-                                  provider.updateShowTimetableGridLines(value),
-                            ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],

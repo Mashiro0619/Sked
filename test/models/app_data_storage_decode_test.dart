@@ -180,6 +180,15 @@ void main() {
       expect(AppData.decodeStorageSnapshot(source).toJson(), isNotEmpty);
     });
 
+    test('normalizes the removed Arabic locale without enabling RTL', () {
+      final snapshot = validSnapshot()..['localeCode'] = 'ar';
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+
+      expect(decoded.localeCode, 'en');
+      expect(decoded.toJson()['localeCode'], 'en');
+    });
+
     test('preserves stored theme modes and legacy missing-field fallback', () {
       for (final themeMode in const ['system', 'light', 'dark']) {
         final snapshot = validSnapshot();

@@ -145,38 +145,52 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          UiCommandBusyIndicator(busy: _interactionBlocked),
-          Expanded(
-            child: AbsorbPointer(
-              key: const ValueKey('period-times-editor-guard'),
-              absorbing: _interactionBlocked,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: l10n.periodTimeSetName,
-                      prefixIcon: const Icon(Icons.schedule_outlined),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            UiCommandBusyIndicator(busy: _interactionBlocked),
+            Expanded(
+              child: AbsorbPointer(
+                key: const ValueKey('period-times-editor-guard'),
+                absorbing: _interactionBlocked,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      children: [
+                        TextField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: l10n.periodTimeSetName,
+                            prefixIcon: const Icon(Icons.schedule_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        for (
+                          var index = 0;
+                          index < _periodTimes.length;
+                          index++
+                        ) ...[
+                          _buildPeriodCard(index),
+                          const SizedBox(height: 12),
+                        ],
+                        FilledButton.icon(
+                          onPressed: _addPeriod,
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.addOnePeriod),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  for (var index = 0; index < _periodTimes.length; index++) ...[
-                    _buildPeriodCard(index),
-                    const SizedBox(height: 12),
-                  ],
-                  FilledButton.icon(
-                    onPressed: _addPeriod,
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.addOnePeriod),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
     return PopScope<void>(canPop: !_interactionBlocked, child: page);
@@ -244,28 +258,36 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _TimeCell(
-                    label: l10n.startTime,
-                    value: formatMinutes(period.startMinutes),
-                    onTap: _timePickerOpen
-                        ? null
-                        : () => _pickPeriodTime(index, isStart: true),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TimeCell(
-                    label: l10n.endTime,
-                    value: formatMinutes(period.endMinutes),
-                    onTap: _timePickerOpen
-                        ? null
-                        : () => _pickPeriodTime(index, isStart: false),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
+                final start = _TimeCell(
+                  label: l10n.startTime,
+                  value: formatMinutes(period.startMinutes),
+                  onTap: _timePickerOpen
+                      ? null
+                      : () => _pickPeriodTime(index, isStart: true),
+                );
+                final end = _TimeCell(
+                  label: l10n.endTime,
+                  value: formatMinutes(period.endMinutes),
+                  onTap: _timePickerOpen
+                      ? null
+                      : () => _pickPeriodTime(index, isStart: false),
+                );
+                if (constraints.maxWidth < 360 || textScale > 1.3) {
+                  return Column(
+                    children: [start, const SizedBox(height: 8), end],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: start),
+                    const SizedBox(width: 12),
+                    Expanded(child: end),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 10),
             Wrap(

@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
-import 'app_localizations_ar.dart';
 import 'app_localizations_bg.dart';
 import 'app_localizations_cs.dart';
 import 'app_localizations_da.dart';
@@ -118,7 +117,6 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
-    Locale('ar'),
     Locale('bg'),
     Locale('cs'),
     Locale('da'),
@@ -488,6 +486,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App'**
   String get settingsSectionApp;
+
+  /// No description provided for @settingsSectionCurrentWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Current timetable / calendar'**
+  String get settingsSectionCurrentWorkspace;
+
+  /// No description provided for @settingsSectionAppearanceLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance & language'**
+  String get settingsSectionAppearanceLanguage;
+
+  /// No description provided for @settingsSectionDataSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Data & security'**
+  String get settingsSectionDataSecurity;
+
+  /// No description provided for @settingsSectionAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About Sked'**
+  String get settingsSectionAbout;
 
   /// No description provided for @noTimetableSettings.
   ///
@@ -3678,7 +3700,6 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) => <String>[
-    'ar',
     'bg',
     'cs',
     'da',
@@ -3725,8 +3746,6 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
 
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'ar':
-      return AppLocalizationsAr();
     case 'bg':
       return AppLocalizationsBg();
     case 'cs':

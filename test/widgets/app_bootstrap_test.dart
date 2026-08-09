@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
+import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/main.dart' hide main;
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -80,6 +81,25 @@ class _ControlledShutdownProvider extends TimetableProvider {
 }
 
 void main() {
+  testWidgets('bootstrap gate uses the deterministic default locale', (
+    tester,
+  ) async {
+    tester.platformDispatcher.localeTestValue = const Locale('ar');
+    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+
+    await tester.pumpWidget(
+      AppBootstrap(lease: _FakeLease([false]), providerFactory: _provider),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffoldContext = tester.element(find.byType(Scaffold));
+    expect(
+      Localizations.localeOf(scaffoldContext),
+      appLocaleFromCode(defaultLocaleCode),
+    );
+    expect(find.text('Sked is already open'), findsOneWidget);
+  });
+
   testWidgets('does not create a provider before the lease is acquired', (
     tester,
   ) async {

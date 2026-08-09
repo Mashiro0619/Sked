@@ -50,31 +50,11 @@ class AppLanguageOption {
 }
 
 const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
-  'ar': AppLanguageMetadata(
-    code: 'ar',
-    nativeName: 'العربية',
-    englishName: 'Arabic',
-    localizedNames: {
-      'ar': 'العربية',
-      'de': 'Arabisch',
-      'en': 'Arabic',
-      'es': 'Árabe',
-      'fr': 'arabe',
-      'it': 'arabo',
-      'ja': 'アラビア語',
-      'ko': '아랍어',
-      'nl': 'Arabisch',
-      'pt': 'Árabe',
-      'ru': 'арабский',
-      'zh': '阿拉伯语',
-    },
-  ),
   'bg': AppLanguageMetadata(
     code: 'bg',
     nativeName: 'Български',
     englishName: 'Bulgarian',
     localizedNames: {
-      'ar': 'بلغارية',
       'bg': 'Български',
       'cs': 'bulharský',
       'da': 'bulgarsk',
@@ -104,7 +84,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Čeština',
     englishName: 'Czech',
     localizedNames: {
-      'ar': 'التشيكية',
       'cs': 'Čeština',
       'de': 'Tschechisch',
       'el': 'Τσεχική',
@@ -129,7 +108,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Dansk',
     englishName: 'Danish',
     localizedNames: {
-      'ar': 'الدنماركية',
       'cs': 'dánské',
       'da': 'Dansk',
       'de': 'Dänisch',
@@ -175,7 +153,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Ελληνικά',
     englishName: 'Greek',
     localizedNames: {
-      'ar': 'اليونانية',
       'de': 'Griechisch',
       'el': 'Ελληνικά',
       'en': 'Greek',
@@ -233,7 +210,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Eesti',
     englishName: 'Estonian',
     localizedNames: {
-      'ar': 'الإستونية',
       'bg': 'естонски',
       'cs': 'estonské',
       'da': 'estisk',
@@ -264,7 +240,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Suomi',
     englishName: 'Finnish',
     localizedNames: {
-      'ar': 'الفنلندية',
       'cs': 'finština',
       'de': 'Finnisch',
       'el': 'Φινλανδικά',
@@ -308,7 +283,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Magyar',
     englishName: 'Hungarian',
     localizedNames: {
-      'ar': 'المجرية',
       'cs': 'maďarské',
       'de': 'Ungarisch',
       'el': 'Ουγγρική',
@@ -336,7 +310,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'हिन्दी',
     englishName: 'Hindi',
     localizedNames: {
-      'ar': 'الهندية',
       'bg': 'Хинди',
       'cs': 'hindština',
       'da': 'hindi',
@@ -438,7 +411,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Polski',
     englishName: 'Polish',
     localizedNames: {
-      'ar': 'البولندية',
       'de': 'polnisch',
       'en': 'Polish',
       'es': 'polaco',
@@ -475,7 +447,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Română',
     englishName: 'Romanian',
     localizedNames: {
-      'ar': 'الرومانية',
       'cs': 'rumunské',
       'de': 'Rumänisch',
       'el': 'Ρουμανικά',
@@ -518,7 +489,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Slovenščina',
     englishName: 'Slovenian',
     localizedNames: {
-      'ar': 'السلوفينية',
       'bg': 'Словенски',
       'cs': 'Slovinský',
       'da': 'slovensk',
@@ -550,7 +520,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Svenska',
     englishName: 'Swedish',
     localizedNames: {
-      'ar': 'السويدية',
       'de': 'Schwedisch',
       'en': 'Swedish',
       'es': 'sueco',
@@ -571,7 +540,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'ไทย',
     englishName: 'Thai',
     localizedNames: {
-      'ar': 'تايلاندية',
       'de': 'thailändisch',
       'en': 'Thai',
       'es': 'tailandés',
@@ -593,7 +561,6 @@ const _supportedLanguageMetadata = <String, AppLanguageMetadata>{
     nativeName: 'Tiếng Việt',
     englishName: 'Vietnamese',
     localizedNames: {
-      'ar': 'فيتنامية',
       'de': 'vietnamesisch',
       'en': 'Vietnamese',
       'es': 'vietnamitas',
@@ -752,10 +719,15 @@ String languageLabelForLocaleCode(String localeCode, {AppLocalizations? l10n}) {
 }
 
 bool isSupportedLocaleCode(String localeCode) {
-  final normalizedCode = normalizeLocaleCode(localeCode);
-  return AppLocalizations.supportedLocales.any(
-    (locale) => localeCodeFromLocale(locale) == normalizedCode,
-  );
+  final raw = localeCode.trim();
+  if (raw.isEmpty) {
+    return false;
+  }
+  return _findSupportedLocale(
+        _canonicalizeChineseLocale(_parseLocaleCode(raw)),
+        allowLanguageFallback: true,
+      ) !=
+      null;
 }
 
 int _languageSortPriority(String localeCode) {

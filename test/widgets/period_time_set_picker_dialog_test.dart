@@ -72,10 +72,20 @@ void _mockDefaultPeriodTimesAsset() {
   addTearDown(() => messenger.setMockMessageHandler('flutter/assets', null));
 }
 
+void _setTestViewport(WidgetTester tester, Size size) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+}
+
+void _resetTestViewport(WidgetTester tester) {
+  tester.view.resetPhysicalSize();
+  tester.view.resetDevicePixelRatio();
+}
+
 void main() {
   testWidgets('dialog lays out on narrow screens', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
 
     final provider = await _createProvider();
 
@@ -130,8 +140,8 @@ void main() {
     tester,
   ) async {
     final semanticsHandle = tester.ensureSemantics();
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
 
     final initialData = buildInitialAppData(buildDefaultPeriodTimes());
     final defaultSet = initialData.studentMode.periodTimeSets.first;
@@ -244,6 +254,62 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     semanticsHandle.dispose();
+  });
+
+  testWidgets('dialog fits scaled localized Android layouts', (tester) async {
+    _setTestViewport(tester, const Size(320, 568));
+    addTearDown(() => _resetTestViewport(tester));
+
+    for (final locale in const [Locale('de')]) {
+      final provider = await _createProvider();
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => unawaited(
+                    showPeriodTimeSetPickerDialog(
+                      context,
+                      provider: provider,
+                      selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(ExpressiveDialogOption), findsWidgets);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(AlertDialog),
+              matching: find.byType(TextButton),
+            )
+            .last,
+      );
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('barrier dismisses the idle period set picker', (tester) async {

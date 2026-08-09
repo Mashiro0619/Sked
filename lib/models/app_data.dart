@@ -1453,9 +1453,15 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
     'localeCode',
     errorMessage: 'Stored locale setting is invalid.',
   );
-  if (json.containsKey('localeCode') &&
-      normalizeLocaleCode(json['localeCode'] as String) != json['localeCode']) {
-    throw const FormatException('Stored locale setting is invalid.');
+  if (json.containsKey('localeCode')) {
+    final storedLocaleCode = json['localeCode'] as String;
+    // Keep removed Arabic snapshots readable once, then AppData normalizes
+    // them to English so loading can never re-enable RTL.
+    final isRemovedLocale = storedLocaleCode.trim().toLowerCase() == 'ar';
+    if (!isRemovedLocale &&
+        normalizeLocaleCode(storedLocaleCode) != storedLocaleCode) {
+      throw const FormatException('Stored locale setting is invalid.');
+    }
   }
   for (final key in const [
     'privacyPolicyAcceptedVersion',

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../theme/sked_expressive_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
@@ -61,6 +62,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   bool _pickerOpen = false;
   bool _selectionDialogOpen = false;
   bool _actionInProgress = false;
+  bool _timeSectionExpanded = true;
+  bool _optionsSectionExpanded = true;
+  bool _detailsSectionExpanded = false;
+  bool _sectionsInitialized = false;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -131,6 +136,21 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     if (!_calendarOptions.any((calendar) => calendar.id == _calendarId)) {
       _calendarId = _resolveCalendarId(widget.initialEvent?.calendarId);
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_sectionsInitialized) return;
+    final mediaQuery = MediaQuery.of(context);
+    final textScale = mediaQuery.textScaler.scale(16) / 16;
+    final hasDetails =
+        _notesController.text.trim().isNotEmpty || _colorValue != null;
+    // Keep low-frequency fields discoverable on Android portrait and with
+    // accessibility text scaling; wider layouts start compact when empty.
+    _detailsSectionExpanded =
+        hasDetails || textScale > 1.3 || mediaQuery.size.height < 560;
+    _sectionsInitialized = true;
   }
 
   @override
@@ -306,12 +326,25 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    // A keyboard already reduces the route's usable height. Expanding the
+    // sheet to 96% in that state would leave the fixed action bar over the
+    // scrollable form on short Android windows.
+    final compactSheet =
+        mediaQuery.size.height < 700 && mediaQuery.viewInsets.bottom == 0;
+    final sheetHeightFactor = mediaQuery.viewInsets.bottom > 0
+        ? 1.0
+        : compactSheet
+        ? 0.96
+        : 0.84;
     return PopScope(
       canPop: !_blocked,
       child: Form(
         key: _formKey,
         child: AppSheetScaffold(
-          heightFactor: 0.84,
+          // Android portrait keyboards and short windows need nearly the
+          // whole viewport so the fixed action bar does not cover the form.
+          heightFactor: sheetHeightFactor,
           contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           title: Text(_isEditing ? l10n.editEvent : l10n.addEvent),
           leading: _isEditing
@@ -397,141 +430,185 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
                         ),
                       ],
                       const SizedBox(height: 8),
-                      _EventSwitchRow(
-                        icon: Icons.event_available_outlined,
-                        title: l10n.allDay,
-                        value: _isAllDay,
-                        onChanged: (value) => setState(() {
-                          _isAllDay = value;
-                          if (value && _endDate.isBefore(_startDate)) {
-                            _endDate = _startDate;
-                          }
-                        }),
-                      ),
-                      _DateTimeRange(
-                        start: _DateTimeRow(
-                          icon: Icons.play_arrow_outlined,
-                          label: l10n.eventStartTime,
-                          date: _startDate,
-                          time: _startTime,
-                          showTime: !_isAllDay,
-                          onPickDate: (_pickerOpen || _hasPopped)
-                              ? null
-                              : () async {
-                                  final picked = await _runPicker(
-                                    () => _pickDate(context, _startDate),
-                                  );
-                                  if (!mounted || picked == null) {
-                                    return;
-                                  }
-                                  setState(() {
-                                    _startDate = picked;
-                                    if (_endDate.isBefore(_startDate)) {
-                                      _endDate = _startDate;
-                                    }
-                                    if (_untilDate?.isBefore(_startDate) ??
-                                        false) {
-                                      _untilDate = _startDate;
-                                    }
-                                  });
-                                },
-                          onPickTime: (_pickerOpen || _hasPopped)
-                              ? null
-                              : () async {
-                                  final picked = await _runPicker(
-                                    () => _pickTime(context, _startTime),
-                                  );
-                                  if (!mounted || picked == null) {
-                                    return;
-                                  }
-                                  setState(() => _startTime = picked);
-                                },
-                        ),
-                        end: _DateTimeRow(
-                          icon: Icons.stop_outlined,
-                          label: l10n.eventEndTime,
-                          date: _endDate,
-                          time: _endTime,
-                          showTime: !_isAllDay,
-                          onPickDate: (_pickerOpen || _hasPopped)
-                              ? null
-                              : () async {
-                                  final picked = await _runPicker(
-                                    () => _pickDate(context, _endDate),
-                                  );
-                                  if (!mounted || picked == null) {
-                                    return;
-                                  }
-                                  setState(() => _endDate = picked);
-                                },
-                          onPickTime: (_pickerOpen || _hasPopped)
-                              ? null
-                              : () async {
-                                  final picked = await _runPicker(
-                                    () => _pickTime(context, _endTime),
-                                  );
-                                  if (!mounted || picked == null) {
-                                    return;
-                                  }
-                                  setState(() => _endTime = picked);
-                                },
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _EventOptionField(
-                        key: const ValueKey('event-recurrence-field'),
-                        icon: Icons.repeat,
-                        label: l10n.eventRecurrence,
-                        value: _recurrenceSummary(
-                          recurrence: _recurrence,
-                          interval: _interval,
-                          unit: _customUnit,
-                          untilDate: _untilDate,
-                          repeatCount: _repeatCount,
-                          l10n: l10n,
-                        ),
-                        onTap: _blocked
-                            ? null
-                            : () => unawaited(_openRecurrenceDialog()),
-                      ),
-                      const SizedBox(height: 8),
-                      _EventOptionField(
-                        key: const ValueKey('event-reminder-field'),
-                        icon: Icons.notifications_outlined,
-                        label: l10n.reminder,
-                        value: _reminderSummary(_reminders, l10n),
-                        onTap: _blocked
-                            ? null
-                            : () => unawaited(_openReminderDialog()),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: InputDecoration(
-                          labelText: l10n.eventNotes,
-                          prefixIcon: const Icon(Icons.notes_outlined),
-                        ),
-                        minLines: 2,
-                        maxLines: 4,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(l10n.eventColor, style: theme.textTheme.labelLarge),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final colorValue in _colorOptions)
-                            _ColorOption(
-                              colorValue: colorValue,
-                              selected: _colorValue == colorValue,
-                              onTap: () => setState(() {
-                                _colorValue = _colorValue == colorValue
-                                    ? null
-                                    : colorValue;
+                      _EditorSection(
+                        icon: Icons.schedule_outlined,
+                        title: '${l10n.eventDate} · ${l10n.eventTime}',
+                        initiallyExpanded: _timeSectionExpanded,
+                        onExpansionChanged: (expanded) =>
+                            setState(() => _timeSectionExpanded = expanded),
+                        enabled: !_blocked,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _EventSwitchRow(
+                              icon: Icons.event_available_outlined,
+                              title: l10n.allDay,
+                              value: _isAllDay,
+                              onChanged: (value) => setState(() {
+                                _isAllDay = value;
+                                if (value && _endDate.isBefore(_startDate)) {
+                                  _endDate = _startDate;
+                                }
                               }),
                             ),
-                        ],
+                            _DateTimeRange(
+                              start: _DateTimeRow(
+                                icon: Icons.play_arrow_outlined,
+                                label: l10n.eventStartTime,
+                                date: _startDate,
+                                time: _startTime,
+                                showTime: !_isAllDay,
+                                onPickDate: (_pickerOpen || _hasPopped)
+                                    ? null
+                                    : () async {
+                                        final picked = await _runPicker(
+                                          () => _pickDate(context, _startDate),
+                                        );
+                                        if (!mounted || picked == null) {
+                                          return;
+                                        }
+                                        setState(() {
+                                          _startDate = picked;
+                                          if (_endDate.isBefore(_startDate)) {
+                                            _endDate = _startDate;
+                                          }
+                                          if (_untilDate?.isBefore(
+                                                _startDate,
+                                              ) ??
+                                              false) {
+                                            _untilDate = _startDate;
+                                          }
+                                        });
+                                      },
+                                onPickTime: (_pickerOpen || _hasPopped)
+                                    ? null
+                                    : () async {
+                                        final picked = await _runPicker(
+                                          () => _pickTime(context, _startTime),
+                                        );
+                                        if (!mounted || picked == null) {
+                                          return;
+                                        }
+                                        setState(() => _startTime = picked);
+                                      },
+                              ),
+                              end: _DateTimeRow(
+                                icon: Icons.stop_outlined,
+                                label: l10n.eventEndTime,
+                                date: _endDate,
+                                time: _endTime,
+                                showTime: !_isAllDay,
+                                onPickDate: (_pickerOpen || _hasPopped)
+                                    ? null
+                                    : () async {
+                                        final picked = await _runPicker(
+                                          () => _pickDate(context, _endDate),
+                                        );
+                                        if (!mounted || picked == null) {
+                                          return;
+                                        }
+                                        setState(() => _endDate = picked);
+                                      },
+                                onPickTime: (_pickerOpen || _hasPopped)
+                                    ? null
+                                    : () async {
+                                        final picked = await _runPicker(
+                                          () => _pickTime(context, _endTime),
+                                        );
+                                        if (!mounted || picked == null) {
+                                          return;
+                                        }
+                                        setState(() => _endTime = picked);
+                                      },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _EditorSection(
+                        icon: Icons.tune_outlined,
+                        title: '${l10n.eventRecurrence} · ${l10n.reminder}',
+                        initiallyExpanded: _optionsSectionExpanded,
+                        onExpansionChanged: (expanded) =>
+                            setState(() => _optionsSectionExpanded = expanded),
+                        enabled: !_blocked,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _EventOptionField(
+                              key: const ValueKey('event-recurrence-field'),
+                              icon: Icons.repeat,
+                              label: l10n.eventRecurrence,
+                              value: _recurrenceSummary(
+                                recurrence: _recurrence,
+                                interval: _interval,
+                                unit: _customUnit,
+                                untilDate: _untilDate,
+                                repeatCount: _repeatCount,
+                                l10n: l10n,
+                              ),
+                              onTap: _blocked
+                                  ? null
+                                  : () => unawaited(_openRecurrenceDialog()),
+                            ),
+                            const SizedBox(height: 8),
+                            _EventOptionField(
+                              key: const ValueKey('event-reminder-field'),
+                              icon: Icons.notifications_outlined,
+                              label: l10n.reminder,
+                              value: _reminderSummary(_reminders, l10n),
+                              onTap: _blocked
+                                  ? null
+                                  : () => unawaited(_openReminderDialog()),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _EditorSection(
+                        icon: Icons.more_horiz,
+                        title: '${l10n.eventNotes} · ${l10n.eventColor}',
+                        initiallyExpanded: _detailsSectionExpanded,
+                        onExpansionChanged: (expanded) =>
+                            setState(() => _detailsSectionExpanded = expanded),
+                        enabled: !_blocked,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: _notesController,
+                              decoration: InputDecoration(
+                                labelText: l10n.eventNotes,
+                                prefixIcon: const Icon(Icons.notes_outlined),
+                              ),
+                              minLines: 2,
+                              maxLines: 4,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.eventColor,
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final colorValue in _colorOptions)
+                                  _ColorOption(
+                                    colorValue: colorValue,
+                                    selected: _colorValue == colorValue,
+                                    onTap: () => setState(() {
+                                      _colorValue = _colorValue == colorValue
+                                          ? null
+                                          : colorValue;
+                                    }),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -620,6 +697,53 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
   }
 }
 
+/// Persistent disclosure container used by the editor's low-frequency groups.
+/// Keeping children alive preserves focus, text drafts, and selected colors
+/// while a user collapses a section on a small Android screen.
+class _EditorSection extends StatelessWidget {
+  const _EditorSection({
+    required this.icon,
+    required this.title,
+    required this.initiallyExpanded,
+    required this.onExpansionChanged,
+    required this.enabled,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool initiallyExpanded;
+  final ValueChanged<bool> onExpansionChanged;
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = skedShapeSchemeOf(context).field;
+    return Material(
+      color: colors.surfaceContainerLow,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
+        maintainState: true,
+        enabled: enabled,
+        onExpansionChanged: enabled ? onExpansionChanged : null,
+        leading: Icon(icon),
+        title: Text(title),
+        tilePadding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
+        childrenPadding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+        shape: shape,
+        collapsedShape: shape,
+        backgroundColor: colors.surfaceContainerLow,
+        collapsedBackgroundColor: colors.surfaceContainerLow,
+        children: [child],
+      ),
+    );
+  }
+}
+
 class _EventOptionField extends StatelessWidget {
   const _EventOptionField({
     super.key,
@@ -667,40 +791,70 @@ class _EventOptionField extends StatelessWidget {
                   horizontal: 12,
                   vertical: 8,
                 ),
-                child: Row(
-                  children: [
-                    SizedBox.square(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final textScale = MediaQuery.textScalerOf(context).scale(1);
+                    final iconWidget = SizedBox.square(
                       dimension: 40,
                       child: Center(child: Icon(icon, color: secondary)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            label,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: secondary,
-                            ),
+                    );
+                    final textWidget = Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          softWrap: true,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: secondary,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            value,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: foreground,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          value,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    );
+                    final chevron = Icon(Icons.chevron_right, color: secondary);
+                    final stack = constraints.maxWidth < 240 || textScale > 1.3;
+                    if (stack) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              iconWidget,
+                              const SizedBox(width: 8),
+                              Expanded(child: textWidget),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: chevron,
                           ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right, color: secondary),
-                  ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        iconWidget,
+                        const SizedBox(width: 8),
+                        Expanded(child: textWidget),
+                        const SizedBox(width: 8),
+                        chevron,
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -778,7 +932,10 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
     final mediaQuery = MediaQuery.of(context);
     final contentMaxHeight = _eventDialogContentMaxHeight(mediaQuery);
     return PopScope(
-      canPop: !_hasPopped,
+      // Keep the recurrence draft modal in place while its date picker is
+      // open. A barrier/back dismissal at that point would otherwise leave
+      // the nested picker with a stale parent route.
+      canPop: !_blocked,
       child: AlertDialog(
         constraints: const BoxConstraints(maxWidth: expressiveDialogMaxWidth),
         insetPadding: _eventDialogInsetPadding(mediaQuery.size.width),
@@ -1088,8 +1245,7 @@ class _DateTimeRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: colors.onSurface,
                   fontWeight: FontWeight.w500,
@@ -1098,8 +1254,7 @@ class _DateTimeRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
@@ -1186,21 +1341,56 @@ class _EventSwitchRow extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              children: [
-                Icon(icon, color: colors.onSurfaceVariant),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
+                final iconWidget = SizedBox.square(
+                  dimension: 40,
+                  child: Center(
+                    child: Icon(icon, color: colors.onSurfaceVariant),
                   ),
-                ),
-                Switch(value: value, onChanged: onChanged),
-              ],
+                );
+                final titleWidget = Text(
+                  title,
+                  softWrap: true,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+                final stack = constraints.maxWidth < 240 || textScale > 1.3;
+                if (stack) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          iconWidget,
+                          const SizedBox(width: 12),
+                          Expanded(child: titleWidget),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: Switch(value: value, onChanged: onChanged),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    iconWidget,
+                    const SizedBox(width: 12),
+                    Expanded(child: titleWidget),
+                    const SizedBox(width: 8),
+                    Switch(value: value, onChanged: onChanged),
+                  ],
+                );
+              },
             ),
           ),
         ),

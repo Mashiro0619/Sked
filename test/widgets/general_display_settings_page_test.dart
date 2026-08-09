@@ -48,6 +48,7 @@ Future<void> _pumpPage(
   WidgetTester tester,
   TimetableProvider provider, {
   Locale locale = const Locale('en'),
+  EdgeInsets viewPadding = EdgeInsets.zero,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -56,6 +57,12 @@ Future<void> _pumpPage(
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(padding: viewPadding, viewPadding: viewPadding),
+          child: child!,
+        ),
         home: const GeneralDisplaySettingsPage(),
       ),
     ),
@@ -75,6 +82,28 @@ Future<void> _toggleSwitch(WidgetTester tester, String title) async {
 }
 
 void main() {
+  testWidgets('caps wide content and consumes Android navigation inset once', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+
+    await _pumpPage(
+      tester,
+      provider,
+      viewPadding: const EdgeInsets.only(bottom: 48),
+    );
+
+    final list = find.byType(ListView);
+    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
+    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows default view as a setting instead of page tabs', (
     tester,
   ) async {
@@ -86,7 +115,7 @@ void main() {
     expect(find.text('Default view'), findsOneWidget);
     expect(find.text('Schedule display'), findsOneWidget);
     expect(find.text('Time grid'), findsOneWidget);
-    expect(find.text('Popup behavior'), findsOneWidget);
+    expect(find.text('Popup behavior', skipOffstage: false), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
     expect(find.byType(SkedDropdownMenu<String>), findsOneWidget);
 

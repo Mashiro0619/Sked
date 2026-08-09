@@ -1,6 +1,197 @@
 import 'package:flutter/material.dart';
 
+import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
+
+/// A settings group whose rows read as one connected surface.
+///
+/// The group deliberately owns the separators and outer shape so callers can
+/// focus on the setting semantics.  It is used by the settings landing page;
+/// the existing [SettingsListTile] remains available for the denser secondary
+/// pages.
+class SettingsConnectedGroup extends StatelessWidget {
+  const SettingsConnectedGroup({
+    super.key,
+    required this.children,
+    this.title,
+    this.margin = const EdgeInsets.symmetric(vertical: 6),
+  });
+
+  final String? title;
+  final List<Widget> children;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shapes = skedShapeSchemeOf(context);
+    final visibleChildren = children;
+    if (visibleChildren.isEmpty && title == null) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: margin,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (title != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  title!,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          Material(
+            color: colors.surfaceContainerLow,
+            shape: shapes.container,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (
+                  var index = 0;
+                  index < visibleChildren.length;
+                  index++
+                ) ...[
+                  if (index > 0)
+                    Divider(
+                      height: 1,
+                      indent: 72,
+                      endIndent: 16,
+                      color: colors.outlineVariant.withValues(alpha: 0.55),
+                    ),
+                  visibleChildren[index],
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A row for [SettingsConnectedGroup].  The visible control remains at least
+/// 48 dp high and reflows its trailing affordance on very narrow windows.
+class SettingsConnectedTile extends StatelessWidget {
+  const SettingsConnectedTile({
+    super.key,
+    required this.leading,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final trailingWidget = trailing == null
+            ? null
+            : IconTheme.merge(
+                data: IconThemeData(color: colors.onSurfaceVariant),
+                child: trailing!,
+              );
+        final textContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                subtitle!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        );
+        final narrow =
+            trailingWidget != null &&
+            (constraints.maxWidth < 360 || textScale > 1.3);
+        final row = narrow
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SettingsTileIcon(child: leading),
+                      const SizedBox(width: 16),
+                      Expanded(child: textContent),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: trailingWidget,
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _SettingsTileIcon(child: leading),
+                  const SizedBox(width: 16),
+                  Expanded(child: textContent),
+                  if (trailingWidget != null) ...[
+                    const SizedBox(width: 12),
+                    trailingWidget,
+                  ],
+                ],
+              );
+        return Semantics(
+          button: onTap != null,
+          enabled: onTap != null,
+          label: subtitle == null ? title : '$title, $subtitle',
+          onTap: onTap,
+          child: ExcludeSemantics(
+            child: ExpressiveTap(
+              onTap: onTap,
+              borderRadius: BorderRadius.zero,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 64),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: row,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 class SettingsSectionHeader extends StatelessWidget {
   const SettingsSectionHeader({super.key, required this.title});
@@ -72,7 +263,9 @@ class SettingsListTile extends StatelessWidget {
                         child: trailing!,
                       );
 
-                if (constraints.maxWidth < 280 && trailingWidget != null) {
+                final textScale = MediaQuery.textScalerOf(context).scale(1);
+                if (trailingWidget != null &&
+                    (constraints.maxWidth < 360 || textScale > 1.3)) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
@@ -151,8 +344,6 @@ class _SettingsTileText extends StatelessWidget {
       children: [
         Text(
           title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: colors.onSurface,
             fontWeight: FontWeight.w500,
@@ -162,8 +353,6 @@ class _SettingsTileText extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             subtitle!,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.onSurfaceVariant,
             ),
@@ -196,6 +385,7 @@ class SettingsSwitchTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final enabled = onChanged != null;
     final toggle = enabled ? () => onChanged!(!value) : null;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
     return Semantics(
       label: title,
       hint: subtitle,
@@ -221,46 +411,83 @@ class SettingsSwitchTile extends StatelessWidget {
                   horizontal: 16,
                   vertical: 10,
                 ),
-                child: Row(
-                  children: [
-                    Icon(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final iconWidget = Icon(
                       icon,
                       color: enabled
                           ? colors.onSurfaceVariant
                           : colors.onSurface.withValues(alpha: 0.38),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                    );
+                    final textWidget = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          softWrap: true,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: enabled
+                                ? colors.onSurface
+                                : colors.onSurface.withValues(alpha: 0.38),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
                           Text(
-                            title,
-                            style: theme.textTheme.bodyLarge?.copyWith(
+                            subtitle!,
+                            softWrap: true,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: enabled
-                                  ? colors.onSurface
+                                  ? colors.onSurfaceVariant
                                   : colors.onSurface.withValues(alpha: 0.38),
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: enabled
-                                    ? colors.onSurfaceVariant
-                                    : colors.onSurface.withValues(alpha: 0.38),
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Switch(value: value, onChanged: onChanged),
-                  ],
+                      ],
+                    );
+                    final stack = constraints.maxWidth < 360 || textScale > 1.3;
+                    if (stack) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 40,
+                                height: 40,
+                                child: Center(child: iconWidget),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(child: textWidget),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: Switch(value: value, onChanged: onChanged),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Center(child: iconWidget),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(child: textWidget),
+                        const SizedBox(width: 16),
+                        Switch(value: value, onChanged: onChanged),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -343,36 +570,67 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Column(
             children: [
-              Row(
-                children: [
-                  Icon(widget.icon, color: secondaryColor),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: foregroundColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final textScale = MediaQuery.textScalerOf(context).scale(1);
+                  final titleWidget = Text(
+                    widget.title,
+                    softWrap: true,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: enabled
-                            ? colors.primary
-                            : colors.onSurface.withValues(alpha: 0.38),
-                        fontWeight: FontWeight.w700,
-                      ),
+                  );
+                  final valueWidget = Text(
+                    label,
+                    softWrap: true,
+                    textAlign: TextAlign.end,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: enabled
+                          ? colors.primary
+                          : colors.onSurface.withValues(alpha: 0.38),
+                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                ],
+                  );
+                  final stack = constraints.maxWidth < 360 || textScale > 1.3;
+                  final iconWidget = SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Center(
+                      child: Icon(widget.icon, color: secondaryColor),
+                    ),
+                  );
+                  if (stack) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            iconWidget,
+                            const SizedBox(width: 16),
+                            Expanded(child: titleWidget),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: valueWidget,
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      iconWidget,
+                      const SizedBox(width: 16),
+                      Expanded(child: titleWidget),
+                      const SizedBox(width: 12),
+                      Flexible(child: valueWidget),
+                    ],
+                  );
+                },
               ),
               Semantics(
                 label: widget.title,

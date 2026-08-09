@@ -192,6 +192,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsSectionApp => 'App';
 
   @override
+  String get settingsSectionCurrentWorkspace => 'Current timetable / calendar';
+
+  @override
+  String get settingsSectionAppearanceLanguage => 'Appearance & language';
+
+  @override
+  String get settingsSectionDataSecurity => 'Data & security';
+
+  @override
+  String get settingsSectionAbout => 'About Sked';
+
+  @override
   String get noTimetableSettings =>
       'Aucun emploi du temps n\'est actuellement disponible pour les paramètres.';
 
