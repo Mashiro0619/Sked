@@ -246,6 +246,9 @@ void main() {
         expect(mode['themeSeedColorValue'], 0xFF00897B);
         expect(mode['colorfulUiColorValues'], {'primary': 0xFF112233});
       }
+      expect(decoded.studentMode.fitDaySelectorToWidth, isTrue);
+      expect(decoded.studentMode.fitWeekColumnsToWidth, isTrue);
+      expect(decoded.studentMode.enableWeekSwipeNavigation, isTrue);
       expect(decoded.privacyPolicyAcceptedVersion, isNull);
       expect(decoded.privacyPolicyAcceptedAtIso, isNull);
       expect(decoded.ignoredUpdateVersion, isNull);
@@ -1310,6 +1313,24 @@ void main() {
         () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
         throwsFormatException,
       );
+    });
+
+    test('rejects malformed timetable layout settings', () {
+      for (final key in const [
+        'fitDaySelectorToWidth',
+        'fitWeekColumnsToWidth',
+        'enableWeekSwipeNavigation',
+      ]) {
+        final snapshot = validSnapshot();
+        final student = studentMode(snapshot)..[key] = 'yes';
+        snapshot['studentMode'] = student;
+
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: key,
+        );
+      }
     });
 
     test('rejects student settings that would be normalized on load', () {

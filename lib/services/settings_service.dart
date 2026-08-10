@@ -41,6 +41,27 @@ class SettingsService {
     );
   }
 
+  AppData updateFitDaySelectorToWidth(AppData data, bool value) {
+    if (data.studentMode.fitDaySelectorToWidth == value) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(fitDaySelectorToWidth: value),
+    );
+  }
+
+  AppData updateFitWeekColumnsToWidth(AppData data, bool value) {
+    if (data.studentMode.fitWeekColumnsToWidth == value) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(fitWeekColumnsToWidth: value),
+    );
+  }
+
+  AppData updateEnableWeekSwipeNavigation(AppData data, bool value) {
+    if (data.studentMode.enableWeekSwipeNavigation == value) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(enableWeekSwipeNavigation: value),
+    );
+  }
+
   AppData updateLocaleCode(AppData data, String localeCode) {
     if (data.localeCode == localeCode) return data;
     return data.copyWith(localeCode: normalizeLocaleCode(localeCode));

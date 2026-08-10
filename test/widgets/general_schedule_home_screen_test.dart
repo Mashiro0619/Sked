@@ -965,6 +965,158 @@ void main() {
     expect(find.byType(GeneralEventEditorSheet), findsNothing);
   });
 
+  testWidgets('week pager commits its date only after the page settles', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const calendar = GeneralSchedule(id: 'cal1', name: 'Calendar', events: []);
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final initialDate = provider.selectedGeneralDate;
+    final pageController = tester
+        .widget<PageView>(find.byKey(_generalWeekPagerKey))
+        .controller!;
+    final initialPage = pageController.page!;
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(_generalWeekPagerKey)),
+    );
+    await gesture.moveBy(const Offset(-40, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-600, 0));
+    await tester.pump(const Duration(milliseconds: 16));
+
+    final draggingPage = pageController.page!;
+    expect(draggingPage, greaterThan(initialPage + 0.5));
+    expect(draggingPage, lessThan(initialPage + 1));
+    expect(provider.selectedGeneralDate, initialDate);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedGeneralDate, DateTime(2026, 6, 23));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'an external date change during a drag is not overwritten by the gesture',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      const calendar = GeneralSchedule(
+        id: 'cal1',
+        name: 'Calendar',
+        events: [],
+      );
+      final provider = await _createGeneralProvider(
+        buildInitialAppData(
+          buildDefaultPeriodTimes(),
+          localeCode: defaultLocaleCode,
+        ).copyWith(
+          activeMode: AppMode.general,
+          generalMode: const GeneralScheduleData(
+            activeScheduleId: 'cal1',
+            schedules: [calendar],
+            selectedDateIso: '2026-06-16',
+            defaultView: generalViewWeek,
+          ),
+        ),
+      );
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+      final controller = tester
+          .widget<PageView>(find.byKey(_generalWeekPagerKey))
+          .controller!;
+      final initialPage = controller.page!;
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(_generalWeekPagerKey)),
+      );
+      await gesture.moveBy(const Offset(-40, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(-610, 0));
+      await tester.pump();
+      expect(controller.page, greaterThan(initialPage + 0.5));
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 23));
+      await tester.pump();
+
+      await gesture.moveBy(const Offset(650, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(provider.selectedGeneralDate, DateTime(2026, 6, 23));
+      expect(controller.page, closeTo(initialPage + 1, 0.01));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('failed pager save returns to the committed week and can retry', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const calendar = GeneralSchedule(id: 'cal1', name: 'Calendar', events: []);
+    final storage = _FailOnceTimetableStorage(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+    final provider = await _createProviderWithStorage(storage);
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+    final controller = tester
+        .widget<PageView>(find.byKey(_generalWeekPagerKey))
+        .controller!;
+    final initialPage = controller.page!;
+
+    storage.failNextSave = true;
+    await tester.fling(
+      find.byKey(_generalWeekPagerKey),
+      const Offset(-700, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedGeneralDate, DateTime(2026, 6, 16));
+    expect(controller.page, closeTo(initialPage, 0.01));
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+
+    await tester.fling(
+      find.byKey(_generalWeekPagerKey),
+      const Offset(-700, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedGeneralDate, DateTime(2026, 6, 23));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('week view keeps selected day visible when weekends are hidden', (
     tester,
   ) async {
@@ -1781,6 +1933,54 @@ void main() {
     expect(provider.selectedGeneralDate.year, 2026);
     expect(provider.selectedGeneralDate.month, 6);
     expect(provider.selectedGeneralDate.day, 17);
+  });
+
+  testWidgets('day pager keeps Provider date stable during a partial drag', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const calendar = GeneralSchedule(id: 'cal1', name: 'Calendar', events: []);
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewDay,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final initialDate = provider.selectedGeneralDate;
+    final pageController = tester
+        .widget<PageView>(find.byKey(_generalDayPagerKey))
+        .controller!;
+    final initialPage = pageController.page!;
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(_generalDayPagerKey)),
+    );
+    await gesture.moveBy(const Offset(-40, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-600, 0));
+    await tester.pump(const Duration(milliseconds: 16));
+
+    final draggingPage = pageController.page!;
+    expect(draggingPage, greaterThan(initialPage + 0.5));
+    expect(draggingPage, lessThan(initialPage + 1));
+    expect(provider.selectedGeneralDate, initialDate);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedGeneralDate, DateTime(2026, 6, 17));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('day view picker selection follows horizontal drag progress', (

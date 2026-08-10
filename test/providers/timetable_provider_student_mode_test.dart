@@ -204,6 +204,25 @@ void main() {
   }
 
   group('TimetableProvider student mode', () {
+    test('rolls back timetable layout settings when save fails', () async {
+      final original = appData();
+      final storage = _MemoryTimetableStorage(original);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      await provider.load();
+      storage.saveFailures.add(Exception('disk full'));
+
+      await expectLater(
+        provider.updateEnableWeekSwipeNavigation(false),
+        throwsException,
+      );
+
+      expect(provider.enableWeekSwipeNavigation, isTrue);
+      expect(storage.data!.studentMode.enableWeekSwipeNavigation, isTrue);
+    });
+
     test('does not auto-save defaults after failed backup recovery', () async {
       final storage = _MemoryTimetableStorage(
         null,

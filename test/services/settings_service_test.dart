@@ -125,4 +125,38 @@ void main() {
       expect(flipped.studentMode.liveCourseOutlineEnabled, isTrue);
     });
   });
+
+  group('SettingsService timetable layout settings', () {
+    test('updates each setting independently and guards no-op writes', () {
+      final initial = base();
+      expect(initial.studentMode.fitDaySelectorToWidth, isTrue);
+      expect(initial.studentMode.fitWeekColumnsToWidth, isTrue);
+      expect(initial.studentMode.enableWeekSwipeNavigation, isTrue);
+
+      final dayFixed = service.updateFitDaySelectorToWidth(initial, false);
+      expect(dayFixed.studentMode.fitDaySelectorToWidth, isFalse);
+      expect(dayFixed.studentMode.fitWeekColumnsToWidth, isTrue);
+      expect(dayFixed.studentMode.enableWeekSwipeNavigation, isTrue);
+
+      final weekFixed = service.updateFitWeekColumnsToWidth(dayFixed, false);
+      expect(weekFixed.studentMode.fitDaySelectorToWidth, isFalse);
+      expect(weekFixed.studentMode.fitWeekColumnsToWidth, isFalse);
+      expect(weekFixed.studentMode.enableWeekSwipeNavigation, isTrue);
+
+      final swipeOff = service.updateEnableWeekSwipeNavigation(
+        weekFixed,
+        false,
+      );
+      expect(swipeOff.studentMode.fitDaySelectorToWidth, isFalse);
+      expect(swipeOff.studentMode.fitWeekColumnsToWidth, isFalse);
+      expect(swipeOff.studentMode.enableWeekSwipeNavigation, isFalse);
+      expect(
+        identical(
+          swipeOff,
+          service.updateEnableWeekSwipeNavigation(swipeOff, false),
+        ),
+        isTrue,
+      );
+    });
+  });
 }

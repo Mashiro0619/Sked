@@ -559,7 +559,11 @@ void main() {
       ),
     );
     final fab = find.byType(FloatingActionButton);
+    final fabWidget = tester.widget<FloatingActionButton>(fab);
+    final colors = Theme.of(tester.element(fab)).colorScheme;
     expect(tester.getSize(fab).height, greaterThanOrEqualTo(48));
+    expect(fabWidget.backgroundColor, colors.primary);
+    expect(fabWidget.foregroundColor, colors.onPrimary);
     await tester.tap(fab);
     expect(pressed, isTrue);
   });
@@ -580,6 +584,8 @@ void main() {
         ),
       ),
     );
+    final iconOnlyFab = find.byType(FloatingActionButton);
+    expect(tester.getSize(iconOnlyFab), const Size.square(56));
     await tester.tap(find.byTooltip('Add'));
     expect(pressed, isTrue);
 

@@ -83,7 +83,13 @@ class TimetableGrid extends StatefulWidget {
     this.onEntryTap,
     this.visibleWeekdays = const <int>[1, 2, 3, 4, 5, 6, 7],
     this.showDayHeader = true,
-  }) : assert(visibleWeekdays.length > 0);
+    this.bottomContentInset = 0,
+    this.fitVisibleDaysToWidth = false,
+    this.horizontalScrollLocked = false,
+    this.onHorizontalPointerDown,
+    this.onHorizontalEdgeDrag,
+  }) : assert(visibleWeekdays.length > 0),
+       assert(bottomContentInset >= 0);
 
   final TimetableData timetable;
   final List<CoursePeriodTime> periodTimes;
@@ -111,6 +117,26 @@ class TimetableGrid extends StatefulWidget {
   final ValueChanged<TimetableEntry>? onEntryTap;
   final List<int> visibleWeekdays;
   final bool showDayHeader;
+  final double bottomContentInset;
+
+  /// Whether the visible day columns should share the available viewport
+  /// width instead of retaining the minimum width used by scrollable grids.
+  ///
+  /// This is intentionally opt-in so generic grid callers keep the existing
+  /// horizontally scrollable behavior.
+  final bool fitVisibleDaysToWidth;
+
+  /// Temporarily freezes the inner horizontal viewport while an ancestor
+  /// pager takes over the same pointer gesture at the content edge.
+  final bool horizontalScrollLocked;
+
+  /// Marks pointers that start inside an overflowing horizontal viewport so
+  /// the ancestor pager waits for an edge handoff before taking over.
+  final ValueChanged<int>? onHorizontalPointerDown;
+
+  /// Reports the finger delta when a horizontal drag continues beyond either
+  /// edge. Ancestor pagers can use it to reveal an adjacent logical page.
+  final ValueChanged<double>? onHorizontalEdgeDrag;
 
   @override
   State<TimetableGrid> createState() => _TimetableGridState();
@@ -164,7 +190,11 @@ class _TimetableGridState extends State<TimetableGrid> {
     required ScrollController source,
     required ScrollController target,
   }) {
-    if (_syncingHorizontalScroll || !source.hasClients || !target.hasClients) {
+    if (_syncingHorizontalScroll ||
+        !source.hasClients ||
+        !target.hasClients ||
+        !source.position.hasContentDimensions ||
+        !target.position.hasContentDimensions) {
       return;
     }
     final targetOffset = source.offset.clamp(
@@ -178,10 +208,17 @@ class _TimetableGridState extends State<TimetableGrid> {
   }
 
   void _clampHorizontalOffsets() {
-    final controllers = <ScrollController>[
-      _headerHorizontalController,
-      _bodyHorizontalController,
-    ].where((controller) => controller.hasClients).toList();
+    final controllers =
+        <ScrollController>[
+              _headerHorizontalController,
+              _bodyHorizontalController,
+            ]
+            .where(
+              (controller) =>
+                  controller.hasClients &&
+                  controller.position.hasContentDimensions,
+            )
+            .toList();
     if (controllers.isEmpty) return;
     final hasCollapsedViewport = controllers.any(
       (controller) => controller.position.maxScrollExtent <= 0,
@@ -276,6 +313,7 @@ class _TimetableGridState extends State<TimetableGrid> {
           constraints.maxWidth,
           visibleDayCount: widget.visibleWeekdays.length,
           textScale: textScale,
+          fitVisibleDaysToWidth: widget.fitVisibleDaysToWidth,
         );
         final baseHeaderHeight = metrics.compact
             ? _compactHeaderHeight
@@ -292,6 +330,30 @@ class _TimetableGridState extends State<TimetableGrid> {
             weekdays: widget.visibleWeekdays,
           ),
         );
+        final availableDaysWidth = math.max(
+          constraints.maxWidth - metrics.timeLabelWidth,
+          0.0,
+        );
+        final horizontalContentOverflows =
+            metrics.daysContentWidth > availableDaysWidth + 0.5;
+        final horizontalPhysics =
+            widget.horizontalScrollLocked || !horizontalContentOverflows
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(
+                parent: ClampingScrollPhysics(),
+              );
+
+        bool reportHorizontalOverscroll(OverscrollNotification notification) {
+          if (notification.metrics.axis != Axis.horizontal ||
+              notification.dragDetails == null) {
+            return false;
+          }
+          final delta = notification.dragDetails!.primaryDelta;
+          if (delta != null && delta != 0) {
+            widget.onHorizontalEdgeDrag?.call(delta);
+          }
+          return false;
+        }
 
         return SizedBox(
           width: constraints.maxWidth,
@@ -312,33 +374,48 @@ class _TimetableGridState extends State<TimetableGrid> {
                         ),
                       ),
                       Expanded(
-                        child: SingleChildScrollView(
-                          key: const ValueKey(
-                            'timetable-day-header-horizontal-scroll',
-                          ),
-                          controller: _headerHorizontalController,
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: metrics.daysContentWidth,
-                            child: Row(
-                              children: [
-                                for (final weekday in widget.visibleWeekdays)
-                                  SizedBox(
-                                    key: ValueKey(
-                                      'timetable-day-header-$weekday',
-                                    ),
-                                    width: metrics.dayColumnWidth,
-                                    child: _DayHeader(
-                                      weekday: weekday,
-                                      date: addCalendarDays(
-                                        widget.weekDateStart,
-                                        weekday - 1,
+                        child: NotificationListener<OverscrollNotification>(
+                          onNotification: reportHorizontalOverscroll,
+                          child: Listener(
+                            onPointerDown: horizontalContentOverflows
+                                ? (event) => widget.onHorizontalPointerDown
+                                      ?.call(event.pointer)
+                                : null,
+                            onPointerPanZoomStart: horizontalContentOverflows
+                                ? (event) => widget.onHorizontalPointerDown
+                                      ?.call(event.pointer)
+                                : null,
+                            child: SingleChildScrollView(
+                              key: const ValueKey(
+                                'timetable-day-header-horizontal-scroll',
+                              ),
+                              controller: _headerHorizontalController,
+                              scrollDirection: Axis.horizontal,
+                              physics: horizontalPhysics,
+                              child: SizedBox(
+                                width: metrics.daysContentWidth,
+                                child: Row(
+                                  children: [
+                                    for (final weekday
+                                        in widget.visibleWeekdays)
+                                      SizedBox(
+                                        key: ValueKey(
+                                          'timetable-day-header-$weekday',
+                                        ),
+                                        width: metrics.dayColumnWidth,
+                                        child: _DayHeader(
+                                          weekday: weekday,
+                                          date: addCalendarDays(
+                                            widget.weekDateStart,
+                                            weekday - 1,
+                                          ),
+                                          compact: metrics.compact,
+                                          localeCode: widget.localeCode,
+                                        ),
                                       ),
-                                      compact: metrics.compact,
-                                      localeCode: widget.localeCode,
-                                    ),
-                                  ),
-                              ],
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -348,6 +425,8 @@ class _TimetableGridState extends State<TimetableGrid> {
                 ),
               Expanded(
                 child: SingleChildScrollView(
+                  key: const ValueKey('timetable-grid-vertical-scroll'),
+                  padding: EdgeInsets.only(bottom: widget.bottomContentInset),
                   child: SizedBox(
                     height: layout.totalHeight,
                     child: Row(
@@ -367,85 +446,106 @@ class _TimetableGridState extends State<TimetableGrid> {
                             controller: _bodyHorizontalController,
                             notificationPredicate: (notification) =>
                                 notification.metrics.axis == Axis.horizontal,
-                            child: SingleChildScrollView(
-                              key: const ValueKey(
-                                'timetable-grid-horizontal-scroll',
-                              ),
-                              controller: _bodyHorizontalController,
-                              scrollDirection: Axis.horizontal,
-                              child: SizedBox(
-                                key: const ValueKey(
-                                  'timetable-grid-horizontal-content',
-                                ),
-                                width: metrics.daysContentWidth,
-                                height: layout.totalHeight,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    for (final weekday
-                                        in widget.visibleWeekdays)
-                                      _DayColumn(
-                                        weekday: weekday,
-                                        width: metrics.dayColumnWidth,
-                                        borderColor: widget.showGridLines
-                                            ? colors.outlineVariant.withValues(
-                                                alpha: 0.25,
-                                              )
-                                            : Colors.transparent,
-                                        showGridLines: widget.showGridLines,
-                                        slots: slots,
-                                        layouts: dayLayoutsByWeekday[weekday]!,
-                                        verticalLayout: layout,
-                                        metrics: metrics,
-                                        themeColorMode: widget.themeColorMode,
-                                        courseNameColorValues:
-                                            widget.courseNameColorValues,
-                                        colorfulTextColor: colorfulTextColor,
-                                        liveCourseOutlineMode:
-                                            widget.liveCourseOutlineMode,
-                                        outlineColor: Color(
-                                          widget.liveCourseOutlineColorValue,
-                                        ),
-                                        outlineWidth:
-                                            widget.liveCourseOutlineWidth,
-                                        onLongPressAt: (localPosition) {
-                                          final matchedPeriod = layout.slotForY(
-                                            localPosition.dy,
-                                          );
-                                          widget.onEmptySlotTap(
-                                            TimetableEmptySlotTapInfo(
-                                              weekday: weekday,
-                                              startMinutes:
-                                                  matchedPeriod.startMinutes,
-                                              endMinutes:
-                                                  matchedPeriod.endMinutes,
-                                              periods: [matchedPeriod.index],
+                            child: NotificationListener<OverscrollNotification>(
+                              onNotification: reportHorizontalOverscroll,
+                              child: Listener(
+                                onPointerDown: horizontalContentOverflows
+                                    ? (event) => widget.onHorizontalPointerDown
+                                          ?.call(event.pointer)
+                                    : null,
+                                onPointerPanZoomStart:
+                                    horizontalContentOverflows
+                                    ? (event) => widget.onHorizontalPointerDown
+                                          ?.call(event.pointer)
+                                    : null,
+                                child: SingleChildScrollView(
+                                  key: const ValueKey(
+                                    'timetable-grid-horizontal-scroll',
+                                  ),
+                                  controller: _bodyHorizontalController,
+                                  scrollDirection: Axis.horizontal,
+                                  physics: horizontalPhysics,
+                                  child: SizedBox(
+                                    key: const ValueKey(
+                                      'timetable-grid-horizontal-content',
+                                    ),
+                                    width: metrics.daysContentWidth,
+                                    height: layout.totalHeight,
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        for (final weekday
+                                            in widget.visibleWeekdays)
+                                          _DayColumn(
+                                            weekday: weekday,
+                                            width: metrics.dayColumnWidth,
+                                            borderColor: widget.showGridLines
+                                                ? colors.outlineVariant
+                                                      .withValues(alpha: 0.25)
+                                                : Colors.transparent,
+                                            showGridLines: widget.showGridLines,
+                                            slots: slots,
+                                            layouts:
+                                                dayLayoutsByWeekday[weekday]!,
+                                            verticalLayout: layout,
+                                            metrics: metrics,
+                                            themeColorMode:
+                                                widget.themeColorMode,
+                                            courseNameColorValues:
+                                                widget.courseNameColorValues,
+                                            colorfulTextColor:
+                                                colorfulTextColor,
+                                            liveCourseOutlineMode:
+                                                widget.liveCourseOutlineMode,
+                                            outlineColor: Color(
+                                              widget
+                                                  .liveCourseOutlineColorValue,
                                             ),
-                                          );
-                                        },
-                                        onLayoutTap: (item) {
-                                          if (useEntries &&
-                                              item.entry != null) {
-                                            widget.onEntryTap!(item.entry!);
-                                            return;
-                                          }
-                                          widget.onCourseTap(
-                                            TimetableCourseTapInfo(
-                                              course: item.course!,
-                                              courses: item.conflictCourses
-                                                  .map(
-                                                    (course) =>
-                                                        course as CourseItem,
-                                                  )
-                                                  .toList(),
-                                              isFullConflict:
-                                                  item.isFullConflict,
-                                              conflictKey: item.conflictKey,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                  ],
+                                            outlineWidth:
+                                                widget.liveCourseOutlineWidth,
+                                            onLongPressAt: (localPosition) {
+                                              final matchedPeriod = layout
+                                                  .slotForY(localPosition.dy);
+                                              widget.onEmptySlotTap(
+                                                TimetableEmptySlotTapInfo(
+                                                  weekday: weekday,
+                                                  startMinutes: matchedPeriod
+                                                      .startMinutes,
+                                                  endMinutes:
+                                                      matchedPeriod.endMinutes,
+                                                  periods: [
+                                                    matchedPeriod.index,
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                            onLayoutTap: (item) {
+                                              if (useEntries &&
+                                                  item.entry != null) {
+                                                widget.onEntryTap!(item.entry!);
+                                                return;
+                                              }
+                                              widget.onCourseTap(
+                                                TimetableCourseTapInfo(
+                                                  course: item.course!,
+                                                  courses: item.conflictCourses
+                                                      .map(
+                                                        (course) =>
+                                                            course
+                                                                as CourseItem,
+                                                      )
+                                                      .toList(),
+                                                  isFullConflict:
+                                                      item.isFullConflict,
+                                                  conflictKey: item.conflictKey,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -725,6 +825,7 @@ class _TimetableMetrics {
     double width, {
     required int visibleDayCount,
     required double textScale,
+    required bool fitVisibleDaysToWidth,
   }) {
     final safeWidth = width.isFinite && width > 0 ? width : 980.0;
     final timeLabelWidth =
@@ -738,10 +839,9 @@ class _TimetableMetrics {
         : textScale > 1.3
         ? 136.0
         : 112.0;
-    final daysContentWidth = math.max(
-      availableDaysWidth,
-      minimumDayWidth * visibleDayCount,
-    );
+    final daysContentWidth = fitVisibleDaysToWidth && visibleDayCount > 1
+        ? availableDaysWidth
+        : math.max(availableDaysWidth, minimumDayWidth * visibleDayCount);
     final dayColumnWidth = daysContentWidth / visibleDayCount;
     final compact = dayColumnWidth < 140;
     return _TimetableMetrics(

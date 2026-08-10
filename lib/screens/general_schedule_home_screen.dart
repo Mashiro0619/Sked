@@ -66,6 +66,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   DateTime? _dateNavigationTarget;
   int _dateNavigationGeneration = 0;
   int _dateNavigationDirection = 0;
+  bool _pagerDateCommitInProgress = false;
+  int _pagerSyncRevision = 0;
 
   @override
   void didChangeDependencies() {
@@ -150,6 +152,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           final selectDate = widget.interactive
               ? (DateTime date) => _selectDate(provider, date)
               : (DateTime _) async {};
+          final pagerActive =
+              widget.active &&
+              widget.interactive &&
+              !_pagerDateCommitInProgress;
+          final settleDate = pagerActive
+              ? (DateTime date) => _commitSettledPagerDate(provider, date)
+              : (DateTime _) async {};
           final content = Column(
             children: [
               toolbar,
@@ -172,9 +181,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     },
                   ),
                   child: SkedDirectionalTransition(
-                    // View changes already use the switcher's fade-through;
-                    // this transition is reserved for date navigation so the
-                    // two spatial effects never stack on the same frame.
+                    // Pager gestures own their spatial motion and commit with
+                    // direction zero. Toolbar navigation keeps this transition.
                     trigger: _calendarDateKey(selectedDate),
                     direction: dateNavigationDirection,
                     fade: false,
@@ -187,8 +195,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             date: selectedDate,
                             provider: provider,
                             filter: filter,
-                            active: widget.active,
+                            active: pagerActive,
+                            syncRevision: _pagerSyncRevision,
                             onDaySelected: selectDate,
+                            onPageSettled: settleDate,
                             onEmptySlotTap: (date) => _openEditor(
                               context,
                               provider,
@@ -214,7 +224,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             date: selectedDate,
                             provider: provider,
                             filter: filter,
-                            active: widget.active,
+                            active: pagerActive,
                             onDaySelected: selectDate,
                             onEmptySlotTap: (date) => _openEditor(
                               context,
@@ -228,8 +238,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             date: selectedDate,
                             provider: provider,
                             filter: filter,
-                            active: widget.active,
+                            active: pagerActive,
+                            syncRevision: _pagerSyncRevision,
                             onDaySelected: selectDate,
+                            onPageSettled: settleDate,
                             onEmptySlotTap: (date) => _openEditor(
                               context,
                               provider,
@@ -332,6 +344,35 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             });
           });
         }
+      }
+    }
+  }
+
+  Future<void> _commitSettledPagerDate(
+    TimetableProvider provider,
+    DateTime requestedDate,
+  ) async {
+    if (_pagerDateCommitInProgress || !mounted) return;
+    final next = _visibleGeneralDate(provider, requestedDate);
+    if (_sameDay(next, provider.selectedGeneralDate)) return;
+    setState(() => _pagerDateCommitInProgress = true);
+    var needsPagerResync = false;
+    try {
+      final saved = await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Persist general schedule pager date',
+        command: () async {
+          await provider.setSelectedGeneralDate(next);
+          await provider.flushPendingUiStateSaves();
+        },
+      );
+      needsPagerResync = !saved;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pagerDateCommitInProgress = false;
+          if (needsPagerResync) _pagerSyncRevision += 1;
+        });
       }
     }
   }

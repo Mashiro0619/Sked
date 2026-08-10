@@ -1,6 +1,13 @@
 part of 'timetable_provider.dart';
 
 mixin _TimetableProviderSettings on _TimetableProviderBase {
+  bool get fitDaySelectorToWidth => _appData.studentMode.fitDaySelectorToWidth;
+
+  bool get fitWeekColumnsToWidth => _appData.studentMode.fitWeekColumnsToWidth;
+
+  bool get enableWeekSwipeNavigation =>
+      _appData.studentMode.enableWeekSwipeNavigation;
+
   Future<void> updateCloseCoursePopupOnOutsideTap(bool value) async {
     _appData = _settings.updateCloseCoursePopupOnOutsideTap(_appData, value);
     await _saveAndNotify();
@@ -23,6 +30,21 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateShowTimetableGridLines(bool value) async {
     _appData = _settings.updateShowTimetableGridLines(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateFitDaySelectorToWidth(bool value) async {
+    _appData = _settings.updateFitDaySelectorToWidth(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateFitWeekColumnsToWidth(bool value) async {
+    _appData = _settings.updateFitWeekColumnsToWidth(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateEnableWeekSwipeNavigation(bool value) async {
+    _appData = _settings.updateEnableWeekSwipeNavigation(_appData, value);
     await _saveAndNotify();
   }
 

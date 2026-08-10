@@ -268,6 +268,31 @@ class AppLocalizationsEs extends AppLocalizations {
       'Controla si las líneas de cuadrícula horizontales y verticales son visibles en el horario.';
 
   @override
+  String get timetableHorizontalLayoutSection =>
+      'Horizontal layout and gestures';
+
+  @override
+  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+
+  @override
+  String get fitDaySelectorToWidthHint =>
+      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+
+  @override
+  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+
+  @override
+  String get fitWeekColumnsToWidthHint =>
+      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+
+  @override
+  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+
+  @override
+  String get enableWeekSwipeNavigationHint =>
+      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+
+  @override
   String get liveCourseOutlineColor => 'Color del contorno del curso';
 
   @override

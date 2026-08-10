@@ -613,6 +613,48 @@ abstract class AppLocalizations {
   /// **'Control whether horizontal and vertical grid lines are visible in the timetable.'**
   String get showTimetableGridLinesHint;
 
+  /// No description provided for @timetableHorizontalLayoutSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Horizontal layout and gestures'**
+  String get timetableHorizontalLayoutSection;
+
+  /// No description provided for @fitDaySelectorToWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit day selector to screen'**
+  String get fitDaySelectorToWidth;
+
+  /// No description provided for @fitDaySelectorToWidthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.'**
+  String get fitDaySelectorToWidthHint;
+
+  /// No description provided for @fitWeekColumnsToWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit week columns to screen'**
+  String get fitWeekColumnsToWidth;
+
+  /// No description provided for @fitWeekColumnsToWidthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.'**
+  String get fitWeekColumnsToWidthHint;
+
+  /// No description provided for @enableWeekSwipeNavigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to change weeks'**
+  String get enableWeekSwipeNavigation;
+
+  /// No description provided for @enableWeekSwipeNavigationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe left or right to move to another week. With fixed widths, drag past the edge first.'**
+  String get enableWeekSwipeNavigationHint;
+
   /// No description provided for @liveCourseOutlineColor.
   ///
   /// In en, this message translates to:

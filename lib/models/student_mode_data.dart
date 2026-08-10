@@ -163,6 +163,9 @@ class StudentModeData {
     this.showPastEndedCourses = false,
     this.showFutureCourses = true,
     this.showTimetableGridLines = true,
+    this.fitDaySelectorToWidth = true,
+    this.fitWeekColumnsToWidth = true,
+    this.enableWeekSwipeNavigation = true,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,
     this.themeSeedColorValue = defaultThemeSeedColorValue,
@@ -188,6 +191,9 @@ class StudentModeData {
   final bool showPastEndedCourses;
   final bool showFutureCourses;
   final bool showTimetableGridLines;
+  final bool fitDaySelectorToWidth;
+  final bool fitWeekColumnsToWidth;
+  final bool enableWeekSwipeNavigation;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -212,6 +218,9 @@ class StudentModeData {
     'showPastEndedCourses': showPastEndedCourses,
     'showFutureCourses': showFutureCourses,
     'showTimetableGridLines': showTimetableGridLines,
+    'fitDaySelectorToWidth': fitDaySelectorToWidth,
+    'fitWeekColumnsToWidth': fitWeekColumnsToWidth,
+    'enableWeekSwipeNavigation': enableWeekSwipeNavigation,
     'themeMode': normalizeThemeMode(themeMode),
     'themeColorMode': normalizeThemeColorMode(themeColorMode),
     'themeSeedColorValue': themeSeedColorValue,
@@ -311,6 +320,12 @@ class StudentModeData {
       showFutureCourses: _tryDecodeBool(json['showFutureCourses']) ?? true,
       showTimetableGridLines:
           _tryDecodeBool(json['showTimetableGridLines']) ?? true,
+      fitDaySelectorToWidth:
+          _tryDecodeBool(json['fitDaySelectorToWidth']) ?? true,
+      fitWeekColumnsToWidth:
+          _tryDecodeBool(json['fitWeekColumnsToWidth']) ?? true,
+      enableWeekSwipeNavigation:
+          _tryDecodeBool(json['enableWeekSwipeNavigation']) ?? true,
       themeMode: normalizeThemeMode(
         _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
@@ -361,6 +376,9 @@ class StudentModeData {
     bool? showPastEndedCourses,
     bool? showFutureCourses,
     bool? showTimetableGridLines,
+    bool? fitDaySelectorToWidth,
+    bool? fitWeekColumnsToWidth,
+    bool? enableWeekSwipeNavigation,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -389,6 +407,12 @@ class StudentModeData {
       showFutureCourses: showFutureCourses ?? this.showFutureCourses,
       showTimetableGridLines:
           showTimetableGridLines ?? this.showTimetableGridLines,
+      fitDaySelectorToWidth:
+          fitDaySelectorToWidth ?? this.fitDaySelectorToWidth,
+      fitWeekColumnsToWidth:
+          fitWeekColumnsToWidth ?? this.fitWeekColumnsToWidth,
+      enableWeekSwipeNavigation:
+          enableWeekSwipeNavigation ?? this.enableWeekSwipeNavigation,
       themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
       themeColorMode: normalizeThemeColorMode(
         themeColorMode ?? this.themeColorMode,

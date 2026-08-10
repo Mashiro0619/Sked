@@ -11,7 +11,9 @@ import 'package:sked/models/student_mode_data.dart';
 import 'package:sked/models/timetable_data.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 
-const performanceDatasetVersion = 1;
+// Increment when the serialized fixture contract changes, even if the
+// generated workload shape and record counts remain the same.
+const performanceDatasetVersion = 2;
 const performanceCalendarCount = 8;
 const performanceSmallEventCount = 1000;
 const performanceLargeEventCount = 5000;

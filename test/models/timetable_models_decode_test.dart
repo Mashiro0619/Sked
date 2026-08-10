@@ -265,5 +265,36 @@ void main() {
       expect(data.schoolImportParserSettings.customBaseUrl, '');
       expect(data.liveCourseOutlineWidth, defaultLiveCourseOutlineWidth);
     });
+
+    test('StudentModeData layout settings default true when absent', () {
+      final data = StudentModeData.fromJson(const {
+        'activeTimetableId': '',
+        'periodTimeSets': [],
+        'timetables': [],
+      }, localeCode: defaultLocaleCode);
+
+      expect(data.fitDaySelectorToWidth, isTrue);
+      expect(data.fitWeekColumnsToWidth, isTrue);
+      expect(data.enableWeekSwipeNavigation, isTrue);
+    });
+
+    test('StudentModeData layout settings round-trip', () {
+      final data = StudentModeData.fromJson(const {
+        'activeTimetableId': '',
+        'periodTimeSets': [],
+        'timetables': [],
+        'fitDaySelectorToWidth': false,
+        'fitWeekColumnsToWidth': false,
+        'enableWeekSwipeNavigation': false,
+      }, localeCode: defaultLocaleCode);
+
+      final decoded = StudentModeData.fromJson(
+        data.toJson(),
+        localeCode: defaultLocaleCode,
+      );
+      expect(decoded.fitDaySelectorToWidth, isFalse);
+      expect(decoded.fitWeekColumnsToWidth, isFalse);
+      expect(decoded.enableWeekSwipeNavigation, isFalse);
+    });
   });
 }

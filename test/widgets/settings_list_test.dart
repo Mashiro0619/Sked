@@ -4,6 +4,85 @@ import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 void main() {
+  testWidgets('compact connected tile keeps its indicator inline', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsConnectedGroup(
+            children: [
+              SettingsConnectedTile(
+                leading: const Icon(Icons.grid_view_outlined),
+                title: 'Timetable display and interaction',
+                subtitle: 'Course popup, empty time, and grid line settings',
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  key: ValueKey('compact-connected-indicator'),
+                ),
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final titleRect = tester.getRect(
+      find.text('Timetable display and interaction'),
+    );
+    final subtitleRect = tester.getRect(
+      find.text('Course popup, empty time, and grid line settings'),
+    );
+    final indicatorRect = tester.getRect(
+      find.byKey(const ValueKey('compact-connected-indicator')),
+    );
+    expect(indicatorRect.center.dy, greaterThanOrEqualTo(titleRect.top));
+    expect(indicatorRect.center.dy, lessThanOrEqualTo(subtitleRect.bottom));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact list tile keeps its indicator inline at large text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.8)),
+          child: Scaffold(
+            body: SettingsListTile(
+              leading: const Icon(Icons.palette_outlined),
+              title: 'Theme appearance',
+              subtitle: 'Light theme and custom colors',
+              trailing: const Icon(
+                Icons.chevron_right,
+                key: ValueKey('compact-list-indicator'),
+              ),
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final titleRect = tester.getRect(find.text('Theme appearance'));
+    final subtitleRect = tester.getRect(
+      find.text('Light theme and custom colors'),
+    );
+    final indicatorRect = tester.getRect(
+      find.byKey(const ValueKey('compact-list-indicator')),
+    );
+    expect(indicatorRect.center.dy, greaterThanOrEqualTo(titleRect.top));
+    expect(indicatorRect.center.dy, lessThanOrEqualTo(subtitleRect.bottom));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('SettingsSwitchTile switch tap changes once', (tester) async {
     final semantics = tester.ensureSemantics();
     var value = false;

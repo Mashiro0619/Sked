@@ -67,6 +67,20 @@ IoAppInstanceLease _leaseFor(Directory directory) {
   return IoAppInstanceLease(directoryProvider: () async => directory);
 }
 
+Future<bool> _tryAcquireAfterProcessExit(
+  IoAppInstanceLease lease, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  do {
+    if (await lease.tryAcquire()) return true;
+    // Windows can report a child process exit before its file handle and
+    // byte-range lock become available to other processes.
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  } while (DateTime.now().isBefore(deadline));
+  return false;
+}
+
 class _MemoryProcessGuard implements AppInstanceProcessGuard {
   String? ownerId;
 
@@ -132,7 +146,7 @@ void main() {
     expect(crashedHolder.process.kill(), isTrue);
     await crashedHolder.process.exitCode.timeout(const Duration(seconds: 5));
 
-    expect(await lease.tryAcquire(), isTrue);
+    expect(await _tryAcquireAfterProcessExit(lease), isTrue);
     await lease.release();
   });
 

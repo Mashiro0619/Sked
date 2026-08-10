@@ -125,6 +125,50 @@ class _TimetableDisplaySettingsPageState
                                   ),
                           ),
                           SettingsSectionHeader(
+                            title: l10n.timetableHorizontalLayoutSection,
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.view_week_outlined,
+                            value: provider.fitDaySelectorToWidth,
+                            title: l10n.fitDaySelectorToWidth,
+                            subtitle: l10n.fitDaySelectorToWidthHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update day selector width mode',
+                                    () => provider.updateFitDaySelectorToWidth(
+                                      value,
+                                    ),
+                                  ),
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.view_column_outlined,
+                            value: provider.fitWeekColumnsToWidth,
+                            title: l10n.fitWeekColumnsToWidth,
+                            subtitle: l10n.fitWeekColumnsToWidthHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update week column width mode',
+                                    () => provider.updateFitWeekColumnsToWidth(
+                                      value,
+                                    ),
+                                  ),
+                          ),
+                          SettingsSwitchTile(
+                            icon: Icons.swipe_outlined,
+                            value: provider.enableWeekSwipeNavigation,
+                            title: l10n.enableWeekSwipeNavigation,
+                            subtitle: l10n.enableWeekSwipeNavigationHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update week swipe navigation',
+                                    () => provider
+                                        .updateEnableWeekSwipeNavigation(value),
+                                  ),
+                          ),
+                          SettingsSectionHeader(
                             title: l10n.generalTimeGridSection,
                           ),
                           SettingsSwitchTile(

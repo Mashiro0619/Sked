@@ -110,6 +110,7 @@ Widget _appFor(
   TimetableProvider provider, {
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
+  EdgeInsets safePadding = EdgeInsets.zero,
   bool disableAnimations = false,
   VoidCallback? onOpenSettings,
 }) {
@@ -134,6 +135,8 @@ Widget _appFor(
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: textScaler,
+            padding: safePadding,
+            viewPadding: safePadding,
             disableAnimations: disableAnimations,
           ),
           child: child ?? const SizedBox.shrink(),
@@ -150,6 +153,17 @@ Widget _appFor(
       ),
     ),
   );
+}
+
+NavigationIndicator _navigationIndicator(
+  WidgetTester tester,
+  String destinationKey,
+) {
+  final indicator = find.descendant(
+    of: find.byKey(ValueKey(destinationKey)),
+    matching: find.byType(NavigationIndicator),
+  );
+  return tester.widget<NavigationIndicator>(indicator);
 }
 
 void main() {
@@ -486,7 +500,7 @@ void main() {
     },
   );
 
-  testWidgets('compact mode indicator follows the committed workspace', (
+  testWidgets('official compact indicator follows the committed workspace', (
     tester,
   ) async {
     final provider = await _providerFor(_MemoryStorage(_shellData()));
@@ -496,22 +510,46 @@ void main() {
     await tester.pumpWidget(_appFor(provider));
     await tester.pumpAndSettle();
 
-    final indicator = find.byKey(
-      const ValueKey('adaptive-shell-mode-selection-indicator'),
+    expect(find.byType(NavigationIndicator), findsNWidgets(2));
+    final navigationBar = find.byKey(
+      const ValueKey('adaptive-shell-navigation-bar'),
     );
-    final initialRect = tester.getRect(indicator);
+    final initialIndicator = _navigationIndicator(
+      tester,
+      'adaptive-shell-student-destination',
+    );
+    expect(tester.widget<NavigationBar>(navigationBar).selectedIndex, 0);
+    expect(initialIndicator.animation.value, 1);
+    expect(
+      _navigationIndicator(
+        tester,
+        'adaptive-shell-general-destination',
+      ).animation.value,
+      0,
+    );
+
     await tester.tap(find.text('General schedule'));
     await tester.pump(const Duration(milliseconds: 120));
     await tester.pumpAndSettle();
-    final settledRect = tester.getRect(indicator);
+    final settledIndicator = _navigationIndicator(
+      tester,
+      'adaptive-shell-general-destination',
+    );
 
-    expect(settledRect.left, greaterThan(initialRect.left));
-    expect(tester.getSize(indicator).height, greaterThanOrEqualTo(24));
+    expect(tester.widget<NavigationBar>(navigationBar).selectedIndex, 1);
+    expect(settledIndicator.animation.value, 1);
+    expect(
+      _navigationIndicator(
+        tester,
+        'adaptive-shell-student-destination',
+      ).animation.value,
+      0,
+    );
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'compact mode indicator stays above labels on a narrow large-text phone',
+    'official compact navigation remains usable on a large-text phone',
     (tester) async {
       final provider = await _providerFor(_MemoryStorage(_shellData()));
       addTearDown(provider.dispose);
@@ -522,37 +560,74 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final indicator = tester.getRect(
-        find.byKey(const ValueKey('adaptive-shell-mode-selection-indicator')),
+      final indicator = _navigationIndicator(
+        tester,
+        'adaptive-shell-student-destination',
       );
       final navigationBar = tester.getRect(
         find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
       );
-      final selectedIcon = tester.getRect(find.byIcon(Icons.school));
-      for (final label in [
-        find.text('Student timetable'),
-        find.text('General schedule'),
-      ]) {
-        final labelRect = tester.getRect(label);
-        expect(
-          indicator.bottom,
-          lessThanOrEqualTo(labelRect.top),
-          reason: 'the moving indicator must remain in the icon region',
-        );
-        expect(labelRect.top, greaterThanOrEqualTo(navigationBar.top));
-        expect(labelRect.bottom, lessThanOrEqualTo(navigationBar.bottom));
-      }
-      expect(indicator.top, greaterThanOrEqualTo(navigationBar.top));
-      expect(indicator.bottom, lessThanOrEqualTo(navigationBar.bottom));
-      expect(indicator.height, greaterThanOrEqualTo(20));
       expect(
-        indicator.overlaps(selectedIcon),
-        isTrue,
-        reason: 'the shared indicator must stay in the icon region',
+        tester
+            .widget<NavigationBar>(
+              find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
+            )
+            .height,
+        80,
       );
+      for (final (destinationKey, labelText) in const [
+        ('adaptive-shell-student-destination', 'Student timetable'),
+        ('adaptive-shell-general-destination', 'General schedule'),
+      ]) {
+        final label = find.descendant(
+          of: find.byKey(ValueKey(destinationKey)),
+          matching: find.text(labelText),
+        );
+        final effectiveTextScale =
+            MediaQuery.textScalerOf(tester.element(label)).scale(16) / 16;
+        expect(label, findsOneWidget);
+        expect(effectiveTextScale, lessThanOrEqualTo(1.3));
+      }
+      expect(indicator.animation.value, 1);
+      expect(navigationBar.height, 80);
+      expect(navigationBar.bottom, closeTo(568, 0.01));
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('compact navigation consumes the Android bottom inset once', (
+    tester,
+  ) async {
+    final provider = await _providerFor(
+      _MemoryStorage(_shellData(populated: true)),
+    );
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pumpWidget(
+      _appFor(
+        provider,
+        textScaler: const TextScaler.linear(2),
+        safePadding: const EdgeInsets.only(top: 24, bottom: 24),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final navigationFinder = find.byKey(
+      const ValueKey('adaptive-shell-navigation-bar'),
+    );
+    final navigationRect = tester.getRect(navigationFinder);
+    final pagerRect = tester.getRect(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+
+    expect(tester.widget<NavigationBar>(navigationFinder).height, 80);
+    expect(navigationRect.height, closeTo(104, 0.01));
+    expect(navigationRect.bottom, closeTo(844, 0.01));
+    expect(pagerRect.bottom, closeTo(navigationRect.top, 0.01));
+    expect(find.byKey(const ValueKey('workspace-switch-busy')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('fade-through scale remains continuous when direction reverses', (
     tester,
@@ -840,6 +915,19 @@ void main() {
       _appFor(provider, onOpenSettings: () => settingsCalls += 1),
     );
     await tester.pumpAndSettle();
+    final navigationFinder = find.byKey(
+      const ValueKey('adaptive-shell-navigation-bar'),
+    );
+    final workspaceFinder = find.byKey(
+      const ValueKey('adaptive-workspace-stack'),
+    );
+    expect(find.byKey(const ValueKey('workspace-switch-busy')), findsNothing);
+    expect(
+      tester.getRect(workspaceFinder).bottom,
+      closeTo(tester.getRect(navigationFinder).top, 0.01),
+    );
+    final navigationRectIdle = tester.getRect(navigationFinder);
+
     await tester.tap(find.text('General schedule'));
     await storage.firstSaveStarted.future;
     await tester.pump();
@@ -856,6 +944,21 @@ void main() {
       0,
     );
     expect(find.byKey(const ValueKey('workspace-switch-busy')), findsOneWidget);
+    final busyRect = tester.getRect(
+      find.byKey(const ValueKey('workspace-switch-busy')),
+    );
+    final navigationRectWhileBusy = tester.getRect(navigationFinder);
+    expect(
+      navigationRectWhileBusy.height,
+      closeTo(navigationRectIdle.height, 0.01),
+    );
+    expect(busyRect.height, closeTo(4, 0.01));
+    expect(busyRect.top, closeTo(navigationRectWhileBusy.top, 0.01));
+    expect(busyRect.bottom, closeTo(navigationRectWhileBusy.top + 4, 0.01));
+    expect(
+      tester.getRect(workspaceFinder).bottom,
+      closeTo(navigationRectWhileBusy.top, 0.01),
+    );
     expect(
       tester
           .widget<HomeScreen>(
@@ -919,13 +1022,13 @@ void main() {
 
     storage.completeSave();
     await tester.pumpAndSettle();
+    expect(tester.widget<NavigationBar>(navigationFinder).selectedIndex, 1);
+    expect(find.byKey(const ValueKey('workspace-switch-busy')), findsNothing);
     expect(
       tester
-          .widget<NavigationBar>(
-            find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
-          )
-          .selectedIndex,
-      1,
+          .getRect(find.byKey(const ValueKey('adaptive-workspace-stack')))
+          .bottom,
+      closeTo(tester.getRect(navigationFinder).top, 0.01),
     );
     await tester.tap(find.byTooltip('Settings'));
     await tester.pump();
@@ -949,8 +1052,6 @@ void main() {
     final pagerFinder = find.byKey(
       const ValueKey<String>('general-week-pager'),
     );
-    final initialPager = tester.widget<PageView>(pagerFinder);
-    final nextPage = initialPager.controller!.page!.round() + 1;
     final initialDate = provider.selectedGeneralDate;
 
     await tester.tap(find.text('Student timetable'));
@@ -982,7 +1083,7 @@ void main() {
       isFalse,
     );
 
-    tester.widget<PageView>(pagerFinder).onPageChanged!(nextPage);
+    expect(tester.widget<PageView>(pagerFinder).onPageChanged, isNull);
     await tester.pump();
     expect(provider.selectedGeneralDate, initialDate);
 
@@ -1153,11 +1254,9 @@ void main() {
     expect(rail.scrollable, isTrue);
     final viewport = Offset.zero & const Size(600, 360);
     for (final key in const [
-      'student-day-week-selector',
-      'student-previous-week',
+      'student-timetable-picker-button',
+      'student-view-toggle-button',
       'student-week-picker-button',
-      'student-today-button',
-      'student-next-week',
     ]) {
       final rect = tester.getRect(find.byKey(ValueKey(key)));
       expect(rect.left, greaterThanOrEqualTo(viewport.left), reason: key);

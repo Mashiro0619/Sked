@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show PointerDeviceKind;
-
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +21,6 @@ import '../widgets/text_transfer_widgets.dart';
 import '../widgets/timetable_grid.dart';
 import '../widgets/ui_command.dart';
 import 'settings_page.dart';
-import 'timetable_display_settings_page.dart';
 import 'timetable_import_flow.dart';
 
 part 'home_screen_course_actions.dart';
@@ -88,6 +86,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _weekNavigationTarget;
   int _weekNavigationGeneration = 0;
   int _weekNavigationDirection = 0;
+  int? _scheduledWeekPageSync;
+  bool _weekPageScrolling = false;
   bool _weekPickerOpen = false;
   bool _timetablePickerOpen = false;
   bool _courseEditorOpen = false;
@@ -96,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _timetableSwitchInProgress = false;
   bool _addTimetableInProgress = false;
   bool _settingsPageOpen = false;
-  bool _displaySettingsPageOpen = false;
   bool _fileImportInProgress = false;
   bool _textImportPageOpen = false;
   bool _schoolWebImportPageOpen = false;
@@ -179,15 +178,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _setDisplaySettingsPageOpen(bool value) {
-    if (_displaySettingsPageOpen == value) return;
-    if (mounted) {
-      setState(() => _displaySettingsPageOpen = value);
-    } else {
-      _displaySettingsPageOpen = value;
-    }
-  }
-
   void _setFileImportInProgress(bool value) {
     if (_fileImportInProgress == value) return;
     if (mounted) {
@@ -250,25 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } finally {
       _setSettingsPageOpen(false);
-    }
-  }
-
-  Future<void> _openDisplaySettingsPage(TimetableProvider provider) async {
-    if (_displaySettingsPageOpen || !mounted) {
-      return;
-    }
-    _setDisplaySettingsPageOpen(true);
-    try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const TimetableDisplaySettingsPage(),
-          ),
-        ),
-      );
-    } finally {
-      _setDisplaySettingsPageOpen(false);
     }
   }
 
@@ -375,6 +346,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 final config = timetable.config;
                 final week = snapshot.selectedWeek;
+                final view = View.of(context);
+                final rawKeyboardInset =
+                    view.viewInsets.bottom / view.devicePixelRatio;
+                final keyboardVisible =
+                    rawKeyboardInset > 0 ||
+                    MediaQuery.viewInsetsOf(context).bottom > 0;
+                final fabVisible =
+                    widget.active &&
+                    widget.interactive &&
+                    !_courseEditorOpen &&
+                    !keyboardVisible;
+                // Keep the viewport full-height so the grid remains visible
+                // behind the FAB. The clearance is added only to the
+                // scrollable grid content, allowing the final course to be
+                // brought above the button without painting a blank strip.
+                final fabContentInset = fabVisible ? 80.0 : 0.0;
                 _ensurePageController(week);
                 _ensureLocalViewState(
                   availableWidth: constraints.maxWidth,
@@ -384,9 +371,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 final viewMode = _viewMode!;
                 final selectedWeekday = _selectedWeekday!;
                 final realCurrentWeek = currentWeekFor(config);
-                final canGoBack = widget.interactive && week > 1;
-                final canGoForward =
-                    widget.interactive && week < config.totalWeeks;
+                final weekSwipeEnabled =
+                    snapshot.enableWeekSwipeNavigation &&
+                    widget.active &&
+                    widget.interactive &&
+                    !_courseEditorOpen &&
+                    !_courseDetailsOpen &&
+                    !_weekPickerOpen &&
+                    !_timetablePickerOpen &&
+                    !_timetableItemDialogOpen &&
+                    !_timetableSwitchInProgress &&
+                    !_settingsPageOpen &&
+                    _weekNavigationTarget == null;
 
                 return Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -408,6 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? _weekNavigationDirection
                                 : 0,
                             viewMode: viewMode,
+                            compactWidth: constraints.maxWidth < 600,
                             compactHeight: constraints.maxHeight < 600,
                             interactive: widget.interactive,
                             showSettings: widget.showSettingsAction,
@@ -428,13 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     config.totalWeeks,
                                     realCurrentWeek,
                                   ),
-                            onPreviousWeek: canGoBack
-                                ? () => unawaited(_jumpWeekBy(provider, -1))
-                                : null,
-                            onNextWeek: canGoForward
-                                ? () => unawaited(_jumpWeekBy(provider, 1))
-                                : null,
-                            onToday: widget.interactive
+                            onJumpToToday: widget.interactive
                                 ? () => unawaited(
                                     _jumpToToday(provider, realCurrentWeek),
                                   )
@@ -442,68 +433,64 @@ class _HomeScreenState extends State<HomeScreen> {
                             onViewChanged: widget.interactive
                                 ? (value) => setState(() => _viewMode = value)
                                 : null,
-                            onOpenDisplaySettings:
-                                _displaySettingsPageOpen || !widget.interactive
-                                ? null
-                                : () => _openDisplaySettingsPage(provider),
                             onOpenSettings: settingsAction,
                           ),
-                          if (viewMode == _StudentTimetableView.day) ...[
-                            const SizedBox(height: 8),
-                            _StudentDayStrip(
-                              weekStart: startOfWeekFor(config, week),
+                          const SizedBox(height: 4),
+                          Expanded(
+                            child: _TimetableWeekPager(
+                              controller: _pageController!,
+                              provider: provider,
+                              timetable: timetable,
+                              config: config,
+                              committedWeek: week,
+                              active: widget.active,
+                              interactive: widget.interactive,
+                              swipeEnabled: weekSwipeEnabled,
+                              viewMode: viewMode,
                               selectedWeekday: selectedWeekday,
-                              enabled: widget.interactive,
-                              onSelected: (weekday) {
+                              fitDaySelectorToWidth:
+                                  snapshot.fitDaySelectorToWidth,
+                              fitWeekColumnsToWidth:
+                                  snapshot.fitWeekColumnsToWidth,
+                              shortcutFocusNode: widget.weekShortcutFocusNode,
+                              bottomContentInset: fabContentInset,
+                              onPageScrollStateChanged: (scrolling) {
+                                _weekPageScrolling = scrolling;
+                              },
+                              onWeekSettled: (settledWeek) =>
+                                  _settleWeekFromPager(provider, settledWeek),
+                              onWeekdaySelected: (weekday) {
                                 if (_selectedWeekday == weekday) return;
                                 setState(() => _selectedWeekday = weekday);
                               },
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 72),
-                              child: _TimetableWeekPager(
-                                controller: _pageController!,
-                                provider: provider,
-                                timetable: timetable,
-                                config: config,
-                                active: widget.active,
-                                interactive: widget.interactive,
-                                viewMode: viewMode,
-                                selectedWeekday: selectedWeekday,
-                                shortcutFocusNode: widget.weekShortcutFocusNode,
-                                onJumpWeekBy: (offset) =>
-                                    _jumpWeekBy(provider, offset),
-                                onCourseTap: (info) =>
-                                    _openDetails(context, provider, info),
-                                onEmptySlotTap: (slotInfo) => _openEditor(
-                                  context,
-                                  provider,
-                                  weekday: slotInfo.weekday,
-                                  emptySlot: slotInfo,
-                                ),
+                              onJumpWeekBy: (offset) =>
+                                  _jumpWeekBy(provider, offset),
+                              onCourseTap: (info) =>
+                                  _openDetails(context, provider, info),
+                              onEmptySlotTap: (slotInfo) => _openEditor(
+                                context,
+                                provider,
+                                weekday: slotInfo.weekday,
+                                emptySlot: slotInfo,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      PositionedDirectional(
-                        end: 12,
-                        bottom: 16,
-                        child: SkedPrimaryFab(
-                          heroTag: 'student-add-course',
-                          tooltip: l10n.addCourse,
-                          onPressed: !_courseEditorOpen && widget.interactive
-                              ? () => _openEditor(context, provider)
-                              : null,
-                          icon: const Icon(Icons.add),
-                          label: constraints.maxWidth >= 760
-                              ? Text(l10n.addCourse)
-                              : null,
+                      if (fabVisible)
+                        PositionedDirectional(
+                          end: 12,
+                          bottom: 16,
+                          child: SkedPrimaryFab(
+                            heroTag: 'student-add-course',
+                            tooltip: l10n.addCourse,
+                            onPressed: () => _openEditor(context, provider),
+                            icon: const Icon(Icons.add),
+                            label: constraints.maxWidth >= 760
+                                ? Text(l10n.addCourse)
+                                : null,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 );
@@ -540,22 +527,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _ensurePageController(int week) {
-    // 周数要等 provider 异步加载完成后才稳定，所以这里每次 build 都顺手校正一下页码。
     final targetPage = week - 1;
     if (_pageController == null) {
       _pageController = PageController(initialPage: targetPage);
       return;
     }
-    if (_weekNavigationTarget != null) return;
+    if (_weekNavigationTarget != null || _weekPageScrolling) return;
+    if (_scheduledWeekPageSync == targetPage) return;
+    _scheduledWeekPageSync = targetPage;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scheduledWeekPageSync == targetPage) {
+        _scheduledWeekPageSync = null;
+      }
       if (!mounted ||
           _weekNavigationTarget != null ||
+          _weekPageScrolling ||
           _pageController == null ||
           !_pageController!.hasClients) {
         return;
       }
-      final currentPage = _pageController!.page?.round() ?? targetPage;
-      if (currentPage != targetPage) {
+      final currentPage = _pageController!.page;
+      if (currentPage == null || (currentPage - targetPage).abs() >= 0.01) {
         _pageController!.jumpToPage(targetPage);
       }
     });
@@ -566,14 +558,38 @@ class _HomeScreenState extends State<HomeScreen> {
     if (timetable == null || offset == 0) {
       return;
     }
-    final targetWeek = (provider.selectedWeek + offset).clamp(
+    final currentWeek = _weekNavigationTarget ?? provider.selectedWeek;
+    final targetWeek = (currentWeek + offset).clamp(
       1,
       timetable.config.totalWeeks,
     );
-    if (targetWeek == provider.selectedWeek) {
+    if (targetWeek == currentWeek) {
       return;
     }
     await _animateToWeek(provider, targetWeek);
+  }
+
+  Future<void> _settleWeekFromPager(
+    TimetableProvider provider,
+    int settledWeek,
+  ) async {
+    final timetable = provider.activeTimetableOrNull;
+    if (!mounted || timetable == null || _weekNavigationTarget != null) return;
+    final targetWeek = settledWeek.clamp(1, timetable.config.totalWeeks);
+    if (targetWeek == provider.selectedWeek) return;
+
+    setState(() => _weekNavigationTarget = targetWeek);
+    try {
+      await provider.setSelectedWeek(targetWeek);
+    } finally {
+      if (_weekNavigationTarget == targetWeek) {
+        if (mounted) {
+          setState(() => _weekNavigationTarget = null);
+        } else {
+          _weekNavigationTarget = null;
+        }
+      }
+    }
   }
 
   Future<void> _jumpToToday(
@@ -589,32 +605,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _animateToWeek(TimetableProvider provider, int week) async {
     final navigationGeneration = ++_weekNavigationGeneration;
-    final direction = week.compareTo(provider.selectedWeek).sign;
-    if (direction != 0 && mounted) {
-      setState(() => _weekNavigationDirection = direction);
+    final originWeek = _weekNavigationTarget ?? provider.selectedWeek;
+    final direction = week.compareTo(originWeek).sign;
+    if (mounted) {
+      setState(() {
+        _weekNavigationDirection = direction;
+        _weekNavigationTarget = week;
+      });
+    } else {
+      _weekNavigationDirection = direction;
+      _weekNavigationTarget = week;
     }
-    _weekNavigationTarget = week;
-    // Publish the latest target before animating. This makes repeated next/
-    // previous commands advance from the user's visible intent, while the
-    // generation token prevents an interrupted animation from restoring an
-    // older page.
     try {
-      await provider.setSelectedWeek(week);
-      if (!mounted || navigationGeneration != _weekNavigationGeneration) return;
-
       final controller = _pageController;
       final targetPage = week - 1;
-      if (controller == null || !controller.hasClients) return;
-      final motion = SkedMotionPolicy.of(context);
-      if (!motion.spatialAnimationsEnabled) {
-        controller.jumpToPage(targetPage);
-        return;
+      if (controller != null && controller.hasClients) {
+        final motion = SkedMotionPolicy.of(context);
+        if (!motion.spatialAnimationsEnabled) {
+          controller.jumpToPage(targetPage);
+        } else {
+          await controller.animateToPage(
+            targetPage,
+            duration: motion.effects(SkedMotionSpeed.standard),
+            curve: motion.scheme.standardCurve,
+          );
+        }
       }
-      await controller.animateToPage(
-        targetPage,
-        duration: motion.effects(SkedMotionSpeed.standard),
-        curve: motion.scheme.standardCurve,
-      );
+      if (!mounted || navigationGeneration != _weekNavigationGeneration) return;
+      await provider.setSelectedWeek(week);
     } finally {
       if (navigationGeneration == _weekNavigationGeneration) {
         _weekNavigationTarget = null;
@@ -638,6 +656,9 @@ class _StudentHomeSnapshot {
     required this.showPastEndedCourses,
     required this.showFutureCourses,
     required this.showTimetableGridLines,
+    required this.fitDaySelectorToWidth,
+    required this.fitWeekColumnsToWidth,
+    required this.enableWeekSwipeNavigation,
     required this.themeMode,
     required this.themeColorMode,
     required this.themeSeedColorValue,
@@ -665,6 +686,9 @@ class _StudentHomeSnapshot {
       showPastEndedCourses: data.showPastEndedCourses,
       showFutureCourses: data.showFutureCourses,
       showTimetableGridLines: data.showTimetableGridLines,
+      fitDaySelectorToWidth: data.fitDaySelectorToWidth,
+      fitWeekColumnsToWidth: data.fitWeekColumnsToWidth,
+      enableWeekSwipeNavigation: data.enableWeekSwipeNavigation,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
       themeSeedColorValue: data.themeSeedColorValue,
@@ -690,6 +714,9 @@ class _StudentHomeSnapshot {
   final bool showPastEndedCourses;
   final bool showFutureCourses;
   final bool showTimetableGridLines;
+  final bool fitDaySelectorToWidth;
+  final bool fitWeekColumnsToWidth;
+  final bool enableWeekSwipeNavigation;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -716,6 +743,9 @@ class _StudentHomeSnapshot {
         other.showPastEndedCourses == showPastEndedCourses &&
         other.showFutureCourses == showFutureCourses &&
         other.showTimetableGridLines == showTimetableGridLines &&
+        other.fitDaySelectorToWidth == fitDaySelectorToWidth &&
+        other.fitWeekColumnsToWidth == fitWeekColumnsToWidth &&
+        other.enableWeekSwipeNavigation == enableWeekSwipeNavigation &&
         other.themeMode == themeMode &&
         other.themeColorMode == themeColorMode &&
         other.themeSeedColorValue == themeSeedColorValue &&
@@ -742,6 +772,9 @@ class _StudentHomeSnapshot {
     showPastEndedCourses,
     showFutureCourses,
     showTimetableGridLines,
+    fitDaySelectorToWidth,
+    fitWeekColumnsToWidth,
+    enableWeekSwipeNavigation,
     themeMode,
     themeColorMode,
     themeSeedColorValue,

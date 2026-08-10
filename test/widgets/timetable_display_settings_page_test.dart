@@ -81,6 +81,7 @@ Future<void> _toggleSetting(WidgetTester tester, String title) async {
     of: titleFinder,
     matching: find.byType(SettingsSwitchTile),
   );
+  await tester.ensureVisible(tile);
   await tester.tap(find.descendant(of: tile, matching: find.byType(Switch)));
   await tester.pumpAndSettle();
 }
@@ -162,5 +163,14 @@ void main() {
 
     await _toggleSetting(tester, 'Show timetable grid lines');
     expect(provider.showTimetableGridLines, isFalse);
+
+    await _toggleSetting(tester, 'Fit day selector to screen');
+    expect(provider.fitDaySelectorToWidth, isFalse);
+
+    await _toggleSetting(tester, 'Fit week columns to screen');
+    expect(provider.fitWeekColumnsToWidth, isFalse);
+
+    await _toggleSetting(tester, 'Swipe to change weeks');
+    expect(provider.enableWeekSwipeNavigation, isFalse);
   });
 }

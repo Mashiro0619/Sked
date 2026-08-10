@@ -16,7 +16,9 @@ class _WeekCalendarView extends StatefulWidget {
     required this.provider,
     required this.filter,
     required this.active,
+    required this.syncRevision,
     required this.onDaySelected,
+    required this.onPageSettled,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
@@ -26,7 +28,9 @@ class _WeekCalendarView extends StatefulWidget {
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final bool active;
+  final int syncRevision;
   final ValueChanged<DateTime> onDaySelected;
+  final ValueChanged<DateTime> onPageSettled;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
@@ -38,18 +42,20 @@ class _WeekCalendarView extends StatefulWidget {
 class _WeekCalendarViewState extends State<_WeekCalendarView> {
   late final DateTime _baseWeekStart;
   late final PageController _controller;
-  late int _currentPage;
+  // Provider-synchronized page. PageView may be fractional or on a different
+  // provisional page while the user is dragging.
+  late int _settledPage;
   int _pageSyncGeneration = 0;
   int? _pendingPage;
-  int? _programmaticPage;
+  bool _pageScrolling = false;
 
   @override
   void initState() {
     super.initState();
     _baseWeekStart = startOfWeekMonday(_visibleDayForDate(widget.date));
-    _currentPage = _generalTimelineInitialPage;
+    _settledPage = _generalTimelineInitialPage;
     _controller = PageController(
-      initialPage: _currentPage,
+      initialPage: _settledPage,
       onAttach: (_) {
         final pendingPage = _pendingPage;
         if (pendingPage != null) _schedulePageJump(pendingPage);
@@ -62,11 +68,14 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
   void didUpdateWidget(covariant _WeekCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active) _syncVisibleSelectedDate();
+    if (_sameDay(oldWidget.date, widget.date) &&
+        oldWidget.syncRevision == widget.syncRevision) {
+      return;
+    }
     final targetPage = _pageForWeek(
       startOfWeekMonday(_visibleDayForDate(widget.date)),
     );
-    if (targetPage != _currentPage || _pendingPage != targetPage) {
-      _currentPage = targetPage;
+    if (targetPage != _settledPage) {
       _schedulePageJump(targetPage);
     }
   }
@@ -78,21 +87,16 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
       if (!mounted || generation != _pageSyncGeneration) return;
       final hasClients = _controller.hasClients;
       if (!hasClients) return;
+      if (_pageScrolling) return;
       final currentPage = _controller.page;
       if (currentPage != null && (currentPage - targetPage).abs() < 0.01) {
         _pendingPage = null;
+        _settledPage = targetPage;
         return;
       }
       _pendingPage = null;
-      _programmaticPage = targetPage;
+      _settledPage = targetPage;
       _controller.jumpToPage(targetPage);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted &&
-            generation == _pageSyncGeneration &&
-            _programmaticPage == targetPage) {
-          _programmaticPage = null;
-        }
-      });
     });
   }
 
@@ -100,7 +104,6 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
   void dispose() {
     _pageSyncGeneration++;
     _pendingPage = null;
-    _programmaticPage = null;
     _controller.dispose();
     super.dispose();
   }
@@ -145,36 +148,64 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
     return calendarDaysBetween(startOfWeekMonday(selected), selected);
   }
 
-  void _handlePageChanged(int page) {
-    _currentPage = page;
-    if (_programmaticPage != null) {
-      final programmaticPage = _programmaticPage;
-      _programmaticPage = null;
-      if (programmaticPage == page) return;
+  void _handlePageSettled(ScrollEndNotification notification) {
+    if (!_pageScrolling || notification.depth != 0 || !_controller.hasClients) {
+      return;
+    }
+    _pageScrolling = false;
+    final page = _controller.page;
+    if (page == null || !page.isFinite) return;
+    final settledPage = page.round();
+    if ((page - settledPage).abs() > 0.01) return;
+    _settledPage = settledPage;
+    final pendingPage = _pendingPage;
+    if (pendingPage != null) {
+      if (pendingPage == settledPage) {
+        _pendingPage = null;
+      } else {
+        _schedulePageJump(pendingPage);
+      }
+      return;
     }
     if (!widget.active) return;
-    final nextDate = _weekStartForPage(page);
-    widget.onDaySelected(addCalendarDays(nextDate, _selectedWeekdayOffset()));
+    final nextDate = _weekStartForPage(settledPage);
+    widget.onPageSettled(addCalendarDays(nextDate, _selectedWeekdayOffset()));
   }
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      key: _generalWeekPagerKey,
-      controller: _controller,
-      onPageChanged: _handlePageChanged,
-      itemBuilder: (context, index) {
-        final weekStart = _weekStartForPage(index);
-        return _WeekTimelinePage(
-          weekStart: weekStart,
-          selectedDate: addCalendarDays(weekStart, _selectedWeekdayOffset()),
-          provider: widget.provider,
-          filter: widget.filter,
-          onEmptySlotTap: widget.onEmptySlotTap,
-          onOccurrenceTap: widget.onOccurrenceTap,
-          onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics is PageMetrics) {
+          if (notification.depth == 0 &&
+              notification is ScrollStartNotification &&
+              notification.dragDetails != null) {
+            _pageScrolling = true;
+          } else if (_pageScrolling && notification is ScrollEndNotification) {
+            _handlePageSettled(notification);
+          }
+        }
+        return false;
       },
+      child: PageView.builder(
+        key: _generalWeekPagerKey,
+        controller: _controller,
+        physics: widget.active
+            ? const PageScrollPhysics()
+            : const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) {
+          final weekStart = _weekStartForPage(index);
+          return _WeekTimelinePage(
+            weekStart: weekStart,
+            selectedDate: addCalendarDays(weekStart, _selectedWeekdayOffset()),
+            provider: widget.provider,
+            filter: widget.filter,
+            onEmptySlotTap: widget.onEmptySlotTap,
+            onOccurrenceTap: widget.onOccurrenceTap,
+            onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
+          );
+        },
+      ),
     );
   }
 }
@@ -228,7 +259,9 @@ class _DayCalendarView extends StatefulWidget {
     required this.provider,
     required this.filter,
     required this.active,
+    required this.syncRevision,
     required this.onDaySelected,
+    required this.onPageSettled,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
@@ -238,7 +271,9 @@ class _DayCalendarView extends StatefulWidget {
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final bool active;
+  final int syncRevision;
   final ValueChanged<DateTime> onDaySelected;
+  final ValueChanged<DateTime> onPageSettled;
   final ValueChanged<DateTime> onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
@@ -252,32 +287,36 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
   late final DateTime _baseWeekStart;
   late final PageController _dayController;
   late final PageController _weekController;
-  late int _currentDayPage;
-  late int _currentWeekPage;
+  // Keep transient PageView positions separate from the last committed pages
+  // so an external date change cannot be mistaken for an already-synced drag.
+  late int _settledDayPage;
+  late int _settledWeekPage;
   bool _syncingWeekPickerFromDay = false;
   int _dayPageSyncGeneration = 0;
   int _weekPageSyncGeneration = 0;
   int? _pendingDayPage;
   int? _pendingWeekPage;
-  int? _programmaticDayPage;
-  int? _programmaticWeekPage;
+  bool _dayPageScrolling = false;
+  bool _weekPageScrolling = false;
+  late bool _showWeekends;
 
   @override
   void initState() {
     super.initState();
     _baseDate = _visibleDayForDate(widget.date);
     _baseWeekStart = startOfWeekMonday(_baseDate);
-    _currentDayPage = _generalTimelineInitialPage;
-    _currentWeekPage = _generalTimelineInitialPage;
+    _showWeekends = widget.provider.generalShowWeekends;
+    _settledDayPage = _generalTimelineInitialPage;
+    _settledWeekPage = _generalTimelineInitialPage;
     _dayController = PageController(
-      initialPage: _currentDayPage,
+      initialPage: _settledDayPage,
       onAttach: (_) {
         final pendingPage = _pendingDayPage;
         if (pendingPage != null) _scheduleDayPageJump(pendingPage);
       },
     );
     _weekController = PageController(
-      initialPage: _currentWeekPage,
+      initialPage: _settledWeekPage,
       onAttach: (_) {
         final pendingPage = _pendingWeekPage;
         if (pendingPage != null) _scheduleWeekPageJump(pendingPage);
@@ -291,16 +330,23 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
   void didUpdateWidget(covariant _DayCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active) _syncVisibleSelectedDate();
+    final showWeekendsChanged =
+        _showWeekends != widget.provider.generalShowWeekends;
+    _showWeekends = widget.provider.generalShowWeekends;
+    final becameActive = !oldWidget.active && widget.active;
+    if (_sameDay(oldWidget.date, widget.date) &&
+        oldWidget.syncRevision == widget.syncRevision &&
+        !showWeekendsChanged &&
+        !becameActive) {
+      return;
+    }
     final selectedDate = _visibleDayForDate(widget.date);
     final targetDayPage = _pageForDay(selectedDate);
-    if (targetDayPage != _currentDayPage || _pendingDayPage != targetDayPage) {
-      _currentDayPage = targetDayPage;
+    if (targetDayPage != _settledDayPage) {
       _scheduleDayPageJump(targetDayPage);
     }
     final targetWeekPage = _pageForWeek(startOfWeekMonday(selectedDate));
-    if (targetWeekPage != _currentWeekPage ||
-        _pendingWeekPage != targetWeekPage) {
-      _currentWeekPage = targetWeekPage;
+    if (targetWeekPage != _settledWeekPage) {
       _scheduleWeekPageJump(targetWeekPage);
     }
   }
@@ -312,21 +358,16 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
       if (!mounted || generation != _dayPageSyncGeneration) return;
       final hasClients = _dayController.hasClients;
       if (!hasClients) return;
+      if (_dayPageScrolling) return;
       final currentPage = _dayController.page;
       if (currentPage != null && (currentPage - targetPage).abs() < 0.01) {
         _pendingDayPage = null;
+        _settledDayPage = targetPage;
         return;
       }
       _pendingDayPage = null;
-      _programmaticDayPage = targetPage;
+      _settledDayPage = targetPage;
       _dayController.jumpToPage(targetPage);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted &&
-            generation == _dayPageSyncGeneration &&
-            _programmaticDayPage == targetPage) {
-          _programmaticDayPage = null;
-        }
-      });
     });
   }
 
@@ -337,21 +378,16 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
       if (!mounted || generation != _weekPageSyncGeneration) return;
       final hasClients = _weekController.hasClients;
       if (!hasClients) return;
+      if (_weekPageScrolling) return;
       final currentPage = _weekController.page;
       if (currentPage != null && (currentPage - targetPage).abs() < 0.01) {
         _pendingWeekPage = null;
+        _settledWeekPage = targetPage;
         return;
       }
       _pendingWeekPage = null;
-      _programmaticWeekPage = targetPage;
+      _settledWeekPage = targetPage;
       _weekController.jumpToPage(targetPage);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted &&
-            generation == _weekPageSyncGeneration &&
-            _programmaticWeekPage == targetPage) {
-          _programmaticWeekPage = null;
-        }
-      });
     });
   }
 
@@ -361,8 +397,6 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     _weekPageSyncGeneration++;
     _pendingDayPage = null;
     _pendingWeekPage = null;
-    _programmaticDayPage = null;
-    _programmaticWeekPage = null;
     _dayController.removeListener(_syncWeekPickerToDayPage);
     _dayController.dispose();
     _weekController.dispose();
@@ -434,7 +468,7 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
       return;
     }
     final targetPage = _weekPageForDayPage(
-      _pageControllerValue(_dayController, _currentDayPage),
+      _pageControllerValue(_dayController, _settledDayPage),
     );
     final targetPixels = targetPage * viewportWidth;
     if ((position.pixels - targetPixels).abs() < 0.5) {
@@ -506,30 +540,77 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
     return difference;
   }
 
-  void _handleDayPageChanged(int page) {
-    _currentDayPage = page;
-    if (_programmaticDayPage != null) {
-      final programmaticPage = _programmaticDayPage;
-      _programmaticDayPage = null;
-      if (programmaticPage == page) return;
+  void _handleDayPageScroll(ScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics is! PageMetrics) return;
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _dayPageScrolling = true;
+    } else if (_dayPageScrolling && notification is ScrollEndNotification) {
+      _handleDayPageSettled(notification);
     }
-    if (!widget.active) return;
-    widget.onDaySelected(_dayForPage(page));
   }
 
-  void _handleWeekPageChanged(int page) {
-    final programmaticPage = _programmaticWeekPage;
-    if (programmaticPage != null) {
-      _programmaticWeekPage = null;
-    }
+  void _handleWeekPageScroll(ScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics is! PageMetrics) return;
     if (_syncingWeekPickerFromDay) {
+      _weekPageScrolling = false;
       return;
     }
-    _currentWeekPage = page;
-    if (programmaticPage == page) return;
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _weekPageScrolling = true;
+    } else if (_weekPageScrolling && notification is ScrollEndNotification) {
+      _handleWeekPageSettled(notification);
+    }
+  }
+
+  void _handleDayPageSettled(ScrollEndNotification notification) {
+    if (notification.depth != 0 || !_dayController.hasClients) {
+      return;
+    }
+    _dayPageScrolling = false;
+    final page = _dayController.page;
+    if (page == null || !page.isFinite) return;
+    final settledPage = page.round();
+    if ((page - settledPage).abs() > 0.01) return;
+    _settledDayPage = settledPage;
+    final pendingPage = _pendingDayPage;
+    if (pendingPage != null) {
+      if (pendingPage == settledPage) {
+        _pendingDayPage = null;
+      } else {
+        _scheduleDayPageJump(pendingPage);
+      }
+      return;
+    }
     if (!widget.active) return;
-    final nextDate = _weekStartForPage(page);
-    widget.onDaySelected(addCalendarDays(nextDate, _selectedWeekdayOffset()));
+    widget.onPageSettled(_dayForPage(settledPage));
+  }
+
+  void _handleWeekPageSettled(ScrollEndNotification notification) {
+    if (notification.depth != 0 ||
+        _syncingWeekPickerFromDay ||
+        !_weekController.hasClients) {
+      return;
+    }
+    _weekPageScrolling = false;
+    final page = _weekController.page;
+    if (page == null || !page.isFinite) return;
+    final settledPage = page.round();
+    if ((page - settledPage).abs() > 0.01) return;
+    _settledWeekPage = settledPage;
+    final pendingPage = _pendingWeekPage;
+    if (pendingPage != null) {
+      if (pendingPage == settledPage) {
+        _pendingWeekPage = null;
+      } else {
+        _scheduleWeekPageJump(pendingPage);
+      }
+      return;
+    }
+    if (!widget.active) return;
+    final nextDate = _weekStartForPage(settledPage);
+    widget.onPageSettled(addCalendarDays(nextDate, _selectedWeekdayOffset()));
   }
 
   @override
@@ -541,29 +622,38 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
           controller: _weekController,
           selectionController: _dayController,
           selectedDate: day,
-          selectedDayPageFallback: _currentDayPage,
+          selectedDayPageFallback: _settledDayPage,
           showWeekends: widget.provider.generalShowWeekends,
           dayPageForDate: _pageForDay,
           weekStartForPage: _weekStartForPage,
-          onPageChanged: _handleWeekPageChanged,
+          onPageScroll: _handleWeekPageScroll,
           onDaySelected: widget.onDaySelected,
+          active: widget.active,
         ),
         Expanded(
-          child: PageView.builder(
-            key: _generalDayPagerKey,
-            controller: _dayController,
-            onPageChanged: _handleDayPageChanged,
-            itemBuilder: (context, index) {
-              final pageDay = _dayForPage(index);
-              return _DayTimelinePage(
-                date: pageDay,
-                provider: widget.provider,
-                filter: widget.filter,
-                onEmptySlotTap: widget.onEmptySlotTap,
-                onOccurrenceTap: widget.onOccurrenceTap,
-                onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
-              );
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              _handleDayPageScroll(notification);
+              return false;
             },
+            child: PageView.builder(
+              key: _generalDayPagerKey,
+              controller: _dayController,
+              physics: widget.active
+                  ? const PageScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                final pageDay = _dayForPage(index);
+                return _DayTimelinePage(
+                  date: pageDay,
+                  provider: widget.provider,
+                  filter: widget.filter,
+                  onEmptySlotTap: widget.onEmptySlotTap,
+                  onOccurrenceTap: widget.onOccurrenceTap,
+                  onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -621,8 +711,9 @@ class _DayWeekPicker extends StatelessWidget {
     required this.showWeekends,
     required this.dayPageForDate,
     required this.weekStartForPage,
-    required this.onPageChanged,
+    required this.onPageScroll,
     required this.onDaySelected,
+    required this.active,
   });
 
   final PageController controller;
@@ -632,8 +723,9 @@ class _DayWeekPicker extends StatelessWidget {
   final bool showWeekends;
   final int Function(DateTime date) dayPageForDate;
   final DateTime Function(int page) weekStartForPage;
-  final ValueChanged<int> onPageChanged;
+  final ValueChanged<ScrollNotification> onPageScroll;
   final ValueChanged<DateTime> onDaySelected;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -659,21 +751,29 @@ class _DayWeekPicker extends StatelessWidget {
             children: [
               _MonthRail(date: selectedDate),
               Expanded(
-                child: PageView.builder(
-                  key: _generalDayWeekPickerPagerKey,
-                  controller: controller,
-                  onPageChanged: onPageChanged,
-                  itemBuilder: (context, index) {
-                    final weekStart = weekStartForPage(index);
-                    final days = _visibleWeekDays(weekStart, showWeekends);
-                    return _DayWeekPickerRow(
-                      days: days,
-                      selectedDate: selectedDate,
-                      selectedDayPage: selectedDayPage,
-                      dayPageForDate: dayPageForDate,
-                      onDaySelected: onDaySelected,
-                    );
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    onPageScroll(notification);
+                    return false;
                   },
+                  child: PageView.builder(
+                    key: _generalDayWeekPickerPagerKey,
+                    controller: controller,
+                    physics: active
+                        ? const PageScrollPhysics()
+                        : const NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) {
+                      final weekStart = weekStartForPage(index);
+                      final days = _visibleWeekDays(weekStart, showWeekends);
+                      return _DayWeekPickerRow(
+                        days: days,
+                        selectedDate: selectedDate,
+                        selectedDayPage: selectedDayPage,
+                        dayPageForDate: dayPageForDate,
+                        onDaySelected: onDaySelected,
+                      );
+                    },
+                  ),
                 ),
               ),
             ],

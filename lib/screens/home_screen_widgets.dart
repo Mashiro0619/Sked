@@ -36,17 +36,15 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     required this.week,
     required this.weekNavigationDirection,
     required this.viewMode,
+    required this.compactWidth,
     required this.compactHeight,
     required this.interactive,
     required this.showSettings,
     this.settingsFocusNode,
     required this.onOpenTimetablePicker,
     required this.onOpenWeekPicker,
-    required this.onPreviousWeek,
-    required this.onNextWeek,
-    required this.onToday,
+    required this.onJumpToToday,
     required this.onViewChanged,
-    required this.onOpenDisplaySettings,
     required this.onOpenSettings,
   });
 
@@ -54,188 +52,162 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final int week;
   final int weekNavigationDirection;
   final _StudentTimetableView viewMode;
+  final bool compactWidth;
   final bool compactHeight;
   final bool interactive;
   final bool showSettings;
   final FocusNode? settingsFocusNode;
   final VoidCallback? onOpenTimetablePicker;
   final VoidCallback? onOpenWeekPicker;
-  final VoidCallback? onPreviousWeek;
-  final VoidCallback? onNextWeek;
-  final VoidCallback? onToday;
+  final VoidCallback? onJumpToToday;
   final ValueChanged<_StudentTimetableView>? onViewChanged;
-  final VoidCallback? onOpenDisplaySettings;
   final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final phoneWidth = compactWidth;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final scaledLabelSize = MediaQuery.textScalerOf(
+      context,
+    ).scale(theme.textTheme.labelLarge?.fontSize ?? 14);
+    final compactWeekPicker =
+        phoneWidth && (screenWidth < 360 || scaledLabelSize > 18.2);
     final controlShape = skedShapeSchemeOf(context).control;
-    final titleButtonStyle = TextButton.styleFrom(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      minimumSize: const Size(48, 48),
-      shape: controlShape,
-      alignment: AlignmentDirectional.centerStart,
-      textStyle: theme.textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
+    final motion = SkedMotionPolicy.of(context);
+    final iconButtonStyle = IconButton.styleFrom(
+      minimumSize: const Size.square(48),
+      padding: const EdgeInsets.all(8),
+      iconSize: 20,
     );
-    final timetableSelector = TextButton.icon(
+    final timetableSelector = TextButton(
       key: const ValueKey('student-timetable-picker-button'),
       onPressed: interactive ? onOpenTimetablePicker : null,
-      style: titleButtonStyle,
-      iconAlignment: IconAlignment.end,
-      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-      label: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Text(
-          timetable.config.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
+        minimumSize: const Size(48, 48),
+        shape: controlShape,
+        alignment: AlignmentDirectional.centerStart,
+        textStyle: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              timetable.config.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+        ],
+      ),
+    );
+    final viewToggle = IconButton(
+      key: const ValueKey('student-view-toggle-button'),
+      onPressed: interactive && onViewChanged != null
+          ? () => onViewChanged!(
+              viewMode == _StudentTimetableView.day
+                  ? _StudentTimetableView.week
+                  : _StudentTimetableView.day,
+            )
+          : null,
+      style: iconButtonStyle,
+      tooltip: viewMode == _StudentTimetableView.day
+          ? l10n.viewWeek
+          : l10n.viewDay,
+      icon: AnimatedSwitcher(
+        duration: motion.effects(SkedMotionSpeed.fast),
+        switchInCurve: motion.scheme.enterCurve,
+        switchOutCurve: motion.scheme.exitCurve,
+        child: Icon(
+          viewMode == _StudentTimetableView.day
+              ? Icons.view_week_outlined
+              : Icons.view_day_outlined,
+          key: ValueKey(viewMode),
+          size: 20,
         ),
       ),
     );
-    final displaySettingsAction = IconButton(
-      key: const ValueKey('student-display-settings-button'),
-      onPressed: onOpenDisplaySettings,
-      icon: const Icon(Icons.tune_rounded),
-      tooltip: l10n.timetableDisplaySettings,
+    final weekPicker = Tooltip(
+      message: '${l10n.jumpToWeek}; ${l10n.today}',
+      child: Semantics(
+        key: const ValueKey('student-week-picker-semantics'),
+        button: true,
+        enabled:
+            interactive && (onOpenWeekPicker != null || onJumpToToday != null),
+        excludeSemantics: true,
+        label: l10n.weekLabel(week),
+        hint: '${l10n.jumpToWeek}; ${l10n.today}',
+        onTap: onOpenWeekPicker,
+        onLongPress: onJumpToToday,
+        onTapHint: l10n.jumpToWeek,
+        onLongPressHint: l10n.today,
+        child: SizedBox(
+          width: compactWeekPicker
+              ? 56
+              : phoneWidth
+              ? 96
+              : 144,
+          child: TextButton(
+            key: const ValueKey('student-week-picker-button'),
+            onPressed: interactive ? onOpenWeekPicker : null,
+            onLongPress: interactive ? onJumpToToday : null,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              shape: controlShape,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (!compactWeekPicker) ...[
+                  const Icon(Icons.calendar_month_outlined, size: 18),
+                  const SizedBox(width: 4),
+                ],
+                Flexible(
+                  child: SkedDirectionalTransition(
+                    trigger: week,
+                    direction: weekNavigationDirection,
+                    distance: 12,
+                    child: Text(
+                      compactWeekPicker ? '$week' : l10n.weekLabel(week),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
     final settingsAction = IconButton(
+      key: const ValueKey('student-settings-button'),
       focusNode: settingsFocusNode,
       onPressed: onOpenSettings,
       icon: const Icon(Icons.settings_outlined),
       tooltip: l10n.settings,
+      style: iconButtonStyle,
     );
     return SkedWorkspaceToolbar(
       key: const ValueKey('student-workspace-toolbar'),
       padding: EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: compactHeight ? 8 : 12,
+        horizontal: phoneWidth ? 8 : 16,
+        vertical: phoneWidth || compactHeight ? 4 : 8,
       ),
-      title: compactHeight
-          ? Row(
-              children: [
-                Expanded(child: timetableSelector),
-                displaySettingsAction,
-                if (showSettings) settingsAction,
-              ],
-            )
-          : timetableSelector,
-      actions: compactHeight
-          ? const []
-          : [displaySettingsAction, if (showSettings) settingsAction],
-      navigation: LayoutBuilder(
-        builder: (context, constraints) {
-          final selector = SkedExpressiveSegmentedButton<_StudentTimetableView>(
-            key: const ValueKey('student-day-week-selector'),
-            segments: [
-              ButtonSegment(
-                value: _StudentTimetableView.day,
-                icon: compactHeight
-                    ? null
-                    : const Icon(Icons.view_day_outlined),
-                label: Text(l10n.viewDay),
-              ),
-              ButtonSegment(
-                value: _StudentTimetableView.week,
-                icon: compactHeight
-                    ? null
-                    : const Icon(Icons.view_week_outlined),
-                label: Text(l10n.viewWeek),
-              ),
-            ],
-            selected: {viewMode},
-            movingIndicator: true,
-            expandedInsets: EdgeInsets.zero,
-            onSelectionChanged: onViewChanged == null
-                ? null
-                : (selection) => onViewChanged!(selection.single),
-          );
-          final weekControls = Wrap(
-            spacing: 2,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              IconButton(
-                key: const ValueKey('student-previous-week'),
-                onPressed: onPreviousWeek,
-                icon: Icon(
-                  isRtl
-                      ? Icons.chevron_right_rounded
-                      : Icons.chevron_left_rounded,
-                ),
-                tooltip: l10n.weekLabel(math.max(1, week - 1)),
-              ),
-              TextButton.icon(
-                key: const ValueKey('student-week-picker-button'),
-                onPressed: interactive ? onOpenWeekPicker : null,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  shape: controlShape,
-                ),
-                icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                label: SkedDirectionalTransition(
-                  trigger: week,
-                  direction: weekNavigationDirection,
-                  distance: 12,
-                  child: Text(l10n.weekLabel(week)),
-                ),
-              ),
-              if (compactHeight)
-                IconButton(
-                  key: const ValueKey('student-today-button'),
-                  onPressed: onToday,
-                  icon: const Icon(Icons.today_outlined),
-                  tooltip: l10n.today,
-                )
-              else
-                OutlinedButton.icon(
-                  key: const ValueKey('student-today-button'),
-                  onPressed: onToday,
-                  icon: const Icon(Icons.today_outlined),
-                  label: Text(l10n.today),
-                ),
-              IconButton(
-                key: const ValueKey('student-next-week'),
-                onPressed: onNextWeek,
-                icon: Icon(
-                  isRtl
-                      ? Icons.chevron_left_rounded
-                      : Icons.chevron_right_rounded,
-                ),
-                tooltip: l10n.weekLabel(
-                  math.min(timetable.config.totalWeeks, week + 1),
-                ),
-              ),
-            ],
-          );
-          if (compactHeight) {
-            return Wrap(
-              key: const ValueKey('student-toolbar-compact-navigation'),
-              spacing: 8,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [selector, weekControls],
-            );
-          }
-          if (constraints.maxWidth < 720) {
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [selector, weekControls],
-            );
-          }
-          return Row(
-            children: [
-              Flexible(child: selector),
-              const Spacer(),
-              weekControls,
-            ],
-          );
-        },
+      navigationSpacing: 0,
+      title: Row(
+        children: [
+          Expanded(child: timetableSelector),
+          viewToggle,
+          weekPicker,
+          if (showSettings) settingsAction,
+        ],
       ),
     );
   }
@@ -246,12 +218,20 @@ class _StudentDayStrip extends StatefulWidget {
     required this.weekStart,
     required this.selectedWeekday,
     required this.enabled,
+    required this.fitToWidth,
+    this.horizontalScrollLocked = false,
+    this.onHorizontalPointerDown,
+    this.onHorizontalEdgeDrag,
     required this.onSelected,
   });
 
   final DateTime weekStart;
   final int selectedWeekday;
   final bool enabled;
+  final bool fitToWidth;
+  final bool horizontalScrollLocked;
+  final ValueChanged<int>? onHorizontalPointerDown;
+  final ValueChanged<double>? onHorizontalEdgeDrag;
   final ValueChanged<int> onSelected;
 
   @override
@@ -259,21 +239,22 @@ class _StudentDayStrip extends StatefulWidget {
 }
 
 class _StudentDayStripState extends State<_StudentDayStrip> {
-  static const _itemExtent = 64.0;
   final ScrollController _scrollController = ScrollController();
+  _DayStripMetrics? _lastMetrics;
 
   @override
   void initState() {
     super.initState();
-    _scheduleRevealSelected();
+    _scheduleRevealSelected(_lastMetrics);
   }
 
   @override
   void didUpdateWidget(covariant _StudentDayStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedWeekday != widget.selectedWeekday ||
-        oldWidget.weekStart != widget.weekStart) {
-      _scheduleRevealSelected();
+        oldWidget.weekStart != widget.weekStart ||
+        oldWidget.fitToWidth != widget.fitToWidth) {
+      _scheduleRevealSelected(_lastMetrics);
     }
   }
 
@@ -283,11 +264,20 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
     super.dispose();
   }
 
-  void _scheduleRevealSelected() {
+  void _scheduleRevealSelected(_DayStripMetrics? metrics) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      if (!mounted || metrics == null || !_scrollController.hasClients) return;
+      if (widget.fitToWidth) {
+        if (_scrollController.offset.abs() >= 0.5) {
+          _scrollController.jumpTo(0);
+        }
+        return;
+      }
       final position = _scrollController.position;
-      final selectedCenter = ((widget.selectedWeekday - 1) * _itemExtent) + 29;
+      final selectedCenter =
+          metrics.padding +
+          ((widget.selectedWeekday - 1) * metrics.itemExtent) +
+          (metrics.itemWidth / 2);
       final target = (selectedCenter - (position.viewportDimension / 2)).clamp(
         position.minScrollExtent,
         position.maxScrollExtent,
@@ -317,99 +307,199 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
     final shape = skedShapeSchemeOf(context).selectionIndicator;
     final today = DateTime.now();
     final textScaler = MediaQuery.textScalerOf(context);
+    final textDirection = Directionality.of(context);
+    double singleLineHeight(String text, TextStyle? style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        maxLines: 1,
+        textDirection: textDirection,
+        textScaler: textScaler,
+      )..layout();
+      return painter.height;
+    }
+
+    final localeCode = Localizations.localeOf(context).toLanguageTag();
+    final weekdayHeight = List.generate(
+      7,
+      (index) => singleLineHeight(
+        formatWeekdayShortLabel(index + 1, localeCode: localeCode),
+        theme.textTheme.labelMedium,
+      ),
+    ).reduce(math.max);
+    final dateHeight = List.generate(
+      7,
+      (index) => singleLineHeight(
+        '${addCalendarDays(widget.weekStart, index).day}',
+        theme.textTheme.titleMedium,
+      ),
+    ).reduce(math.max);
     final stripHeight = math
-        .max(68.0, textScaler.scale(40) + 20)
+        .max(60.0, weekdayHeight + dateHeight + 12)
         .ceilToDouble();
-    return SizedBox(
-      height: stripHeight,
-      child: ListView.separated(
-        key: const ValueKey('student-day-strip'),
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: 7,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final weekday = index + 1;
-          final date = addCalendarDays(widget.weekStart, index);
-          final selected = weekday == widget.selectedWeekday;
-          final isToday = DateUtils.isSameDay(date, today);
-          final foreground = selected
-              ? colors.onPrimaryContainer
-              : colors.onSurface;
-          return Semantics(
-            button: true,
-            selected: selected,
-            label: MaterialLocalizations.of(context).formatFullDate(date),
-            child: AnimatedContainer(
-              key: ValueKey('student-day-$weekday'),
-              duration: motion.effects(SkedMotionSpeed.fast),
-              curve: motion.scheme.standardCurve,
-              width: 58,
-              decoration: ShapeDecoration(
-                shape: shape.copyWith(
-                  side: BorderSide(
-                    color: selected || isToday
-                        ? colors.primary
-                        : colors.outlineVariant,
-                  ),
-                ),
-                color: selected
-                    ? colors.primaryContainer
-                    : colors.surfaceContainerLow,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                shape: shape,
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  customBorder: shape,
-                  onTap: widget.enabled
-                      ? () => widget.onSelected(weekday)
-                      : null,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          formatWeekdayShortLabel(
-                            weekday,
-                            localeCode: Localizations.localeOf(
-                              context,
-                            ).toLanguageTag(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final metrics = _DayStripMetrics.fromWidth(
+          constraints.maxWidth,
+          fitToWidth: widget.fitToWidth,
+        );
+        _lastMetrics = metrics;
+        _scheduleRevealSelected(metrics);
+        final contentWidth =
+            metrics.padding * 2 + metrics.itemWidth * 7 + metrics.gap * 6;
+        final scrollable = contentWidth > constraints.maxWidth + 0.5;
+        final physics = widget.horizontalScrollLocked || !scrollable
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(
+                parent: ClampingScrollPhysics(),
+              );
+        bool reportHorizontalOverscroll(OverscrollNotification notification) {
+          if (notification.metrics.axis != Axis.horizontal ||
+              notification.dragDetails == null) {
+            return false;
+          }
+          final delta = notification.dragDetails!.primaryDelta;
+          if (delta != null && delta != 0) {
+            widget.onHorizontalEdgeDrag?.call(delta);
+          }
+          return false;
+        }
+
+        return SizedBox(
+          height: stripHeight,
+          child: NotificationListener<OverscrollNotification>(
+            onNotification: reportHorizontalOverscroll,
+            child: Listener(
+              onPointerDown: scrollable
+                  ? (event) =>
+                        widget.onHorizontalPointerDown?.call(event.pointer)
+                  : null,
+              onPointerPanZoomStart: scrollable
+                  ? (event) =>
+                        widget.onHorizontalPointerDown?.call(event.pointer)
+                  : null,
+              child: ListView.separated(
+                key: const ValueKey('student-day-strip'),
+                controller: _scrollController,
+                physics: physics,
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: metrics.padding),
+                itemCount: 7,
+                separatorBuilder: (_, _) => SizedBox(width: metrics.gap),
+                itemBuilder: (context, index) {
+                  final weekday = index + 1;
+                  final date = addCalendarDays(widget.weekStart, index);
+                  final selected = weekday == widget.selectedWeekday;
+                  final isToday = DateUtils.isSameDay(date, today);
+                  final foreground = selected
+                      ? colors.onPrimaryContainer
+                      : colors.onSurface;
+                  return Semantics(
+                    button: true,
+                    selected: selected,
+                    label: MaterialLocalizations.of(
+                      context,
+                    ).formatFullDate(date),
+                    child: AnimatedContainer(
+                      key: ValueKey('student-day-$weekday'),
+                      duration: motion.effects(SkedMotionSpeed.fast),
+                      curve: motion.scheme.standardCurve,
+                      width: metrics.itemWidth,
+                      decoration: ShapeDecoration(
+                        shape: shape.copyWith(
+                          side: BorderSide(
+                            color: selected || isToday
+                                ? colors.primary
+                                : colors.outlineVariant,
                           ),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: foreground,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          softWrap: false,
                         ),
-                        Text(
-                          '${date.day}',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: foreground,
-                            fontWeight: selected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
+                        color: selected
+                            ? colors.primaryContainer
+                            : colors.surfaceContainerLow,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: shape,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          customBorder: shape,
+                          onTap: widget.enabled
+                              ? () => widget.onSelected(weekday)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  formatWeekdayShortLabel(
+                                    weekday,
+                                    localeCode: Localizations.localeOf(
+                                      context,
+                                    ).toLanguageTag(),
+                                  ),
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: foreground,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.fade,
+                                  softWrap: false,
+                                ),
+                                Text(
+                                  '${date.day}',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: foreground,
+                                    fontWeight: selected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.fade,
+                                  softWrap: false,
+                                ),
+                              ],
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          softWrap: false,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DayStripMetrics {
+  const _DayStripMetrics({
+    required this.itemWidth,
+    required this.gap,
+    required this.padding,
+  });
+
+  final double itemWidth;
+  final double gap;
+  final double padding;
+
+  double get itemExtent => itemWidth + gap;
+
+  factory _DayStripMetrics.fromWidth(double width, {required bool fitToWidth}) {
+    if (!fitToWidth) {
+      return const _DayStripMetrics(itemWidth: 54, gap: 4, padding: 4);
+    }
+    final safeWidth = width.isFinite && width > 0 ? width : 320.0;
+    const gap = 2.0;
+    const padding = 0.0;
+    return _DayStripMetrics(
+      itemWidth: math.max(1.0, (safeWidth - gap * 6) / 7),
+      gap: gap,
+      padding: padding,
     );
   }
 }
@@ -653,11 +743,19 @@ class _TimetableWeekPager extends StatefulWidget {
     required this.provider,
     required this.timetable,
     required this.config,
+    required this.committedWeek,
     required this.active,
     required this.interactive,
+    required this.swipeEnabled,
     required this.viewMode,
     required this.selectedWeekday,
+    required this.fitDaySelectorToWidth,
+    required this.fitWeekColumnsToWidth,
     this.shortcutFocusNode,
+    required this.bottomContentInset,
+    required this.onPageScrollStateChanged,
+    required this.onWeekSettled,
+    required this.onWeekdaySelected,
     required this.onJumpWeekBy,
     required this.onCourseTap,
     required this.onEmptySlotTap,
@@ -667,11 +765,19 @@ class _TimetableWeekPager extends StatefulWidget {
   final TimetableProvider provider;
   final TimetableData timetable;
   final TimetableConfig config;
+  final int committedWeek;
   final bool active;
   final bool interactive;
+  final bool swipeEnabled;
   final _StudentTimetableView viewMode;
   final int selectedWeekday;
+  final bool fitDaySelectorToWidth;
+  final bool fitWeekColumnsToWidth;
   final FocusNode? shortcutFocusNode;
+  final double bottomContentInset;
+  final ValueChanged<bool> onPageScrollStateChanged;
+  final Future<void> Function(int week) onWeekSettled;
+  final ValueChanged<int> onWeekdaySelected;
   final Future<void> Function(int offset) onJumpWeekBy;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
   final ValueChanged<TimetableEmptySlotTapInfo> onEmptySlotTap;
@@ -689,6 +795,16 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
       _createTimetableLiveRefreshTimer;
   bool _isForeground = true;
   bool _tickerEnabled = false;
+  bool _manualEdgeDrag = false;
+  bool _manualSettleInProgress = false;
+  bool _pageScrollReported = false;
+  final Set<int> _innerHorizontalPointers = <int>{};
+  int? _activePointer;
+  int? _manualOriginPage;
+  int _manualDirection = 0;
+  Offset _pointerTravel = Offset.zero;
+  double _manualProgressPixels = 0;
+  VelocityTracker? _velocityTracker;
 
   @override
   void initState() {
@@ -725,6 +841,11 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
     if (oldWidget.active != widget.active) {
       _restartLiveCourseTimer(refreshImmediately: _canRefresh);
     }
+    if (oldWidget.swipeEnabled && !widget.swipeEnabled && _manualEdgeDrag) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_finishManualEdgeDrag(0));
+      });
+    }
   }
 
   @override
@@ -740,6 +861,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _liveCourseTimer?.cancel();
+    _reportPageScrolling(false);
     if (widget.shortcutFocusNode == null) _shortcutFocusNode.dispose();
     super.dispose();
   }
@@ -771,8 +893,344 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
     );
   }
 
+  void _reportPageScrolling(bool scrolling) {
+    if (_pageScrollReported == scrolling) return;
+    _pageScrollReported = scrolling;
+    widget.onPageScrollStateChanged(scrolling);
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if (!widget.swipeEnabled || _activePointer != null) return;
+    _activePointer = event.pointer;
+    _pointerTravel = Offset.zero;
+    _velocityTracker = VelocityTracker.withKind(event.kind)
+      ..addPosition(event.timeStamp, event.position);
+  }
+
+  void _handlePointerPanZoomStart(PointerPanZoomStartEvent event) {
+    if (!widget.swipeEnabled || _activePointer != null) return;
+    _activePointer = event.pointer;
+    _pointerTravel = Offset.zero;
+    _velocityTracker = VelocityTracker.withKind(event.kind)
+      ..addPosition(event.timeStamp, Offset.zero);
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (event.pointer != _activePointer) return;
+    _velocityTracker?.addPosition(event.timeStamp, event.position);
+    _handlePointerDelta(event.pointer, event.delta);
+  }
+
+  void _handlePointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
+    if (event.pointer != _activePointer) return;
+    _velocityTracker?.addPosition(event.timeStamp, event.pan);
+    _handlePointerDelta(event.pointer, event.panDelta);
+  }
+
+  void _handlePointerDelta(int pointer, Offset delta) {
+    _pointerTravel += delta;
+    if (_manualEdgeDrag) {
+      _applyManualPageDelta(delta.dx);
+      return;
+    }
+    if (!_innerHorizontalPointers.contains(pointer) &&
+        _pointerTravel.dx.abs() >= kTouchSlop &&
+        _pointerTravel.dx.abs() > _pointerTravel.dy.abs() * 1.1) {
+      _beginManualPageDrag(_pointerTravel.dx);
+    }
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    if (event.pointer != _activePointer) return;
+    _velocityTracker?.addPosition(event.timeStamp, event.position);
+    final velocity = _velocityTracker?.getVelocity().pixelsPerSecond.dx ?? 0;
+    _innerHorizontalPointers.remove(event.pointer);
+    _activePointer = null;
+    _velocityTracker = null;
+    _pointerTravel = Offset.zero;
+    if (_manualEdgeDrag) {
+      unawaited(_finishManualEdgeDrag(velocity));
+    }
+  }
+
+  void _handlePointerPanZoomEnd(PointerPanZoomEndEvent event) {
+    if (event.pointer != _activePointer) return;
+    final velocity = _velocityTracker?.getVelocity().pixelsPerSecond.dx ?? 0;
+    _innerHorizontalPointers.remove(event.pointer);
+    _activePointer = null;
+    _velocityTracker = null;
+    _pointerTravel = Offset.zero;
+    if (_manualEdgeDrag) {
+      unawaited(_finishManualEdgeDrag(velocity));
+    }
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    if (event.pointer != _activePointer) return;
+    _innerHorizontalPointers.remove(event.pointer);
+    _activePointer = null;
+    _velocityTracker = null;
+    _pointerTravel = Offset.zero;
+    if (_manualEdgeDrag) {
+      unawaited(_finishManualEdgeDrag(0));
+    }
+  }
+
+  void _markInnerHorizontalPointer(int pointer) {
+    if (widget.swipeEnabled) _innerHorizontalPointers.add(pointer);
+  }
+
+  void _beginManualEdgeDrag(double physicalDelta) {
+    _beginManualPageDrag(physicalDelta);
+  }
+
+  /// Nested horizontal scrollables consume the gesture first. Once one of
+  /// them reports that it has reached an edge, keep the same pointer stream
+  /// and move the outer page at the finger's physical delta.
+  void _beginManualPageDrag(double physicalDelta) {
+    if (_manualEdgeDrag ||
+        _manualSettleInProgress ||
+        _activePointer == null ||
+        !widget.swipeEnabled ||
+        widget.config.totalWeeks <= 1 ||
+        !widget.controller.hasClients) {
+      return;
+    }
+    final position = widget.controller.position;
+    if (!position.hasViewportDimension || position.viewportDimension <= 0) {
+      return;
+    }
+    final originPage = (widget.controller.page ?? widget.committedWeek - 1)
+        .round()
+        .clamp(0, widget.config.totalWeeks - 1);
+    final adjustedDelta = axisDirectionIsReversed(position.axisDirection)
+        ? -physicalDelta
+        : physicalDelta;
+    final direction = (-adjustedDelta).sign.toInt();
+    if (direction == 0) return;
+
+    _manualEdgeDrag = true;
+    _manualOriginPage = originPage;
+    _manualDirection = direction;
+    _manualProgressPixels = 0;
+    _reportPageScrolling(true);
+    if (mounted) setState(() {});
+    _applyManualPageDelta(physicalDelta);
+  }
+
+  void _applyManualPageDelta(double physicalDelta) {
+    final originPage = _manualOriginPage;
+    if (!_manualEdgeDrag ||
+        originPage == null ||
+        !widget.controller.hasClients) {
+      return;
+    }
+    final position = widget.controller.position;
+    if (!position.hasViewportDimension || position.viewportDimension <= 0) {
+      return;
+    }
+    final adjustedDelta = axisDirectionIsReversed(position.axisDirection)
+        ? -physicalDelta
+        : physicalDelta;
+    final originPixels = originPage * position.viewportDimension;
+    final destinationPage = (originPage + _manualDirection).clamp(
+      0,
+      widget.config.totalWeeks - 1,
+    );
+    final maximumProgress =
+        (destinationPage - originPage).abs() * position.viewportDimension;
+    final progressDelta = -adjustedDelta * _manualDirection;
+    _manualProgressPixels = (_manualProgressPixels + progressDelta).clamp(
+      0,
+      maximumProgress,
+    );
+    if (SkedMotionPolicy.of(context).spatialAnimationsEnabled) {
+      final nextPixels =
+          (originPixels + _manualDirection * _manualProgressPixels).clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          );
+      if ((nextPixels - position.pixels).abs() >= 0.01) {
+        widget.controller.jumpTo(nextPixels);
+      }
+    }
+  }
+
+  Future<void> _finishManualEdgeDrag(double physicalVelocity) async {
+    if (!_manualEdgeDrag || _manualSettleInProgress) return;
+    final originPage = _manualOriginPage;
+    if (originPage == null || !widget.controller.hasClients) {
+      _resetManualDrag();
+      return;
+    }
+    _manualEdgeDrag = false;
+    _manualSettleInProgress = true;
+    if (mounted) setState(() {});
+
+    final position = widget.controller.position;
+    final progress = position.viewportDimension <= 0
+        ? 0.0
+        : _manualProgressPixels / position.viewportDimension;
+    final adjustedVelocity = axisDirectionIsReversed(position.axisDirection)
+        ? -physicalVelocity
+        : physicalVelocity;
+    final pageVelocity = -adjustedVelocity * _manualDirection;
+    final shouldAdvance =
+        progress >= 0.35 || (pageVelocity >= 700 && progress >= 0.05);
+    final targetPage = shouldAdvance
+        ? (originPage + _manualDirection).clamp(0, widget.config.totalWeeks - 1)
+        : originPage;
+
+    try {
+      final motion = SkedMotionPolicy.of(context);
+      if (!motion.spatialAnimationsEnabled) {
+        widget.controller.jumpToPage(targetPage);
+      } else {
+        await widget.controller.animateToPage(
+          targetPage,
+          duration: motion.effects(SkedMotionSpeed.standard),
+          curve: motion.scheme.standardCurve,
+        );
+      }
+      if (mounted && targetPage != widget.committedWeek - 1) {
+        await widget.onWeekSettled(targetPage + 1);
+      }
+    } finally {
+      _resetManualDrag();
+    }
+  }
+
+  void _resetManualDrag() {
+    _manualEdgeDrag = false;
+    _manualSettleInProgress = false;
+    _manualOriginPage = null;
+    _manualDirection = 0;
+    _manualProgressPixels = 0;
+    _reportPageScrolling(false);
+    if (mounted) setState(() {});
+  }
+
+  Widget _buildWeekPage(BuildContext context, int index) {
+    final pageWeek = index + 1;
+    final weekStart = startOfWeekFor(widget.config, pageWeek);
+    final realCurrentWeek = currentWeekFor(widget.config);
+    final liveCourseTarget = currentOrNextCourseTargetFor(
+      timetable: widget.timetable,
+      selectedWeek: pageWeek,
+      realCurrentWeek: realCurrentWeek,
+      now: _now(),
+      displayedCourseIdForConflict:
+          widget.provider.displayedCourseIdForConflict,
+    );
+    final liveCourseOutlineColorValue =
+        widget.provider.liveCourseOutlineFollowTheme
+        ? deriveLiveCourseOutlineColorFromSeed(
+            Color(widget.provider.themeSeedColorValue),
+          ).toARGB32()
+        : widget.provider.liveCourseOutlineColorValue;
+    final horizontalHandoffEnabled =
+        widget.swipeEnabled &&
+        ((widget.viewMode == _StudentTimetableView.day &&
+                !widget.fitDaySelectorToWidth) ||
+            (widget.viewMode == _StudentTimetableView.week &&
+                !widget.fitWeekColumnsToWidth));
+    final currentPageInteractive =
+        widget.interactive && pageWeek == widget.committedWeek;
+
+    return KeyedSubtree(
+      key: ValueKey('student-week-page-$pageWeek'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.viewMode == _StudentTimetableView.day) ...[
+            _StudentDayStrip(
+              weekStart: weekStart,
+              selectedWeekday: widget.selectedWeekday,
+              enabled: currentPageInteractive,
+              fitToWidth: widget.fitDaySelectorToWidth,
+              horizontalScrollLocked:
+                  _manualEdgeDrag || _manualSettleInProgress,
+              onHorizontalPointerDown: horizontalHandoffEnabled
+                  ? _markInnerHorizontalPointer
+                  : null,
+              onHorizontalEdgeDrag: horizontalHandoffEnabled
+                  ? _beginManualEdgeDrag
+                  : null,
+              onSelected: widget.onWeekdaySelected,
+            ),
+            const SizedBox(height: 4),
+          ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(2, 4, 0, AppSpacing.md),
+              child: RepaintBoundary(
+                child: TimetableGrid(
+                  timetable: widget.timetable,
+                  periodTimes: widget.provider.periodTimesForTimetable(
+                    widget.timetable,
+                  ),
+                  weekDateStart: weekStart,
+                  selectedWeek: pageWeek,
+                  realCurrentWeek: realCurrentWeek,
+                  localeCode: widget.provider.localeCode,
+                  preserveGaps: widget.provider.preserveTimetableGaps,
+                  showPastEndedCourses: widget.provider.showPastEndedCourses,
+                  showFutureCourses: widget.provider.showFutureCourses,
+                  showGridLines: widget.provider.showTimetableGridLines,
+                  themeColorMode: widget.provider.themeColorMode,
+                  courseNameColorValues: widget.provider.courseNameColorValues,
+                  colorfulCourseTextColorMode:
+                      widget.provider.colorfulCourseTextColorMode,
+                  colorfulCourseTextColorValue: widget
+                      .provider
+                      .colorfulUiColorValues[colorfulCourseTextColorKey],
+                  displayedCourseIdForConflict:
+                      widget.provider.displayedCourseIdForConflict,
+                  liveCourseTarget: liveCourseTarget,
+                  liveCourseOutlineEnabled:
+                      widget.provider.liveCourseOutlineEnabled,
+                  liveCourseOutlineMode: widget.provider.liveCourseOutlineMode,
+                  liveCourseOutlineColorValue: liveCourseOutlineColorValue,
+                  liveCourseOutlineWidth:
+                      widget.provider.liveCourseOutlineWidth,
+                  visibleWeekdays: widget.viewMode == _StudentTimetableView.day
+                      ? [widget.selectedWeekday]
+                      : const <int>[1, 2, 3, 4, 5, 6, 7],
+                  fitVisibleDaysToWidth:
+                      widget.viewMode == _StudentTimetableView.week &&
+                      widget.fitWeekColumnsToWidth,
+                  showDayHeader: widget.viewMode != _StudentTimetableView.day,
+                  bottomContentInset: widget.bottomContentInset,
+                  horizontalScrollLocked:
+                      _manualEdgeDrag || _manualSettleInProgress,
+                  onHorizontalPointerDown:
+                      horizontalHandoffEnabled &&
+                          widget.viewMode == _StudentTimetableView.week
+                      ? _markInnerHorizontalPointer
+                      : null,
+                  onHorizontalEdgeDrag:
+                      horizontalHandoffEnabled &&
+                          widget.viewMode == _StudentTimetableView.week
+                      ? _beginManualEdgeDrag
+                      : null,
+                  onCourseTap: currentPageInteractive
+                      ? widget.onCourseTap
+                      : (_) {},
+                  onEmptySlotTap: currentPageInteractive
+                      ? widget.onEmptySlotTap
+                      : (_) {},
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
     final pageView = ScrollConfiguration(
       behavior: const MaterialScrollBehavior().copyWith(
         dragDevices: {
@@ -783,75 +1241,30 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
           PointerDeviceKind.invertedStylus,
         },
       ),
-      child: PageView.builder(
-        key: const ValueKey('student-week-pager'),
-        controller: widget.controller,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: widget.config.totalWeeks,
-        itemBuilder: (context, index) {
-          final pageWeek = index + 1;
-          final weekStart = startOfWeekFor(widget.config, pageWeek);
-          final realCurrentWeek = currentWeekFor(widget.config);
-          final liveCourseTarget = currentOrNextCourseTargetFor(
-            timetable: widget.timetable,
-            selectedWeek: pageWeek,
-            realCurrentWeek: realCurrentWeek,
-            now: _now(),
-            displayedCourseIdForConflict:
-                widget.provider.displayedCourseIdForConflict,
-          );
-          final liveCourseOutlineColorValue =
-              widget.provider.liveCourseOutlineFollowTheme
-              ? deriveLiveCourseOutlineColorFromSeed(
-                  Color(widget.provider.themeSeedColorValue),
-                ).toARGB32()
-              : widget.provider.liveCourseOutlineColorValue;
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(2, 8, 0, AppSpacing.md),
-            child: RepaintBoundary(
-              child: TimetableGrid(
-                timetable: widget.timetable,
-                periodTimes: widget.provider.periodTimesForTimetable(
-                  widget.timetable,
-                ),
-                weekDateStart: weekStart,
-                selectedWeek: pageWeek,
-                realCurrentWeek: realCurrentWeek,
-                localeCode: widget.provider.localeCode,
-                preserveGaps: widget.provider.preserveTimetableGaps,
-                showPastEndedCourses: widget.provider.showPastEndedCourses,
-                showFutureCourses: widget.provider.showFutureCourses,
-                showGridLines: widget.provider.showTimetableGridLines,
-                themeColorMode: widget.provider.themeColorMode,
-                courseNameColorValues: widget.provider.courseNameColorValues,
-                colorfulCourseTextColorMode:
-                    widget.provider.colorfulCourseTextColorMode,
-                colorfulCourseTextColorValue: widget
-                    .provider
-                    .colorfulUiColorValues[colorfulCourseTextColorKey],
-                displayedCourseIdForConflict:
-                    widget.provider.displayedCourseIdForConflict,
-                liveCourseTarget: liveCourseTarget,
-                liveCourseOutlineEnabled:
-                    widget.provider.liveCourseOutlineEnabled,
-                liveCourseOutlineMode: widget.provider.liveCourseOutlineMode,
-                liveCourseOutlineColorValue: liveCourseOutlineColorValue,
-                liveCourseOutlineWidth: widget.provider.liveCourseOutlineWidth,
-                visibleWeekdays: widget.viewMode == _StudentTimetableView.day
-                    ? [widget.selectedWeekday]
-                    : const <int>[1, 2, 3, 4, 5, 6, 7],
-                showDayHeader: widget.viewMode != _StudentTimetableView.day,
-                onCourseTap: widget.onCourseTap,
-                onEmptySlotTap: widget.onEmptySlotTap,
-              ),
-            ),
-          );
-        },
+      child: Listener(
+        onPointerDown: _handlePointerDown,
+        onPointerMove: _handlePointerMove,
+        onPointerUp: _handlePointerUp,
+        onPointerCancel: _handlePointerCancel,
+        onPointerPanZoomStart: _handlePointerPanZoomStart,
+        onPointerPanZoomUpdate: _handlePointerPanZoomUpdate,
+        onPointerPanZoomEnd: _handlePointerPanZoomEnd,
+        child: PageView.builder(
+          key: const ValueKey('student-week-pager'),
+          controller: widget.controller,
+          physics: const NeverScrollableScrollPhysics(),
+          // The manual pointer state machine owns both drag progress and the
+          // release animation. Implicit snapping would start a ballistic
+          // spring after every jumpTo and fight slow mouse drags.
+          pageSnapping: false,
+          itemCount: widget.config.totalWeeks,
+          itemBuilder: _buildWeekPage,
+        ),
       ),
     );
-    final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
     final horizontalGridMayScroll =
         widget.viewMode == _StudentTimetableView.week &&
+        !widget.fitWeekColumnsToWidth &&
         (MediaQuery.sizeOf(context).width < 760 || textScale > 1.3);
     final shortcutsEnabled =
         _shortcutsEnabled && widget.interactive && !horizontalGridMayScroll;

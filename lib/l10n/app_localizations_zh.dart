@@ -255,6 +255,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showTimetableGridLinesHint => '控制课表中的横向与纵向网格线是否显示。';
 
   @override
+  String get timetableHorizontalLayoutSection => '横向布局与手势';
+
+  @override
+  String get fitDaySelectorToWidth => '日期选择条适应屏幕';
+
+  @override
+  String get fitDaySelectorToWidthHint => '尽可能在屏幕内显示完整七天；关闭后使用固定宽度并支持横向滚动。';
+
+  @override
+  String get fitWeekColumnsToWidth => '周课表列适应屏幕';
+
+  @override
+  String get fitWeekColumnsToWidthHint => '尽可能在屏幕内显示完整七列；关闭后使用固定宽度并支持横向滚动。';
+
+  @override
+  String get enableWeekSwipeNavigation => '允许滑动切换周数';
+
+  @override
+  String get enableWeekSwipeNavigationHint => '左右滑动切换周数；固定宽度模式下需先滑到边缘再继续拖动。';
+
+  @override
   String get liveCourseOutlineColor => '课程描边颜色';
 
   @override
@@ -2155,6 +2176,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get showTimetableGridLinesHint => '控制課表中的橫向與縱向網格線是否顯示。';
+
+  @override
+  String get timetableHorizontalLayoutSection => '橫向佈局與手勢';
+
+  @override
+  String get fitDaySelectorToWidth => '日期選擇列適應螢幕';
+
+  @override
+  String get fitDaySelectorToWidthHint => '盡可能在螢幕內顯示完整七天；關閉後使用固定寬度並支援橫向捲動。';
+
+  @override
+  String get fitWeekColumnsToWidth => '週課表欄位適應螢幕';
+
+  @override
+  String get fitWeekColumnsToWidthHint => '盡可能在螢幕內顯示完整七欄；關閉後使用固定寬度並支援橫向捲動。';
+
+  @override
+  String get enableWeekSwipeNavigation => '允許滑動切換週數';
+
+  @override
+  String get enableWeekSwipeNavigationHint => '左右滑動切換週數；固定寬度模式下需先滑到邊緣再繼續拖動。';
 
   @override
   String get liveCourseOutlineColor => '課程描邊顏色';

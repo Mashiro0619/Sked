@@ -205,7 +205,8 @@ class SkedWorkspaceToolbar extends StatelessWidget {
     this.navigation,
     this.actions = const [],
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  });
+    this.navigationSpacing = 10,
+  }) : assert(navigationSpacing >= 0);
 
   final Widget title;
   final Widget? subtitle;
@@ -213,6 +214,7 @@ class SkedWorkspaceToolbar extends StatelessWidget {
   final Widget? navigation;
   final List<Widget> actions;
   final EdgeInsetsGeometry padding;
+  final double navigationSpacing;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +304,7 @@ class SkedWorkspaceToolbar extends StatelessWidget {
                 children: [
                   header,
                   if (navigation != null) ...[
-                    const SizedBox(height: 10),
+                    SizedBox(height: navigationSpacing),
                     navigation!,
                   ],
                 ],
@@ -336,13 +338,14 @@ class SkedPrimaryFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final shape = skedShapeSchemeOf(context).fab;
     final effectiveOnPressed = isLoading ? null : onPressed;
     final loadingIcon = SizedBox.square(
       dimension: 22,
       child: CircularProgressIndicator(
         strokeWidth: 2.5,
-        color: Theme.of(context).colorScheme.onPrimary,
+        color: colors.onPrimary,
       ),
     );
 
@@ -352,6 +355,8 @@ class SkedPrimaryFab extends StatelessWidget {
         onPressed: effectiveOnPressed,
         tooltip: tooltip,
         shape: shape,
+        backgroundColor: colors.primary,
+        foregroundColor: colors.onPrimary,
         icon: isLoading ? loadingIcon : icon,
         label: label ?? const SizedBox.shrink(),
       );
@@ -361,6 +366,8 @@ class SkedPrimaryFab extends StatelessWidget {
       onPressed: effectiveOnPressed,
       tooltip: tooltip,
       shape: shape,
+      backgroundColor: colors.primary,
+      foregroundColor: colors.onPrimary,
       child: isLoading ? loadingIcon : icon,
     );
   }

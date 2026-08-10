@@ -86,6 +86,8 @@ used an API 36 x86_64 emulator, not a physical device.
 
 The LRU policy reduced expensive service recomputations by 13.0% in the fixed
 churn workload. Promotion makes a pure cache hit cost roughly 0.1 us more in
-these environments. All eleven workload checksums remained unchanged. The
-remaining timing differences were not treated as causal evidence because they
-also appeared in unrelated encode, decode, and sanitizer cases.
+these environments. The seven non-serialization workload checksums remain
+unchanged; the four AppData and app-backup checksums were refreshed for the
+new persisted layout settings. The remaining timing differences were not
+treated as causal evidence because they also appeared in unrelated encode,
+decode, and sanitizer cases.

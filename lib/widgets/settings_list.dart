@@ -78,8 +78,8 @@ class SettingsConnectedGroup extends StatelessWidget {
   }
 }
 
-/// A row for [SettingsConnectedGroup].  The visible control remains at least
-/// 48 dp high and reflows its trailing affordance on very narrow windows.
+/// A row for [SettingsConnectedGroup]. The trailing affordance stays in a
+/// fixed touch slot while the text column takes responsibility for wrapping.
 class SettingsConnectedTile extends StatelessWidget {
   const SettingsConnectedTile({
     super.key,
@@ -100,95 +100,63 @@ class SettingsConnectedTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final trailingWidget = trailing == null
-            ? null
-            : IconTheme.merge(
-                data: IconThemeData(color: colors.onSurfaceVariant),
-                child: trailing!,
-              );
-        final textContent = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: colors.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
+    final trailingWidget = trailing == null
+        ? null
+        : IconTheme.merge(
+            data: IconThemeData(color: colors.onSurfaceVariant),
+            child: trailing!,
+          );
+    final textContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
             ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                subtitle!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ],
-        );
-        final narrow =
-            trailingWidget != null &&
-            (constraints.maxWidth < 360 || textScale > 1.3);
-        final row = narrow
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SettingsTileIcon(child: leading),
-                      const SizedBox(width: 16),
-                      Expanded(child: textContent),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: trailingWidget,
-                  ),
-                ],
-              )
-            : Row(
+          ),
+        ],
+      ],
+    );
+    return Semantics(
+      button: onTap != null,
+      enabled: onTap != null,
+      label: subtitle == null ? title : '$title, $subtitle',
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: ExpressiveTap(
+          onTap: onTap,
+          borderRadius: BorderRadius.zero,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 64),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _SettingsTileIcon(child: leading),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(child: textContent),
                   if (trailingWidget != null) ...[
-                    const SizedBox(width: 12),
-                    trailingWidget,
+                    const SizedBox(width: 8),
+                    _SettingsTileTrailing(child: trailingWidget),
                   ],
                 ],
-              );
-        return Semantics(
-          button: onTap != null,
-          enabled: onTap != null,
-          label: subtitle == null ? title : '$title, $subtitle',
-          onTap: onTap,
-          child: ExcludeSemantics(
-            child: ExpressiveTap(
-              onTap: onTap,
-              borderRadius: BorderRadius.zero,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 64),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: row,
-                ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -235,6 +203,12 @@ class SettingsListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final trailingWidget = trailing == null
+        ? null
+        : IconTheme.merge(
+            data: IconThemeData(color: colors.onSurfaceVariant),
+            child: trailing!,
+          );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ExpressiveTap(
@@ -249,56 +223,19 @@ class SettingsListTile extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final leadingIcon = _SettingsTileIcon(child: leading);
-                final textContent = _SettingsTileText(
-                  title: title,
-                  subtitle: subtitle,
-                );
-                final trailingWidget = trailing == null
-                    ? null
-                    : IconTheme.merge(
-                        data: IconThemeData(color: colors.onSurfaceVariant),
-                        child: trailing!,
-                      );
-
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                if (trailingWidget != null &&
-                    (constraints.maxWidth < 360 || textScale > 1.3)) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          leadingIcon,
-                          const SizedBox(width: 16),
-                          Expanded(child: textContent),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: trailingWidget,
-                      ),
-                    ],
-                  );
-                }
-
-                return Row(
-                  children: [
-                    leadingIcon,
-                    const SizedBox(width: 16),
-                    Expanded(child: textContent),
-                    if (trailingWidget != null) ...[
-                      const SizedBox(width: 12),
-                      trailingWidget,
-                    ],
-                  ],
-                );
-              },
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _SettingsTileIcon(child: leading),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SettingsTileText(title: title, subtitle: subtitle),
+                ),
+                if (trailingWidget != null) ...[
+                  const SizedBox(width: 8),
+                  _SettingsTileTrailing(child: trailingWidget),
+                ],
+              ],
             ),
           ),
         ),
@@ -324,6 +261,20 @@ class _SettingsTileIcon extends StatelessWidget {
           child: child,
         ),
       ),
+    );
+  }
+}
+
+class _SettingsTileTrailing extends StatelessWidget {
+  const _SettingsTileTrailing({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      child: Center(child: child),
     );
   }
 }

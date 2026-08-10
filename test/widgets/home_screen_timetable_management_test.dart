@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,7 @@ import 'package:sked/services/secret_store.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
+import 'package:sked/widgets/timetable_grid.dart';
 
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
@@ -415,6 +417,9 @@ Future<void> _pumpHomeScreenWithProvider(
   TextScaler textScaler = TextScaler.noScaling,
   Locale locale = const Locale('en'),
   TextDirection? textDirection,
+  bool active = true,
+  bool interactive = true,
+  bool showSettingsAction = true,
   bool settle = true,
 }) async {
   await _resetWidgetTree(tester);
@@ -438,7 +443,12 @@ Future<void> _pumpHomeScreenWithProvider(
           }
           return result;
         },
-        home: HomeScreen(key: UniqueKey()),
+        home: HomeScreen(
+          key: UniqueKey(),
+          active: active,
+          interactive: interactive,
+          showSettingsAction: showSettingsAction,
+        ),
       ),
     ),
   );
@@ -923,6 +933,30 @@ void main() {
       find.byKey(const ValueKey('first-launch-onboarding')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('custom timetable layout settings skip first-launch onboarding', (
+    tester,
+  ) async {
+    final data = _buildDefaultFirstLaunchData();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(
+        data.copyWith(
+          studentMode: data.studentMode.copyWith(
+            enableWeekSwipeNavigation: false,
+          ),
+        ),
+      ),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    expect(find.byKey(const ValueKey('first-launch-onboarding')), findsNothing);
+    expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
   });
 
   for (final scenario
@@ -1952,12 +1986,25 @@ void main() {
     final addCourseButton = find.byTooltip('Add course');
     expect(addCourseButton, findsOneWidget);
     expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(80),
+    );
 
     await tester.tap(addCourseButton);
     await tester.tap(addCourseButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.byType(CourseEditorSheet), findsOneWidget);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(0),
+    );
     expect(find.text('Add course'), findsWidgets);
     final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
     expect(bottomSheet.enableDrag, isFalse);
@@ -1984,7 +2031,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
 
-    await tester.tap(find.text('Week'));
+    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
 
@@ -2023,7 +2070,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('compact large-text toolbar keeps every week action visible', (
+  testWidgets('compact large-text toolbar keeps every primary action visible', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -2032,26 +2079,204 @@ void main() {
     await _pumpHomeScreenWithProvider(
       tester,
       provider,
+      locale: const Locale('de'),
       textScaler: const TextScaler.linear(1.8),
     );
 
     final viewport = Offset.zero & const Size(320, 568);
     for (final key in const [
-      'student-day-week-selector',
-      'student-previous-week',
+      'student-timetable-picker-button',
+      'student-view-toggle-button',
       'student-week-picker-button',
-      'student-today-button',
-      'student-next-week',
+      'student-settings-button',
     ]) {
       final rect = tester.getRect(find.byKey(ValueKey(key)));
       expect(viewport.contains(rect.topLeft), isTrue, reason: key);
       expect(viewport.contains(rect.bottomRight), isTrue, reason: key);
       expect(rect.height, greaterThanOrEqualTo(48), reason: key);
     }
+    for (final removedKey in const [
+      'student-day-week-selector',
+      'student-previous-week',
+      'student-today-button',
+      'student-next-week',
+    ]) {
+      expect(find.byKey(ValueKey(removedKey)), findsNothing);
+    }
+    expect(
+      find.byKey(const ValueKey('student-display-settings-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('student-settings-button')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('rapid week commands settle on the latest requested week', (
+  testWidgets('student toolbar and day strip use compact phone metrics', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final selectorRect = tester.getRect(
+      find.byKey(const ValueKey('student-view-toggle-button')),
+    );
+    final stripRect = tester.getRect(
+      find.byKey(const ValueKey('student-day-strip')),
+    );
+    final mondayRect = tester.getRect(
+      find.byKey(const ValueKey('student-day-1')),
+    );
+    final tuesdayRect = tester.getRect(
+      find.byKey(const ValueKey('student-day-2')),
+    );
+
+    expect(selectorRect.size, const Size.square(48));
+    expect(stripRect.height, closeTo(60, 0.01));
+    expect(mondayRect.width, closeTo((stripRect.width - 12) / 7, 0.01));
+    expect(tuesdayRect.left - mondayRect.right, closeTo(2, 0.01));
+    expect(
+      find.byKey(const ValueKey('student-display-settings-button')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('student navigation adapts across target window sizes', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final scenarios = [
+      (size: const Size(390, 844), locale: const Locale('zh'), scale: 1.0),
+      (size: const Size(575, 776), locale: const Locale('de'), scale: 1.3),
+      (size: const Size(576, 776), locale: const Locale('en'), scale: 1.0),
+      (size: const Size(900, 360), locale: const Locale('de'), scale: 1.0),
+      (size: const Size(1120, 680), locale: const Locale('en'), scale: 1.0),
+    ];
+
+    for (final scenario in scenarios) {
+      await tester.binding.setSurfaceSize(scenario.size);
+      await _pumpHomeScreenWithProvider(
+        tester,
+        provider,
+        locale: scenario.locale,
+        textScaler: TextScaler.linear(scenario.scale),
+      );
+
+      final viewport = Offset.zero & scenario.size;
+      for (final key in const [
+        'student-timetable-picker-button',
+        'student-view-toggle-button',
+        'student-week-picker-button',
+        'student-settings-button',
+      ]) {
+        final rect = tester.getRect(find.byKey(ValueKey(key)));
+        expect(
+          viewport.contains(rect.topLeft),
+          true,
+          reason: '$key ${scenario.size}',
+        );
+        expect(
+          viewport.contains(rect.bottomRight),
+          true,
+          reason: '$key ${scenario.size}',
+        );
+        expect(rect.height, greaterThanOrEqualTo(48), reason: key);
+      }
+
+      final timetablePicker = tester.getRect(
+        find.byKey(const ValueKey('student-timetable-picker-button')),
+      );
+      final settings = tester.getRect(
+        find.byKey(const ValueKey('student-settings-button')),
+      );
+      expect(timetablePicker.center.dy, closeTo(settings.center.dy, 0.01));
+      final viewToggle = tester.getRect(
+        find.byKey(const ValueKey('student-view-toggle-button')),
+      );
+      final weekPicker = tester.getRect(
+        find.byKey(const ValueKey('student-week-picker-button')),
+      );
+      expect(viewToggle.center.dy, closeTo(weekPicker.center.dy, 0.01));
+      for (final removedKey in const [
+        'student-day-week-selector',
+        'student-previous-week',
+        'student-today-button',
+        'student-next-week',
+      ]) {
+        expect(find.byKey(ValueKey(removedKey)), findsNothing);
+      }
+      expect(
+        find.byKey(const ValueKey('student-display-settings-button')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull, reason: '${scenario.size}');
+    }
+  });
+
+  testWidgets('student pager stays full height and FAB has no backing layer', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final pagerRect = tester.getRect(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    final fabFinder = find.byType(FloatingActionButton);
+    final fabRect = tester.getRect(fabFinder);
+    final fab = tester.widget<FloatingActionButton>(fabFinder);
+    final colors = Theme.of(tester.element(fabFinder)).colorScheme;
+
+    expect(pagerRect.bottom, closeTo(776, 0.01));
+    expect(fabRect.size, const Size.square(56));
+    expect(fabRect.right, closeTo(pagerRect.right - 12, 0.01));
+    expect(fabRect.bottom, closeTo(760, 0.01));
+    expect(fab.backgroundColor, colors.primary);
+    expect(fab.foregroundColor, colors.onPrimary);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keyboard and inactive workspace clear FAB avoidance', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+
+    final physicalKeyboardInset = 280 * tester.view.devicePixelRatio;
+    tester.view.viewInsets = FakeViewPadding(bottom: physicalKeyboardInset);
+    addTearDown(tester.view.reset);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(0),
+    );
+
+    tester.view.reset();
+    await _pumpHomeScreenWithProvider(tester, provider, active: false);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(0),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rapid keyboard week commands settle on the latest request', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1120, 680));
@@ -2060,11 +2285,9 @@ void main() {
     await provider.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    final next = find.byKey(const ValueKey('student-next-week'));
-    final previous = find.byKey(const ValueKey('student-previous-week'));
-    await tester.tap(next);
-    await tester.tap(next);
-    await tester.tap(previous);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
 
     expect(provider.selectedWeek, 6);
@@ -2095,6 +2318,388 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('long pressing the week picker jumps to the current week', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(1);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final expectedWeek = currentWeekFor(provider.activeTimetable.config);
+    await tester.longPress(
+      find.byKey(const ValueKey('student-week-picker-button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, expectedWeek);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('day view edge swipe changes week when enabled', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final pager = tester.widget<PageView>(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('student-day-strip'))),
+    );
+    await gesture.moveBy(const Offset(-180, 0));
+    await tester.pump();
+
+    expect(pager.controller!.page, greaterThan(4));
+    expect(pager.controller!.page, lessThan(5));
+    expect(provider.selectedWeek, 5);
+    expect(find.byKey(const ValueKey('student-week-page-6')), findsOneWidget);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 6);
+
+    await tester.drag(
+      find.byKey(const ValueKey('student-day-strip')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(provider.selectedWeek, 7);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'day pager can start from the timetable body in fixed-width mode',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      await provider.setSelectedWeek(5);
+      await provider.updateFitDaySelectorToWidth(false);
+      await _pumpHomeScreenWithProvider(tester, provider);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(
+          find.byKey(const ValueKey('timetable-grid-vertical-scroll')),
+        ),
+      );
+      await gesture.moveBy(const Offset(-180, 0));
+      await tester.pumpAndSettle();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(provider.selectedWeek, 6);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('disabled week swipe leaves day view on the same week', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await provider.updateEnableWeekSwipeNavigation(false);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    await tester.drag(
+      find.byKey(const ValueKey('student-day-strip')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('short week swipe previews then returns without changing week', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final pager = tester.widget<PageView>(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('student-day-strip'))),
+    );
+    await gesture.moveBy(const Offset(-90, 0));
+    await tester.pump();
+
+    expect(pager.controller!.page, greaterThan(4));
+    expect(pager.controller!.page, lessThan(4.5));
+    expect(provider.selectedWeek, 5);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(pager.controller!.page, closeTo(4, 0.01));
+    expect(provider.selectedWeek, 5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('slow mouse week drag stays stable while held', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final pager = tester.widget<PageView>(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('timetable-time-rail'))),
+      kind: PointerDeviceKind.mouse,
+    );
+    final pageSamples = <double>[];
+    for (var step = 0; step < 20; step += 1) {
+      await gesture.moveBy(const Offset(-4, 0));
+      await tester.pump(const Duration(milliseconds: 40));
+      pageSamples.add(pager.controller!.page!);
+    }
+
+    for (var index = 1; index < pageSamples.length; index += 1) {
+      expect(pageSamples[index], greaterThanOrEqualTo(pageSamples[index - 1]));
+    }
+    expect(pageSamples.last, greaterThan(4));
+    expect(provider.selectedWeek, 5);
+
+    final heldPage = pager.controller!.page!;
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(pager.controller!.page, closeTo(heldPage, 0.001));
+    expect(provider.selectedWeek, 5);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(pager.controller!.page, closeTo(4, 0.01));
+    expect(provider.selectedWeek, 5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('RTL week swipe follows the physical page direction', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(
+      tester,
+      provider,
+      textDirection: TextDirection.rtl,
+    );
+
+    await tester.drag(
+      find.byKey(const ValueKey('student-day-strip')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 4);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('week view swipe changes week when columns fit the screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('timetable-grid-horizontal-scroll')),
+      const Offset(-180, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 6);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fixed week pager can start from the time rail', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await provider.updateFitWeekColumnsToWidth(false);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('timetable-time-rail'))),
+    );
+    await gesture.moveBy(const Offset(-180, 0));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 6);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fixed week columns scroll before an edge swipe changes week', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await provider.updateFitWeekColumnsToWidth(false);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
+    await tester.pumpAndSettle();
+
+    final horizontal = find.byKey(
+      const ValueKey('timetable-grid-horizontal-scroll'),
+    );
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: horizontal, matching: find.byType(Scrollable)),
+        )
+        .position;
+    await tester.drag(horizontal, const Offset(-120, 0));
+    await tester.pumpAndSettle();
+    expect(provider.selectedWeek, 5);
+    expect(position.pixels, greaterThan(0));
+
+    final currentPosition = tester
+        .state<ScrollableState>(
+          find.descendant(of: horizontal, matching: find.byType(Scrollable)),
+        )
+        .position;
+    currentPosition.jumpTo(currentPosition.maxScrollExtent);
+    await tester.pump();
+    await tester.drag(horizontal, const Offset(-180, 0));
+    await tester.pumpAndSettle();
+    expect(provider.selectedWeek, 6);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('slow mouse edge handoff stays stable while held', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await provider.updateFitWeekColumnsToWidth(false);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
+    await tester.pumpAndSettle();
+
+    final pager = tester.widget<PageView>(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    final horizontal = find.byKey(
+      const ValueKey('timetable-grid-horizontal-scroll'),
+    );
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(of: horizontal, matching: find.byType(Scrollable)),
+        )
+        .position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pump();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(horizontal),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 25; step += 1) {
+      await gesture.moveBy(const Offset(-4, 0));
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+
+    expect(pager.controller!.page, greaterThan(4));
+    expect(provider.selectedWeek, 5);
+    final heldPage = pager.controller!.page!;
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(pager.controller!.page, closeTo(heldPage, 0.001));
+    expect(provider.selectedWeek, 5);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(pager.controller!.page, closeTo(4, 0.01));
+    expect(provider.selectedWeek, 5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'reduced motion week swipe commits without spatial drag preview',
+    (tester) async {
+      tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(reduceMotion: true);
+      addTearDown(
+        tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.binding.setSurfaceSize(const Size(430, 776));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      await provider.setSelectedWeek(5);
+      await _pumpHomeScreenWithProvider(tester, provider);
+
+      final strip = find.byKey(const ValueKey('student-day-strip'));
+      final gesture = await tester.startGesture(tester.getCenter(strip));
+      await gesture.moveBy(const Offset(-180, 0));
+      await tester.pump();
+
+      final pager = tester.widget<PageView>(
+        find.byKey(const ValueKey('student-week-pager')),
+      );
+      expect(pager.controller!.page, closeTo(4, 0.01));
+      expect(provider.selectedWeek, 5);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(provider.selectedWeek, 6);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('trackpad pan preview commits the adjacent week', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await provider.setSelectedWeek(5);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final pager = tester.widget<PageView>(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    final pointer = TestPointer(7, PointerDeviceKind.trackpad);
+    final center = tester.getCenter(
+      find.byKey(const ValueKey('student-week-pager')),
+    );
+    await tester.sendEventToBinding(pointer.panZoomStart(center));
+    await tester.sendEventToBinding(
+      pointer.panZoomUpdate(center, pan: const Offset(-360, 0)),
+    );
+    await tester.pump();
+
+    expect(pager.controller!.page, greaterThan(4));
+    expect(pager.controller!.page, lessThan(5));
+    expect(provider.selectedWeek, 5);
+
+    await tester.sendEventToBinding(pointer.panZoomEnd());
+    await tester.pumpAndSettle();
+
+    expect(provider.selectedWeek, 6);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('reduced motion reveals the selected day without scrolling', (
     tester,
   ) async {
@@ -2106,16 +2711,19 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
-    final selectedWeekday = normalizeDayOfWeek(DateTime.now().weekday);
+    await provider.updateFitDaySelectorToWidth(false);
 
     await _pumpHomeScreenWithProvider(tester, provider, settle: false);
+    await tester.tap(find.byKey(const ValueKey('student-day-4')));
+    await tester.pump();
+    await tester.pump();
 
     final scrollable = find.descendant(
       of: find.byKey(const ValueKey('student-day-strip')),
       matching: find.byType(Scrollable),
     );
     final position = tester.state<ScrollableState>(scrollable).position;
-    final selectedCenter = ((selectedWeekday - 1) * 64) + 29;
+    const selectedCenter = 4 + (3 * 58) + 27;
     final expectedTarget = (selectedCenter - position.viewportDimension / 2)
         .clamp(position.minScrollExtent, position.maxScrollExtent);
     expect(position.pixels, closeTo(expectedTarget, 0.01));
@@ -2189,6 +2797,24 @@ void main() {
     expect(data.flagsCollection.isButton, isTrue);
     expect(data.flagsCollection.isSelected, ui.Tristate.isTrue);
     expect(data.label, 'Week 5');
+    semantics.dispose();
+  });
+
+  testWidgets('week picker exposes tap and long-press semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final data = tester
+        .getSemantics(
+          find.byKey(const ValueKey('student-week-picker-semantics')),
+        )
+        .getSemanticsData();
+    expect(data.flagsCollection.isButton, isTrue);
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.hasAction(SemanticsAction.longPress), isTrue);
     semantics.dispose();
   });
 

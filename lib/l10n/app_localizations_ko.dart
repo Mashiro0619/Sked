@@ -259,6 +259,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get showTimetableGridLinesHint => '시간표에서 가로 및 세로 격자선을 표시할지 설정합니다.';
 
   @override
+  String get timetableHorizontalLayoutSection =>
+      'Horizontal layout and gestures';
+
+  @override
+  String get fitDaySelectorToWidth => 'Fit day selector to screen';
+
+  @override
+  String get fitDaySelectorToWidthHint =>
+      'Show all seven days within the screen when possible; turn off to use a fixed width and scroll.';
+
+  @override
+  String get fitWeekColumnsToWidth => 'Fit week columns to screen';
+
+  @override
+  String get fitWeekColumnsToWidthHint =>
+      'Show all seven timetable columns within the screen when possible; turn off to use a fixed width and scroll.';
+
+  @override
+  String get enableWeekSwipeNavigation => 'Swipe to change weeks';
+
+  @override
+  String get enableWeekSwipeNavigationHint =>
+      'Swipe left or right to move to another week. With fixed widths, drag past the edge first.';
+
+  @override
   String get liveCourseOutlineColor => '수업 윤곽선 색상';
 
   @override

@@ -98,6 +98,8 @@ Widget _gridHarness({
   bool showDayHeader = true,
   bool preserveGaps = true,
   double textScale = 1,
+  double bottomContentInset = 0,
+  bool fitVisibleDaysToWidth = false,
   TextDirection textDirection = TextDirection.ltr,
   ValueChanged<TimetableCourseTapInfo>? onCourseTap,
   ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap,
@@ -133,10 +135,25 @@ Widget _gridHarness({
           liveCourseOutlineWidth: 2,
           visibleWeekdays: visibleWeekdays,
           showDayHeader: showDayHeader,
+          bottomContentInset: bottomContentInset,
+          fitVisibleDaysToWidth: fitVisibleDaysToWidth,
         ),
       ),
     ),
   );
+}
+
+ScrollableState _horizontalScrollState(WidgetTester tester, Key ownerKey) {
+  final scrollable = find.descendant(
+    of: find.byKey(ownerKey),
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable &&
+          (widget.axisDirection == AxisDirection.right ||
+              widget.axisDirection == AxisDirection.left),
+    ),
+  );
+  return tester.state<ScrollableState>(scrollable.first);
 }
 
 void main() {
@@ -358,6 +375,7 @@ void main() {
       _gridHarness(
         timetable: _timetableWithCourses(const []),
         periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+        fitVisibleDaysToWidth: false,
       ),
     );
     await tester.pumpAndSettle();
@@ -383,6 +401,170 @@ void main() {
       headerAfter.dx - headerBefore.dx,
       closeTo(columnAfter.dx - columnBefore.dx, 0.5),
     );
+  });
+
+  testWidgets('fit mode divides all visible columns across the viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: _timetableWithCourses(const []),
+        periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+        fitVisibleDaysToWidth: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final headerScroll = _horizontalScrollState(
+      tester,
+      const ValueKey('timetable-day-header-horizontal-scroll'),
+    );
+    final bodyScroll = _horizontalScrollState(
+      tester,
+      const ValueKey('timetable-grid-horizontal-scroll'),
+    );
+    expect(headerScroll.position.maxScrollExtent, closeTo(0, 0.01));
+    expect(bodyScroll.position.maxScrollExtent, closeTo(0, 0.01));
+
+    final viewport = tester.getSize(
+      find.byKey(const ValueKey('timetable-grid-horizontal-scroll')),
+    );
+    final content = tester.getSize(
+      find.byKey(const ValueKey('timetable-grid-horizontal-content')),
+    );
+    expect(content.width, closeTo(viewport.width, 0.01));
+
+    final firstColumn = tester.getSize(
+      find.byKey(const ValueKey('timetable-day-column-1')),
+    );
+    final lastColumn = tester.getSize(
+      find.byKey(const ValueKey('timetable-day-column-7')),
+    );
+    expect(firstColumn.width, closeTo(content.width / 7, 0.01));
+    expect(lastColumn.width, closeTo(firstColumn.width, 0.01));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('switching fit mode clamps synchronized scroll offsets', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var fitVisibleDaysToWidth = false;
+    late void Function(void Function()) updateGrid;
+    final timetable = _timetableWithCourses([
+      _course(
+        id: 'fit-toggle-course',
+        weekday: DateTime.monday,
+        startMinutes: 480,
+        endMinutes: 525,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateGrid = setState;
+            return Scaffold(
+              body: SizedBox.expand(
+                child: TimetableGrid(
+                  timetable: timetable,
+                  periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+                  weekDateStart: DateTime(2026, 1, 5),
+                  selectedWeek: 1,
+                  realCurrentWeek: 1,
+                  localeCode: 'en',
+                  preserveGaps: true,
+                  showPastEndedCourses: true,
+                  showFutureCourses: true,
+                  showGridLines: true,
+                  onCourseTap: (_) {},
+                  onEmptySlotTap: (_) {},
+                  themeColorMode: themeColorModeSingle,
+                  courseNameColorValues: const {},
+                  colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
+                  liveCourseOutlineEnabled: false,
+                  liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
+                  liveCourseOutlineColorValue: 0xFF6750A4,
+                  liveCourseOutlineWidth: 2,
+                  fitVisibleDaysToWidth: fitVisibleDaysToWidth,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const bodyKey = ValueKey('timetable-grid-horizontal-scroll');
+    final bodyFinder = find.byKey(bodyKey);
+    await tester.drag(bodyFinder, const Offset(-180, 0));
+    await tester.pumpAndSettle();
+    final bodyBeforeToggle = _horizontalScrollState(
+      tester,
+      bodyKey,
+    ).position.pixels;
+    expect(bodyBeforeToggle, greaterThan(0));
+
+    updateGrid(() => fitVisibleDaysToWidth = true);
+    await tester.pumpAndSettle();
+    final fitBody = _horizontalScrollState(tester, bodyKey);
+    final fitHeader = _horizontalScrollState(
+      tester,
+      const ValueKey('timetable-day-header-horizontal-scroll'),
+    );
+    expect(fitBody.position.maxScrollExtent, closeTo(0, 0.01));
+    expect(fitHeader.position.maxScrollExtent, closeTo(0, 0.01));
+    expect(fitBody.position.pixels, closeTo(0, 0.01));
+    expect(fitHeader.position.pixels, closeTo(0, 0.01));
+
+    updateGrid(() => fitVisibleDaysToWidth = false);
+    await tester.pumpAndSettle();
+    final restoredBody = _horizontalScrollState(tester, bodyKey);
+    final restoredHeader = _horizontalScrollState(
+      tester,
+      const ValueKey('timetable-day-header-horizontal-scroll'),
+    );
+    expect(restoredBody.position.maxScrollExtent, greaterThan(0));
+    expect(restoredHeader.position.maxScrollExtent, greaterThan(0));
+    expect(restoredBody.position.pixels, closeTo(0, 0.01));
+    expect(restoredHeader.position.pixels, closeTo(0, 0.01));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fit mode remains bounded on a narrow large-text viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: _timetableWithCourses(const []),
+        periodTimes: buildDefaultPeriodTimes().take(3).toList(),
+        fitVisibleDaysToWidth: true,
+        textScale: 2,
+        textDirection: TextDirection.rtl,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final headerScroll = _horizontalScrollState(
+      tester,
+      const ValueKey('timetable-day-header-horizontal-scroll'),
+    );
+    final bodyScroll = _horizontalScrollState(
+      tester,
+      const ValueKey('timetable-grid-horizontal-scroll'),
+    );
+    expect(headerScroll.position.maxScrollExtent, closeTo(0, 0.01));
+    expect(bodyScroll.position.maxScrollExtent, closeTo(0, 0.01));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('switching week and day views keeps horizontal offsets aligned', (
@@ -647,6 +829,96 @@ void main() {
       find.byKey(const ValueKey('timetable-time-rail')),
     );
     expect(railRect.right, closeTo(320, 0.01));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('bottom content inset only extends the vertical scroll tail', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final periodTimes = buildDefaultPeriodTimes();
+    final lastPeriod = periodTimes.last;
+    final timetable = _timetableWithCourses([
+      _course(
+        id: 'last-course',
+        weekday: DateTime.monday,
+        startMinutes: lastPeriod.startMinutes,
+        endMinutes: lastPeriod.endMinutes,
+        periods: [lastPeriod.index],
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: timetable,
+        periodTimes: periodTimes,
+        visibleWeekdays: const [DateTime.monday],
+        showDayHeader: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollFinder = find.byKey(
+      const ValueKey('timetable-grid-vertical-scroll'),
+    );
+    final scrollableFinder = find.descendant(
+      of: scrollFinder,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    final courseFinder = find.byKey(
+      const ValueKey('timetable-course-visual-last-course'),
+    );
+    final courseTopWithoutInset = tester.getTopLeft(courseFinder).dy;
+    final extentWithoutInset = tester
+        .state<ScrollableState>(scrollableFinder)
+        .position
+        .maxScrollExtent;
+    expect(
+      tester
+          .widget<SingleChildScrollView>(scrollFinder)
+          .padding!
+          .resolve(TextDirection.ltr)
+          .bottom,
+      0,
+    );
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: timetable,
+        periodTimes: periodTimes,
+        visibleWeekdays: const [DateTime.monday],
+        showDayHeader: false,
+        bottomContentInset: 80,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final position = tester.state<ScrollableState>(scrollableFinder).position;
+    expect(
+      tester.getTopLeft(courseFinder).dy,
+      closeTo(courseTopWithoutInset, 0.01),
+    );
+    expect(position.maxScrollExtent, closeTo(extentWithoutInset + 80, 0.01));
+    expect(
+      tester
+          .widget<SingleChildScrollView>(scrollFinder)
+          .padding!
+          .resolve(TextDirection.ltr)
+          .bottom,
+      80,
+    );
+
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pump();
+    final viewportBottom = tester.getRect(scrollFinder).bottom;
+    expect(
+      tester.getRect(courseFinder).bottom,
+      lessThanOrEqualTo(viewportBottom - 80),
+    );
     expect(tester.takeException(), isNull);
   });
 }

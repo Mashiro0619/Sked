@@ -828,6 +828,9 @@ bool _hasDefaultStudentData(StudentModeData data) {
       data.showPastEndedCourses ||
       !data.showFutureCourses ||
       !data.showTimetableGridLines ||
+      !data.fitDaySelectorToWidth ||
+      !data.fitWeekColumnsToWidth ||
+      !data.enableWeekSwipeNavigation ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
         themeColorMode: data.themeColorMode,
