@@ -17,7 +17,9 @@ import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/sked_expressive_components.dart';
+import '../widgets/sked_popup_menu.dart';
 import '../widgets/ui_command.dart';
+import '../theme/sked_expressive_theme.dart';
 import 'settings_page.dart';
 
 part 'general_schedule_list_view.dart';
@@ -106,43 +108,50 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
-          final compact = width < 520;
-          final narrowNavigation = width < 760 || textScale > 1.3;
           final toolbar = SkedWorkspaceToolbar(
             key: const ValueKey('general-workspace-toolbar'),
             padding: EdgeInsets.symmetric(
               horizontal: width < 600 ? 12 : 16,
               vertical: constraints.maxHeight < 600 ? 8 : 12,
             ),
-            title: _GeneralCalendarSelector(
-              schedule: activeCalendar,
-              disabled: _calendarManagerOpen || !widget.interactive,
-              onPressed: () => _openCalendarManager(context, provider),
-            ),
-            actions: [
-              if (widget.showSettingsAction)
-                IconButton(
-                  focusNode: widget.settingsFocusNode,
-                  onPressed: settingsAction,
-                  icon: const Icon(Icons.settings_outlined),
-                  tooltip: l10n.settings,
+            navigationSpacing: width < 600 ? 4 : 10,
+            // Keep the calendar selector and settings affordance in one
+            // title row on narrow screens.  The shared toolbar deliberately
+            // does not know about this workspace's action hierarchy.
+            title: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: _GeneralCalendarSelector(
+                    schedule: activeCalendar,
+                    disabled: _calendarManagerOpen || !widget.interactive,
+                    onPressed: () => _openCalendarManager(context, provider),
+                  ),
                 ),
-            ],
+                if (widget.showSettingsAction) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: const ValueKey('general-settings-button'),
+                    focusNode: widget.settingsFocusNode,
+                    onPressed: settingsAction,
+                    icon: const Icon(Icons.settings_outlined),
+                    tooltip: l10n.settings,
+                  ),
+                ],
+              ],
+            ),
+            actions: const [],
             navigation: _GeneralWorkspaceNavigation(
               view: view,
               selectedDate: selectedDate,
               dateNavigationDirection: dateNavigationDirection,
-              compact: compact,
-              narrow: narrowNavigation,
               interactive: widget.interactive,
+              viewSwitchBehavior: snapshot.viewSwitchBehavior,
               onViewChanged: (nextView) => setState(() {
                 _view = nextView;
                 _dateNavigationTarget = null;
                 _dateNavigationDirection = 0;
               }),
-              onPrevious: () => unawaited(_navigateDate(provider, view, -1)),
-              onNext: () => unawaited(_navigateDate(provider, view, 1)),
               onToday: () => unawaited(_goToToday(provider)),
               onPickDate: _datePickerOpen
                   ? null
@@ -394,33 +403,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     );
   }
 
-  Future<void> _navigateDate(
-    TimetableProvider provider,
-    String view,
-    int direction,
-  ) async {
-    if (!widget.interactive || direction == 0) return;
-    final current = normalizeDateOnly(provider.selectedGeneralDate);
-    DateTime next;
-    if (view == generalViewMonth) {
-      final month = DateTime(current.year, current.month + direction, 1);
-      final lastDay = DateTime(month.year, month.month + 1, 0).day;
-      next = DateTime(month.year, month.month, current.day.clamp(1, lastDay));
-    } else {
-      next = addCalendarDays(
-        current,
-        view == generalViewWeek ? direction * 7 : direction,
-      );
-    }
-    if (!provider.generalShowWeekends && next.weekday > DateTime.friday) {
-      next = addCalendarDays(
-        next,
-        direction < 0 ? DateTime.friday - next.weekday : 8 - next.weekday,
-      );
-    }
-    await _selectDate(provider, next);
-  }
-
   Widget _wrapStandalone(Widget workspace) {
     if (widget.embedded) return workspace;
     return Scaffold(key: widget.scaffoldKey, body: workspace);
@@ -667,21 +649,36 @@ class _GeneralCalendarSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Tooltip(
-      message: l10n.calendars,
-      child: OutlinedButton.icon(
-        key: const ValueKey('general-calendar-selector'),
-        onPressed: disabled ? null : onPressed,
-        icon: const Icon(Icons.calendar_month_outlined),
-        label: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 240),
-          child: Text(
-            schedule?.name ?? l10n.calendars,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 240.0;
+        final labelWidth = math.max(0.0, math.min(240.0, available - 64.0));
+        return Tooltip(
+          message: l10n.calendars,
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('general-calendar-selector'),
+              onPressed: disabled ? null : onPressed,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: labelWidth),
+                child: Text(
+                  schedule?.name ?? l10n.calendars,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -691,12 +688,9 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     required this.view,
     required this.selectedDate,
     required this.dateNavigationDirection,
-    required this.compact,
-    required this.narrow,
     required this.interactive,
+    required this.viewSwitchBehavior,
     required this.onViewChanged,
-    required this.onPrevious,
-    required this.onNext,
     required this.onToday,
     required this.onPickDate,
   });
@@ -704,140 +698,215 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
   final String view;
   final DateTime selectedDate;
   final int dateNavigationDirection;
-  final bool compact;
-  final bool narrow;
   final bool interactive;
+  final String viewSwitchBehavior;
   final ValueChanged<String> onViewChanged;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
   final VoidCallback onToday;
   final VoidCallback? onPickDate;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final segments = [
-      ButtonSegment<String>(
-        value: generalViewWeek,
-        icon: const Icon(Icons.view_week_outlined),
-        label: compact ? null : Text(l10n.viewWeek),
-        tooltip: l10n.viewWeek,
-      ),
-      ButtonSegment<String>(
-        value: generalViewDay,
-        icon: const Icon(Icons.view_day_outlined),
-        label: compact ? null : Text(l10n.viewDay),
-        tooltip: l10n.viewDay,
-      ),
-      ButtonSegment<String>(
-        value: generalViewList,
-        icon: const Icon(Icons.list_alt_outlined),
-        label: compact ? null : Text(l10n.viewList),
-        tooltip: l10n.viewList,
-      ),
-      ButtonSegment<String>(
-        value: generalViewMonth,
-        icon: const Icon(Icons.calendar_view_month_outlined),
-        label: compact ? null : Text(l10n.viewMonth),
-        tooltip: l10n.viewMonth,
-      ),
-    ];
-    final selector = SkedExpressiveSegmentedButton<String>(
-      key: const ValueKey('general-view-selector'),
-      segments: segments,
-      selected: {view},
-      showSelectedIcon: false,
-      movingIndicator: true,
-      onSelectionChanged: interactive
-          ? (selection) {
-              if (selection.isNotEmpty) onViewChanged(selection.first);
-            }
-          : null,
-      expandedInsets: EdgeInsets.zero,
-      direction: Axis.horizontal,
+    final currentViewLabel = _generalViewLabel(l10n, view);
+    final nextView = _nextGeneralView(view);
+    final nextViewLabel = _generalViewLabel(l10n, nextView);
+    final selector = _GeneralViewSwitcher(
+      key: const ValueKey('general-view-switcher'),
+      view: view,
+      behavior: viewSwitchBehavior,
+      currentLabel: currentViewLabel,
+      nextLabel: nextViewLabel,
+      interactive: interactive,
+      onViewChanged: onViewChanged,
     );
     final dateLabel = _dateNavigationLabel(selectedDate, view, context);
-    final materialL10n = MaterialLocalizations.of(context);
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final previousTooltip = view == generalViewMonth
-        ? l10n.previousMonth
-        : materialL10n.previousPageTooltip;
-    final nextTooltip = view == generalViewMonth
-        ? l10n.nextMonth
-        : materialL10n.nextPageTooltip;
-    final navigation = Wrap(
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 4,
-      runSpacing: 4,
-      children: [
-        IconButton(
-          tooltip: previousTooltip,
-          onPressed: interactive ? onPrevious : null,
-          icon: Icon(
-            isRtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-          ),
-        ),
-        OutlinedButton.icon(
+    final fullDateLabel = '${l10n.pickDate}: $dateLabel';
+    final dateInteractive = interactive && onPickDate != null;
+    final dateButton = Tooltip(
+      excludeFromSemantics: true,
+      message: fullDateLabel,
+      child: Semantics(
+        button: true,
+        enabled: dateInteractive,
+        label: fullDateLabel,
+        hint: l10n.generalViewLongPressTodayHint,
+        onTap: dateInteractive ? onPickDate : null,
+        onLongPress: dateInteractive ? onToday : null,
+        excludeSemantics: true,
+        child: OutlinedButton.icon(
           key: const ValueKey('general-date-title-button'),
-          onPressed: interactive ? onPickDate : null,
+          onPressed: dateInteractive ? onPickDate : null,
+          onLongPress: dateInteractive ? onToday : null,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
           icon: const Icon(Icons.event_outlined),
-          label: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.pickDate, maxLines: 1, overflow: TextOverflow.ellipsis),
-              SkedDirectionalTransition(
-                trigger: dateLabel,
-                direction: dateNavigationDirection,
-                distance: 16,
-                child: Text(
-                  dateLabel,
-                  key: ValueKey('general-date-label-$dateLabel'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
+          label: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SkedDirectionalTransition(
+              trigger: dateLabel,
+              direction: dateNavigationDirection,
+              distance: 16,
+              child: Text(
+                dateLabel,
+                key: ValueKey('general-date-label-$dateLabel'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
           ),
         ),
-        TextButton.icon(
-          onPressed: interactive ? onToday : null,
-          icon: const Icon(Icons.today_outlined),
-          label: Text(l10n.today),
-        ),
-        IconButton(
-          tooltip: nextTooltip,
-          onPressed: interactive ? onNext : null,
-          icon: Icon(
-            isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-          ),
-        ),
-      ],
+      ),
     );
 
-    if (narrow) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [selector, const SizedBox(height: 8), navigation],
-      );
-    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: selector),
-        const SizedBox(width: 12),
-        Flexible(child: navigation),
+        selector,
+        const SizedBox(width: 4),
+        Expanded(child: dateButton),
       ],
     );
   }
+}
+
+class _GeneralViewSwitcher extends StatelessWidget {
+  const _GeneralViewSwitcher({
+    super.key,
+    required this.view,
+    required this.behavior,
+    required this.currentLabel,
+    required this.nextLabel,
+    required this.interactive,
+    required this.onViewChanged,
+  });
+
+  final String view;
+  final String behavior;
+  final String currentLabel;
+  final String nextLabel;
+  final bool interactive;
+  final ValueChanged<String> onViewChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final icon = _generalViewIcon(view);
+    final enabled = interactive;
+    if (behavior == generalViewSwitchBehaviorMenu) {
+      final tooltip = '${l10n.generalViewSwitchMenuTooltip}: $currentLabel';
+      return SkedPopupMenuButton<String>(
+        icon: AnimatedSwitcher(
+          duration: SkedMotionPolicy.of(context).effects(SkedMotionSpeed.fast),
+          child: Icon(icon, key: ValueKey(view)),
+        ),
+        tooltip: tooltip,
+        enabled: interactive,
+        onSelected: (next) {
+          if (next != view) onViewChanged(next);
+        },
+        itemBuilder: (context) => [
+          for (final item in _generalViewOptions(l10n))
+            SkedPopupMenuItem<String>(
+              value: item.value,
+              child: Semantics(
+                selected: item.value == view,
+                child: Row(
+                  children: [
+                    Icon(item.icon, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(item.label)),
+                    item.value == view
+                        ? Icon(
+                            Icons.check_rounded,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : const SizedBox.square(dimension: 20),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    final tooltip =
+        '${l10n.generalViewSwitchTooltip}: $currentLabel -> $nextLabel';
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Tooltip(
+        excludeFromSemantics: true,
+        message: tooltip,
+        child: IconButton(
+          onPressed: enabled
+              ? () => onViewChanged(_nextGeneralView(view))
+              : null,
+          icon: AnimatedSwitcher(
+            duration: SkedMotionPolicy.of(
+              context,
+            ).effects(SkedMotionSpeed.fast),
+            child: Icon(icon, key: ValueKey(view)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GeneralViewOption {
+  const _GeneralViewOption(this.value, this.label, this.icon);
+
+  final String value;
+  final String label;
+  final IconData icon;
+}
+
+List<_GeneralViewOption> _generalViewOptions(AppLocalizations l10n) => [
+  _GeneralViewOption(generalViewWeek, l10n.viewWeek, Icons.view_week_outlined),
+  _GeneralViewOption(generalViewDay, l10n.viewDay, Icons.view_day_outlined),
+  _GeneralViewOption(generalViewList, l10n.viewList, Icons.list_alt_outlined),
+  _GeneralViewOption(
+    generalViewMonth,
+    l10n.viewMonth,
+    Icons.calendar_view_month_outlined,
+  ),
+];
+
+IconData _generalViewIcon(String view) {
+  return switch (view) {
+    generalViewDay => Icons.view_day_outlined,
+    generalViewList => Icons.list_alt_outlined,
+    generalViewMonth => Icons.calendar_view_month_outlined,
+    _ => Icons.view_week_outlined,
+  };
+}
+
+String _generalViewLabel(AppLocalizations l10n, String view) {
+  return switch (view) {
+    generalViewDay => l10n.viewDay,
+    generalViewList => l10n.viewList,
+    generalViewMonth => l10n.viewMonth,
+    _ => l10n.viewWeek,
+  };
+}
+
+String _nextGeneralView(String view) {
+  return switch (view) {
+    generalViewWeek => generalViewDay,
+    generalViewDay => generalViewList,
+    generalViewList => generalViewMonth,
+    _ => generalViewWeek,
+  };
 }
 
 class _GeneralHomeSnapshot {
   const _GeneralHomeSnapshot({
     required this.selectedDate,
     required this.defaultView,
+    required this.viewSwitchBehavior,
     required this.activeScheduleId,
     required this.schedules,
     required this.reminderAcknowledgements,
@@ -853,6 +922,7 @@ class _GeneralHomeSnapshot {
     return _GeneralHomeSnapshot(
       selectedDate: data.selectedDate,
       defaultView: data.defaultView,
+      viewSwitchBehavior: data.viewSwitchBehavior,
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
       reminderAcknowledgements: data.reminderAcknowledgements,
@@ -866,6 +936,7 @@ class _GeneralHomeSnapshot {
 
   final DateTime selectedDate;
   final String defaultView;
+  final String viewSwitchBehavior;
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
@@ -880,6 +951,7 @@ class _GeneralHomeSnapshot {
     return other is _GeneralHomeSnapshot &&
         _sameDay(other.selectedDate, selectedDate) &&
         other.defaultView == defaultView &&
+        other.viewSwitchBehavior == viewSwitchBehavior &&
         other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
         identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
@@ -896,6 +968,7 @@ class _GeneralHomeSnapshot {
     selectedDate.month,
     selectedDate.day,
     defaultView,
+    viewSwitchBehavior,
     activeScheduleId,
     identityHashCode(schedules),
     identityHashCode(reminderAcknowledgements),

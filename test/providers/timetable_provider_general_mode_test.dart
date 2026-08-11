@@ -709,4 +709,30 @@ END:VCALENDAR
       expect(provider.closeCoursePopupOnOutsideTap, studentValue);
     },
   );
+
+  test('general view switch behavior persists independently', () async {
+    final initial = buildInitialAppData(buildDefaultPeriodTimes());
+    final storage = _MemoryTimetableStorage(initial);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+
+    await provider.load();
+    expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorCycle);
+
+    await provider.updateGeneralDisplaySettings(
+      viewSwitchBehavior: generalViewSwitchBehaviorMenu,
+    );
+
+    expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
+    expect(
+      storage.data!.generalMode.viewSwitchBehavior,
+      generalViewSwitchBehaviorMenu,
+    );
+    expect(
+      storage.data!.studentMode.fitDaySelectorToWidth,
+      initial.studentMode.fitDaySelectorToWidth,
+    );
+  });
 }

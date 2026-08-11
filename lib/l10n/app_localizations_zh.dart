@@ -1914,6 +1914,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalDefaultViewSection => '启动';
 
   @override
+  String get generalViewSwitchBehavior => '视图切换按钮';
+
+  @override
+  String get generalViewSwitchCycle => '顺序循环';
+
+  @override
+  String get generalViewSwitchMenu => '打开菜单';
+
+  @override
+  String get generalViewSwitchTooltip => '切换视图';
+
+  @override
+  String get generalViewSwitchMenuTooltip => '选择视图';
+
+  @override
+  String get generalViewLongPressTodayHint => '长按回到今天';
+
+  @override
   String get generalScheduleDisplaySection => '日程显示';
 
   @override
@@ -3834,6 +3852,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generalDefaultViewSection => '啟動';
+
+  @override
+  String get generalViewSwitchBehavior => '視圖切換按鈕';
+
+  @override
+  String get generalViewSwitchCycle => '依序循環';
+
+  @override
+  String get generalViewSwitchMenu => '開啟選單';
+
+  @override
+  String get generalViewSwitchTooltip => '切換視圖';
+
+  @override
+  String get generalViewSwitchMenuTooltip => '選擇視圖';
+
+  @override
+  String get generalViewLongPressTodayHint => '長按返回今天';
 
   @override
   String get generalScheduleDisplaySection => '日程顯示';

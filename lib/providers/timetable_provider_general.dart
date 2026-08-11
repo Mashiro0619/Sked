@@ -14,6 +14,8 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       _appData.generalMode.activeSchedule;
 
   String get generalDefaultView => _appData.generalMode.defaultView;
+  String get generalViewSwitchBehavior =>
+      _appData.generalMode.viewSwitchBehavior;
   bool get generalShowWeekends => _appData.generalMode.showWeekends;
   bool get generalShowLunarCalendar => _appData.generalMode.showLunarCalendar;
   int get generalDayStartHour => _appData.generalMode.dayStartHour;
@@ -106,6 +108,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
 
   Future<void> updateGeneralDisplaySettings({
     String? defaultView,
+    String? viewSwitchBehavior,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -117,6 +120,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       generalMode: _calendarService.updateDisplaySettings(
         _appData.generalMode,
         defaultView: defaultView,
+        viewSwitchBehavior: viewSwitchBehavior,
         showWeekends: showWeekends,
         showLunarCalendar: showLunarCalendar,
         dayStartHour: dayStartHour,

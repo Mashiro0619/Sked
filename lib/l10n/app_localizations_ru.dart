@@ -2022,6 +2022,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generalDefaultViewSection => 'Startup';
 
   @override
+  String get generalViewSwitchBehavior => 'View switch button';
+
+  @override
+  String get generalViewSwitchCycle => 'Cycle through views';
+
+  @override
+  String get generalViewSwitchMenu => 'Open view menu';
+
+  @override
+  String get generalViewSwitchTooltip => 'Switch view';
+
+  @override
+  String get generalViewSwitchMenuTooltip => 'Choose view';
+
+  @override
+  String get generalViewLongPressTodayHint => 'Long-press to go to today';
+
+  @override
   String get generalScheduleDisplaySection => 'Schedule display';
 
   @override

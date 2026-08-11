@@ -737,19 +737,34 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('General schedule'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Month'));
+    for (var index = 0; index < 3; index++) {
+      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+      await tester.pumpAndSettle();
+    }
     await tester.pumpAndSettle();
 
-    SegmentedButton<String> viewSelector() =>
-        tester.widget(find.byType(SegmentedButton<String>));
-    expect(viewSelector().selected, {generalViewMonth});
+    Finder viewSwitcher() =>
+        find.byKey(const ValueKey('general-view-switcher'));
+    expect(
+      find.descendant(
+        of: viewSwitcher(),
+        matching: find.byIcon(Icons.calendar_view_month_outlined),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Student timetable'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('General schedule'));
     await tester.pumpAndSettle();
 
-    expect(viewSelector().selected, {generalViewMonth});
+    expect(
+      find.descendant(
+        of: viewSwitcher(),
+        matching: find.byIcon(Icons.calendar_view_month_outlined),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('student-home'), skipOffstage: false),
       findsOneWidget,
@@ -843,18 +858,31 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('General schedule'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Month'));
+    for (var index = 0; index < 3; index++) {
+      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+      await tester.pumpAndSettle();
+    }
     await tester.pumpAndSettle();
     final saveCountBeforeResize = storage.saveCount;
 
-    SegmentedButton<String> viewSelector() =>
-        tester.widget(find.byType(SegmentedButton<String>));
-    expect(viewSelector().selected, {generalViewMonth});
+    Finder viewSwitcher() =>
+        find.byKey(const ValueKey('general-view-switcher'));
+    void expectMonthView() {
+      expect(
+        find.descendant(
+          of: viewSwitcher(),
+          matching: find.byIcon(Icons.calendar_view_month_outlined),
+        ),
+        findsOneWidget,
+      );
+    }
+
+    expectMonthView();
 
     for (final width in [600.0, 840.0, 1200.0, 599.0]) {
       await tester.binding.setSurfaceSize(Size(width, 800));
       await tester.pumpAndSettle();
-      expect(viewSelector().selected, {generalViewMonth});
+      expectMonthView();
       expect(
         find.byKey(const ValueKey('general-home'), skipOffstage: false),
         findsOneWidget,

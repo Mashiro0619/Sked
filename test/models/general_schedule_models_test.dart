@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/data/migrations/migration.dart';
 import 'package:sked/models/timetable_models.dart';
 
 void main() {
@@ -442,6 +443,74 @@ void main() {
       expect(decoded.closeEventPopupOnOutsideTap, false);
     });
 
+    test('view switch behavior round-trips and copyWith preserves it', () {
+      final data = GeneralScheduleData(
+        activeScheduleId: 'sched1',
+        schedules: [
+          GeneralSchedule(id: 'sched1', name: 'My Schedule', events: const []),
+        ],
+        viewSwitchBehavior: generalViewSwitchBehaviorMenu,
+      );
+
+      final decoded = GeneralScheduleData.fromJson(data.toJson());
+      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorMenu);
+      expect(
+        decoded.copyWith(selectedDateIso: '2026-05-29').viewSwitchBehavior,
+        generalViewSwitchBehaviorMenu,
+      );
+      expect(
+        decoded.copyWith(viewSwitchBehavior: 'unknown').viewSwitchBehavior,
+        generalViewSwitchBehaviorCycle,
+      );
+    });
+
+    test('missing view switch behavior defaults to cycle', () {
+      final decoded = GeneralScheduleData.fromJson({
+        'schemaVersion': generalScheduleSchemaVersion,
+        'activeScheduleId': 'sched1',
+        'schedules': [
+          {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
+        ],
+      });
+
+      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorCycle);
+    });
+
+    test('legacy empty payload preserves a valid view switch behavior', () {
+      final decoded = GeneralScheduleData.fromJson({
+        'viewSwitchBehavior': generalViewSwitchBehaviorMenu,
+      });
+
+      expect(decoded.viewSwitchBehavior, generalViewSwitchBehaviorMenu);
+      expect(decoded.schedules, isNotEmpty);
+    });
+
+    test('invalid view switch behavior is rejected by the model decoder', () {
+      final base = <String, dynamic>{
+        'schemaVersion': generalScheduleSchemaVersion,
+        'activeScheduleId': 'sched1',
+        'schedules': [
+          {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
+        ],
+      };
+
+      for (final value in [true, 'unknown', <String, dynamic>{}]) {
+        expect(
+          () => GeneralScheduleData.fromJson({
+            ...base,
+            'viewSwitchBehavior': value,
+          }),
+          throwsFormatException,
+          reason: 'viewSwitchBehavior=$value',
+        );
+        expect(
+          () => GeneralScheduleData.fromJson({'viewSwitchBehavior': value}),
+          throwsFormatException,
+          reason: 'empty payload viewSwitchBehavior=$value',
+        );
+      }
+    });
+
     test(
       'reminder acknowledgements round-trip with current schema version',
       () {
@@ -528,12 +597,15 @@ void main() {
       expect(
         () => GeneralScheduleData.fromJson({
           'schemaVersion': generalScheduleSchemaVersion + 1,
+          // Future schemas may change this field's representation. Version
+          // rejection must take precedence over current-field validation.
+          'viewSwitchBehavior': 123,
           'activeScheduleId': 'sched1',
           'schedules': [
             {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
           ],
         }),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<UnsupportedSchemaVersionException>()),
       );
     });
 

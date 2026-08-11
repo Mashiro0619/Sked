@@ -1404,6 +1404,7 @@ void main() {
     test('rejects general settings that would be normalized on load', () {
       final invalidGeneralSettings = const <(String, Object)>[
         ('defaultView', 'agenda'),
+        ('viewSwitchBehavior', 'unknown'),
         ('dayStartHour', -1),
         ('dayEndHour', 25),
         ('timeGridMinutes', 45),
@@ -1418,6 +1419,18 @@ void main() {
         expect(
           () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
           throwsFormatException,
+        );
+      }
+
+      for (final value in [true, 1, <String, dynamic>{}]) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['viewSwitchBehavior'] = value;
+        snapshot['generalMode'] = general;
+
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: 'viewSwitchBehavior=$value',
         );
       }
 

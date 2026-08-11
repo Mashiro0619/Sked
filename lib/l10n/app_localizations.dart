@@ -3688,6 +3688,42 @@ abstract class AppLocalizations {
   /// **'Startup'**
   String get generalDefaultViewSection;
 
+  /// No description provided for @generalViewSwitchBehavior.
+  ///
+  /// In en, this message translates to:
+  /// **'View switch button'**
+  String get generalViewSwitchBehavior;
+
+  /// No description provided for @generalViewSwitchCycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycle through views'**
+  String get generalViewSwitchCycle;
+
+  /// No description provided for @generalViewSwitchMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Open view menu'**
+  String get generalViewSwitchMenu;
+
+  /// No description provided for @generalViewSwitchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch view'**
+  String get generalViewSwitchTooltip;
+
+  /// No description provided for @generalViewSwitchMenuTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose view'**
+  String get generalViewSwitchMenuTooltip;
+
+  /// No description provided for @generalViewLongPressTodayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press to go to today'**
+  String get generalViewLongPressTodayHint;
+
   /// No description provided for @generalScheduleDisplaySection.
   ///
   /// In en, this message translates to:

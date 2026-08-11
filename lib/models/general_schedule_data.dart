@@ -9,6 +9,8 @@ const generalViewWeek = 'week';
 const generalViewDay = 'day';
 const generalViewList = 'list';
 const generalViewMonth = 'month';
+const generalViewSwitchBehaviorCycle = 'cycle';
+const generalViewSwitchBehaviorMenu = 'menu';
 const generalScheduleSchemaVersion = 4;
 
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
@@ -133,12 +135,40 @@ String normalizeGeneralView(String? value) {
   }
 }
 
+String normalizeGeneralViewSwitchBehavior(String? value) {
+  switch (value) {
+    case generalViewSwitchBehaviorMenu:
+    case generalViewSwitchBehaviorCycle:
+      return value!;
+    default:
+      return generalViewSwitchBehaviorCycle;
+  }
+}
+
+String _decodeGeneralViewSwitchBehavior(Map<String, dynamic> json) {
+  if (!json.containsKey('viewSwitchBehavior')) {
+    return generalViewSwitchBehaviorCycle;
+  }
+  final value = json['viewSwitchBehavior'];
+  if (value is! String ||
+      !const {
+        generalViewSwitchBehaviorCycle,
+        generalViewSwitchBehaviorMenu,
+      }.contains(value)) {
+    throw const FormatException(
+      'General schedule view switch behavior is invalid.',
+    );
+  }
+  return value;
+}
+
 class GeneralScheduleData {
   const GeneralScheduleData({
     required this.activeScheduleId,
     required this.schedules,
     this.selectedDateIso,
     this.defaultView = generalViewWeek,
+    this.viewSwitchBehavior = generalViewSwitchBehaviorCycle,
     this.showWeekends = true,
     this.showLunarCalendar = true,
     this.dayStartHour = 6,
@@ -156,6 +186,7 @@ class GeneralScheduleData {
   final List<GeneralSchedule> schedules;
   final String? selectedDateIso;
   final String defaultView;
+  final String viewSwitchBehavior;
   final bool showWeekends;
   final bool showLunarCalendar;
   final int dayStartHour;
@@ -199,6 +230,9 @@ class GeneralScheduleData {
     'schedules': schedules.map((s) => s.toJson()).toList(),
     if (selectedDateIso != null) 'selectedDateIso': selectedDateIso,
     'defaultView': normalizeGeneralView(defaultView),
+    'viewSwitchBehavior': normalizeGeneralViewSwitchBehavior(
+      viewSwitchBehavior,
+    ),
     'showWeekends': showWeekends,
     'showLunarCalendar': showLunarCalendar,
     'dayStartHour': dayStartHour,
@@ -224,8 +258,11 @@ class GeneralScheduleData {
         'General schedule schemaVersion is unsupported.',
       );
     }
+    final viewSwitchBehavior = _decodeGeneralViewSwitchBehavior(json);
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
-      return GeneralScheduleData.createDefault();
+      return GeneralScheduleData.createDefault().copyWith(
+        viewSwitchBehavior: viewSwitchBehavior,
+      );
     }
 
     final schedules =
@@ -258,6 +295,7 @@ class GeneralScheduleData {
       defaultView: normalizeGeneralView(
         _nullableStringValue(json['defaultView']),
       ),
+      viewSwitchBehavior: viewSwitchBehavior,
       showWeekends: _boolValue(json['showWeekends']) ?? true,
       showLunarCalendar: _boolValue(json['showLunarCalendar']) ?? true,
       dayStartHour: (_intValue(json['dayStartHour']) ?? 6).clamp(0, 23).toInt(),
@@ -299,6 +337,7 @@ class GeneralScheduleData {
     List<GeneralSchedule>? schedules,
     Object? selectedDateIso = _keepNullable,
     String? defaultView,
+    String? viewSwitchBehavior,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -318,6 +357,9 @@ class GeneralScheduleData {
           ? this.selectedDateIso
           : selectedDateIso as String?,
       defaultView: normalizeGeneralView(defaultView ?? this.defaultView),
+      viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
+        viewSwitchBehavior ?? this.viewSwitchBehavior,
+      ),
       showWeekends: showWeekends ?? this.showWeekends,
       showLunarCalendar: showLunarCalendar ?? this.showLunarCalendar,
       dayStartHour: dayStartHour ?? this.dayStartHour,
@@ -445,6 +487,9 @@ class GeneralScheduleData {
       schedules: normalizedSchedules,
       selectedDateIso: selectedDateIso ?? _dateIso(DateTime.now()),
       defaultView: normalizeGeneralView(defaultView),
+      viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
+        viewSwitchBehavior,
+      ),
       showWeekends: showWeekends,
       showLunarCalendar: showLunarCalendar,
       dayStartHour: start,

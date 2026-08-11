@@ -3766,11 +3766,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('List'));
+      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Today'), findsOneWidget);
-      expect(find.text('Pick date'), findsOneWidget);
+      expect(find.text('Today'), findsNothing);
+      expect(find.text('Pick date'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('general-date-title-button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('general week view fits all visible days on narrow screens', (

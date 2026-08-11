@@ -1082,7 +1082,7 @@ void _validateStorageGeneralSettings(
   Map<String, dynamic> generalMode, {
   bool validateCurrentSemantics = false,
 }) {
-  for (final key in const ['defaultView']) {
+  for (final key in const ['defaultView', 'viewSwitchBehavior']) {
     _validateStorageStringField(
       generalMode,
       key,
@@ -1111,6 +1111,15 @@ void _validateStorageGeneralSettings(
     generalMode,
     validateCurrentSemantics: validateCurrentSemantics,
   );
+  if (generalMode.containsKey('viewSwitchBehavior') &&
+      !const {
+        generalViewSwitchBehaviorCycle,
+        generalViewSwitchBehaviorMenu,
+      }.contains(generalMode['viewSwitchBehavior'])) {
+    throw const FormatException(
+      'Stored general schedule settings are invalid.',
+    );
+  }
   if (validateCurrentSemantics) {
     if (generalMode.containsKey('defaultView') &&
         !const {

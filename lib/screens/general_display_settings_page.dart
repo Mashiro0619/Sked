@@ -91,6 +91,43 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                               },
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: SkedDropdownMenu<String>(
+                              key: const ValueKey(
+                                'general-view-switch-behavior',
+                              ),
+                              initialSelection:
+                                  provider.generalViewSwitchBehavior,
+                              label: Text(l10n.generalViewSwitchBehavior),
+                              leadingIcon: const Icon(
+                                Icons.swap_horiz_outlined,
+                              ),
+                              expandedInsets: EdgeInsets.zero,
+                              enabled: !uiCommandBusy,
+                              dropdownMenuEntries: [
+                                DropdownMenuEntry(
+                                  value: generalViewSwitchBehaviorCycle,
+                                  label: l10n.generalViewSwitchCycle,
+                                ),
+                                DropdownMenuEntry(
+                                  value: generalViewSwitchBehaviorMenu,
+                                  label: l10n.generalViewSwitchMenu,
+                                ),
+                              ],
+                              onSelected: (value) {
+                                if (value != null) {
+                                  _updateSetting(
+                                    'Update general view switch behavior',
+                                    () => provider.updateGeneralDisplaySettings(
+                                      viewSwitchBehavior: value,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
                           SettingsSectionHeader(
                             title: l10n.generalScheduleDisplaySection,
                           ),

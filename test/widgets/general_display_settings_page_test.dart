@@ -117,14 +117,28 @@ void main() {
     expect(find.text('Time grid'), findsOneWidget);
     expect(find.text('Popup behavior', skipOffstage: false), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
-    expect(find.byType(SkedDropdownMenu<String>), findsOneWidget);
+    expect(find.byType(SkedDropdownMenu<String>), findsNWidgets(2));
 
-    await tester.tap(find.byType(SkedDropdownMenu<String>));
+    await tester.tap(find.byKey(const ValueKey('general-default-view')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Month').last);
     await tester.pumpAndSettle();
 
     expect(provider.generalDefaultView, generalViewMonth);
+  });
+
+  testWidgets('persists the view switch behavior setting', (tester) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider);
+
+    final dropdown = find.byKey(const ValueKey('general-view-switch-behavior'));
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open view menu').last);
+    await tester.pumpAndSettle();
+
+    expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
   });
 
   testWidgets('default view dropdown opens with a full field-width menu', (
@@ -134,7 +148,7 @@ void main() {
 
     await _pumpPage(tester, provider);
 
-    final dropdown = find.byType(SkedDropdownMenu<String>);
+    final dropdown = find.byKey(const ValueKey('general-default-view'));
     final dropdownRect = tester.getRect(dropdown);
 
     await tester.tap(dropdown);

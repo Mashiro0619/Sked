@@ -234,19 +234,24 @@ void main() {
 
       expect(find.byType(SkedPrimaryFab), findsOneWidget);
       expect(find.byTooltip('Add event'), findsOneWidget);
-      expect(find.byType(SegmentedButton<String>), findsOneWidget);
+      expect(find.byType(SegmentedButton<String>), findsNothing);
+      expect(
+        find.byKey(const ValueKey('general-view-switcher')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey('general-date-title-button')),
         findsOneWidget,
       );
-      expect(find.byTooltip('Previous page'), findsOneWidget);
-      expect(find.byTooltip('Next page'), findsOneWidget);
+      expect(find.byTooltip('Previous page'), findsNothing);
+      expect(find.byTooltip('Next page'), findsNothing);
+      expect(find.text('Today'), findsNothing);
       expect(find.byType(Scaffold), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('date navigation shows its period and mirrors arrows in RTL', (
+  testWidgets('date navigation shows its period without arrow controls', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 800));
@@ -274,15 +279,9 @@ void main() {
       find.descendant(of: dateButton, matching: find.textContaining('2026')),
       findsOneWidget,
     );
-    final iconButtons = tester.widgetList<IconButton>(find.byType(IconButton));
-    final previous = iconButtons.singleWhere(
-      (button) => button.tooltip == 'Previous page',
-    );
-    final next = iconButtons.singleWhere(
-      (button) => button.tooltip == 'Next page',
-    );
-    expect((previous.icon as Icon).icon, Icons.chevron_right_rounded);
-    expect((next.icon as Icon).icon, Icons.chevron_left_rounded);
+    expect(find.byTooltip('Previous page'), findsNothing);
+    expect(find.byTooltip('Next page'), findsNothing);
+    expect(find.text('Pick date'), findsNothing);
   });
 
   testWidgets(
@@ -409,26 +408,44 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     final initialDate = provider.selectedGeneralDate;
-    await tester.tap(find.byTooltip('Previous page'));
+    await tester.fling(
+      find.byKey(_generalWeekPagerKey),
+      const Offset(-600, 0),
+      1000,
+    );
     await tester.pumpAndSettle();
     expect(provider.selectedGeneralDate, isNot(initialDate));
 
-    await tester.tap(find.byTooltip('Next page'));
+    await tester.fling(
+      find.byKey(_generalWeekPagerKey),
+      const Offset(600, 0),
+      1000,
+    );
     await tester.pumpAndSettle();
     expect(provider.selectedGeneralDate, initialDate);
 
-    await tester.tap(find.byTooltip('Day'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
     await provider.setSelectedGeneralDate(DateTime(2026, 6, 19));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Next page'));
+    await tester.fling(
+      find.byKey(_generalDayPagerKey),
+      const Offset(-600, 0),
+      1000,
+    );
     await tester.pumpAndSettle();
     expect(provider.selectedGeneralDate, DateTime(2026, 6, 22));
-    await tester.tap(find.byTooltip('Previous page'));
+    await tester.fling(
+      find.byKey(_generalDayPagerKey),
+      const Offset(600, 0),
+      1000,
+    );
     await tester.pumpAndSettle();
     expect(provider.selectedGeneralDate, DateTime(2026, 6, 19));
 
-    await tester.tap(find.widgetWithText(TextButton, 'Today'));
+    await tester.longPress(
+      find.byKey(const ValueKey('general-date-title-button')),
+    );
     await tester.pumpAndSettle();
     var today = normalizeDateOnly(DateTime.now());
     if (!provider.generalShowWeekends && today.weekday > DateTime.friday) {
@@ -444,18 +461,40 @@ void main() {
     Navigator.of(tester.element(find.byType(DatePickerDialog))).pop();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Month'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Previous month'), findsOneWidget);
-    expect(find.byTooltip('Next month'), findsOneWidget);
-    await tester.tap(find.byTooltip('Previous month'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Next month'));
+    expect(find.byTooltip('Previous month'), findsNothing);
+    expect(find.byTooltip('Next month'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact date button keeps its date semantics', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          selectedDateIso: '2026-06-16',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final dateButton = find.byKey(const ValueKey('general-date-title-button'));
+    expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
+    expect(find.text('Pick date'), findsNothing);
+    await tester.longPress(dateButton);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('date navigation keeps its direction through the first frame', (
+  testWidgets('view switching leaves the selected date unchanged', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 800));
@@ -473,64 +512,110 @@ void main() {
     );
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    await tester.tap(find.byTooltip('Next page'));
-    await tester.pump();
-    final translations = tester
-        .widgetList<Transform>(
-          find.byKey(const ValueKey('sked-directional-transition-offset')),
-        )
-        .map((transform) => transform.transform.getTranslation())
-        .toList();
-
-    expect(translations, isNotEmpty);
-    expect(translations.any((translation) => translation.x > 0), isTrue);
-    expect(translations.every((translation) => translation.y == 0), isTrue);
+    final initialDate = provider.selectedGeneralDate;
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    expect(provider.selectedGeneralDate, initialDate);
+    expect(find.byTooltip('Previous month'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'switching views settles an in-flight date transition before fade-through',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(900, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final base = _buildGeneralDataWithCalendars([
-        const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
-      ], activeId: 'cal1');
-      final provider = await _createGeneralProvider(
-        base.copyWith(
-          generalMode: base.generalMode.copyWith(
-            selectedDateIso: '2026-06-16',
-            defaultView: generalViewWeek,
-          ),
-        ),
-      );
-      await _pumpGeneralScheduleHomeScreen(tester, provider);
+  testWidgets('view switch button cycles through every view and wraps', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+    final initialDate = provider.selectedGeneralDate;
 
-      await tester.tap(find.byTooltip('Next page'));
-      await tester.pump(const Duration(milliseconds: 40));
-      final inFlight = tester
-          .widgetList<Transform>(
-            find.byKey(const ValueKey('sked-directional-transition-offset')),
-          )
-          .map((transform) => transform.transform.getTranslation().x)
-          .toList();
-      expect(inFlight.any((offset) => offset.abs() > 0.1), isTrue);
-
-      await tester.tap(find.byTooltip('Month'));
-      await tester.pump();
-      final settled = tester
-          .widgetList<Transform>(
-            find.byKey(const ValueKey('sked-directional-transition-offset')),
-          )
-          .map((transform) => transform.transform.getTranslation().x)
-          .toList();
-      expect(settled.every((offset) => offset == 0), isTrue);
+    Future<void> tapNext() async {
+      await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Previous month'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    }
+
+    expect(find.byTooltip('Switch view: Week -> Day'), findsOneWidget);
+    await tapNext();
+    expect(find.byTooltip('Switch view: Day -> List'), findsOneWidget);
+    await tapNext();
+    expect(find.byTooltip('Switch view: List -> Month'), findsOneWidget);
+    await tapNext();
+    expect(find.byTooltip('Switch view: Month -> Week'), findsOneWidget);
+    await tapNext();
+    expect(find.byTooltip('Switch view: Week -> Day'), findsOneWidget);
+    expect(provider.selectedGeneralDate, initialDate);
+  });
+
+  testWidgets('menu view switcher opens, cancels, and selects once', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          viewSwitchBehavior: generalViewSwitchBehaviorMenu,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final switcher = find.byKey(const ValueKey('general-view-switcher'));
+    await tester.tap(switcher);
+    await tester.pumpAndSettle();
+    expect(find.text('Day').last, findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.byType(PopupMenuItem<String>), findsNothing);
+    expect(find.byTooltip('Choose view: Week'), findsOneWidget);
+
+    await tester.tap(switcher);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Month').last);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Choose view: Month'), findsOneWidget);
+    expect(find.byType(PopupMenuItem<String>), findsNothing);
+    expect(provider.selectedGeneralDate, DateTime(2026, 6, 16));
+  });
+
+  testWidgets('compact navigation keeps settings and date controls reachable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final settings = find.byKey(const ValueKey('general-settings-button'));
+    final switcher = find.byKey(const ValueKey('general-view-switcher'));
+    final dateButton = find.byKey(const ValueKey('general-date-title-button'));
+    expect(tester.getSize(settings), const Size(48, 48));
+    expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(switcher).height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getTopLeft(settings).dy,
+      closeTo(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('general-calendar-selector')))
+            .dy,
+        1,
+      ),
+    );
+    expect(
+      tester.getTopLeft(switcher).dy,
+      greaterThan(tester.getTopLeft(settings).dy),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('empty list view renders its empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 800));
@@ -586,7 +671,7 @@ void main() {
     );
     await openAndCloseDetails(timedKey);
 
-    await tester.tap(find.byTooltip('Day'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
     await openAndCloseDetails(
       find.byKey(
@@ -596,11 +681,17 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('Month'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
     await openAndCloseDetails(find.text('View event'));
 
-    await tester.tap(find.byTooltip('List'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
     await openAndCloseDetails(find.text('View event'));
 
@@ -1233,7 +1324,7 @@ void main() {
 
     expect(find.text('May'), findsWidgets);
 
-    await tester.tap(find.text('Day'));
+    await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
 
     expect(find.text('May'), findsWidgets);
@@ -1775,8 +1866,12 @@ void main() {
 
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    expect(find.text('Today'), findsWidgets);
-    expect(find.text('Pick date'), findsWidgets);
+    expect(find.text('Today'), findsNothing);
+    expect(find.text('Pick date'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('general-date-title-button')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -2327,7 +2422,11 @@ void main() {
 
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    await tester.tap(find.byTooltip('Previous month'));
+    await tester.fling(
+      find.byKey(const ValueKey('general-month-calendar-panel')),
+      const Offset(480, 0),
+      1000,
+    );
     await tester.pumpAndSettle();
 
     expect(provider.selectedGeneralDate, DateTime(2026, 5, 29));
