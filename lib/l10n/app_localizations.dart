@@ -3694,6 +3694,84 @@ abstract class AppLocalizations {
   /// **'View switch button'**
   String get generalViewSwitchBehavior;
 
+  /// No description provided for @settingsWorkspaceMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Active workspace'**
+  String get settingsWorkspaceMode;
+
+  /// No description provided for @hideHomeBottomNavigationBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the home bottom bar'**
+  String get hideHomeBottomNavigationBar;
+
+  /// No description provided for @hideHomeBottomNavigationBarDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch workspaces from Settings after hiding the bar.'**
+  String get hideHomeBottomNavigationBarDesc;
+
+  /// No description provided for @generalDateLabelFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Date label format'**
+  String get generalDateLabelFormat;
+
+  /// No description provided for @generalDateLabelFormatLocalized.
+  ///
+  /// In en, this message translates to:
+  /// **'Localized (2026 Jul)'**
+  String get generalDateLabelFormatLocalized;
+
+  /// No description provided for @generalDateLabelFormatSlash.
+  ///
+  /// In en, this message translates to:
+  /// **'Slash (2026/7)'**
+  String get generalDateLabelFormatSlash;
+
+  /// No description provided for @generalDateLabelFormatIso.
+  ///
+  /// In en, this message translates to:
+  /// **'ISO (2026-07)'**
+  String get generalDateLabelFormatIso;
+
+  /// No description provided for @generalToolbarSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Toolbar layout'**
+  String get generalToolbarSection;
+
+  /// No description provided for @generalToolbarWidthPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Toolbar space allocation'**
+  String get generalToolbarWidthPolicy;
+
+  /// No description provided for @generalToolbarWidthContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic allocation'**
+  String get generalToolbarWidthContent;
+
+  /// No description provided for @generalToolbarWidthBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get generalToolbarWidthBalanced;
+
+  /// No description provided for @generalToolbarWidthCalendarPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar priority'**
+  String get generalToolbarWidthCalendarPriority;
+
+  /// No description provided for @generalToolbarWidthDatePriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Date priority'**
+  String get generalToolbarWidthDatePriority;
+
   /// No description provided for @generalViewSwitchCycle.
   ///
   /// In en, this message translates to:

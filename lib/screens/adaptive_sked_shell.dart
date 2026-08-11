@@ -12,8 +12,9 @@ import 'general_schedule_home_screen.dart';
 import 'home_screen.dart';
 
 const double _compactNavigationBreakpoint = 600;
-const double _extendedRailBreakpoint = 840;
-const double _permanentDrawerBreakpoint = 1200;
+// A full drawer gives the workspaces enough room for their labels and keeps
+// the desktop shell out of the awkward half-expanded rail state.
+const double _permanentDrawerBreakpoint = 840;
 // Keep the permanent drawer close to Material's compact width.  Destination
 // labels below are flexible so longer localizations never create a layout
 // overflow in the constrained leading/selection row.
@@ -141,12 +142,12 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         final navigationLayoutIdentity = compact
             ? 'bar'
             : width < _permanentDrawerBreakpoint
-            ? width >= _extendedRailBreakpoint
-                  ? 'rail-extended'
-                  : 'rail-compact'
+            ? 'rail-compact'
             : 'drawer';
         _prepareNavigationLayout(navigationLayoutIdentity);
         final selectedIndex = _selectedIndex;
+        final showCompactNavigationBar =
+            compact && !widget.provider.hideHomeBottomNavigationBar;
         final compactSettingsEnabled =
             widget.enabled && !uiCommandBusy && !_settingsOpen;
         final workspaceStack = _AdaptiveWorkspaceStack(
@@ -188,7 +189,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             : width < _permanentDrawerBreakpoint
             ? _WorkspaceRail(
                 selectedIndex: selectedIndex,
-                extended: width >= _extendedRailBreakpoint,
+                extended: false,
                 busy: uiCommandBusy,
                 enabled: widget.enabled,
                 settingsBusy: _settingsOpen,
@@ -218,19 +219,24 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         // the top status-bar inset as well and make the bar unnecessarily tall
         // on Android.
         if (compact) {
+          final body = Directionality(
+            textDirection: textDirection,
+            child: showCompactNavigationBar
+                ? MediaQuery.removePadding(
+                    context: context,
+                    removeBottom: true,
+                    child: workspaceStack,
+                  )
+                : workspaceStack,
+          );
           return Scaffold(
-            body: Directionality(
-              textDirection: textDirection,
-              child: MediaQuery.removePadding(
-                context: context,
-                removeBottom: true,
-                child: workspaceStack,
-              ),
-            ),
-            bottomNavigationBar: Directionality(
-              textDirection: textDirection,
-              child: navigationWithFocus,
-            ),
+            body: body,
+            bottomNavigationBar: showCompactNavigationBar
+                ? Directionality(
+                    textDirection: textDirection,
+                    child: navigationWithFocus,
+                  )
+                : null,
           );
         }
 

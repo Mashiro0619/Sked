@@ -10,6 +10,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   AppData? data;
   int saveCount = 0;
+  Object? nextSaveError;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -18,6 +19,9 @@ class _MemoryTimetableStorage implements TimetableStorage {
   @override
   Future<void> save(AppData data) async {
     saveCount += 1;
+    final error = nextSaveError;
+    nextSaveError = null;
+    if (error != null) throw error;
     this.data = data;
   }
 
@@ -717,6 +721,7 @@ END:VCALENDAR
       storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
     );
+    addTearDown(provider.dispose);
 
     await provider.load();
     expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorCycle);
@@ -733,6 +738,101 @@ END:VCALENDAR
     expect(
       storage.data!.studentMode.fitDaySelectorToWidth,
       initial.studentMode.fitDaySelectorToWidth,
+    );
+  });
+
+  test(
+    'general toolbar width policy persists all values independently',
+    () async {
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = _MemoryTimetableStorage(initial);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+
+      await provider.load();
+      expect(
+        provider.generalToolbarWidthPolicy,
+        generalToolbarWidthPolicyContent,
+      );
+
+      const policies = [
+        generalToolbarWidthPolicyContent,
+        generalToolbarWidthPolicyBalanced,
+        generalToolbarWidthPolicyCalendarPriority,
+        generalToolbarWidthPolicyDatePriority,
+      ];
+      for (final policy in policies) {
+        await provider.updateGeneralDisplaySettings(toolbarWidthPolicy: policy);
+
+        expect(provider.generalToolbarWidthPolicy, policy);
+        expect(storage.data!.generalMode.toolbarWidthPolicy, policy);
+      }
+
+      expect(
+        storage.data!.generalMode.viewSwitchBehavior,
+        initial.generalMode.viewSwitchBehavior,
+      );
+      expect(storage.data!.studentMode.toJson(), initial.studentMode.toJson());
+    },
+  );
+
+  test('general date label format persists all values independently', () async {
+    final initial = buildInitialAppData(buildDefaultPeriodTimes());
+    final storage = _MemoryTimetableStorage(initial);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+
+    await provider.load();
+    expect(provider.generalDateLabelFormat, generalDateLabelFormatSlash);
+
+    const formats = [
+      generalDateLabelFormatLocalized,
+      generalDateLabelFormatIso,
+      generalDateLabelFormatSlash,
+    ];
+    for (final format in formats) {
+      await provider.updateGeneralDisplaySettings(dateLabelFormat: format);
+
+      expect(provider.generalDateLabelFormat, format);
+      expect(storage.data!.generalMode.dateLabelFormat, format);
+    }
+
+    expect(
+      storage.data!.generalMode.toolbarWidthPolicy,
+      initial.generalMode.toolbarWidthPolicy,
+    );
+    expect(storage.data!.studentMode.toJson(), initial.studentMode.toJson());
+  });
+
+  test('failed general date label format save rolls back', () async {
+    final initial = buildInitialAppData(buildDefaultPeriodTimes());
+    final storage = _MemoryTimetableStorage(initial);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+
+    await provider.load();
+    storage.nextSaveError = StateError('save failed');
+
+    await expectLater(
+      provider.updateGeneralDisplaySettings(
+        dateLabelFormat: generalDateLabelFormatLocalized,
+      ),
+      throwsStateError,
+    );
+
+    expect(provider.generalDateLabelFormat, generalDateLabelFormatSlash);
+    expect(
+      storage.data!.generalMode.dateLabelFormat,
+      generalDateLabelFormatSlash,
     );
   });
 }

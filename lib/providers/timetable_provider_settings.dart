@@ -1,12 +1,19 @@
 part of 'timetable_provider.dart';
 
 mixin _TimetableProviderSettings on _TimetableProviderBase {
+  bool get hideHomeBottomNavigationBar => _appData.hideHomeBottomNavigationBar;
+
   bool get fitDaySelectorToWidth => _appData.studentMode.fitDaySelectorToWidth;
 
   bool get fitWeekColumnsToWidth => _appData.studentMode.fitWeekColumnsToWidth;
 
   bool get enableWeekSwipeNavigation =>
       _appData.studentMode.enableWeekSwipeNavigation;
+
+  Future<void> updateHideHomeBottomNavigationBar(bool value) async {
+    _appData = _settings.updateHideHomeBottomNavigationBar(_appData, value);
+    await _saveAndNotify();
+  }
 
   Future<void> updateCloseCoursePopupOnOutsideTap(bool value) async {
     _appData = _settings.updateCloseCoursePopupOnOutsideTap(_appData, value);

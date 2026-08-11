@@ -1405,6 +1405,7 @@ void main() {
       final invalidGeneralSettings = const <(String, Object)>[
         ('defaultView', 'agenda'),
         ('viewSwitchBehavior', 'unknown'),
+        ('toolbarWidthPolicy', 'unknown'),
         ('dayStartHour', -1),
         ('dayEndHour', 25),
         ('timeGridMinutes', 45),
@@ -1434,6 +1435,18 @@ void main() {
         );
       }
 
+      for (final value in [true, 1, <String, dynamic>{}]) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['toolbarWidthPolicy'] = value;
+        snapshot['generalMode'] = general;
+
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: 'toolbarWidthPolicy=$value',
+        );
+      }
+
       final snapshot = validSnapshot();
       final general = generalMode(snapshot)
         ..['selectedDateIso'] = '2026-08-03T12:00:00.000';
@@ -1442,6 +1455,112 @@ void main() {
         () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
         throwsFormatException,
       );
+    });
+
+    test('preserves toolbar width policy and defaults missing field', () {
+      const policies = [
+        generalToolbarWidthPolicyContent,
+        generalToolbarWidthPolicyBalanced,
+        generalToolbarWidthPolicyCalendarPriority,
+        generalToolbarWidthPolicyDatePriority,
+      ];
+
+      for (final policy in policies) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['toolbarWidthPolicy'] = policy;
+        snapshot['generalMode'] = general;
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+        expect(decoded.generalMode.toolbarWidthPolicy, policy);
+        expect(decoded.toJson()['generalMode']['toolbarWidthPolicy'], policy);
+      }
+
+      final legacySnapshot = validSnapshot();
+      final legacyGeneral = generalMode(legacySnapshot)
+        ..remove('toolbarWidthPolicy');
+      legacySnapshot['generalMode'] = legacyGeneral;
+
+      final decodedLegacy = AppData.decodeStorageSnapshot(
+        jsonEncode(legacySnapshot),
+      );
+      expect(
+        decodedLegacy.generalMode.toolbarWidthPolicy,
+        generalToolbarWidthPolicyContent,
+      );
+    });
+
+    test('preserves date label format and defaults missing field', () {
+      const formats = [
+        generalDateLabelFormatLocalized,
+        generalDateLabelFormatSlash,
+        generalDateLabelFormatIso,
+      ];
+
+      for (final format in formats) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['dateLabelFormat'] = format;
+        snapshot['generalMode'] = general;
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+        expect(decoded.generalMode.dateLabelFormat, format);
+        expect(decoded.toJson()['generalMode']['dateLabelFormat'], format);
+      }
+
+      final legacySnapshot = validSnapshot();
+      final legacyGeneral = generalMode(legacySnapshot)
+        ..remove('dateLabelFormat');
+      legacySnapshot['generalMode'] = legacyGeneral;
+      final decodedLegacy = AppData.decodeStorageSnapshot(
+        jsonEncode(legacySnapshot),
+      );
+      expect(
+        decodedLegacy.generalMode.dateLabelFormat,
+        generalDateLabelFormatSlash,
+      );
+    });
+
+    test('rejects malformed date label format values', () {
+      for (final value in [true, 1, <String, dynamic>{}, 'unknown']) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['dateLabelFormat'] = value;
+        snapshot['generalMode'] = general;
+
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: 'dateLabelFormat=$value',
+        );
+      }
+    });
+
+    test('preserves and strictly decodes hidden home navigation setting', () {
+      final snapshot = validSnapshot()..['hideHomeBottomNavigationBar'] = true;
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+
+      expect(decoded.hideHomeBottomNavigationBar, isTrue);
+      expect(decoded.toJson()['hideHomeBottomNavigationBar'], isTrue);
+
+      final missing = validSnapshot()..remove('hideHomeBottomNavigationBar');
+      expect(
+        AppData.decodeStorageSnapshot(
+          jsonEncode(missing),
+        ).hideHomeBottomNavigationBar,
+        isFalse,
+      );
+
+      for (final value in [null, 1, 'true', <String, dynamic>{}]) {
+        final malformed = validSnapshot();
+        if (value == null) {
+          malformed['hideHomeBottomNavigationBar'] = null;
+        } else {
+          malformed['hideHomeBottomNavigationBar'] = value;
+        }
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(malformed)),
+          throwsFormatException,
+          reason: 'hideHomeBottomNavigationBar=$value',
+        );
+      }
     });
 
     test('rejects malformed top-level settings and metadata', () {

@@ -45,6 +45,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('connected tile forwards a trailing switch state to semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    var value = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Scaffold(
+            body: SettingsConnectedTile(
+              key: const ValueKey('connected-toggle'),
+              leading: const Icon(Icons.navigation_outlined),
+              title: 'Hide bottom navigation',
+              trailing: Switch(value: value, onChanged: (_) {}),
+              semanticToggled: value,
+              onTap: () => setState(() => value = !value),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('connected-toggle'))),
+      matchesSemantics(
+        label: 'Hide bottom navigation',
+        hasEnabledState: true,
+        isEnabled: true,
+        hasToggledState: true,
+        isToggled: false,
+        hasTapAction: true,
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('connected-toggle')));
+    await tester.pump();
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('connected-toggle'))),
+      matchesSemantics(
+        label: 'Hide bottom navigation',
+        hasEnabledState: true,
+        isEnabled: true,
+        hasToggledState: true,
+        isToggled: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
   testWidgets('compact list tile keeps its indicator inline at large text', (
     tester,
   ) async {

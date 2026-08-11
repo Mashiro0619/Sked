@@ -49,6 +49,31 @@ void main() {
     );
   });
 
+  test('app-data normalization preserves workspace and toolbar settings', () {
+    final source = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+      hideHomeBottomNavigationBar: true,
+      generalMode: GeneralScheduleData.createDefault().copyWith(
+        toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
+        dateLabelFormat: generalDateLabelFormatLocalized,
+      ),
+    );
+
+    final normalized = service.normalizeAppData(
+      source,
+      localeCode: defaultLocaleCode,
+    );
+
+    expect(normalized.hideHomeBottomNavigationBar, isTrue);
+    expect(
+      normalized.generalMode.toolbarWidthPolicy,
+      generalToolbarWidthPolicyDatePriority,
+    );
+    expect(
+      normalized.generalMode.dateLabelFormat,
+      generalDateLabelFormatLocalized,
+    );
+  });
+
   GeneralEvent event({
     String id = 'event',
     String calendarId = 'cal',

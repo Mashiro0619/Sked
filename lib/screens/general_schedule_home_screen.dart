@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:lunar/lunar.dart';
 import 'package:provider/provider.dart';
 
@@ -111,37 +112,19 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           final toolbar = SkedWorkspaceToolbar(
             key: const ValueKey('general-workspace-toolbar'),
             padding: EdgeInsets.symmetric(
-              horizontal: width < 600 ? 12 : 16,
-              vertical: constraints.maxHeight < 600 ? 8 : 12,
+              horizontal: constraints.maxWidth < 360 ? 8 : 12,
+              vertical: constraints.maxHeight < 600 ? 6 : 8,
             ),
-            navigationSpacing: width < 600 ? 4 : 10,
-            // Keep the calendar selector and settings affordance in one
-            // title row on narrow screens.  The shared toolbar deliberately
-            // does not know about this workspace's action hierarchy.
-            title: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: _GeneralCalendarSelector(
-                    schedule: activeCalendar,
-                    disabled: _calendarManagerOpen || !widget.interactive,
-                    onPressed: () => _openCalendarManager(context, provider),
-                  ),
-                ),
-                if (widget.showSettingsAction) ...[
-                  const SizedBox(width: 4),
-                  IconButton(
-                    key: const ValueKey('general-settings-button'),
-                    focusNode: widget.settingsFocusNode,
-                    onPressed: settingsAction,
-                    icon: const Icon(Icons.settings_outlined),
-                    tooltip: l10n.settings,
-                  ),
-                ],
-              ],
-            ),
-            actions: const [],
-            navigation: _GeneralWorkspaceNavigation(
+            title: _GeneralToolbarLayout(
+              schedule: activeCalendar,
+              toolbarWidthPolicy: snapshot.toolbarWidthPolicy,
+              dateLabelFormat: snapshot.dateLabelFormat,
+              showSettingsAction: widget.showSettingsAction,
+              settingsFocusNode: widget.settingsFocusNode,
+              settingsAction: settingsAction,
+              settingsLabel: l10n.settings,
+              calendarDisabled: _calendarManagerOpen || !widget.interactive,
+              onOpenCalendar: () => _openCalendarManager(context, provider),
               view: view,
               selectedDate: selectedDate,
               dateNavigationDirection: dateNavigationDirection,
@@ -640,51 +623,82 @@ class _GeneralCalendarSelector extends StatelessWidget {
     required this.schedule,
     required this.disabled,
     required this.onPressed,
+    required this.showIcon,
   });
 
   final GeneralSchedule? schedule;
   final bool disabled;
   final VoidCallback onPressed;
+  final bool showIcon;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final available = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : 240.0;
-        final labelWidth = math.max(0.0, math.min(240.0, available - 64.0));
-        return Tooltip(
-          message: l10n.calendars,
+    final name = schedule?.name ?? l10n.calendars;
+    final labelStyle = Theme.of(context).textTheme.labelLarge;
+    final labelPainter = TextPainter(
+      text: TextSpan(text: name, style: labelStyle),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    return Tooltip(
+      message: l10n.calendars,
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          key: const ValueKey('general-calendar-selector'),
+          onPressed: disabled ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(48, 48),
+            padding: EdgeInsets.symmetric(horizontal: showIcon ? 10 : 8),
+            textStyle: labelStyle,
+          ),
           child: SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              key: const ValueKey('general-calendar-selector'),
-              onPressed: disabled ? null : onPressed,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              icon: const Icon(Icons.calendar_month_outlined),
-              label: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: labelWidth),
-                child: Text(
-                  schedule?.name ?? l10n.calendars,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            height: math.max(24, labelPainter.height),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Center the label against the whole control.  A leading icon
+                // must not shift the visual center toward the trailing edge.
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: showIcon ? 28 : 0,
+                    ),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              ),
+                if (showIcon)
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: const Icon(Icons.calendar_month_outlined, size: 20),
+                  ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _GeneralWorkspaceNavigation extends StatelessWidget {
-  const _GeneralWorkspaceNavigation({
+class _GeneralToolbarLayout extends StatelessWidget {
+  const _GeneralToolbarLayout({
+    required this.schedule,
+    required this.toolbarWidthPolicy,
+    required this.dateLabelFormat,
+    required this.showSettingsAction,
+    required this.settingsFocusNode,
+    required this.settingsAction,
+    required this.settingsLabel,
+    required this.calendarDisabled,
+    required this.onOpenCalendar,
     required this.view,
     required this.selectedDate,
     required this.dateNavigationDirection,
@@ -695,10 +709,254 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     required this.onPickDate,
   });
 
+  final GeneralSchedule? schedule;
+  final String toolbarWidthPolicy;
+  final String dateLabelFormat;
+  final bool showSettingsAction;
+  final FocusNode? settingsFocusNode;
+  final VoidCallback? settingsAction;
+  final String settingsLabel;
+  final bool calendarDisabled;
+  final VoidCallback onOpenCalendar;
   final String view;
   final DateTime selectedDate;
   final int dateNavigationDirection;
   final bool interactive;
+  final String viewSwitchBehavior;
+  final ValueChanged<String> onViewChanged;
+  final VoidCallback onToday;
+  final VoidCallback? onPickDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 0.0;
+          // Use the complete toolbar slot.  The allocation policy itself
+          // keeps the calendar control bounded; capping the whole group here
+          // would leave a misleading empty tail on wide windows.
+          final groupWidth = availableWidth;
+          final metrics = _GeneralToolbarMetrics.calculate(
+            context: context,
+            availableWidth: groupWidth,
+            scheduleName:
+                schedule?.name ?? AppLocalizations.of(context).calendars,
+            policy: toolbarWidthPolicy,
+            showSettingsAction: showSettingsAction,
+          );
+          final calendar = SizedBox(
+            width: metrics.calendarWidth,
+            child: _GeneralCalendarSelector(
+              schedule: schedule,
+              disabled: calendarDisabled,
+              onPressed: onOpenCalendar,
+              showIcon: metrics.calendarShowIcon,
+            ),
+          );
+          final navigation = SizedBox(
+            width: metrics.dateWidth + 48 + 4,
+            child: _GeneralWorkspaceNavigation(
+              view: view,
+              selectedDate: selectedDate,
+              dateNavigationDirection: dateNavigationDirection,
+              interactive: interactive,
+              dateWidth: metrics.dateWidth,
+              dateLabelFormat: dateLabelFormat,
+              viewSwitchBehavior: viewSwitchBehavior,
+              onViewChanged: onViewChanged,
+              onToday: onToday,
+              onPickDate: onPickDate,
+            ),
+          );
+          final settings = showSettingsAction
+              ? SizedBox.square(
+                  dimension: 48,
+                  child: IconButton(
+                    key: const ValueKey('general-settings-button'),
+                    focusNode: settingsFocusNode,
+                    onPressed: settingsAction,
+                    icon: const Icon(Icons.settings_outlined),
+                    tooltip: settingsLabel,
+                  ),
+                )
+              : null;
+          return Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SizedBox(
+              width: groupWidth,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  calendar,
+                  const SizedBox(width: 4),
+                  navigation,
+                  if (settings != null) ...[const SizedBox(width: 4), settings],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GeneralToolbarMetrics {
+  const _GeneralToolbarMetrics({
+    required this.calendarWidth,
+    required this.dateWidth,
+    required this.calendarShowIcon,
+  });
+
+  static const _calendarSoftMin = 96.0;
+  static const _dateSoftMin = 72.0;
+  static const _hardMin = 48.0;
+  static const _calendarMax = 280.0;
+  static const _dateButtonHorizontalPadding = 8.0;
+
+  final double calendarWidth;
+  final double dateWidth;
+  final bool calendarShowIcon;
+
+  static _GeneralToolbarMetrics calculate({
+    required BuildContext context,
+    required double availableWidth,
+    required String scheduleName,
+    required String policy,
+    required bool showSettingsAction,
+  }) {
+    final fixedWidth =
+        48 + (showSettingsAction ? 48 : 0) + (showSettingsAction ? 3 : 2) * 4;
+    final budget = math.max(0.0, availableWidth - fixedWidth);
+    final minima = _minimumSlotWidths(budget);
+    final calendarMin = minima.$1;
+    final dateMin = minima.$2;
+    final style =
+        Theme.of(context).textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final painter = TextPainter(
+      text: TextSpan(text: scheduleName, style: style),
+      textDirection: direction,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final scale = scaler.scale(style.fontSize ?? 14) / (style.fontSize ?? 14);
+    final iconAllowed = scale <= 1.3;
+    final textOnlyDemand = painter.width + 16;
+    // The centered label reserves 28dp on both sides so the leading icon
+    // cannot shift it, plus the button's 10dp padding on each side.
+    final iconDemand = painter.width + 76;
+    // Only reserve the leading icon when the bounded content slot can
+    // actually contain it.  Otherwise the calendar slot is sized to the
+    // text-only demand instead of retaining an invisible icon's width.
+    final contentMax = math.max(
+      calendarMin,
+      math.min(
+        math.min(_calendarMax, budget * 0.4),
+        math.max(0, budget - dateMin),
+      ),
+    );
+    final contentDemand = iconAllowed && iconDemand <= contentMax
+        ? iconDemand
+        : textOnlyDemand;
+
+    final desiredCalendar = (switch (normalizeGeneralToolbarWidthPolicy(
+      policy,
+    )) {
+      generalToolbarWidthPolicyBalanced => budget / 2,
+      generalToolbarWidthPolicyCalendarPriority => budget * 3 / 5,
+      generalToolbarWidthPolicyDatePriority => budget * 2 / 5,
+      _ => contentDemand.clamp(
+        calendarMin,
+        math.max(
+          calendarMin,
+          math.min(
+            _calendarMax,
+            math.min(budget * 0.4, math.max(0, budget - dateMin)),
+          ),
+        ),
+      ),
+    }).toDouble();
+    final calendarWidth = _clampSlot(
+      desiredCalendar,
+      min: calendarMin,
+      max: math.max(calendarMin, budget - dateMin),
+      budget: budget,
+    );
+    final dateWidth = math.max(0.0, budget - calendarWidth);
+    final showIcon = iconAllowed && calendarWidth >= iconDemand;
+    return _GeneralToolbarMetrics(
+      calendarWidth: calendarWidth,
+      dateWidth: dateWidth,
+      calendarShowIcon: showIcon,
+    );
+  }
+
+  /// Returns the minimum calendar/date widths for the current flexible
+  /// budget.  Between the soft and hard totals the two minima shrink
+  /// continuously, preserving their relative amount of optional space.
+  static (double, double) _minimumSlotWidths(double budget) {
+    const hardTotal = _hardMin * 2;
+    const softTotal = _calendarSoftMin + _dateSoftMin;
+    if (budget >= softTotal) {
+      return (_calendarSoftMin, _dateSoftMin);
+    }
+    if (budget <= hardTotal) {
+      // A physical window this narrow cannot fit four 48dp controls and the
+      // required gaps at all.  Keep the hard touch targets; normal Android
+      // windows are wider than this lower bound.
+      return (_hardMin, _hardMin);
+    }
+    final progress = (budget - hardTotal) / (softTotal - hardTotal);
+    return (
+      _hardMin + (_calendarSoftMin - _hardMin) * progress,
+      _hardMin + (_dateSoftMin - _hardMin) * progress,
+    );
+  }
+
+  static double _clampSlot(
+    double value, {
+    required double min,
+    required double max,
+    required double budget,
+  }) {
+    if (budget <= 0) return 0;
+    // If the flexible budget is narrower than two hard touch targets, keep
+    // the row inside its parent rather than creating an overflow. Standard
+    // Android widths never reach this fallback, but it keeps desktop
+    // split-view and test surfaces deterministic.
+    final roomForCalendar = math.max(0.0, budget - _hardMin);
+    final safeMin = math.min(min, roomForCalendar);
+    final safeMax = math.min(math.max(safeMin, max), roomForCalendar);
+    return value.clamp(safeMin, safeMax).toDouble();
+  }
+}
+
+class _GeneralWorkspaceNavigation extends StatelessWidget {
+  const _GeneralWorkspaceNavigation({
+    required this.view,
+    required this.selectedDate,
+    required this.dateNavigationDirection,
+    required this.interactive,
+    required this.dateWidth,
+    required this.dateLabelFormat,
+    required this.viewSwitchBehavior,
+    required this.onViewChanged,
+    required this.onToday,
+    required this.onPickDate,
+  });
+
+  final String view;
+  final DateTime selectedDate;
+  final int dateNavigationDirection;
+  final bool interactive;
+  final double dateWidth;
+  final String dateLabelFormat;
   final String viewSwitchBehavior;
   final ValueChanged<String> onViewChanged;
   final VoidCallback onToday;
@@ -719,40 +977,59 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
       interactive: interactive,
       onViewChanged: onViewChanged,
     );
-    final dateLabel = _dateNavigationLabel(selectedDate, view, context);
-    final fullDateLabel = '${l10n.pickDate}: $dateLabel';
+    final dateLabel = _dateNavigationLabelForWidth(
+      context,
+      selectedDate,
+      view,
+      dateWidth,
+      format: dateLabelFormat,
+    );
+    final accessibleDateLabel = _accessibleDateNavigationLabel(
+      selectedDate,
+      view,
+      context,
+    );
+    final fullDateLabel = '${l10n.pickDate}: $accessibleDateLabel';
     final dateInteractive = interactive && onPickDate != null;
-    final dateButton = Tooltip(
-      excludeFromSemantics: true,
-      message: fullDateLabel,
-      child: Semantics(
-        button: true,
-        enabled: dateInteractive,
-        label: fullDateLabel,
-        hint: l10n.generalViewLongPressTodayHint,
-        onTap: dateInteractive ? onPickDate : null,
-        onLongPress: dateInteractive ? onToday : null,
-        excludeSemantics: true,
-        child: OutlinedButton.icon(
-          key: const ValueKey('general-date-title-button'),
-          onPressed: dateInteractive ? onPickDate : null,
+    final dateButton = SizedBox(
+      width: dateWidth,
+      child: Tooltip(
+        excludeFromSemantics: true,
+        message: fullDateLabel,
+        child: Semantics(
+          button: true,
+          enabled: dateInteractive,
+          label: fullDateLabel,
+          hint: l10n.generalViewLongPressTodayHint,
+          onTap: dateInteractive ? onPickDate : null,
           onLongPress: dateInteractive ? onToday : null,
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, 48),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-          ),
-          icon: const Icon(Icons.event_outlined),
-          label: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: SkedDirectionalTransition(
-              trigger: dateLabel,
-              direction: dateNavigationDirection,
-              distance: 16,
-              child: Text(
-                dateLabel,
-                key: ValueKey('general-date-label-$dateLabel'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+          excludeSemantics: true,
+          child: OutlinedButton(
+            key: const ValueKey('general-date-title-button'),
+            onPressed: dateInteractive ? onPickDate : null,
+            onLongPress: dateInteractive ? onToday : null,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _GeneralToolbarMetrics._dateButtonHorizontalPadding,
+              ),
+              textStyle: Theme.of(context).textTheme.labelLarge,
+            ),
+            child: ClipRect(
+              child: SkedDirectionalTransition(
+                trigger: dateLabel,
+                direction: dateNavigationDirection,
+                distance: 16,
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    dateLabel,
+                    key: ValueKey('general-date-label-$dateLabel'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
             ),
           ),
@@ -761,9 +1038,10 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     );
 
     return Row(
+      mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        selector,
+        SizedBox.square(dimension: 48, child: selector),
         const SizedBox(width: 4),
         Expanded(child: dateButton),
       ],
@@ -907,6 +1185,8 @@ class _GeneralHomeSnapshot {
     required this.selectedDate,
     required this.defaultView,
     required this.viewSwitchBehavior,
+    required this.dateLabelFormat,
+    required this.toolbarWidthPolicy,
     required this.activeScheduleId,
     required this.schedules,
     required this.reminderAcknowledgements,
@@ -923,6 +1203,8 @@ class _GeneralHomeSnapshot {
       selectedDate: data.selectedDate,
       defaultView: data.defaultView,
       viewSwitchBehavior: data.viewSwitchBehavior,
+      toolbarWidthPolicy: data.toolbarWidthPolicy,
+      dateLabelFormat: data.dateLabelFormat,
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
       reminderAcknowledgements: data.reminderAcknowledgements,
@@ -937,6 +1219,8 @@ class _GeneralHomeSnapshot {
   final DateTime selectedDate;
   final String defaultView;
   final String viewSwitchBehavior;
+  final String toolbarWidthPolicy;
+  final String dateLabelFormat;
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
@@ -952,6 +1236,8 @@ class _GeneralHomeSnapshot {
         _sameDay(other.selectedDate, selectedDate) &&
         other.defaultView == defaultView &&
         other.viewSwitchBehavior == viewSwitchBehavior &&
+        other.toolbarWidthPolicy == toolbarWidthPolicy &&
+        other.dateLabelFormat == dateLabelFormat &&
         other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
         identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
@@ -969,6 +1255,8 @@ class _GeneralHomeSnapshot {
     selectedDate.day,
     defaultView,
     viewSwitchBehavior,
+    toolbarWidthPolicy,
+    dateLabelFormat,
     activeScheduleId,
     identityHashCode(schedules),
     identityHashCode(reminderAcknowledgements),
@@ -1071,19 +1359,173 @@ class _GeneralOccurrenceFilter {
   }
 }
 
-String _dateNavigationLabel(DateTime date, String view, BuildContext context) {
-  if (view == generalViewMonth) {
-    final localizations = MaterialLocalizations.of(context);
-    return localizations.formatMonthYear(date);
+String _dateNavigationLabelForWidth(
+  BuildContext context,
+  DateTime date,
+  String view,
+  double width, {
+  required String format,
+}) {
+  final style =
+      Theme.of(context).textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+  final scaler = MediaQuery.textScalerOf(context);
+  final maxTextWidth = math.max(
+    0.0,
+    width - (_GeneralToolbarMetrics._dateButtonHorizontalPadding * 2),
+  );
+  final candidates = _dateNavigationCandidates(
+    date,
+    view,
+    format: format,
+    localeName: Localizations.localeOf(context).toLanguageTag(),
+  );
+  for (final candidate in candidates) {
+    final painter = TextPainter(
+      text: TextSpan(text: candidate, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    if (painter.width <= maxTextWidth) {
+      return candidate;
+    }
   }
-  final localizations = MaterialLocalizations.of(context);
+  return candidates.last;
+}
+
+List<String> _dateNavigationCandidates(
+  DateTime date,
+  String view, {
+  required String format,
+  required String localeName,
+}) {
+  if (format == generalDateLabelFormatLocalized) {
+    return _localizedDateNavigationCandidates(date, view, localeName);
+  }
+  final year = date.year;
+  final shortYear = _shortYear(year);
+  final separator = format == generalDateLabelFormatIso ? '-' : '/';
+  final month = format == generalDateLabelFormatIso
+      ? date.month.toString().padLeft(2, '0')
+      : date.month.toString();
+  final day = format == generalDateLabelFormatIso
+      ? date.day.toString().padLeft(2, '0')
+      : date.day.toString();
+  String datePart(DateTime value, {bool short = false}) {
+    final y = short ? _shortYear(value.year) : value.year.toString();
+    final m = format == generalDateLabelFormatIso
+        ? value.month.toString().padLeft(2, '0')
+        : value.month.toString();
+    final d = format == generalDateLabelFormatIso
+        ? value.day.toString().padLeft(2, '0')
+        : value.day.toString();
+    return '$y$separator$m$separator$d';
+  }
+
+  if (view == generalViewMonth) {
+    final fullMonth = format == generalDateLabelFormatIso
+        ? '$year$separator$month'
+        : '$year$separator${date.month}';
+    final shortMonth = format == generalDateLabelFormatIso
+        ? '$shortYear$separator$month'
+        : '$shortYear$separator${date.month}';
+    return [fullMonth, shortMonth, '${date.month}'];
+  }
   if (view != generalViewWeek) {
-    return localizations.formatShortDate(date);
+    return [
+      datePart(date),
+      datePart(date, short: true),
+      '$month$separator$day',
+    ];
+  }
+
+  final start = startOfWeekMonday(date);
+  final end = addCalendarDays(start, 6);
+  String monthDayPart(DateTime value) {
+    final month = format == generalDateLabelFormatIso
+        ? value.month.toString().padLeft(2, '0')
+        : value.month.toString();
+    final day = format == generalDateLabelFormatIso
+        ? value.day.toString().padLeft(2, '0')
+        : value.day.toString();
+    return '$month$separator$day';
+  }
+
+  if (start.year != end.year) {
+    return [
+      '${datePart(start)}\u2013${datePart(end)}',
+      '${datePart(start, short: true)}\u2013${datePart(end, short: true)}',
+      '${monthDayPart(start)}\u2013${monthDayPart(end)}',
+      '${start.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}\u2013${monthDayPart(end)}',
+    ];
+  }
+  if (start.month != end.month) {
+    return [
+      '${datePart(start)}\u2013${datePart(end)}',
+      '${datePart(start)}\u2013${monthDayPart(end)}',
+      '${datePart(start, short: true)}\u2013${monthDayPart(end)}',
+      '${monthDayPart(start)}\u2013${monthDayPart(end)}',
+      '${start.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}\u2013${monthDayPart(end)}',
+    ];
+  }
+  return [
+    '${datePart(start)}\u2013${datePart(end)}',
+    '${datePart(start)}\u2013${monthDayPart(end)}',
+    '${datePart(start)}\u2013${end.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}',
+    '${datePart(start, short: true)}\u2013${end.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}',
+    '${monthDayPart(start)}\u2013${end.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}',
+  ];
+}
+
+List<String> _localizedDateNavigationCandidates(
+  DateTime date,
+  String view,
+  String localeName,
+) {
+  final locale = localeName.replaceAll('_', '-');
+  final fullDate = intl.DateFormat.yMd(locale).format(date);
+  final shortDate = intl.DateFormat.Md(locale).format(date);
+  final fullMonth = intl.DateFormat.yMMM(locale).format(date);
+  final shortMonth = intl.DateFormat.MMM(locale).format(date);
+  if (view == generalViewMonth) {
+    return [fullMonth, shortMonth, date.month.toString()];
+  }
+  if (view != generalViewWeek) {
+    return [fullDate, shortDate, shortDate];
   }
   final start = startOfWeekMonday(date);
   final end = addCalendarDays(start, 6);
-  return '${localizations.formatShortDate(start)} - '
-      '${localizations.formatShortDate(end)}';
+  final startFull = intl.DateFormat.yMd(locale).format(start);
+  final endFull = intl.DateFormat.yMd(locale).format(end);
+  final startShort = intl.DateFormat.Md(locale).format(start);
+  final endShort = intl.DateFormat.Md(locale).format(end);
+  final candidates = <String>['$startFull\u2013$endFull'];
+  if (start.year == end.year) {
+    candidates.add('$startFull\u2013$endShort');
+  }
+  candidates.add('$startShort\u2013$endShort');
+  candidates.add('${start.day}\u2013$endShort');
+  return candidates;
+}
+
+String _shortYear(int year) => (year % 100).toString().padLeft(2, '0');
+
+String _accessibleDateNavigationLabel(
+  DateTime date,
+  String view,
+  BuildContext context,
+) {
+  final localizations = MaterialLocalizations.of(context);
+  if (view == generalViewMonth) {
+    return localizations.formatMonthYear(date);
+  }
+  if (view != generalViewWeek) {
+    return localizations.formatFullDate(date);
+  }
+  final start = startOfWeekMonday(date);
+  final end = addCalendarDays(start, 6);
+  return '${localizations.formatFullDate(start)} - '
+      '${localizations.formatFullDate(end)}';
 }
 
 String _formatDate(DateTime date) {

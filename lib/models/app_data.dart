@@ -1082,7 +1082,12 @@ void _validateStorageGeneralSettings(
   Map<String, dynamic> generalMode, {
   bool validateCurrentSemantics = false,
 }) {
-  for (final key in const ['defaultView', 'viewSwitchBehavior']) {
+  for (final key in const [
+    'defaultView',
+    'viewSwitchBehavior',
+    'toolbarWidthPolicy',
+    'dateLabelFormat',
+  ]) {
     _validateStorageStringField(
       generalMode,
       key,
@@ -1116,6 +1121,27 @@ void _validateStorageGeneralSettings(
         generalViewSwitchBehaviorCycle,
         generalViewSwitchBehaviorMenu,
       }.contains(generalMode['viewSwitchBehavior'])) {
+    throw const FormatException(
+      'Stored general schedule settings are invalid.',
+    );
+  }
+  if (generalMode.containsKey('toolbarWidthPolicy') &&
+      !const {
+        generalToolbarWidthPolicyContent,
+        generalToolbarWidthPolicyBalanced,
+        generalToolbarWidthPolicyCalendarPriority,
+        generalToolbarWidthPolicyDatePriority,
+      }.contains(generalMode['toolbarWidthPolicy'])) {
+    throw const FormatException(
+      'Stored general schedule settings are invalid.',
+    );
+  }
+  if (generalMode.containsKey('dateLabelFormat') &&
+      !const {
+        generalDateLabelFormatLocalized,
+        generalDateLabelFormatSlash,
+        generalDateLabelFormatIso,
+      }.contains(generalMode['dateLabelFormat'])) {
     throw const FormatException(
       'Stored general schedule settings are invalid.',
     );
@@ -1495,6 +1521,11 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
       errorMessage: 'Stored privacy acceptance date is invalid.',
     );
   }
+  _validateStorageBooleanField(
+    json,
+    'hideHomeBottomNavigationBar',
+    errorMessage: 'Stored home navigation setting is invalid.',
+  );
   _validateStorageThemeSettings(json, validateCurrentSemantics: true);
   final hasStudentMode = json.containsKey('studentMode');
   final hasGeneralMode = json.containsKey('generalMode');
@@ -1563,6 +1594,7 @@ class AppData {
     required StudentModeData studentMode,
     required GeneralScheduleData generalMode,
     String localeCode = defaultLocaleCode,
+    bool hideHomeBottomNavigationBar = false,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1609,6 +1641,7 @@ class AppData {
       studentMode: nextStudentMode,
       generalMode: nextGeneralMode,
       localeCode: localeCode,
+      hideHomeBottomNavigationBar: hideHomeBottomNavigationBar,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
       ignoredUpdateVersion: ignoredUpdateVersion,
@@ -1621,6 +1654,7 @@ class AppData {
     required this.studentMode,
     required this.generalMode,
     this.localeCode = defaultLocaleCode,
+    this.hideHomeBottomNavigationBar = false,
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
     this.ignoredUpdateVersion,
@@ -1631,6 +1665,7 @@ class AppData {
   final StudentModeData studentMode;
   final GeneralScheduleData generalMode;
   final String localeCode;
+  final bool hideHomeBottomNavigationBar;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
   final String? ignoredUpdateVersion;
@@ -1651,6 +1686,7 @@ class AppData {
     'studentMode': studentMode.toJson(),
     'generalMode': generalMode.toJson(),
     'localeCode': normalizeLocaleCode(localeCode),
+    'hideHomeBottomNavigationBar': hideHomeBottomNavigationBar,
     if (privacyPolicyAcceptedVersion != null)
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
@@ -1727,6 +1763,7 @@ class AppData {
       studentMode: studentMode,
       generalMode: generalMode,
       localeCode: localeCode,
+      hideHomeBottomNavigationBar: _decodeHideHomeBottomNavigationBar(migrated),
       privacyPolicyAcceptedVersion: _nullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
@@ -1747,6 +1784,7 @@ class AppData {
     StudentModeData? studentMode,
     GeneralScheduleData? generalMode,
     String? localeCode,
+    bool? hideHomeBottomNavigationBar,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1794,6 +1832,8 @@ class AppData {
       studentMode: nextStudentMode,
       generalMode: nextGeneralMode,
       localeCode: normalizeLocaleCode(localeCode ?? this.localeCode),
+      hideHomeBottomNavigationBar:
+          hideHomeBottomNavigationBar ?? this.hideHomeBottomNavigationBar,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
           ? this.privacyPolicyAcceptedVersion
@@ -1823,6 +1863,17 @@ class AppData {
     _validateStorageSnapshotShape(migrated);
     return AppData.fromJson(migrated);
   }
+}
+
+bool _decodeHideHomeBottomNavigationBar(Map<String, dynamic> json) {
+  if (!json.containsKey('hideHomeBottomNavigationBar')) {
+    return false;
+  }
+  final value = json['hideHomeBottomNavigationBar'];
+  if (value is! bool) {
+    throw const FormatException('Home navigation setting is invalid.');
+  }
+  return value;
 }
 
 GeneralScheduleData _buildDefaultGeneralMode() {

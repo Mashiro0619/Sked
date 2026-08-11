@@ -117,7 +117,7 @@ void main() {
     expect(find.text('Time grid'), findsOneWidget);
     expect(find.text('Popup behavior', skipOffstage: false), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
-    expect(find.byType(SkedDropdownMenu<String>), findsNWidgets(2));
+    expect(find.byType(SkedDropdownMenu<String>), findsNWidgets(4));
 
     await tester.tap(find.byKey(const ValueKey('general-default-view')));
     await tester.pumpAndSettle();
@@ -139,6 +139,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
+  });
+
+  testWidgets('persists all toolbar width policy options', (tester) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider);
+
+    final dropdown = find.byKey(const ValueKey('general-toolbar-width-policy'));
+    expect(
+      provider.generalToolbarWidthPolicy,
+      generalToolbarWidthPolicyContent,
+    );
+
+    const options = [
+      (generalToolbarWidthPolicyBalanced, 'Balanced'),
+      (generalToolbarWidthPolicyCalendarPriority, 'Calendar priority'),
+      (generalToolbarWidthPolicyDatePriority, 'Date priority'),
+      (generalToolbarWidthPolicyContent, 'Automatic allocation'),
+    ];
+
+    for (final option in options) {
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(option.$2).last);
+      await tester.pumpAndSettle();
+
+      expect(provider.generalToolbarWidthPolicy, option.$1);
+    }
   });
 
   testWidgets('default view dropdown opens with a full field-width menu', (

@@ -13,7 +13,7 @@ import 'package:sked/services/school_import_content_sanitizer.dart';
 
 // Increment when the serialized fixture contract changes, even if the
 // generated workload shape and record counts remain the same.
-const performanceDatasetVersion = 2;
+const performanceDatasetVersion = 3;
 const performanceCalendarCount = 8;
 const performanceSmallEventCount = 1000;
 const performanceLargeEventCount = 5000;

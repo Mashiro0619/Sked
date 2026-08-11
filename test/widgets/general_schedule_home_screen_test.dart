@@ -115,10 +115,11 @@ class _FailOnceTimetableStorage implements TimetableStorage {
 AppData _buildGeneralDataWithCalendars(
   List<GeneralSchedule> calendars, {
   required String activeId,
+  String localeCode = defaultLocaleCode,
 }) {
   return buildInitialAppData(
     buildDefaultPeriodTimes(),
-    localeCode: defaultLocaleCode,
+    localeCode: localeCode,
   ).copyWith(
     activeMode: AppMode.general,
     generalMode: GeneralScheduleData(
@@ -173,6 +174,7 @@ Future<void> _pumpGeneralScheduleHomeScreen(
   ThemeData? theme,
   TextScaler textScaler = TextScaler.noScaling,
   TextDirection? textDirection,
+  bool showSettingsAction = true,
 }) async {
   addTearDown(provider.dispose);
   PackageInfo.setMockInitialValues(
@@ -199,7 +201,7 @@ Future<void> _pumpGeneralScheduleHomeScreen(
               ? mediaQuery
               : Directionality(textDirection: textDirection, child: mediaQuery);
         },
-        home: const GeneralScheduleHomeScreen(),
+        home: GeneralScheduleHomeScreen(showSettingsAction: showSettingsAction),
       ),
     ),
   );
@@ -222,6 +224,21 @@ const _generalDayPickerSelectionIndicatorKey = ValueKey<String>(
 const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
   'general-month-compact-selected-day-feedback',
 );
+
+String _visibleDateNavigationLabel(WidgetTester tester) {
+  final labels = tester
+      .widgetList<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('general-date-title-button')),
+          matching: find.byType(Text),
+        ),
+      )
+      .map((widget) => widget.data)
+      .whereType<String>()
+      .toList();
+  expect(labels, hasLength(1));
+  return labels.single;
+}
 
 void main() {
   testWidgets(
@@ -275,13 +292,74 @@ void main() {
     );
 
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
+    expect(_visibleDateNavigationLabel(tester), '2026/6/15\u20132026/6/21');
     expect(
-      find.descendant(of: dateButton, matching: find.textContaining('2026')),
-      findsOneWidget,
+      find.descendant(
+        of: dateButton,
+        matching: find.byIcon(Icons.event_outlined),
+      ),
+      findsNothing,
     );
     expect(find.byTooltip('Previous page'), findsNothing);
     expect(find.byTooltip('Next page'), findsNothing);
     expect(find.text('Pick date'), findsNothing);
+  });
+
+  testWidgets('compact week date shows both months across a boundary', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          selectedDateIso: '2026-09-02',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final dateButton = find.byKey(const ValueKey('general-date-title-button'));
+    expect(
+      find.descendant(of: dateButton, matching: find.text('8/31\u20139/6')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ISO compact week candidates keep zero-padded month and day', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          selectedDateIso: '2026-07-01',
+          defaultView: generalViewWeek,
+          dateLabelFormat: generalDateLabelFormatIso,
+        ),
+      ),
+    );
+
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final label = _visibleDateNavigationLabel(tester);
+    // A compressed ISO candidate may omit the year or the first endpoint's
+    // month, but it must never turn 06/07 or 05 into unpadded values.
+    expect(
+      RegExp(r'(?<!\d)[1-9]-(?:0?[1-9]|[12]\d|3[01])(?!\d)').hasMatch(label),
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -471,16 +549,19 @@ void main() {
   });
 
   testWidgets('compact date button keeps its date semantics', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(900, 800));
+    await tester.binding.setSurfaceSize(const Size(390, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final base = _buildGeneralDataWithCalendars([
-      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
-    ], activeId: 'cal1');
+    final semantics = tester.ensureSemantics();
+    final base = _buildGeneralDataWithCalendars(
+      [const GeneralSchedule(id: 'cal1', name: 'Calendar', events: [])],
+      activeId: 'cal1',
+      localeCode: 'zh',
+    );
     final provider = await _createGeneralProvider(
       base.copyWith(
         generalMode: base.generalMode.copyWith(
-          selectedDateIso: '2026-06-16',
-          defaultView: generalViewWeek,
+          selectedDateIso: '2026-08-11',
+          defaultView: generalViewDay,
         ),
       ),
     );
@@ -488,9 +569,23 @@ void main() {
 
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
     expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
-    expect(find.text('Pick date'), findsNothing);
+    expect(_visibleDateNavigationLabel(tester), '2026/8/11');
+    expect(
+      find.descendant(
+        of: dateButton,
+        matching: find.textContaining(RegExp('[\u5e74\u6708\u65e5]')),
+      ),
+      findsNothing,
+    );
+    final dateSemantics = tester.getSemantics(dateButton).getSemanticsData();
+    expect(dateSemantics.label, contains('2026'));
+    final tooltip = tester.widget<Tooltip>(
+      find.ancestor(of: dateButton, matching: find.byType(Tooltip)).first,
+    );
+    expect(tooltip.message, contains('2026'));
     await tester.longPress(dateButton);
     await tester.pumpAndSettle();
+    semantics.dispose();
     expect(tester.takeException(), isNull);
   });
 
@@ -513,12 +608,26 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     final initialDate = provider.selectedGeneralDate;
+    final dateButton = find.byKey(const ValueKey('general-date-title-button'));
+    expect(_visibleDateNavigationLabel(tester), '2026/6/15\u20132026/6/21');
     await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: dateButton, matching: find.text('2026/6/16')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: dateButton, matching: find.text('2026/6/16')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
     await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: dateButton, matching: find.text('2026/6')),
+      findsOneWidget,
+    );
     expect(provider.selectedGeneralDate, initialDate);
     expect(find.byTooltip('Previous month'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -592,28 +701,279 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = await _createProvider();
-    await _pumpGeneralScheduleHomeScreen(tester, provider);
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(
+        id: 'cal1',
+        name: 'A deliberately long calendar name',
+        events: [],
+      ),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(base);
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
 
-    final settings = find.byKey(const ValueKey('general-settings-button'));
+    for (final size in const [
+      Size(320, 568),
+      Size(390, 844),
+      Size(430, 776),
+      Size(600, 680),
+      Size(900, 360),
+      Size(1120, 680),
+      Size(1268, 680),
+    ]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpAndSettle();
+
+      final calendar = find.byKey(const ValueKey('general-calendar-selector'));
+      final switcher = find.byKey(const ValueKey('general-view-switcher'));
+      final dateButton = find.byKey(
+        const ValueKey('general-date-title-button'),
+      );
+      final settings = find.byKey(const ValueKey('general-settings-button'));
+      final toolbar = find.byKey(const ValueKey('general-workspace-toolbar'));
+      final calendarRect = tester.getRect(calendar);
+      final switcherRect = tester.getRect(switcher);
+      final dateRect = tester.getRect(dateButton);
+      final settingsRect = tester.getRect(settings);
+
+      expect(settingsRect.size, const Size(48, 48), reason: '$size');
+      expect(calendarRect.height, greaterThanOrEqualTo(48), reason: '$size');
+      expect(switcherRect.height, greaterThanOrEqualTo(48), reason: '$size');
+      expect(dateRect.height, greaterThanOrEqualTo(48), reason: '$size');
+      expect(calendarRect.width, inInclusiveRange(48, 280), reason: '$size');
+      expect(dateRect.width, greaterThanOrEqualTo(72), reason: '$size');
+      expect(
+        calendarRect.width + dateRect.width + 108,
+        lessThanOrEqualTo(size.width - (size.width < 360 ? 16 : 24)),
+        reason: '$size',
+      );
+      expect(
+        calendarRect.center.dy,
+        closeTo(settingsRect.center.dy, 1),
+        reason: '$size',
+      );
+      expect(
+        switcherRect.center.dy,
+        closeTo(settingsRect.center.dy, 1),
+        reason: '$size',
+      );
+      expect(
+        dateRect.center.dy,
+        closeTo(settingsRect.center.dy, 1),
+        reason: '$size',
+      );
+      expect(calendarRect.right, lessThanOrEqualTo(switcherRect.left));
+      expect(switcherRect.right, lessThanOrEqualTo(dateRect.left));
+      expect(dateRect.right, lessThanOrEqualTo(settingsRect.left));
+      expect(tester.getSize(toolbar).height, lessThanOrEqualTo(64));
+      expect(
+        find.descendant(
+          of: calendar,
+          matching: find.byIcon(Icons.calendar_month_outlined),
+        ),
+        findsNothing,
+        reason: '$size',
+      );
+      expect(tester.takeException(), isNull, reason: '$size');
+    }
+  });
+
+  testWidgets('wide content layout caps calendar and expands numeric date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(
+        id: 'cal1',
+        name: 'A deliberately long calendar name',
+        events: [],
+      ),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(base);
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      showSettingsAction: false,
+    );
+
+    final calendar = find.byKey(const ValueKey('general-calendar-selector'));
     final switcher = find.byKey(const ValueKey('general-view-switcher'));
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
-    expect(tester.getSize(settings), const Size(48, 48));
-    expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
-    expect(tester.getSize(switcher).height, greaterThanOrEqualTo(48));
+    final toolbar = find.byKey(const ValueKey('general-workspace-toolbar'));
+    final calendarRect = tester.getRect(calendar);
+    final switcherRect = tester.getRect(switcher);
+    final dateRect = tester.getRect(dateButton);
+
+    expect(calendarRect.width, lessThanOrEqualTo(280));
+    expect(calendarRect.width, lessThan(tester.getSize(toolbar).width / 2));
+    expect(dateRect.width, greaterThan(320));
+    expect(calendarRect.center.dy, closeTo(dateRect.center.dy, 1));
+    expect(switcherRect.center.dy, closeTo(dateRect.center.dy, 1));
     expect(
-      tester.getTopLeft(settings).dy,
-      closeTo(
-        tester
-            .getTopLeft(find.byKey(const ValueKey('general-calendar-selector')))
-            .dy,
-        1,
+      find.descendant(
+        of: calendar,
+        matching: find.byIcon(Icons.calendar_month_outlined),
+      ),
+      findsNothing,
+    );
+    expect(_visibleDateNavigationLabel(tester), '2026/6/15\u20132026/6/21');
+    expect(find.byKey(const ValueKey('general-settings-button')), findsNothing);
+
+    await provider.setSelectedGeneralDate(DateTime(2026, 9, 2));
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026/8/31\u20132026/9/6');
+
+    await provider.setSelectedGeneralDate(DateTime(2027, 1, 1));
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026/12/28\u20132027/1/3');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('toolbar width policies reallocate calendar and date slots', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(
+        id: 'cal1',
+        name: 'A deliberately long calendar name for width allocation',
+        events: [],
+      ),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(base);
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      showSettingsAction: false,
+    );
+
+    final initialDate = provider.selectedGeneralDate;
+    final initialView = provider.generalDefaultView;
+    final calendar = find.byKey(const ValueKey('general-calendar-selector'));
+    final dateButton = find.byKey(const ValueKey('general-date-title-button'));
+
+    Future<(double, double)> measure() async {
+      await tester.pumpAndSettle();
+      return (tester.getSize(calendar).width, tester.getSize(dateButton).width);
+    }
+
+    final content = await measure();
+    expect(content.$1, lessThanOrEqualTo(280));
+    expect(content.$2, greaterThan(content.$1));
+
+    await provider.updateGeneralDisplaySettings(
+      toolbarWidthPolicy: generalToolbarWidthPolicyBalanced,
+    );
+    final balanced = await measure();
+    expect(balanced.$1, closeTo(balanced.$2, 1));
+
+    await provider.updateGeneralDisplaySettings(
+      toolbarWidthPolicy: generalToolbarWidthPolicyCalendarPriority,
+    );
+    final calendarPriority = await measure();
+    expect(calendarPriority.$1 / calendarPriority.$2, closeTo(1.5, 0.03));
+
+    await provider.updateGeneralDisplaySettings(
+      toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
+    );
+    final datePriority = await measure();
+    expect(datePriority.$2 / datePriority.$1, closeTo(1.5, 0.03));
+    expect(provider.selectedGeneralDate, initialDate);
+    expect(provider.generalDefaultView, initialView);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('date format preference drives every general schedule view', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 680));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars(
+      const [GeneralSchedule(id: 'cal1', name: 'Calendar', events: [])],
+      activeId: 'cal1',
+      localeCode: 'zh',
+    );
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          selectedDateIso: '2026-07-15',
+          dateLabelFormat: generalDateLabelFormatSlash,
+        ),
       ),
     );
-    expect(
-      tester.getTopLeft(switcher).dy,
-      greaterThan(tester.getTopLeft(settings).dy),
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      showSettingsAction: false,
     );
+
+    expect(_visibleDateNavigationLabel(tester), '2026/7/13\u20132026/7/19');
+
+    await provider.updateGeneralDisplaySettings(
+      dateLabelFormat: generalDateLabelFormatIso,
+    );
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026-07-13\u20132026-07-19');
+
+    final switcher = find.byKey(const ValueKey('general-view-switcher'));
+    await tester.tap(switcher);
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026-07-15');
+
+    await tester.tap(switcher);
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026-07-15');
+
+    await tester.tap(switcher);
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026-07');
+
+    await provider.updateGeneralDisplaySettings(
+      dateLabelFormat: generalDateLabelFormatLocalized,
+    );
+    await tester.pumpAndSettle();
+    expect(_visibleDateNavigationLabel(tester), '2026\u5e747\u6708');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('toolbar minima shrink continuously at the soft-width boundary', (
+    tester,
+  ) async {
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
+        ),
+      ),
+    );
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    Future<(double, double)> measureAt(double width) async {
+      await tester.binding.setSurfaceSize(Size(width, 568));
+      await tester.pumpAndSettle();
+      return (
+        tester
+            .getSize(find.byKey(const ValueKey('general-calendar-selector')))
+            .width,
+        tester
+            .getSize(find.byKey(const ValueKey('general-date-title-button')))
+            .width,
+      );
+    }
+
+    final before = await measureAt(291);
+    final after = await measureAt(292);
+    expect((after.$1 - before.$1).abs(), lessThan(2));
+    expect((after.$2 - before.$2).abs(), lessThan(2));
     expect(tester.takeException(), isNull);
   });
 
@@ -2627,7 +2987,7 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('June 2026'), findsWidgets);
+    expect(find.text('2026/6'), findsWidgets);
     expect(find.text('No upcoming events'), findsWidgets);
   });
 
@@ -2674,7 +3034,7 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('June 2026'), findsWidgets);
+    expect(find.text('26/6'), findsWidgets);
     expect(find.textContaining('Recurring project review'), findsWidgets);
   });
 
@@ -2751,7 +3111,7 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('July 2026'), findsWidgets);
+    expect(find.text('2026/7'), findsWidgets);
     expect(find.text('31'), findsOneWidget);
   });
 

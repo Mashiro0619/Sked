@@ -4,6 +4,11 @@ import '../models/timetable_models.dart';
 class SettingsService {
   const SettingsService();
 
+  AppData updateHideHomeBottomNavigationBar(AppData data, bool value) {
+    if (data.hideHomeBottomNavigationBar == value) return data;
+    return data.copyWith(hideHomeBottomNavigationBar: value);
+  }
+
   AppData updateCloseCoursePopupOnOutsideTap(AppData data, bool value) {
     if (data.studentMode.closeCoursePopupOnOutsideTap == value) return data;
     return data.copyWith(

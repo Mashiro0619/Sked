@@ -23,6 +23,7 @@ import '../services/update_service.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
+import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 import 'general_display_settings_page.dart';
@@ -36,6 +37,8 @@ import 'timetable_import_flow.dart';
 enum _ExportFormat { json, ics }
 
 enum _SettingsFlow {
+  workspaceMode,
+  homeNavigation,
   periodTimePicker,
   schoolSitesPage,
   themeSettingsPage,
@@ -106,6 +109,57 @@ class _SettingsPageState extends State<SettingsPage> {
             ? provider.periodTimeSetForId(_selectedPeriodTimeSetId!)
             : provider.activePeriodTimeSetOrNull;
         final currentWorkspaceChildren = <Widget>[];
+        currentWorkspaceChildren.add(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: SkedDropdownMenu<AppMode>(
+              key: const ValueKey('settings-workspace-mode'),
+              initialSelection: provider.activeMode,
+              label: Text(l10n.settingsWorkspaceMode),
+              leadingIcon: const Icon(Icons.swap_horiz_outlined),
+              expandedInsets: EdgeInsets.zero,
+              enabled: !_isFlowOpen(_SettingsFlow.workspaceMode),
+              dropdownMenuEntries: [
+                DropdownMenuEntry(
+                  value: AppMode.student,
+                  label: l10n.studentTimetable,
+                ),
+                DropdownMenuEntry(
+                  value: AppMode.general,
+                  label: l10n.generalSchedule,
+                ),
+              ],
+              onSelected: (value) {
+                if (value != null) {
+                  unawaited(_switchWorkspace(provider, value));
+                }
+              },
+            ),
+          ),
+        );
+        currentWorkspaceChildren.add(
+          SettingsConnectedTile(
+            leading: const Icon(Icons.navigation_outlined),
+            title: l10n.hideHomeBottomNavigationBar,
+            subtitle: l10n.hideHomeBottomNavigationBarDesc,
+            trailing: Switch(
+              value: provider.hideHomeBottomNavigationBar,
+              onChanged: _isFlowOpen(_SettingsFlow.homeNavigation)
+                  ? null
+                  : (value) =>
+                        unawaited(_updateHomeNavigation(provider, value)),
+            ),
+            semanticToggled: provider.hideHomeBottomNavigationBar,
+            onTap: _isFlowOpen(_SettingsFlow.homeNavigation)
+                ? null
+                : () => unawaited(
+                    _updateHomeNavigation(
+                      provider,
+                      !provider.hideHomeBottomNavigationBar,
+                    ),
+                  ),
+          ),
+        );
         if (provider.isStudentMode) {
           if (!hasTimetable) {
             currentWorkspaceChildren.add(
@@ -366,6 +420,37 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool _isFlowOpen(_SettingsFlow flow) => _openFlows.contains(flow);
+
+  Future<void> _switchWorkspace(
+    TimetableProvider provider,
+    AppMode mode,
+  ) async {
+    if (provider.activeMode == mode ||
+        _isFlowOpen(_SettingsFlow.workspaceMode)) {
+      return;
+    }
+    await _guardFlow(_SettingsFlow.workspaceMode, () async {
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Switch settings workspace',
+        command: () => provider.switchMode(mode),
+      );
+    });
+  }
+
+  Future<void> _updateHomeNavigation(
+    TimetableProvider provider,
+    bool value,
+  ) async {
+    if (_isFlowOpen(_SettingsFlow.homeNavigation)) return;
+    await _guardFlow(_SettingsFlow.homeNavigation, () async {
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Update home navigation visibility',
+        command: () => provider.updateHideHomeBottomNavigationBar(value),
+      );
+    });
+  }
 
   String _themeSettingsSummary(
     TimetableProvider provider,

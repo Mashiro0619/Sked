@@ -178,7 +178,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                 Expanded(
                   flex: 3,
                   child: Align(
-                    alignment: Alignment.topCenter,
+                    alignment: Alignment.center,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
                         maxWidth: _monthCalendarPanelMaxWidth,
@@ -795,6 +795,9 @@ class _MonthDateGrid extends StatelessWidget {
         final gridCompact = compact || targetHeight < 64;
 
         return SizedBox(
+          key: ValueKey(
+            'general-month-date-grid-${selectedDate.year}-${selectedDate.month}',
+          ),
           height: height,
           child: GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
@@ -813,18 +816,23 @@ class _MonthDateGrid extends StatelessWidget {
                 builder: (context, cellConstraints) {
                   final cellCompact =
                       gridCompact || cellConstraints.maxHeight < 64;
-                  return _MonthDayCell(
-                    date: day,
-                    month: selectedDate.month,
-                    isToday: _sameDay(day, today),
-                    isSelected: _sameDay(day, selectedDate),
-                    occurrences: dayOccurrences.sortedForAgenda(),
-                    localeCode: provider.localeCode,
-                    showLunarCalendar: provider.generalShowLunarCalendar,
-                    cellWidth: cellWidth,
-                    cellHeight: cellConstraints.maxHeight,
-                    compact: cellCompact,
-                    onTap: () => onDaySelected(day),
+                  return KeyedSubtree(
+                    key: ValueKey(
+                      'general-month-day-cell-${day.year}-${day.month}-${day.day}',
+                    ),
+                    child: _MonthDayCell(
+                      date: day,
+                      month: selectedDate.month,
+                      isToday: _sameDay(day, today),
+                      isSelected: _sameDay(day, selectedDate),
+                      occurrences: dayOccurrences.sortedForAgenda(),
+                      localeCode: provider.localeCode,
+                      showLunarCalendar: provider.generalShowLunarCalendar,
+                      cellWidth: cellWidth,
+                      cellHeight: cellConstraints.maxHeight,
+                      compact: cellCompact,
+                      onTap: () => onDaySelected(day),
+                    ),
                   );
                 },
               );
@@ -915,29 +923,49 @@ class _MonthWeekdayHeaderRow extends StatelessWidget {
       color: Theme.of(context).colorScheme.onSurfaceVariant,
       fontWeight: FontWeight.w600,
     );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 0, 6, 4),
-      child: Row(
-        children: [
-          for (final weekday in weekdays)
-            Expanded(
-              child: Center(
-                child: Text(
-                  _weekdayLabel(
-                    context,
-                    addCalendarDays(
-                      _referenceMonday,
-                      weekday - DateTime.monday,
+    // Keep the header's tracks identical to the date grid below.  Padding the
+    // whole row made each weekday center drift by a few pixels at wide sizes;
+    // visual breathing room belongs inside each cell instead.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final gap = _monthGridSpacing;
+        final cellWidth = math.max(
+          0.0,
+          (constraints.maxWidth - (weekdays.length - 1) * gap) /
+              weekdays.length,
+        );
+        return ConstrainedBox(
+          key: const ValueKey('general-month-weekday-header'),
+          constraints: const BoxConstraints(minHeight: 40),
+          child: Row(
+            children: [
+              for (var index = 0; index < weekdays.length; index++) ...[
+                SizedBox(
+                  width: cellWidth,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: Text(
+                        _weekdayLabel(
+                          context,
+                          addCalendarDays(
+                            _referenceMonday,
+                            weekdays[index] - DateTime.monday,
+                          ),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        style: labelStyle,
+                      ),
                     ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: labelStyle,
                 ),
-              ),
-            ),
-        ],
-      ),
+                if (index < weekdays.length - 1) SizedBox(width: gap),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

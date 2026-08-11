@@ -129,6 +129,91 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             ),
                           ),
                           SettingsSectionHeader(
+                            title: l10n.generalToolbarSection,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: SkedDropdownMenu<String>(
+                              key: const ValueKey(
+                                'general-toolbar-width-policy',
+                              ),
+                              initialSelection:
+                                  provider.generalToolbarWidthPolicy,
+                              label: Text(l10n.generalToolbarWidthPolicy),
+                              leadingIcon: const Icon(Icons.space_bar_outlined),
+                              expandedInsets: EdgeInsets.zero,
+                              enabled: !uiCommandBusy,
+                              dropdownMenuEntries: [
+                                DropdownMenuEntry(
+                                  value: generalToolbarWidthPolicyContent,
+                                  label: l10n.generalToolbarWidthContent,
+                                ),
+                                DropdownMenuEntry(
+                                  value: generalToolbarWidthPolicyBalanced,
+                                  label: l10n.generalToolbarWidthBalanced,
+                                ),
+                                DropdownMenuEntry(
+                                  value:
+                                      generalToolbarWidthPolicyCalendarPriority,
+                                  label:
+                                      l10n.generalToolbarWidthCalendarPriority,
+                                ),
+                                DropdownMenuEntry(
+                                  value: generalToolbarWidthPolicyDatePriority,
+                                  label: l10n.generalToolbarWidthDatePriority,
+                                ),
+                              ],
+                              onSelected: (value) {
+                                if (value != null) {
+                                  _updateSetting(
+                                    'Update general toolbar width policy',
+                                    () => provider.updateGeneralDisplaySettings(
+                                      toolbarWidthPolicy: value,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: SkedDropdownMenu<String>(
+                              key: const ValueKey('general-date-label-format'),
+                              initialSelection: provider.generalDateLabelFormat,
+                              label: Text(l10n.generalDateLabelFormat),
+                              leadingIcon: const Icon(
+                                Icons.text_format_outlined,
+                              ),
+                              expandedInsets: EdgeInsets.zero,
+                              enabled: !uiCommandBusy,
+                              dropdownMenuEntries: [
+                                DropdownMenuEntry(
+                                  value: generalDateLabelFormatLocalized,
+                                  label: l10n.generalDateLabelFormatLocalized,
+                                ),
+                                DropdownMenuEntry(
+                                  value: generalDateLabelFormatSlash,
+                                  label: l10n.generalDateLabelFormatSlash,
+                                ),
+                                DropdownMenuEntry(
+                                  value: generalDateLabelFormatIso,
+                                  label: l10n.generalDateLabelFormatIso,
+                                ),
+                              ],
+                              onSelected: (value) {
+                                if (value != null) {
+                                  _updateSetting(
+                                    'Update general date label format',
+                                    () => provider.updateGeneralDisplaySettings(
+                                      dateLabelFormat: value,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          SettingsSectionHeader(
                             title: l10n.generalScheduleDisplaySection,
                           ),
                           SettingsSwitchTile(

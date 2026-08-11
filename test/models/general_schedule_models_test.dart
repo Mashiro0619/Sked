@@ -464,6 +464,121 @@ void main() {
       );
     });
 
+    test(
+      'toolbar width policy round-trips all values and copyWith preserves it',
+      () {
+        const policies = [
+          generalToolbarWidthPolicyContent,
+          generalToolbarWidthPolicyBalanced,
+          generalToolbarWidthPolicyCalendarPriority,
+          generalToolbarWidthPolicyDatePriority,
+        ];
+
+        for (final policy in policies) {
+          final data = GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: [
+              GeneralSchedule(
+                id: 'sched1',
+                name: 'My Schedule',
+                events: const [],
+              ),
+            ],
+            toolbarWidthPolicy: policy,
+          );
+
+          final decoded = GeneralScheduleData.fromJson(data.toJson());
+
+          expect(decoded.toolbarWidthPolicy, policy);
+          expect(decoded.toJson()['toolbarWidthPolicy'], policy);
+          expect(
+            decoded.copyWith(selectedDateIso: '2026-05-29').toolbarWidthPolicy,
+            policy,
+          );
+        }
+
+        expect(
+          GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: [
+              GeneralSchedule(
+                id: 'sched1',
+                name: 'My Schedule',
+                events: const [],
+              ),
+            ],
+            toolbarWidthPolicy: 'unknown',
+          ).normalized().toolbarWidthPolicy,
+          generalToolbarWidthPolicyContent,
+        );
+      },
+    );
+
+    test(
+      'date label format round-trips all values and copyWith preserves it',
+      () {
+        const formats = [
+          generalDateLabelFormatLocalized,
+          generalDateLabelFormatSlash,
+          generalDateLabelFormatIso,
+        ];
+
+        for (final format in formats) {
+          final data = GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: const [
+              GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+            ],
+            dateLabelFormat: format,
+          );
+
+          final decoded = GeneralScheduleData.fromJson(data.toJson());
+
+          expect(decoded.dateLabelFormat, format);
+          expect(decoded.toJson()['dateLabelFormat'], format);
+          expect(
+            decoded.copyWith(selectedDateIso: '2026-05-29').dateLabelFormat,
+            format,
+          );
+        }
+
+        expect(
+          GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: const [
+              GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+            ],
+            dateLabelFormat: 'unknown',
+          ).normalized().dateLabelFormat,
+          generalDateLabelFormatSlash,
+        );
+      },
+    );
+
+    test('missing date label format defaults to slash', () {
+      final decoded = GeneralScheduleData.fromJson({
+        'schemaVersion': generalScheduleSchemaVersion,
+        'activeScheduleId': 'sched1',
+        'schedules': [
+          {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
+        ],
+      });
+
+      expect(decoded.dateLabelFormat, generalDateLabelFormatSlash);
+    });
+
+    test('missing toolbar width policy defaults to content', () {
+      final decoded = GeneralScheduleData.fromJson({
+        'schemaVersion': generalScheduleSchemaVersion,
+        'activeScheduleId': 'sched1',
+        'schedules': [
+          {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
+        ],
+      });
+
+      expect(decoded.toolbarWidthPolicy, generalToolbarWidthPolicyContent);
+    });
+
     test('missing view switch behavior defaults to cycle', () {
       final decoded = GeneralScheduleData.fromJson({
         'schemaVersion': generalScheduleSchemaVersion,
@@ -507,6 +622,56 @@ void main() {
           () => GeneralScheduleData.fromJson({'viewSwitchBehavior': value}),
           throwsFormatException,
           reason: 'empty payload viewSwitchBehavior=$value',
+        );
+      }
+    });
+
+    test('invalid toolbar width policy is rejected by the model decoder', () {
+      final base = <String, dynamic>{
+        'schemaVersion': generalScheduleSchemaVersion,
+        'activeScheduleId': 'sched1',
+        'schedules': [
+          {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
+        ],
+      };
+
+      for (final value in [true, 123, 'unknown', <String, dynamic>{}]) {
+        expect(
+          () => GeneralScheduleData.fromJson({
+            ...base,
+            'toolbarWidthPolicy': value,
+          }),
+          throwsFormatException,
+          reason: 'toolbarWidthPolicy=$value',
+        );
+        expect(
+          () => GeneralScheduleData.fromJson({'toolbarWidthPolicy': value}),
+          throwsFormatException,
+          reason: 'empty payload toolbarWidthPolicy=$value',
+        );
+      }
+    });
+
+    test('invalid date label format is rejected by the model decoder', () {
+      final base = <String, dynamic>{
+        'schemaVersion': generalScheduleSchemaVersion,
+        'activeScheduleId': 'sched1',
+        'schedules': [
+          {'id': 'sched1', 'name': 'My Schedule', 'events': <Object>[]},
+        ],
+      };
+
+      for (final value in [true, 123, 'unknown', <String, dynamic>{}]) {
+        expect(
+          () =>
+              GeneralScheduleData.fromJson({...base, 'dateLabelFormat': value}),
+          throwsFormatException,
+          reason: 'dateLabelFormat=$value',
+        );
+        expect(
+          () => GeneralScheduleData.fromJson({'dateLabelFormat': value}),
+          throwsFormatException,
+          reason: 'empty payload dateLabelFormat=$value',
         );
       }
     });

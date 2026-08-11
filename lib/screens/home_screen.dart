@@ -9,7 +9,6 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
-import '../widgets/app_layout_tokens.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';

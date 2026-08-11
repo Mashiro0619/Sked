@@ -2196,7 +2196,10 @@ void main() {
 
       expect(find.text('英语'), findsOneWidget);
 
-      await tester.tap(find.text('语言'));
+      final languageEntry = find.text('语言');
+      await tester.ensureVisible(languageEntry);
+      await tester.pumpAndSettle();
+      await tester.tap(languageEntry);
       await tester.pumpAndSettle();
 
       expect(find.byType(SearchBar), findsNothing);

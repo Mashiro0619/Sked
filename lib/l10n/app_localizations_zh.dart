@@ -1917,6 +1917,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalViewSwitchBehavior => '视图切换按钮';
 
   @override
+  String get settingsWorkspaceMode => '当前工作区';
+
+  @override
+  String get hideHomeBottomNavigationBar => '隐藏主界面底部栏';
+
+  @override
+  String get hideHomeBottomNavigationBarDesc => '隐藏后可在设置中切换工作区。';
+
+  @override
+  String get generalDateLabelFormat => '日期显示格式';
+
+  @override
+  String get generalDateLabelFormatLocalized => '本地化（2026年7月）';
+
+  @override
+  String get generalDateLabelFormatSlash => '斜杠（2026/7）';
+
+  @override
+  String get generalDateLabelFormatIso => 'ISO（2026-07）';
+
+  @override
+  String get generalToolbarSection => '工具栏布局';
+
+  @override
+  String get generalToolbarWidthPolicy => '工具栏空间分配';
+
+  @override
+  String get generalToolbarWidthContent => '自动分配';
+
+  @override
+  String get generalToolbarWidthBalanced => '均衡';
+
+  @override
+  String get generalToolbarWidthCalendarPriority => '日程优先';
+
+  @override
+  String get generalToolbarWidthDatePriority => '日期优先';
+
+  @override
   String get generalViewSwitchCycle => '顺序循环';
 
   @override
@@ -3855,6 +3894,45 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generalViewSwitchBehavior => '視圖切換按鈕';
+
+  @override
+  String get settingsWorkspaceMode => '目前工作區';
+
+  @override
+  String get hideHomeBottomNavigationBar => '隱藏主介面底部列';
+
+  @override
+  String get hideHomeBottomNavigationBarDesc => '隱藏後可在設定中切換工作區。';
+
+  @override
+  String get generalDateLabelFormat => '日期顯示格式';
+
+  @override
+  String get generalDateLabelFormatLocalized => '本地化（2026年7月）';
+
+  @override
+  String get generalDateLabelFormatSlash => '斜線（2026/7）';
+
+  @override
+  String get generalDateLabelFormatIso => 'ISO（2026-07）';
+
+  @override
+  String get generalToolbarSection => '工具列版面';
+
+  @override
+  String get generalToolbarWidthPolicy => '工具列空間分配';
+
+  @override
+  String get generalToolbarWidthContent => '自動分配';
+
+  @override
+  String get generalToolbarWidthBalanced => '均衡';
+
+  @override
+  String get generalToolbarWidthCalendarPriority => '日曆優先';
+
+  @override
+  String get generalToolbarWidthDatePriority => '日期優先';
 
   @override
   String get generalViewSwitchCycle => '依序循環';

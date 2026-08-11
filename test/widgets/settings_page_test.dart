@@ -349,6 +349,45 @@ void main() {
     expect(find.text('About Sked'), findsOneWidget);
   });
 
+  testWidgets('workspace selector changes mode without leaving settings', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.tap(find.byKey(const ValueKey('settings-workspace-mode')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('General schedule').last);
+    await tester.pumpAndSettle();
+
+    expect(provider.activeMode, AppMode.general);
+    expect(find.byType(SettingsPage), findsOneWidget);
+    expect(find.text('General display settings'), findsOneWidget);
+    expect(find.text('Timetable display and interaction'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('home bottom bar setting rolls back and can retry', (
+    tester,
+  ) async {
+    final data = _buildStudentData();
+    final storage = _MemoryTimetableStorage(data)..failSaves = true;
+    final provider = await _createProvider(data, storage: storage);
+    await _pumpSettingsPage(tester, provider);
+
+    await tester.tap(find.text('Hide the home bottom bar'));
+    await tester.pumpAndSettle();
+    expect(provider.hideHomeBottomNavigationBar, isFalse);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+
+    storage.failSaves = false;
+    await tester.tap(find.text('Hide the home bottom bar'));
+    await tester.pumpAndSettle();
+    expect(provider.hideHomeBottomNavigationBar, isTrue);
+    expect(storage.data?.hideHomeBottomNavigationBar, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings page keeps compact rows reachable at 2x text scale', (
     tester,
   ) async {
@@ -435,7 +474,10 @@ void main() {
     final provider = await _createProvider(_buildStudentData());
     await _pumpSettingsPage(tester, provider, locale: const Locale('en'));
 
-    final navigationTile = find.byType(SettingsConnectedTile).at(1);
+    final navigationTile = find.ancestor(
+      of: find.text('Import from school webpage'),
+      matching: find.byType(SettingsConnectedTile),
+    );
     final chevron = find.descendant(
       of: navigationTile,
       matching: find.byIcon(Icons.chevron_right),
@@ -457,8 +499,10 @@ void main() {
     final provider = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, provider);
 
-    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
-    await tester.tap(find.text('App backup and restore'));
+    final backupEntry = find.text('App backup and restore');
+    await tester.ensureVisible(backupEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(backupEntry);
     await tester.pumpAndSettle();
 
     expect(find.text('Restore from JSON file'), findsOneWidget);
@@ -483,8 +527,10 @@ void main() {
     expect(provider.recoveryArtifacts, [artifact]);
     await _pumpSettingsPage(tester, provider);
 
-    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
-    await tester.tap(find.text('App backup and restore'));
+    final backupEntry = find.text('App backup and restore');
+    await tester.ensureVisible(backupEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(backupEntry);
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).last, const Offset(0, -400));
     await tester.pumpAndSettle();
@@ -509,8 +555,10 @@ void main() {
     );
     await _pumpSettingsPage(tester, provider);
 
-    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
-    await tester.tap(find.text('App backup and restore'));
+    final backupEntry = find.text('App backup and restore');
+    await tester.ensureVisible(backupEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(backupEntry);
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).last, const Offset(0, -400));
     await tester.pumpAndSettle();
@@ -554,6 +602,8 @@ void main() {
     final themeTile = find.text('Theme');
     expect(themeTile, findsOneWidget);
 
+    await tester.ensureVisible(themeTile);
+    await tester.pumpAndSettle();
     await tester.tap(themeTile);
     await tester.tap(themeTile, warnIfMissed: false);
     await _pumpRouteTransition(tester);

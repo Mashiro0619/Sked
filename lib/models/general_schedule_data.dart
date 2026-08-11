@@ -11,6 +11,13 @@ const generalViewList = 'list';
 const generalViewMonth = 'month';
 const generalViewSwitchBehaviorCycle = 'cycle';
 const generalViewSwitchBehaviorMenu = 'menu';
+const generalToolbarWidthPolicyContent = 'content';
+const generalToolbarWidthPolicyBalanced = 'balanced';
+const generalToolbarWidthPolicyCalendarPriority = 'calendarPriority';
+const generalToolbarWidthPolicyDatePriority = 'datePriority';
+const generalDateLabelFormatLocalized = 'localized';
+const generalDateLabelFormatSlash = 'slash';
+const generalDateLabelFormatIso = 'iso';
 const generalScheduleSchemaVersion = 4;
 
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
@@ -145,6 +152,29 @@ String normalizeGeneralViewSwitchBehavior(String? value) {
   }
 }
 
+String normalizeGeneralToolbarWidthPolicy(String? value) {
+  switch (value) {
+    case generalToolbarWidthPolicyBalanced:
+    case generalToolbarWidthPolicyCalendarPriority:
+    case generalToolbarWidthPolicyDatePriority:
+    case generalToolbarWidthPolicyContent:
+      return value!;
+    default:
+      return generalToolbarWidthPolicyContent;
+  }
+}
+
+String normalizeGeneralDateLabelFormat(String? value) {
+  switch (value) {
+    case generalDateLabelFormatLocalized:
+    case generalDateLabelFormatIso:
+    case generalDateLabelFormatSlash:
+      return value!;
+    default:
+      return generalDateLabelFormatSlash;
+  }
+}
+
 String _decodeGeneralViewSwitchBehavior(Map<String, dynamic> json) {
   if (!json.containsKey('viewSwitchBehavior')) {
     return generalViewSwitchBehaviorCycle;
@@ -162,6 +192,43 @@ String _decodeGeneralViewSwitchBehavior(Map<String, dynamic> json) {
   return value;
 }
 
+String _decodeGeneralToolbarWidthPolicy(Map<String, dynamic> json) {
+  if (!json.containsKey('toolbarWidthPolicy')) {
+    return generalToolbarWidthPolicyContent;
+  }
+  final value = json['toolbarWidthPolicy'];
+  if (value is! String ||
+      !const {
+        generalToolbarWidthPolicyContent,
+        generalToolbarWidthPolicyBalanced,
+        generalToolbarWidthPolicyCalendarPriority,
+        generalToolbarWidthPolicyDatePriority,
+      }.contains(value)) {
+    throw const FormatException(
+      'General schedule toolbar width policy is invalid.',
+    );
+  }
+  return value;
+}
+
+String _decodeGeneralDateLabelFormat(Map<String, dynamic> json) {
+  if (!json.containsKey('dateLabelFormat')) {
+    return generalDateLabelFormatSlash;
+  }
+  final value = json['dateLabelFormat'];
+  if (value is! String ||
+      !const {
+        generalDateLabelFormatLocalized,
+        generalDateLabelFormatSlash,
+        generalDateLabelFormatIso,
+      }.contains(value)) {
+    throw const FormatException(
+      'General schedule date label format is invalid.',
+    );
+  }
+  return value;
+}
+
 class GeneralScheduleData {
   const GeneralScheduleData({
     required this.activeScheduleId,
@@ -169,6 +236,8 @@ class GeneralScheduleData {
     this.selectedDateIso,
     this.defaultView = generalViewWeek,
     this.viewSwitchBehavior = generalViewSwitchBehaviorCycle,
+    this.toolbarWidthPolicy = generalToolbarWidthPolicyContent,
+    this.dateLabelFormat = generalDateLabelFormatSlash,
     this.showWeekends = true,
     this.showLunarCalendar = true,
     this.dayStartHour = 6,
@@ -187,6 +256,8 @@ class GeneralScheduleData {
   final String? selectedDateIso;
   final String defaultView;
   final String viewSwitchBehavior;
+  final String toolbarWidthPolicy;
+  final String dateLabelFormat;
   final bool showWeekends;
   final bool showLunarCalendar;
   final int dayStartHour;
@@ -233,6 +304,10 @@ class GeneralScheduleData {
     'viewSwitchBehavior': normalizeGeneralViewSwitchBehavior(
       viewSwitchBehavior,
     ),
+    'toolbarWidthPolicy': normalizeGeneralToolbarWidthPolicy(
+      toolbarWidthPolicy,
+    ),
+    'dateLabelFormat': normalizeGeneralDateLabelFormat(dateLabelFormat),
     'showWeekends': showWeekends,
     'showLunarCalendar': showLunarCalendar,
     'dayStartHour': dayStartHour,
@@ -259,9 +334,13 @@ class GeneralScheduleData {
       );
     }
     final viewSwitchBehavior = _decodeGeneralViewSwitchBehavior(json);
+    final toolbarWidthPolicy = _decodeGeneralToolbarWidthPolicy(json);
+    final dateLabelFormat = _decodeGeneralDateLabelFormat(json);
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
       return GeneralScheduleData.createDefault().copyWith(
         viewSwitchBehavior: viewSwitchBehavior,
+        toolbarWidthPolicy: toolbarWidthPolicy,
+        dateLabelFormat: dateLabelFormat,
       );
     }
 
@@ -296,6 +375,8 @@ class GeneralScheduleData {
         _nullableStringValue(json['defaultView']),
       ),
       viewSwitchBehavior: viewSwitchBehavior,
+      toolbarWidthPolicy: toolbarWidthPolicy,
+      dateLabelFormat: dateLabelFormat,
       showWeekends: _boolValue(json['showWeekends']) ?? true,
       showLunarCalendar: _boolValue(json['showLunarCalendar']) ?? true,
       dayStartHour: (_intValue(json['dayStartHour']) ?? 6).clamp(0, 23).toInt(),
@@ -338,6 +419,8 @@ class GeneralScheduleData {
     Object? selectedDateIso = _keepNullable,
     String? defaultView,
     String? viewSwitchBehavior,
+    String? toolbarWidthPolicy,
+    String? dateLabelFormat,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -359,6 +442,12 @@ class GeneralScheduleData {
       defaultView: normalizeGeneralView(defaultView ?? this.defaultView),
       viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
         viewSwitchBehavior ?? this.viewSwitchBehavior,
+      ),
+      toolbarWidthPolicy: normalizeGeneralToolbarWidthPolicy(
+        toolbarWidthPolicy ?? this.toolbarWidthPolicy,
+      ),
+      dateLabelFormat: normalizeGeneralDateLabelFormat(
+        dateLabelFormat ?? this.dateLabelFormat,
       ),
       showWeekends: showWeekends ?? this.showWeekends,
       showLunarCalendar: showLunarCalendar ?? this.showLunarCalendar,
@@ -490,6 +579,10 @@ class GeneralScheduleData {
       viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
         viewSwitchBehavior,
       ),
+      toolbarWidthPolicy: normalizeGeneralToolbarWidthPolicy(
+        toolbarWidthPolicy,
+      ),
+      dateLabelFormat: normalizeGeneralDateLabelFormat(dateLabelFormat),
       showWeekends: showWeekends,
       showLunarCalendar: showLunarCalendar,
       dayStartHour: start,

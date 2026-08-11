@@ -34,7 +34,13 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   @override
   void didUpdateWidget(covariant SkedDropdownMenu<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialSelection != widget.initialSelection) {
+    // A command may fail without changing the provider value.  The menu is
+    // disabled while that command is in flight, so resync when it reopens as
+    // well as when its controlled value changes.  This clears an optimistic
+    // local selection after a failed save without disturbing an editor draft
+    // during ordinary rebuilds.
+    final saveFinished = !oldWidget.enabled && widget.enabled;
+    if (oldWidget.initialSelection != widget.initialSelection || saveFinished) {
       _selectedValue = widget.initialSelection;
     }
   }

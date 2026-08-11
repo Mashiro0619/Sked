@@ -88,6 +88,7 @@ class SettingsConnectedTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.semanticToggled,
   });
 
   final Widget leading;
@@ -95,6 +96,11 @@ class SettingsConnectedTile extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// Exposes a trailing toggle's state on the single combined row semantics
+  /// node.  The visual subtree is intentionally excluded to avoid duplicate
+  /// announcements, so toggle state must be forwarded explicitly.
+  final bool? semanticToggled;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +135,8 @@ class SettingsConnectedTile extends StatelessWidget {
       ],
     );
     return Semantics(
-      button: onTap != null,
+      button: semanticToggled == null && onTap != null,
+      toggled: semanticToggled,
       enabled: onTap != null,
       label: subtitle == null ? title : '$title, $subtitle',
       onTap: onTap,

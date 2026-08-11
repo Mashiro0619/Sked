@@ -37,6 +37,33 @@ Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
 }
 
 void main() {
+  test(
+    'hidden home navigation setting persists and rolls back on failure',
+    () async {
+      final storage = _ControllableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _providerFor(storage);
+      addTearDown(provider.dispose);
+
+      expect(provider.hideHomeBottomNavigationBar, isFalse);
+
+      await provider.updateHideHomeBottomNavigationBar(true);
+
+      expect(provider.hideHomeBottomNavigationBar, isTrue);
+      expect(storage.data!.hideHomeBottomNavigationBar, isTrue);
+
+      storage.nextSaveError = StateError('save failed');
+      await expectLater(
+        provider.updateHideHomeBottomNavigationBar(false),
+        throwsStateError,
+      );
+
+      expect(provider.hideHomeBottomNavigationBar, isTrue);
+      expect(storage.data!.hideHomeBottomNavigationBar, isTrue);
+    },
+  );
+
   test('course text mode and custom color commit atomically', () async {
     final storage = _ControllableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),

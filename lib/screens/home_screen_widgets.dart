@@ -1162,9 +1162,10 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
           ],
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(2, 4, 0, AppSpacing.md),
+              padding: const EdgeInsets.only(left: 2, top: 4),
               child: RepaintBoundary(
                 child: TimetableGrid(
+                  key: ValueKey('student-timetable-grid-$pageWeek'),
                   timetable: widget.timetable,
                   periodTimes: widget.provider.periodTimesForTimetable(
                     widget.timetable,

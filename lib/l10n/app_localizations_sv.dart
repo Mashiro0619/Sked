@@ -2013,6 +2013,46 @@ class AppLocalizationsSv extends AppLocalizations {
   String get generalViewSwitchBehavior => 'View switch button';
 
   @override
+  String get settingsWorkspaceMode => 'Active workspace';
+
+  @override
+  String get hideHomeBottomNavigationBar => 'Hide the home bottom bar';
+
+  @override
+  String get hideHomeBottomNavigationBarDesc =>
+      'Switch workspaces from Settings after hiding the bar.';
+
+  @override
+  String get generalDateLabelFormat => 'Date label format';
+
+  @override
+  String get generalDateLabelFormatLocalized => 'Localized (2026 Jul)';
+
+  @override
+  String get generalDateLabelFormatSlash => 'Slash (2026/7)';
+
+  @override
+  String get generalDateLabelFormatIso => 'ISO (2026-07)';
+
+  @override
+  String get generalToolbarSection => 'Toolbar layout';
+
+  @override
+  String get generalToolbarWidthPolicy => 'Toolbar space allocation';
+
+  @override
+  String get generalToolbarWidthContent => 'Automatic allocation';
+
+  @override
+  String get generalToolbarWidthBalanced => 'Balanced';
+
+  @override
+  String get generalToolbarWidthCalendarPriority => 'Calendar priority';
+
+  @override
+  String get generalToolbarWidthDatePriority => 'Date priority';
+
+  @override
   String get generalViewSwitchCycle => 'Cycle through views';
 
   @override

@@ -115,6 +115,8 @@ class GeneralCalendarService {
       selectedDateIso: selectedDateIso,
       defaultView: data.defaultView,
       viewSwitchBehavior: data.viewSwitchBehavior,
+      toolbarWidthPolicy: data.toolbarWidthPolicy,
+      dateLabelFormat: data.dateLabelFormat,
       showWeekends: data.showWeekends,
       showLunarCalendar: data.showLunarCalendar,
       dayStartHour: data.dayStartHour,
@@ -133,6 +135,8 @@ class GeneralCalendarService {
     GeneralScheduleData data, {
     String? defaultView,
     String? viewSwitchBehavior,
+    String? toolbarWidthPolicy,
+    String? dateLabelFormat,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -143,6 +147,8 @@ class GeneralCalendarService {
     return data.copyWith(
       defaultView: defaultView,
       viewSwitchBehavior: viewSwitchBehavior,
+      toolbarWidthPolicy: toolbarWidthPolicy,
+      dateLabelFormat: dateLabelFormat,
       showWeekends: showWeekends,
       showLunarCalendar: showLunarCalendar,
       dayStartHour: dayStartHour,

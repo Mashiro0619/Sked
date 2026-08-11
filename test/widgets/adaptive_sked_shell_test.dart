@@ -206,13 +206,11 @@ void main() {
     );
     await expectNavigation(
       840,
-      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
-      railExtended: true,
+      find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
     );
     await expectNavigation(
       1199,
-      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
-      railExtended: true,
+      find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
     );
     await expectNavigation(
       1200,
@@ -620,11 +618,17 @@ void main() {
     final pagerRect = tester.getRect(
       find.byKey(const ValueKey('student-week-pager')),
     );
+    final timetableGridFinder = find.byKey(
+      ValueKey('student-timetable-grid-${provider.selectedWeek}'),
+    );
+    expect(timetableGridFinder, findsOneWidget);
+    final timetableGridRect = tester.getRect(timetableGridFinder);
 
     expect(tester.widget<NavigationBar>(navigationFinder).height, 80);
     expect(navigationRect.height, closeTo(104, 0.01));
     expect(navigationRect.bottom, closeTo(844, 0.01));
     expect(pagerRect.bottom, closeTo(navigationRect.top, 0.01));
+    expect(timetableGridRect.bottom, closeTo(navigationRect.top, 0.01));
     expect(find.byKey(const ValueKey('workspace-switch-busy')), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -1188,7 +1192,7 @@ void main() {
     );
     addTearDown(provider.dispose);
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.binding.setSurfaceSize(const Size(900, 800));
+    await tester.binding.setSurfaceSize(const Size(800, 800));
 
     await tester.pumpWidget(_appFor(provider));
     await tester.pumpAndSettle();
