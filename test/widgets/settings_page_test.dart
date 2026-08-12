@@ -233,6 +233,21 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 }
 
+const _settingsGroupKeys = <String>[
+  'settings-group-workspace',
+  'settings-group-timetable',
+  'settings-group-general-schedule',
+  'settings-group-appearance-language',
+  'settings-group-data-security',
+  'settings-group-about',
+];
+
+void _expectAllSettingsGroups() {
+  for (final key in _settingsGroupKeys) {
+    expect(find.byKey(ValueKey(key)), findsOneWidget);
+  }
+}
+
 void main() {
   testWidgets('background package info failure is contained', (tester) async {
     final provider = await _createProvider(_buildStudentData());
@@ -261,24 +276,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('student settings page groups entries into sections', (
+  testWidgets('student settings page shows all six settings groups', (
     tester,
   ) async {
     final provider = await _createProvider(_buildStudentData());
     await _pumpSettingsPage(tester, provider);
 
+    _expectAllSettingsGroups();
+    expect(find.text('Workspace'), findsOneWidget);
+    expect(find.text('Timetable'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('settings-group-current-workspace')),
+      find.descendant(
+        of: find.byKey(const ValueKey('settings-group-general-schedule')),
+        matching: find.text('General schedule'),
+      ),
       findsOneWidget,
     );
-    expect(find.text('Current timetable / calendar'), findsOneWidget);
     expect(find.text('Appearance & language'), findsOneWidget);
     expect(find.text('Data & security'), findsOneWidget);
     expect(find.text('About Sked'), findsOneWidget);
-    expect(find.text('General schedule'), findsNothing);
     expect(find.text('Period time set'), findsOneWidget);
     expect(find.text('Timetable display and interaction'), findsOneWidget);
     expect(find.text('Import and export data'), findsOneWidget);
+    expect(find.text('General display settings'), findsOneWidget);
+    expect(find.text('Schedule import & export'), findsOneWidget);
+
+    final groupTops = _settingsGroupKeys
+        .map((key) => tester.getTopLeft(find.byKey(ValueKey(key))).dy)
+        .toList();
+    for (var index = 1; index < groupTops.length; index++) {
+      expect(groupTops[index], greaterThan(groupTops[index - 1]));
+    }
 
     await tester.scrollUntilVisible(find.text('About Sked'), 120);
     expect(find.text('About Sked'), findsOneWidget);
@@ -327,21 +355,28 @@ void main() {
     expect(find.textContaining('Alternative'), findsOneWidget);
   });
 
-  testWidgets('general settings page groups entries into sections', (
+  testWidgets('general settings page shows all six settings groups', (
     tester,
   ) async {
     final provider = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, provider);
 
+    _expectAllSettingsGroups();
+    expect(find.text('Workspace'), findsOneWidget);
+    expect(find.text('Timetable'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('settings-group-current-workspace')),
+      find.descendant(
+        of: find.byKey(const ValueKey('settings-group-general-schedule')),
+        matching: find.text('General schedule'),
+      ),
       findsOneWidget,
     );
-    expect(find.text('Current timetable / calendar'), findsOneWidget);
     expect(find.text('Appearance & language'), findsOneWidget);
     expect(find.text('Data & security'), findsOneWidget);
     expect(find.text('About Sked'), findsOneWidget);
-    expect(find.text('Timetable'), findsNothing);
+    expect(find.text('Period time set'), findsOneWidget);
+    expect(find.text('Timetable display and interaction'), findsOneWidget);
+    expect(find.text('Import and export data'), findsOneWidget);
     expect(find.text('General display settings'), findsOneWidget);
     expect(find.text('Schedule import & export'), findsOneWidget);
 
@@ -349,25 +384,47 @@ void main() {
     expect(find.text('About Sked'), findsOneWidget);
   });
 
-  testWidgets('workspace selector changes mode without leaving settings', (
-    tester,
-  ) async {
-    final provider = await _createProvider(_buildStudentData());
-    await _pumpSettingsPage(tester, provider);
+  testWidgets(
+    'workspace selector saves once and keeps all groups and scroll state',
+    (tester) async {
+      final data = _buildStudentData();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      await _pumpSettingsPage(tester, provider);
 
-    await tester.tap(find.byKey(const ValueKey('settings-workspace-mode')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('General schedule').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('settings-workspace-mode')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(MenuItemButton, 'General schedule'));
+      await tester.pumpAndSettle();
 
-    expect(provider.activeMode, AppMode.general);
-    expect(find.byType(SettingsPage), findsOneWidget);
-    expect(find.text('General display settings'), findsOneWidget);
-    expect(find.text('Timetable display and interaction'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      expect(provider.activeMode, AppMode.general);
+      expect(storage.saveCount, 1);
+      expect(find.byType(SettingsPage), findsOneWidget);
+      _expectAllSettingsGroups();
+      expect(find.text('General display settings'), findsOneWidget);
+      expect(find.text('Timetable display and interaction'), findsOneWidget);
 
-  testWidgets('home bottom bar setting rolls back and can retry', (
+      final listFinder = find.byType(ListView).first;
+      await tester.drag(listFinder, const Offset(0, -320));
+      await tester.pumpAndSettle();
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      final offsetBeforeSwitch = scrollable.position.pixels;
+      expect(offsetBeforeSwitch, greaterThan(0));
+
+      await provider.switchMode(AppMode.student);
+      await tester.pumpAndSettle();
+
+      expect(provider.activeMode, AppMode.student);
+      expect(storage.saveCount, 2);
+      _expectAllSettingsGroups();
+      expect(scrollable.position.pixels, closeTo(offsetBeforeSwitch, 0.01));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('home workspace navigation setting rolls back and can retry', (
     tester,
   ) async {
     final data = _buildStudentData();
@@ -375,16 +432,16 @@ void main() {
     final provider = await _createProvider(data, storage: storage);
     await _pumpSettingsPage(tester, provider);
 
-    await tester.tap(find.text('Hide the home bottom bar'));
+    await tester.tap(find.text('Hide workspace navigation'));
     await tester.pumpAndSettle();
-    expect(provider.hideHomeBottomNavigationBar, isFalse);
+    expect(provider.hideHomeWorkspaceNavigation, isFalse);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
 
     storage.failSaves = false;
-    await tester.tap(find.text('Hide the home bottom bar'));
+    await tester.tap(find.text('Hide workspace navigation'));
     await tester.pumpAndSettle();
-    expect(provider.hideHomeBottomNavigationBar, isTrue);
-    expect(storage.data?.hideHomeBottomNavigationBar, isTrue);
+    expect(provider.hideHomeWorkspaceNavigation, isTrue);
+    expect(storage.data?.hideHomeWorkspaceNavigation, isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -420,6 +477,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('settings groups stay single-column across compact widths', (
+    tester,
+  ) async {
+    addTearDown(() => _resetTestViewport(tester));
+    final provider = await _createProvider(_buildGeneralData());
+
+    for (final scenario in const [
+      (Size(390, 844), Locale('de'), TextScaler.linear(1.3)),
+      (Size(600, 900), Locale('en'), TextScaler.linear(1.8)),
+    ]) {
+      _setTestViewport(tester, scenario.$1);
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        locale: scenario.$2,
+        textScaler: scenario.$3,
+      );
+
+      _expectAllSettingsGroups();
+      expect(
+        find.byKey(const ValueKey('settings-groups-single-column')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets(
     'settings page uses two columns only when text comfortably fits',
     (tester) async {
@@ -432,6 +516,34 @@ void main() {
         find.byKey(const ValueKey('settings-groups-two-column')),
         findsOneWidget,
       );
+
+      final workspaceRect = tester.getRect(
+        find.byKey(const ValueKey('settings-group-workspace')),
+      );
+      final timetableRect = tester.getRect(
+        find.byKey(const ValueKey('settings-group-timetable')),
+      );
+      final generalRect = tester.getRect(
+        find.byKey(const ValueKey('settings-group-general-schedule')),
+      );
+      final appearanceRect = tester.getRect(
+        find.byKey(const ValueKey('settings-group-appearance-language')),
+      );
+      final dataRect = tester.getRect(
+        find.byKey(const ValueKey('settings-group-data-security')),
+      );
+      final aboutRect = tester.getRect(
+        find.byKey(const ValueKey('settings-group-about')),
+      );
+      expect(timetableRect.left, closeTo(workspaceRect.left, 0.01));
+      expect(generalRect.left, closeTo(workspaceRect.left, 0.01));
+      expect(appearanceRect.left, greaterThan(workspaceRect.right));
+      expect(dataRect.left, closeTo(appearanceRect.left, 0.01));
+      expect(aboutRect.left, closeTo(appearanceRect.left, 0.01));
+      expect(timetableRect.top, greaterThan(workspaceRect.top));
+      expect(generalRect.top, greaterThan(timetableRect.top));
+      expect(dataRect.top, greaterThan(appearanceRect.top));
+      expect(aboutRect.top, greaterThan(dataRect.top));
 
       await _pumpSettingsPage(
         tester,
@@ -570,28 +682,49 @@ void main() {
     expect(find.byIcon(Icons.download_outlined), findsNothing);
   });
 
-  testWidgets('zero-timetable settings keep recovery and app backup access', (
-    tester,
-  ) async {
-    final provider = await _createProvider(
-      buildInitialAppData(
-        buildDefaultPeriodTimes(),
-        localeCode: defaultLocaleCode,
-      ),
-      recoveryStatus: RecoveryStatus.restoredFromBackup,
-    );
-    await _pumpSettingsPage(tester, provider);
+  testWidgets(
+    'zero-timetable settings disable period selection but keep all groups',
+    (tester) async {
+      final provider = await _createProvider(
+        buildInitialAppData(
+          buildDefaultPeriodTimes(),
+          localeCode: defaultLocaleCode,
+        ),
+        recoveryStatus: RecoveryStatus.restoredFromBackup,
+      );
+      await _pumpSettingsPage(tester, provider);
 
-    expect(
-      find.text('No timetable is currently available for settings.'),
-      findsOneWidget,
-    );
-    expect(find.text('Period time set'), findsNothing);
-    expect(find.textContaining('previous backup'), findsOneWidget);
+      expect(
+        find.text('No timetable is currently available for settings.'),
+        findsOneWidget,
+      );
+      _expectAllSettingsGroups();
+      expect(find.text('Period time set'), findsOneWidget);
+      final periodTileFinder = find.byKey(
+        const ValueKey('settings-period-time-sets'),
+      );
+      final periodTile = tester.widget<SettingsConnectedTile>(periodTileFinder);
+      expect(periodTile.onTap, isNull);
+      expect(
+        tester.getSemantics(periodTileFinder),
+        matchesSemantics(
+          label:
+              'Period time set, '
+              'No timetable is currently available for settings.',
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
 
-    await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
-    expect(find.text('App backup and restore'), findsOneWidget);
-  });
+      await tester.tap(periodTileFinder, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.textContaining('previous backup'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('App backup and restore'), 120);
+      expect(find.text('App backup and restore'), findsOneWidget);
+    },
+  );
 
   testWidgets('theme settings entry ignores rapid duplicate taps', (
     tester,
@@ -667,6 +800,8 @@ void main() {
     final importExportTile = find.text('Schedule import & export');
     expect(importExportTile, findsOneWidget);
 
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
     await tester.tap(importExportTile);
     await tester.tap(importExportTile, warnIfMissed: false);
     await tester.pumpAndSettle();
@@ -680,7 +815,10 @@ void main() {
     final provider = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, provider);
 
-    await tester.tap(find.text('Schedule import & export'));
+    final importExportTile = find.text('Schedule import & export');
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
+    await tester.tap(importExportTile);
     await tester.pumpAndSettle();
 
     final actionTitles = [
@@ -727,6 +865,8 @@ void main() {
     final importExportTile = find.text('Schedule import & export');
     expect(importExportTile, findsOneWidget);
 
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
     await tester.tap(importExportTile);
     await tester.pumpAndSettle();
 
@@ -759,7 +899,10 @@ void main() {
     storage.failSaves = true;
     await _pumpSettingsPage(tester, provider);
 
-    await tester.tap(find.text('Schedule import & export'));
+    final importExportTile = find.text('Schedule import & export');
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
+    await tester.tap(importExportTile);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paste JSON'));
     await _pumpRouteTransition(tester);
@@ -810,7 +953,10 @@ void main() {
     storage.failSaves = true;
     await _pumpSettingsPage(tester, provider);
 
-    await tester.tap(find.text('Schedule import & export'));
+    final importExportTile = find.text('Schedule import & export');
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
+    await tester.tap(importExportTile);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Paste ICS'));
     await _pumpRouteTransition(tester);

@@ -108,8 +108,8 @@ class _SettingsPageState extends State<SettingsPage> {
         final selectedSet = _selectedPeriodTimeSetId != null
             ? provider.periodTimeSetForId(_selectedPeriodTimeSetId!)
             : provider.activePeriodTimeSetOrNull;
-        final currentWorkspaceChildren = <Widget>[];
-        currentWorkspaceChildren.add(
+        final workspaceChildren = <Widget>[];
+        workspaceChildren.add(
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SkedDropdownMenu<AppMode>(
@@ -137,113 +137,97 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         );
-        currentWorkspaceChildren.add(
+        workspaceChildren.add(
           SettingsConnectedTile(
             leading: const Icon(Icons.navigation_outlined),
-            title: l10n.hideHomeBottomNavigationBar,
-            subtitle: l10n.hideHomeBottomNavigationBarDesc,
+            title: l10n.hideHomeWorkspaceNavigation,
+            subtitle: l10n.hideHomeWorkspaceNavigationDesc,
             trailing: Switch(
-              value: provider.hideHomeBottomNavigationBar,
+              value: provider.hideHomeWorkspaceNavigation,
               onChanged: _isFlowOpen(_SettingsFlow.homeNavigation)
                   ? null
                   : (value) =>
                         unawaited(_updateHomeNavigation(provider, value)),
             ),
-            semanticToggled: provider.hideHomeBottomNavigationBar,
+            semanticToggled: provider.hideHomeWorkspaceNavigation,
             onTap: _isFlowOpen(_SettingsFlow.homeNavigation)
                 ? null
                 : () => unawaited(
                     _updateHomeNavigation(
                       provider,
-                      !provider.hideHomeBottomNavigationBar,
+                      !provider.hideHomeWorkspaceNavigation,
                     ),
                   ),
           ),
         );
-        if (provider.isStudentMode) {
-          if (!hasTimetable) {
-            currentWorkspaceChildren.add(
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                child: Text(
-                  l10n.noTimetableSettings,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+        final timetableChildren = <Widget>[
+          SettingsConnectedTile(
+            key: const ValueKey('settings-period-time-sets'),
+            leading: const Icon(Icons.schedule_outlined),
+            title: l10n.periodTimeSets,
+            subtitle: !hasTimetable
+                ? l10n.noTimetableSettings
+                : selectedSet == null
+                ? l10n.noPeriodTimeAvailable
+                : l10n.periodTimeSetSummary(
+                    selectedSet.name,
+                    selectedSet.periodTimes.length,
                   ),
-                ),
-              ),
-            );
-          } else {
-            currentWorkspaceChildren.add(
-              SettingsConnectedTile(
-                leading: const Icon(Icons.schedule_outlined),
-                title: l10n.periodTimeSets,
-                subtitle: selectedSet == null
-                    ? l10n.noPeriodTimeAvailable
-                    : l10n.periodTimeSetSummary(
-                        selectedSet.name,
-                        selectedSet.periodTimes.length,
-                      ),
-                trailing: const Icon(Icons.keyboard_arrow_down),
-                onTap: _isFlowOpen(_SettingsFlow.periodTimePicker)
-                    ? null
-                    : () => unawaited(
-                        _pickPeriodTimeSet(provider, timetable.config),
-                      ),
-              ),
-            );
-          }
-          currentWorkspaceChildren.addAll([
-            SettingsConnectedTile(
-              leading: const Icon(Icons.language_outlined),
-              title: l10n.schoolWebImportEntry,
-              subtitle: l10n.schoolWebImportEntryDesc,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _isFlowOpen(_SettingsFlow.schoolSitesPage)
-                  ? null
-                  : () => _openSchoolSitesPage(provider),
-            ),
-            SettingsConnectedTile(
-              leading: const Icon(Icons.grid_view_outlined),
-              title: l10n.timetableDisplaySettings,
-              subtitle: l10n.timetableDisplaySettingsDesc,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _isFlowOpen(_SettingsFlow.timetableDisplaySettingsPage)
-                  ? null
-                  : () => _openTimetableDisplaySettingsPage(provider),
-            ),
-            SettingsConnectedTile(
-              leading: const Icon(Icons.import_export),
-              title: l10n.dataImportExport,
-              subtitle: l10n.dataImportExportDesc,
-              trailing: const Icon(Icons.keyboard_arrow_up),
-              onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
-                  ? null
-                  : () => _showDataActions(provider),
-            ),
-          ]);
-        } else {
-          currentWorkspaceChildren.addAll([
-            SettingsConnectedTile(
-              leading: const Icon(Icons.grid_view_outlined),
-              title: l10n.generalDisplaySettings,
-              subtitle: l10n.generalDisplaySettingsDesc,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _isFlowOpen(_SettingsFlow.generalDisplaySettingsPage)
-                  ? null
-                  : () => _openGeneralDisplaySettingsPage(provider),
-            ),
-            SettingsConnectedTile(
-              leading: const Icon(Icons.import_export),
-              title: l10n.generalScheduleImportExport,
-              subtitle: l10n.generalScheduleImportExportDesc,
-              trailing: const Icon(Icons.keyboard_arrow_up),
-              onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
-                  ? null
-                  : () => _showGeneralDataActions(provider),
-            ),
-          ]);
-        }
+            trailing: const Icon(Icons.keyboard_arrow_down),
+            onTap:
+                timetable == null || _isFlowOpen(_SettingsFlow.periodTimePicker)
+                ? null
+                : () =>
+                      unawaited(_pickPeriodTimeSet(provider, timetable.config)),
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.language_outlined),
+            title: l10n.schoolWebImportEntry,
+            subtitle: l10n.schoolWebImportEntryDesc,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.schoolSitesPage)
+                ? null
+                : () => _openSchoolSitesPage(provider),
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.grid_view_outlined),
+            title: l10n.timetableDisplaySettings,
+            subtitle: l10n.timetableDisplaySettingsDesc,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.timetableDisplaySettingsPage)
+                ? null
+                : () => _openTimetableDisplaySettingsPage(provider),
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.import_export),
+            title: l10n.dataImportExport,
+            subtitle: l10n.dataImportExportDesc,
+            trailing: const Icon(Icons.keyboard_arrow_up),
+            onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
+                ? null
+                : () => _showDataActions(provider),
+          ),
+        ];
+        final generalScheduleChildren = <Widget>[
+          SettingsConnectedTile(
+            leading: const Icon(Icons.grid_view_outlined),
+            title: l10n.generalDisplaySettings,
+            subtitle: l10n.generalDisplaySettingsDesc,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.generalDisplaySettingsPage)
+                ? null
+                : () => _openGeneralDisplaySettingsPage(provider),
+          ),
+          SettingsConnectedTile(
+            leading: const Icon(Icons.import_export),
+            title: l10n.generalScheduleImportExport,
+            subtitle: l10n.generalScheduleImportExportDesc,
+            trailing: const Icon(Icons.keyboard_arrow_up),
+            onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
+                ? null
+                : () => _showGeneralDataActions(provider),
+          ),
+        ];
         final appearanceChildren = [
           SettingsConnectedTile(
             leading: const Icon(Icons.palette_outlined),
@@ -316,7 +300,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 : _openGithubRepo,
           ),
         ];
-        final currentTitle = l10n.settingsSectionCurrentWorkspace;
         // Scaffold removes the IME inset from its body when it resizes. Keep
         // the value captured above the Scaffold so the final row still gets a
         // scrollable tail while the keyboard is visible.
@@ -345,10 +328,20 @@ class _SettingsPageState extends State<SettingsPage> {
                     constraints.maxWidth >= 840 &&
                     textScale <= 1.3 &&
                     availableColumnWidth >= 360;
-                final currentGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-current-workspace'),
-                  title: currentTitle,
-                  children: currentWorkspaceChildren,
+                final workspaceGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-workspace'),
+                  title: l10n.settingsSectionWorkspace,
+                  children: workspaceChildren,
+                );
+                final timetableGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-timetable'),
+                  title: l10n.settingsSectionTimetable,
+                  children: timetableChildren,
+                );
+                final generalScheduleGroup = SettingsConnectedGroup(
+                  key: const ValueKey('settings-group-general-schedule'),
+                  title: l10n.settingsSectionGeneralSchedule,
+                  children: generalScheduleChildren,
                 );
                 final appearanceGroup = SettingsConnectedGroup(
                   key: const ValueKey('settings-group-appearance-language'),
@@ -365,8 +358,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: l10n.settingsSectionAbout,
                   children: aboutChildren,
                 );
-                final left = [currentGroup, appearanceGroup];
-                final right = [dataGroup, aboutGroup];
+                final left = [
+                  workspaceGroup,
+                  timetableGroup,
+                  generalScheduleGroup,
+                ];
+                final right = [appearanceGroup, dataGroup, aboutGroup];
                 final groups = useTwoColumns
                     ? KeyedSubtree(
                         key: const ValueKey('settings-groups-two-column'),
@@ -447,7 +444,7 @@ class _SettingsPageState extends State<SettingsPage> {
       await runUiCommandWithFeedback(
         context: context,
         debugLabel: 'Update home navigation visibility',
-        command: () => provider.updateHideHomeBottomNavigationBar(value),
+        command: () => provider.updateHideHomeWorkspaceNavigation(value),
       );
     });
   }

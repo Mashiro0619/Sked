@@ -49,6 +49,7 @@ Future<void> _pumpPage(
   TimetableProvider provider, {
   Locale locale = const Locale('en'),
   EdgeInsets viewPadding = EdgeInsets.zero,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -58,9 +59,11 @@ Future<void> _pumpPage(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(padding: viewPadding, viewPadding: viewPadding),
+          data: MediaQuery.of(context).copyWith(
+            padding: viewPadding,
+            viewPadding: viewPadding,
+            textScaler: textScaler,
+          ),
           child: child!,
         ),
         home: const GeneralDisplaySettingsPage(),
@@ -115,7 +118,6 @@ void main() {
     expect(find.text('Default view'), findsOneWidget);
     expect(find.text('Schedule display'), findsOneWidget);
     expect(find.text('Time grid'), findsOneWidget);
-    expect(find.text('Popup behavior', skipOffstage: false), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
     expect(find.byType(SkedDropdownMenu<String>), findsNWidgets(4));
 
@@ -125,6 +127,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.generalDefaultView, generalViewMonth);
+
+    await tester.scrollUntilVisible(find.text('Popup behavior'), 160);
+    expect(find.text('Popup behavior'), findsOneWidget);
+  });
+
+  testWidgets('compact large text keeps the slider value beside its title', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+
+    await _pumpPage(tester, provider, textScaler: const TextScaler.linear(2));
+
+    final title = find.text('Start hour');
+    await tester.scrollUntilVisible(title, 160);
+    final tile = find.ancestor(
+      of: title,
+      matching: find.byType(SettingsSliderTile),
+    );
+    final value = find.descendant(of: tile, matching: find.text('06:00'));
+    final titleRect = tester.getRect(title);
+    final valueRect = tester.getRect(value);
+
+    expect(valueRect.left, greaterThan(titleRect.right));
+    expect(valueRect.center.dy, closeTo(titleRect.center.dy, 1));
+    expect(tester.widget<Text>(value).maxLines, 1);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('persists the view switch behavior setting', (tester) async {

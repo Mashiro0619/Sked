@@ -46,21 +46,21 @@ void main() {
       final provider = await _providerFor(storage);
       addTearDown(provider.dispose);
 
-      expect(provider.hideHomeBottomNavigationBar, isFalse);
+      expect(provider.hideHomeWorkspaceNavigation, isFalse);
 
-      await provider.updateHideHomeBottomNavigationBar(true);
+      await provider.updateHideHomeWorkspaceNavigation(true);
 
-      expect(provider.hideHomeBottomNavigationBar, isTrue);
-      expect(storage.data!.hideHomeBottomNavigationBar, isTrue);
+      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(storage.data!.hideHomeWorkspaceNavigation, isTrue);
 
       storage.nextSaveError = StateError('save failed');
       await expectLater(
-        provider.updateHideHomeBottomNavigationBar(false),
+        provider.updateHideHomeWorkspaceNavigation(false),
         throwsStateError,
       );
 
-      expect(provider.hideHomeBottomNavigationBar, isTrue);
-      expect(storage.data!.hideHomeBottomNavigationBar, isTrue);
+      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(storage.data!.hideHomeWorkspaceNavigation, isTrue);
     },
   );
 

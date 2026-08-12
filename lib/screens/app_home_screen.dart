@@ -752,7 +752,7 @@ class _AppHomeSnapshot {
     required this.isStudentMode,
     required this.hasAcceptedCurrentPrivacyPolicy,
     required this.showFirstLaunchOnboarding,
-    required this.hideHomeBottomNavigationBar,
+    required this.hideHomeWorkspaceNavigation,
     required this.canWrite,
     required this.storageLoadStatus,
     required this.recoveryArtifacts,
@@ -764,7 +764,7 @@ class _AppHomeSnapshot {
       isStudentMode: provider.isStudentMode,
       hasAcceptedCurrentPrivacyPolicy: provider.hasAcceptedCurrentPrivacyPolicy,
       showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
-      hideHomeBottomNavigationBar: provider.hideHomeBottomNavigationBar,
+      hideHomeWorkspaceNavigation: provider.hideHomeWorkspaceNavigation,
       canWrite: provider.canWrite,
       storageLoadStatus: provider.storageLoadStatus,
       recoveryArtifacts: provider.recoveryArtifacts,
@@ -775,7 +775,7 @@ class _AppHomeSnapshot {
   final bool isStudentMode;
   final bool hasAcceptedCurrentPrivacyPolicy;
   final bool showFirstLaunchOnboarding;
-  final bool hideHomeBottomNavigationBar;
+  final bool hideHomeWorkspaceNavigation;
   final bool canWrite;
   final StorageLoadStatus storageLoadStatus;
   final List<String> recoveryArtifacts;
@@ -788,7 +788,7 @@ class _AppHomeSnapshot {
         other.hasAcceptedCurrentPrivacyPolicy ==
             hasAcceptedCurrentPrivacyPolicy &&
         other.showFirstLaunchOnboarding == showFirstLaunchOnboarding &&
-        other.hideHomeBottomNavigationBar == hideHomeBottomNavigationBar &&
+        other.hideHomeWorkspaceNavigation == hideHomeWorkspaceNavigation &&
         other.canWrite == canWrite &&
         other.storageLoadStatus == storageLoadStatus &&
         listEquals(other.recoveryArtifacts, recoveryArtifacts);
@@ -800,7 +800,7 @@ class _AppHomeSnapshot {
     isStudentMode,
     hasAcceptedCurrentPrivacyPolicy,
     showFirstLaunchOnboarding,
-    hideHomeBottomNavigationBar,
+    hideHomeWorkspaceNavigation,
     canWrite,
     storageLoadStatus,
     Object.hashAll(recoveryArtifacts),
@@ -821,7 +821,7 @@ bool _hasDefaultFirstLaunchData(TimetableProvider provider) {
   }
   return _hasDefaultStudentData(provider.studentMode) &&
       _hasDefaultGeneralData(provider.generalMode) &&
-      !provider.hideHomeBottomNavigationBar;
+      !provider.hideHomeWorkspaceNavigation;
 }
 
 bool _hasDefaultStudentData(StudentModeData data) {

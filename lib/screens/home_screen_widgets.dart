@@ -69,43 +69,57 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     final theme = Theme.of(context);
     final phoneWidth = compactWidth;
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final scaledLabelSize = MediaQuery.textScalerOf(
-      context,
-    ).scale(theme.textTheme.labelLarge?.fontSize ?? 14);
-    final compactWeekPicker =
+    final textScaler = MediaQuery.textScalerOf(context);
+    final scaledLabelSize = textScaler.scale(
+      theme.textTheme.labelLarge?.fontSize ?? 14,
+    );
+    final preferWeekPickerWithoutIcon =
         phoneWidth && (screenWidth < 360 || scaledLabelSize > 18.2);
     final controlShape = skedShapeSchemeOf(context).control;
     final motion = SkedMotionPolicy.of(context);
+    final weekTextStyle = theme.textTheme.labelLarge;
+    final weekTextPainter = TextPainter(
+      text: TextSpan(text: l10n.weekLabel(week), style: weekTextStyle),
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final measuredWeekWidth = weekTextPainter.width;
+    weekTextPainter.dispose();
     final iconButtonStyle = IconButton.styleFrom(
       minimumSize: const Size.square(48),
       padding: const EdgeInsets.all(8),
       iconSize: 20,
     );
-    final timetableSelector = TextButton(
-      key: const ValueKey('student-timetable-picker-button'),
-      onPressed: interactive ? onOpenTimetablePicker : null,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
-        minimumSize: const Size(48, 48),
-        shape: controlShape,
-        alignment: AlignmentDirectional.centerStart,
-        textStyle: theme.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              timetable.config.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+    Widget buildTimetableSelector({required bool showArrow}) {
+      return TextButton(
+        key: const ValueKey('student-timetable-picker-button'),
+        onPressed: interactive ? onOpenTimetablePicker : null,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
+          minimumSize: const Size(48, 48),
+          shape: controlShape,
+          alignment: AlignmentDirectional.centerStart,
+          textStyle: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
-        ],
-      ),
-    );
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                timetable.config.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (showArrow)
+              const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+          ],
+        ),
+      );
+    }
+
     final viewToggle = IconButton(
       key: const ValueKey('student-view-toggle-button'),
       onPressed: interactive && onViewChanged != null
@@ -132,60 +146,67 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         ),
       ),
     );
-    final weekPicker = Tooltip(
-      message: '${l10n.jumpToWeek}; ${l10n.today}',
-      child: Semantics(
-        key: const ValueKey('student-week-picker-semantics'),
-        button: true,
-        enabled:
-            interactive && (onOpenWeekPicker != null || onJumpToToday != null),
-        excludeSemantics: true,
-        label: l10n.weekLabel(week),
-        hint: '${l10n.jumpToWeek}; ${l10n.today}',
-        onTap: onOpenWeekPicker,
-        onLongPress: onJumpToToday,
-        onTapHint: l10n.jumpToWeek,
-        onLongPressHint: l10n.today,
-        child: SizedBox(
-          width: compactWeekPicker
-              ? 56
-              : phoneWidth
-              ? 96
-              : 144,
-          child: TextButton(
-            key: const ValueKey('student-week-picker-button'),
-            onPressed: interactive ? onOpenWeekPicker : null,
-            onLongPress: interactive ? onJumpToToday : null,
-            style: TextButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              shape: controlShape,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!compactWeekPicker) ...[
-                  const Icon(Icons.calendar_month_outlined, size: 18),
-                  const SizedBox(width: 4),
-                ],
-                Flexible(
-                  child: SkedDirectionalTransition(
-                    trigger: week,
-                    direction: weekNavigationDirection,
-                    distance: 12,
-                    child: Text(
-                      compactWeekPicker ? '$week' : l10n.weekLabel(week),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
+    Widget buildWeekPicker({required double width}) {
+      return Tooltip(
+        message: '${l10n.jumpToWeek}; ${l10n.today}',
+        child: Semantics(
+          key: const ValueKey('student-week-picker-semantics'),
+          button: true,
+          enabled:
+              interactive &&
+              (onOpenWeekPicker != null || onJumpToToday != null),
+          excludeSemantics: true,
+          label: l10n.weekLabel(week),
+          hint: '${l10n.jumpToWeek}; ${l10n.today}',
+          onTap: onOpenWeekPicker,
+          onLongPress: onJumpToToday,
+          onTapHint: l10n.jumpToWeek,
+          onLongPressHint: l10n.today,
+          child: SizedBox(
+            width: width,
+            child: TextButton(
+              key: const ValueKey('student-week-picker-button'),
+              onPressed: interactive ? onOpenWeekPicker : null,
+              onLongPress: interactive ? onJumpToToday : null,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                shape: controlShape,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final showIcon =
+                      !preferWeekPickerWithoutIcon &&
+                      constraints.maxWidth >= measuredWeekWidth + 34;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (showIcon) ...[
+                        const Icon(Icons.calendar_month_outlined, size: 18),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: SkedDirectionalTransition(
+                          trigger: week,
+                          direction: weekNavigationDirection,
+                          distance: 12,
+                          child: Text(
+                            l10n.weekLabel(week),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    }
+
     final settingsAction = IconButton(
       key: const ValueKey('student-settings-button'),
       focusNode: settingsFocusNode,
@@ -201,13 +222,54 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         vertical: phoneWidth || compactHeight ? 4 : 8,
       ),
       navigationSpacing: 0,
-      title: Row(
-        children: [
-          Expanded(child: timetableSelector),
-          viewToggle,
-          weekPicker,
-          if (showSettings) settingsAction,
-        ],
+      title: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.hasBoundedWidth
+              ? constraints.maxWidth
+              : screenWidth - (phoneWidth ? 16 : 32);
+          final fixedWidth = 48.0 + (showSettings ? 48.0 : 0.0);
+          const gap = 4.0;
+          final gapWidth = showSettings ? gap * 3 : gap * 2;
+          const selectorMinimum = 48.0;
+          final weekMinimum = phoneWidth ? 80.0 : 96.0;
+          final maximumWeekWidth = math.max(
+            48.0,
+            availableWidth - fixedWidth - gapWidth - selectorMinimum,
+          );
+          final desiredWeekWidth = math.max(
+            weekMinimum,
+            measuredWeekWidth + 12,
+          );
+          final weekWidth = math
+              .min(desiredWeekWidth, maximumWeekWidth)
+              .clamp(48.0, desiredWeekWidth)
+              .toDouble();
+          final flexibleWidth = math.max(
+            selectorMinimum,
+            availableWidth - fixedWidth - gapWidth - weekWidth,
+          );
+          final selectorMaximum = phoneWidth ? 168.0 : 240.0;
+          final selectorWidth = math.min(selectorMaximum, flexibleWidth);
+          final showArrow = selectorWidth >= 72;
+          final remainingWidth = math.max(
+            0.0,
+            availableWidth - fixedWidth - gapWidth - selectorWidth - weekWidth,
+          );
+          return Row(
+            children: [
+              SizedBox(
+                width: selectorWidth,
+                child: buildTimetableSelector(showArrow: showArrow),
+              ),
+              if (remainingWidth > 0) SizedBox(width: remainingWidth),
+              const SizedBox(width: gap),
+              buildWeekPicker(width: weekWidth),
+              const SizedBox(width: gap),
+              viewToggle,
+              if (showSettings) ...[const SizedBox(width: gap), settingsAction],
+            ],
+          );
+        },
       ),
     );
   }
@@ -530,13 +592,20 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
   Future<void> _run(
     Future<bool> Function() command, {
     bool showBusy = true,
+    bool closeOnSuccess = true,
   }) async {
     if (_busy) return;
     if (showBusy) setState(() => _busy = true);
     final completed = await command();
     if (!mounted) return;
     if (completed) {
-      Navigator.of(context).pop();
+      if (closeOnSuccess) {
+        Navigator.of(context).pop();
+      } else if (showBusy) {
+        // Creation keeps the picker open so the newly selected timetable can
+        // be reviewed or another timetable can be added immediately.
+        setState(() => _busy = false);
+      }
     } else if (showBusy) {
       setState(() => _busy = false);
     }
@@ -623,7 +692,10 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                 child: FilledButton.icon(
                   onPressed: _busy
                       ? null
-                      : () => _run(() => widget.onCreate(context)),
+                      : () => _run(
+                          () => widget.onCreate(context),
+                          closeOnSuccess: false,
+                        ),
                   icon: const Icon(Icons.add),
                   label: Text(l10n.createTimetable),
                 ),
@@ -1162,7 +1234,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
           ],
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 2, top: 4),
+              padding: const EdgeInsets.only(top: 4),
               child: RepaintBoundary(
                 child: TimetableGrid(
                   key: ValueKey('student-timetable-grid-$pageWeek'),

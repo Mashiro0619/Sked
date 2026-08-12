@@ -4,7 +4,7 @@ import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 void main() {
-  testWidgets('compact connected tile keeps its indicator inline', (
+  testWidgets('compact connected tile keeps its indicator inline at 2x text', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -12,36 +12,57 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SettingsConnectedGroup(
-            children: [
-              SettingsConnectedTile(
-                leading: const Icon(Icons.grid_view_outlined),
-                title: 'Timetable display and interaction',
-                subtitle: 'Course popup, empty time, and grid line settings',
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  key: ValueKey('compact-connected-indicator'),
-                ),
-                onTap: () {},
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: SettingsConnectedGroup(
+                children: [
+                  SettingsConnectedTile(
+                    leading: const Icon(Icons.grid_view_outlined),
+                    title: 'Timetable display and interaction with long text',
+                    subtitle:
+                        'Course popup, empty time, grid line, and gesture settings',
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      key: ValueKey('compact-connected-indicator'),
+                    ),
+                    onTap: () {},
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
 
     final titleRect = tester.getRect(
-      find.text('Timetable display and interaction'),
+      find.text('Timetable display and interaction with long text'),
     );
     final subtitleRect = tester.getRect(
-      find.text('Course popup, empty time, and grid line settings'),
+      find.text('Course popup, empty time, grid line, and gesture settings'),
     );
     final indicatorRect = tester.getRect(
       find.byKey(const ValueKey('compact-connected-indicator')),
     );
-    expect(indicatorRect.center.dy, greaterThanOrEqualTo(titleRect.top));
-    expect(indicatorRect.center.dy, lessThanOrEqualTo(subtitleRect.bottom));
+    expect(indicatorRect.left, greaterThan(titleRect.right));
+    expect(indicatorRect.left, greaterThan(subtitleRect.right));
+    expect(
+      indicatorRect.center.dy,
+      closeTo((titleRect.top + subtitleRect.bottom) / 2, 1),
+    );
+    final trailingSlot = find.ancestor(
+      of: find.byKey(const ValueKey('compact-connected-indicator')),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is ConstrainedBox &&
+            widget.constraints.minWidth == 48 &&
+            widget.constraints.minHeight == 48,
+      ),
+    );
+    expect(trailingSlot, findsOneWidget);
+    expect(tester.getSize(trailingSlot), const Size(48, 48));
     expect(tester.takeException(), isNull);
   });
 
@@ -96,7 +117,7 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('compact list tile keeps its indicator inline at large text', (
+  testWidgets('compact list tile keeps its indicator inline at 2x text', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
@@ -105,32 +126,172 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
-          data: const MediaQueryData(textScaler: TextScaler.linear(1.8)),
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
           child: Scaffold(
-            body: SettingsListTile(
-              leading: const Icon(Icons.palette_outlined),
-              title: 'Theme appearance',
-              subtitle: 'Light theme and custom colors',
-              trailing: const Icon(
-                Icons.chevron_right,
-                key: ValueKey('compact-list-indicator'),
+            body: SingleChildScrollView(
+              child: SettingsListTile(
+                leading: const Icon(Icons.palette_outlined),
+                title: 'Theme appearance and language preferences',
+                subtitle:
+                    'Light theme, custom colors, and a long explanatory note',
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  key: ValueKey('compact-list-indicator'),
+                ),
+                onTap: () {},
               ),
-              onTap: () {},
             ),
           ),
         ),
       ),
     );
 
-    final titleRect = tester.getRect(find.text('Theme appearance'));
+    final titleRect = tester.getRect(
+      find.text('Theme appearance and language preferences'),
+    );
     final subtitleRect = tester.getRect(
-      find.text('Light theme and custom colors'),
+      find.text('Light theme, custom colors, and a long explanatory note'),
     );
     final indicatorRect = tester.getRect(
       find.byKey(const ValueKey('compact-list-indicator')),
     );
-    expect(indicatorRect.center.dy, greaterThanOrEqualTo(titleRect.top));
-    expect(indicatorRect.center.dy, lessThanOrEqualTo(subtitleRect.bottom));
+    expect(indicatorRect.left, greaterThan(titleRect.right));
+    expect(indicatorRect.left, greaterThan(subtitleRect.right));
+    expect(
+      indicatorRect.center.dy,
+      closeTo((titleRect.top + subtitleRect.bottom) / 2, 1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact switch stays right of its full text block', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: SettingsSwitchTile(
+                value: true,
+                onChanged: (_) {},
+                icon: Icons.navigation_outlined,
+                title: 'Hide workspace navigation on the home screen',
+                subtitle:
+                    'Keep both workspaces available from settings when hidden',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final titleRect = tester.getRect(
+      find.text('Hide workspace navigation on the home screen'),
+    );
+    final subtitleRect = tester.getRect(
+      find.text('Keep both workspaces available from settings when hidden'),
+    );
+    final switchRect = tester.getRect(find.byType(Switch));
+    expect(switchRect.left, greaterThan(titleRect.right));
+    expect(switchRect.left, greaterThan(subtitleRect.right));
+    expect(
+      switchRect.center.dy,
+      closeTo((titleRect.top + subtitleRect.bottom) / 2, 1),
+    );
+    expect(switchRect.width, greaterThanOrEqualTo(48));
+    expect(switchRect.height, greaterThanOrEqualTo(48));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact slider keeps its value in the title row', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: SettingsSliderTile(
+                icon: Icons.straighten,
+                title: 'Maximum course information lines',
+                value: 12,
+                min: 1,
+                max: 24,
+                labelBuilder: (value) => '$value lines',
+                onChangeEnd: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final titleRect = tester.getRect(
+      find.text('Maximum course information lines'),
+    );
+    final valueText = find.text('12 lines');
+    final valueRect = tester.getRect(valueText);
+    expect(valueRect.left, greaterThan(titleRect.right));
+    expect(valueRect.center.dy, closeTo(titleRect.center.dy, 1));
+    expect(tester.widget<Text>(valueText).maxLines, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('disabled connected row dims leading, text, and trailing alike', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SettingsConnectedTile(
+            key: ValueKey('disabled-connected-row'),
+            leading: Icon(
+              Icons.schedule_outlined,
+              key: ValueKey('disabled-leading'),
+            ),
+            title: 'Period time set',
+            subtitle: 'No timetable is currently available for settings.',
+            trailing: Icon(
+              Icons.keyboard_arrow_down,
+              key: ValueKey('disabled-trailing'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Color? inheritedIconColor(Finder finder) =>
+        IconTheme.of(tester.element(finder)).color;
+
+    final leadingColor = inheritedIconColor(
+      find.byKey(const ValueKey('disabled-leading')),
+    );
+    final trailingColor = inheritedIconColor(
+      find.byKey(const ValueKey('disabled-trailing')),
+    );
+    final titleColor = tester
+        .widget<Text>(find.text('Period time set'))
+        .style
+        ?.color;
+    final subtitleColor = tester
+        .widget<Text>(
+          find.text('No timetable is currently available for settings.'),
+        )
+        .style
+        ?.color;
+
+    expect(leadingColor, titleColor);
+    expect(subtitleColor, titleColor);
+    expect(trailingColor, titleColor);
     expect(tester.takeException(), isNull);
   });
 

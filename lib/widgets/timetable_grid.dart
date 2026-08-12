@@ -256,7 +256,8 @@ class _TimetableGridState extends State<TimetableGrid> {
     final slots = widget.periodTimes.isEmpty
         ? buildPeriodTimesForCount(1)
         : widget.periodTimes;
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final textScale = textScaler.scale(1);
     final layout = _TimetableVerticalLayout(
       slots: slots,
       preserveGaps: widget.preserveGaps || widget.entries != null,
@@ -312,7 +313,10 @@ class _TimetableGridState extends State<TimetableGrid> {
         final metrics = _TimetableMetrics.fromWidth(
           constraints.maxWidth,
           visibleDayCount: widget.visibleWeekdays.length,
-          textScale: textScale,
+          textScaler: textScaler,
+          textDirection: Directionality.of(context),
+          textTheme: Theme.of(context).textTheme,
+          periodTimes: slots,
           fitVisibleDaysToWidth: widget.fitVisibleDaysToWidth,
         );
         final baseHeaderHeight = metrics.compact
@@ -824,13 +828,47 @@ class _TimetableMetrics {
   factory _TimetableMetrics.fromWidth(
     double width, {
     required int visibleDayCount,
-    required double textScale,
+    required TextScaler textScaler,
+    required TextDirection textDirection,
+    required TextTheme textTheme,
+    required List<CoursePeriodTime> periodTimes,
     required bool fitVisibleDaysToWidth,
   }) {
     final safeWidth = width.isFinite && width > 0 ? width : 980.0;
-    final timeLabelWidth =
-        (safeWidth < 600 ? 56.0 : 64.0) +
-        ((textScale - 1).clamp(0.0, 1.0) * 18);
+    final timeLabelTextStyle = textTheme.titleSmall?.copyWith(
+      fontWeight: FontWeight.w800,
+    );
+    final clockTextStyle = textTheme.labelSmall?.copyWith(height: 1);
+    final textScale = textScaler.scale(1);
+    final sidePadding = textScale > 1.3 ? 2.0 : 4.0;
+    var measuredTimeWidth = 0.0;
+    for (final slot in periodTimes) {
+      for (final text in <String>[
+        slot.index.toString(),
+        formatMinutes(slot.startMinutes),
+        formatMinutes(slot.endMinutes),
+      ]) {
+        final style = text == slot.index.toString()
+            ? timeLabelTextStyle
+            : clockTextStyle;
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          textDirection: textDirection,
+          textScaler: textScaler,
+          maxLines: 1,
+        )..layout();
+        measuredTimeWidth = math.max(measuredTimeWidth, painter.width);
+        painter.dispose();
+      }
+    }
+    // Keep a compact but usable rail. The padding is the actual breathing
+    // room around measured labels, rather than a viewport-size heuristic.
+    // Keep the default rail compact even with unusually wide fallback glyphs.
+    // Enlarged text still receives its full measured width.
+    final measuredRailWidth = measuredTimeWidth + (sidePadding * 2);
+    final timeLabelWidth = textScale <= 1.0
+        ? measuredRailWidth.clamp(48.0, 56.0)
+        : math.max(48.0, measuredRailWidth);
     final availableDaysWidth = math.max(safeWidth - timeLabelWidth, 0.0);
     final minimumDayWidth = visibleDayCount == 1
         ? 0.0
@@ -848,9 +886,17 @@ class _TimetableMetrics {
       timeLabelWidth: timeLabelWidth,
       dayColumnWidth: dayColumnWidth,
       daysContentWidth: daysContentWidth,
-      courseGap: compact ? 4.0 : 6.0,
-      cardPadding: compact ? 6.0 : 8.0,
-      sidePadding: textScale > 1.3 ? 2.0 : 4.0,
+      courseGap: dayColumnWidth < 72
+          ? 2.0
+          : compact
+          ? 4.0
+          : 6.0,
+      cardPadding: dayColumnWidth < 72
+          ? 3.0
+          : compact
+          ? 6.0
+          : 8.0,
+      sidePadding: sidePadding,
       compact: compact,
     );
   }
@@ -1408,38 +1454,6 @@ class _CourseCard extends StatelessWidget {
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         );
-                final textScale = MediaQuery.textScalerOf(context);
-                final availableHeight = constraints.maxHeight;
-                final titleHeight = _singleLineTextHeight(
-                  context,
-                  text: _title,
-                  style: titleStyle,
-                  textScaler: textScale,
-                );
-                final locationHeight = _singleLineTextHeight(
-                  context,
-                  text: _location,
-                  style: bodyStyle,
-                  textScaler: textScale,
-                );
-                final teacherHeight = _singleLineTextHeight(
-                  context,
-                  text: _teacher,
-                  style: teacherStyle,
-                  textScaler: textScale,
-                );
-                final showTitle = titleHeight <= availableHeight;
-                final showLocation =
-                    showTitle &&
-                    _location.isNotEmpty &&
-                    titleHeight + locationHeight <= availableHeight;
-                final showTeacher =
-                    showTitle &&
-                    _teacher.isNotEmpty &&
-                    titleHeight +
-                            (showLocation ? locationHeight : 0) +
-                            teacherHeight <=
-                        availableHeight;
                 return Stack(
                   children: [
                     Positioned.fill(
@@ -1450,34 +1464,39 @@ class _CourseCard extends StatelessWidget {
                                 ? 22
                                 : 0,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (showTitle)
-                                Text(
-                                  _title,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: titleStyle,
-                                ),
-                              if (showLocation)
-                                Text(
-                                  _location,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: bodyStyle,
-                                ),
-                              if (showTeacher)
-                                Text(
-                                  _teacher,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: teacherStyle,
-                                ),
-                            ],
+                          child: OverflowBox(
+                            alignment: AlignmentDirectional.topStart,
+                            minWidth: constraints.maxWidth,
+                            maxWidth: constraints.maxWidth,
+                            minHeight: 0,
+                            maxHeight: double.infinity,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_title.isNotEmpty)
+                                  Text(
+                                    _title,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    style: titleStyle,
+                                  ),
+                                if (_location.isNotEmpty)
+                                  Text(
+                                    _location,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    style: bodyStyle,
+                                  ),
+                                if (_teacher.isNotEmpty)
+                                  Text(
+                                    _teacher,
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    style: teacherStyle,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1611,24 +1630,6 @@ class _CourseSemanticTarget extends StatelessWidget {
       ),
     );
   }
-}
-
-double _singleLineTextHeight(
-  BuildContext context, {
-  required String text,
-  required TextStyle? style,
-  required TextScaler textScaler,
-}) {
-  if (text.isEmpty) return 0;
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: Directionality.of(context),
-    textScaler: textScaler,
-    maxLines: 1,
-  )..layout(maxWidth: double.infinity);
-  final height = painter.height;
-  painter.dispose();
-  return height;
 }
 
 String _semanticLabelForGeometry(_CourseGeometry geometry) {

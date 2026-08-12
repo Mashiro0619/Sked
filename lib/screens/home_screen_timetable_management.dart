@@ -13,12 +13,8 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       final panel = _TimetablePickerPanel(
         provider: provider,
         activeTimetable: activeTimetable,
-        onSwitch: (pickerContext, timetable) => _switchTimetableFromPicker(
-          pickerContext,
-          provider,
-          activeTimetable,
-          timetable,
-        ),
+        onSwitch: (pickerContext, timetable) =>
+            _switchTimetableFromPicker(pickerContext, provider, timetable),
         onEdit: (timetable) =>
             _openTimetableItemDialog(context, provider, timetable),
         onCreate: (pickerContext) =>

@@ -192,7 +192,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionApp => 'App';
 
   @override
-  String get settingsSectionCurrentWorkspace => 'Current timetable / calendar';
+  String get settingsSectionWorkspace => 'Workspace';
 
   @override
   String get settingsSectionAppearanceLanguage => 'Appearance & language';
@@ -2009,11 +2009,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsWorkspaceMode => 'Active workspace';
 
   @override
-  String get hideHomeBottomNavigationBar => 'Hide the home bottom bar';
+  String get hideHomeWorkspaceNavigation => 'Hide workspace navigation';
 
   @override
-  String get hideHomeBottomNavigationBarDesc =>
-      'Switch workspaces from Settings after hiding the bar.';
+  String get hideHomeWorkspaceNavigationDesc =>
+      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';

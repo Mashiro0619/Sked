@@ -4159,99 +4159,101 @@ void main() {
       );
     });
 
-    testWidgets('TimetableGrid narrow course cards clip visual text safely', (
-      tester,
-    ) async {
-      await tester.binding.setSurfaceSize(const Size(360, 640));
-      addTearDown(() async {
-        await tester.binding.setSurfaceSize(null);
-      });
+    testWidgets(
+      'TimetableGrid narrow course cards keep natural text wrapping',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(360, 640));
+        addTearDown(() async {
+          await tester.binding.setSurfaceSize(null);
+        });
 
-      const title = 'Advanced Writing Workshop Seminar';
-      const location = 'Building A Room 106';
-      const teacher = 'Mr. Smith';
-      final periodTimes = buildDefaultPeriodTimes().take(4).toList();
-      final timetable = TimetableData(
-        id: 'table_legacy_text_wrap',
-        config: TimetableConfig(
-          name: 'Narrow',
-          startDate: DateTime(2026, 2, 23),
-          totalWeeks: 18,
-          periodTimeSetId: 'set1',
-        ),
-        courses: [
-          CourseItem(
-            id: 'course_legacy_text_wrap',
-            name: title,
-            teacher: teacher,
-            location: location,
-            dayOfWeek: 1,
-            semesterWeeks: const [1],
-            periods: const [1],
-            startMinutes: periodTimes[0].startMinutes,
-            endMinutes: periodTimes[0].endMinutes,
-            timeRange: buildTimeRange(
-              periodTimes[0].startMinutes,
-              periodTimes[0].endMinutes,
-            ),
-            credit: 0,
-            remarks: '',
-            customFields: const {},
+        const title = 'Advanced Writing Workshop Seminar';
+        const location = 'Building A Room 106';
+        const teacher = 'Mr. Smith';
+        final periodTimes = buildDefaultPeriodTimes().take(4).toList();
+        final timetable = TimetableData(
+          id: 'table_legacy_text_wrap',
+          config: TimetableConfig(
+            name: 'Narrow',
+            startDate: DateTime(2026, 2, 23),
+            totalWeeks: 18,
+            periodTimeSetId: 'set1',
           ),
-        ],
-      );
+          courses: [
+            CourseItem(
+              id: 'course_legacy_text_wrap',
+              name: title,
+              teacher: teacher,
+              location: location,
+              dayOfWeek: 1,
+              semesterWeeks: const [1],
+              periods: const [1],
+              startMinutes: periodTimes[0].startMinutes,
+              endMinutes: periodTimes[0].endMinutes,
+              timeRange: buildTimeRange(
+                periodTimes[0].startMinutes,
+                periodTimes[0].endMinutes,
+              ),
+              credit: 0,
+              remarks: '',
+              customFields: const {},
+            ),
+          ],
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              width: 360,
-              height: 640,
-              child: TimetableGrid(
-                timetable: timetable,
-                periodTimes: periodTimes,
-                weekDateStart: DateTime(2026, 2, 23),
-                selectedWeek: 1,
-                realCurrentWeek: 1,
-                localeCode: 'en',
-                preserveGaps: true,
-                showPastEndedCourses: false,
-                showFutureCourses: true,
-                showGridLines: true,
-                themeColorMode: themeColorModeSingle,
-                courseNameColorValues: const {},
-                colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
-                liveCourseOutlineEnabled: true,
-                liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
-                onCourseTap: (_) {},
-                onEmptySlotTap: (_) {},
-                liveCourseOutlineColorValue: defaultLiveCourseOutlineColorValue,
-                liveCourseOutlineWidth: defaultLiveCourseOutlineWidth,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 360,
+                height: 640,
+                child: TimetableGrid(
+                  timetable: timetable,
+                  periodTimes: periodTimes,
+                  weekDateStart: DateTime(2026, 2, 23),
+                  selectedWeek: 1,
+                  realCurrentWeek: 1,
+                  localeCode: 'en',
+                  preserveGaps: true,
+                  showPastEndedCourses: false,
+                  showFutureCourses: true,
+                  showGridLines: true,
+                  themeColorMode: themeColorModeSingle,
+                  courseNameColorValues: const {},
+                  colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
+                  liveCourseOutlineEnabled: true,
+                  liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
+                  onCourseTap: (_) {},
+                  onEmptySlotTap: (_) {},
+                  liveCourseOutlineColorValue:
+                      defaultLiveCourseOutlineColorValue,
+                  liveCourseOutlineWidth: defaultLiveCourseOutlineWidth,
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-      expect(find.text(title), findsOneWidget);
-      expect(find.text(location), findsOneWidget);
-      expect(find.text(teacher), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        expect(find.text(title), findsOneWidget);
+        expect(find.text(location), findsOneWidget);
+        expect(find.text(teacher), findsOneWidget);
 
-      final titleText = tester.widget<Text>(find.text(title));
-      final locationText = tester.widget<Text>(find.text(location));
-      final teacherText = tester.widget<Text>(find.text(teacher));
-      expect(titleText.maxLines, 1);
-      expect(locationText.maxLines, 1);
-      expect(teacherText.maxLines, 1);
-      expect(titleText.overflow, TextOverflow.ellipsis);
-      expect(locationText.overflow, TextOverflow.ellipsis);
-      expect(teacherText.overflow, TextOverflow.ellipsis);
-      expect(titleText.softWrap, isFalse);
-      expect(locationText.softWrap, isFalse);
-      expect(teacherText.softWrap, isFalse);
-    });
+        final titleText = tester.widget<Text>(find.text(title));
+        final locationText = tester.widget<Text>(find.text(location));
+        final teacherText = tester.widget<Text>(find.text(teacher));
+        expect(titleText.maxLines, isNull);
+        expect(locationText.maxLines, isNull);
+        expect(teacherText.maxLines, isNull);
+        expect(titleText.overflow, TextOverflow.visible);
+        expect(locationText.overflow, TextOverflow.visible);
+        expect(teacherText.overflow, TextOverflow.visible);
+        expect(titleText.softWrap, isTrue);
+        expect(locationText.softWrap, isTrue);
+        expect(teacherText.softWrap, isTrue);
+      },
+    );
 
     testWidgets('TimetableGrid 会在全部描边时继续突出当前或下一节课程', (tester) async {
       final periodTimes = buildDefaultPeriodTimes().take(4).toList();

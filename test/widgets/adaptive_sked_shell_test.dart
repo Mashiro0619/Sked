@@ -142,12 +142,13 @@ Widget _appFor(
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: Selector<TimetableProvider, AppMode>(
-        selector: (_, provider) => provider.activeMode,
-        builder: (context, mode, child) => AdaptiveSkedShell(
+      home: Selector<TimetableProvider, (AppMode, bool)>(
+        selector: (_, provider) =>
+            (provider.activeMode, provider.hideHomeWorkspaceNavigation),
+        builder: (context, snapshot, child) => AdaptiveSkedShell(
           key: const ValueKey('adaptive-shell-test'),
           provider: context.read<TimetableProvider>(),
-          activeMode: mode,
+          activeMode: snapshot.$1,
           onOpenSettings: () async => onOpenSettings?.call(),
         ),
       ),
@@ -218,6 +219,226 @@ void main() {
     );
     await tester.binding.setSurfaceSize(null);
   });
+
+  testWidgets('permanent drawer anchors settings above the bottom safe area', (
+    tester,
+  ) async {
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final width in [840.0, 1200.0]) {
+      await tester.binding.setSurfaceSize(Size(width, 800));
+      await tester.pumpWidget(
+        _appFor(provider, safePadding: const EdgeInsets.only(bottom: 24)),
+      );
+      await tester.pumpAndSettle();
+
+      final drawer = find.byKey(
+        const ValueKey('adaptive-shell-navigation-drawer'),
+      );
+      final settings = find.byKey(
+        const ValueKey('adaptive-shell-settings-action'),
+      );
+      final destinations = find.descendant(
+        of: drawer,
+        matching: find.byType(NavigationDrawerDestination),
+      );
+      final drawerRect = tester.getRect(drawer);
+      final settingsRect = tester.getRect(settings);
+
+      expect(destinations, findsNWidgets(2));
+      expect(settingsRect.top, greaterThan(drawerRect.center.dy));
+      expect(drawerRect.bottom - settingsRect.bottom, closeTo(36, 0.01));
+      expect(
+        tester.getRect(destinations.last).bottom,
+        lessThan(settingsRect.top),
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('short large-text drawer keeps settings reachable', (
+    tester,
+  ) async {
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(840, 360));
+    await tester.pumpWidget(
+      _appFor(
+        provider,
+        locale: const Locale('de'),
+        textScaler: const TextScaler.linear(2),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final drawer = find.byKey(
+      const ValueKey('adaptive-shell-navigation-drawer'),
+    );
+    final settings = find.byKey(
+      const ValueKey('adaptive-shell-settings-action'),
+    );
+    final drawerRect = tester.getRect(drawer);
+    final settingsRect = tester.getRect(settings);
+
+    expect(
+      find.descendant(of: drawer, matching: find.byType(ListView)),
+      findsOneWidget,
+    );
+    expect(settingsRect.top, greaterThanOrEqualTo(drawerRect.top));
+    expect(settingsRect.bottom, lessThanOrEqualTo(drawerRect.bottom));
+    expect(settingsRect.height, greaterThanOrEqualTo(48));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'hidden workspace navigation removes every adaptive navigation variant',
+    (tester) async {
+      final provider = await _providerFor(
+        _MemoryStorage(
+          _shellData(
+            populated: true,
+          ).copyWith(hideHomeWorkspaceNavigation: true),
+        ),
+      );
+      addTearDown(provider.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final width in [390.0, 600.0, 840.0, 1200.0]) {
+        await tester.binding.setSurfaceSize(Size(width, 800));
+        await tester.pumpWidget(_appFor(provider));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+          findsNothing,
+        );
+        final toolbar = tester.getRect(
+          find.byKey(const ValueKey('student-workspace-toolbar')),
+        );
+        final settings = tester.getRect(
+          find.byKey(const ValueKey('student-settings-button')),
+        );
+        final expectedTrailingInset = width < 600 ? 8.0 : 16.0;
+        expect(
+          toolbar.right - settings.right,
+          closeTo(expectedTrailingInset, 0.01),
+        );
+        expect(
+          settings.left,
+          greaterThan(
+            tester
+                .getRect(
+                  find.byKey(const ValueKey('student-view-toggle-button')),
+                )
+                .left,
+          ),
+        );
+        expect(settings.height, greaterThanOrEqualTo(48));
+        expect(tester.takeException(), isNull, reason: '${width}px');
+      }
+    },
+  );
+
+  testWidgets(
+    'hidden workspace navigation exposes settings in the general toolbar',
+    (tester) async {
+      var settingsCalls = 0;
+      final provider = await _providerFor(
+        _MemoryStorage(
+          _shellData(
+            mode: AppMode.general,
+          ).copyWith(hideHomeWorkspaceNavigation: true),
+        ),
+        mode: AppMode.general,
+      );
+      addTearDown(provider.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(1200, 800));
+      await tester.pumpWidget(
+        _appFor(provider, onOpenSettings: () => settingsCalls += 1),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+        findsNothing,
+      );
+      final toolbar = tester.getRect(
+        find.byKey(const ValueKey('general-workspace-toolbar')),
+      );
+      final settingsFinder = find.byKey(
+        const ValueKey('general-settings-button'),
+      );
+      final settings = tester.getRect(settingsFinder);
+      expect(toolbar.right - settings.right, closeTo(12, 0.01));
+      expect(settings.height, greaterThanOrEqualTo(48));
+
+      await tester.tap(settingsFinder);
+      await tester.pumpAndSettle();
+      expect(settingsCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'workspace navigation visibility changes live and preserves settings focus',
+    (tester) async {
+      final provider = await _providerFor(
+        _MemoryStorage(_shellData(populated: true)),
+      );
+      addTearDown(provider.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(840, 800));
+      await tester.pumpWidget(_appFor(provider));
+      await tester.pumpAndSettle();
+
+      final drawerSettings = tester.widget<ListTile>(
+        find.byKey(const ValueKey('adaptive-shell-settings-action')),
+      );
+      final settingsFocusNode = drawerSettings.focusNode!;
+      settingsFocusNode.requestFocus();
+      await tester.pump();
+      expect(settingsFocusNode.hasFocus, isTrue);
+
+      await provider.updateHideHomeWorkspaceNavigation(true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+        findsNothing,
+      );
+      final toolbarSettings = tester.widget<IconButton>(
+        find.byKey(const ValueKey('student-settings-button')),
+      );
+      expect(toolbarSettings.focusNode, same(settingsFocusNode));
+      expect(settingsFocusNode.hasFocus, isTrue);
+
+      await provider.updateHideHomeWorkspaceNavigation(false);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+        findsOneWidget,
+      );
+      final restoredDrawerSettings = tester.widget<ListTile>(
+        find.byKey(const ValueKey('adaptive-shell-settings-action')),
+      );
+      expect(restoredDrawerSettings.focusNode, same(settingsFocusNode));
+      expect(settingsFocusNode.hasFocus, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('navigation keyboard focus survives adaptive layout changes', (
     tester,

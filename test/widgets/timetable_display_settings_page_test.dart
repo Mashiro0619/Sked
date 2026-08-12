@@ -46,6 +46,7 @@ Future<void> _pumpPage(
   WidgetTester tester,
   TimetableProvider provider, {
   EdgeInsets viewPadding = EdgeInsets.zero,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -55,9 +56,11 @@ Future<void> _pumpPage(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(padding: viewPadding, viewPadding: viewPadding),
+          data: MediaQuery.of(context).copyWith(
+            padding: viewPadding,
+            viewPadding: viewPadding,
+            textScaler: textScaler,
+          ),
           child: child!,
         ),
         home: const TimetableDisplaySettingsPage(),
@@ -137,6 +140,39 @@ void main() {
       find.descendant(of: titleScroll, matching: find.byType(Scrollable)),
     );
     expect(horizontalScrollable.position.pixels, greaterThan(0));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact large text keeps the switch beside its text block', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+
+    await _pumpPage(tester, provider, textScaler: const TextScaler.linear(2));
+
+    final title = find.text('Allow outside tap to close course popup');
+    final subtitle = find.text(
+      'Turning this off also disables swipe-down dismissal.',
+    );
+    final tile = find.ancestor(
+      of: title,
+      matching: find.byType(SettingsSwitchTile),
+    );
+    final toggle = find.descendant(of: tile, matching: find.byType(Switch));
+    final titleRect = tester.getRect(title);
+    final subtitleRect = tester.getRect(subtitle);
+    final switchRect = tester.getRect(toggle);
+
+    expect(switchRect.left, greaterThan(titleRect.right));
+    expect(switchRect.left, greaterThan(subtitleRect.right));
+    expect(
+      switchRect.center.dy,
+      closeTo((titleRect.top + subtitleRect.bottom) / 2, 1),
+    );
     expect(tester.takeException(), isNull);
   });
 

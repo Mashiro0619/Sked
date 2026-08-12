@@ -487,11 +487,11 @@ abstract class AppLocalizations {
   /// **'App'**
   String get settingsSectionApp;
 
-  /// No description provided for @settingsSectionCurrentWorkspace.
+  /// No description provided for @settingsSectionWorkspace.
   ///
   /// In en, this message translates to:
-  /// **'Current timetable / calendar'**
-  String get settingsSectionCurrentWorkspace;
+  /// **'Workspace'**
+  String get settingsSectionWorkspace;
 
   /// No description provided for @settingsSectionAppearanceLanguage.
   ///
@@ -3700,17 +3700,17 @@ abstract class AppLocalizations {
   /// **'Active workspace'**
   String get settingsWorkspaceMode;
 
-  /// No description provided for @hideHomeBottomNavigationBar.
+  /// No description provided for @hideHomeWorkspaceNavigation.
   ///
   /// In en, this message translates to:
-  /// **'Hide the home bottom bar'**
-  String get hideHomeBottomNavigationBar;
+  /// **'Hide workspace navigation'**
+  String get hideHomeWorkspaceNavigation;
 
-  /// No description provided for @hideHomeBottomNavigationBarDesc.
+  /// No description provided for @hideHomeWorkspaceNavigationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Switch workspaces from Settings after hiding the bar.'**
-  String get hideHomeBottomNavigationBarDesc;
+  /// **'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.'**
+  String get hideHomeWorkspaceNavigationDesc;
 
   /// No description provided for @generalDateLabelFormat.
   ///

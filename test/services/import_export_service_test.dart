@@ -51,7 +51,7 @@ void main() {
 
   test('app-data normalization preserves workspace and toolbar settings', () {
     final source = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
-      hideHomeBottomNavigationBar: true,
+      hideHomeWorkspaceNavigation: true,
       generalMode: GeneralScheduleData.createDefault().copyWith(
         toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
         dateLabelFormat: generalDateLabelFormatLocalized,
@@ -63,7 +63,7 @@ void main() {
       localeCode: defaultLocaleCode,
     );
 
-    expect(normalized.hideHomeBottomNavigationBar, isTrue);
+    expect(normalized.hideHomeWorkspaceNavigation, isTrue);
     expect(
       normalized.generalMode.toolbarWidthPolicy,
       generalToolbarWidthPolicyDatePriority,

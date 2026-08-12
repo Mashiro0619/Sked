@@ -2204,6 +2204,11 @@ void main() {
         find.byKey(const ValueKey('student-week-picker-button')),
       );
       expect(viewToggle.center.dy, closeTo(weekPicker.center.dy, 0.01));
+      expect(
+        weekPicker.right,
+        lessThanOrEqualTo(viewToggle.left),
+        reason: 'week picker should precede the view toggle',
+      );
       for (final removedKey in const [
         'student-day-week-selector',
         'student-previous-week',
@@ -2976,6 +2981,29 @@ void main() {
 
     expect(storage.saveCount, 2);
     expect(provider.timetables, hasLength(2));
+    // Creating a timetable keeps the picker open so the new selection is
+    // visible and the user can continue managing timetables.
+    expect(find.text('Switch timetables'), findsOneWidget);
+    final newTimetableKey = ValueKey(
+      'timetable-picker-item-${provider.activeTimetable.id}',
+    );
+    expect(find.byKey(newTimetableKey), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(newTimetableKey))
+          .getSemanticsData()
+          .flagsCollection
+          .isSelected,
+      ui.Tristate.isTrue,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-picker-item-table-1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 3);
+    expect(provider.activeTimetable.id, 'table-1');
     expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });

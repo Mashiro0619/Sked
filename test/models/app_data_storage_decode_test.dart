@@ -1537,15 +1537,36 @@ void main() {
       final snapshot = validSnapshot()..['hideHomeBottomNavigationBar'] = true;
       final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
 
-      expect(decoded.hideHomeBottomNavigationBar, isTrue);
+      expect(decoded.hideHomeWorkspaceNavigation, isTrue);
       expect(decoded.toJson()['hideHomeBottomNavigationBar'], isTrue);
+      expect(decoded.toJson(), isNot(contains('hideHomeWorkspaceNavigation')));
 
       final missing = validSnapshot()..remove('hideHomeBottomNavigationBar');
       expect(
         AppData.decodeStorageSnapshot(
           jsonEncode(missing),
-        ).hideHomeBottomNavigationBar,
+        ).hideHomeWorkspaceNavigation,
         isFalse,
+      );
+
+      final developmentSnapshot = validSnapshot()
+        ..remove('hideHomeBottomNavigationBar')
+        ..['hideHomeWorkspaceNavigation'] = true;
+      expect(
+        AppData.decodeStorageSnapshot(
+          jsonEncode(developmentSnapshot),
+        ).hideHomeWorkspaceNavigation,
+        isTrue,
+      );
+
+      final bothKeys = validSnapshot()
+        ..['hideHomeBottomNavigationBar'] = false
+        ..['hideHomeWorkspaceNavigation'] = true;
+      expect(
+        AppData.decodeStorageSnapshot(
+          jsonEncode(bothKeys),
+        ).hideHomeWorkspaceNavigation,
+        isTrue,
       );
 
       for (final value in [null, 1, 'true', <String, dynamic>{}]) {

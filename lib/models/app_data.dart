@@ -1521,11 +1521,16 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
       errorMessage: 'Stored privacy acceptance date is invalid.',
     );
   }
-  _validateStorageBooleanField(
-    json,
+  for (final key in const [
+    'hideHomeWorkspaceNavigation',
     'hideHomeBottomNavigationBar',
-    errorMessage: 'Stored home navigation setting is invalid.',
-  );
+  ]) {
+    _validateStorageBooleanField(
+      json,
+      key,
+      errorMessage: 'Stored home navigation setting is invalid.',
+    );
+  }
   _validateStorageThemeSettings(json, validateCurrentSemantics: true);
   final hasStudentMode = json.containsKey('studentMode');
   final hasGeneralMode = json.containsKey('generalMode');
@@ -1594,7 +1599,7 @@ class AppData {
     required StudentModeData studentMode,
     required GeneralScheduleData generalMode,
     String localeCode = defaultLocaleCode,
-    bool hideHomeBottomNavigationBar = false,
+    bool hideHomeWorkspaceNavigation = false,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1641,7 +1646,7 @@ class AppData {
       studentMode: nextStudentMode,
       generalMode: nextGeneralMode,
       localeCode: localeCode,
-      hideHomeBottomNavigationBar: hideHomeBottomNavigationBar,
+      hideHomeWorkspaceNavigation: hideHomeWorkspaceNavigation,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
       ignoredUpdateVersion: ignoredUpdateVersion,
@@ -1654,7 +1659,7 @@ class AppData {
     required this.studentMode,
     required this.generalMode,
     this.localeCode = defaultLocaleCode,
-    this.hideHomeBottomNavigationBar = false,
+    this.hideHomeWorkspaceNavigation = false,
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
     this.ignoredUpdateVersion,
@@ -1665,7 +1670,7 @@ class AppData {
   final StudentModeData studentMode;
   final GeneralScheduleData generalMode;
   final String localeCode;
-  final bool hideHomeBottomNavigationBar;
+  final bool hideHomeWorkspaceNavigation;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
   final String? ignoredUpdateVersion;
@@ -1686,7 +1691,9 @@ class AppData {
     'studentMode': studentMode.toJson(),
     'generalMode': generalMode.toJson(),
     'localeCode': normalizeLocaleCode(localeCode),
-    'hideHomeBottomNavigationBar': hideHomeBottomNavigationBar,
+    // Keep the persisted key stable: the setting now controls every adaptive
+    // navigation shape, but its storage representation is still schema v2.
+    'hideHomeBottomNavigationBar': hideHomeWorkspaceNavigation,
     if (privacyPolicyAcceptedVersion != null)
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
@@ -1763,7 +1770,7 @@ class AppData {
       studentMode: studentMode,
       generalMode: generalMode,
       localeCode: localeCode,
-      hideHomeBottomNavigationBar: _decodeHideHomeBottomNavigationBar(migrated),
+      hideHomeWorkspaceNavigation: _decodeHideHomeWorkspaceNavigation(migrated),
       privacyPolicyAcceptedVersion: _nullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
@@ -1784,7 +1791,7 @@ class AppData {
     StudentModeData? studentMode,
     GeneralScheduleData? generalMode,
     String? localeCode,
-    bool? hideHomeBottomNavigationBar,
+    bool? hideHomeWorkspaceNavigation,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1832,8 +1839,8 @@ class AppData {
       studentMode: nextStudentMode,
       generalMode: nextGeneralMode,
       localeCode: normalizeLocaleCode(localeCode ?? this.localeCode),
-      hideHomeBottomNavigationBar:
-          hideHomeBottomNavigationBar ?? this.hideHomeBottomNavigationBar,
+      hideHomeWorkspaceNavigation:
+          hideHomeWorkspaceNavigation ?? this.hideHomeWorkspaceNavigation,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
           ? this.privacyPolicyAcceptedVersion
@@ -1865,11 +1872,16 @@ class AppData {
   }
 }
 
-bool _decodeHideHomeBottomNavigationBar(Map<String, dynamic> json) {
-  if (!json.containsKey('hideHomeBottomNavigationBar')) {
+bool _decodeHideHomeWorkspaceNavigation(Map<String, dynamic> json) {
+  const persistedKey = 'hideHomeBottomNavigationBar';
+  const developmentKey = 'hideHomeWorkspaceNavigation';
+  // Prefer the development key if a local build wrote it before this rename
+  // was finalized, then converge back to the schema-v2 key on the next save.
+  final key = json.containsKey(developmentKey) ? developmentKey : persistedKey;
+  if (!json.containsKey(key)) {
     return false;
   }
-  final value = json['hideHomeBottomNavigationBar'];
+  final value = json[key];
   if (value is! bool) {
     throw const FormatException('Home navigation setting is invalid.');
   }

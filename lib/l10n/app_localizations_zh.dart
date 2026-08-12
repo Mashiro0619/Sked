@@ -190,7 +190,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSectionApp => '应用';
 
   @override
-  String get settingsSectionCurrentWorkspace => '当前课表 / 日历';
+  String get settingsSectionWorkspace => '工作区';
 
   @override
   String get settingsSectionAppearanceLanguage => '外观与语言';
@@ -1920,10 +1920,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsWorkspaceMode => '当前工作区';
 
   @override
-  String get hideHomeBottomNavigationBar => '隐藏主界面底部栏';
+  String get hideHomeWorkspaceNavigation => '隐藏主界面工作区导航';
 
   @override
-  String get hideHomeBottomNavigationBarDesc => '隐藏后可在设置中切换工作区。';
+  String get hideHomeWorkspaceNavigationDesc => '隐藏底部栏、导航轨或侧边栏；隐藏后可在设置中切换工作区。';
 
   @override
   String get generalDateLabelFormat => '日期显示格式';
@@ -2180,6 +2180,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsSectionApp => '應用';
+
+  @override
+  String get settingsSectionWorkspace => '工作區';
 
   @override
   String get noTimetableSettings => '當前沒有可設定的課表';
@@ -3899,10 +3902,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsWorkspaceMode => '目前工作區';
 
   @override
-  String get hideHomeBottomNavigationBar => '隱藏主介面底部列';
+  String get hideHomeWorkspaceNavigation => '隱藏主介面工作區導覽';
 
   @override
-  String get hideHomeBottomNavigationBarDesc => '隱藏後可在設定中切換工作區。';
+  String get hideHomeWorkspaceNavigationDesc => '隱藏底部列、導覽軌或側邊欄；隱藏後可在設定中切換工作區。';
 
   @override
   String get generalDateLabelFormat => '日期顯示格式';

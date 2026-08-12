@@ -448,6 +448,70 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('compact fitted week wraps the course title within its card', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final timetable = _timetableWithCourses([
+      _course(
+        id: 'narrow-course',
+        title: 'Advanced Mathematics',
+        weekday: DateTime.monday,
+        startMinutes: 480,
+        endMinutes: 525,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: timetable,
+        periodTimes: const [
+          CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 525),
+        ],
+        fitVisibleDaysToWidth: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final rail = find.byKey(const ValueKey('timetable-time-rail'));
+    expect(tester.getSize(rail).width, inInclusiveRange(48, 56));
+    final visual = find.byKey(
+      const ValueKey('timetable-course-visual-narrow-course'),
+    );
+    final title = find.descendant(
+      of: visual,
+      matching: find.text('Advanced Mathematics'),
+    );
+    expect(title, findsOneWidget);
+    final titleText = tester.widget<Text>(title);
+    expect(titleText.maxLines, isNull);
+    expect(titleText.softWrap, isTrue);
+    expect(titleText.overflow, TextOverflow.visible);
+    expect(tester.getSize(title).height, greaterThan(20));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large text expands the measured time rail', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: _timetableWithCourses(const []),
+        periodTimes: const [
+          CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 525),
+        ],
+        textScale: 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final rail = find.byKey(const ValueKey('timetable-time-rail'));
+    expect(tester.getSize(rail).width, greaterThan(56));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('switching fit mode clamps synchronized scroll offsets', (
     tester,
   ) async {

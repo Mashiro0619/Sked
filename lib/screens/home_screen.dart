@@ -52,7 +52,7 @@ class HomeScreen extends StatefulWidget {
   /// Whether input may mutate this workspace while it remains visible.
   final bool interactive;
 
-  /// Keeps the compact shell's single settings action in the workspace bar.
+  /// Keeps the shell's single settings action in the workspace bar.
   final bool showSettingsAction;
 
   /// Optional shell-owned settings action. When omitted, this screen opens
@@ -245,7 +245,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<bool> _switchTimetableFromPicker(
     BuildContext pickerContext,
     TimetableProvider provider,
-    TimetableData activeTimetable,
     TimetableData targetTimetable,
   ) async {
     if (_timetableSwitchInProgress) {
@@ -254,7 +253,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _setTimetableSwitchInProgress(true);
     try {
       var saved = true;
-      if (targetTimetable.id != activeTimetable.id) {
+      // The picker can remain open while another command updates the
+      // provider. Compare against the live selection instead of the snapshot
+      // captured when the panel was opened.
+      if (targetTimetable.id != provider.activeTimetableOrNull?.id) {
         saved = await runUiCommandWithFeedback(
           context: pickerContext,
           debugLabel: 'Switch timetable',

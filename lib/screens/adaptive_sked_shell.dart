@@ -139,15 +139,19 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final compact = width < _compactNavigationBreakpoint;
-        final navigationLayoutIdentity = compact
+        final hideWorkspaceNavigation =
+            widget.provider.hideHomeWorkspaceNavigation;
+        final navigationLayoutIdentity = hideWorkspaceNavigation
+            ? 'hidden'
+            : compact
             ? 'bar'
             : width < _permanentDrawerBreakpoint
             ? 'rail-compact'
             : 'drawer';
         _prepareNavigationLayout(navigationLayoutIdentity);
         final selectedIndex = _selectedIndex;
-        final showCompactNavigationBar =
-            compact && !widget.provider.hideHomeBottomNavigationBar;
+        final showCompactNavigationBar = compact && !hideWorkspaceNavigation;
+        final showWorkspaceSettingsAction = compact || hideWorkspaceNavigation;
         final compactSettingsEnabled =
             widget.enabled && !uiCommandBusy && !_settingsOpen;
         final workspaceStack = _AdaptiveWorkspaceStack(
@@ -162,24 +166,34 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             active: active,
             interactive: interactive,
             weekShortcutFocusNode: _studentWeekShortcutFocusNode,
-            showSettingsAction: compact,
+            showSettingsAction: showWorkspaceSettingsAction,
             settingsEnabled: compactSettingsEnabled,
-            settingsAction: compact ? _openSettingsFromWorkspace : null,
-            settingsFocusNode: compact && active ? _settingsFocusNode : null,
+            settingsAction: showWorkspaceSettingsAction
+                ? _openSettingsFromWorkspace
+                : null,
+            settingsFocusNode: showWorkspaceSettingsAction && active
+                ? _settingsFocusNode
+                : null,
           ),
           generalBuilder: (active, interactive) => GeneralScheduleHomeScreen(
             key: const ValueKey('general-home'),
             embedded: true,
             active: active,
             interactive: interactive,
-            showSettingsAction: compact,
+            showSettingsAction: showWorkspaceSettingsAction,
             settingsEnabled: compactSettingsEnabled,
-            settingsAction: compact ? _openSettingsFromWorkspace : null,
-            settingsFocusNode: compact && active ? _settingsFocusNode : null,
+            settingsAction: showWorkspaceSettingsAction
+                ? _openSettingsFromWorkspace
+                : null,
+            settingsFocusNode: showWorkspaceSettingsAction && active
+                ? _settingsFocusNode
+                : null,
           ),
         );
 
-        final navigation = compact
+        final navigation = hideWorkspaceNavigation
+            ? const SizedBox.shrink()
+            : compact
             ? _CompactWorkspaceNavigation(
                 selectedIndex: selectedIndex,
                 busy: uiCommandBusy,
@@ -218,10 +232,10 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         // owns the bottom safe area; keeping it in the body would expose it to
         // the top status-bar inset as well and make the bar unnecessarily tall
         // on Android.
-        if (compact) {
+        if (compact || hideWorkspaceNavigation) {
           final body = Directionality(
             textDirection: textDirection,
-            child: showCompactNavigationBar
+            child: compact && showCompactNavigationBar
                 ? MediaQuery.removePadding(
                     context: context,
                     removeBottom: true,
@@ -973,6 +987,40 @@ class _WorkspaceDrawer extends StatelessWidget {
         key: const ValueKey('adaptive-shell-navigation-drawer'),
         selectedIndex: selectedIndex,
         onDestinationSelected: busy || !enabled ? null : onDestinationSelected,
+        footer: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              key: const ValueKey('adaptive-shell-drawer-footer'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Divider(),
+                ),
+                Tooltip(
+                  message: l10n.settings,
+                  child: ListTile(
+                    key: const ValueKey('adaptive-shell-settings-action'),
+                    focusNode: settingsFocusNode,
+                    enabled: enabled && !busy && !settingsBusy,
+                    leading: settingsBusy
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.settings_outlined),
+                    title: Text(l10n.settings),
+                    onTap: busy || settingsBusy || !enabled
+                        ? null
+                        : onOpenSettings,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         children: [
           SafeArea(
             bottom: false,
@@ -1026,26 +1074,6 @@ class _WorkspaceDrawer extends StatelessWidget {
               ),
             ),
             enabled: enabled && !busy,
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Divider(),
-          ),
-          Tooltip(
-            message: l10n.settings,
-            child: ListTile(
-              key: const ValueKey('adaptive-shell-settings-action'),
-              focusNode: settingsFocusNode,
-              enabled: enabled && !busy && !settingsBusy,
-              leading: settingsBusy
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.settings_outlined),
-              title: Text(l10n.settings),
-              onTap: busy || settingsBusy || !enabled ? null : onOpenSettings,
-            ),
           ),
         ],
       ),

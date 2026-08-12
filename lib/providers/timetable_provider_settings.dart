@@ -1,7 +1,7 @@
 part of 'timetable_provider.dart';
 
 mixin _TimetableProviderSettings on _TimetableProviderBase {
-  bool get hideHomeBottomNavigationBar => _appData.hideHomeBottomNavigationBar;
+  bool get hideHomeWorkspaceNavigation => _appData.hideHomeWorkspaceNavigation;
 
   bool get fitDaySelectorToWidth => _appData.studentMode.fitDaySelectorToWidth;
 
@@ -10,8 +10,8 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   bool get enableWeekSwipeNavigation =>
       _appData.studentMode.enableWeekSwipeNavigation;
 
-  Future<void> updateHideHomeBottomNavigationBar(bool value) async {
-    _appData = _settings.updateHideHomeBottomNavigationBar(_appData, value);
+  Future<void> updateHideHomeWorkspaceNavigation(bool value) async {
+    _appData = _settings.updateHideHomeWorkspaceNavigation(_appData, value);
     await _saveAndNotify();
   }
 
