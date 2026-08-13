@@ -1320,6 +1320,7 @@ void main() {
         'fitDaySelectorToWidth',
         'fitWeekColumnsToWidth',
         'enableWeekSwipeNavigation',
+        'showAddCourseFab',
       ]) {
         final snapshot = validSnapshot();
         final student = studentMode(snapshot)..[key] = 'yes';
@@ -1391,14 +1392,45 @@ void main() {
     });
 
     test('rejects malformed general display settings', () {
-      final snapshot = validSnapshot();
-      final general = generalMode(snapshot)..['showWeekends'] = 1;
-      snapshot['generalMode'] = general;
+      for (final key in const ['showWeekends', 'showAddEventFab']) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..[key] = 1;
+        snapshot['generalMode'] = general;
 
-      expect(
-        () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
-        throwsFormatException,
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: key,
+        );
+      }
+    });
+
+    test('FAB settings persist and default true when missing', () {
+      final snapshot = validSnapshot();
+      final student = studentMode(snapshot)..['showAddCourseFab'] = false;
+      final general = generalMode(snapshot)..['showAddEventFab'] = false;
+      snapshot
+        ..['studentMode'] = student
+        ..['generalMode'] = general;
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+      expect(decoded.studentMode.showAddCourseFab, isFalse);
+      expect(decoded.generalMode.showAddEventFab, isFalse);
+
+      final legacySnapshot = validSnapshot();
+      final legacyStudent = studentMode(legacySnapshot)
+        ..remove('showAddCourseFab');
+      final legacyGeneral = generalMode(legacySnapshot)
+        ..remove('showAddEventFab');
+      legacySnapshot
+        ..['studentMode'] = legacyStudent
+        ..['generalMode'] = legacyGeneral;
+
+      final legacyDecoded = AppData.decodeStorageSnapshot(
+        jsonEncode(legacySnapshot),
       );
+      expect(legacyDecoded.studentMode.showAddCourseFab, isTrue);
+      expect(legacyDecoded.generalMode.showAddEventFab, isTrue);
     });
 
     test('rejects general settings that would be normalized on load', () {

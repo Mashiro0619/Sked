@@ -46,6 +46,13 @@ class SettingsService {
     );
   }
 
+  AppData updateShowAddCourseFab(AppData data, bool value) {
+    if (data.studentMode.showAddCourseFab == value) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(showAddCourseFab: value),
+    );
+  }
+
   AppData updateFitDaySelectorToWidth(AppData data, bool value) {
     if (data.studentMode.fitDaySelectorToWidth == value) return data;
     return data.copyWith(

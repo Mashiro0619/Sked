@@ -328,6 +328,24 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                                     ),
                                   ),
                           ),
+                          SettingsSectionHeader(
+                            title: l10n.quickActionsSection,
+                          ),
+                          SettingsSwitchTile(
+                            key: const ValueKey('show-add-event-fab-setting'),
+                            icon: Icons.add_circle_outline,
+                            title: l10n.showAddEventFab,
+                            subtitle: l10n.showAddEventFabHint,
+                            value: provider.showAddEventFab,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update add event button visibility',
+                                    () => provider.updateGeneralDisplaySettings(
+                                      showAddEventFab: value,
+                                    ),
+                                  ),
+                          ),
                         ],
                       ),
                     ),

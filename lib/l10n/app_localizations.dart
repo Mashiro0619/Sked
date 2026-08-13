@@ -598,7 +598,7 @@ abstract class AppLocalizations {
   /// No description provided for @timetableDisplaySettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Popup dismissal, gaps, gray courses, and grid lines'**
+  /// **'Course display, layout, week gestures, and quick add'**
   String get timetableDisplaySettingsDesc;
 
   /// No description provided for @showTimetableGridLines.
@@ -2863,7 +2863,7 @@ abstract class AppLocalizations {
   /// No description provided for @generalDisplaySettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Toggles for the general schedule view'**
+  /// **'Views, toolbar, date format, and quick add'**
   String get generalDisplaySettingsDesc;
 
   /// No description provided for @closePopupOnOutsideTap.
@@ -3819,6 +3819,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Popup behavior'**
   String get generalPopupSection;
+
+  /// No description provided for @quickActionsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get quickActionsSection;
+
+  /// No description provided for @showAddCourseFab.
+  ///
+  /// In en, this message translates to:
+  /// **'Show floating add course button'**
+  String get showAddCourseFab;
+
+  /// No description provided for @showAddCourseFabHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show or hide the floating add course button in the bottom-right corner of the timetable.'**
+  String get showAddCourseFabHint;
+
+  /// No description provided for @showAddEventFab.
+  ///
+  /// In en, this message translates to:
+  /// **'Show floating add event button'**
+  String get showAddEventFab;
+
+  /// No description provided for @showAddEventFabHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show or hide the floating add event button in the bottom-right corner of the schedule.'**
+  String get showAddEventFabHint;
 
   /// No description provided for @schoolWebImportSignInConsentTitle.
   ///

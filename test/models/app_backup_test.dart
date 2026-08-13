@@ -17,6 +17,7 @@ void main() {
   test('round-trips app data and school sites without API keys', () {
     final data = appData(localeCode: 'zh').copyWith(
       studentMode: appData().studentMode.copyWith(
+        showAddCourseFab: false,
         fitDaySelectorToWidth: false,
         fitWeekColumnsToWidth: false,
         enableWeekSwipeNavigation: false,
@@ -26,6 +27,7 @@ void main() {
           customModel: 'model-a',
         ),
       ),
+      generalMode: appData().generalMode.copyWith(showAddEventFab: false),
     );
 
     final source = encodeAppBackup(data, sites);
@@ -38,6 +40,8 @@ void main() {
     expect(decoded.appData.studentMode.fitDaySelectorToWidth, isFalse);
     expect(decoded.appData.studentMode.fitWeekColumnsToWidth, isFalse);
     expect(decoded.appData.studentMode.enableWeekSwipeNavigation, isFalse);
+    expect(decoded.appData.studentMode.showAddCourseFab, isFalse);
+    expect(decoded.appData.generalMode.showAddEventFab, isFalse);
     expect(
       decoded.appData.studentMode.schoolImportParserSettings.customApiKey,
       isEmpty,

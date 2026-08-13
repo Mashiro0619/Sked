@@ -611,6 +611,17 @@ String _selectedWeekTitle(TimetableProvider provider) {
   return 'Week ${provider.selectedWeek}';
 }
 
+Rect _emptyTimetableImportMenuRect(WidgetTester tester) {
+  final itemRects = [
+    tester.getRect(find.byKey(const ValueKey('empty-timetable-import-files'))),
+    tester.getRect(find.byKey(const ValueKey('empty-timetable-import-text'))),
+    tester.getRect(find.byKey(const ValueKey('empty-timetable-import-web'))),
+  ];
+  return itemRects.skip(1).fold(itemRects.first, (rect, itemRect) {
+    return rect.expandToInclude(itemRect);
+  });
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -2021,7 +2032,7 @@ void main() {
     );
   });
 
-  testWidgets('student workspace chooses its initial day or week view once', (
+  testWidgets('student workspace opens in week view and keeps selection once', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(430, 776));
@@ -2029,15 +2040,15 @@ void main() {
     final provider = await _createProvider();
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
+    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
+    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
 
     await tester.binding.setSurfaceSize(const Size(1120, 680));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
+    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -2054,7 +2065,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('large text makes the initial wide workspace use day view', (
+  testWidgets('large text does not change the initial week view', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 700));
@@ -2066,7 +2077,7 @@ void main() {
       textScaler: const TextScaler.linear(1.8),
     );
 
-    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
+    expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -2111,8 +2122,23 @@ void main() {
       find.byKey(const ValueKey('student-settings-button')),
       findsOneWidget,
     );
+    final timetablePicker = find.byKey(
+      const ValueKey('student-timetable-picker-button'),
+    );
+    expect(
+      find.descendant(
+        of: timetablePicker,
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+      ),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
+
+  Future<void> switchStudentToDayView(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
+    await tester.pumpAndSettle();
+  }
 
   testWidgets('student toolbar and day strip use compact phone metrics', (
     tester,
@@ -2121,6 +2147,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final provider = await _createProvider();
     await _pumpHomeScreenWithProvider(tester, provider);
+    await switchStudentToDayView(tester);
 
     final selectorRect = tester.getRect(
       find.byKey(const ValueKey('student-view-toggle-button')),
@@ -2281,6 +2308,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('course FAB preference immediately updates grid avoidance', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(80),
+    );
+
+    await provider.updateShowAddCourseFab(false);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(0),
+    );
+
+    await provider.updateShowAddCourseFab(true);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    expect(
+      tester
+          .widgetList<TimetableGrid>(find.byType(TimetableGrid))
+          .map((grid) => grid.bottomContentInset),
+      everyElement(80),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('rapid keyboard week commands settle on the latest request', (
     tester,
   ) async {
@@ -2348,6 +2416,7 @@ void main() {
     final provider = await _createProvider();
     await provider.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
+    await switchStudentToDayView(tester);
 
     final pager = tester.widget<PageView>(
       find.byKey(const ValueKey('student-week-pager')),
@@ -2386,6 +2455,7 @@ void main() {
       await provider.setSelectedWeek(5);
       await provider.updateFitDaySelectorToWidth(false);
       await _pumpHomeScreenWithProvider(tester, provider);
+      await switchStudentToDayView(tester);
 
       final gesture = await tester.startGesture(
         tester.getCenter(
@@ -2411,6 +2481,7 @@ void main() {
     await provider.setSelectedWeek(5);
     await provider.updateEnableWeekSwipeNavigation(false);
     await _pumpHomeScreenWithProvider(tester, provider);
+    await switchStudentToDayView(tester);
 
     await tester.drag(
       find.byKey(const ValueKey('student-day-strip')),
@@ -2430,6 +2501,7 @@ void main() {
     final provider = await _createProvider();
     await provider.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
+    await switchStudentToDayView(tester);
 
     final pager = tester.widget<PageView>(
       find.byKey(const ValueKey('student-week-pager')),
@@ -2502,6 +2574,7 @@ void main() {
       provider,
       textDirection: TextDirection.rtl,
     );
+    await switchStudentToDayView(tester);
 
     await tester.drag(
       find.byKey(const ValueKey('student-day-strip')),
@@ -2521,8 +2594,6 @@ void main() {
     final provider = await _createProvider();
     await provider.setSelectedWeek(5);
     await _pumpHomeScreenWithProvider(tester, provider);
-    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
-    await tester.pumpAndSettle();
 
     await tester.drag(
       find.byKey(const ValueKey('timetable-grid-horizontal-scroll')),
@@ -2541,8 +2612,6 @@ void main() {
     await provider.setSelectedWeek(5);
     await provider.updateFitWeekColumnsToWidth(false);
     await _pumpHomeScreenWithProvider(tester, provider);
-    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
-    await tester.pumpAndSettle();
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.byKey(const ValueKey('timetable-time-rail'))),
@@ -2564,8 +2633,6 @@ void main() {
     await provider.setSelectedWeek(5);
     await provider.updateFitWeekColumnsToWidth(false);
     await _pumpHomeScreenWithProvider(tester, provider);
-    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
-    await tester.pumpAndSettle();
 
     final horizontal = find.byKey(
       const ValueKey('timetable-grid-horizontal-scroll'),
@@ -2602,8 +2669,6 @@ void main() {
     await provider.setSelectedWeek(5);
     await provider.updateFitWeekColumnsToWidth(false);
     await _pumpHomeScreenWithProvider(tester, provider);
-    await tester.tap(find.byKey(const ValueKey('student-view-toggle-button')));
-    await tester.pumpAndSettle();
 
     final pager = tester.widget<PageView>(
       find.byKey(const ValueKey('student-week-pager')),
@@ -2655,6 +2720,7 @@ void main() {
       final provider = await _createProvider();
       await provider.setSelectedWeek(5);
       await _pumpHomeScreenWithProvider(tester, provider);
+      await switchStudentToDayView(tester);
 
       final strip = find.byKey(const ValueKey('student-day-strip'));
       final gesture = await tester.startGesture(tester.getCenter(strip));
@@ -2719,6 +2785,7 @@ void main() {
     await provider.updateFitDaySelectorToWidth(false);
 
     await _pumpHomeScreenWithProvider(tester, provider, settle: false);
+    await switchStudentToDayView(tester);
     await tester.tap(find.byKey(const ValueKey('student-day-4')));
     await tester.pump();
     await tester.pump();
@@ -2749,6 +2816,7 @@ void main() {
     await provider.load();
 
     await _pumpHomeScreenWithProvider(tester, provider);
+    await switchStudentToDayView(tester);
 
     expect(find.byType(HomeScreen), findsOneWidget);
     final monday = find.byKey(const ValueKey('student-day-1'));
@@ -2876,6 +2944,149 @@ void main() {
     await _pumpRouteTransition(tester);
 
     expect(find.byType(SettingsPage, skipOffstage: false), findsOneWidget);
+  });
+
+  testWidgets('empty timetable toolbar stays on one row with large text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final storage = _BlockingTimetableStorage(null);
+    final provider = await _createEmptyProvider(storage);
+    addTearDown(provider.dispose);
+
+    await _pumpHomeScreenWithProvider(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    final toolbar = find.byKey(const ValueKey('student-workspace-toolbar'));
+    final title = find.descendant(of: toolbar, matching: find.text('Sked'));
+    final settings = find.byKey(
+      const ValueKey('empty-timetable-settings-button'),
+    );
+    final toolbarRect = tester.getRect(toolbar);
+    final titleRect = tester.getRect(title);
+    final settingsRect = tester.getRect(settings);
+    final viewport = Offset.zero & const Size(320, 568);
+
+    expect(settingsRect.size, const Size.square(48));
+    expect(titleRect.center.dy, closeTo(settingsRect.center.dy, 0.01));
+    expect(titleRect.right, lessThanOrEqualTo(settingsRect.left));
+    expect(viewport.contains(toolbarRect.topLeft), isTrue);
+    expect(viewport.contains(toolbarRect.bottomRight), isTrue);
+    expect(viewport.contains(settingsRect.topLeft), isTrue);
+    expect(viewport.contains(settingsRect.bottomRight), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty timetable import menu follows its anchor and viewport', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final storage = _BlockingTimetableStorage(null);
+    final provider = await _createEmptyProvider(storage);
+    addTearDown(provider.dispose);
+
+    for (final scenario in const [
+      (size: Size(430, 900), opensBelow: true),
+      (size: Size(430, 568), opensBelow: false),
+    ]) {
+      await tester.binding.setSurfaceSize(scenario.size);
+      await _pumpHomeScreenWithProvider(tester, provider);
+
+      final anchor = find.byKey(
+        const ValueKey('empty-timetable-import-button'),
+      );
+      final anchorRect = tester.getRect(anchor);
+      await tester.tap(anchor);
+      await tester.tap(anchor, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('empty-timetable-import-files')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('empty-timetable-import-text')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('empty-timetable-import-web')),
+        findsOneWidget,
+      );
+      final menuRect = _emptyTimetableImportMenuRect(tester);
+      expect(menuRect.width, lessThanOrEqualTo(320));
+      expect(menuRect.center.dx, closeTo(anchorRect.center.dx, 1));
+      expect(menuRect.left, greaterThanOrEqualTo(16));
+      expect(menuRect.right, lessThanOrEqualTo(scenario.size.width - 16));
+      if (scenario.opensBelow) {
+        expect(menuRect.top - anchorRect.bottom, greaterThanOrEqualTo(8));
+      } else {
+        expect(anchorRect.top - menuRect.bottom, greaterThanOrEqualTo(8));
+      }
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('reduced motion shows the empty import menu immediately', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    await tester.binding.setSurfaceSize(const Size(430, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final storage = _BlockingTimetableStorage(null);
+    final provider = await _createEmptyProvider(storage);
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    await tester.tap(
+      find.byKey(const ValueKey('empty-timetable-import-button')),
+    );
+    await tester.pump();
+
+    final firstItem = find.byKey(
+      const ValueKey('empty-timetable-import-files'),
+    );
+    expect(firstItem, findsOneWidget);
+    final menuRoute = ModalRoute.of(tester.element(firstItem));
+    expect(menuRoute, isNotNull);
+    expect(menuRoute!.animation!.value, 1);
+    expect(firstItem.hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty timetable import menu tracks layout changes', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final storage = _BlockingTimetableStorage(null);
+    final provider = await _createEmptyProvider(storage);
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final anchor = find.byKey(const ValueKey('empty-timetable-import-button'));
+    await tester.tap(anchor);
+    await tester.pumpAndSettle();
+    final initialMenuRect = _emptyTimetableImportMenuRect(tester);
+
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    await tester.pumpAndSettle();
+
+    final updatedAnchorRect = tester.getRect(anchor);
+    final updatedMenuRect = _emptyTimetableImportMenuRect(tester);
+    expect(updatedMenuRect, isNot(initialMenuRect));
+    expect(updatedMenuRect.center.dx, closeTo(updatedAnchorRect.center.dx, 1));
+    expect(updatedMenuRect.left, greaterThanOrEqualTo(8));
+    expect(updatedMenuRect.right, lessThanOrEqualTo(312));
+    expect(updatedMenuRect.bottom, lessThanOrEqualTo(560));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('new timetable failure rolls back and can be retried', (
@@ -3197,9 +3408,8 @@ void main() {
       find.byKey(const ValueKey('empty-timetable-import-button')),
     );
     await tester.pumpAndSettle();
-    final textImportButton = find.widgetWithText(
-      MenuItemButton,
-      'Import timetable from JSON text',
+    final textImportButton = find.byKey(
+      const ValueKey('empty-timetable-import-text'),
     );
     expect(textImportButton, findsOneWidget);
 
@@ -3222,9 +3432,8 @@ void main() {
       find.byKey(const ValueKey('empty-timetable-import-button')),
     );
     await tester.pumpAndSettle();
-    final webImportButton = find.widgetWithText(
-      MenuItemButton,
-      'Import from school webpage',
+    final webImportButton = find.byKey(
+      const ValueKey('empty-timetable-import-web'),
     );
     expect(webImportButton, findsOneWidget);
 

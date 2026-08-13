@@ -247,7 +247,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get timetableDisplaySettings => '時間割の表示と操作';
 
   @override
-  String get timetableDisplaySettingsDesc => 'ポップアップの閉じ方、空き時間、グレー表示の授業、グリッド線';
+  String get timetableDisplaySettingsDesc => '授業表示、レイアウト、週切り替えジェスチャー、クイック追加';
 
   @override
   String get showTimetableGridLines => '時間割のグリッド線を表示';
@@ -1504,8 +1504,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get generalDisplaySettings => 'General display settings';
 
   @override
-  String get generalDisplaySettingsDesc =>
-      'Toggles for the general schedule view';
+  String get generalDisplaySettingsDesc => '表示形式、ツールバー、日付形式、クイック追加';
 
   @override
   String get closePopupOnOutsideTap => 'Close popup on tap outside';
@@ -2031,6 +2030,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get quickActionsSection => 'Quick actions';
+
+  @override
+  String get showAddCourseFab => 'Show floating add course button';
+
+  @override
+  String get showAddCourseFabHint =>
+      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+
+  @override
+  String get showAddEventFab => 'Show floating add event button';
+
+  @override
+  String get showAddEventFabHint =>
+      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
   String get schoolWebImportSignInConsentTitle => '学校のログインページを開きますか？';

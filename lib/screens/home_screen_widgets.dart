@@ -91,7 +91,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       iconSize: 20,
     );
-    Widget buildTimetableSelector({required bool showArrow}) {
+    Widget buildTimetableSelector() {
       return TextButton(
         key: const ValueKey('student-timetable-picker-button'),
         onPressed: interactive ? onOpenTimetablePicker : null,
@@ -104,18 +104,10 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                timetable.config.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (showArrow)
-              const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
-          ],
+        child: Text(
+          timetable.config.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       );
     }
@@ -250,17 +242,13 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           );
           final selectorMaximum = phoneWidth ? 168.0 : 240.0;
           final selectorWidth = math.min(selectorMaximum, flexibleWidth);
-          final showArrow = selectorWidth >= 72;
           final remainingWidth = math.max(
             0.0,
             availableWidth - fixedWidth - gapWidth - selectorWidth - weekWidth,
           );
           return Row(
             children: [
-              SizedBox(
-                width: selectorWidth,
-                child: buildTimetableSelector(showArrow: showArrow),
-              ),
+              SizedBox(width: selectorWidth, child: buildTimetableSelector()),
               if (remainingWidth > 0) SizedBox(width: remainingWidth),
               const SizedBox(width: gap),
               buildWeekPicker(width: weekWidth),
@@ -1407,40 +1395,276 @@ class _EmptyTimetableState extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 label: Text(l10n.createTimetable),
               ),
-              MenuAnchor(
-                key: const ValueKey('empty-timetable-import-menu'),
-                menuChildren: [
-                  MenuItemButton(
-                    onPressed: onImport,
-                    leadingIcon: const Icon(Icons.file_download_outlined),
-                    child: Text(l10n.importTimetableFiles),
-                  ),
-                  MenuItemButton(
-                    onPressed: onImportFromText,
-                    leadingIcon: const Icon(Icons.paste_outlined),
-                    child: Text(l10n.importTimetableText),
-                  ),
-                  MenuItemButton(
-                    onPressed: onImportFromWeb,
-                    leadingIcon: const Icon(Icons.language_outlined),
-                    child: Text(l10n.schoolWebImportEntry),
-                  ),
-                ],
-                builder: (context, controller, child) => OutlinedButton.icon(
-                  key: const ValueKey('empty-timetable-import-button'),
-                  onPressed: !importEnabled
-                      ? null
-                      : () => controller.isOpen
-                            ? controller.close()
-                            : controller.open(),
-                  icon: const Icon(Icons.file_download_outlined),
-                  label: Text(l10n.importTimetable),
-                ),
+              _EmptyTimetableImportMenu(
+                enabled: importEnabled,
+                onImport: onImport,
+                onImportFromText: onImportFromText,
+                onImportFromWeb: onImportFromWeb,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _EmptyTimetableToolbar extends StatelessWidget {
+  const _EmptyTimetableToolbar({
+    super.key,
+    required this.title,
+    required this.showSettingsAction,
+    required this.settingsFocusNode,
+    required this.onOpenSettings,
+  });
+
+  final String title;
+  final bool showSettingsAction;
+  final FocusNode? settingsFocusNode;
+  final VoidCallback? onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SkedWorkspaceToolbar(
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 6, 6),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          if (showSettingsAction)
+            SizedBox.square(
+              dimension: 48,
+              child: IconButton(
+                key: const ValueKey('empty-timetable-settings-button'),
+                focusNode: settingsFocusNode,
+                onPressed: onOpenSettings,
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: l10n.settings,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _EmptyTimetableImportAction { files, text, schoolWeb }
+
+class _EmptyTimetableImportMenu extends StatefulWidget {
+  const _EmptyTimetableImportMenu({
+    required this.enabled,
+    required this.onImport,
+    required this.onImportFromText,
+    required this.onImportFromWeb,
+  });
+
+  final bool enabled;
+  final Future<void> Function()? onImport;
+  final Future<void> Function()? onImportFromText;
+  final Future<void> Function()? onImportFromWeb;
+
+  @override
+  State<_EmptyTimetableImportMenu> createState() =>
+      _EmptyTimetableImportMenuState();
+}
+
+class _EmptyTimetableImportMenuState extends State<_EmptyTimetableImportMenu> {
+  final _anchorKey = GlobalKey();
+  bool _menuOpen = false;
+  RelativeRect? _lastMenuPosition;
+
+  RelativeRect _menuPositionBuilder(
+    BoxConstraints constraints,
+    double menuWidth,
+  ) {
+    final fallback =
+        _lastMenuPosition ??
+        RelativeRect.fromLTRB(
+          16,
+          16,
+          math.max(0, constraints.maxWidth - menuWidth - 16),
+          math.max(0, constraints.maxHeight - 16),
+        );
+    if (!mounted) return fallback;
+
+    final anchor = _anchorKey.currentContext?.findRenderObject();
+    final overlay = Navigator.of(context).overlay?.context.findRenderObject();
+    if (anchor is! RenderBox ||
+        overlay is! RenderBox ||
+        !anchor.attached ||
+        !overlay.attached) {
+      return fallback;
+    }
+
+    final anchorRect = Rect.fromPoints(
+      anchor.localToGlobal(Offset.zero, ancestor: overlay),
+      anchor.localToGlobal(
+        anchor.size.bottomRight(Offset.zero),
+        ancestor: overlay,
+      ),
+    );
+    final media = MediaQuery.of(context);
+    final scrollable = Scrollable.maybeOf(context)?.context.findRenderObject();
+    final scrollableRect = scrollable is RenderBox && scrollable.attached
+        ? Rect.fromPoints(
+            scrollable.localToGlobal(Offset.zero, ancestor: overlay),
+            scrollable.localToGlobal(
+              scrollable.size.bottomRight(Offset.zero),
+              ancestor: overlay,
+            ),
+          )
+        : Offset.zero & overlay.size;
+    final safeTop = math.max(media.padding.top + 8, scrollableRect.top + 8);
+    final safeBottom = math.max(
+      safeTop,
+      math.min(
+        overlay.size.height -
+            math.max(media.padding.bottom, media.viewInsets.bottom) -
+            8,
+        scrollableRect.bottom - 8,
+      ),
+    );
+    final itemHeight = math.max(
+      48.0,
+      MediaQuery.textScalerOf(context).scale(14) * 2 * 1.2 + 12,
+    );
+    final menuHeight = itemHeight * 3 + 20;
+    const gap = 8.0;
+    final spaceBelow = safeBottom - anchorRect.bottom - gap;
+    final spaceAbove = anchorRect.top - safeTop - gap;
+    final openBelow = spaceBelow >= menuHeight || spaceBelow >= spaceAbove;
+    final requestedTop = openBelow
+        ? anchorRect.bottom + gap
+        : anchorRect.top - gap - menuHeight;
+    final maxMenuTop = math.max(safeTop, safeBottom - menuHeight);
+    final menuTop = requestedTop.clamp(safeTop, maxMenuTop).toDouble();
+    final effectiveMenuWidth = math.min(
+      menuWidth,
+      math.max(0, overlay.size.width - 32),
+    );
+    final idealLeft = anchorRect.center.dx - effectiveMenuWidth / 2;
+    final maxMenuLeft = math.max(
+      16.0,
+      overlay.size.width - effectiveMenuWidth - 16,
+    );
+    final menuLeft = idealLeft.clamp(16.0, maxMenuLeft).toDouble();
+    return _lastMenuPosition = RelativeRect.fromLTRB(
+      menuLeft,
+      menuTop,
+      math.max(0, overlay.size.width - menuLeft - effectiveMenuWidth),
+      math.max(0, overlay.size.height - menuTop),
+    );
+  }
+
+  Future<void> _showMenu() async {
+    if (_menuOpen || !widget.enabled) return;
+    final anchor = _anchorKey.currentContext?.findRenderObject();
+    final overlay = Navigator.of(context).overlay?.context.findRenderObject();
+    if (anchor is! RenderBox || overlay is! RenderBox) return;
+    final menuWidth = math
+        .min(320.0, overlay.size.width - 32)
+        .clamp(0.0, 320.0)
+        .toDouble();
+    if (menuWidth <= 0) return;
+    final l10n = AppLocalizations.of(context);
+
+    _lastMenuPosition = null;
+    setState(() => _menuOpen = true);
+    _EmptyTimetableImportAction? selected;
+    try {
+      selected = await showMenu<_EmptyTimetableImportAction>(
+        context: context,
+        positionBuilder: (_, constraints) =>
+            _menuPositionBuilder(constraints, menuWidth),
+        constraints: BoxConstraints.tightFor(width: menuWidth),
+        menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        clipBehavior: Clip.antiAlias,
+        popUpAnimationStyle: SkedMotionPolicy.of(
+          context,
+        ).routeStyle(AppMotion.menuAnimationStyle),
+        items: [
+          SkedPopupMenuItem(
+            key: const ValueKey('empty-timetable-import-files'),
+            value: _EmptyTimetableImportAction.files,
+            enabled: widget.onImport != null,
+            child: _EmptyTimetableImportMenuLabel(
+              icon: Icons.file_download_outlined,
+              label: l10n.importTimetableFiles,
+            ),
+          ),
+          SkedPopupMenuItem(
+            key: const ValueKey('empty-timetable-import-text'),
+            value: _EmptyTimetableImportAction.text,
+            enabled: widget.onImportFromText != null,
+            child: _EmptyTimetableImportMenuLabel(
+              icon: Icons.paste_outlined,
+              label: l10n.importTimetableText,
+            ),
+          ),
+          SkedPopupMenuItem(
+            key: const ValueKey('empty-timetable-import-web'),
+            value: _EmptyTimetableImportAction.schoolWeb,
+            enabled: widget.onImportFromWeb != null,
+            child: _EmptyTimetableImportMenuLabel(
+              icon: Icons.language_outlined,
+              label: l10n.schoolWebImportEntry,
+            ),
+          ),
+        ],
+      );
+    } finally {
+      if (mounted) setState(() => _menuOpen = false);
+    }
+    if (!mounted || selected == null) return;
+    switch (selected) {
+      case _EmptyTimetableImportAction.files:
+        await widget.onImport?.call();
+        break;
+      case _EmptyTimetableImportAction.text:
+        await widget.onImportFromText?.call();
+        break;
+      case _EmptyTimetableImportAction.schoolWeb:
+        await widget.onImportFromWeb?.call();
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SizedBox(
+      key: _anchorKey,
+      child: OutlinedButton.icon(
+        key: const ValueKey('empty-timetable-import-button'),
+        onPressed: widget.enabled && !_menuOpen ? _showMenu : null,
+        icon: const Icon(Icons.file_download_outlined),
+        label: Text(l10n.importTimetable),
+      ),
+    );
+  }
+}
+
+class _EmptyTimetableImportMenuLabel extends StatelessWidget {
+  const _EmptyTimetableImportMenuLabel({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
+      ],
     );
   }
 }

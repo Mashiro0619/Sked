@@ -159,4 +159,16 @@ void main() {
       );
     });
   });
+
+  test('updates course FAB visibility and guards no-op writes', () {
+    final initial = base();
+
+    final hidden = service.updateShowAddCourseFab(initial, false);
+
+    expect(hidden.studentMode.showAddCourseFab, isFalse);
+    expect(
+      identical(hidden, service.updateShowAddCourseFab(hidden, false)),
+      isTrue,
+    );
+  });
 }

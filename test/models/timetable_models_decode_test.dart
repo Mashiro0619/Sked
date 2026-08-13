@@ -276,6 +276,7 @@ void main() {
       expect(data.fitDaySelectorToWidth, isTrue);
       expect(data.fitWeekColumnsToWidth, isTrue);
       expect(data.enableWeekSwipeNavigation, isTrue);
+      expect(data.showAddCourseFab, isTrue);
     });
 
     test('StudentModeData layout settings round-trip', () {
@@ -286,6 +287,7 @@ void main() {
         'fitDaySelectorToWidth': false,
         'fitWeekColumnsToWidth': false,
         'enableWeekSwipeNavigation': false,
+        'showAddCourseFab': false,
       }, localeCode: defaultLocaleCode);
 
       final decoded = StudentModeData.fromJson(
@@ -295,6 +297,8 @@ void main() {
       expect(decoded.fitDaySelectorToWidth, isFalse);
       expect(decoded.fitWeekColumnsToWidth, isFalse);
       expect(decoded.enableWeekSwipeNavigation, isFalse);
+      expect(decoded.showAddCourseFab, isFalse);
+      expect(decoded.copyWith().showAddCourseFab, isFalse);
     });
   });
 }

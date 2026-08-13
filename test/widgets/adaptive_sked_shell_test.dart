@@ -258,6 +258,42 @@ void main() {
     }
   });
 
+  testWidgets(
+    'expanded workspace navigation replaces the empty timetable header',
+    (tester) async {
+      final provider = await _providerFor(_MemoryStorage(_shellData()));
+      addTearDown(provider.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final width in [600.0, 840.0, 1200.0]) {
+        await tester.binding.setSurfaceSize(Size(width, 800));
+        await tester.pumpWidget(_appFor(provider));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('student-workspace-toolbar')),
+          findsNothing,
+          reason: '${width}px',
+        );
+        expect(find.text('No timetable yet'), findsOneWidget);
+        expect(tester.takeException(), isNull, reason: '${width}px');
+      }
+
+      await provider.updateHideHomeWorkspaceNavigation(true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('student-workspace-toolbar')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('empty-timetable-settings-button')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('short large-text drawer keeps settings reachable', (
     tester,
   ) async {

@@ -117,6 +117,21 @@ void main() {
     });
   });
 
+  group('GeneralCalendarService display settings', () {
+    test('updates and preserves event FAB visibility', () {
+      final hidden = service.updateDisplaySettings(
+        buildData(),
+        showAddEventFab: false,
+      );
+
+      expect(hidden.showAddEventFab, isFalse);
+      expect(
+        service.setSelectedDate(hidden, DateTime(2026, 6, 1)).showAddEventFab,
+        isFalse,
+      );
+    });
+  });
+
   group('GeneralCalendarService events', () {
     test('saveEvent recovers when the schedule list is empty', () {
       final data = GeneralScheduleData(

@@ -835,4 +835,28 @@ END:VCALENDAR
       generalDateLabelFormatSlash,
     );
   });
+
+  test('event FAB setting persists and rolls back on failure', () async {
+    final initial = buildInitialAppData(buildDefaultPeriodTimes());
+    final storage = _MemoryTimetableStorage(initial);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+    await provider.load();
+
+    await provider.updateGeneralDisplaySettings(showAddEventFab: false);
+    expect(provider.showAddEventFab, isFalse);
+    expect(storage.data!.generalMode.showAddEventFab, isFalse);
+
+    storage.nextSaveError = StateError('save failed');
+    await expectLater(
+      provider.updateGeneralDisplaySettings(showAddEventFab: true),
+      throwsStateError,
+    );
+
+    expect(provider.showAddEventFab, isFalse);
+    expect(storage.data!.generalMode.showAddEventFab, isFalse);
+  });
 }

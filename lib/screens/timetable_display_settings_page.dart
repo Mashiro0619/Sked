@@ -185,6 +185,23 @@ class _TimetableDisplaySettingsPageState
                                     ),
                                   ),
                           ),
+                          SettingsSectionHeader(
+                            title: l10n.quickActionsSection,
+                          ),
+                          SettingsSwitchTile(
+                            key: const ValueKey('show-add-course-fab-setting'),
+                            icon: Icons.add_circle_outline,
+                            value: provider.showAddCourseFab,
+                            title: l10n.showAddCourseFab,
+                            subtitle: l10n.showAddCourseFabHint,
+                            onChanged: uiCommandBusy
+                                ? null
+                                : (value) => _updateSetting(
+                                    'Update add course button visibility',
+                                    () =>
+                                        provider.updateShowAddCourseFab(value),
+                                  ),
+                          ),
                         ],
                       ),
                     ),

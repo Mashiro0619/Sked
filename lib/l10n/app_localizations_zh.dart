@@ -246,7 +246,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get timetableDisplaySettings => '课表显示与交互';
 
   @override
-  String get timetableDisplaySettingsDesc => '课程弹窗、空白时间、灰色课程与网格线';
+  String get timetableDisplaySettingsDesc => '课程显示、横向布局、切周手势和快捷添加';
 
   @override
   String get showTimetableGridLines => '显示课表网格线';
@@ -1465,7 +1465,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalDisplaySettings => '通用显示设置';
 
   @override
-  String get generalDisplaySettingsDesc => '通用日程页面的显示开关';
+  String get generalDisplaySettingsDesc => '视图、工具栏、日期格式和快捷添加';
 
   @override
   String get closePopupOnOutsideTap => '点击外部关闭弹窗';
@@ -1980,6 +1980,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalPopupSection => '弹窗行为';
 
   @override
+  String get quickActionsSection => '快捷操作';
+
+  @override
+  String get showAddCourseFab => '显示悬浮添加课程按钮';
+
+  @override
+  String get showAddCourseFabHint => '显示或隐藏课表右下角的悬浮添加课程按钮。';
+
+  @override
+  String get showAddEventFab => '显示悬浮添加日程按钮';
+
+  @override
+  String get showAddEventFabHint => '显示或隐藏日程右下角的悬浮添加日程按钮。';
+
+  @override
   String get schoolWebImportSignInConsentTitle => '打开学校登录页面？';
 
   @override
@@ -2229,7 +2244,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get timetableDisplaySettings => '課表顯示與互動';
 
   @override
-  String get timetableDisplaySettingsDesc => '課程彈窗、空白時間、灰色課程與網格線';
+  String get timetableDisplaySettingsDesc => '課程顯示、橫向版面、切換週次手勢與快速新增';
 
   @override
   String get showTimetableGridLines => '顯示課表網格線';
@@ -3447,7 +3462,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get generalDisplaySettings => '通用顯示設定';
 
   @override
-  String get generalDisplaySettingsDesc => '通用日程頁面的顯示開關';
+  String get generalDisplaySettingsDesc => '檢視、工具列、日期格式與快速新增';
 
   @override
   String get closePopupOnOutsideTap => '點擊外部關閉彈窗';
@@ -3960,6 +3975,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generalPopupSection => '彈窗行為';
+
+  @override
+  String get quickActionsSection => '快速操作';
+
+  @override
+  String get showAddCourseFab => '顯示懸浮新增課程按鈕';
+
+  @override
+  String get showAddCourseFabHint => '顯示或隱藏課表右下角的懸浮新增課程按鈕。';
+
+  @override
+  String get showAddEventFab => '顯示懸浮新增日程按鈕';
+
+  @override
+  String get showAddEventFabHint => '顯示或隱藏日程右下角的懸浮新增日程按鈕。';
 
   @override
   String get schoolWebImportSignInConsentTitle => '開啟學校登入頁面？';

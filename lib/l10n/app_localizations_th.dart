@@ -253,7 +253,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get timetableDisplaySettingsDesc =>
-      'การยกเลิกป๊อปอัป, ช่องว่าง, หลักสูตรสีเทา, และบรรทัดตาราง';
+      'การแสดงวิชา เค้าโครง ท่าทางเปลี่ยนสัปดาห์ และการเพิ่มด่วน';
 
   @override
   String get showTimetableGridLines => 'แสดงเส้นทางตารางเวลา';
@@ -1535,7 +1535,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get generalDisplaySettingsDesc =>
-      'Toggles for the general schedule view';
+      'มุมมอง แถบเครื่องมือ รูปแบบวันที่ และการเพิ่มด่วน';
 
   @override
   String get closePopupOnOutsideTap => 'Close popup on tap outside';
@@ -2061,6 +2061,23 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get quickActionsSection => 'Quick actions';
+
+  @override
+  String get showAddCourseFab => 'Show floating add course button';
+
+  @override
+  String get showAddCourseFabHint =>
+      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+
+  @override
+  String get showAddEventFab => 'Show floating add event button';
+
+  @override
+  String get showAddEventFabHint =>
+      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
   String get schoolWebImportSignInConsentTitle =>

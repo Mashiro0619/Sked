@@ -940,7 +940,10 @@ double _scaledDayHeaderHeight(
   final maxDateHeight = datePainter.height;
   datePainter.dispose();
   final datePadding = compact ? 4.0 : 6.0;
-  return maxWeekdayHeight + 2 + maxDateHeight + datePadding + 16;
+  // Text widgets can round their scaled line boxes up to the next device
+  // pixel. Keep a small allowance so the measured header remains stable at
+  // large accessibility text scales.
+  return maxWeekdayHeight + 2 + maxDateHeight + datePadding + 18;
 }
 
 class _MonthHeader extends StatelessWidget {

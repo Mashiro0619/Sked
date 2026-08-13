@@ -10,6 +10,8 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   bool get enableWeekSwipeNavigation =>
       _appData.studentMode.enableWeekSwipeNavigation;
 
+  bool get showAddCourseFab => _appData.studentMode.showAddCourseFab;
+
   Future<void> updateHideHomeWorkspaceNavigation(bool value) async {
     _appData = _settings.updateHideHomeWorkspaceNavigation(_appData, value);
     await _saveAndNotify();
@@ -37,6 +39,11 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateShowTimetableGridLines(bool value) async {
     _appData = _settings.updateShowTimetableGridLines(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateShowAddCourseFab(bool value) async {
+    _appData = _settings.updateShowAddCourseFab(_appData, value);
     await _saveAndNotify();
   }
 

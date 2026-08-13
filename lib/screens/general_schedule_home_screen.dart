@@ -257,6 +257,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ],
           );
           final showFab =
+              snapshot.showAddEventFab &&
+              widget.active &&
               widget.interactive &&
               !_editorSheetOpen &&
               MediaQuery.viewInsetsOf(context).bottom == 0;
@@ -646,13 +648,14 @@ class _GeneralCalendarSelector extends StatelessWidget {
       message: l10n.calendars,
       child: SizedBox(
         width: double.infinity,
-        child: OutlinedButton(
+        child: TextButton(
           key: const ValueKey('general-calendar-selector'),
           onPressed: disabled ? null : onPressed,
-          style: OutlinedButton.styleFrom(
+          style: TextButton.styleFrom(
             minimumSize: const Size(48, 48),
             padding: EdgeInsets.symmetric(horizontal: showIcon ? 10 : 8),
             textStyle: labelStyle,
+            shape: skedShapeSchemeOf(context).control,
           ),
           child: SizedBox(
             height: math.max(24, labelPainter.height),
@@ -1041,9 +1044,9 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
       mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox.square(dimension: 48, child: selector),
-        const SizedBox(width: 4),
         Expanded(child: dateButton),
+        const SizedBox(width: 4),
+        SizedBox.square(dimension: 48, child: selector),
       ],
     );
   }
@@ -1186,6 +1189,7 @@ class _GeneralHomeSnapshot {
     required this.defaultView,
     required this.viewSwitchBehavior,
     required this.dateLabelFormat,
+    required this.showAddEventFab,
     required this.toolbarWidthPolicy,
     required this.activeScheduleId,
     required this.schedules,
@@ -1205,6 +1209,7 @@ class _GeneralHomeSnapshot {
       viewSwitchBehavior: data.viewSwitchBehavior,
       toolbarWidthPolicy: data.toolbarWidthPolicy,
       dateLabelFormat: data.dateLabelFormat,
+      showAddEventFab: data.showAddEventFab,
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
       reminderAcknowledgements: data.reminderAcknowledgements,
@@ -1221,6 +1226,7 @@ class _GeneralHomeSnapshot {
   final String viewSwitchBehavior;
   final String toolbarWidthPolicy;
   final String dateLabelFormat;
+  final bool showAddEventFab;
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
@@ -1238,6 +1244,7 @@ class _GeneralHomeSnapshot {
         other.viewSwitchBehavior == viewSwitchBehavior &&
         other.toolbarWidthPolicy == toolbarWidthPolicy &&
         other.dateLabelFormat == dateLabelFormat &&
+        other.showAddEventFab == showAddEventFab &&
         other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
         identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
@@ -1257,6 +1264,7 @@ class _GeneralHomeSnapshot {
     viewSwitchBehavior,
     toolbarWidthPolicy,
     dateLabelFormat,
+    showAddEventFab,
     activeScheduleId,
     identityHashCode(schedules),
     identityHashCode(reminderAcknowledgements),

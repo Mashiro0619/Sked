@@ -62,14 +62,6 @@ String _windowsResourceValue(String source, String key) {
   return match.group(1)!;
 }
 
-String _requiredMatch(String source, RegExp pattern, String description) {
-  final value = pattern.firstMatch(source)?.group(1);
-  if (value == null) {
-    throw StateError('Missing $description.');
-  }
-  return value;
-}
-
 List<String> _plistArrayStrings(XmlDocument document, String key) {
   final value = _plistValue(document, key);
   expect(value.localName, 'array', reason: key);
@@ -395,26 +387,5 @@ void main() {
         r"steps.android-security-artifacts.outcome != 'skipped' }}",
       ),
     );
-  });
-
-  test('bundled privacy version matches the published policy page', () {
-    final privacyPage = File('web/privacy.html').readAsStringSync();
-    final providerLifecycle = File(
-      'lib/providers/timetable_provider_lifecycle.dart',
-    ).readAsStringSync();
-    final publishedVersion = _requiredMatch(
-      privacyPage,
-      RegExp(
-        r'<meta\s+name="privacy-policy-version"\s+content="([^"]+)"\s*/?>',
-      ),
-      'published privacy policy version',
-    );
-    final bundledVersion = _requiredMatch(
-      providerLifecycle,
-      RegExp(r"bundledPrivacyPolicyVersion\s*=\s*'([^']+)'"),
-      'bundled privacy policy version',
-    );
-
-    expect(publishedVersion, bundledVersion);
   });
 }

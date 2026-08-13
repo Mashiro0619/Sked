@@ -254,7 +254,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get timetableDisplaySettingsDesc =>
-      'Popup sa thải, khoảng trống, khóa học màu xám và đường lưới';
+      'Hiển thị môn học, bố cục, cử chỉ đổi tuần và thêm nhanh';
 
   @override
   String get showTimetableGridLines => 'Hiển thị các dòng lưới lịch trình';
@@ -1552,7 +1552,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get generalDisplaySettingsDesc =>
-      'Toggles for the general schedule view';
+      'Chế độ xem, thanh công cụ, định dạng ngày và thêm nhanh';
 
   @override
   String get closePopupOnOutsideTap => 'Close popup on tap outside';
@@ -2078,6 +2078,23 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get quickActionsSection => 'Quick actions';
+
+  @override
+  String get showAddCourseFab => 'Show floating add course button';
+
+  @override
+  String get showAddCourseFabHint =>
+      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+
+  @override
+  String get showAddEventFab => 'Show floating add event button';
+
+  @override
+  String get showAddEventFabHint =>
+      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
   String get schoolWebImportSignInConsentTitle =>

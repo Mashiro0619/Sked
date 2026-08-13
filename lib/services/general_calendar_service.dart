@@ -123,6 +123,7 @@ class GeneralCalendarService {
       dayEndHour: data.dayEndHour,
       timeGridMinutes: data.timeGridMinutes,
       closeEventPopupOnOutsideTap: data.closeEventPopupOnOutsideTap,
+      showAddEventFab: data.showAddEventFab,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
       themeSeedColorValue: data.themeSeedColorValue,
@@ -143,6 +144,7 @@ class GeneralCalendarService {
     int? dayEndHour,
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
+    bool? showAddEventFab,
   }) {
     return data.copyWith(
       defaultView: defaultView,
@@ -155,6 +157,7 @@ class GeneralCalendarService {
       dayEndHour: dayEndHour,
       timeGridMinutes: timeGridMinutes,
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
+      showAddEventFab: showAddEventFab,
     );
   }
 

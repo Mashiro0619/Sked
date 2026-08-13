@@ -244,6 +244,7 @@ class GeneralScheduleData {
     this.dayEndHour = 23,
     this.timeGridMinutes = 60,
     this.closeEventPopupOnOutsideTap = true,
+    this.showAddEventFab = true,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,
     this.themeSeedColorValue = defaultThemeSeedColorValue,
@@ -264,6 +265,7 @@ class GeneralScheduleData {
   final int dayEndHour;
   final int timeGridMinutes;
   final bool closeEventPopupOnOutsideTap;
+  final bool showAddEventFab;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -314,6 +316,7 @@ class GeneralScheduleData {
     'dayEndHour': dayEndHour,
     'timeGridMinutes': timeGridMinutes,
     'closeEventPopupOnOutsideTap': closeEventPopupOnOutsideTap,
+    'showAddEventFab': showAddEventFab,
     'themeMode': normalizeThemeMode(themeMode),
     'themeColorMode': normalizeThemeColorMode(themeColorMode),
     'themeSeedColorValue': themeSeedColorValue,
@@ -336,11 +339,13 @@ class GeneralScheduleData {
     final viewSwitchBehavior = _decodeGeneralViewSwitchBehavior(json);
     final toolbarWidthPolicy = _decodeGeneralToolbarWidthPolicy(json);
     final dateLabelFormat = _decodeGeneralDateLabelFormat(json);
+    final showAddEventFab = _boolValue(json['showAddEventFab']) ?? true;
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
       return GeneralScheduleData.createDefault().copyWith(
         viewSwitchBehavior: viewSwitchBehavior,
         toolbarWidthPolicy: toolbarWidthPolicy,
         dateLabelFormat: dateLabelFormat,
+        showAddEventFab: showAddEventFab,
       );
     }
 
@@ -386,6 +391,7 @@ class GeneralScheduleData {
       ),
       closeEventPopupOnOutsideTap:
           _boolValue(json['closeEventPopupOnOutsideTap']) ?? true,
+      showAddEventFab: showAddEventFab,
       themeMode: normalizeThemeMode(
         _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
@@ -427,6 +433,7 @@ class GeneralScheduleData {
     int? dayEndHour,
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
+    bool? showAddEventFab,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -456,6 +463,7 @@ class GeneralScheduleData {
       timeGridMinutes: timeGridMinutes ?? this.timeGridMinutes,
       closeEventPopupOnOutsideTap:
           closeEventPopupOnOutsideTap ?? this.closeEventPopupOnOutsideTap,
+      showAddEventFab: showAddEventFab ?? this.showAddEventFab,
       themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
       themeColorMode: normalizeThemeColorMode(
         themeColorMode ?? this.themeColorMode,
@@ -589,6 +597,7 @@ class GeneralScheduleData {
       dayEndHour: end,
       timeGridMinutes: _normalizeGridMinutes(timeGridMinutes),
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
+      showAddEventFab: showAddEventFab,
       themeMode: normalizeThemeMode(themeMode),
       themeColorMode: normalizeThemeColorMode(themeColorMode),
       themeSeedColorValue: themeSeedColorValue,

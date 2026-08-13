@@ -72,13 +72,14 @@ Future<void> _pumpPage(
 
 Future<void> _toggleSetting(WidgetTester tester, String title) async {
   final titleFinder = find.text(title);
+  final verticalScrollable = find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  );
   await tester.scrollUntilVisible(
     titleFinder,
     120,
-    scrollable: find.descendant(
-      of: find.byKey(const ValueKey('timetable-display-settings-list')),
-      matching: find.byType(Scrollable),
-    ),
+    scrollable: verticalScrollable,
   );
   final tile = find.ancestor(
     of: titleFinder,
@@ -197,9 +198,6 @@ void main() {
     await _toggleSetting(tester, 'Show future courses');
     expect(provider.showFutureCourses, isFalse);
 
-    await _toggleSetting(tester, 'Show timetable grid lines');
-    expect(provider.showTimetableGridLines, isFalse);
-
     await _toggleSetting(tester, 'Fit day selector to screen');
     expect(provider.fitDaySelectorToWidth, isFalse);
 
@@ -208,5 +206,12 @@ void main() {
 
     await _toggleSetting(tester, 'Swipe to change weeks');
     expect(provider.enableWeekSwipeNavigation, isFalse);
+
+    await _toggleSetting(tester, 'Show timetable grid lines');
+    expect(provider.showTimetableGridLines, isFalse);
+
+    await _toggleSetting(tester, 'Show floating add course button');
+    expect(provider.showAddCourseFab, isFalse);
+    expect(find.text('Quick actions'), findsOneWidget);
   });
 }

@@ -1287,10 +1287,7 @@ class _MonthAgendaPanel extends StatelessWidget {
           const Divider(height: 1),
           Expanded(
             child: occurrences.isEmpty
-                ? _MonthAgendaEmptyState(
-                    filtered: filtered,
-                    onAddEvent: onAddEvent,
-                  )
+                ? _MonthAgendaEmptyState(filtered: filtered)
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
                     itemCount: occurrences.length,
@@ -1311,13 +1308,9 @@ class _MonthAgendaPanel extends StatelessWidget {
 }
 
 class _MonthAgendaEmptyState extends StatelessWidget {
-  const _MonthAgendaEmptyState({
-    required this.filtered,
-    required this.onAddEvent,
-  });
+  const _MonthAgendaEmptyState({required this.filtered});
 
   final bool filtered;
-  final VoidCallback onAddEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -1344,14 +1337,6 @@ class _MonthAgendaEmptyState extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleSmall,
               ),
-              if (!filtered) ...[
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: onAddEvent,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.addEvent),
-                ),
-              ],
             ],
           ),
         ),

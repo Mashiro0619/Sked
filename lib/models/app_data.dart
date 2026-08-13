@@ -965,6 +965,7 @@ void _validateStorageStudentSettings(
     'showPastEndedCourses',
     'showFutureCourses',
     'showTimetableGridLines',
+    'showAddCourseFab',
     'fitDaySelectorToWidth',
     'fitWeekColumnsToWidth',
     'enableWeekSwipeNavigation',
@@ -1098,6 +1099,7 @@ void _validateStorageGeneralSettings(
     'showWeekends',
     'showLunarCalendar',
     'closeEventPopupOnOutsideTap',
+    'showAddEventFab',
   ]) {
     _validateStorageBooleanField(
       generalMode,

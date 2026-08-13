@@ -256,6 +256,10 @@ void main() {
 
     await _toggleSwitch(tester, 'Close popup on tap outside');
     expect(provider.closeGeneralEventPopupOnOutsideTap, isFalse);
+
+    await _toggleSwitch(tester, 'Show floating add event button');
+    expect(provider.showAddEventFab, isFalse);
+    expect(find.text('Quick actions'), findsOneWidget);
   });
 
   testWidgets('Chinese locale exposes and persists the lunar toggle', (

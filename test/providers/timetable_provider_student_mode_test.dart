@@ -204,6 +204,27 @@ void main() {
   }
 
   group('TimetableProvider student mode', () {
+    test('course FAB setting persists and rolls back on failure', () async {
+      final original = appData();
+      final storage = _MemoryTimetableStorage(original);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+
+      await provider.updateShowAddCourseFab(false);
+      expect(provider.showAddCourseFab, isFalse);
+      expect(storage.data!.studentMode.showAddCourseFab, isFalse);
+
+      storage.saveFailures.add(Exception('disk full'));
+      await expectLater(provider.updateShowAddCourseFab(true), throwsException);
+
+      expect(provider.showAddCourseFab, isFalse);
+      expect(storage.data!.studentMode.showAddCourseFab, isFalse);
+    });
+
     test('rolls back timetable layout settings when save fails', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);

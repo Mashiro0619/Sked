@@ -297,8 +297,16 @@ void main() {
     expect(find.text('About Sked'), findsOneWidget);
     expect(find.text('Period time set'), findsOneWidget);
     expect(find.text('Timetable display and interaction'), findsOneWidget);
+    expect(
+      find.text('Course display, layout, week gestures, and quick add'),
+      findsOneWidget,
+    );
     expect(find.text('Import and export data'), findsOneWidget);
     expect(find.text('General display settings'), findsOneWidget);
+    expect(
+      find.text('Views, toolbar, date format, and quick add'),
+      findsOneWidget,
+    );
     expect(find.text('Schedule import & export'), findsOneWidget);
 
     final groupTops = _settingsGroupKeys
@@ -382,6 +390,18 @@ void main() {
 
     await tester.scrollUntilVisible(find.text('About Sked'), 120);
     expect(find.text('About Sked'), findsOneWidget);
+  });
+
+  testWidgets('Chinese settings summaries describe the current controls', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(tester, provider, locale: const Locale('zh'));
+
+    expect(find.text('课程显示、横向布局、切周手势和快捷添加'), findsOneWidget);
+    expect(find.text('视图、工具栏、日期格式和快捷添加'), findsOneWidget);
+    expect(find.text('课程弹窗、空白时间、灰色课程与网格线'), findsNothing);
+    expect(find.text('通用日程页面的显示开关'), findsNothing);
   });
 
   testWidgets(

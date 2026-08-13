@@ -163,6 +163,7 @@ class StudentModeData {
     this.showPastEndedCourses = false,
     this.showFutureCourses = true,
     this.showTimetableGridLines = true,
+    this.showAddCourseFab = true,
     this.fitDaySelectorToWidth = true,
     this.fitWeekColumnsToWidth = true,
     this.enableWeekSwipeNavigation = true,
@@ -191,6 +192,7 @@ class StudentModeData {
   final bool showPastEndedCourses;
   final bool showFutureCourses;
   final bool showTimetableGridLines;
+  final bool showAddCourseFab;
   final bool fitDaySelectorToWidth;
   final bool fitWeekColumnsToWidth;
   final bool enableWeekSwipeNavigation;
@@ -218,6 +220,7 @@ class StudentModeData {
     'showPastEndedCourses': showPastEndedCourses,
     'showFutureCourses': showFutureCourses,
     'showTimetableGridLines': showTimetableGridLines,
+    'showAddCourseFab': showAddCourseFab,
     'fitDaySelectorToWidth': fitDaySelectorToWidth,
     'fitWeekColumnsToWidth': fitWeekColumnsToWidth,
     'enableWeekSwipeNavigation': enableWeekSwipeNavigation,
@@ -320,6 +323,7 @@ class StudentModeData {
       showFutureCourses: _tryDecodeBool(json['showFutureCourses']) ?? true,
       showTimetableGridLines:
           _tryDecodeBool(json['showTimetableGridLines']) ?? true,
+      showAddCourseFab: _tryDecodeBool(json['showAddCourseFab']) ?? true,
       fitDaySelectorToWidth:
           _tryDecodeBool(json['fitDaySelectorToWidth']) ?? true,
       fitWeekColumnsToWidth:
@@ -376,6 +380,7 @@ class StudentModeData {
     bool? showPastEndedCourses,
     bool? showFutureCourses,
     bool? showTimetableGridLines,
+    bool? showAddCourseFab,
     bool? fitDaySelectorToWidth,
     bool? fitWeekColumnsToWidth,
     bool? enableWeekSwipeNavigation,
@@ -407,6 +412,7 @@ class StudentModeData {
       showFutureCourses: showFutureCourses ?? this.showFutureCourses,
       showTimetableGridLines:
           showTimetableGridLines ?? this.showTimetableGridLines,
+      showAddCourseFab: showAddCourseFab ?? this.showAddCourseFab,
       fitDaySelectorToWidth:
           fitDaySelectorToWidth ?? this.fitDaySelectorToWidth,
       fitWeekColumnsToWidth:

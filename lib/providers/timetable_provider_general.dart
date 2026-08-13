@@ -26,6 +26,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   int get generalTimeGridMinutes => _appData.generalMode.timeGridMinutes;
   bool get closeGeneralEventPopupOnOutsideTap =>
       _appData.generalMode.closeEventPopupOnOutsideTap;
+  bool get showAddEventFab => _appData.generalMode.showAddEventFab;
 
   DateTime get selectedGeneralDate => _appData.generalMode.selectedDate;
 
@@ -120,6 +121,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     int? dayEndHour,
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
+    bool? showAddEventFab,
   }) async {
     _appData = _appData.copyWith(
       generalMode: _calendarService.updateDisplaySettings(
@@ -134,6 +136,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
         dayEndHour: dayEndHour,
         timeGridMinutes: timeGridMinutes,
         closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
+        showAddEventFab: showAddEventFab,
       ),
     );
     await _saveAndNotify();

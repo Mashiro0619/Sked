@@ -257,7 +257,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get timetableDisplaySettingsDesc =>
-      'Cierre del popup, huecos, cursos en gris y líneas de cuadrícula';
+      'Vista de clases, diseño, gestos semanales y adición rápida';
 
   @override
   String get showTimetableGridLines =>
@@ -1564,7 +1564,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get generalDisplaySettingsDesc =>
-      'Toggles for the general schedule view';
+      'Vistas, barra de herramientas, formato de fecha y adición rápida';
 
   @override
   String get closePopupOnOutsideTap => 'Close popup on tap outside';
@@ -2090,6 +2090,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get quickActionsSection => 'Quick actions';
+
+  @override
+  String get showAddCourseFab => 'Show floating add course button';
+
+  @override
+  String get showAddCourseFabHint =>
+      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+
+  @override
+  String get showAddEventFab => 'Show floating add event button';
+
+  @override
+  String get showAddEventFabHint =>
+      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
   String get schoolWebImportSignInConsentTitle =>

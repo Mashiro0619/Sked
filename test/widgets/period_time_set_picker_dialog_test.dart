@@ -119,6 +119,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);
+    final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    expect(dialog.constraints?.maxWidth, 400);
+    expect(
+      dialog.insetPadding,
+      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    );
+    expect(
+      dialog.contentPadding,
+      const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 0),
+    );
     final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
     expect(find.byTooltip(l10n.newItem), findsOneWidget);
     expect(find.byIcon(Icons.schedule_outlined), findsNothing);
@@ -133,6 +143,72 @@ void main() {
     final titleRect = tester.getRect(find.text(l10n.selectPeriodTimeSet));
     final addRect = tester.getRect(find.byTooltip(l10n.newItem));
     expect(addRect.top, lessThan(titleRect.bottom + 20));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('dialog and option list use bounded responsive widths', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(600, 700));
+    addTearDown(() => _resetTestViewport(tester));
+
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => unawaited(
+                  showPeriodTimeSetPickerDialog(
+                    context,
+                    provider: provider,
+                    selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                  ),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    final listView = find.descendant(
+      of: find.byType(ExpressiveDialogContent),
+      matching: find.byType(ListView),
+    );
+    final listRect = tester.getRect(listView);
+    final optionRects = tester
+        .widgetList<ExpressiveDialogOption>(find.byType(ExpressiveDialogOption))
+        .map((option) => tester.getRect(find.byWidget(option)))
+        .toList();
+
+    expect(dialog.constraints?.maxWidth, 400);
+    expect(
+      dialog.insetPadding,
+      const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+    );
+    expect(
+      dialog.contentPadding,
+      const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 0),
+    );
+    expect(listRect.width, lessThanOrEqualTo(352));
+    expect(listRect.center.dx, closeTo(300, 0.1));
+    expect(optionRects, isNotEmpty);
+    for (final optionRect in optionRects) {
+      expect(optionRect.width, closeTo(listRect.width, 0.1));
+      expect(optionRect.height, greaterThanOrEqualTo(48));
+    }
     expect(tester.takeException(), isNull);
   });
 

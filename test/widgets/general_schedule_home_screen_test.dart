@@ -407,6 +407,42 @@ void main() {
     },
   );
 
+  testWidgets('inactive embedded general workspace hides its FAB', (
+    tester,
+  ) async {
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(showAddEventFab: true),
+      ),
+    );
+    addTearDown(provider.dispose);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<TimetableProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          locale: appLocaleFromCode(provider.localeCode),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Material(
+            child: GeneralScheduleHomeScreen(
+              embedded: true,
+              active: false,
+              interactive: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(provider.showAddEventFab, isTrue);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'active calendar switch rebuilds selector and keeps visible events',
     (tester) async {
@@ -765,10 +801,13 @@ void main() {
         closeTo(settingsRect.center.dy, 1),
         reason: '$size',
       );
-      expect(calendarRect.right, lessThanOrEqualTo(switcherRect.left));
-      expect(switcherRect.right, lessThanOrEqualTo(dateRect.left));
-      expect(dateRect.right, lessThanOrEqualTo(settingsRect.left));
+      expect(calendarRect.right, lessThanOrEqualTo(dateRect.left));
+      expect(dateRect.right, lessThanOrEqualTo(switcherRect.left));
+      expect(switcherRect.right, lessThanOrEqualTo(settingsRect.left));
       expect(tester.getSize(toolbar).height, lessThanOrEqualTo(64));
+      final calendarButton = tester.widget<TextButton>(calendar);
+      expect(calendarButton, isNot(isA<OutlinedButton>()), reason: '$size');
+      expect(calendarButton.style?.side, isNull, reason: '$size');
       expect(
         find.descendant(
           of: calendar,
@@ -1127,6 +1166,36 @@ void main() {
       tester.getTopLeft(title).dy - sheetRect.top,
       greaterThanOrEqualTo(20),
     );
+  });
+
+  testWidgets('add event FAB setting rebuilds the home screen immediately', (
+    tester,
+  ) async {
+    final base = _buildGeneralDataWithCalendars([
+      const GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(showAddEventFab: false),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(provider.showAddEventFab, isFalse);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+
+    await provider.updateGeneralDisplaySettings(showAddEventFab: true);
+    await tester.pumpAndSettle();
+
+    expect(provider.showAddEventFab, isTrue);
+    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+
+    await provider.updateGeneralDisplaySettings(showAddEventFab: false);
+    await tester.pumpAndSettle();
+
+    expect(provider.showAddEventFab, isFalse);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('settings entry ignores rapid duplicate taps', (tester) async {
@@ -2922,7 +2991,7 @@ void main() {
     expect(find.text('Conference'), findsWidgets);
   });
 
-  testWidgets('month view empty agenda add opens editor on selected date', (
+  testWidgets('month view empty agenda keeps only header and FAB add actions', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
@@ -2951,8 +3020,13 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     final addButtons = find.byTooltip('Add event');
-    expect(addButtons, findsWidgets);
-    await tester.tap(addButtons.first);
+    expect(addButtons, findsNWidgets(2));
+    expect(find.widgetWithText(FilledButton, 'Add event'), findsNothing);
+    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    final headerAdd = find.widgetWithIcon(IconButton, Icons.add);
+    expect(headerAdd, findsOneWidget);
+
+    await tester.tap(headerAdd);
     await tester.pumpAndSettle();
 
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);

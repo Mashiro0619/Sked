@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/course_details_sheet.dart';
@@ -16,6 +17,7 @@ import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/sked_expressive_components.dart';
+import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/timetable_grid.dart';
 import '../widgets/ui_command.dart';
@@ -305,19 +307,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SkedWorkspaceToolbar(
-                          key: const ValueKey('student-workspace-toolbar'),
-                          title: Text(l10n.appTitle),
-                          actions: [
-                            if (widget.showSettingsAction)
-                              IconButton(
-                                focusNode: widget.settingsFocusNode,
-                                onPressed: settingsAction,
-                                icon: const Icon(Icons.settings_outlined),
-                                tooltip: l10n.settings,
-                              ),
-                          ],
-                        ),
+                        if (widget.showSettingsAction)
+                          _EmptyTimetableToolbar(
+                            key: const ValueKey('student-workspace-toolbar'),
+                            title: l10n.appTitle,
+                            showSettingsAction: true,
+                            settingsFocusNode: widget.settingsFocusNode,
+                            onOpenSettings: settingsAction,
+                          ),
                         Expanded(
                           child: _EmptyTimetableState(
                             onCreate: _addTimetableInProgress
@@ -354,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     rawKeyboardInset > 0 ||
                     MediaQuery.viewInsetsOf(context).bottom > 0;
                 final fabVisible =
+                    snapshot.showAddCourseFab &&
                     widget.active &&
                     widget.interactive &&
                     !_courseEditorOpen &&
@@ -364,11 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // brought above the button without painting a blank strip.
                 final fabContentInset = fabVisible ? 80.0 : 0.0;
                 _ensurePageController(week);
-                _ensureLocalViewState(
-                  availableWidth: constraints.maxWidth,
-                  config: config,
-                  selectedWeek: week,
-                );
+                _ensureLocalViewState(config: config, selectedWeek: week);
                 final viewMode = _viewMode!;
                 final selectedWeekday = _selectedWeekday!;
                 final realCurrentWeek = currentWeekFor(config);
@@ -509,19 +503,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _ensureLocalViewState({
-    required double availableWidth,
     required TimetableConfig config,
     required int selectedWeek,
   }) {
-    if (_viewMode == null) {
-      final textTheme = Theme.of(context).textTheme;
-      final scaler = MediaQuery.textScalerOf(context);
-      final fontSize = textTheme.bodyLarge?.fontSize ?? 16;
-      final usesLargeText = scaler.scale(fontSize) > fontSize * 1.3;
-      _viewMode = availableWidth < 760 || usesLargeText
-          ? _StudentTimetableView.day
-          : _StudentTimetableView.week;
-    }
+    // A new timetable always opens in the week view. Once initialized, keep
+    // the user's selection stable across window and text-scale changes.
+    _viewMode ??= _StudentTimetableView.week;
     _selectedWeekday ??= selectedWeek == currentWeekFor(config)
         ? normalizeDayOfWeek(DateTime.now().weekday)
         : DateTime.monday;
@@ -660,6 +647,7 @@ class _StudentHomeSnapshot {
     required this.fitDaySelectorToWidth,
     required this.fitWeekColumnsToWidth,
     required this.enableWeekSwipeNavigation,
+    required this.showAddCourseFab,
     required this.themeMode,
     required this.themeColorMode,
     required this.themeSeedColorValue,
@@ -690,6 +678,7 @@ class _StudentHomeSnapshot {
       fitDaySelectorToWidth: data.fitDaySelectorToWidth,
       fitWeekColumnsToWidth: data.fitWeekColumnsToWidth,
       enableWeekSwipeNavigation: data.enableWeekSwipeNavigation,
+      showAddCourseFab: data.showAddCourseFab,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
       themeSeedColorValue: data.themeSeedColorValue,
@@ -718,6 +707,7 @@ class _StudentHomeSnapshot {
   final bool fitDaySelectorToWidth;
   final bool fitWeekColumnsToWidth;
   final bool enableWeekSwipeNavigation;
+  final bool showAddCourseFab;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -747,6 +737,7 @@ class _StudentHomeSnapshot {
         other.fitDaySelectorToWidth == fitDaySelectorToWidth &&
         other.fitWeekColumnsToWidth == fitWeekColumnsToWidth &&
         other.enableWeekSwipeNavigation == enableWeekSwipeNavigation &&
+        other.showAddCourseFab == showAddCourseFab &&
         other.themeMode == themeMode &&
         other.themeColorMode == themeColorMode &&
         other.themeSeedColorValue == themeSeedColorValue &&
@@ -776,6 +767,7 @@ class _StudentHomeSnapshot {
     fitDaySelectorToWidth,
     fitWeekColumnsToWidth,
     enableWeekSwipeNavigation,
+    showAddCourseFab,
     themeMode,
     themeColorMode,
     themeSeedColorValue,

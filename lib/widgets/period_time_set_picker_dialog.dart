@@ -36,7 +36,11 @@ Future<String?> showPeriodTimeSetPickerDialog(
         builder: (dialogContext, refreshDialog) {
           final l10n = AppLocalizations.of(dialogContext);
           final mediaQuery = MediaQuery.of(dialogContext);
-          final compactHeader = mediaQuery.textScaler.scale(20) > 26;
+          final useCompactSpacing =
+              mediaQuery.size.width < 360 ||
+              mediaQuery.textScaler.scale(1) > 1.3;
+          final horizontalInset = useCompactSpacing ? 16.0 : 24.0;
+          final horizontalContentPadding = useCompactSpacing ? 12.0 : 20.0;
 
           Future<void> runBusy({
             required String debugLabel,
@@ -88,15 +92,28 @@ Future<String?> showPeriodTimeSetPickerDialog(
           return PopScope(
             canPop: !busy && !popped,
             child: AlertDialog(
+              constraints: const BoxConstraints(maxWidth: 400),
               insetPadding: EdgeInsets.symmetric(
-                horizontal: mediaQuery.size.width < 480 ? 16 : 40,
+                horizontal: horizontalInset,
                 vertical: 24,
               ),
+              titlePadding: EdgeInsetsDirectional.fromSTEB(
+                horizontalContentPadding,
+                20,
+                horizontalContentPadding,
+                12,
+              ),
               contentPadding: EdgeInsetsDirectional.fromSTEB(
-                mediaQuery.size.width < 480 ? 12 : 24,
+                horizontalContentPadding,
                 0,
-                mediaQuery.size.width < 480 ? 12 : 24,
+                horizontalContentPadding,
                 0,
+              ),
+              actionsPadding: EdgeInsetsDirectional.fromSTEB(
+                horizontalContentPadding,
+                8,
+                horizontalContentPadding,
+                16,
               ),
               titleTextStyle: Theme.of(
                 dialogContext,
@@ -106,76 +123,75 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   UiCommandBusyIndicator(busy: busy),
-                  if (compactHeader)
-                    Text(l10n.selectPeriodTimeSet)
-                  else
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: Text(l10n.selectPeriodTimeSet)),
-                        createButton,
-                      ],
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(child: Text(l10n.selectPeriodTimeSet)),
+                      createButton,
+                    ],
+                  ),
                 ],
               ),
-              content: ExpressiveDialogContent(
-                maxWidth: 420,
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: provider.periodTimeSets.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 4),
-                  itemBuilder: (context, index) {
-                    final item = provider.periodTimeSets[index];
-                    final selected = item.id == currentSelectedId;
-                    return ExpressiveDialogOption(
-                      selected: selected,
-                      title: Text(item.name),
-                      subtitle: Text(
-                        l10n.schoolWebImportPeriodCount(
-                          item.periodTimes.length,
+              content: Align(
+                alignment: Alignment.center,
+                child: ExpressiveDialogContent(
+                  maxWidth: 352,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: provider.periodTimeSets.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 4),
+                    itemBuilder: (context, index) {
+                      final item = provider.periodTimeSets[index];
+                      final selected = item.id == currentSelectedId;
+                      return ExpressiveDialogOption(
+                        selected: selected,
+                        title: Text(item.name),
+                        subtitle: Text(
+                          l10n.schoolWebImportPeriodCount(
+                            item.periodTimes.length,
+                          ),
                         ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      trailing: IconButton(
-                        tooltip: l10n.editPeriodTimeSet,
-                        onPressed: (busy || popped)
-                            ? null
-                            : () {
-                                unawaited(
-                                  runBusy(
-                                    debugLabel: 'Edit period time set',
-                                    action: () async {
-                                      await openPeriodTimePage(item.id);
-                                      final stillExists =
-                                          provider.periodTimeSetForId(
-                                            item.id,
-                                          ) !=
-                                          null;
-                                      if (!stillExists &&
-                                          currentSelectedId == item.id) {
-                                        currentSelectedId =
-                                            provider
-                                                .activePeriodTimeSetOrNull
-                                                ?.id ??
-                                            '';
-                                      }
-                                    },
-                                  ),
-                                );
-                              },
-                        icon: const Icon(Icons.edit_outlined),
-                      ),
-                      onTap: () => popOnce(item.id),
-                      enabled: !(busy || popped),
-                    );
-                  },
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        trailing: IconButton(
+                          tooltip: l10n.editPeriodTimeSet,
+                          onPressed: (busy || popped)
+                              ? null
+                              : () {
+                                  unawaited(
+                                    runBusy(
+                                      debugLabel: 'Edit period time set',
+                                      action: () async {
+                                        await openPeriodTimePage(item.id);
+                                        final stillExists =
+                                            provider.periodTimeSetForId(
+                                              item.id,
+                                            ) !=
+                                            null;
+                                        if (!stillExists &&
+                                            currentSelectedId == item.id) {
+                                          currentSelectedId =
+                                              provider
+                                                  .activePeriodTimeSetOrNull
+                                                  ?.id ??
+                                              '';
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        onTap: () => popOnce(item.id),
+                        enabled: !(busy || popped),
+                      );
+                    },
+                  ),
                 ),
               ),
               actions: [
-                if (compactHeader) createButton,
                 TextButton(
                   onPressed: (busy || popped) ? null : () => popOnce(),
                   child: Text(l10n.cancel),

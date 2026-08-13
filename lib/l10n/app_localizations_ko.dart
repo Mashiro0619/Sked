@@ -250,7 +250,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get timetableDisplaySettings => '시간표 표시 및 상호작용';
 
   @override
-  String get timetableDisplaySettingsDesc => '팝업 닫기, 빈칸, 회색 수업, 격자선';
+  String get timetableDisplaySettingsDesc => '수업 표시, 레이아웃, 주 전환 제스처 및 빠른 추가';
 
   @override
   String get showTimetableGridLines => '시간표 격자선 표시';
@@ -1505,8 +1505,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get generalDisplaySettings => 'General display settings';
 
   @override
-  String get generalDisplaySettingsDesc =>
-      'Toggles for the general schedule view';
+  String get generalDisplaySettingsDesc => '보기, 도구 모음, 날짜 형식 및 빠른 추가';
 
   @override
   String get closePopupOnOutsideTap => 'Close popup on tap outside';
@@ -2032,6 +2031,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get generalPopupSection => 'Popup behavior';
+
+  @override
+  String get quickActionsSection => 'Quick actions';
+
+  @override
+  String get showAddCourseFab => 'Show floating add course button';
+
+  @override
+  String get showAddCourseFabHint =>
+      'Show or hide the floating add course button in the bottom-right corner of the timetable.';
+
+  @override
+  String get showAddEventFab => 'Show floating add event button';
+
+  @override
+  String get showAddEventFabHint =>
+      'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
   String get schoolWebImportSignInConsentTitle => '학교 로그인 페이지를 열까요?';
