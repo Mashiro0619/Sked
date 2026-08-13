@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -402,9 +402,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           ),
           actions: [
             TextButton.icon(
-              onPressed: () => Navigator.of(
-                dialogContext,
-              ).pop(const _RecoveryArtifactDialogAction.copyPaths()),
+              onPressed: () =>
+                  Navigator.of(dialogContext)
+                      .pop(const _RecoveryArtifactDialogAction.copyPaths()),
               icon: const Icon(Icons.copy_outlined),
               label: Text(l10n.copyText),
             ),
@@ -687,18 +687,16 @@ class _DataRecoveryScreen extends StatelessWidget {
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodyLarge
+                        ?.copyWith(color: colors.onSurfaceVariant),
                   ),
                   if (artifacts.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
                       l10n.dataRecoveryArtifactsHint,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: colors.onSurfaceVariant),
                     ),
                   ],
                   const SizedBox(height: 24),

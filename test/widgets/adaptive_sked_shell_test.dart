@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -118,12 +118,7 @@ Widget _appFor(
     value: provider,
     child: MaterialApp(
       locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: buildAppTheme(
         seedColor: const Color(0xFF6750A4),
@@ -258,6 +253,28 @@ void main() {
     }
   });
 
+  testWidgets('permanent drawer aligns its brand icon and title', (
+    tester,
+  ) async {
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    final icon = tester.getRect(
+      find.byKey(const ValueKey('adaptive-shell-drawer-brand-icon')),
+    );
+    final title = tester.getRect(
+      find.byKey(const ValueKey('adaptive-shell-drawer-brand-title')),
+    );
+    expect(icon.center.dy, closeTo(title.center.dy, 0.01));
+    expect(icon.height, 32);
+    expect(title.height, 40);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'expanded workspace navigation replaces the empty timetable header',
     (tester) async {
@@ -334,9 +351,8 @@ void main() {
     (tester) async {
       final provider = await _providerFor(
         _MemoryStorage(
-          _shellData(
-            populated: true,
-          ).copyWith(hideHomeWorkspaceNavigation: true),
+          _shellData(populated: true)
+              .copyWith(hideHomeWorkspaceNavigation: true),
         ),
       );
       addTearDown(provider.dispose);
@@ -392,9 +408,8 @@ void main() {
       var settingsCalls = 0;
       final provider = await _providerFor(
         _MemoryStorage(
-          _shellData(
-            mode: AppMode.general,
-          ).copyWith(hideHomeWorkspaceNavigation: true),
+          _shellData(mode: AppMode.general)
+              .copyWith(hideHomeWorkspaceNavigation: true),
         ),
         mode: AppMode.general,
       );
@@ -580,7 +595,14 @@ void main() {
     await tester.pump();
     expect(settingsFocusNode.hasFocus, isTrue);
 
-    await provider.addTimetable();
+    await provider.addTimetable(
+      TimetableConfig(
+        name: 'Added timetable',
+        startDate: DateTime(2026, 8, 13),
+        totalWeeks: 18,
+        periodTimeSetId: provider.activePeriodTimeSet.id,
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('student-week-pager')), findsOneWidget);

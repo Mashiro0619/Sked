@@ -19,6 +19,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   flutter::DartProject project(L"data");
 
+  // Flutter 3.47's Windows Impeller SDF path renders bold Simplified Chinese
+  // unevenly. Remove this workaround after flutter/flutter#190391 is fixed.
+  project.set_impeller_switch(flutter::ImpellerSwitch::Disabled);
+
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
 

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -49,6 +50,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get timetableName => 'Име на графика';
+
+  @override
+  String get timetableNameRequired => 'Timetable name is required';
 
   @override
   String get totalWeeks => 'Общо седмици';
@@ -124,6 +128,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get customFieldsHint => 'Един на ред, формат: ключ:стойност';
+
+  @override
+  String get more => 'Още';
 
   @override
   String get selectDayOfWeek => 'Изберете ден';

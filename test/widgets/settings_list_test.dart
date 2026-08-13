@@ -1,9 +1,93 @@
-import 'package:flutter/material.dart';
+import 'dart:ui' show PointerDeviceKind;
+
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 void main() {
+  testWidgets('responsive settings body switches at its usable column width', (
+    tester,
+  ) async {
+    Future<void> pump(double width, {double textScale = 1}) async {
+      await tester.binding.setSurfaceSize(Size(width, 640));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
+              body: ResponsiveSettingsBody(
+                firstColumnSectionIndices: const {0},
+                children: const [
+                  SettingsSectionHeader(title: 'First'),
+                  SizedBox(height: 400),
+                  SettingsSectionHeader(title: 'Second'),
+                  SizedBox(height: 400),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pump(839);
+    expect(
+      find.byKey(const ValueKey('responsive-settings-single-column')),
+      findsOneWidget,
+    );
+
+    await pump(840);
+    expect(
+      find.byKey(const ValueKey('responsive-settings-two-column')),
+      findsOneWidget,
+    );
+
+    await pump(840, textScale: 1.31);
+    expect(
+      find.byKey(const ValueKey('responsive-settings-single-column')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('wide settings gutters drag the single scroll viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ResponsiveSettingsSingleColumnBody(
+            child: SizedBox(width: double.infinity, height: 1200),
+          ),
+        ),
+      ),
+    );
+
+    final list = find.byType(ListView);
+    final content = find.byKey(
+      const ValueKey('responsive-settings-single-column-content'),
+    );
+    expect(tester.getSize(list).width, 1200);
+    expect(tester.getSize(content).width, 720);
+
+    final gesture = await tester.startGesture(
+      const Offset(80, 500),
+      kind: PointerDeviceKind.mouse,
+    );
+    await gesture.moveBy(const Offset(0, -300));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: list, matching: find.byType(Scrollable)),
+    );
+    expect(scrollable.position.pixels, greaterThan(0));
+  });
+
   testWidgets('compact connected tile keeps its indicator inline at 2x text', (
     tester,
   ) async {
@@ -21,8 +105,7 @@ void main() {
                   SettingsConnectedTile(
                     leading: const Icon(Icons.grid_view_outlined),
                     title: 'Timetable display and interaction with long text',
-                    subtitle:
-                        'Course popup, empty time, grid line, and gesture settings',
+                    subtitle: 'Course popup, empty time, grid line, and gesture settings',
                     trailing: const Icon(
                       Icons.chevron_right,
                       key: ValueKey('compact-connected-indicator'),

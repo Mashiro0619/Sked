@@ -1,11 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -111,7 +112,7 @@ Future<void> _pumpPeriodTimesPage(
       value: provider,
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: textScaler),
@@ -138,7 +139,17 @@ void main() {
     await _pumpPeriodTimesPage(tester, provider);
 
     final list = find.byType(ListView).last;
-    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect(tester.getSize(list).width, 1024);
+    expect(
+      tester
+          .getSize(
+            find.byKey(
+              const ValueKey('responsive-settings-single-column-content'),
+            ),
+          )
+          .width,
+      lessThanOrEqualTo(720),
+    );
     expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
     expect(tester.takeException(), isNull);
   });
@@ -272,7 +283,7 @@ void main() {
         value: provider,
         child: MaterialApp(
           locale: const Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(

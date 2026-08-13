@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/period_times_page.dart';
 import 'expressive_dialog.dart';
@@ -34,14 +35,6 @@ Future<String?> showPeriodTimeSetPickerDialog(
 
       return StatefulBuilder(
         builder: (dialogContext, refreshDialog) {
-          final l10n = AppLocalizations.of(dialogContext);
-          final mediaQuery = MediaQuery.of(dialogContext);
-          final useCompactSpacing =
-              mediaQuery.size.width < 360 ||
-              mediaQuery.textScaler.scale(1) > 1.3;
-          final horizontalInset = useCompactSpacing ? 16.0 : 24.0;
-          final horizontalContentPadding = useCompactSpacing ? 12.0 : 20.0;
-
           Future<void> runBusy({
             required String debugLabel,
             required Future<void> Function() action,
@@ -67,140 +60,179 @@ Future<String?> showPeriodTimeSetPickerDialog(
             Navigator.of(dialogContext).pop(result);
           }
 
-          final createButton = IconButton(
-            tooltip: l10n.newItem,
-            onPressed: (busy || popped)
-                ? null
-                : () {
-                    unawaited(
-                      runBusy(
-                        debugLabel: 'Create period time set',
-                        action: () async {
-                          final created = await provider.addPeriodTimeSet();
-                          if (!dialogContext.mounted || popped) {
-                            return;
-                          }
-                          currentSelectedId = created.id;
-                          await openPeriodTimePage(created.id);
-                        },
-                      ),
-                    );
+          return PeriodTimeSetPickerDialogView(
+            periodTimeSets: provider.periodTimeSets,
+            selectedPeriodTimeSetId: currentSelectedId,
+            busy: busy,
+            blocked: busy || popped,
+            onCreate: () {
+              unawaited(
+                runBusy(
+                  debugLabel: 'Create period time set',
+                  action: () async {
+                    final created = await provider.addPeriodTimeSet();
+                    if (!dialogContext.mounted || popped) return;
+                    currentSelectedId = created.id;
+                    await openPeriodTimePage(created.id);
                   },
-            icon: const Icon(Icons.add),
-          );
-
-          return PopScope(
-            canPop: !busy && !popped,
-            child: AlertDialog(
-              constraints: const BoxConstraints(maxWidth: 400),
-              insetPadding: EdgeInsets.symmetric(
-                horizontal: horizontalInset,
-                vertical: 24,
-              ),
-              titlePadding: EdgeInsetsDirectional.fromSTEB(
-                horizontalContentPadding,
-                20,
-                horizontalContentPadding,
-                12,
-              ),
-              contentPadding: EdgeInsetsDirectional.fromSTEB(
-                horizontalContentPadding,
-                0,
-                horizontalContentPadding,
-                0,
-              ),
-              actionsPadding: EdgeInsetsDirectional.fromSTEB(
-                horizontalContentPadding,
-                8,
-                horizontalContentPadding,
-                16,
-              ),
-              titleTextStyle: Theme.of(
-                dialogContext,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  UiCommandBusyIndicator(busy: busy),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(child: Text(l10n.selectPeriodTimeSet)),
-                      createButton,
-                    ],
-                  ),
-                ],
-              ),
-              content: Align(
-                alignment: Alignment.center,
-                child: ExpressiveDialogContent(
-                  maxWidth: 352,
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: provider.periodTimeSets.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 4),
-                    itemBuilder: (context, index) {
-                      final item = provider.periodTimeSets[index];
-                      final selected = item.id == currentSelectedId;
-                      return ExpressiveDialogOption(
-                        selected: selected,
-                        title: Text(item.name),
-                        subtitle: Text(
-                          l10n.schoolWebImportPeriodCount(
-                            item.periodTimes.length,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        trailing: IconButton(
-                          tooltip: l10n.editPeriodTimeSet,
-                          onPressed: (busy || popped)
-                              ? null
-                              : () {
-                                  unawaited(
-                                    runBusy(
-                                      debugLabel: 'Edit period time set',
-                                      action: () async {
-                                        await openPeriodTimePage(item.id);
-                                        final stillExists =
-                                            provider.periodTimeSetForId(
-                                              item.id,
-                                            ) !=
-                                            null;
-                                        if (!stillExists &&
-                                            currentSelectedId == item.id) {
-                                          currentSelectedId =
-                                              provider
-                                                  .activePeriodTimeSetOrNull
-                                                  ?.id ??
-                                              '';
-                                        }
-                                      },
-                                    ),
-                                  );
-                                },
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        onTap: () => popOnce(item.id),
-                        enabled: !(busy || popped),
-                      );
-                    },
-                  ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: (busy || popped) ? null : () => popOnce(),
-                  child: Text(l10n.cancel),
+              );
+            },
+            onEdit: (item) {
+              unawaited(
+                runBusy(
+                  debugLabel: 'Edit period time set',
+                  action: () async {
+                    await openPeriodTimePage(item.id);
+                    final stillExists =
+                        provider.periodTimeSetForId(item.id) != null;
+                    if (!stillExists && currentSelectedId == item.id) {
+                      currentSelectedId =
+                          provider.activePeriodTimeSetOrNull?.id ?? '';
+                    }
+                  },
                 ),
-              ],
-            ),
+              );
+            },
+            onSelect: popOnce,
+            onCancel: popOnce,
           );
         },
       );
     },
   );
+}
+
+/// The presentation layer shared by the live picker route and widget previews.
+class PeriodTimeSetPickerDialogView extends StatelessWidget {
+  const PeriodTimeSetPickerDialogView({
+    super.key,
+    required this.periodTimeSets,
+    required this.selectedPeriodTimeSetId,
+    required this.busy,
+    required this.blocked,
+    required this.onCreate,
+    required this.onEdit,
+    required this.onSelect,
+    required this.onCancel,
+  });
+
+  final List<PeriodTimeSet> periodTimeSets;
+  final String selectedPeriodTimeSetId;
+  final bool busy;
+  final bool blocked;
+  final VoidCallback onCreate;
+  final ValueChanged<PeriodTimeSet> onEdit;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final useCompactSpacing =
+        mediaQuery.size.width < 360 || mediaQuery.textScaler.scale(1) > 1.3;
+    final horizontalInset = useCompactSpacing ? 16.0 : 24.0;
+    final horizontalContentPadding = useCompactSpacing ? 12.0 : 20.0;
+    final maxListHeight = (mediaQuery.size.height * 0.58).clamp(96.0, 480.0);
+
+    return PopScope(
+      canPop: !blocked,
+      child: AlertDialog(
+        constraints: const BoxConstraints(maxWidth: 400),
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: horizontalInset,
+          vertical: 24,
+        ),
+        titlePadding: EdgeInsetsDirectional.fromSTEB(
+          horizontalContentPadding,
+          20,
+          horizontalContentPadding,
+          12,
+        ),
+        contentPadding: EdgeInsetsDirectional.fromSTEB(
+          horizontalContentPadding,
+          0,
+          horizontalContentPadding,
+          0,
+        ),
+        actionsPadding: EdgeInsetsDirectional.fromSTEB(
+          horizontalContentPadding,
+          8,
+          horizontalContentPadding,
+          16,
+        ),
+        titleTextStyle: Theme.of(context).textTheme.titleLarge
+            ?.copyWith(fontWeight: FontWeight.w700),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            UiCommandBusyIndicator(busy: busy),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Expanded(child: Text(l10n.selectPeriodTimeSet)),
+                IconButton(
+                  tooltip: l10n.newItem,
+                  onPressed: blocked ? null : onCreate,
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+          ],
+        ),
+        content: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxListHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ExpressiveDialogContent(
+                maxWidth: 320,
+                child: ListView.separated(
+                  key: const ValueKey('period-time-set-picker-list'),
+                  primary: false,
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: periodTimeSets.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
+                  itemBuilder: (context, index) {
+                    final item = periodTimeSets[index];
+                    return ExpressiveDialogOption(
+                      selected: item.id == selectedPeriodTimeSetId,
+                      title: Text(item.name),
+                      subtitle: Text(
+                        l10n.schoolWebImportPeriodCount(
+                          item.periodTimes.length,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      trailing: IconButton(
+                        tooltip: l10n.editPeriodTimeSet,
+                        onPressed: blocked ? null : () => onEdit(item),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                      onTap: () => onSelect(item.id),
+                      enabled: !blocked,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: blocked ? null : onCancel,
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -49,6 +50,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get timetableName => 'Időrend neve';
+
+  @override
+  String get timetableNameRequired => 'Timetable name is required';
 
   @override
   String get totalWeeks => 'Összes hét';
@@ -124,6 +128,9 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get customFieldsHint => 'Egy soronként, formátum: kulcs:érték';
+
+  @override
+  String get more => 'Továbbiak';
 
   @override
   String get selectDayOfWeek => 'Válasszon napot';

@@ -53,9 +53,8 @@ void _expectPlistAbsent(XmlDocument document, String key) {
 }
 
 String _windowsResourceValue(String source, String key) {
-  final match = RegExp(
-    'VALUE\\s+"${RegExp.escape(key)}",\\s+"([^"]*)"',
-  ).firstMatch(source);
+  final match = RegExp('VALUE\\s+"${RegExp.escape(key)}",\\s+"([^"]*)"')
+      .firstMatch(source);
   if (match == null) {
     throw StateError('Missing Windows resource value for $key.');
   }
@@ -263,9 +262,12 @@ void main() {
         .toSet();
     expect(releaseEntitlementKeys, allowedReleaseEntitlements);
 
-    final xcodeProject = File(
-      'ios/Runner.xcodeproj/project.pbxproj',
-    ).readAsStringSync();
+    final xcodeProject = File('ios/Runner.xcodeproj/project.pbxproj')
+        .readAsStringSync();
+    expect(
+      RegExp(r'IPHONEOS_DEPLOYMENT_TARGET = 15\.0;').allMatches(xcodeProject),
+      hasLength(3),
+    );
     final signedRunnerConfigurations = RegExp(
       r'CODE_SIGN_ENTITLEMENTS = Runner/Runner\.entitlements;[\s\S]*?'
       r'\};\s*name = (Debug|Profile|Release);',
@@ -282,9 +284,13 @@ void main() {
       'Release',
     });
 
-    final macosXcodeProject = File(
-      'macos/Runner.xcodeproj/project.pbxproj',
-    ).readAsStringSync();
+    final macosXcodeProject = File('macos/Runner.xcodeproj/project.pbxproj')
+        .readAsStringSync();
+    expect(
+      RegExp(r'MACOSX_DEPLOYMENT_TARGET = 12\.0;')
+          .allMatches(macosXcodeProject),
+      hasLength(3),
+    );
     Set<String?> configurationsUsing(String entitlementFile) {
       return RegExp(
         'CODE_SIGN_ENTITLEMENTS = Runner/$entitlementFile;[\\s\\S]*?'
@@ -308,15 +314,13 @@ void main() {
       contains('CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;'),
     );
     expect(
-      RegExp(
-        r'CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;',
-      ).allMatches(macosXcodeProject),
+      RegExp(r'CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;')
+          .allMatches(macosXcodeProject),
       hasLength(1),
     );
 
-    final macosAppInfo = File(
-      'macos/Runner/Configs/AppInfo.xcconfig',
-    ).readAsStringSync();
+    final macosAppInfo = File('macos/Runner/Configs/AppInfo.xcconfig')
+        .readAsStringSync();
     expect(
       RegExp(
         r'^PRODUCT_BUNDLE_IDENTIFIER\s*=\s*com\.mashiro\.sked\s*$',
@@ -343,6 +347,18 @@ void main() {
     );
     expect(_windowsResourceValue(runnerResources, 'ProductName'), 'Sked');
     expect(runnerResources, isNot(contains('com.example')));
+  });
+
+  test('Windows uses Skia for consistent Simplified Chinese bold text', () {
+    final runner = File('windows/runner/main.cpp').readAsStringSync();
+
+    expect(
+      RegExp(
+        r'project\.set_impeller_switch\(\s*'
+        r'flutter::ImpellerSwitch::Disabled\s*\);',
+      ).allMatches(runner),
+      hasLength(1),
+    );
   });
 
   test('Windows WebView compatibility workaround stays target-scoped', () {
@@ -376,9 +392,15 @@ void main() {
       hasLength(2),
     );
     expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
+    expect(
+      RegExp(r"flutter-version: '3\.47\.0'").allMatches(workflow),
+      hasLength(2),
+    );
     expect(workflow, isNot(contains('actions/checkout@v4')));
     expect(workflow, isNot(contains('actions/upload-artifact@v4')));
     expect(workflow, isNot(contains('NuGet/setup-nuget@v2')));
+    expect(workflow, contains('os: ubuntu-22.04'));
+    expect(workflow, isNot(contains('os: ubuntu-latest')));
     expect(workflow, contains('id: android-security-artifacts'));
     expect(
       workflow,
@@ -387,5 +409,38 @@ void main() {
         r"steps.android-security-artifacts.outcome != 'skipped' }}",
       ),
     );
+    for (final linuxPackage in <String>[
+      'libepoxy-dev',
+      'libwayland-dev',
+      'libwpe-1.0-dev',
+      'libwpebackend-fdo-1.0-dev',
+      'libwpewebkit-1.0-dev',
+    ]) {
+      expect(workflow, contains(linuxPackage));
+    }
+    expect(workflow, isNot(contains('libwpewebkit-1.1-dev')));
+    expect(workflow, contains('flutter build ios --release --no-codesign'));
+  });
+
+  test('Android build uses the Flutter 3.47 verified dependency matrix', () {
+    final settings = File('android/settings.gradle.kts').readAsStringSync();
+    final wrapper = File('android/gradle/wrapper/gradle-wrapper.properties')
+        .readAsStringSync();
+    final properties = File('android/gradle.properties').readAsStringSync();
+    final appBuild = File('android/app/build.gradle.kts').readAsStringSync();
+
+    expect(settings, contains('com.android.application") version "9.1.0"'));
+    expect(
+      settings,
+      contains('org.jetbrains.kotlin.android") version "2.4.0"'),
+    );
+    expect(wrapper, contains('gradle-9.3.1-all.zip'));
+    expect(properties, contains('android.newDsl=false'));
+    expect(properties, contains('android.builtInKotlin=false'));
+    expect(appBuild, contains('compileSdk = flutter.compileSdkVersion'));
+    expect(appBuild, contains('targetSdk = flutter.targetSdkVersion'));
+    expect(appBuild, contains('minSdk = flutter.minSdkVersion'));
+    expect(appBuild, contains('JavaVersion.VERSION_17'));
+    expect(appBuild, contains('JvmTarget.JVM_17'));
   });
 }

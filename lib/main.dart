@@ -1,19 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'theme/app_theme.dart';
 import 'theme/sked_expressive_theme.dart';
 import 'l10n/app_locale.dart';
+import 'l10n/app_localization_delegates.dart';
 import 'l10n/app_localizations.dart';
 import 'models/timetable_models.dart';
 import 'providers/timetable_provider.dart';
 import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
 import 'widgets/sked_expressive_loading_indicator.dart';
+import 'widgets/material_ui_compatibility.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -210,7 +212,8 @@ class _AppBootstrapGate extends StatelessWidget {
       locale: const Locale('en'),
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
+      builder: bridgeLegacyMaterialUi,
       theme: buildAppTheme(
         seedColor: const Color(0xFF6750A4),
         brightness: Brightness.light,
@@ -354,7 +357,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   AppLocalizations.of(context).appTitle,
               locale: appLocaleFromCode(snapshot.localeCode),
               supportedLocales: AppLocalizations.supportedLocales,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              localizationsDelegates: appLocalizationsDelegates,
+              builder: bridgeLegacyMaterialUi,
               themeMode: themeModeFromValue(snapshot.themeMode),
               themeAnimationStyle: appThemeAnimationStyle,
               theme: buildAppTheme(

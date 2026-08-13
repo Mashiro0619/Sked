@@ -371,7 +371,7 @@ class PlatformSchoolSiteStore extends SchoolSiteStore {
           FileSystemEntityType.file) {
         return null;
       }
-      return File(candidatePath).readAsBytes();
+      return await File(candidatePath).readAsBytes();
     } catch (_) {
       return null;
     }

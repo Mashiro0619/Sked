@@ -189,9 +189,9 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                     children: [
                                       Text(
                                         l10n.liveCourseOutlineTarget,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleSmall,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall,
                                       ),
                                       const SizedBox(height: 12),
                                       _ResponsiveSegmentedButton(

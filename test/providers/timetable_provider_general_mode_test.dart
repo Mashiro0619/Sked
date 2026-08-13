@@ -669,9 +669,8 @@ END:VCALENDAR
     () async {
       final provider = TimetableProvider(
         storage: _MemoryTimetableStorage(
-          buildInitialAppData(
-            buildDefaultPeriodTimes(),
-          ).copyWith(localeCode: 'zh'),
+          buildInitialAppData(buildDefaultPeriodTimes())
+              .copyWith(localeCode: 'zh'),
         ),
         systemLocaleCodeResolver: () => 'zh',
       );

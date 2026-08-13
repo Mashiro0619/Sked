@@ -20,6 +20,8 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/services/app_storage_layout.dart': 'is an export-only library',
   'lib/services/app_storage_layout_stub.dart':
       'is selected only when dart:io is unavailable',
+  'lib/l10n/app_localization_delegates.dart':
+      'contains compile-time localization delegate constants only',
   'lib/theme/app_motion.dart': 'contains compile-time theme constants only',
   'lib/utils/constants.dart': 'contains compile-time constants only',
   'lib/widgets/app_layout_tokens.dart':
@@ -331,9 +333,8 @@ class ChangedLines {
       if (!line.startsWith('@@ ') || currentPath == null) {
         continue;
       }
-      final match = RegExp(
-        r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@',
-      ).firstMatch(line);
+      final match = RegExp(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@')
+          .firstMatch(line);
       if (match == null) {
         throw FormatException('Invalid unified diff hunk: $line');
       }
@@ -934,9 +935,9 @@ String _githubError(String path, int line, String message) {
 }
 
 String _escapeGitHubProperty(String value) {
-  return _escapeGitHubMessage(
-    value,
-  ).replaceAll(':', '%3A').replaceAll(',', '%2C');
+  return _escapeGitHubMessage(value)
+      .replaceAll(':', '%3A')
+      .replaceAll(',', '%2C');
 }
 
 String _escapeGitHubMessage(String value) {

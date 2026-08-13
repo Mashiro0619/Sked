@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/sked_spring_builder.dart';

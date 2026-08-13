@@ -555,8 +555,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
 
   String _buildOpenAiUserPrompt(SchoolImportPagePayload payload) {
     return jsonEncode({
-      'task':
-          'Extract timetable data from the provided source content. The content may be plain timetable text, copied table text, page text, HTML, or mixed markup as long as it contains timetable information.',
+      'task': 'Extract timetable data from the provided source content. The content may be plain timetable text, copied table text, page text, HTML, or mixed markup as long as it contains timetable information.',
       'locale': payload.locale,
       'sourceHint': payload.sourceHint,
       'url': payload.url,

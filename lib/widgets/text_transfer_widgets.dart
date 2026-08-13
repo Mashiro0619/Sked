@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import 'expressive_dialog.dart';
 
-typedef TextImportSubmit =
-    Future<bool> Function(BuildContext context, String content);
+typedef TextImportSubmit = Future<bool> Function(
+  BuildContext context,
+  String content,
+);
 
 class TextImportPage extends StatefulWidget {
   const TextImportPage({
@@ -120,9 +122,8 @@ class _TextImportPageState extends State<TextImportPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

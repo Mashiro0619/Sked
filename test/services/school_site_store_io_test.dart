@@ -489,9 +489,8 @@ void main() {
         expect(result.recoveryArtifacts, unorderedEquals(artifacts));
         expect(result.historicalRecoveryArtifacts, unorderedEquals(artifacts));
 
-        final serviceResult = await SchoolSiteService(
-          store: store,
-        ).loadSitesResult();
+        final serviceResult = await SchoolSiteService(store: store)
+            .loadSitesResult();
         expect(
           serviceResult.recoveryStatus,
           SchoolSiteRecoveryStatus.storedDataCorrupt,
@@ -537,9 +536,8 @@ void main() {
         ];
         expect(preservedAfterSave, preservedSources);
 
-        final reloaded = await SchoolSiteService(
-          store: store,
-        ).loadSitesResult();
+        final reloaded = await SchoolSiteService(store: store)
+            .loadSitesResult();
         expect(reloaded.canWrite, isTrue);
         expect(
           reloaded.recoveryArtifacts,

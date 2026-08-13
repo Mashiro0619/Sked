@@ -53,9 +53,8 @@ class _ColorfulThemeSection extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Text(
-                        AppLocalizations.of(
-                          context,
-                        ).themeColorCourseColorsEmpty,
+                        AppLocalizations.of(context)
+                            .themeColorCourseColorsEmpty,
                       ),
                     ),
                   ]

@@ -175,25 +175,28 @@ void main() {
           'add unmeasured source',
         ], repository.path);
 
-        final missingUnchangedSource =
-            await Process.run(_dartExecutable, <String>[
-              script,
-              '--base-ref',
-              'HEAD',
-              '--head-ref',
-              'HEAD',
-              '--lcov',
-              lcov.path,
-              '--output',
-              filtered,
-              '--report',
-              report,
-              '--minimum-total',
-              '0',
-              '--minimum-diff',
-              '0',
-              '--github-annotations',
-            ], workingDirectory: repository.path);
+        final missingUnchangedSource = await Process.run(
+          _dartExecutable,
+          <String>[
+            script,
+            '--base-ref',
+            'HEAD',
+            '--head-ref',
+            'HEAD',
+            '--lcov',
+            lcov.path,
+            '--output',
+            filtered,
+            '--report',
+            report,
+            '--minimum-total',
+            '0',
+            '--minimum-diff',
+            '0',
+            '--github-annotations',
+          ],
+          workingDirectory: repository.path,
+        );
 
         expect(missingUnchangedSource.exitCode, 1);
         expect(
@@ -243,6 +246,7 @@ end_of_record
 String get _dartExecutable => Platform.isWindows ? 'dart.bat' : 'dart';
 
 const _coverageUnavailableSourcePaths = <String>[
+  'lib/l10n/app_localization_delegates.dart',
   'lib/models/timetable_models.dart',
   'lib/services/app_backup_restore_journal_factory_stub.dart',
   'lib/services/app_instance_lease.dart',

@@ -344,9 +344,8 @@ void main() {
         ..writeAsStringSync(_androidManifest());
       final resourceRoot = Directory('${temp.path}/resources');
       _writeAndroidResources(resourceRoot);
-      File(
-        '${resourceRoot.path}/icon.png',
-      ).writeAsBytesSync([0x89, 0x50, 0x4e, 0x47, 0xff]);
+      File('${resourceRoot.path}/icon.png')
+          .writeAsBytesSync([0x89, 0x50, 0x4e, 0x47, 0xff]);
       final script = File('tool/platform_artifact_check.dart').absolute.path;
       final passing = await Process.run(_dartExecutable, [
         script,
@@ -387,12 +386,11 @@ void main() {
       final valuesDirectory = Directory(
         '${resourceRoot.path}${Platform.pathSeparator}values-v31',
       )..createSync(recursive: true);
-      File(
-        '${valuesDirectory.path}${Platform.pathSeparator}aliases.xml',
-      ).writeAsStringSync(
-        '<resources><item type="xml" name="network_security_config">'
-        '@xml/unsafe_network</item></resources>',
-      );
+      File('${valuesDirectory.path}${Platform.pathSeparator}aliases.xml')
+          .writeAsStringSync(
+            '<resources><item type="xml" name="network_security_config">'
+            '@xml/unsafe_network</item></resources>',
+          );
       final aliasFailing = await Process.run(_dartExecutable, [
         script,
         'android-manifest',
@@ -484,9 +482,8 @@ Map<String, String> _androidResources({
 void _writeAndroidResources(Directory root) {
   final xml = Directory('${root.path}/xml')..createSync(recursive: true);
   for (final entry in _androidResources().entries) {
-    File(
-      '${root.path}/${entry.key.replaceAll('/', Platform.pathSeparator)}',
-    ).writeAsStringSync(entry.value);
+    File('${root.path}/${entry.key.replaceAll('/', Platform.pathSeparator)}')
+        .writeAsStringSync(entry.value);
   }
   expect(xml.existsSync(), isTrue);
 }

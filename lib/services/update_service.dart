@@ -46,9 +46,8 @@ String? _normalizeUpdateVersionOrNull(String value) {
   final withoutPrefix = trimmed.startsWith('v') || trimmed.startsWith('V')
       ? trimmed.substring(1)
       : trimmed;
-  if (!RegExp(
-    r'^\d+(?:\.\d+)*(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$',
-  ).hasMatch(withoutPrefix)) {
+  if (!RegExp(r'^\d+(?:\.\d+)*(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$')
+      .hasMatch(withoutPrefix)) {
     return null;
   }
   return withoutPrefix.split('+').first.split('-').first.trim();

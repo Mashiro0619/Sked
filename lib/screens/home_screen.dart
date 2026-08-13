@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widget_previews.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../previews/sked_preview_support.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
@@ -16,9 +19,11 @@ import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
+import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
+import '../widgets/timetable_information_form.dart';
 import '../widgets/timetable_grid.dart';
 import '../widgets/ui_command.dart';
 import 'settings_page.dart';
@@ -28,6 +33,7 @@ part 'home_screen_course_actions.dart';
 part 'home_screen_imports.dart';
 part 'home_screen_timetable_management.dart';
 part 'home_screen_widgets.dart';
+part '../previews/timetable_information_previews.dart';
 
 enum _StudentTimetableView { day, week }
 
@@ -95,7 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _courseDetailsOpen = false;
   bool _timetableItemDialogOpen = false;
   bool _timetableSwitchInProgress = false;
-  bool _addTimetableInProgress = false;
   bool _settingsPageOpen = false;
   bool _fileImportInProgress = false;
   bool _textImportPageOpen = false;
@@ -161,15 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _setAddTimetableInProgress(bool value) {
-    if (_addTimetableInProgress == value) return;
-    if (mounted) {
-      setState(() => _addTimetableInProgress = value);
-    } else {
-      _addTimetableInProgress = value;
-    }
-  }
-
   void _setSettingsPageOpen(bool value) {
     if (_settingsPageOpen == value) return;
     if (mounted) {
@@ -203,25 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _schoolWebImportPageOpen = value);
     } else {
       _schoolWebImportPageOpen = value;
-    }
-  }
-
-  Future<bool> _addTimetableOnce(
-    TimetableProvider provider, {
-    BuildContext? feedbackContext,
-  }) async {
-    if (_addTimetableInProgress || !mounted) {
-      return false;
-    }
-    _setAddTimetableInProgress(true);
-    try {
-      return await runUiCommandWithFeedback(
-        context: feedbackContext ?? context,
-        debugLabel: 'Create timetable',
-        command: provider.addTimetable,
-      );
-    } finally {
-      _setAddTimetableInProgress(false);
     }
   }
 
@@ -317,9 +294,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         Expanded(
                           child: _EmptyTimetableState(
-                            onCreate: _addTimetableInProgress
+                            onCreate: _timetableItemDialogOpen
                                 ? null
-                                : () => _addTimetableOnce(provider),
+                                : () => _openCreateTimetableDialog(
+                                    context,
+                                    provider,
+                                  ),
                             onImport: _fileImportInProgress
                                 ? null
                                 : () => _importTimetableData(context, provider),
@@ -409,7 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : () => _showTimetablePicker(
                                     context,
                                     provider,
-                                    timetable,
                                     availableWidth: constraints.maxWidth,
                                   ),
                             onOpenWeekPicker: _weekPickerOpen

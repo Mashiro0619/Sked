@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "หนึ่งต่อเส้นรูปแบบ: คีย์: ค่า",
   "@customFieldsHint": {},
+  "more": "เพิ่มเติม",
+  "@more": {},
   "selectDayOfWeek": "เลือกวัน",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "เลือกสัปดาห์",

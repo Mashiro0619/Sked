@@ -52,9 +52,8 @@ void main() {
   test('app-data normalization preserves workspace and toolbar settings', () {
     final source = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
       hideHomeWorkspaceNavigation: true,
-      studentMode: buildInitialAppData(
-        buildDefaultPeriodTimes(),
-      ).studentMode.copyWith(showAddCourseFab: false),
+      studentMode: buildInitialAppData(buildDefaultPeriodTimes()).studentMode
+          .copyWith(showAddCourseFab: false),
       generalMode: GeneralScheduleData.createDefault().copyWith(
         toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
         dateLabelFormat: generalDateLabelFormatLocalized,
@@ -1352,135 +1351,128 @@ END:VCALENDAR
       expect(normalized.studentMode.conflictDisplayCourseIds, isEmpty);
     });
 
-    test(
-      'normalizes unsafe general ids and migrates reminder acknowledgement keys',
-      () {
-        final source = AppData(
-          activeMode: AppMode.general,
-          studentMode: studentData(),
-          generalMode: GeneralScheduleData(
-            activeScheduleId: 'shared|calendar',
-            schedules: [
-              schedule(
-                id: 'shared|calendar',
-                name: 'Unsafe',
-                events: [
-                  event(
-                    id: 'a|b',
-                    calendarId: 'shared|calendar',
-                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
-                  ),
-                  event(
-                    id: 'a:b',
-                    calendarId: 'shared|calendar',
-                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
-                  ),
-                ],
-              ),
-            ],
-            reminderAcknowledgements: const [
-              GeneralReminderAcknowledgement(
-                occurrenceKey: 'shared|calendar|a|b|2026-05-25T09:00:00.000',
-                updatedAtIso: '2026-05-25T08:55:00.000',
-              ),
-              GeneralReminderAcknowledgement(
-                occurrenceKey: 'shared|calendar|a:b|2026-05-25T09:00:00.000',
-                isHandled: false,
-                updatedAtIso: '2026-05-25T08:56:00.000',
-              ),
-            ],
-          ),
-        );
-
-        final normalized = service.normalizeAppData(
-          source,
-          localeCode: defaultLocaleCode,
-        );
-
-        final general = normalized.generalMode;
-        final remappedDuplicateEventId =
-            general.schedules.single.events.last.id;
-        expect(general.activeScheduleId, 'shared_calendar');
-        expect(general.schedules.single.id, 'shared_calendar');
-        expect(general.schedules.single.events.first.id, 'a_b');
-        expect(general.schedules.single.events.last.id, 'a_b_copy');
-        expect(
-          general.schedules.single.events.map((item) => item.calendarId),
-          everyElement('shared_calendar'),
-        );
-        expect(
-          general.reminderAcknowledgements.map((item) => item.occurrenceKey),
-          containsAll([
-            buildGeneralOccurrenceKey(
-              'shared_calendar',
-              'a_b',
-              '2026-05-25T09:00:00.000',
+    test('normalizes unsafe general ids and migrates reminder acknowledgement keys', () {
+      final source = AppData(
+        activeMode: AppMode.general,
+        studentMode: studentData(),
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'shared|calendar',
+          schedules: [
+            schedule(
+              id: 'shared|calendar',
+              name: 'Unsafe',
+              events: [
+                event(
+                  id: 'a|b',
+                  calendarId: 'shared|calendar',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                ),
+                event(
+                  id: 'a:b',
+                  calendarId: 'shared|calendar',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                ),
+              ],
             ),
-            buildGeneralOccurrenceKey(
-              'shared_calendar',
-              remappedDuplicateEventId,
-              '2026-05-25T09:00:00.000',
+          ],
+          reminderAcknowledgements: const [
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'shared|calendar|a|b|2026-05-25T09:00:00.000',
+              updatedAtIso: '2026-05-25T08:55:00.000',
             ),
-          ]),
-        );
-      },
-    );
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'shared|calendar|a:b|2026-05-25T09:00:00.000',
+              isHandled: false,
+              updatedAtIso: '2026-05-25T08:56:00.000',
+            ),
+          ],
+        ),
+      );
 
-    test(
-      'remaps general acknowledgement keys by occurrence start for duplicate raw event ids',
-      () {
-        const firstStart = '2026-05-25T09:00:00.000';
-        const secondStart = '2026-05-26T09:00:00.000';
-        final source = AppData(
-          activeMode: AppMode.general,
-          studentMode: studentData(),
-          generalMode: GeneralScheduleData(
-            activeScheduleId: 'calendar',
-            schedules: [
-              schedule(
-                id: 'calendar',
-                name: 'Calendar',
-                events: [
-                  event(
-                    id: 'event',
-                    calendarId: 'calendar',
-                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
-                  ),
-                  event(
-                    id: 'event',
-                    calendarId: 'calendar',
-                    reminders: const [GeneralEventReminder(minutesBefore: 10)],
-                  ).copyWith(
-                    startDateTimeIso: secondStart,
-                    endDateTimeIso: '2026-05-26T10:00:00.000',
-                  ),
-                ],
-              ),
-            ],
-            reminderAcknowledgements: const [
-              GeneralReminderAcknowledgement(
-                occurrenceKey: 'calendar|event|$secondStart',
-                updatedAtIso: '2026-05-26T08:55:00.000',
-              ),
-            ],
+      final normalized = service.normalizeAppData(
+        source,
+        localeCode: defaultLocaleCode,
+      );
+
+      final general = normalized.generalMode;
+      final remappedDuplicateEventId = general.schedules.single.events.last.id;
+      expect(general.activeScheduleId, 'shared_calendar');
+      expect(general.schedules.single.id, 'shared_calendar');
+      expect(general.schedules.single.events.first.id, 'a_b');
+      expect(general.schedules.single.events.last.id, 'a_b_copy');
+      expect(
+        general.schedules.single.events.map((item) => item.calendarId),
+        everyElement('shared_calendar'),
+      );
+      expect(
+        general.reminderAcknowledgements.map((item) => item.occurrenceKey),
+        containsAll([
+          buildGeneralOccurrenceKey(
+            'shared_calendar',
+            'a_b',
+            '2026-05-25T09:00:00.000',
           ),
-        );
+          buildGeneralOccurrenceKey(
+            'shared_calendar',
+            remappedDuplicateEventId,
+            '2026-05-25T09:00:00.000',
+          ),
+        ]),
+      );
+    });
 
-        final normalized = service.normalizeAppData(
-          source,
-          localeCode: defaultLocaleCode,
-        );
+    test('remaps general acknowledgement keys by occurrence start for duplicate raw event ids', () {
+      const firstStart = '2026-05-25T09:00:00.000';
+      const secondStart = '2026-05-26T09:00:00.000';
+      final source = AppData(
+        activeMode: AppMode.general,
+        studentMode: studentData(),
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'calendar',
+          schedules: [
+            schedule(
+              id: 'calendar',
+              name: 'Calendar',
+              events: [
+                event(
+                  id: 'event',
+                  calendarId: 'calendar',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                ),
+                event(
+                  id: 'event',
+                  calendarId: 'calendar',
+                  reminders: const [GeneralEventReminder(minutesBefore: 10)],
+                ).copyWith(
+                  startDateTimeIso: secondStart,
+                  endDateTimeIso: '2026-05-26T10:00:00.000',
+                ),
+              ],
+            ),
+          ],
+          reminderAcknowledgements: const [
+            GeneralReminderAcknowledgement(
+              occurrenceKey: 'calendar|event|$secondStart',
+              updatedAtIso: '2026-05-26T08:55:00.000',
+            ),
+          ],
+        ),
+      );
 
-        final events = normalized.generalMode.schedules.single.events;
-        expect(events.map((item) => item.id), ['event', 'event_copy']);
-        expect(events.first.startDateTimeIso, firstStart);
-        expect(events.last.startDateTimeIso, secondStart);
-        expect(
-          normalized.generalMode.reminderAcknowledgements.single.occurrenceKey,
-          buildGeneralOccurrenceKey('calendar', 'event_copy', secondStart),
-        );
-      },
-    );
+      final normalized = service.normalizeAppData(
+        source,
+        localeCode: defaultLocaleCode,
+      );
+
+      final events = normalized.generalMode.schedules.single.events;
+      expect(events.map((item) => item.id), ['event', 'event_copy']);
+      expect(events.first.startDateTimeIso, firstStart);
+      expect(events.last.startDateTimeIso, secondStart);
+      expect(
+        normalized.generalMode.reminderAcknowledgements.single.occurrenceKey,
+        buildGeneralOccurrenceKey('calendar', 'event_copy', secondStart),
+      );
+    });
 
     test('drops unresolved and duplicate general acknowledgements', () {
       const eventStart = '2026-05-25T09:00:00.000';

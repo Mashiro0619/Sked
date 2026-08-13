@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -29,9 +29,8 @@ Future<T?> showAppModalSheet<T>({
     routeSettings: routeSettings,
     constraints: BoxConstraints(maxWidth: maxWidth),
     clipBehavior: Clip.antiAlias,
-    sheetAnimationStyle: SkedMotionPolicy.of(
-      context,
-    ).routeStyle(AppMotion.sheetAnimationStyle),
+    sheetAnimationStyle: SkedMotionPolicy.of(context)
+        .routeStyle(AppMotion.sheetAnimationStyle),
     builder: (_) => UiCommandFeedbackHost(builder: builder),
   );
 }

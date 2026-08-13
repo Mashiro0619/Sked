@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +16,7 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/sked_popup_menu.dart';
+import '../widgets/settings_list.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
 
@@ -166,20 +167,17 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                     : _addSite,
                 onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
               )
-            : Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    itemCount: _sites.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final site = _sites[index];
-                      return _SchoolSiteRow(
-                        site: site,
+            : ResponsiveSettingsSingleColumnBody(
+                topPadding: 16,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < _sites.length; index++) ...[
+                      if (index > 0) const SizedBox(height: 10),
+                      _SchoolSiteRow(
+                        site: _sites[index],
                         enabled: _supportsWebImport && !_webImportOpen,
                         onTap: _supportsWebImport && !_webImportOpen
-                            ? () => _openWebImportForSite(site)
+                            ? () => _openWebImportForSite(_sites[index])
                             : null,
                         trailing: _isEditMode
                             ? SkedPopupMenuButton<_SchoolSiteItemAction>(
@@ -205,9 +203,9 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                                 ],
                               )
                             : null,
-                      );
-                    },
-                  ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
       ),
@@ -862,17 +860,17 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
                 key: const ValueKey('school-sites-import-merge'),
                 onPressed: preview.sites.isEmpty
                     ? null
-                    : () => Navigator.of(
-                        dialogContext,
-                      ).pop(_SchoolSiteImportAction.merge),
+                    : () =>
+                          Navigator.of(dialogContext)
+                              .pop(_SchoolSiteImportAction.merge),
                 child: Text(l10n.schoolSitesImportMerge),
               ),
             FilledButton(
               key: const ValueKey('school-sites-import-replace'),
               onPressed: canReplace
-                  ? () => Navigator.of(
-                      dialogContext,
-                    ).pop(_SchoolSiteImportAction.replace)
+                  ? () =>
+                        Navigator.of(dialogContext)
+                            .pop(_SchoolSiteImportAction.replace)
                   : null,
               child: Text(l10n.schoolSitesImportReplace),
             ),
@@ -1098,9 +1096,8 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

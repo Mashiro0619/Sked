@@ -1,14 +1,18 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widget_previews.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../previews/sked_preview_support.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 import 'ui_command.dart';
+
+part '../previews/course_editor_previews.dart';
 
 /// delete 单独保留成一个标记，避免和“只是点了取消”共用同一种空值语义。
 class CourseEditorResult {
@@ -230,8 +234,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
             const SizedBox(height: 8),
             _EditorSection(
               icon: Icons.notes_outlined,
-              title: '${l10n.teacherName} · ${l10n.remarks}',
-              subtitle: _detailsSectionExpanded ? null : l10n.customFields,
+              title: l10n.more,
               initiallyExpanded: _detailsSectionExpanded,
               onExpansionChanged: (expanded) =>
                   setState(() => _detailsSectionExpanded = expanded),
@@ -278,24 +281,14 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
           ],
         ),
         const SizedBox(height: 8),
-        _ResponsiveFormRow(
-          breakpoint: 520,
-          children: [
-            _SelectionTile(
-              title: l10n.startTime,
-              subtitle: _formatTimeOfDay(_startTime),
-              icon: Icons.schedule,
-              enabled: !_blocked,
-              onTap: _blocked ? null : () => _pickTime(isStart: true),
-            ),
-            _SelectionTile(
-              title: l10n.endTime,
-              subtitle: _formatTimeOfDay(_endTime),
-              icon: Icons.schedule,
-              enabled: !_blocked,
-              onTap: _blocked ? null : () => _pickTime(isStart: false),
-            ),
-          ],
+        _CourseTimeRange(
+          startLabel: l10n.startTime,
+          startValue: _formatTimeOfDay(_startTime),
+          endLabel: l10n.endTime,
+          endValue: _formatTimeOfDay(_endTime),
+          enabled: !_blocked,
+          onPickStart: _blocked ? null : () => _pickTime(isStart: true),
+          onPickEnd: _blocked ? null : () => _pickTime(isStart: false),
         ),
         const SizedBox(height: 8),
         _SelectionTile(
@@ -1200,21 +1193,10 @@ class _SelectionTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: ShapeDecoration(
-                  color: colors.primary.withValues(
-                    alpha: enabled ? 0.10 : 0.05,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  color: enabled ? colors.primary : secondaryColor,
-                ),
+              _SelectionIcon(
+                icon: icon,
+                enabled: enabled,
+                disabledColor: secondaryColor,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1246,6 +1228,243 @@ class _SelectionTile extends StatelessWidget {
               const SizedBox(width: 8),
               Icon(Icons.chevron_right, color: secondaryColor),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectionIcon extends StatelessWidget {
+  const _SelectionIcon({
+    super.key,
+    required this.icon,
+    required this.enabled,
+    required this.disabledColor,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final Color disabledColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: ShapeDecoration(
+        color: colors.primary.withValues(alpha: enabled ? 0.10 : 0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Icon(icon, color: enabled ? colors.primary : disabledColor),
+    );
+  }
+}
+
+class _CourseTimeRange extends StatelessWidget {
+  const _CourseTimeRange({
+    required this.startLabel,
+    required this.startValue,
+    required this.endLabel,
+    required this.endValue,
+    required this.enabled,
+    required this.onPickStart,
+    required this.onPickEnd,
+  });
+
+  final String startLabel;
+  final String startValue;
+  final String endLabel;
+  final String endValue;
+  final bool enabled;
+  final VoidCallback? onPickStart;
+  final VoidCallback? onPickEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
+    return Material(
+      key: const ValueKey('course-time-range'),
+      color: colors.surfaceContainerLow,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final textScale = MediaQuery.textScalerOf(context).scale(1);
+          final stacksVertically =
+              constraints.maxWidth < 280 || textScale > 1.3;
+          final start = _CourseTimeAction(
+            key: const ValueKey('course-start-time-action'),
+            label: startLabel,
+            value: startValue,
+            enabled: enabled,
+            onTap: onPickStart,
+          );
+          final end = _CourseTimeAction(
+            key: const ValueKey('course-end-time-action'),
+            label: endLabel,
+            value: endValue,
+            enabled: enabled,
+            onTap: onPickEnd,
+          );
+          final secondaryColor = enabled
+              ? colors.onSurfaceVariant
+              : colors.onSurface.withValues(alpha: 0.38);
+          final leadingIcon = ExcludeSemantics(
+            child: _SelectionIcon(
+              key: const ValueKey('course-time-range-icon-background'),
+              icon: Icons.schedule_outlined,
+              enabled: enabled,
+              disabledColor: secondaryColor,
+            ),
+          );
+
+          if (stacksVertically) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 11),
+                    child: leadingIcon,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        start,
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: colors.outlineVariant,
+                        ),
+                        end,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                leadingIcon,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    key: const ValueKey('course-time-range-content'),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: start),
+                          SizedBox(
+                            width: 40,
+                            child: Center(
+                              child: Icon(
+                                Icons.arrow_forward,
+                                key: const ValueKey('course-time-range-arrow'),
+                                size: 20,
+                                color: secondaryColor,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: end),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CourseTimeAction extends StatelessWidget {
+  const _CourseTimeAction({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final contentColor = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondaryColor = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    final effectiveOnTap = enabled ? onTap : null;
+    final interactionShape = skedShapeSchemeOf(context).compact;
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      value: value,
+      onTap: effectiveOnTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: effectiveOnTap,
+          customBorder: interactionShape,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 64),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(10, 8, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: contentColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: secondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

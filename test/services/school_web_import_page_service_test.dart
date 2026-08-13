@@ -138,8 +138,7 @@ void main() {
       final payload = decodeSchoolWebImportExtraction(
         jsonEncode({
           'content': '<table><tr><td>Math</td></tr></table>',
-          'url':
-              'https://user:secret@school.example.test:443/timetable?token=sso#week',
+          'url': 'https://user:secret@school.example.test:443/timetable?token=sso#week',
           'title': 'Spring timetable',
           'truncated': true,
         }),

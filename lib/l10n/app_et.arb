@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Üks rida kohta, vorming: key:value",
   "@customFieldsHint": {},
+  "more": "Rohkem",
+  "@more": {},
   "selectDayOfWeek": "Vali päev",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Vali nädalad",

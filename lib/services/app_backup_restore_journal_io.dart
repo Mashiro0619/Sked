@@ -191,7 +191,7 @@ class FileAppBackupRestoreJournal extends AppBackupRestoreJournal {
   Future<List<String>> listRecoveryArtifacts() => _enqueue(() async {
     try {
       final root = (await _layout.backupRestoreJournalPaths()).root;
-      return _existingRecoveryArtifacts(root);
+      return await _existingRecoveryArtifacts(root);
     } catch (error) {
       throw AppBackupRestoreJournalException(
         'Unable to enumerate app-backup restore recovery artifacts.',

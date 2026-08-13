@@ -45,9 +45,8 @@ class _AllDayColumn extends StatelessWidget {
       decoration: BoxDecoration(
         border: BorderDirectional(
           start: BorderSide(
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.55),
+            color: Theme.of(context).colorScheme.outlineVariant
+                .withValues(alpha: 0.55),
           ),
         ),
       ),

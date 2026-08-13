@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart' as app_locale;
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_strings.dart';
 import 'package:sked/main.dart' hide main;
@@ -29,8 +30,11 @@ import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/timetable_entry.dart';
 import 'package:sked/widgets/timetable_grid.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show GlobalCupertinoLocalizations;
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    show GlobalWidgetsLocalizations;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -204,7 +208,7 @@ class FakeSchoolImportApi extends SchoolImportApi {
 Widget _buildLocalizedApp(Widget child, {Locale locale = const Locale('zh')}) {
   return MaterialApp(
     locale: locale,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
   );
@@ -4133,9 +4137,8 @@ void main() {
       expect(find.text('色彩课程'), findsOneWidget);
       final singleModeCourseCard = find.byType(Card);
       expect(singleModeCourseCard, findsOneWidget);
-      final colorScheme = Theme.of(
-        tester.element(singleModeCourseCard),
-      ).colorScheme;
+      final colorScheme = Theme.of(tester.element(singleModeCourseCard))
+          .colorScheme;
       final expectedSingleModeColor = Color.lerp(
         colorScheme.secondaryContainer,
         colorScheme.primaryContainer,

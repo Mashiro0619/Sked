@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:lunar/lunar.dart';
 import 'package:provider/provider.dart';
@@ -1126,9 +1126,8 @@ class _GeneralViewSwitcher extends StatelessWidget {
               ? () => onViewChanged(_nextGeneralView(view))
               : null,
           icon: AnimatedSwitcher(
-            duration: SkedMotionPolicy.of(
-              context,
-            ).effects(SkedMotionSpeed.fast),
+            duration: SkedMotionPolicy.of(context)
+                .effects(SkedMotionSpeed.fast),
             child: Icon(icon, key: ValueKey(view)),
           ),
         ),

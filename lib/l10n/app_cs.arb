@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Jeden na řádek, formát: klíč:hodnota",
   "@customFieldsHint": {},
+  "more": "Další",
+  "@more": {},
   "selectDayOfWeek": "Vyberte si den",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Vyberte si týdny",

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -49,6 +50,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get timetableName => 'Nom de l\'emploi du temps';
+
+  @override
+  String get timetableNameRequired => 'Timetable name is required';
 
   @override
   String get totalWeeks => 'Nombre total de semaines';
@@ -124,6 +128,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get customFieldsHint => 'Un par ligne, format : clé:valeur';
+
+  @override
+  String get more => 'Plus';
 
   @override
   String get selectDayOfWeek => 'Choisir un jour';

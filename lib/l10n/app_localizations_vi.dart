@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -49,6 +50,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get timetableName => 'Tên lịch trình';
+
+  @override
+  String get timetableNameRequired => 'Timetable name is required';
 
   @override
   String get totalWeeks => 'Tổng số tuần';
@@ -124,6 +128,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get customFieldsHint => 'Một cho mỗi dòng, định dạng: khóa: giá trị';
+
+  @override
+  String get more => 'Thêm';
 
   @override
   String get selectDayOfWeek => 'Chọn ngày';

@@ -1173,9 +1173,8 @@ class _MonthDayCell extends StatelessWidget {
       ),
     );
     final semanticsLabel = occurrences.isNotEmpty
-        ? AppLocalizations.of(
-            context,
-          ).monthDayEvents(date.day, occurrences.length)
+        ? AppLocalizations.of(context)
+              .monthDayEvents(date.day, occurrences.length)
         : '${date.day}';
 
     if (compact) {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../models/timetable_models.dart';
 import '../theme/general_calendar_color_theme.dart';

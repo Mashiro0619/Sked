@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
 
@@ -121,9 +121,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                 ? null
                 : _reload,
             icon: const Icon(Icons.refresh),
-            tooltip: MaterialLocalizations.of(
-              context,
-            ).refreshIndicatorSemanticLabel,
+            tooltip: MaterialLocalizations.of(context)
+                .refreshIndicatorSemanticLabel,
           ),
           IconButton(
             onPressed:
@@ -266,9 +265,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                               _handlePageLoadFailure(
                                 controller,
                                 request.url,
-                                AppLocalizations.of(
-                                  context,
-                                ).schoolWebImportLoadFailed,
+                                AppLocalizations.of(context)
+                                    .schoolWebImportLoadFailed,
                               ),
                             );
                           },
@@ -280,9 +278,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                               _handlePageLoadFailure(
                                 controller,
                                 request.url,
-                                AppLocalizations.of(
-                                  context,
-                                ).schoolWebImportLoadFailed,
+                                AppLocalizations.of(context)
+                                    .schoolWebImportLoadFailed,
                               ),
                             );
                           },
@@ -433,9 +430,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       _hasApprovedInitialNavigation = true;
       _approvedNavigationOrigins.add(initialOrigin);
     }
-    final loadFailedMessage = AppLocalizations.of(
-      context,
-    ).schoolWebImportLoadFailed;
+    final loadFailedMessage = AppLocalizations.of(context)
+        .schoolWebImportLoadFailed;
     _startPageLoadWatchdog();
     if (mounted) {
       setState(() {
@@ -467,9 +463,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       await _openSelectedSchool();
       return;
     }
-    final loadFailedMessage = AppLocalizations.of(
-      context,
-    ).schoolWebImportLoadFailed;
+    final loadFailedMessage = AppLocalizations.of(context)
+        .schoolWebImportLoadFailed;
     _startPageLoadWatchdog();
     if (mounted) {
       setState(() {
@@ -490,9 +485,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     if (controller == null || !_canGoBack || _isLoadingPage) {
       return;
     }
-    final loadFailedMessage = AppLocalizations.of(
-      context,
-    ).schoolWebImportLoadFailed;
+    final loadFailedMessage = AppLocalizations.of(context)
+        .schoolWebImportLoadFailed;
     _startPageLoadWatchdog();
     if (mounted) {
       setState(() {
@@ -746,16 +740,14 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       final message = error.message == 'Import content is empty.'
           ? l10n.schoolWebImportEmptyPage
           : error.message;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (_) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.importFailedCheckContent)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.importFailedCheckContent)));
     } finally {
       if (mounted) {
         setState(() => _isParsing = false);
@@ -822,8 +814,9 @@ String schoolWebImportNavigationConsentMessage(
       : l10n.schoolWebImportCrossOriginMessage(origin);
 }
 
-typedef SchoolWebImportSecurityDialogShown =
-    void Function(ModalRoute<dynamic>? route);
+typedef SchoolWebImportSecurityDialogShown = void Function(
+  ModalRoute<dynamic>? route,
+);
 
 @visibleForTesting
 Future<bool> showSchoolWebImportSecurityConsentDialog({
@@ -883,8 +876,9 @@ Future<bool> showSchoolWebImportSecurityConsentDialog({
   return confirmed == true;
 }
 
-typedef SchoolWebImportNavigationDecision =
-    Future<bool> Function(String origin);
+typedef SchoolWebImportNavigationDecision = Future<bool> Function(
+  String origin,
+);
 
 @visibleForTesting
 class SchoolWebImportNavigationDecisionQueue {

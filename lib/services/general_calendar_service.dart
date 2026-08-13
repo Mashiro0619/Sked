@@ -299,9 +299,10 @@ class GeneralCalendarService {
     if (!event.recurrenceRule.isRepeating || occurrence.sequence <= 0) {
       return deleteEvent(data, event.id);
     }
-    final until = previousCalendarDate(
-      occurrence.start,
-    ).toIso8601String().split('T').first;
+    final until = previousCalendarDate(occurrence.start)
+        .toIso8601String()
+        .split('T')
+        .first;
     final updated = saveEvent(
       data,
       event.copyWith(

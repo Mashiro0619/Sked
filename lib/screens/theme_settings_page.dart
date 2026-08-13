@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 
@@ -61,9 +61,8 @@ String _outlineModeLabel(BuildContext context, String mode) {
 }
 
 int _derivedOutlineColorValue(int themeSeedColorValue) {
-  return deriveLiveCourseOutlineColorFromSeed(
-    Color(themeSeedColorValue),
-  ).toARGB32();
+  return deriveLiveCourseOutlineColorFromSeed(Color(themeSeedColorValue))
+      .toARGB32();
 }
 
 int _effectiveUiColorValue(
@@ -254,253 +253,222 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                 Expanded(
                   child: AbsorbPointer(
                     absorbing: uiCommandBusy,
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 720),
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          children: [
-                            SettingsSectionHeader(title: l10n.theme),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: _ResponsiveSegmentedButton(
-                                key: const ValueKey(
-                                  'theme-brightness-mode-segmented',
-                                ),
-                                segments: [
-                                  _SegmentOption(
-                                    value: 'system',
-                                    icon: Icons.settings_suggest_outlined,
-                                    label: l10n.themeFollowSystem,
-                                  ),
-                                  _SegmentOption(
-                                    value: 'light',
-                                    icon: Icons.light_mode_outlined,
-                                    label: l10n.themeLight,
-                                  ),
-                                  _SegmentOption(
-                                    value: 'dark',
-                                    icon: Icons.dark_mode_outlined,
-                                    label: l10n.themeDark,
-                                  ),
-                                ],
-                                selected: {provider.themeMode},
-                                onSelectionChanged: (selection) {
-                                  if (selection.isEmpty) {
-                                    return;
-                                  }
-                                  _updateSetting(
-                                    'Update theme brightness mode',
-                                    () => provider.updateThemeMode(
-                                      selection.first,
-                                    ),
-                                  );
-                                },
-                              ),
+                    child: ResponsiveSettingsBody(
+                      firstColumnSectionIndices: const {0},
+                      children: [
+                        SettingsSectionHeader(title: l10n.theme),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _ResponsiveSegmentedButton(
+                            key: const ValueKey(
+                              'theme-brightness-mode-segmented',
                             ),
-                            const SizedBox(height: 12),
-                            SettingsSectionHeader(title: l10n.themeColor),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
+                            segments: [
+                              _SegmentOption(
+                                value: 'system',
+                                icon: Icons.settings_suggest_outlined,
+                                label: l10n.themeFollowSystem,
                               ),
-                              child: _ResponsiveSegmentedButton(
-                                key: const ValueKey(
-                                  'theme-color-mode-segmented',
+                              _SegmentOption(
+                                value: 'light',
+                                icon: Icons.light_mode_outlined,
+                                label: l10n.themeLight,
+                              ),
+                              _SegmentOption(
+                                value: 'dark',
+                                icon: Icons.dark_mode_outlined,
+                                label: l10n.themeDark,
+                              ),
+                            ],
+                            selected: {provider.themeMode},
+                            onSelectionChanged: (selection) {
+                              if (selection.isEmpty) {
+                                return;
+                              }
+                              _updateSetting(
+                                'Update theme brightness mode',
+                                () => provider.updateThemeMode(selection.first),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SettingsSectionHeader(title: l10n.themeColor),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _ResponsiveSegmentedButton(
+                            key: const ValueKey('theme-color-mode-segmented'),
+                            segments: [
+                              _SegmentOption(
+                                value: themeColorModeSingle,
+                                icon: Icons.palette_outlined,
+                                label: l10n.themeColorModeSingle,
+                              ),
+                              _SegmentOption(
+                                value: themeColorModeColorful,
+                                icon: Icons.color_lens_outlined,
+                                label: l10n.themeColorModeColorful,
+                              ),
+                            ],
+                            selected: {provider.themeColorMode},
+                            onSelectionChanged: (selection) {
+                              if (selection.isEmpty) {
+                                return;
+                              }
+                              _updateSetting(
+                                'Update theme color mode',
+                                () => provider.updateThemeColorMode(
+                                  selection.first,
                                 ),
-                                segments: [
-                                  _SegmentOption(
-                                    value: themeColorModeSingle,
-                                    icon: Icons.palette_outlined,
-                                    label: l10n.themeColorModeSingle,
-                                  ),
-                                  _SegmentOption(
-                                    value: themeColorModeColorful,
-                                    icon: Icons.color_lens_outlined,
-                                    label: l10n.themeColorModeColorful,
-                                  ),
-                                ],
-                                selected: {provider.themeColorMode},
-                                onSelectionChanged: (selection) {
-                                  if (selection.isEmpty) {
-                                    return;
-                                  }
-                                  _updateSetting(
-                                    'Update theme color mode',
-                                    () => provider.updateThemeColorMode(
-                                      selection.first,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            child:
+                                provider.themeColorMode == themeColorModeSingle
+                                ? _SingleThemeColorSection(
+                                    key: const ValueKey(
+                                      'single-theme-color-section',
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 180),
-                                switchInCurve: Curves.easeOut,
-                                switchOutCurve: Curves.easeIn,
-                                child:
-                                    provider.themeColorMode ==
-                                        themeColorModeSingle
-                                    ? _SingleThemeColorSection(
-                                        key: const ValueKey(
-                                          'single-theme-color-section',
+                                    provider: provider,
+                                    hasCustomColor: hasCustomColor,
+                                    onSelectColor: (colorValue) =>
+                                        _updateSetting(
+                                          'Update theme seed color',
+                                          () => provider
+                                              .updateThemeSeedColorValue(
+                                                colorValue,
+                                              ),
                                         ),
-                                        provider: provider,
-                                        hasCustomColor: hasCustomColor,
-                                        onSelectColor: (colorValue) =>
-                                            _updateSetting(
-                                              'Update theme seed color',
-                                              () => provider
-                                                  .updateThemeSeedColorValue(
-                                                    colorValue,
-                                                  ),
-                                            ),
-                                        onPickCustomColor: () => unawaited(
-                                          _openCustomColorDialog(
+                                    onPickCustomColor: () => unawaited(
+                                      _openCustomColorDialog(context, provider),
+                                    ),
+                                  )
+                                : _ColorfulThemeSection(
+                                    key: const ValueKey(
+                                      'colorful-theme-section',
+                                    ),
+                                    provider: provider,
+                                    onPickUiColor: (key) {
+                                      if (key == colorfulCourseTextColorKey) {
+                                        unawaited(
+                                          _openCourseTextColorDialog(
                                             context,
                                             provider,
                                           ),
-                                        ),
-                                      )
-                                    : _ColorfulThemeSection(
-                                        key: const ValueKey(
-                                          'colorful-theme-section',
-                                        ),
-                                        provider: provider,
-                                        onPickUiColor: (key) {
-                                          if (key ==
-                                              colorfulCourseTextColorKey) {
-                                            unawaited(
-                                              _openCourseTextColorDialog(
+                                        );
+                                        return;
+                                      }
+                                      unawaited(
+                                        _openColorValueDialog(
+                                          context,
+                                          title: _uiColorLabel(context, key),
+                                          previewTitle: l10n.themeColorUiColors,
+                                          initialColorValue:
+                                              _effectiveUiColorValue(
                                                 context,
                                                 provider,
-                                              ),
-                                            );
-                                            return;
-                                          }
-                                          unawaited(
-                                            _openColorValueDialog(
-                                              context,
-                                              title: _uiColorLabel(
-                                                context,
                                                 key,
                                               ),
-                                              previewTitle:
-                                                  l10n.themeColorUiColors,
-                                              initialColorValue:
-                                                  _effectiveUiColorValue(
-                                                    context,
-                                                    provider,
-                                                    key,
-                                                  ),
-                                              onApply: (colorValue) => provider
-                                                  .updateColorfulUiColorValue(
-                                                    key,
-                                                    colorValue,
-                                                  ),
+                                          onApply: (colorValue) => provider
+                                              .updateColorfulUiColorValue(
+                                                key,
+                                                colorValue,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    onPickGeneralMonthTextColor: (key) {
+                                      unawaited(
+                                        _openColorValueDialog(
+                                          context,
+                                          title: _generalMonthTextColorLabel(
+                                            context,
+                                            key,
+                                          ),
+                                          previewTitle:
+                                              _generalMonthTextColorGroupTitle(
+                                                context,
+                                              ),
+                                          initialColorValue:
+                                              _effectiveGeneralMonthTextColorValue(
+                                                context,
+                                                provider,
+                                                key,
+                                              ),
+                                          onApply: (colorValue) => provider
+                                              .updateColorfulUiColorValue(
+                                                key,
+                                                colorValue,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    onPickCourseColor: (courseName) => unawaited(
+                                      _openColorValueDialog(
+                                        context,
+                                        title: courseName,
+                                        previewTitle:
+                                            l10n.themeColorCourseColors,
+                                        initialColorValue:
+                                            provider
+                                                .courseNameColorValues[courseName] ??
+                                            provider.themeSeedColorValue,
+                                        onApply: (colorValue) =>
+                                            provider.updateCourseNameColorValue(
+                                              courseName,
+                                              colorValue,
                                             ),
-                                          );
-                                        },
-                                        onPickGeneralMonthTextColor: (key) {
-                                          unawaited(
-                                            _openColorValueDialog(
-                                              context,
-                                              title:
-                                                  _generalMonthTextColorLabel(
-                                                    context,
-                                                    key,
-                                                  ),
-                                              previewTitle:
-                                                  _generalMonthTextColorGroupTitle(
-                                                    context,
-                                                  ),
-                                              initialColorValue:
-                                                  _effectiveGeneralMonthTextColorValue(
-                                                    context,
-                                                    provider,
-                                                    key,
-                                                  ),
-                                              onApply: (colorValue) => provider
-                                                  .updateColorfulUiColorValue(
-                                                    key,
-                                                    colorValue,
-                                                  ),
-                                            ),
-                                          );
-                                        },
-                                        onPickCourseColor: (courseName) => unawaited(
+                                      ),
+                                    ),
+                                    onPickCalendarColor: (schedule) =>
+                                        unawaited(
                                           _openColorValueDialog(
                                             context,
-                                            title: courseName,
-                                            previewTitle:
-                                                l10n.themeColorCourseColors,
+                                            title: schedule.name,
+                                            previewTitle: l10n.calendars,
                                             initialColorValue:
-                                                provider
-                                                    .courseNameColorValues[courseName] ??
-                                                provider.themeSeedColorValue,
-                                            onApply: (colorValue) => provider
-                                                .updateCourseNameColorValue(
-                                                  courseName,
-                                                  colorValue,
+                                                effectiveGeneralCalendarColor(
+                                                  context,
+                                                  schedule,
+                                                ).toARGB32(),
+                                            onApply: (colorValue) =>
+                                                provider.updateGeneralSchedule(
+                                                  schedule.copyWith(
+                                                    colorValue: colorValue,
+                                                  ),
                                                 ),
                                           ),
                                         ),
-                                        onPickCalendarColor: (schedule) =>
-                                            unawaited(
-                                              _openColorValueDialog(
-                                                context,
-                                                title: schedule.name,
-                                                previewTitle: l10n.calendars,
-                                                initialColorValue:
-                                                    effectiveGeneralCalendarColor(
-                                                      context,
-                                                      schedule,
-                                                    ).toARGB32(),
-                                                onApply: (colorValue) =>
-                                                    provider
-                                                        .updateGeneralSchedule(
-                                                          schedule.copyWith(
-                                                            colorValue:
-                                                                colorValue,
-                                                          ),
-                                                        ),
-                                              ),
-                                            ),
-                                      ),
+                                  ),
+                          ),
+                        ),
+                        if (provider.isStudentMode) ...[
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _OutlineSettingsCard(
+                              key: const ValueKey(
+                                'theme-outline-settings-card',
+                              ),
+                              provider: provider,
+                              effectiveOutlineColorValue:
+                                  effectiveOutlineColorValue,
+                              outlineWidth: outlineWidth,
+                              onTap: () => unawaited(
+                                _openOutlineSettingsPage(context, provider),
                               ),
                             ),
-                            if (provider.isStudentMode) ...[
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: _OutlineSettingsCard(
-                                  key: const ValueKey(
-                                    'theme-outline-settings-card',
-                                  ),
-                                  provider: provider,
-                                  effectiveOutlineColorValue:
-                                      effectiveOutlineColorValue,
-                                  outlineWidth: outlineWidth,
-                                  onTap: () => unawaited(
-                                    _openOutlineSettingsPage(context, provider),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),

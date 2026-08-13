@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "En pr. linje, format: nøgle:værdi",
   "@customFieldsHint": {},
+  "more": "Mere",
+  "@more": {},
   "selectDayOfWeek": "Vælg dag",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Vælg uger",

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -823,9 +823,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           actions: [
             TextButton.icon(
-              onPressed: () => Navigator.of(
-                dialogContext,
-              ).pop(const _SettingsRecoveryArtifactAction.copyPaths()),
+              onPressed: () =>
+                  Navigator.of(dialogContext)
+                      .pop(const _SettingsRecoveryArtifactAction.copyPaths()),
               icon: const Icon(Icons.copy_outlined),
               label: Text(l10n.copyText),
             ),
@@ -937,24 +937,21 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await provider.importAppDataJson(source, mode: AppImportMode.replaceAll);
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(successMessage)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(successMessage)));
       }
       return true;
     } on FormatException catch (error) {
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
       return false;
     } catch (_) {
       if (!provider.canWrite) return false;
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(failureMessage)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(failureMessage)));
       }
       return false;
     }
@@ -1347,9 +1344,8 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _showGeneralDataActions(TimetableProvider provider) async {
@@ -1586,17 +1582,15 @@ class _SettingsPageState extends State<SettingsPage> {
       return true;
     } on FormatException catch (e) {
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(e.message)));
       }
       return false;
     } catch (error, stackTrace) {
       debugPrint('General schedule JSON import failed: $error\n$stackTrace');
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
       }
       return false;
     }
@@ -1690,17 +1684,15 @@ class _SettingsPageState extends State<SettingsPage> {
       return true;
     } on FormatException catch (e) {
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(e.message)));
       }
       return false;
     } catch (error, stackTrace) {
       debugPrint('General schedule ICS import failed: $error\n$stackTrace');
       if (feedbackContext.mounted) {
-        ScaffoldMessenger.of(
-          feedbackContext,
-        ).showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(l10n.saveFailedRetry)));
       }
       return false;
     }

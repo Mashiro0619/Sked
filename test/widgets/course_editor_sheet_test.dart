@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/app_modal_sheet.dart';
@@ -11,7 +12,7 @@ import 'package:sked/widgets/course_editor_sheet.dart';
 Widget _localizedApp(Widget child) {
   return MaterialApp(
     locale: const Locale('en'),
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
   );
@@ -162,6 +163,152 @@ void main() {
     await tester.pump();
 
     expect(find.byType(CourseEditorSheet), findsOneWidget);
+    final startTime = find.byKey(const ValueKey('course-start-time-action'));
+    final endTime = find.byKey(const ValueKey('course-end-time-action'));
+    expect(startTime, findsOneWidget);
+    expect(endTime, findsOneWidget);
+    expect(tester.getSize(startTime).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(endTime).height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getTopLeft(endTime).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(startTime).dy),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('groups course times and exposes separate accessible actions', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(430, 776);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      _localizedApp(
+        CourseEditorSheet(
+          periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+          totalWeeks: 18,
+          dayOfWeek: 1,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final range = find.byKey(const ValueKey('course-time-range'));
+    final startTime = find.byKey(const ValueKey('course-start-time-action'));
+    final endTime = find.byKey(const ValueKey('course-end-time-action'));
+    final rangeContent = find.byKey(
+      const ValueKey('course-time-range-content'),
+    );
+    final rangeArrow = find.byKey(const ValueKey('course-time-range-arrow'));
+    final iconBackground = find.byKey(
+      const ValueKey('course-time-range-icon-background'),
+    );
+    expect(range, findsOneWidget);
+    expect(startTime, findsOneWidget);
+    expect(endTime, findsOneWidget);
+    expect(rangeContent, findsOneWidget);
+    expect(rangeArrow, findsOneWidget);
+    expect(iconBackground, findsOneWidget);
+    expect(
+      tester.getTopLeft(startTime).dy,
+      moreOrLessEquals(tester.getTopLeft(endTime).dy, epsilon: 1),
+    );
+    expect(
+      tester.getSize(startTime).width,
+      moreOrLessEquals(tester.getSize(endTime).width, epsilon: 0.1),
+    );
+    expect(
+      tester.getCenter(rangeArrow).dx,
+      moreOrLessEquals(tester.getCenter(rangeContent).dx, epsilon: 0.1),
+    );
+    expect(tester.getSize(iconBackground), const Size.square(42));
+    for (final action in <Finder>[startTime, endTime]) {
+      final inkWell = tester.widget<InkWell>(
+        find.descendant(of: action, matching: find.byType(InkWell)),
+      );
+      expect(inkWell.customBorder, isA<RoundedSuperellipseBorder>());
+    }
+    final iconContainer = tester.widget<Container>(
+      find.descendant(of: iconBackground, matching: find.byType(Container)),
+    );
+    final iconDecoration = iconContainer.decoration! as ShapeDecoration;
+    expect(iconDecoration.shape, isA<RoundedRectangleBorder>());
+    expect(iconDecoration.color, isNot(Colors.transparent));
+    expect(tester.getSemantics(startTime).label, 'Start time');
+    expect(tester.getSemantics(startTime).value, '08:00');
+    expect(tester.getSemantics(endTime).label, 'End time');
+    expect(tester.getSemantics(endTime).value, '09:40');
+    expect(
+      find.descendant(
+        of: range,
+        matching: find.byIcon(Icons.schedule_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('More'), findsOneWidget);
+    expect(find.text('Teacher · Remarks'), findsNothing);
+
+    await tester.ensureVisible(startTime);
+    await tester.pumpAndSettle();
+    await tester.tap(startTime);
+    await tester.pumpAndSettle();
+    expect(find.byType(TimePickerDialog), findsOneWidget);
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(endTime);
+    await tester.pumpAndSettle();
+    await tester.tap(endTime);
+    await tester.pumpAndSettle();
+    expect(find.byType(TimePickerDialog), findsOneWidget);
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
+  testWidgets('course time range remains reachable with large text', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: CourseEditorSheet(
+            periodTimes: buildDefaultPeriodTimes().take(4).toList(),
+            totalWeeks: 18,
+            dayOfWeek: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final startTime = find.byKey(const ValueKey('course-start-time-action'));
+    final endTime = find.byKey(const ValueKey('course-end-time-action'));
+    expect(startTime, findsOneWidget);
+    expect(endTime, findsOneWidget);
+    expect(tester.getSize(startTime).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(endTime).height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getTopLeft(endTime).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(startTime).dy),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -176,7 +323,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(

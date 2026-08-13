@@ -5,8 +5,8 @@ publish_to: 'none'
 version: 2.1.0+10
 
 environment:
-  sdk: ^3.12.2
-  flutter: ">=3.44.9"
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
@@ -28,11 +28,14 @@ dependencies:
   html: ^0.15.6
   crypto: ^3.0.6
   package_info_plus: ^10.2.1
-  flutter_inappwebview: ^6.1.5
+  # 6.2 is the first line whose Android plugin supports AGP 9.
+  flutter_inappwebview: ^6.2.0-beta.3
   flutter_colorpicker: ^1.1.0
   lunar: ^1.7.8
   flutter_secure_storage: ^10.3.1
   intl: ^0.20.2
+  material_ui: ^1.0.0
+  cupertino_ui: ^1.0.0
 
 dev_dependencies:
   flutter_test:

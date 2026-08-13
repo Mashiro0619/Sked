@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -10,6 +10,7 @@ import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_popup_menu.dart';
+import '../widgets/settings_list.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/ui_command.dart';
 
@@ -154,37 +155,33 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
               child: AbsorbPointer(
                 key: const ValueKey('period-times-editor-guard'),
                 absorbing: _interactionBlocked,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      children: [
-                        TextField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: l10n.periodTimeSetName,
-                            prefixIcon: const Icon(Icons.schedule_outlined),
-                          ),
+                child: ResponsiveSettingsSingleColumnBody(
+                  topPadding: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: l10n.periodTimeSetName,
+                          prefixIcon: const Icon(Icons.schedule_outlined),
                         ),
-                        const SizedBox(height: 16),
-                        for (
-                          var index = 0;
-                          index < _periodTimes.length;
-                          index++
-                        ) ...[
-                          _buildPeriodCard(index),
-                          const SizedBox(height: 12),
-                        ],
-                        FilledButton.icon(
-                          onPressed: _addPeriod,
-                          icon: const Icon(Icons.add),
-                          label: Text(l10n.addOnePeriod),
-                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      for (
+                        var index = 0;
+                        index < _periodTimes.length;
+                        index++
+                      ) ...[
+                        _buildPeriodCard(index),
+                        const SizedBox(height: 12),
                       ],
-                    ),
+                      FilledButton.icon(
+                        onPressed: _addPeriod,
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.addOnePeriod),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -629,9 +626,8 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<bool?> _showPermissionDialog({

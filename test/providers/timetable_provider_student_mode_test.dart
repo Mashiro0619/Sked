@@ -204,6 +204,22 @@ void main() {
   }
 
   group('TimetableProvider student mode', () {
+    test(
+      'daily period count uses the selected set or a safe fallback',
+      () async {
+        final provider = providerWith(appData());
+        await provider.load();
+
+        expect(provider.dailyPeriodsForTimetable(provider.activeTimetable), 2);
+        expect(
+          provider.dailyPeriodsForTimetable(
+            timetable(periodTimeSetId: 'missing-period-set'),
+          ),
+          1,
+        );
+      },
+    );
+
     test('course FAB setting persists and rolls back on failure', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);
@@ -507,9 +523,13 @@ void main() {
 
         expect(provider.activeTimetable.courses.single.periods, [1, 2]);
         expect(
-          AppData.decodeStorageSnapshot(
-            storage.data!.encode(),
-          ).studentMode.timetables.single.courses.single.periods,
+          AppData.decodeStorageSnapshot(storage.data!.encode())
+              .studentMode
+              .timetables
+              .single
+              .courses
+              .single
+              .periods,
           [1, 2],
         );
       },

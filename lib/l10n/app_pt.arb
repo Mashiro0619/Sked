@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Um por linha, formato: chave:valor",
   "@customFieldsHint": {},
+  "more": "Mais",
+  "@more": {},
   "selectDayOfWeek": "Escolher dia",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Escolher semanas",

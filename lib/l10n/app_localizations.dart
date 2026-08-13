@@ -217,6 +217,12 @@ abstract class AppLocalizations {
   /// **'Timetable name'**
   String get timetableName;
 
+  /// No description provided for @timetableNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable name is required'**
+  String get timetableNameRequired;
+
   /// No description provided for @totalWeeks.
   ///
   /// In en, this message translates to:
@@ -354,6 +360,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One per line, format: key:value'**
   String get customFieldsHint;
+
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
 
   /// No description provided for @selectDayOfWeek.
   ///

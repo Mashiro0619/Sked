@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "По одному в строке, формат: ключ:значение",
   "@customFieldsHint": {},
+  "more": "Ещё",
+  "@more": {},
   "selectDayOfWeek": "Выберите день",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Выберите недели",

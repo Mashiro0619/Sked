@@ -742,71 +742,68 @@ void main() {
       expect(dismissed.reminderAcknowledgements, isEmpty);
     });
 
-    test(
-      'rejects forged recurring occurrences outside count, until, or exceptions',
-      () {
-        final cases = <({GeneralEvent event, DateTime forgedStart})>[
-          (
-            event: buildEvent(
-              id: 'counted',
-              start: DateTime(2026, 5, 1, 9),
-              recurrenceRule: const GeneralEventRecurrenceRule(
-                type: GeneralEventRecurrence.weekly,
-                unit: GeneralEventRecurrenceUnit.week,
-                count: 2,
-              ),
-              reminders: const [GeneralEventReminder(minutesBefore: 10)],
+    test('rejects forged recurring occurrences outside count, until, or exceptions', () {
+      final cases = <({GeneralEvent event, DateTime forgedStart})>[
+        (
+          event: buildEvent(
+            id: 'counted',
+            start: DateTime(2026, 5, 1, 9),
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.weekly,
+              unit: GeneralEventRecurrenceUnit.week,
+              count: 2,
             ),
-            forgedStart: DateTime(2026, 5, 15, 9),
+            reminders: const [GeneralEventReminder(minutesBefore: 10)],
           ),
-          (
-            event: buildEvent(
-              id: 'until',
-              start: DateTime(2026, 5, 1, 9),
-              recurrenceRule: const GeneralEventRecurrenceRule(
-                type: GeneralEventRecurrence.weekly,
-                unit: GeneralEventRecurrenceUnit.week,
-                untilDateIso: '2026-05-08',
-              ),
-              reminders: const [GeneralEventReminder(minutesBefore: 10)],
+          forgedStart: DateTime(2026, 5, 15, 9),
+        ),
+        (
+          event: buildEvent(
+            id: 'until',
+            start: DateTime(2026, 5, 1, 9),
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.weekly,
+              unit: GeneralEventRecurrenceUnit.week,
+              untilDateIso: '2026-05-08',
             ),
-            forgedStart: DateTime(2026, 5, 15, 9),
+            reminders: const [GeneralEventReminder(minutesBefore: 10)],
           ),
-          (
-            event: buildEvent(
-              id: 'excepted',
-              start: DateTime(2026, 5, 1, 9),
-              recurrenceRule: const GeneralEventRecurrenceRule(
-                type: GeneralEventRecurrence.weekly,
-                unit: GeneralEventRecurrenceUnit.week,
-              ),
-              exceptions: const ['2026-05-08'],
-              reminders: const [GeneralEventReminder(minutesBefore: 10)],
+          forgedStart: DateTime(2026, 5, 15, 9),
+        ),
+        (
+          event: buildEvent(
+            id: 'excepted',
+            start: DateTime(2026, 5, 1, 9),
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.weekly,
+              unit: GeneralEventRecurrenceUnit.week,
             ),
-            forgedStart: DateTime(2026, 5, 8, 9),
+            exceptions: const ['2026-05-08'],
+            reminders: const [GeneralEventReminder(minutesBefore: 10)],
           ),
-        ];
+          forgedStart: DateTime(2026, 5, 8, 9),
+        ),
+      ];
 
-        for (final testCase in cases) {
-          final calendar = GeneralSchedule(
-            id: 'cal',
-            name: 'Work',
-            events: [testCase.event],
-          );
-          final data = buildData(schedules: [calendar]);
-          final forged = buildOccurrence(
-            event: testCase.event,
-            calendar: calendar,
-            start: testCase.forgedStart,
-          );
+      for (final testCase in cases) {
+        final calendar = GeneralSchedule(
+          id: 'cal',
+          name: 'Work',
+          events: [testCase.event],
+        );
+        final data = buildData(schedules: [calendar]);
+        final forged = buildOccurrence(
+          event: testCase.event,
+          calendar: calendar,
+          start: testCase.forgedStart,
+        );
 
-          final dismissed = service.dismissReminder(data, forged);
+        final dismissed = service.dismissReminder(data, forged);
 
-          expect(dismissed, same(data), reason: testCase.event.id);
-          expect(dismissed.reminderAcknowledgements, isEmpty);
-        }
-      },
-    );
+        expect(dismissed, same(data), reason: testCase.event.id);
+        expect(dismissed.reminderAcknowledgements, isEmpty);
+      }
+    });
 
     test(
       'prunes only acknowledgements for occurrences ending before the cutoff',

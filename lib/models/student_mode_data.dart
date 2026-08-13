@@ -244,9 +244,10 @@ class StudentModeData {
     Map<String, dynamic> json, {
     String localeCode = defaultLocaleCode,
   }) {
-    final rawTimetables = _listValue(
-      json['timetables'],
-    ).map(_asStringKeyedMap).whereType<Map<String, dynamic>>().toList();
+    final rawTimetables = _listValue(json['timetables'])
+        .map(_asStringKeyedMap)
+        .whereType<Map<String, dynamic>>()
+        .toList();
     final rawPeriodTimeSets = _listValue(json['periodTimeSets'])
         .map(_asStringKeyedMap)
         .whereType<Map<String, dynamic>>()

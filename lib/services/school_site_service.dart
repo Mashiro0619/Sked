@@ -340,7 +340,7 @@ class SchoolSiteService {
         if (storageChanged) {
           _coordinator._markStorageChanged();
         }
-        return _finishBlockedLoad(
+        return await _finishBlockedLoad(
           status: SchoolSiteRecoveryStatus.recoveryWriteFailed,
           sites: selectedSites,
           invalidArtifacts: invalidArtifacts,
@@ -383,7 +383,7 @@ class SchoolSiteService {
         final artifacts =
             await (stored.isolateForRecovery ?? _store.isolateForRecovery)();
         _coordinator._markStorageChanged();
-        return _finishBlockedLoad(
+        return await _finishBlockedLoad(
           status: SchoolSiteRecoveryStatus.storedDataCorrupt,
           invalidArtifacts: invalidArtifacts,
           storageIssues: stored.issues,

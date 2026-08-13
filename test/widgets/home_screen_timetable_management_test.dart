@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -315,6 +316,28 @@ AppData _buildMultiTimetableStudentData() {
   );
 }
 
+AppData _buildMultiPeriodTimeSetStudentData() {
+  final data = _buildPopulatedStudentData();
+  return data.copyWith(
+    studentMode: data.studentMode.copyWith(
+      periodTimeSets: [
+        ...data.studentMode.periodTimeSets,
+        PeriodTimeSet(
+          id: 'period-set-2',
+          name: 'Evening periods',
+          periodTimes: const [
+            CoursePeriodTime(
+              index: 1,
+              startMinutes: 18 * 60,
+              endMinutes: 18 * 60 + 45,
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 AppData _buildLongCourseStudentData() {
   final periodTimes = buildDefaultPeriodTimes();
   final timetable = TimetableData(
@@ -328,8 +351,7 @@ AppData _buildLongCourseStudentData() {
     courses: [
       CourseItem(
         id: 'course-long',
-        name:
-            'Advanced interdisciplinary seminar with an extremely long course name',
+        name: 'Advanced interdisciplinary seminar with an extremely long course name',
         teacher: 'Professor With A Very Long Display Name',
         location: 'Building Alpha Room 123 With Additional Location Notes',
         dayOfWeek: 1,
@@ -428,7 +450,7 @@ Future<void> _pumpHomeScreenWithProvider(
       value: provider,
       child: MaterialApp(
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
           Widget result = MediaQuery(
@@ -474,7 +496,7 @@ Future<void> _pumpAppHomeScreenWithProvider(
       value: provider,
       child: MaterialApp(
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
           Widget result = child!;
@@ -552,7 +574,7 @@ Future<void> _pumpHomeScreenHostPage(
       value: provider,
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
@@ -605,6 +627,10 @@ Future<void> _openTimetablePicker(WidgetTester tester) async {
     find.byKey(const ValueKey('student-timetable-picker-button')),
   );
   await tester.pumpAndSettle();
+}
+
+Future<void> _saveTimetableDialog(WidgetTester tester) async {
+  await tester.tap(find.widgetWithText(FilledButton, 'Save'));
 }
 
 String _selectedWeekTitle(TimetableProvider provider) {
@@ -1946,6 +1972,34 @@ void main() {
     expect(provider.activeTimetable.config.name, 'Draft timetable');
     expect(provider.activeTimetable.config.totalWeeks, 20);
     expect(find.widgetWithText(FilledButton, 'Save'), findsNothing);
+    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timetable edit success updates the row and keeps picker open', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData());
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    await _openTimetablePicker(tester);
+    await tester.tap(find.byTooltip('Edit timetable').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Renamed timetable');
+    await _saveTimetableDialog(tester);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Renamed timetable'), findsOneWidget);
+    expect(provider.timetables.last.config.name, 'Renamed timetable');
     expect(tester.takeException(), isNull);
   });
 
@@ -1988,6 +2042,35 @@ void main() {
     expect(provider.timetables, hasLength(1));
     expect(provider.timetables.single.config.name, 'First timetable');
     expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('deleting the last timetable closes the empty picker', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildPopulatedStudentData());
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    await _openTimetablePicker(tester);
+    await tester.tap(find.byTooltip('Edit timetable'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.timetables, isEmpty);
+    expect(find.text('Switch timetables'), findsNothing);
+    expect(find.text('No timetable yet'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -2891,7 +2974,7 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('empty state new timetable ignores rapid duplicate taps', (
+  testWidgets('empty state new timetable opens one draft before saving', (
     tester,
   ) async {
     final storage = _BlockingTimetableStorage(null);
@@ -2913,10 +2996,24 @@ void main() {
 
     await tester.tap(createButton);
     await tester.tap(createButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 0);
+    expect(provider.timetables, isEmpty);
+    expect(find.text('Semester start date'), findsOneWidget);
+    expect(find.text('Period time set'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Save'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Delete'), findsNothing);
+
+    await tester.enterText(find.byType(TextField).at(0), 'Created timetable');
+    await tester.enterText(find.byType(TextField).at(1), '20');
+    await _saveTimetableDialog(tester);
     await storage.firstSaveStarted;
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(1));
+    expect(provider.activeTimetable.config.name, 'Created timetable');
+    expect(provider.activeTimetable.config.totalWeeks, 20);
 
     storage.completeSave();
     await tester.pumpAndSettle();
@@ -2924,6 +3021,52 @@ void main() {
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(1));
     expect(find.text(_selectedWeekTitle(provider)), findsOneWidget);
+  });
+
+  testWidgets('cancelling a new timetable draft does not persist it', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'New timetable'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Discarded draft');
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 0);
+    expect(provider.timetables, isEmpty);
+    expect(find.text('No timetable yet'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new timetable requires a non-empty name before saving', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(null);
+    final provider = await _createEmptyProvider(storage);
+
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.widgetWithText(FilledButton, 'New timetable'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), '   ');
+    await _saveTimetableDialog(tester);
+    await tester.pump();
+
+    expect(find.text('Timetable name is required'), findsOneWidget);
+    expect(storage.saveCount, 0);
+    expect(provider.timetables, isEmpty);
+    expect(find.text('New timetable'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('empty timetable keeps the settings entry available', (
@@ -3089,7 +3232,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('new timetable failure rolls back and can be retried', (
+  testWidgets('new timetable failure keeps its draft and can be retried', (
     tester,
   ) async {
     final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData())
@@ -3107,21 +3250,36 @@ void main() {
     await tester.tap(createButton);
     await tester.pumpAndSettle();
 
+    final nameField = find.byType(TextField).at(0);
+    final weeksField = find.byType(TextField).at(1);
+    await tester.enterText(nameField, 'Draft timetable');
+    await tester.enterText(weeksField, '20');
+    await _saveTimetableDialog(tester);
+    await tester.pumpAndSettle();
+
     expect(storage.saveCount, 1);
     expect(provider.timetables, isEmpty);
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(nameField).controller?.text,
+      'Draft timetable',
+    );
+    expect(tester.widget<TextField>(weeksField).controller?.text, '20');
     expect(tester.takeException(), isNull);
 
     storage.failSaves = false;
-    await tester.tap(createButton);
+    await _saveTimetableDialog(tester);
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
     expect(provider.timetables, hasLength(1));
+    expect(provider.activeTimetable.config.name, 'Draft timetable');
+    expect(provider.activeTimetable.config.totalWeeks, 20);
+    expect(find.widgetWithText(FilledButton, 'Save'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('timetable picker new action ignores rapid duplicate taps', (
+  testWidgets('timetable picker new action opens one draft and saves once', (
     tester,
   ) async {
     final storage = _BlockingTimetableStorage(_buildPopulatedStudentData());
@@ -3144,19 +3302,67 @@ void main() {
 
     await tester.tap(createButton);
     await tester.tap(createButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 0);
+    expect(provider.timetables, hasLength(1));
+    expect(find.text('Semester start date'), findsOneWidget);
+    expect(tester.widget<FilledButton>(createButton).onPressed, isNull);
+
+    await tester.enterText(find.byType(TextField).at(0), 'Second draft');
+    await _saveTimetableDialog(tester);
     await storage.firstSaveStarted;
     await tester.pump();
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(2));
-    expect(find.byKey(const ValueKey('timetable-picker-busy')), findsOneWidget);
-    expect(tester.widget<FilledButton>(createButton).onPressed, isNull);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
+          .onPressed,
+      isNull,
+    );
 
     storage.completeSave();
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(2));
+    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(provider.activeTimetable.config.name, 'Second draft');
+  });
+
+  testWidgets('new timetable saves the selected period time set', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(
+      _buildMultiPeriodTimeSetStudentData(),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await _openTimetablePicker(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'New timetable'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Period time set'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Evening periods'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Evening periods · 1 periods'), findsOneWidget);
+    await _saveTimetableDialog(tester);
+    await tester.pumpAndSettle();
+
+    expect(storage.saveCount, 1);
+    expect(provider.activeTimetable.config.periodTimeSetId, 'period-set-2');
+    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('failed timetable creation reports inside the picker', (
@@ -3177,6 +3383,9 @@ void main() {
     final createButton = find.widgetWithText(FilledButton, 'New timetable');
     await tester.tap(createButton);
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Picker draft');
+    await _saveTimetableDialog(tester);
+    await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(1));
@@ -3187,7 +3396,7 @@ void main() {
     );
 
     storage.failSaves = false;
-    await tester.tap(createButton);
+    await _saveTimetableDialog(tester);
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
@@ -3195,6 +3404,7 @@ void main() {
     // Creating a timetable keeps the picker open so the new selection is
     // visible and the user can continue managing timetables.
     expect(find.text('Switch timetables'), findsOneWidget);
+    expect(provider.activeTimetable.config.name, 'Picker draft');
     final newTimetableKey = ValueKey(
       'timetable-picker-item-${provider.activeTimetable.id}',
     );

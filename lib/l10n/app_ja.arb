@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "1行に1件、形式: key:value",
   "@customFieldsHint": {},
+  "more": "その他",
+  "@more": {},
   "selectDayOfWeek": "曜日を選択",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "週を選択",

@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "한 줄에 하나씩, 형식: key:value",
   "@customFieldsHint": {},
+  "more": "더보기",
+  "@more": {},
   "selectDayOfWeek": "요일 선택",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "주차 선택",

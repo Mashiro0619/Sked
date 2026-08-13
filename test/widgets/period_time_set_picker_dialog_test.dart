@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -91,7 +92,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -129,6 +130,11 @@ void main() {
       dialog.contentPadding,
       const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 0),
     );
+    final listRect = tester.getRect(
+      find.byKey(const ValueKey('period-time-set-picker-list')),
+    );
+    expect(listRect.width, closeTo(256, 0.1));
+    expect(listRect.center.dx, closeTo(160, 0.1));
     final l10n = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
     expect(find.byTooltip(l10n.newItem), findsOneWidget);
     expect(find.byIcon(Icons.schedule_outlined), findsNothing);
@@ -157,7 +163,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -202,13 +208,63 @@ void main() {
       dialog.contentPadding,
       const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 0),
     );
-    expect(listRect.width, lessThanOrEqualTo(352));
+    expect(listRect.width, closeTo(320, 0.1));
     expect(listRect.center.dx, closeTo(300, 0.1));
     expect(optionRects, isNotEmpty);
     for (final optionRect in optionRects) {
       expect(optionRect.width, closeTo(listRect.width, 0.1));
       expect(optionRect.height, greaterThanOrEqualTo(48));
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('single period set keeps the dialog content compact', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(430, 776));
+    addTearDown(() => _resetTestViewport(tester));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => unawaited(
+                  showPeriodTimeSetPickerDialog(
+                    context,
+                    provider: provider,
+                    selectedPeriodTimeSetId: provider.periodTimeSets.first.id,
+                  ),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    final dialogSurface = find
+        .descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(Material),
+        )
+        .first;
+    final dialogRect = tester.getRect(dialogSurface);
+    final listRect = tester.getRect(
+      find.byKey(const ValueKey('period-time-set-picker-list')),
+    );
+    expect(listRect.height, lessThan(120));
+    expect(dialogRect.height, lessThan(360));
     expect(tester.takeException(), isNull);
   });
 
@@ -238,7 +294,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -341,12 +397,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(2)),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2)),
             child: child!,
           ),
           home: ChangeNotifierProvider<TimetableProvider>.value(
@@ -395,7 +450,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -438,7 +493,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -493,7 +548,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -537,7 +592,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -574,6 +629,76 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
   });
 
+  testWidgets(
+    'returning from edit falls back when the selected set was deleted',
+    (tester) async {
+      final initialData = buildInitialAppData(buildDefaultPeriodTimes());
+      final activeSet = initialData.studentMode.periodTimeSets.first;
+      final deletedSet = activeSet.copyWith(
+        id: 'deleted-while-editing',
+        name: 'Deleted while editing',
+      );
+      final provider = await _createProvider(
+        storage: _MemoryTimetableStorage(
+          initialData.copyWith(
+            studentMode: initialData.studentMode.copyWith(
+              periodTimeSets: <PeriodTimeSet>[activeSet, deletedSet],
+            ),
+          ),
+        ),
+      );
+      addTearDown(provider.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () {
+                    unawaited(
+                      showPeriodTimeSetPickerDialog(
+                        context,
+                        provider: provider,
+                        selectedPeriodTimeSetId: deletedSet.id,
+                      ),
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.edit_outlined).last);
+      await tester.pumpAndSettle();
+      expect(find.byType(PeriodTimesPage), findsOneWidget);
+
+      await provider.deletePeriodTimeSet(deletedSet.id);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(provider.periodTimeSetForId(deletedSet.id), isNull);
+      final remainingOption = find.byType(ExpressiveDialogOption);
+      expect(remainingOption, findsOneWidget);
+      expect(
+        tester
+            .getSemantics(remainingOption)
+            .getSemanticsData()
+            .flagsCollection
+            .isSelected,
+        ui.Tristate.isTrue,
+      );
+    },
+  );
+
   testWidgets('barrier does not dismiss while creating period set', (
     tester,
   ) async {
@@ -589,7 +714,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
@@ -650,7 +775,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,

@@ -309,46 +309,41 @@ void main() {
     },
   );
 
-  test(
-    'an accepted save blocked by an earlier I/O failure restores persisted data',
-    () async {
-      final initial = _initialApp();
-      final storage = _ControlledTimetableStorage(initial);
-      final provider = _providerWith(storage);
-      await provider.load();
-      storage.saveCount = 0;
-      storage.writeLog.clear();
-      final firstGate = Completer<void>();
-      storage.saveGates.add(firstGate);
-      storage.saveErrors.add(
-        const StorageWriteException('storage unavailable'),
-      );
+  test('an accepted save blocked by an earlier I/O failure restores persisted data', () async {
+    final initial = _initialApp();
+    final storage = _ControlledTimetableStorage(initial);
+    final provider = _providerWith(storage);
+    await provider.load();
+    storage.saveCount = 0;
+    storage.writeLog.clear();
+    final firstGate = Completer<void>();
+    storage.saveGates.add(firstGate);
+    storage.saveErrors.add(const StorageWriteException('storage unavailable'));
 
-      final firstSaveExpectation = expectLater(
-        provider.switchMode(AppMode.student),
-        throwsA(isA<StorageWriteException>()),
-      );
-      await _waitForSaveCount(storage, 1);
-      final secondSaveExpectation = expectLater(
-        provider.updateGeneralDisplaySettings(dayStartHour: 5),
-        throwsA(isA<RecoveryWriteBlockedException>()),
-      );
+    final firstSaveExpectation = expectLater(
+      provider.switchMode(AppMode.student),
+      throwsA(isA<StorageWriteException>()),
+    );
+    await _waitForSaveCount(storage, 1);
+    final secondSaveExpectation = expectLater(
+      provider.updateGeneralDisplaySettings(dayStartHour: 5),
+      throwsA(isA<RecoveryWriteBlockedException>()),
+    );
 
-      firstGate.complete();
-      await firstSaveExpectation;
-      await secondSaveExpectation;
+    firstGate.complete();
+    await firstSaveExpectation;
+    await secondSaveExpectation;
 
-      expect(provider.canWrite, isFalse);
-      expect(provider.activeMode, initial.activeMode);
-      expect(provider.generalDayStartHour, 5);
-      expect(storage.saveCount, 1);
-      expect(storage.writeLog, isEmpty);
-      expect(
-        storage.data!.generalMode.dayStartHour,
-        initial.generalMode.dayStartHour,
-      );
-    },
-  );
+    expect(provider.canWrite, isFalse);
+    expect(provider.activeMode, initial.activeMode);
+    expect(provider.generalDayStartHour, 5);
+    expect(storage.saveCount, 1);
+    expect(storage.writeLog, isEmpty);
+    expect(
+      storage.data!.generalMode.dayStartHour,
+      initial.generalMode.dayStartHour,
+    );
+  });
 
   test('lifecycle flush reports a deferred save failure once', () async {
     final storage = _ControlledTimetableStorage(_initialApp());

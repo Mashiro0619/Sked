@@ -7,10 +7,9 @@ import 'school_import_api.dart';
 import 'school_import_apply_service.dart';
 import 'school_import_content_sanitizer.dart';
 
-typedef SchoolImportStreamPresenter =
-    Future<SchoolImportResponse?> Function(
-      Stream<SchoolImportStreamEvent> stream,
-    );
+typedef SchoolImportStreamPresenter = Future<SchoolImportResponse?> Function(
+  Stream<SchoolImportStreamEvent> stream,
+);
 
 class SchoolImportWorkflow {
   SchoolImportWorkflow({

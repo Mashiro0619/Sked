@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Ένα ανά γραμμή, μορφή: κλειδί: τιμή",
   "@customFieldsHint": {},
+  "more": "Περισσότερα",
+  "@more": {},
   "selectDayOfWeek": "Επιλέξτε ημέρα",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Επιλέξτε εβδομάδες",

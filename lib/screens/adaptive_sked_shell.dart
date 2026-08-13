@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
@@ -1025,31 +1025,56 @@ class _WorkspaceDrawer extends StatelessWidget {
           SafeArea(
             bottom: false,
             child: Padding(
+              key: const ValueKey('adaptive-shell-drawer-brand'),
               padding: const EdgeInsets.fromLTRB(28, 22, 20, 16),
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_month_outlined, color: colors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      l10n.appTitle,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (busy)
-                    Semantics(
-                      liveRegion: true,
-                      label: l10n.savingChanges,
-                      child: const ExcludeSemantics(
-                        child: SizedBox.square(
-                          dimension: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+              child: SizedBox(
+                height: 40,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox.square(
+                      key: const ValueKey('adaptive-shell-drawer-brand-icon'),
+                      dimension: 32,
+                      child: Center(
+                        child: Icon(
+                          Icons.calendar_month_outlined,
+                          size: 24,
+                          color: colors.primary,
                         ),
                       ),
                     ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        key: const ValueKey(
+                          'adaptive-shell-drawer-brand-title',
+                        ),
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          l10n.appTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                    ),
+                    if (busy)
+                      Semantics(
+                        liveRegion: true,
+                        label: l10n.savingChanges,
+                        child: const ExcludeSemantics(
+                          child: SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

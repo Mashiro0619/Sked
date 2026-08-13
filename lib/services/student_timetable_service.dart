@@ -139,19 +139,20 @@ class StudentTimetableService {
   }
 
   StudentTimetableMutationResult addTimetable(
-    StudentModeData data, {
+    StudentModeData data,
+    TimetableConfig config, {
     required PeriodTimeSet fallbackPeriodTimeSet,
-    required String localeCode,
     DateTime? now,
   }) {
     final timestamp = (now ?? DateTime.now()).millisecondsSinceEpoch;
+    final periodTimeSetId =
+        periodTimeSetForId(data, config.periodTimeSetId)?.id ??
+        fallbackPeriodTimeSet.id;
     final timetable = TimetableData(
       id: 'table_$timestamp',
-      config: TimetableConfig(
-        name: newTimetableName(localeCode: localeCode),
-        startDate: now ?? DateTime.now(),
-        totalWeeks: 18,
-        periodTimeSetId: fallbackPeriodTimeSet.id,
+      config: config.copyWith(
+        totalWeeks: normalizeTimetableWeeks(config.totalWeeks),
+        periodTimeSetId: periodTimeSetId,
       ),
       courses: const [],
     );

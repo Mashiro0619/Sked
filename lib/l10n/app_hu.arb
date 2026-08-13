@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Egy soronként, formátum: kulcs:érték",
   "@customFieldsHint": {},
+  "more": "Továbbiak",
+  "@more": {},
   "selectDayOfWeek": "Válasszon napot",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Válasszon héteket",

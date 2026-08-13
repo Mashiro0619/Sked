@@ -1,7 +1,9 @@
 part of 'home_screen.dart';
 
-typedef TimetableLiveRefreshTimerFactory =
-    Timer Function(Duration delay, VoidCallback callback);
+typedef TimetableLiveRefreshTimerFactory = Timer Function(
+  Duration delay,
+  VoidCallback callback,
+);
 
 @visibleForTesting
 class TimetableLiveRefreshScope extends InheritedWidget {
@@ -446,9 +448,8 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                   return Semantics(
                     button: true,
                     selected: selected,
-                    label: MaterialLocalizations.of(
-                      context,
-                    ).formatFullDate(date),
+                    label: MaterialLocalizations.of(context)
+                        .formatFullDate(date),
                     child: AnimatedContainer(
                       key: ValueKey('student-day-$weekday'),
                       duration: motion.effects(SkedMotionSpeed.fast),
@@ -483,9 +484,8 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
                                 Text(
                                   formatWeekdayShortLabel(
                                     weekday,
-                                    localeCode: Localizations.localeOf(
-                                      context,
-                                    ).toLanguageTag(),
+                                    localeCode: Localizations.localeOf(context)
+                                        .toLanguageTag(),
                                   ),
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     color: foreground,
@@ -557,17 +557,16 @@ class _DayStripMetrics {
 class _TimetablePickerPanel extends StatefulWidget {
   const _TimetablePickerPanel({
     required this.provider,
-    required this.activeTimetable,
     required this.onSwitch,
     required this.onEdit,
     required this.onCreate,
   });
 
   final TimetableProvider provider;
-  final TimetableData activeTimetable;
   final Future<bool> Function(BuildContext context, TimetableData timetable)
   onSwitch;
-  final Future<bool> Function(TimetableData timetable) onEdit;
+  final Future<bool> Function(BuildContext context, TimetableData timetable)
+  onEdit;
   final Future<bool> Function(BuildContext context) onCreate;
 
   @override
@@ -576,26 +575,42 @@ class _TimetablePickerPanel extends StatefulWidget {
 
 class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
   bool _busy = false;
+  bool _childDialogOpen = false;
 
-  Future<void> _run(
-    Future<bool> Function() command, {
-    bool showBusy = true,
-    bool closeOnSuccess = true,
-  }) async {
-    if (_busy) return;
-    if (showBusy) setState(() => _busy = true);
+  Future<void> _switch(Future<bool> Function() command) async {
+    if (_busy || _childDialogOpen) return;
+    setState(() => _busy = true);
     final completed = await command();
     if (!mounted) return;
     if (completed) {
-      if (closeOnSuccess) {
-        Navigator.of(context).pop();
-      } else if (showBusy) {
-        // Creation keeps the picker open so the newly selected timetable can
-        // be reviewed or another timetable can be added immediately.
-        setState(() => _busy = false);
-      }
-    } else if (showBusy) {
+      Navigator.of(context).pop();
+    } else {
       setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openChildDialog(
+    Future<bool> Function() openDialog, {
+    bool closeWhenNoTimetables = false,
+  }) async {
+    if (_busy || _childDialogOpen) return;
+    setState(() => _childDialogOpen = true);
+    var closePanel = false;
+    try {
+      final completed = await openDialog();
+      closePanel =
+          completed &&
+          closeWhenNoTimetables &&
+          widget.provider.timetables.isEmpty;
+    } finally {
+      if (mounted && !closePanel) {
+        setState(() => _childDialogOpen = false);
+      } else {
+        _childDialogOpen = false;
+      }
+    }
+    if (mounted && closePanel) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -604,7 +619,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
     final l10n = AppLocalizations.of(context);
     final height = math.min(MediaQuery.sizeOf(context).height * 0.72, 640.0);
     return PopScope(
-      canPop: !_busy,
+      canPop: !_busy && !_childDialogOpen,
       child: SafeArea(
         top: false,
         child: SizedBox(
@@ -623,7 +638,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _busy
+                      onPressed: _busy || _childDialogOpen
                           ? null
                           : () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
@@ -641,8 +656,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                   listenable: widget.provider,
                   builder: (context, _) {
                     final selectedId =
-                        widget.provider.activeTimetableOrNull?.id ??
-                        widget.activeTimetable.id;
+                        widget.provider.activeTimetableOrNull?.id;
                     return ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
@@ -650,7 +664,7 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                           _TimetableDrawerItem(
                             timetable: item,
                             selected: item.id == selectedId,
-                            enabled: !_busy,
+                            enabled: !_busy && !_childDialogOpen,
                             currentLabel: l10n.currentTimetableWeeks(
                               item.config.totalWeeks,
                             ),
@@ -658,16 +672,16 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                               item.config.totalWeeks,
                             ),
                             editTooltip: l10n.editTimetable,
-                            onTap: _busy
+                            onTap: _busy || _childDialogOpen
                                 ? null
-                                : () => _run(
+                                : () => _switch(
                                     () => widget.onSwitch(context, item),
                                   ),
-                            onEdit: _busy
+                            onEdit: _busy || _childDialogOpen
                                 ? null
-                                : () => _run(
-                                    () => widget.onEdit(item),
-                                    showBusy: false,
+                                : () => _openChildDialog(
+                                    () => widget.onEdit(context, item),
+                                    closeWhenNoTimetables: true,
                                   ),
                           ),
                       ],
@@ -678,12 +692,9 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: FilledButton.icon(
-                  onPressed: _busy
+                  onPressed: _busy || _childDialogOpen
                       ? null
-                      : () => _run(
-                          () => widget.onCreate(context),
-                          closeOnSuccess: false,
-                        ),
+                      : () => _openChildDialog(() => widget.onCreate(context)),
                   icon: const Icon(Icons.add),
                   label: Text(l10n.createTimetable),
                 ),
@@ -1581,9 +1592,8 @@ class _EmptyTimetableImportMenuState extends State<_EmptyTimetableImportMenu> {
         constraints: BoxConstraints.tightFor(width: menuWidth),
         menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         clipBehavior: Clip.antiAlias,
-        popUpAnimationStyle: SkedMotionPolicy.of(
-          context,
-        ).routeStyle(AppMotion.menuAnimationStyle),
+        popUpAnimationStyle: SkedMotionPolicy.of(context)
+            .routeStyle(AppMotion.menuAnimationStyle),
         items: [
           SkedPopupMenuItem(
             key: const ValueKey('empty-timetable-import-files'),

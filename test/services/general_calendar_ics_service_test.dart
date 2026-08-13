@@ -440,9 +440,8 @@ END:VCALENDAR
     expect(event.title, 'Apple exported event');
     expect(DateTime.tryParse(event.startDateTimeIso), isNotNull);
     expect(
-      DateTime.parse(
-        event.endDateTimeIso,
-      ).isAfter(DateTime.parse(event.startDateTimeIso)),
+      DateTime.parse(event.endDateTimeIso)
+          .isAfter(DateTime.parse(event.startDateTimeIso)),
       true,
     );
   });

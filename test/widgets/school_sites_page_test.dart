@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -169,7 +170,7 @@ Future<void> _pumpSchoolSitesPage(
       child: MaterialApp(
         key: UniqueKey(),
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: SchoolSitesPage(
           key: UniqueKey(),
@@ -510,9 +511,9 @@ void main() {
 
     expect(store.saveCount, 1);
     expect(
-      decodeSchoolSitesStrict(
-        store.result.candidates.single.source,
-      ).single.name,
+      decodeSchoolSitesStrict(store.result.candidates.single.source)
+          .single
+          .name,
       'Recovered',
     );
   });

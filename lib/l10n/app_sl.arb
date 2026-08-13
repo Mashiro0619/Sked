@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Ena na vrstico, oblika: ključ: value",
   "@customFieldsHint": {},
+  "more": "Več",
+  "@more": {},
   "selectDayOfWeek": "Izberite dan",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Izberite tedne",

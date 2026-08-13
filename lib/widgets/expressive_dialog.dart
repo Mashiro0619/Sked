@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -14,9 +14,8 @@ Future<T?> showExpressiveDialog<T>({
   bool waitForTransitionComplete = false,
   RouteSettings? routeSettings,
 }) async {
-  final animationStyle = SkedMotionPolicy.of(
-    context,
-  ).routeStyle(AppMotion.dialogAnimationStyle);
+  final animationStyle = SkedMotionPolicy.of(context)
+      .routeStyle(AppMotion.dialogAnimationStyle);
   final transitionAnchor = waitForTransitionComplete
       ? GlobalKey(debugLabel: 'expressive-dialog-transition-anchor')
       : null;

@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -87,7 +88,7 @@ class _ThemeSettingsHost extends StatelessWidget {
         builder: (context, provider, child) {
           return MaterialApp(
             locale: locale,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
@@ -185,7 +186,13 @@ void main() {
     await tester.pumpAndSettle();
 
     final list = find.byType(ListView);
-    expect(tester.getSize(list).width, lessThanOrEqualTo(720));
+    expect(tester.getSize(list).width, 1024);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('responsive-settings-content')))
+          .width,
+      lessThanOrEqualTo(1120),
+    );
     expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
     expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
     expect(tester.takeException(), isNull);
@@ -594,9 +601,8 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     final storage = _BlockingTimetableStorage(
-      buildInitialAppData(
-        buildDefaultPeriodTimes(),
-      ).copyWith(themeSeedColorValue: 0xFF6750A4),
+      buildInitialAppData(buildDefaultPeriodTimes())
+          .copyWith(themeSeedColorValue: 0xFF6750A4),
     );
     final provider = await _createProvider(storage);
 
@@ -770,7 +776,7 @@ void main() {
         value: provider,
         child: const MaterialApp(
           locale: Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: ThemeSettingsPage(),
         ),
@@ -913,9 +919,9 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     }
 
-    AppData colorfulData() => buildInitialAppData(
-      buildDefaultPeriodTimes(),
-    ).copyWith(themeColorMode: themeColorModeColorful);
+    AppData colorfulData() =>
+        buildInitialAppData(buildDefaultPeriodTimes())
+            .copyWith(themeColorMode: themeColorModeColorful);
 
     await exerciseDialog(
       data: colorfulData(),

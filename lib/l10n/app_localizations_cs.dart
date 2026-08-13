@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -49,6 +50,9 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get timetableName => 'Název jízdního řádu';
+
+  @override
+  String get timetableNameRequired => 'Timetable name is required';
 
   @override
   String get totalWeeks => 'Celkem týdny';
@@ -124,6 +128,9 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get customFieldsHint => 'Jeden na řádek, formát: klíč:hodnota';
+
+  @override
+  String get more => 'Další';
 
   @override
   String get selectDayOfWeek => 'Vyberte si den';

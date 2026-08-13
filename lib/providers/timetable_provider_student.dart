@@ -54,9 +54,9 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
   }
 
   int dailyPeriodsForTimetable(TimetableData timetable) {
-    return periodTimeSetForId(
-          timetable.config.periodTimeSetId,
-        )?.periodTimes.length ??
+    return periodTimeSetForId(timetable.config.periodTimeSetId)
+            ?.periodTimes
+            .length ??
         1;
   }
 
@@ -147,14 +147,12 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> addTimetable() async {
-    final now = DateTime.now();
+  Future<void> addTimetable(TimetableConfig config) async {
     final result = _studentTimetableService.addTimetable(
       _appData.studentMode,
+      config,
       fallbackPeriodTimeSet:
           activePeriodTimeSetOrNull ?? _createFallbackPeriodTimeSet(),
-      localeCode: _appData.localeCode,
-      now: now,
     );
     _appData = _appData.copyWith(studentMode: result.data);
     _selectedWeek = 1;

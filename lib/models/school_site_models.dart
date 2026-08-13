@@ -195,9 +195,8 @@ List<SchoolSite> _decodeSchoolSiteListStrict(Object? decoded) {
 }
 
 String encodeSchoolSites(List<SchoolSite> sites) {
-  return const JsonEncoder.withIndent(
-    '  ',
-  ).convert(sites.map((item) => item.toJson()).toList());
+  return const JsonEncoder.withIndent('  ')
+      .convert(sites.map((item) => item.toJson()).toList());
 }
 
 String encodeSchoolSiteStorageSnapshot(List<SchoolSite> sites) {

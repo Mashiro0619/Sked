@@ -1575,9 +1575,8 @@ void main() {
 
       final missing = validSnapshot()..remove('hideHomeBottomNavigationBar');
       expect(
-        AppData.decodeStorageSnapshot(
-          jsonEncode(missing),
-        ).hideHomeWorkspaceNavigation,
+        AppData.decodeStorageSnapshot(jsonEncode(missing))
+            .hideHomeWorkspaceNavigation,
         isFalse,
       );
 
@@ -1585,9 +1584,8 @@ void main() {
         ..remove('hideHomeBottomNavigationBar')
         ..['hideHomeWorkspaceNavigation'] = true;
       expect(
-        AppData.decodeStorageSnapshot(
-          jsonEncode(developmentSnapshot),
-        ).hideHomeWorkspaceNavigation,
+        AppData.decodeStorageSnapshot(jsonEncode(developmentSnapshot))
+            .hideHomeWorkspaceNavigation,
         isTrue,
       );
 
@@ -1595,9 +1593,8 @@ void main() {
         ..['hideHomeBottomNavigationBar'] = false
         ..['hideHomeWorkspaceNavigation'] = true;
       expect(
-        AppData.decodeStorageSnapshot(
-          jsonEncode(bothKeys),
-        ).hideHomeWorkspaceNavigation,
+        AppData.decodeStorageSnapshot(jsonEncode(bothKeys))
+            .hideHomeWorkspaceNavigation,
         isTrue,
       );
 

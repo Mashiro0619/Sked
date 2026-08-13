@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -49,6 +50,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get timetableName => '课表名称';
+
+  @override
+  String get timetableNameRequired => '请输入课表名称';
 
   @override
   String get totalWeeks => '总周数';
@@ -122,6 +126,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get customFieldsHint => '每行一个，格式：键:值';
+
+  @override
+  String get more => '更多';
 
   @override
   String get selectDayOfWeek => '选择上课日';
@@ -2058,6 +2065,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get timetableName => '課表名稱';
 
   @override
+  String get timetableNameRequired => '請輸入課表名稱';
+
+  @override
   String get totalWeeks => '總週數';
 
   @override
@@ -2129,6 +2139,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get customFieldsHint => '每行一個，格式：鍵:值';
+
+  @override
+  String get more => '更多';
 
   @override
   String get selectDayOfWeek => '選擇上課日';

@@ -1,42 +1,39 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/utils/constants.dart';
 
 void main() {
-  test(
-    'shape scheme exposes semantic families and interpolates same-family shapes',
-    () {
-      final shapes = SkedShapeScheme.standard;
+  test('shape scheme exposes semantic families and interpolates same-family shapes', () {
+    final shapes = SkedShapeScheme.standard;
 
-      expect(shapes.card, same(shapes.container));
-      expect(shapes.field, same(shapes.control));
-      expect(shapes.bottomSheet, isA<RoundedSuperellipseBorder>());
-      final sheetRadius = (shapes.bottomSheet as RoundedSuperellipseBorder)
-          .borderRadius
-          .resolve(TextDirection.ltr);
-      expect(sheetRadius.bottomLeft.x, 0);
-      expect(sheetRadius.bottomRight.x, 0);
+    expect(shapes.card, same(shapes.container));
+    expect(shapes.field, same(shapes.control));
+    expect(shapes.bottomSheet, isA<RoundedSuperellipseBorder>());
+    final sheetRadius = (shapes.bottomSheet as RoundedSuperellipseBorder)
+        .borderRadius
+        .resolve(TextDirection.ltr);
+    expect(sheetRadius.bottomLeft.x, 0);
+    expect(sheetRadius.bottomRight.x, 0);
 
-      final mid = shapes.lerp(
-        shapes.copyWith(
-          control: const RoundedSuperellipseBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-          ),
+    final mid = shapes.lerp(
+      shapes.copyWith(
+        control: const RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
         ),
-        0.5,
-      );
-      expect(mid.control, isA<RoundedSuperellipseBorder>());
-      expect(
-        (mid.control as RoundedSuperellipseBorder).borderRadius
-            .resolve(TextDirection.ltr)
-            .topLeft
-            .x,
-        closeTo(12, 0.001),
-      );
-    },
-  );
+      ),
+      0.5,
+    );
+    expect(mid.control, isA<RoundedSuperellipseBorder>());
+    expect(
+      (mid.control as RoundedSuperellipseBorder).borderRadius
+          .resolve(TextDirection.ltr)
+          .topLeft
+          .x,
+      closeTo(12, 0.001),
+    );
+  });
 
   test(
     'shape scheme copy, fallback radius, and semantic getters stay coherent',

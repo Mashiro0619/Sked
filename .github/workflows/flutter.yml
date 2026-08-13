@@ -21,7 +21,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.9'
+          flutter-version: '3.47.0'
           channel: stable
           cache: true
 
@@ -187,7 +187,7 @@ jobs:
       matrix:
         include:
           - target: linux
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - target: windows
             os: windows-latest
           - target: macos
@@ -200,6 +200,7 @@ jobs:
       - name: Install Linux desktop dependencies
         if: matrix.target == 'linux'
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y \
             clang \
@@ -207,8 +208,13 @@ jobs:
             ninja-build \
             pkg-config \
             libgtk-3-dev \
+            libepoxy-dev \
             liblzma-dev \
-            libsecret-1-dev
+            libsecret-1-dev \
+            libwayland-dev \
+            libwpe-1.0-dev \
+            libwpebackend-fdo-1.0-dev \
+            libwpewebkit-1.0-dev
 
       - name: Install NuGet
         if: matrix.target == 'windows'
@@ -223,7 +229,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.9'
+          flutter-version: '3.47.0'
           channel: stable
           cache: true
 
@@ -239,6 +245,10 @@ jobs:
 
       - name: Build release application
         run: flutter build ${{ matrix.target }} --release
+
+      - name: Build unsigned iOS release
+        if: matrix.target == 'macos'
+        run: flutter build ios --release --no-codesign
 
       - name: Verify built macOS bundle
         if: matrix.target == 'macos'

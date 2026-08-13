@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "En per rad, format: nyckel:värde",
   "@customFieldsHint": {},
+  "more": "Mer",
+  "@more": {},
   "selectDayOfWeek": "Välj dag",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Välj veckor",

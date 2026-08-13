@@ -1,11 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
+import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 
 class LanguageSettingsPage extends StatefulWidget {
@@ -26,9 +27,9 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         final l10n = AppLocalizations.of(context);
         final languageOptions = supportedLanguageOptions(l10n);
         final currentCode = normalizeLocaleCode(provider.localeCode);
-        final searchViewMinWidth = MediaQuery.sizeOf(
-          context,
-        ).width.clamp(0.0, 320.0).toDouble();
+        final searchViewMinWidth = MediaQuery.sizeOf(context).width
+            .clamp(0.0, 320.0)
+            .toDouble();
         return Scaffold(
           appBar: AppBar(
             title: Text(l10n.language),
@@ -96,43 +97,24 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
               Expanded(
                 child: SafeArea(
                   top: false,
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-                        keyboardDismissBehavior:
-                            ScrollViewKeyboardDismissBehavior.onDrag,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Column(
-                              children: [
-                                for (final option in languageOptions)
-                                  _LanguageOptionTile(
-                                    key: ValueKey(
-                                      'language-option-${option.code}',
-                                    ),
-                                    option: option,
-                                    selected: option.code == currentCode,
-                                    onTap:
-                                        _isSelectingLanguage ||
-                                            _languageSelectionPopped
-                                        ? null
-                                        : () {
-                                            unawaited(
-                                              _selectLanguage(
-                                                provider,
-                                                option.code,
-                                              ),
-                                            );
-                                          },
-                                  ),
-                              ],
-                            ),
+                  child: ResponsiveSettingsSingleColumnBody(
+                    child: Column(
+                      children: [
+                        for (final option in languageOptions)
+                          _LanguageOptionTile(
+                            key: ValueKey('language-option-${option.code}'),
+                            option: option,
+                            selected: option.code == currentCode,
+                            onTap:
+                                _isSelectingLanguage || _languageSelectionPopped
+                                ? null
+                                : () {
+                                    unawaited(
+                                      _selectLanguage(provider, option.code),
+                                    );
+                                  },
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),

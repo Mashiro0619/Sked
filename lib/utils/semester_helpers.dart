@@ -14,9 +14,8 @@ String formatDayOfWeekLabel(
   String localeCode = defaultLocaleCode,
 }) {
   final normalizedDay = normalizeDayOfWeek(dayOfWeek);
-  return AppStrings.forLocaleCode(
-    localeCode,
-  ).formatDayOfWeekLabel(normalizedDay);
+  return AppStrings.forLocaleCode(localeCode)
+      .formatDayOfWeekLabel(normalizedDay);
 }
 
 String formatWeekdayShortLabel(
@@ -24,9 +23,8 @@ String formatWeekdayShortLabel(
   String localeCode = defaultLocaleCode,
 }) {
   final normalizedDay = normalizeDayOfWeek(dayOfWeek);
-  return AppStrings.forLocaleCode(
-    localeCode,
-  ).formatWeekdayShortLabel(normalizedDay);
+  return AppStrings.forLocaleCode(localeCode)
+      .formatWeekdayShortLabel(normalizedDay);
 }
 
 String formatMonthLabel(int month, {String localeCode = defaultLocaleCode}) {
@@ -39,9 +37,8 @@ String formatSemesterWeeksLabel(
   String localeCode = defaultLocaleCode,
 }) {
   final normalized = normalizeSemesterWeeks(semesterWeeks);
-  return AppStrings.forLocaleCode(
-    localeCode,
-  ).formatSemesterWeeksLabel(normalized, totalWeeks: totalWeeks);
+  return AppStrings.forLocaleCode(localeCode)
+      .formatSemesterWeeksLabel(normalized, totalWeeks: totalWeeks);
 }
 
 List<int> matchPeriodsForTimeRange(

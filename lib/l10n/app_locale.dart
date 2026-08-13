@@ -20,9 +20,8 @@ class AppLanguageMetadata {
 
   String localizedNameFor(String uiLocaleCode) {
     final normalizedCode = normalizeLocaleCode(uiLocaleCode);
-    final languageCode = _parseLocaleCode(
-      normalizedCode,
-    ).languageCode.toLowerCase();
+    final languageCode = _parseLocaleCode(normalizedCode).languageCode
+        .toLowerCase();
     return localizedNames[normalizedCode] ??
         localizedNames[languageCode] ??
         localizedNames[defaultLocaleCode] ??
@@ -688,9 +687,8 @@ List<AppLanguageOption> supportedLanguageOptions(AppLocalizations l10n) {
     );
   }).toList();
   options.sort((a, b) {
-    final priorityCompare = _languageSortPriority(
-      a.code,
-    ).compareTo(_languageSortPriority(b.code));
+    final priorityCompare = _languageSortPriority(a.code)
+        .compareTo(_languageSortPriority(b.code));
     if (priorityCompare != 0) {
       return priorityCompare;
     }

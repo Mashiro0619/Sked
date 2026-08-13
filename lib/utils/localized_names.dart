@@ -71,9 +71,8 @@ String noExportableTimetableMessage({String localeCode = defaultLocaleCode}) {
 String replaceActiveRequiresSingleTimetableMessage({
   String localeCode = defaultLocaleCode,
 }) {
-  return _stringsForLocale(
-    localeCode,
-  ).replaceActiveRequiresSingleTimetableMessage;
+  return _stringsForLocale(localeCode)
+      .replaceActiveRequiresSingleTimetableMessage;
 }
 
 String noActiveTimetableToReplaceMessage({
@@ -106,9 +105,8 @@ String noSchedulesInImportMessage({String localeCode = defaultLocaleCode}) {
 String replaceActiveRequiresSingleScheduleMessage({
   String localeCode = defaultLocaleCode,
 }) {
-  return _stringsForLocale(
-    localeCode,
-  ).replaceActiveRequiresSingleScheduleMessage;
+  return _stringsForLocale(localeCode)
+      .replaceActiveRequiresSingleScheduleMessage;
 }
 
 String noActiveScheduleToReplaceMessage({

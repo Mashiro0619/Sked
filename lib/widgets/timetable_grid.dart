@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -1514,9 +1514,8 @@ class _CourseCard extends StatelessWidget {
                           padding: EdgeInsets.all(compact ? 2 : 3),
                           decoration: ShapeDecoration(
                             color: colorScheme.primary.withValues(alpha: 0.18),
-                            shape: skedShapeSchemeOf(
-                              context,
-                            ).selectionIndicator,
+                            shape: skedShapeSchemeOf(context)
+                                .selectionIndicator,
                           ),
                           child: Icon(
                             Icons.layers_outlined,

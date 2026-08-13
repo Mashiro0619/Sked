@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "प्रति पंक्ति एक, फ़ॉर्मेट: key:value",
   "@customFieldsHint": {},
+  "more": "अधिक",
+  "@more": {},
   "selectDayOfWeek": "दिन चुनें",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "सप्ताह चुनें",

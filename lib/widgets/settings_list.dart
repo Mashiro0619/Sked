@@ -1,7 +1,244 @@
-import 'package:flutter/material.dart';
+import 'dart:ui' show PointerDeviceKind;
+
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
+
+/// A full-width scroll viewport for settings pages with centered, adaptive
+/// content. Wide layouts may split complete sections into two columns while
+/// compact and large-text layouts keep the caller-provided reading order.
+class ResponsiveSettingsBody extends StatelessWidget {
+  const ResponsiveSettingsBody({
+    super.key,
+    required this.children,
+    this.firstColumnChildren,
+    this.secondColumnChildren,
+    this.firstColumnSectionIndices,
+    this.scrollViewKey,
+    this.controller,
+    this.topPadding = 8,
+    this.bottomPadding = 24,
+  });
+
+  final List<Widget> children;
+  final List<Widget>? firstColumnChildren;
+  final List<Widget>? secondColumnChildren;
+  final Set<int>? firstColumnSectionIndices;
+  final Key? scrollViewKey;
+  final ScrollController? controller;
+  final double topPadding;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final availableContentWidth =
+            (constraints.maxWidth - horizontalPadding * 2)
+                .clamp(0.0, 1120.0)
+                .toDouble();
+        final availableColumnWidth = (availableContentWidth - 20) / 2;
+        final groupedSections = firstColumnSectionIndices == null
+            ? null
+            : _groupSettingsSections(children);
+        final derivedFirstColumnChildren = groupedSections == null
+            ? firstColumnChildren
+            : [
+                for (var index = 0; index < groupedSections.length; index++)
+                  if (firstColumnSectionIndices!.contains(index))
+                    groupedSections[index],
+              ];
+        final derivedSecondColumnChildren = groupedSections == null
+            ? secondColumnChildren
+            : [
+                for (var index = 0; index < groupedSections.length; index++)
+                  if (!firstColumnSectionIndices!.contains(index))
+                    groupedSections[index],
+              ];
+        final hasWideColumns =
+            derivedFirstColumnChildren != null &&
+            derivedSecondColumnChildren != null;
+        final useTwoColumns =
+            hasWideColumns &&
+            constraints.maxWidth >= 840 &&
+            textScale <= 1.3 &&
+            availableColumnWidth >= 360;
+        final maxContentWidth = useTwoColumns ? 1120.0 : 720.0;
+
+        final content = useTwoColumns
+            ? KeyedSubtree(
+                key: const ValueKey('responsive-settings-two-column'),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: derivedFirstColumnChildren,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: derivedSecondColumnChildren,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : KeyedSubtree(
+                key: const ValueKey('responsive-settings-single-column'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: children,
+                ),
+              );
+
+        return ScrollConfiguration(
+          behavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.invertedStylus,
+            },
+          ),
+          child: ListView(
+            key: scrollViewKey,
+            controller: controller,
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              topPadding,
+              horizontalPadding,
+              bottomPadding,
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  key: const ValueKey('responsive-settings-content'),
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: SizedBox(width: double.infinity, child: content),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+List<Widget> _groupSettingsSections(List<Widget> children) {
+  final sections = <List<Widget>>[];
+  var currentSection = <Widget>[];
+  for (final child in children) {
+    if (child is SettingsSectionHeader && currentSection.isNotEmpty) {
+      sections.add(currentSection);
+      currentSection = <Widget>[];
+    }
+    currentSection.add(child);
+  }
+  if (currentSection.isNotEmpty) sections.add(currentSection);
+  return [
+    for (final section in sections)
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: section),
+  ];
+}
+
+/// A full-width scroll viewport for pages that intentionally stay single
+/// column on large windows.
+class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
+  const ResponsiveSettingsSingleColumnBody({
+    super.key,
+    required this.child,
+    this.scrollViewKey,
+    this.controller,
+    this.padding,
+    this.topPadding = 8,
+    this.bottomPadding = 24,
+  });
+
+  final Widget child;
+  final Key? scrollViewKey;
+  final ScrollController? controller;
+  final EdgeInsetsGeometry? padding;
+  final double topPadding;
+  final double bottomPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        return ScrollConfiguration(
+          behavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.invertedStylus,
+            },
+          ),
+          child: ListView(
+            key: scrollViewKey,
+            controller: controller,
+            padding:
+                padding ??
+                EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  topPadding,
+                  horizontalPadding,
+                  bottomPadding,
+                ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  key: const ValueKey(
+                    'responsive-settings-single-column-content',
+                  ),
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: SizedBox(width: double.infinity, child: child),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Keeps a heading and its controls together when a settings body switches
+/// between one and two columns.
+class ResponsiveSettingsSection extends StatelessWidget {
+  const ResponsiveSettingsSection({
+    super.key,
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SettingsSectionHeader(title: title),
+        ...children,
+      ],
+    );
+  }
+}
 
 /// A settings group whose rows read as one connected surface.
 ///

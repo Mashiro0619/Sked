@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Yksi rivistä kohti, muoto: avain:arvo",
   "@customFieldsHint": {},
+  "more": "Lisää",
+  "@more": {},
   "selectDayOfWeek": "Valitse päivä",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Valitse viikot",

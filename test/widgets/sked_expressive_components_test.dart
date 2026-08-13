@@ -1,6 +1,6 @@
 import 'dart:ui' show SemanticsRole;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/sked_expressive_loading_indicator.dart';

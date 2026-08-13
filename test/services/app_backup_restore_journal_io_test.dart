@@ -11,9 +11,8 @@ import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/app_storage_layout_io.dart';
 
 AppData _appData(String localeCode) {
-  return buildInitialAppData(
-    buildDefaultPeriodTimes(),
-  ).copyWith(localeCode: localeCode);
+  return buildInitialAppData(buildDefaultPeriodTimes())
+      .copyWith(localeCode: localeCode);
 }
 
 String _backupSource(String localeCode) {
@@ -242,9 +241,8 @@ void main() {
         phase: AppBackupRestoreJournalPhase.dataCommitted,
       );
       await supportDirectory.create(recursive: true);
-      await _journalFile(
-        supportDirectory,
-      ).writeAsString(oldSource, flush: true);
+      await _journalFile(supportDirectory)
+          .writeAsString(oldSource, flush: true);
       await _journalFile(
         supportDirectory,
         AppStorageLayout.temporarySuffix,

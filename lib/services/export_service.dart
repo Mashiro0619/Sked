@@ -119,12 +119,14 @@ class ExportService {
 
     if (isAndroid) {
       try {
-        final savedName = await _androidChannel
-            .invokeMethod<String>('saveTextFile', {
-              'fileName': payload.fileName,
-              'content': payload.content,
-              'mimeType': payload.mimeType,
-            });
+        final savedName = await _androidChannel.invokeMethod<String>(
+          'saveTextFile',
+          {
+            'fileName': payload.fileName,
+            'content': payload.content,
+            'mimeType': payload.mimeType,
+          },
+        );
         if (savedName == null) {
           return const ExportSaveResult(status: ExportSaveStatus.cancelled);
         }

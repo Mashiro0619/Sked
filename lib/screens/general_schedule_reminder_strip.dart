@@ -1,7 +1,9 @@
 part of 'general_schedule_home_screen.dart';
 
-typedef GeneralReminderTimerFactory =
-    Timer Function(Duration delay, VoidCallback callback);
+typedef GeneralReminderTimerFactory = Timer Function(
+  Duration delay,
+  VoidCallback callback,
+);
 
 @visibleForTesting
 class GeneralReminderTimeScope extends InheritedWidget {

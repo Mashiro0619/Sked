@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Một cho mỗi dòng, định dạng: khóa: giá trị",
   "@customFieldsHint": {},
+  "more": "Thêm",
+  "@more": {},
   "selectDayOfWeek": "Chọn ngày",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Chọn tuần",

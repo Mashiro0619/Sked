@@ -71,9 +71,8 @@ List<String> _run(List<String> arguments) {
       });
       return macosBundleMetadataIssues(
         infoPlist: File(options['--info-plist']!).readAsStringSync(),
-        entitlementsPlist: File(
-          options['--entitlements-plist']!,
-        ).readAsStringSync(),
+        entitlementsPlist: File(options['--entitlements-plist']!)
+            .readAsStringSync(),
         bundleIdentifier: options['--bundle-id']!,
       );
     default:

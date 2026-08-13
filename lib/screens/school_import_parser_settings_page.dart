@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -148,202 +148,192 @@ class _SchoolImportParserSettingsPageState
                 Expanded(
                   child: SafeArea(
                     top: false,
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 720),
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          children: [
-                            SettingsSectionHeader(
-                              title: l10n.schoolImportParserCustomOpenAi,
+                    child: ResponsiveSettingsSingleColumnBody(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SettingsSectionHeader(
+                            title: l10n.schoolImportParserCustomOpenAi,
+                          ),
+                          Text(
+                            l10n.schoolImportParserSettingsDesc,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _baseUrlController,
+                            focusNode: _baseUrlFocusNode,
+                            decoration: InputDecoration(
+                              labelText: l10n.schoolImportParserBaseUrl,
+                              hintText: 'https://api.example.com/v1',
+                              prefixIcon: const Icon(Icons.link),
+                              errorText: baseUrl.isNotEmpty && !hasValidBaseUrl
+                                  ? l10n.schoolImportParserBaseUrlInvalid
+                                  : null,
                             ),
-                            Text(
-                              l10n.schoolImportParserSettingsDesc,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _baseUrlController,
-                              focusNode: _baseUrlFocusNode,
-                              decoration: InputDecoration(
-                                labelText: l10n.schoolImportParserBaseUrl,
-                                hintText: 'https://api.example.com/v1',
-                                prefixIcon: const Icon(Icons.link),
-                                errorText:
-                                    baseUrl.isNotEmpty && !hasValidBaseUrl
-                                    ? l10n.schoolImportParserBaseUrlInvalid
-                                    : null,
-                              ),
-                              keyboardType: TextInputType.url,
-                              onChanged: (_) =>
-                                  _scheduleTextSettingsUpdate(provider),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _apiKeyController,
-                              focusNode: _apiKeyFocusNode,
-                              obscureText: !_showApiKey,
-                              decoration: InputDecoration(
-                                labelText: l10n.schoolImportParserApiKey,
-                                prefixIcon: const Icon(Icons.key_outlined),
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() => _showApiKey = !_showApiKey);
-                                  },
-                                  tooltip: _showApiKey
-                                      ? l10n.hideApiKey
-                                      : l10n.showApiKey,
-                                  icon: Icon(
-                                    _showApiKey
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                  ),
+                            keyboardType: TextInputType.url,
+                            onChanged: (_) =>
+                                _scheduleTextSettingsUpdate(provider),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _apiKeyController,
+                            focusNode: _apiKeyFocusNode,
+                            obscureText: !_showApiKey,
+                            decoration: InputDecoration(
+                              labelText: l10n.schoolImportParserApiKey,
+                              prefixIcon: const Icon(Icons.key_outlined),
+                              suffixIcon: IconButton(
+                                onPressed: () {
+                                  setState(() => _showApiKey = !_showApiKey);
+                                },
+                                tooltip: _showApiKey
+                                    ? l10n.hideApiKey
+                                    : l10n.showApiKey,
+                                icon: Icon(
+                                  _showApiKey
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                 ),
                               ),
-                              onChanged: (value) =>
-                                  _scheduleApiKeyUpdate(provider, value),
                             ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _modelController,
-                              focusNode: _modelFocusNode,
-                              decoration: InputDecoration(
-                                labelText: l10n.schoolImportParserModel,
-                                prefixIcon: const Icon(
-                                  Icons.model_training_outlined,
-                                ),
-                              ),
-                              onChanged: (_) =>
-                                  _scheduleTextSettingsUpdate(provider),
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.tonalIcon(
-                              onPressed:
-                                  _isFetchingModels ||
-                                      _isSavingApiKey ||
-                                      _isSavingTextSettings ||
-                                      !hasValidBaseUrl ||
-                                      apiKey.isEmpty
-                                  ? null
-                                  : _fetchModels,
-                              icon: _isFetchingModels
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.refresh_outlined),
-                              label: Text(
-                                _isFetchingModels
-                                    ? l10n.schoolImportParserFetchingModels
-                                    : l10n.schoolImportParserFetchModels,
+                            onChanged: (value) =>
+                                _scheduleApiKeyUpdate(provider, value),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _modelController,
+                            focusNode: _modelFocusNode,
+                            decoration: InputDecoration(
+                              labelText: l10n.schoolImportParserModel,
+                              prefixIcon: const Icon(
+                                Icons.model_training_outlined,
                               ),
                             ),
-                            if (availableModels.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  for (final model in availableModels)
-                                    ChoiceChip(
-                                      label: Text(model),
-                                      selected:
-                                          _modelController.text.trim() == model,
-                                      onSelected: (_) {
-                                        _modelController.text = model;
-                                        _modelController.selection =
-                                            TextSelection.collapsed(
-                                              offset: model.length,
-                                            );
-                                        _scheduleTextSettingsUpdate(provider);
-                                        unawaited(
-                                          _flushPendingTextSettingsSave(),
-                                        );
-                                      },
+                            onChanged: (_) =>
+                                _scheduleTextSettingsUpdate(provider),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.tonalIcon(
+                            onPressed:
+                                _isFetchingModels ||
+                                    _isSavingApiKey ||
+                                    _isSavingTextSettings ||
+                                    !hasValidBaseUrl ||
+                                    apiKey.isEmpty
+                                ? null
+                                : _fetchModels,
+                            icon: _isFetchingModels
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                     ),
-                                ],
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            ExpansionTile(
-                              tilePadding: EdgeInsets.zero,
-                              childrenPadding: const EdgeInsets.only(top: 8),
-                              initiallyExpanded: false,
-                              title: Text(
-                                l10n.schoolImportParserCustomPromptTitle,
-                              ),
-                              subtitle: Text(
-                                l10n.schoolImportParserCustomPromptDescription,
-                              ),
+                                  )
+                                : const Icon(Icons.refresh_outlined),
+                            label: Text(
+                              _isFetchingModels
+                                  ? l10n.schoolImportParserFetchingModels
+                                  : l10n.schoolImportParserFetchModels,
+                            ),
+                          ),
+                          if (availableModels.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
-                                TextField(
-                                  controller: _customPromptController,
-                                  focusNode: _customPromptFocusNode,
-                                  minLines: 4,
-                                  maxLines: 8,
-                                  decoration: InputDecoration(
-                                    labelText: l10n
-                                        .schoolImportParserCustomPromptTitle,
-                                    hintText:
-                                        l10n.schoolImportParserCustomPromptHint,
-                                    alignLabelWithHint: true,
-                                  ),
-                                  onChanged: (value) {
-                                    _promptStorageValue = value;
-                                    _scheduleTextSettingsUpdate(provider);
-                                  },
-                                ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    onPressed: () {
-                                      _promptStorageValue = '';
-                                      _syncController(
-                                        _customPromptController,
-                                        SchoolImportApi
-                                            .defaultCustomOpenAiSystemPrompt,
-                                      );
-                                      _scheduleTextSettingsUpdate(
-                                        provider,
-                                        promptOverride: '',
-                                      );
+                                for (final model in availableModels)
+                                  ChoiceChip(
+                                    label: Text(model),
+                                    selected:
+                                        _modelController.text.trim() == model,
+                                    onSelected: (_) {
+                                      _modelController.text = model;
+                                      _modelController.selection =
+                                          TextSelection.collapsed(
+                                            offset: model.length,
+                                          );
+                                      _scheduleTextSettingsUpdate(provider);
                                       unawaited(
                                         _flushPendingTextSettingsSave(),
                                       );
                                     },
-                                    icon: const Icon(
-                                      Icons.restart_alt_outlined,
-                                    ),
-                                    label: Text(
-                                      l10n.schoolImportParserResetDefaultPrompt,
-                                    ),
                                   ),
-                                ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              l10n.schoolImportParserPlaintextWarning,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
                           ],
-                        ),
+                          const SizedBox(height: 16),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(top: 8),
+                            initiallyExpanded: false,
+                            title: Text(
+                              l10n.schoolImportParserCustomPromptTitle,
+                            ),
+                            subtitle: Text(
+                              l10n.schoolImportParserCustomPromptDescription,
+                            ),
+                            children: [
+                              TextField(
+                                controller: _customPromptController,
+                                focusNode: _customPromptFocusNode,
+                                minLines: 4,
+                                maxLines: 8,
+                                decoration: InputDecoration(
+                                  labelText:
+                                      l10n.schoolImportParserCustomPromptTitle,
+                                  hintText:
+                                      l10n.schoolImportParserCustomPromptHint,
+                                  alignLabelWithHint: true,
+                                ),
+                                onChanged: (value) {
+                                  _promptStorageValue = value;
+                                  _scheduleTextSettingsUpdate(provider);
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    _promptStorageValue = '';
+                                    _syncController(
+                                      _customPromptController,
+                                      SchoolImportApi
+                                          .defaultCustomOpenAiSystemPrompt,
+                                    );
+                                    _scheduleTextSettingsUpdate(
+                                      provider,
+                                      promptOverride: '',
+                                    );
+                                    unawaited(_flushPendingTextSettingsSave());
+                                  },
+                                  icon: const Icon(Icons.restart_alt_outlined),
+                                  label: Text(
+                                    l10n.schoolImportParserResetDefaultPrompt,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.schoolImportParserPlaintextWarning,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -699,9 +689,8 @@ class _SchoolImportParserSettingsPageState
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

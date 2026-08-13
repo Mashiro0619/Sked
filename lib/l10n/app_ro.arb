@@ -101,6 +101,8 @@
   "@customFields": {},
   "customFieldsHint": "Unul pe linie, format: cheie:valoare",
   "@customFieldsHint": {},
+  "more": "Mai multe",
+  "@more": {},
   "selectDayOfWeek": "Alegeți ziua",
   "@selectDayOfWeek": {},
   "selectSemesterWeeks": "Alegeți săptămâni",

@@ -243,9 +243,10 @@ class GeneralEvent {
       endDateTimeIso: _stringValue(json['end']),
       isAllDay: _boolValue(json['isAllDay']) ?? false,
       recurrenceRule: GeneralEventRecurrenceRule.fromJson(ruleJson),
-      recurrenceExceptionDateIso: _listValue(
-        json['recurrenceExceptionDates'],
-      ).where((item) => item != null).map((item) => item.toString()).toList(),
+      recurrenceExceptionDateIso: _listValue(json['recurrenceExceptionDates'])
+          .where((item) => item != null)
+          .map((item) => item.toString())
+          .toList(),
       location: _stringValue(json['location']),
       notes: _stringValue(json['notes']),
       colorValue: _intValue(json['colorValue']),

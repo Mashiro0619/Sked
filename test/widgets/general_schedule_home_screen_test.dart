@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -189,7 +190,7 @@ Future<void> _pumpGeneralScheduleHomeScreen(
       value: provider,
       child: MaterialApp(
         locale: appLocaleFromCode(provider.localeCode),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: theme,
         builder: (context, child) {
@@ -382,7 +383,7 @@ void main() {
           value: provider,
           child: MaterialApp(
             locale: appLocaleFromCode(provider.localeCode),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const Material(
               child: GeneralScheduleHomeScreen(
@@ -424,7 +425,7 @@ void main() {
         value: provider,
         child: MaterialApp(
           locale: appLocaleFromCode(provider.localeCode),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Material(
             child: GeneralScheduleHomeScreen(
@@ -683,15 +684,26 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    expect(find.byTooltip('Switch view: Week -> Day'), findsOneWidget);
+    String switchTooltip() {
+      return tester
+          .widget<Tooltip>(
+            find.descendant(
+              of: find.byKey(const ValueKey('general-view-switcher')),
+              matching: find.byType(Tooltip),
+            ),
+          )
+          .message!;
+    }
+
+    expect(switchTooltip(), 'Switch view: Week -> Day');
     await tapNext();
-    expect(find.byTooltip('Switch view: Day -> List'), findsOneWidget);
+    expect(switchTooltip(), 'Switch view: Day -> List');
     await tapNext();
-    expect(find.byTooltip('Switch view: List -> Month'), findsOneWidget);
+    expect(switchTooltip(), 'Switch view: List -> Month');
     await tapNext();
-    expect(find.byTooltip('Switch view: Month -> Week'), findsOneWidget);
+    expect(switchTooltip(), 'Switch view: Month -> Week');
     await tapNext();
-    expect(find.byTooltip('Switch view: Week -> Day'), findsOneWidget);
+    expect(switchTooltip(), 'Switch view: Week -> Day');
     expect(provider.selectedGeneralDate, initialDate);
   });
 
@@ -2266,8 +2278,7 @@ void main() {
         GeneralEvent(
           id: 'evt1',
           calendarId: 'cal1',
-          title:
-              'Planning session with a very long event title that should wrap safely',
+          title: 'Planning session with a very long event title that should wrap safely',
           startDateTimeIso: '2026-06-16T09:00:00.000',
           endDateTimeIso: '2026-06-16T10:00:00.000',
           location:
@@ -3078,8 +3089,7 @@ void main() {
         GeneralEvent(
           id: 'evt1',
           calendarId: 'cal1',
-          title:
-              'Recurring project review with a very long event title for agenda',
+          title: 'Recurring project review with a very long event title for agenda',
           startDateTimeIso: '2026-06-16T09:00:00.000',
           endDateTimeIso: '2026-06-16T10:00:00.000',
           location:
@@ -3309,9 +3319,8 @@ void main() {
     const solarTermColor = Color(0xFF8844CC);
     final theme = ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: festivalColor,
-      ).copyWith(primary: festivalColor, tertiary: solarTermColor),
+      colorScheme: ColorScheme.fromSeed(seedColor: festivalColor)
+          .copyWith(primary: festivalColor, tertiary: solarTermColor),
     );
     final calendar = const GeneralSchedule(
       id: 'cal1',

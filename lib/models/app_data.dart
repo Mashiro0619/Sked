@@ -672,9 +672,10 @@ void _validateStorageGeneralEvent(
     String? previousDate;
     for (final date in exceptionDates) {
       final parsed = tryParseStrictIsoDate(date)!;
-      final canonical = normalizeDateOnly(
-        parsed,
-      ).toIso8601String().split('T').first;
+      final canonical = normalizeDateOnly(parsed)
+          .toIso8601String()
+          .split('T')
+          .first;
       if (date != canonical ||
           !seenDates.add(date) ||
           (previousDate != null && date.compareTo(previousDate) <= 0)) {

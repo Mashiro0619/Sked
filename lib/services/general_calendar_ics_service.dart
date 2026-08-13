@@ -903,9 +903,8 @@ DateTime? _parseRRuleUntil(String value) {
     return date;
   }
 
-  final basicMatch = RegExp(
-    r'^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$',
-  ).firstMatch(trimmed);
+  final basicMatch = RegExp(r'^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$')
+      .firstMatch(trimmed);
   if (basicMatch != null) {
     return _strictDateTime(
       year: int.parse(basicMatch.group(1)!),

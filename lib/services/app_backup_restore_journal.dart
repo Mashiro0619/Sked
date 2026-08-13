@@ -420,7 +420,7 @@ class SharedPreferencesAppBackupRestoreJournal extends AppBackupRestoreJournal {
     try {
       final preferences = await _preferencesProvider();
       await _preferencesReloader(preferences);
-      return _preserveSourceNow(preferences, source);
+      return await _preserveSourceNow(preferences, source);
     } on AppBackupRestoreJournalException {
       rethrow;
     } catch (error) {

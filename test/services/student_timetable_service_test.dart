@@ -124,16 +124,45 @@ void main() {
 
       final result = service.addTimetable(
         source,
+        TimetableConfig(
+          name: 'Configured timetable',
+          startDate: now,
+          totalWeeks: 20,
+          periodTimeSetId: 'set1',
+        ),
         fallbackPeriodTimeSet: periodSet(id: 'set1'),
-        localeCode: defaultLocaleCode,
         now: now,
       );
 
       expect(result.timetable!.id, 'table_${now.millisecondsSinceEpoch}');
       expect(result.timetable!.config.periodTimeSetId, 'set1');
+      expect(result.timetable!.config.name, 'Configured timetable');
+      expect(result.timetable!.config.totalWeeks, 20);
       expect(result.data.activeTimetableId, result.timetable!.id);
       expect(result.data.timetables, hasLength(2));
     });
+
+    test(
+      'normalizes a new timetable and falls back from a missing period set',
+      () {
+        final source = data(periodTimeSets: [periodSet(id: 'set1')]);
+        final result = service.addTimetable(
+          source,
+          TimetableConfig(
+            name: 'Configured timetable',
+            startDate: DateTime(2026, 5, 24),
+            totalWeeks: 999,
+            periodTimeSetId: 'missing',
+          ),
+          fallbackPeriodTimeSet: periodSet(id: 'set1'),
+          now: DateTime(2026, 5, 24, 10),
+        );
+
+        expect(result.timetable!.config.totalWeeks, maxTimetableWeeks);
+        expect(result.timetable!.config.periodTimeSetId, 'set1');
+        expect(result.data.activeTimetableId, result.timetable!.id);
+      },
+    );
 
     test('deletes a timetable and removes stale conflict choices', () {
       final source = data(
