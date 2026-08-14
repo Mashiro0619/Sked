@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Tämä sivu saavutti turvallisen tuonnin rajan. Vain tallennettu osa lähetetään jäsennettäväksi.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Tuntematon sivusto",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Kehittäjätila",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Työkalut kattavien esimerkkitietojen lisäämiseen ulkoasun ja käytön tarkistamista varten.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Esimerkkitietojen kieli",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Kiina",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Englanti",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Lisää yhden lukujärjestyksen sekä kalentereita ja tapahtumia korvaamatta nykyisiä tietoja.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Lisää esimerkkitiedot",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Esimerkkilukujärjestys ja tapahtumat lisättiin.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Avaa kehittäjätila painamalla 3 sekunnin ajan",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Tiivistä työtilan navigointi",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Laajenna työtilan navigointi",
+  "@expandWorkspaceNavigation": {}
 }

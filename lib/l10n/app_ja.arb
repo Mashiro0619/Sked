@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "このページは安全なインポート上限に達しました。取得できた部分だけが解析のために送信されます。",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "不明なサイト",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "開発者モード",
+  "@developerModeTitle": {},
+  "developerModeDescription": "表示と操作の確認に使う一式のサンプルデータを追加できます。",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "サンプルデータの言語",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "中国語",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "英語",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "既存のデータを置き換えずに、時間割 1 件とカレンダー・予定一式を追加します。",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "サンプルデータを追加",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "サンプルの時間割と予定を追加しました。",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "3 秒間長押しすると開発者モードが開きます",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "ワークスペースナビゲーションを折りたたむ",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "ワークスペースナビゲーションを展開する",
+  "@expandWorkspaceNavigation": {}
 }

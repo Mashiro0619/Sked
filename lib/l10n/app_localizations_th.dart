@@ -2087,6 +2087,20 @@ class AppLocalizationsTh extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่';
 
@@ -2103,4 +2117,41 @@ class AppLocalizationsTh extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'โหมดนักพัฒนา';
+
+  @override
+  String get developerModeDescription =>
+      'เครื่องมือสำหรับเพิ่มข้อมูลตัวอย่างแบบครบชุดเพื่อตรวจสอบหน้าตาและการโต้ตอบ';
+
+  @override
+  String get developerSampleLanguage => 'ภาษาของข้อมูลตัวอย่าง';
+
+  @override
+  String get developerSampleChinese => 'ภาษาจีน';
+
+  @override
+  String get developerSampleEnglish => 'ภาษาอังกฤษ';
+
+  @override
+  String get developerSampleDataDescription =>
+      'เพิ่มตารางเรียนหนึ่งรายการพร้อมชุดปฏิทินและกิจกรรมโดยไม่แทนที่ข้อมูลเดิม';
+
+  @override
+  String get developerAddSampleData => 'เพิ่มข้อมูลตัวอย่าง';
+
+  @override
+  String get developerSampleDataAdded =>
+      'เพิ่มตารางเรียนและข้อมูลกิจกรรมตัวอย่างแล้ว';
+
+  @override
+  String get developerModeLongPressHint =>
+      'กดค้าง 3 วินาทีเพื่อเปิดโหมดนักพัฒนา';
+
+  @override
+  String get collapseWorkspaceNavigation => 'ยุบการนำทางพื้นที่ทำงาน';
+
+  @override
+  String get expandWorkspaceNavigation => 'ขยายการนำทางพื้นที่ทำงาน';
 }

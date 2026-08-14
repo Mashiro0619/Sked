@@ -996,6 +996,64 @@ void main() {
     expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
   });
 
+  for (final scenario in <({String name, AppData Function(AppData) update})>[
+    (
+      name: 'course',
+      update: (data) => data.copyWith(
+        studentMode: data.studentMode.copyWith(enableLongPressAddCourse: false),
+      ),
+    ),
+    (
+      name: 'event',
+      update: (data) => data.copyWith(
+        generalMode: data.generalMode.copyWith(enableLongPressAddEvent: false),
+      ),
+    ),
+  ]) {
+    testWidgets(
+      'disabled long-press ${scenario.name} add skips first-launch onboarding',
+      (tester) async {
+        final data = scenario.update(_buildDefaultFirstLaunchData());
+        final provider = TimetableProvider(
+          storage: _MemoryTimetableStorage(data),
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+          privacyService: const _NoopPrivacyService(),
+          secretStore: const _NoopSecretStore(),
+        );
+        await provider.load();
+
+        await _pumpAppHomeScreenWithProvider(tester, provider);
+
+        expect(
+          find.byKey(const ValueKey('first-launch-onboarding')),
+          findsNothing,
+        );
+        expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets('collapsed workspace navigation skips first-launch onboarding', (
+    tester,
+  ) async {
+    final data = _buildDefaultFirstLaunchData();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(
+        data.copyWith(homeWorkspaceNavigationCollapsed: true),
+      ),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(find.byKey(const ValueKey('first-launch-onboarding')), findsNothing);
+    expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
+  });
+
   for (final scenario
       in <
         ({AppMode mode, ValueKey<String> card, ValueKey<String> destination})
@@ -2490,6 +2548,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.selectedWeek, expectedWeek);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long-press add setting rebuilds the active timetable grid', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await provider.updateEnableLongPressAddCourse(false);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final dayGesture = find
+        .byKey(const ValueKey('timetable-day-column-long-press-1'))
+        .hitTestable();
+    expect(dayGesture, findsOneWidget);
+    expect(tester.widget<GestureDetector>(dayGesture).onLongPressStart, isNull);
+
+    await provider.updateEnableLongPressAddCourse(true);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<GestureDetector>(dayGesture).onLongPressStart,
+      isNotNull,
+    );
     expect(tester.takeException(), isNull);
   });
 

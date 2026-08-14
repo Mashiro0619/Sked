@@ -249,10 +249,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
             top: false,
             child: Column(
               children: [
-                UiCommandBusyIndicator(busy: uiCommandBusy),
+                UiCommandBusyIndicator(
+                  busy: uiCommandBusy,
+                  showDelay: const Duration(milliseconds: 180),
+                ),
                 Expanded(
-                  child: AbsorbPointer(
-                    absorbing: uiCommandBusy,
+                  child: SettingsInteractionBlocker(
+                    blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
                       firstColumnSectionIndices: const {0},
                       children: [

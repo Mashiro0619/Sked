@@ -2126,6 +2126,20 @@ class AppLocalizationsFr extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Ouvrir la connexion à l’établissement ?';
 
@@ -2142,4 +2156,43 @@ class AppLocalizationsFr extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Cette connexion scolaire utilise HTTP. Toute personne capable d’observer ou de modifier cette connexion peut lire ou changer vos identifiants et le contenu de la page. Continuez uniquement si vous acceptez ce risque pour :\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Mode développeur';
+
+  @override
+  String get developerModeDescription =>
+      'Outils permettant d’ajouter des données d’exemple complètes pour vérifier l’interface et les interactions.';
+
+  @override
+  String get developerSampleLanguage => 'Langue des données d’exemple';
+
+  @override
+  String get developerSampleChinese => 'Chinois';
+
+  @override
+  String get developerSampleEnglish => 'Anglais';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Ajoute un emploi du temps ainsi que des calendriers et événements sans remplacer les données existantes.';
+
+  @override
+  String get developerAddSampleData => 'Ajouter des données d’exemple';
+
+  @override
+  String get developerSampleDataAdded =>
+      'L’emploi du temps et les événements d’exemple ont été ajoutés.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Appuyez pendant 3 secondes pour ouvrir le mode développeur';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Réduire la navigation de l’espace de travail';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Développer la navigation de l’espace de travail';
 }

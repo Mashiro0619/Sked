@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +29,36 @@ class _MemoryTimetableStorage implements TimetableStorage {
 
   @override
   Future<String?> filePath() async => 'memory://general-display-settings-test';
+}
+
+class _PendingTimetableStorage implements TimetableStorage {
+  _PendingTimetableStorage(this.data);
+
+  AppData data;
+  Completer<void>? pendingSave;
+  var saveCount = 0;
+
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: RecoveryStatus.none);
+
+  @override
+  Future<void> save(AppData next) async {
+    saveCount += 1;
+    final pending = Completer<void>();
+    pendingSave = pending;
+    await pending.future;
+    data = next;
+  }
+
+  @override
+  Future<String?> filePath() async =>
+      'memory://pending-general-display-settings-test';
+
+  void completePendingSave() {
+    final pending = pendingSave;
+    if (pending != null && !pending.isCompleted) pending.complete();
+  }
 }
 
 Future<TimetableProvider> _createProvider({
@@ -180,6 +212,69 @@ void main() {
     expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
   });
 
+  testWidgets(
+    'pending save keeps switch enabled-looking and blocks duplicate input',
+    (tester) async {
+      final initialData = buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(activeMode: AppMode.general);
+      final storage = _PendingTimetableStorage(initialData);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      await provider.load();
+      addTearDown(() {
+        storage.completePendingSave();
+        provider.dispose();
+      });
+      await _pumpPage(tester, provider);
+
+      final title = find.text('Show weekends');
+      final tile = find.ancestor(
+        of: title,
+        matching: find.byType(SettingsSwitchTile),
+      );
+      final toggle = find.descendant(of: tile, matching: find.byType(Switch));
+      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+
+      await tester.tap(toggle);
+      await tester.pump();
+
+      expect(storage.saveCount, 1);
+      expect(provider.generalShowWeekends, isFalse);
+      expect(
+        tester
+            .widget<SettingsInteractionBlocker>(
+              find.byType(SettingsInteractionBlocker),
+            )
+            .blocked,
+        isTrue,
+      );
+      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+
+      await tester.tap(toggle, warnIfMissed: false);
+      await tester.pump();
+      expect(storage.saveCount, 1);
+      expect(provider.generalShowWeekends, isFalse);
+
+      storage.completePendingSave();
+      await tester.pumpAndSettle();
+
+      expect(storage.saveCount, 1);
+      expect(
+        tester
+            .widget<SettingsInteractionBlocker>(
+              find.byType(SettingsInteractionBlocker),
+            )
+            .blocked,
+        isFalse,
+      );
+      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+    },
+  );
+
   testWidgets('persists all toolbar width policy options', (tester) async {
     final provider = await _createProvider();
     addTearDown(provider.dispose);
@@ -266,6 +361,24 @@ void main() {
 
     await _toggleSwitch(tester, 'Show floating add event button');
     expect(provider.showAddEventFab, isFalse);
+    final longPressSetting = find.byKey(
+      const ValueKey('enable-long-press-add-event-setting'),
+    );
+    expect(
+      find.descendant(
+        of: longPressSetting,
+        matching: find.byIcon(Icons.touch_app_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'In day or week view, long-press an empty area of the time grid to add an event.',
+      ),
+      findsOneWidget,
+    );
+    await _toggleSwitch(tester, 'Long-press blank grid to add events');
+    expect(provider.enableLongPressAddEvent, isFalse);
     expect(find.text('Quick actions'), findsOneWidget);
   });
 
@@ -276,6 +389,8 @@ void main() {
     addTearDown(provider.dispose);
     await _pumpPage(tester, provider, locale: const Locale('zh'));
 
+    expect(find.text('长按空白网格添加日程'), findsOneWidget);
+    expect(find.text('在日视图或周视图中，长按空白时间网格即可添加日程。'), findsOneWidget);
     await _toggleSwitch(tester, '显示农历');
 
     expect(provider.generalShowLunarCalendar, isFalse);

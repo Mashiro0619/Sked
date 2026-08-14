@@ -7,6 +7,27 @@ void main() {
 
   AppData base() => AppData.fromJson(const {});
 
+  test(
+    'updates home navigation collapsed preference and guards no-op writes',
+    () {
+      final initial = base();
+
+      final collapsed = service.updateHomeWorkspaceNavigationCollapsed(
+        initial,
+        true,
+      );
+
+      expect(collapsed.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(
+        identical(
+          collapsed,
+          service.updateHomeWorkspaceNavigationCollapsed(collapsed, true),
+        ),
+        isTrue,
+      );
+    },
+  );
+
   group('SettingsService.updateSchoolImportParserSettings', () {
     test('replaces the parser settings subtree when any field differs', () {
       final data = base();
@@ -168,6 +189,21 @@ void main() {
     expect(hidden.studentMode.showAddCourseFab, isFalse);
     expect(
       identical(hidden, service.updateShowAddCourseFab(hidden, false)),
+      isTrue,
+    );
+  });
+
+  test('updates long-press course add and guards no-op writes', () {
+    final initial = base();
+
+    final disabled = service.updateEnableLongPressAddCourse(initial, false);
+
+    expect(disabled.studentMode.enableLongPressAddCourse, isFalse);
+    expect(
+      identical(
+        disabled,
+        service.updateEnableLongPressAddCourse(disabled, false),
+      ),
       isTrue,
     );
   });

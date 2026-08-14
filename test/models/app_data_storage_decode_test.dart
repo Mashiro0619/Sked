@@ -1321,6 +1321,7 @@ void main() {
         'fitWeekColumnsToWidth',
         'enableWeekSwipeNavigation',
         'showAddCourseFab',
+        'enableLongPressAddCourse',
       ]) {
         final snapshot = validSnapshot();
         final student = studentMode(snapshot)..[key] = 'yes';
@@ -1392,7 +1393,11 @@ void main() {
     });
 
     test('rejects malformed general display settings', () {
-      for (final key in const ['showWeekends', 'showAddEventFab']) {
+      for (final key in const [
+        'showWeekends',
+        'showAddEventFab',
+        'enableLongPressAddEvent',
+      ]) {
         final snapshot = validSnapshot();
         final general = generalMode(snapshot)..[key] = 1;
         snapshot['generalMode'] = general;
@@ -1407,21 +1412,29 @@ void main() {
 
     test('FAB settings persist and default true when missing', () {
       final snapshot = validSnapshot();
-      final student = studentMode(snapshot)..['showAddCourseFab'] = false;
-      final general = generalMode(snapshot)..['showAddEventFab'] = false;
+      final student = studentMode(snapshot)
+        ..['showAddCourseFab'] = false
+        ..['enableLongPressAddCourse'] = false;
+      final general = generalMode(snapshot)
+        ..['showAddEventFab'] = false
+        ..['enableLongPressAddEvent'] = false;
       snapshot
         ..['studentMode'] = student
         ..['generalMode'] = general;
 
       final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
       expect(decoded.studentMode.showAddCourseFab, isFalse);
+      expect(decoded.studentMode.enableLongPressAddCourse, isFalse);
       expect(decoded.generalMode.showAddEventFab, isFalse);
+      expect(decoded.generalMode.enableLongPressAddEvent, isFalse);
 
       final legacySnapshot = validSnapshot();
       final legacyStudent = studentMode(legacySnapshot)
-        ..remove('showAddCourseFab');
+        ..remove('showAddCourseFab')
+        ..remove('enableLongPressAddCourse');
       final legacyGeneral = generalMode(legacySnapshot)
-        ..remove('showAddEventFab');
+        ..remove('showAddEventFab')
+        ..remove('enableLongPressAddEvent');
       legacySnapshot
         ..['studentMode'] = legacyStudent
         ..['generalMode'] = legacyGeneral;
@@ -1430,7 +1443,9 @@ void main() {
         jsonEncode(legacySnapshot),
       );
       expect(legacyDecoded.studentMode.showAddCourseFab, isTrue);
+      expect(legacyDecoded.studentMode.enableLongPressAddCourse, isTrue);
       expect(legacyDecoded.generalMode.showAddEventFab, isTrue);
+      expect(legacyDecoded.generalMode.enableLongPressAddEvent, isTrue);
     });
 
     test('rejects general settings that would be normalized on load', () {
@@ -1609,6 +1624,34 @@ void main() {
           () => AppData.decodeStorageSnapshot(jsonEncode(malformed)),
           throwsFormatException,
           reason: 'hideHomeBottomNavigationBar=$value',
+        );
+      }
+    });
+
+    test('round-trips and strictly decodes collapsed home navigation', () {
+      final snapshot = validSnapshot()
+        ..['homeWorkspaceNavigationCollapsed'] = true;
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+
+      expect(decoded.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(decoded.copyWith().homeWorkspaceNavigationCollapsed, isTrue);
+      expect(decoded.toJson()['homeWorkspaceNavigationCollapsed'], isTrue);
+
+      final missing = validSnapshot()
+        ..remove('homeWorkspaceNavigationCollapsed');
+      expect(
+        AppData.decodeStorageSnapshot(jsonEncode(missing))
+            .homeWorkspaceNavigationCollapsed,
+        isFalse,
+      );
+
+      for (final value in [null, 1, 'true', <String, dynamic>{}]) {
+        final malformed = validSnapshot()
+          ..['homeWorkspaceNavigationCollapsed'] = value;
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(malformed)),
+          throwsFormatException,
+          reason: 'homeWorkspaceNavigationCollapsed=$value',
         );
       }
     });

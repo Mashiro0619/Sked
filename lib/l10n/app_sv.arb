@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Den här sidan har nått den säkra importgränsen. Endast den insamlade delen skickas för analys.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Okänd webbplats",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Utvecklarläge",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Verktyg för att lägga till fullständiga exempeldata och kontrollera utseende och interaktion.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Språk för exempeldata",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Kinesiska",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Engelska",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Lägger till ett schema och en uppsättning kalendrar och händelser utan att ersätta befintliga data.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Lägg till exempeldata",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Exempelschema och händelser har lagts till.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Håll ned i 3 sekunder för att öppna utvecklarläget",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Fäll ihop arbetsytenavigering",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Expandera arbetsytenavigering",
+  "@expandWorkspaceNavigation": {}
 }

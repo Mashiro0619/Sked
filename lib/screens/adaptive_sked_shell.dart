@@ -6,15 +6,15 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
-import '../widgets/sked_expressive_loading_indicator.dart';
 import '../widgets/ui_command.dart';
 import 'general_schedule_home_screen.dart';
 import 'home_screen.dart';
 
 const double _compactNavigationBreakpoint = 600;
-// A full drawer gives the workspaces enough room for their labels and keeps
-// the desktop shell out of the awkward half-expanded rail state.
-const double _permanentDrawerBreakpoint = 840;
+// Medium windows keep a compact rail. A full drawer only becomes useful once
+// the workspace still has substantial room beside its 240 dp navigation.
+const double _permanentDrawerBreakpoint = 1200;
+const double _compactRailWidth = 80;
 // Keep the permanent drawer close to Material's compact width.  Destination
 // labels below are flexible so longer localizations never create a layout
 // overflow in the constrained leading/selection row.
@@ -47,6 +47,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     with UiCommandRunner<AdaptiveSkedShell> {
   bool _settingsOpen = false;
   bool _modeSwitchInFlight = false;
+  bool _navigationToggleInFlight = false;
   Object? _navigationLayoutIdentity;
   late AppMode _committedMode;
   final _workspaceStackKey = GlobalKey<_AdaptiveWorkspaceStackState>();
@@ -90,6 +91,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   Future<void> _selectWorkspace(int index) async {
     if (!widget.enabled ||
         uiCommandBusy ||
+        _navigationToggleInFlight ||
         _settingsOpen ||
         index == _selectedIndex) {
       return;
@@ -111,12 +113,40 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   }
 
   Future<void> _openSettings() async {
-    if (!widget.enabled || uiCommandBusy || _settingsOpen || !mounted) return;
+    if (!widget.enabled ||
+        uiCommandBusy ||
+        _navigationToggleInFlight ||
+        _settingsOpen ||
+        !mounted) {
+      return;
+    }
     setState(() => _settingsOpen = true);
     try {
       await widget.onOpenSettings();
     } finally {
       if (mounted) setState(() => _settingsOpen = false);
+    }
+  }
+
+  Future<void> _toggleWorkspaceNavigation() async {
+    if (!widget.enabled ||
+        uiCommandBusy ||
+        _navigationToggleInFlight ||
+        _settingsOpen ||
+        !mounted) {
+      return;
+    }
+    final target = !widget.provider.homeWorkspaceNavigationCollapsed;
+    setState(() => _navigationToggleInFlight = true);
+    try {
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Toggle large-screen workspace navigation',
+        command: () =>
+            widget.provider.updateHomeWorkspaceNavigationCollapsed(target),
+      );
+    } finally {
+      if (mounted) setState(() => _navigationToggleInFlight = false);
     }
   }
 
@@ -139,21 +169,29 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final compact = width < _compactNavigationBreakpoint;
+        final supportsCollapsibleNavigation =
+            width >= _permanentDrawerBreakpoint;
         final hideWorkspaceNavigation =
             widget.provider.hideHomeWorkspaceNavigation;
+        final navigationCollapsed =
+            supportsCollapsibleNavigation &&
+            widget.provider.homeWorkspaceNavigationCollapsed;
         final navigationLayoutIdentity = hideWorkspaceNavigation
             ? 'hidden'
             : compact
             ? 'bar'
-            : width < _permanentDrawerBreakpoint
-            ? 'rail-compact'
-            : 'drawer';
+            : !supportsCollapsibleNavigation
+            ? 'rail-medium'
+            : 'rail-large';
         _prepareNavigationLayout(navigationLayoutIdentity);
         final selectedIndex = _selectedIndex;
         final showCompactNavigationBar = compact && !hideWorkspaceNavigation;
         final showWorkspaceSettingsAction = compact || hideWorkspaceNavigation;
         final compactSettingsEnabled =
-            widget.enabled && !uiCommandBusy && !_settingsOpen;
+            widget.enabled &&
+            !uiCommandBusy &&
+            !_navigationToggleInFlight &&
+            !_settingsOpen;
         final workspaceStack = _AdaptiveWorkspaceStack(
           key: _workspaceStackKey,
           selectedIndex: selectedIndex,
@@ -200,10 +238,9 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                 enabled: widget.enabled,
                 onDestinationSelected: _selectWorkspace,
               )
-            : width < _permanentDrawerBreakpoint
+            : !supportsCollapsibleNavigation
             ? _WorkspaceRail(
                 selectedIndex: selectedIndex,
-                extended: false,
                 busy: uiCommandBusy,
                 enabled: widget.enabled,
                 settingsBusy: _settingsOpen,
@@ -211,7 +248,9 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                 onOpenSettings: _openSettings,
                 settingsFocusNode: _settingsFocusNode,
               )
-            : _WorkspaceDrawer(
+            : _ExpandableWorkspaceRail(
+                expanded: !navigationCollapsed,
+                interactionBlocked: _navigationToggleInFlight,
                 selectedIndex: selectedIndex,
                 busy: uiCommandBusy,
                 enabled: widget.enabled,
@@ -219,6 +258,10 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                 onDestinationSelected: _selectWorkspace,
                 onOpenSettings: _openSettings,
                 settingsFocusNode: _settingsFocusNode,
+                collapseToggleTooltip: navigationCollapsed
+                    ? AppLocalizations.of(context).expandWorkspaceNavigation
+                    : AppLocalizations.of(context).collapseWorkspaceNavigation,
+                onToggleCollapsed: _toggleWorkspaceNavigation,
               );
         final navigationWithFocus = _AdaptiveNavigationFocusBridge(
           key: _navigationFocusBridgeKey,
@@ -818,238 +861,172 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
   }
 }
 
-class _WorkspaceRail extends StatelessWidget {
-  const _WorkspaceRail({
+/// Uses one official navigation rail for both large-screen states. Material's
+/// extended transition keeps every icon in the same 80 dp slot while the
+/// labels and occupied width reveal progressively, avoiding a blank swap
+/// frame between unrelated drawer and rail trees.
+class _ExpandableWorkspaceRail extends StatelessWidget {
+  const _ExpandableWorkspaceRail({
+    required this.expanded,
+    required this.interactionBlocked,
     required this.selectedIndex,
-    required this.extended,
     required this.busy,
     required this.enabled,
     required this.settingsBusy,
     required this.onDestinationSelected,
     required this.onOpenSettings,
     required this.settingsFocusNode,
+    required this.collapseToggleTooltip,
+    required this.onToggleCollapsed,
   });
 
+  final bool expanded;
+  final bool interactionBlocked;
   final int selectedIndex;
-  final bool extended;
   final bool busy;
   final bool enabled;
   final bool settingsBusy;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onOpenSettings;
   final FocusNode settingsFocusNode;
+  final String collapseToggleTooltip;
+  final VoidCallback onToggleCollapsed;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: NavigationRail(
-                key: const ValueKey('adaptive-shell-navigation-rail'),
-                selectedIndex: selectedIndex,
-                extended: extended,
-                scrollable: !extended,
-                labelType: extended
-                    ? NavigationRailLabelType.none
-                    : NavigationRailLabelType.all,
-                onDestinationSelected: busy || !enabled
-                    ? null
-                    : onDestinationSelected,
-                leading: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: busy
-                      ? Semantics(
-                          liveRegion: true,
-                          label: l10n.savingChanges,
-                          child: const ExcludeSemantics(
-                            child: SizedBox.square(
-                              dimension: 28,
-                              child: SkedExpressiveLoadingIndicator(),
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          Icons.calendar_month_outlined,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                ),
-                destinations: [
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.school_outlined),
-                    selectedIcon: const Icon(Icons.school),
-                    label: _WorkspaceRailLabel(
-                      label: l10n.studentTimetable,
-                      extended: extended,
-                    ),
-                    disabled: !enabled || busy,
-                  ),
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.event_note_outlined),
-                    selectedIcon: const Icon(Icons.event_note),
-                    label: _WorkspaceRailLabel(
-                      label: l10n.generalSchedule,
-                      extended: extended,
-                    ),
-                    disabled: !enabled || busy,
-                  ),
-                ],
+    final motion = SkedMotionPolicy.of(context);
+    final rail = NavigationRail(
+      key: const ValueKey('adaptive-shell-navigation-rail'),
+      extended: expanded,
+      minWidth: _compactRailWidth,
+      minExtendedWidth: _permanentDrawerWidth,
+      selectedIndex: selectedIndex,
+      labelType: NavigationRailLabelType.none,
+      scrollable: true,
+      onDestinationSelected: busy || !enabled ? null : onDestinationSelected,
+      leading: _ExpandableRailBrand(
+        tooltip: collapseToggleTooltip,
+        onPressed: busy || settingsBusy || !enabled ? null : onToggleCollapsed,
+      ),
+      trailingAtBottom: true,
+      trailing: _ExpandableRailSettingsAction(
+        busy: busy,
+        enabled: enabled,
+        settingsBusy: settingsBusy,
+        onOpenSettings: onOpenSettings,
+        settingsFocusNode: settingsFocusNode,
+      ),
+      destinations: [
+        NavigationRailDestination(
+          icon: const Icon(Icons.school_outlined),
+          selectedIcon: const Icon(Icons.school),
+          label: Text(
+            l10n.studentTimetable,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          disabled: !enabled || busy,
+        ),
+        NavigationRailDestination(
+          icon: const Icon(Icons.event_note_outlined),
+          selectedIcon: const Icon(Icons.event_note),
+          label: Text(
+            l10n.generalSchedule,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          disabled: !enabled || busy,
+        ),
+      ],
+    );
+    final motionAwareRail = motion.spatialAnimationsEnabled
+        ? KeyedSubtree(
+            key: const ValueKey('adaptive-shell-wide-navigation-animated'),
+            child: rail,
+          )
+        : KeyedSubtree(
+            key: ValueKey('adaptive-shell-wide-navigation-static-$expanded'),
+            child: rail,
+          );
+    final targetWidth = expanded ? _permanentDrawerWidth : _compactRailWidth;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: targetWidth),
+      duration: motion.spatialAnimationsEnabled
+          ? kThemeAnimationDuration
+          : Duration.zero,
+      curve: Curves.easeInOut,
+      builder: (context, width, child) => SizedBox(
+        key: const ValueKey('adaptive-shell-wide-navigation-width'),
+        width: width,
+        child: ClipRect(child: child),
+      ),
+      child: Stack(
+        children: [
+          AbsorbPointer(absorbing: interactionBlocked, child: motionAwareRail),
+          if (interactionBlocked)
+            Semantics(
+              liveRegion: true,
+              label: l10n.savingChanges,
+              child: const SizedBox.shrink(),
+            ),
+          if (busy)
+            const PositionedDirectional(
+              top: 0,
+              start: 0,
+              end: 0,
+              child: UiCommandBusyIndicator(
+                busy: true,
+                semanticsKey: ValueKey('workspace-switch-busy'),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-              child: extended
-                  ? Tooltip(
-                      message: l10n.settings,
-                      child: FilledButton.tonalIcon(
-                        focusNode: settingsFocusNode,
-                        onPressed: busy || settingsBusy || !enabled
-                            ? null
-                            : onOpenSettings,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 48),
-                        ),
-                        icon: const Icon(Icons.settings_outlined),
-                        label: Text(l10n.settings),
-                      ),
-                    )
-                  : IconButton(
-                      key: const ValueKey('adaptive-shell-settings-action'),
-                      focusNode: settingsFocusNode,
-                      onPressed: busy || settingsBusy || !enabled
-                          ? null
-                          : onOpenSettings,
-                      tooltip: l10n.settings,
-                      icon: settingsBusy
-                          ? const SizedBox.square(
-                              dimension: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.settings_outlined),
-                    ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _WorkspaceRailLabel extends StatelessWidget {
-  const _WorkspaceRailLabel({required this.label, required this.extended});
+class _ExpandableRailBrand extends StatelessWidget {
+  const _ExpandableRailBrand({required this.tooltip, required this.onPressed});
 
-  final String label;
-  final bool extended;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: extended ? 156 : 72),
-      child: Text(
-        label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        textAlign: extended ? TextAlign.start : TextAlign.center,
-      ),
-    );
-  }
-}
-
-class _WorkspaceDrawer extends StatelessWidget {
-  const _WorkspaceDrawer({
-    required this.selectedIndex,
-    required this.busy,
-    required this.enabled,
-    required this.settingsBusy,
-    required this.onDestinationSelected,
-    required this.onOpenSettings,
-    required this.settingsFocusNode,
-  });
-
-  final int selectedIndex;
-  final bool busy;
-  final bool enabled;
-  final bool settingsBusy;
-  final ValueChanged<int> onDestinationSelected;
-  final VoidCallback onOpenSettings;
-  final FocusNode settingsFocusNode;
+  final String tooltip;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final animation = NavigationRail.extendedAnimation(context);
     final l10n = AppLocalizations.of(context);
-    final colors = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: _permanentDrawerWidth,
-      child: NavigationDrawer(
-        key: const ValueKey('adaptive-shell-navigation-drawer'),
-        selectedIndex: selectedIndex,
-        onDestinationSelected: busy || !enabled ? null : onDestinationSelected,
-        footer: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              key: const ValueKey('adaptive-shell-drawer-footer'),
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: Divider(),
-                ),
-                Tooltip(
-                  message: l10n.settings,
-                  child: ListTile(
-                    key: const ValueKey('adaptive-shell-settings-action'),
-                    focusNode: settingsFocusNode,
-                    enabled: enabled && !busy && !settingsBusy,
-                    leading: settingsBusy
-                        ? const SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.settings_outlined),
-                    title: Text(l10n.settings),
-                    onTap: busy || settingsBusy || !enabled
-                        ? null
-                        : onOpenSettings,
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final width =
+            _compactRailWidth +
+            (_permanentDrawerWidth - _compactRailWidth) * animation.value;
+        final labelOpacity = const Interval(0, 0.25).transform(animation.value);
+        return SizedBox(
+          key: const ValueKey('adaptive-shell-wide-brand'),
+          width: width,
+          height: 56,
+          child: Row(
+            children: [
+              SizedBox(
+                key: const ValueKey('adaptive-shell-wide-brand-icon-slot'),
+                width: _compactRailWidth,
+                child: Center(
+                  child: _WorkspaceNavigationBrandIcon(
+                    tooltip: tooltip,
+                    onPressed: onPressed,
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              key: const ValueKey('adaptive-shell-drawer-brand'),
-              padding: const EdgeInsets.fromLTRB(28, 22, 20, 16),
-              child: SizedBox(
-                height: 40,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox.square(
-                      key: const ValueKey('adaptive-shell-drawer-brand-icon'),
-                      dimension: 32,
-                      child: Center(
-                        child: Icon(
-                          Icons.calendar_month_outlined,
-                          size: 24,
-                          color: colors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Align(
-                        key: const ValueKey(
-                          'adaptive-shell-drawer-brand-title',
-                        ),
-                        alignment: AlignmentDirectional.centerStart,
+              ),
+              Expanded(
+                child: ClipRect(
+                  child: Opacity(
+                    opacity: labelOpacity,
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 16),
                         child: Text(
                           l10n.appTitle,
                           maxLines: 1,
@@ -1062,45 +1039,268 @@ class _WorkspaceDrawer extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (busy)
-                      Semantics(
-                        liveRegion: true,
-                        label: l10n.savingChanges,
-                        child: const ExcludeSemantics(
-                          child: SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ExpandableRailSettingsAction extends StatelessWidget {
+  const _ExpandableRailSettingsAction({
+    required this.busy,
+    required this.enabled,
+    required this.settingsBusy,
+    required this.onOpenSettings,
+    required this.settingsFocusNode,
+  });
+
+  final bool busy;
+  final bool enabled;
+  final bool settingsBusy;
+  final VoidCallback onOpenSettings;
+  final FocusNode settingsFocusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = NavigationRail.extendedAnimation(context);
+    final l10n = AppLocalizations.of(context);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            final width =
+                _compactRailWidth +
+                (_permanentDrawerWidth - _compactRailWidth) * animation.value;
+            final labelOpacity = const Interval(
+              0,
+              0.25,
+            ).transform(animation.value);
+            return SizedBox(
+              width: width,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: Divider(),
+                  ),
+                  SizedBox(
+                    height: 48,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: _compactRailWidth,
+                          child: Center(
+                            child: IconButton(
+                              key: const ValueKey(
+                                'adaptive-shell-settings-action',
+                              ),
+                              focusNode: settingsFocusNode,
+                              onPressed: busy || settingsBusy || !enabled
+                                  ? null
+                                  : onOpenSettings,
+                              tooltip: l10n.settings,
+                              icon: settingsBusy
+                                  ? const SizedBox.square(
+                                      dimension: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.settings_outlined),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: ClipRect(
+                            child: Opacity(
+                              opacity: labelOpacity,
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    end: 16,
+                                  ),
+                                  child: Text(
+                                    l10n.settings,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkspaceRail extends StatelessWidget {
+  const _WorkspaceRail({
+    required this.selectedIndex,
+    required this.busy,
+    required this.enabled,
+    required this.settingsBusy,
+    required this.onDestinationSelected,
+    required this.onOpenSettings,
+    required this.settingsFocusNode,
+  });
+
+  final int selectedIndex;
+  final bool busy;
+  final bool enabled;
+  final bool settingsBusy;
+  final ValueChanged<int> onDestinationSelected;
+  final VoidCallback onOpenSettings;
+  final FocusNode settingsFocusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: NavigationRail(
+                    key: const ValueKey('adaptive-shell-navigation-rail'),
+                    selectedIndex: selectedIndex,
+                    extended: false,
+                    scrollable: true,
+                    labelType: NavigationRailLabelType.all,
+                    onDestinationSelected: busy || !enabled
+                        ? null
+                        : onDestinationSelected,
+                    leading: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: const _WorkspaceNavigationBrandIcon(),
+                    ),
+                    destinations: [
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.school_outlined),
+                        selectedIcon: const Icon(Icons.school),
+                        label: _WorkspaceRailLabel(
+                          label: l10n.studentTimetable,
+                        ),
+                        disabled: !enabled || busy,
+                      ),
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.event_note_outlined),
+                        selectedIcon: const Icon(Icons.event_note),
+                        label: _WorkspaceRailLabel(label: l10n.generalSchedule),
+                        disabled: !enabled || busy,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+                  child: IconButton(
+                    key: const ValueKey('adaptive-shell-settings-action'),
+                    focusNode: settingsFocusNode,
+                    onPressed: busy || settingsBusy || !enabled
+                        ? null
+                        : onOpenSettings,
+                    tooltip: l10n.settings,
+                    icon: settingsBusy
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.settings_outlined),
+                  ),
+                ),
+              ],
             ),
           ),
-          NavigationDrawerDestination(
-            icon: const Icon(Icons.school_outlined),
-            selectedIcon: const Icon(Icons.school),
-            label: Flexible(
-              child: Text(
-                l10n.studentTimetable,
-                overflow: TextOverflow.ellipsis,
+          if (busy)
+            const PositionedDirectional(
+              top: 0,
+              start: 0,
+              end: 0,
+              child: UiCommandBusyIndicator(
+                busy: true,
+                semanticsKey: ValueKey('workspace-switch-busy'),
               ),
             ),
-            enabled: enabled && !busy,
-          ),
-          NavigationDrawerDestination(
-            icon: const Icon(Icons.event_note_outlined),
-            selectedIcon: const Icon(Icons.event_note),
-            label: Flexible(
-              child: Text(
-                l10n.generalSchedule,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            enabled: enabled && !busy,
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _WorkspaceRailLabel extends StatelessWidget {
+  const _WorkspaceRailLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 72),
+      child: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+class _WorkspaceNavigationBrandIcon extends StatelessWidget {
+  const _WorkspaceNavigationBrandIcon({this.tooltip, this.onPressed});
+
+  final String? tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(
+      Icons.calendar_month_outlined,
+      color: Theme.of(context).colorScheme.primary,
+    );
+    if (tooltip == null) {
+      return ExcludeSemantics(
+        child: SizedBox.square(
+          key: const ValueKey('adaptive-shell-navigation-brand-icon'),
+          dimension: 48,
+          child: Center(child: icon),
+        ),
+      );
+    }
+    return Tooltip(
+      message: tooltip,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: tooltip,
+        button: true,
+        enabled: onPressed != null,
+        child: IconButton(
+          key: const ValueKey('adaptive-shell-navigation-collapse-toggle'),
+          onPressed: onPressed,
+          icon: icon,
+        ),
       ),
     );
   }

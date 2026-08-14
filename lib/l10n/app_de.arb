@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Diese Seite hat das sichere Importlimit erreicht. Nur der erfasste Teil wird zur Analyse gesendet.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Unbekannte Website",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Entwicklermodus",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Werkzeuge zum Hinzufügen vollständiger Beispieldaten für die Prüfung von Darstellung und Interaktion.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Sprache der Beispieldaten",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chinesisch",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Englisch",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Fügt einen Stundenplan sowie Kalender und Termine hinzu, ohne vorhandene Daten zu ersetzen.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Beispieldaten hinzufügen",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Beispiel-Stundenplan und -Termine wurden hinzugefügt.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "3 Sekunden gedrückt halten, um den Entwicklermodus zu öffnen",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Arbeitsbereichsnavigation einklappen",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Arbeitsbereichsnavigation ausklappen",
+  "@expandWorkspaceNavigation": {}
 }

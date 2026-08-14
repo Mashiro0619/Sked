@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -27,6 +28,7 @@ import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 import 'general_display_settings_page.dart';
+import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
 import 'school_html_import_page.dart';
 import 'settings_data_transfer_controller.dart';
@@ -51,6 +53,7 @@ enum _SettingsFlow {
   privacyPolicy,
   licensesPage,
   updateCheck,
+  developerModePage,
   githubRepo,
 }
 
@@ -138,26 +141,25 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
         workspaceChildren.add(
-          SettingsConnectedTile(
-            leading: const Icon(Icons.navigation_outlined),
-            title: l10n.hideHomeWorkspaceNavigation,
-            subtitle: l10n.hideHomeWorkspaceNavigationDesc,
-            trailing: Switch(
-              value: provider.hideHomeWorkspaceNavigation,
-              onChanged: _isFlowOpen(_SettingsFlow.homeNavigation)
-                  ? null
-                  : (value) =>
-                        unawaited(_updateHomeNavigation(provider, value)),
+          SettingsInteractionBlocker(
+            blocked: _isFlowOpen(_SettingsFlow.homeNavigation),
+            child: SettingsConnectedTile(
+              leading: const Icon(Icons.navigation_outlined),
+              title: l10n.hideHomeWorkspaceNavigation,
+              subtitle: l10n.hideHomeWorkspaceNavigationDesc,
+              trailing: Switch(
+                value: provider.hideHomeWorkspaceNavigation,
+                onChanged: (value) =>
+                    unawaited(_updateHomeNavigation(provider, value)),
+              ),
+              semanticToggled: provider.hideHomeWorkspaceNavigation,
+              onTap: () => unawaited(
+                _updateHomeNavigation(
+                  provider,
+                  !provider.hideHomeWorkspaceNavigation,
+                ),
+              ),
             ),
-            semanticToggled: provider.hideHomeWorkspaceNavigation,
-            onTap: _isFlowOpen(_SettingsFlow.homeNavigation)
-                ? null
-                : () => unawaited(
-                    _updateHomeNavigation(
-                      provider,
-                      !provider.hideHomeWorkspaceNavigation,
-                    ),
-                  ),
           ),
         );
         final timetableChildren = <Widget>[
@@ -272,6 +274,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 : _openPrivacyPolicyPage,
           ),
         ];
+        final updateEntryBusy =
+            _isFlowOpen(_SettingsFlow.updateCheck) ||
+            _isFlowOpen(_SettingsFlow.developerModePage);
         final aboutChildren = [
           SettingsConnectedTile(
             leading: const Icon(Icons.description_outlined),
@@ -282,13 +287,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? null
                 : _openLicensesPage,
           ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.update_outlined),
+          _DeveloperModeEntryTile(
+            key: const ValueKey('settings-check-for-updates'),
             title: l10n.checkForUpdates,
             subtitle: _buildUpdateSubtitle(provider, l10n),
-            onTap: _isFlowOpen(_SettingsFlow.updateCheck)
-                ? null
-                : _checkForUpdates,
+            onTap: updateEntryBusy ? null : _checkForUpdates,
+            onLongPress: updateEntryBusy ? null : _openDeveloperModePage,
+            onLongPressHint: l10n.developerModeLongPressHint,
+            onTapHint: l10n.checkForUpdates,
           ),
           SettingsConnectedTile(
             leading: const FaIcon(FontAwesomeIcons.github),
@@ -692,11 +698,28 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _checkForUpdates() async {
+    if (_isFlowOpen(_SettingsFlow.developerModePage)) return;
     await _guardFlow(_SettingsFlow.updateCheck, () async {
       await AppUpdateCoordinator.checkForUpdates(
         context,
         provider: context.read<TimetableProvider>(),
         source: UpdateCheckSource.manual,
+      );
+    });
+  }
+
+  Future<void> _openDeveloperModePage() async {
+    if (_isFlowOpen(_SettingsFlow.updateCheck)) return;
+    await _guardFlow(_SettingsFlow.developerModePage, () async {
+      if (!mounted) return;
+      unawaited(Feedback.forLongPress(context));
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: context.read<TimetableProvider>(),
+            child: const DeveloperModePage(),
+          ),
+        ),
       );
     });
   }
@@ -1845,6 +1868,60 @@ class _SettingsPageState extends State<SettingsPage> {
           warning.values.isEmpty ? '' : warning.values.first,
         ),
     };
+  }
+}
+
+class _DeveloperModeEntryTile extends StatelessWidget {
+  const _DeveloperModeEntryTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onLongPressHint,
+    required this.onTapHint,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final String onLongPressHint;
+  final String onTapHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final longPress = onLongPress;
+    final tile = SettingsConnectedTile(
+      leading: const Icon(Icons.update_outlined),
+      title: title,
+      subtitle: subtitle,
+      onTap: onTap,
+      onLongPress: longPress,
+      onLongPressHint: onLongPressHint,
+      onTapHint: onTapHint,
+    );
+    if (longPress == null) return tile;
+    return RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      gestures: {
+        LongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+              () => LongPressGestureRecognizer(
+                duration: const Duration(seconds: 3),
+                supportedDevices: const {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.mouse,
+                },
+                allowedButtonsFilter: (buttons) => buttons == kPrimaryButton,
+              ),
+              (recognizer) => recognizer.onLongPress = longPress,
+            ),
+      },
+      child: tile,
+    );
   }
 }
 

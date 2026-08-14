@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Cette page a atteint la limite d’importation sécurisée. Seule la partie capturée sera envoyée pour analyse.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Site inconnu",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Mode développeur",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Outils permettant d’ajouter des données d’exemple complètes pour vérifier l’interface et les interactions.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Langue des données d’exemple",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chinois",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Anglais",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Ajoute un emploi du temps ainsi que des calendriers et événements sans remplacer les données existantes.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Ajouter des données d’exemple",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "L’emploi du temps et les événements d’exemple ont été ajoutés.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Appuyez pendant 3 secondes pour ouvrir le mode développeur",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Réduire la navigation de l’espace de travail",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Développer la navigation de l’espace de travail",
+  "@expandWorkspaceNavigation": {}
 }

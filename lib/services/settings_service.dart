@@ -9,6 +9,11 @@ class SettingsService {
     return data.copyWith(hideHomeWorkspaceNavigation: value);
   }
 
+  AppData updateHomeWorkspaceNavigationCollapsed(AppData data, bool value) {
+    if (data.homeWorkspaceNavigationCollapsed == value) return data;
+    return data.copyWith(homeWorkspaceNavigationCollapsed: value);
+  }
+
   AppData updateCloseCoursePopupOnOutsideTap(AppData data, bool value) {
     if (data.studentMode.closeCoursePopupOnOutsideTap == value) return data;
     return data.copyWith(
@@ -50,6 +55,13 @@ class SettingsService {
     if (data.studentMode.showAddCourseFab == value) return data;
     return data.copyWith(
       studentMode: data.studentMode.copyWith(showAddCourseFab: value),
+    );
+  }
+
+  AppData updateEnableLongPressAddCourse(AppData data, bool value) {
+    if (data.studentMode.enableLongPressAddCourse == value) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(enableLongPressAddCourse: value),
     );
   }
 

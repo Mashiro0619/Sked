@@ -2112,6 +2112,20 @@ class AppLocalizationsIt extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Aprire l’accesso al sistema scolastico?';
 
@@ -2128,4 +2142,42 @@ class AppLocalizationsIt extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Questo accesso scolastico usa HTTP. Chiunque possa osservare o alterare la connessione potrebbe leggere o modificare le credenziali e il contenuto della pagina. Continua solo se accetti questo rischio per:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Modalità sviluppatore';
+
+  @override
+  String get developerModeDescription =>
+      'Strumenti per aggiungere dati di esempio completi e verificare aspetto e interazioni.';
+
+  @override
+  String get developerSampleLanguage => 'Lingua dei dati di esempio';
+
+  @override
+  String get developerSampleChinese => 'Cinese';
+
+  @override
+  String get developerSampleEnglish => 'Inglese';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Aggiunge un orario e un insieme di calendari ed eventi senza sostituire i dati esistenti.';
+
+  @override
+  String get developerAddSampleData => 'Aggiungi dati di esempio';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Orario ed eventi di esempio aggiunti.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Tieni premuto per 3 secondi per aprire la modalità sviluppatore';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Comprimi navigazione area di lavoro';
+
+  @override
+  String get expandWorkspaceNavigation => 'Espandi navigazione area di lavoro';
 }

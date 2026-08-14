@@ -2094,6 +2094,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => 'Open school sign-in?';
 
   @override
@@ -2109,4 +2123,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Developer mode';
+
+  @override
+  String get developerModeDescription =>
+      'Tools for adding complete sample data for visual and interaction checks.';
+
+  @override
+  String get developerSampleLanguage => 'Sample data language';
+
+  @override
+  String get developerSampleChinese => '中文';
+
+  @override
+  String get developerSampleEnglish => 'English';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Adds one timetable and a set of calendars and events without replacing existing data.';
+
+  @override
+  String get developerAddSampleData => 'Add sample data';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Sample timetable and schedule data added.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Long-press for 3 seconds to open developer mode';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Collapse workspace navigation';
+
+  @override
+  String get expandWorkspaceNavigation => 'Expand workspace navigation';
 }

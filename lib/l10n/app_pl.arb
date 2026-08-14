@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Ta strona osiągnęła bezpieczny limit importu. Do analizy zostanie wysłana tylko przechwycona część.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Nieznana witryna",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Tryb deweloperski",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Narzędzia do dodawania pełnych danych przykładowych w celu sprawdzenia wyglądu i obsługi.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Język danych przykładowych",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chiński",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Angielski",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Dodaje jeden plan zajęć oraz zestaw kalendarzy i wydarzeń bez zastępowania istniejących danych.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Dodaj dane przykładowe",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Dodano przykładowy plan zajęć i wydarzenia.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Przytrzymaj przez 3 sekundy, aby otworzyć tryb deweloperski",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Zwiń nawigację obszaru roboczego",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Rozwiń nawigację obszaru roboczego",
+  "@expandWorkspaceNavigation": {}
 }

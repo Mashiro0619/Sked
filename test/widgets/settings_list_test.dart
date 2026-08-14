@@ -1,6 +1,7 @@
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:ui' show PointerDeviceKind, SemanticsAction;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
@@ -199,6 +200,56 @@ void main() {
     );
     semantics.dispose();
   });
+
+  testWidgets(
+    'connected tile exposes one tap and long-press semantics node with hints',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SettingsConnectedTile(
+              key: const ValueKey('developer-entry'),
+              leading: const Icon(Icons.update_outlined),
+              title: 'Check for updates',
+              subtitle: 'Current version 2.1.0',
+              onTap: () {},
+              onTapHint: 'Check now',
+              onLongPress: () {},
+              onLongPressHint: 'Open developer mode',
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.bySemanticsLabel('Check for updates, Current version 2.1.0'),
+        findsOneWidget,
+      );
+      final data = tester
+          .getSemantics(find.byKey(const ValueKey('developer-entry')))
+          .getSemanticsData();
+      expect(data.hasAction(SemanticsAction.tap), isTrue);
+      expect(data.hasAction(SemanticsAction.longPress), isTrue);
+      expect(
+        data.customSemanticsActionIds
+            ?.map(CustomSemanticsAction.getAction)
+            .whereType<CustomSemanticsAction>(),
+        containsAll(<CustomSemanticsAction>[
+          const CustomSemanticsAction.overridingAction(
+            hint: 'Check now',
+            action: SemanticsAction.tap,
+          ),
+          const CustomSemanticsAction.overridingAction(
+            hint: 'Open developer mode',
+            action: SemanticsAction.longPress,
+          ),
+        ]),
+      );
+      semantics.dispose();
+    },
+  );
 
   testWidgets('compact list tile keeps its indicator inline at 2x text', (
     tester,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -187,23 +189,71 @@ mixin UiCommandRunner<T extends StatefulWidget> on State<T> {
   }
 }
 
-class UiCommandBusyIndicator extends StatelessWidget {
+class UiCommandBusyIndicator extends StatefulWidget {
   const UiCommandBusyIndicator({
     super.key,
     required this.busy,
     this.semanticsKey,
+    this.showDelay = Duration.zero,
   });
 
   final bool busy;
   final Key? semanticsKey;
+  final Duration showDelay;
+
+  @override
+  State<UiCommandBusyIndicator> createState() => _UiCommandBusyIndicatorState();
+}
+
+class _UiCommandBusyIndicatorState extends State<UiCommandBusyIndicator> {
+  Timer? _showTimer;
+  var _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncVisibility();
+  }
+
+  @override
+  void didUpdateWidget(covariant UiCommandBusyIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.busy != widget.busy ||
+        oldWidget.showDelay != widget.showDelay) {
+      _syncVisibility();
+    }
+  }
+
+  void _syncVisibility() {
+    _showTimer?.cancel();
+    _showTimer = null;
+    if (!widget.busy) {
+      _visible = false;
+      return;
+    }
+    if (widget.showDelay <= Duration.zero) {
+      _visible = true;
+      return;
+    }
+    _visible = false;
+    _showTimer = Timer(widget.showDelay, () {
+      if (mounted && widget.busy) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _showTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 4,
-      child: busy
+      child: _visible
           ? Semantics(
-              key: semanticsKey,
+              key: widget.semanticsKey,
               liveRegion: true,
               label: AppLocalizations.of(context).savingChanges,
               child: const ExcludeSemantics(child: LinearProgressIndicator()),

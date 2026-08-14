@@ -2113,6 +2113,20 @@ class AppLocalizationsRu extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Открыть вход в школьную систему?';
 
@@ -2129,4 +2143,43 @@ class AppLocalizationsRu extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Этот вход в школьную систему использует HTTP. Любой, кто может просматривать или изменять это соединение, может прочитать либо изменить ваши учётные данные и содержимое страницы. Продолжайте, только если принимаете этот риск для:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Режим разработчика';
+
+  @override
+  String get developerModeDescription =>
+      'Инструменты для добавления полного набора примеров для проверки интерфейса и взаимодействия.';
+
+  @override
+  String get developerSampleLanguage => 'Язык примеров';
+
+  @override
+  String get developerSampleChinese => 'Китайский';
+
+  @override
+  String get developerSampleEnglish => 'Английский';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Добавляет одно расписание, календари и события, не заменяя существующие данные.';
+
+  @override
+  String get developerAddSampleData => 'Добавить примеры';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Пример расписания и событий добавлен.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Удерживайте 3 секунды, чтобы открыть режим разработчика';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Свернуть навигацию рабочего пространства';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Развернуть навигацию рабочего пространства';
 }

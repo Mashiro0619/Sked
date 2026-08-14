@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Эта страница достигла безопасного ограничения на импорт. На анализ будет отправлена только сохранённая часть.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Неизвестный сайт",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Режим разработчика",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Инструменты для добавления полного набора примеров для проверки интерфейса и взаимодействия.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Язык примеров",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Китайский",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Английский",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Добавляет одно расписание, календари и события, не заменяя существующие данные.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Добавить примеры",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Пример расписания и событий добавлен.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Удерживайте 3 секунды, чтобы открыть режим разработчика",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Свернуть навигацию рабочего пространства",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Развернуть навигацию рабочего пространства",
+  "@expandWorkspaceNavigation": {}
 }

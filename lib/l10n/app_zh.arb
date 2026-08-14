@@ -1491,6 +1491,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "显示或隐藏日程右下角的悬浮添加日程按钮。",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "长按空白网格添加课程",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "长按课表中的空白网格区域即可添加课程。",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "长按空白网格添加日程",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "在日视图或周视图中，长按空白时间网格即可添加日程。",
+  "@enableLongPressAddEventHint": {},
   "schoolWebImportSignInConsentTitle": "打开学校登录页面？",
   "@schoolWebImportSignInConsentTitle": {},
   "schoolWebImportSignInConsentMessage": "学校登录可能会通过表单或服务器重定向，将登录凭据提交给学校及其登录服务提供方。Android 无法在每次此类传输前都暂停并单独确认目标。仅在你信任这些服务用于本次导入会话时继续：\n\n{origin}",
@@ -1506,5 +1514,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "开发者模式",
+  "@developerModeTitle": {},
+  "developerModeDescription": "用于添加完整示例数据，方便检查界面和交互。",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "示例数据语言",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "中文",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "English",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "新增一张课表和一组日历、日程，不会覆盖已有数据。",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "添加示例数据",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "示例课表和日程数据已添加。",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "长按 3 秒打开开发者模式",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "折叠工作区导航",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "展开工作区导航",
+  "@expandWorkspaceNavigation": {}
 }

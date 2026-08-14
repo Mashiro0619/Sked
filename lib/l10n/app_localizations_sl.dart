@@ -2103,6 +2103,20 @@ class AppLocalizationsSl extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Želite odpreti prijavo v šolski sistem?';
 
@@ -2119,4 +2133,42 @@ class AppLocalizationsSl extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Ta prijava v šolski sistem uporablja HTTP. Kdor lahko spremlja ali spreminja to povezavo, lahko prebere ali spremeni vaše poverilnice in vsebino strani. Nadaljujte le, če sprejemate to tveganje za:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Način za razvijalce';
+
+  @override
+  String get developerModeDescription =>
+      'Orodja za dodajanje celovitih vzorčnih podatkov za preverjanje videza in uporabe.';
+
+  @override
+  String get developerSampleLanguage => 'Jezik vzorčnih podatkov';
+
+  @override
+  String get developerSampleChinese => 'Kitajščina';
+
+  @override
+  String get developerSampleEnglish => 'Angleščina';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Doda en urnik ter nabor koledarjev in dogodkov, ne da bi zamenjal obstoječe podatke.';
+
+  @override
+  String get developerAddSampleData => 'Dodaj vzorčne podatke';
+
+  @override
+  String get developerSampleDataAdded => 'Vzorčni urnik in dogodki so dodani.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Za odprtje načina za razvijalce pridržite 3 sekunde';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Strni krmarjenje po delovnem prostoru';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Razširi krmarjenje po delovnem prostoru';
 }

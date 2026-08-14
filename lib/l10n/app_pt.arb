@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Esta página atingiu o limite de importação segura. Apenas a parte capturada será enviada para análise.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Site desconhecido",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Modo de programador",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Ferramentas para adicionar dados de exemplo completos e verificar o aspeto e as interações.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Idioma dos dados de exemplo",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chinês",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Inglês",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Adiciona um horário e um conjunto de calendários e eventos sem substituir os dados existentes.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Adicionar dados de exemplo",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "O horário e os eventos de exemplo foram adicionados.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Prima durante 3 segundos para abrir o modo de programador",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Recolher navegação do espaço de trabalho",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Expandir navegação do espaço de trabalho",
+  "@expandWorkspaceNavigation": {}
 }

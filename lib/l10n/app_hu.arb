@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Ez az oldal elérte a biztonságos importálási korlátot. Csak a rögzített rész lesz elküldve elemzésre.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Ismeretlen webhely",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Fejlesztői mód",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Eszközök teljes mintaadatok hozzáadásához a megjelenés és a működés ellenőrzésére.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Mintaadatok nyelve",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Kínai",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Angol",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Egy órarendet, valamint naptárakat és eseményeket ad hozzá a meglévő adatok felülírása nélkül.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Mintaadatok hozzáadása",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "A mintaórarend és az események hozzáadva.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Tartsa lenyomva 3 másodpercig a fejlesztői mód megnyitásához",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Munkaterület-navigáció összecsukása",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Munkaterület-navigáció kibontása",
+  "@expandWorkspaceNavigation": {}
 }

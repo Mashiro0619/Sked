@@ -2099,6 +2099,20 @@ class AppLocalizationsHi extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => 'स्कूल साइन-इन खोलें?';
 
   @override
@@ -2114,4 +2128,42 @@ class AppLocalizationsHi extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'डेवलपर मोड';
+
+  @override
+  String get developerModeDescription =>
+      'दृश्य और इंटरैक्शन जाँच के लिए संपूर्ण नमूना डेटा जोड़ने के टूल।';
+
+  @override
+  String get developerSampleLanguage => 'नमूना डेटा की भाषा';
+
+  @override
+  String get developerSampleChinese => 'चीनी';
+
+  @override
+  String get developerSampleEnglish => 'अंग्रेज़ी';
+
+  @override
+  String get developerSampleDataDescription =>
+      'मौजूदा डेटा को बदले बिना एक समय-सारणी और कैलेंडर व इवेंट का समूह जोड़ता है।';
+
+  @override
+  String get developerAddSampleData => 'नमूना डेटा जोड़ें';
+
+  @override
+  String get developerSampleDataAdded =>
+      'नमूना समय-सारणी और इवेंट डेटा जोड़ दिया गया।';
+
+  @override
+  String get developerModeLongPressHint =>
+      'डेवलपर मोड खोलने के लिए 3 सेकंड तक दबाकर रखें';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'कार्यस्थान नेविगेशन संक्षिप्त करें';
+
+  @override
+  String get expandWorkspaceNavigation => 'कार्यस्थान नेविगेशन विस्तृत करें';
 }

@@ -52,12 +52,14 @@ void main() {
   test('app-data normalization preserves workspace and toolbar settings', () {
     final source = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
       hideHomeWorkspaceNavigation: true,
+      homeWorkspaceNavigationCollapsed: true,
       studentMode: buildInitialAppData(buildDefaultPeriodTimes()).studentMode
-          .copyWith(showAddCourseFab: false),
+          .copyWith(showAddCourseFab: false, enableLongPressAddCourse: false),
       generalMode: GeneralScheduleData.createDefault().copyWith(
         toolbarWidthPolicy: generalToolbarWidthPolicyDatePriority,
         dateLabelFormat: generalDateLabelFormatLocalized,
         showAddEventFab: false,
+        enableLongPressAddEvent: false,
       ),
     );
 
@@ -67,8 +69,11 @@ void main() {
     );
 
     expect(normalized.hideHomeWorkspaceNavigation, isTrue);
+    expect(normalized.homeWorkspaceNavigationCollapsed, isTrue);
     expect(normalized.studentMode.showAddCourseFab, isFalse);
+    expect(normalized.studentMode.enableLongPressAddCourse, isFalse);
     expect(normalized.generalMode.showAddEventFab, isFalse);
+    expect(normalized.generalMode.enableLongPressAddEvent, isFalse);
     expect(
       normalized.generalMode.toolbarWidthPolicy,
       generalToolbarWidthPolicyDatePriority,

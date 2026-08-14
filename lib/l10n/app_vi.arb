@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Trang này đã đạt giới hạn nhập an toàn. Chỉ phần đã thu thập sẽ được gửi để phân tích.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Trang web không xác định",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Chế độ nhà phát triển",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Công cụ thêm dữ liệu mẫu đầy đủ để kiểm tra giao diện và thao tác.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Ngôn ngữ dữ liệu mẫu",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Tiếng Trung",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Tiếng Anh",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Thêm một thời khóa biểu cùng các lịch và sự kiện mà không thay thế dữ liệu hiện có.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Thêm dữ liệu mẫu",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Đã thêm thời khóa biểu và sự kiện mẫu.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Nhấn giữ 3 giây để mở chế độ nhà phát triển",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Thu gọn điều hướng không gian làm việc",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Mở rộng điều hướng không gian làm việc",
+  "@expandWorkspaceNavigation": {}
 }

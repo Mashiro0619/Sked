@@ -31,7 +31,7 @@ class _WeekCalendarView extends StatefulWidget {
   final int syncRevision;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onPageSettled;
-  final ValueChanged<DateTime> onEmptySlotTap;
+  final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
@@ -225,7 +225,7 @@ class _WeekTimelinePage extends StatelessWidget {
   final DateTime selectedDate;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<DateTime> onEmptySlotTap;
+  final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
@@ -274,7 +274,7 @@ class _DayCalendarView extends StatefulWidget {
   final int syncRevision;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onPageSettled;
-  final ValueChanged<DateTime> onEmptySlotTap;
+  final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
@@ -674,7 +674,7 @@ class _DayTimelinePage extends StatelessWidget {
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<DateTime> onEmptySlotTap;
+  final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
@@ -981,7 +981,7 @@ class _CalendarTimeline extends StatelessWidget {
   final int endHour;
   final int gridMinutes;
   final bool showHeader;
-  final ValueChanged<DateTime> onEmptySlotTap;
+  final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
@@ -1100,24 +1100,33 @@ class _CalendarTimeline extends StatelessWidget {
                                 'general-timeline-empty-slot-${_dateKey(days[index])}',
                               ),
                               behavior: HitTestBehavior.translucent,
-                              onLongPressStart: (details) {
-                                final minutes = _snapMinutes(
-                                  startMinutes +
-                                      (details.localPosition.dy / minuteHeight)
-                                          .round(),
-                                  gridMinutes,
-                                ).clamp(startMinutes, endMinutes - 15).toInt();
-                                final day = days[index];
-                                onEmptySlotTap(
-                                  DateTime(
-                                    day.year,
-                                    day.month,
-                                    day.day,
-                                    minutes ~/ 60,
-                                    minutes % 60,
-                                  ),
-                                );
-                              },
+                              onLongPressStart: onEmptySlotTap == null
+                                  ? null
+                                  : (details) {
+                                      final minutes =
+                                          _snapMinutes(
+                                                startMinutes +
+                                                    (details.localPosition.dy /
+                                                            minuteHeight)
+                                                        .round(),
+                                                gridMinutes,
+                                              )
+                                              .clamp(
+                                                startMinutes,
+                                                endMinutes - 15,
+                                              )
+                                              .toInt();
+                                      final day = days[index];
+                                      onEmptySlotTap!(
+                                        DateTime(
+                                          day.year,
+                                          day.month,
+                                          day.day,
+                                          minutes ~/ 60,
+                                          minutes % 60,
+                                        ),
+                                      );
+                                    },
                             ),
                           ),
                         for (var index = 0; index < days.length; index++)

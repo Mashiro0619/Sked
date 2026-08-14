@@ -2116,6 +2116,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => 'Schulanmeldung öffnen?';
 
   @override
@@ -2131,4 +2145,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Diese Schulanmeldung verwendet HTTP. Jeder, der diese Verbindung beobachten oder verändern kann, kann Ihre Anmeldedaten und Seiteninhalte lesen oder ändern. Fahren Sie nur fort, wenn Sie dieses Risiko akzeptieren für:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Entwicklermodus';
+
+  @override
+  String get developerModeDescription =>
+      'Werkzeuge zum Hinzufügen vollständiger Beispieldaten für die Prüfung von Darstellung und Interaktion.';
+
+  @override
+  String get developerSampleLanguage => 'Sprache der Beispieldaten';
+
+  @override
+  String get developerSampleChinese => 'Chinesisch';
+
+  @override
+  String get developerSampleEnglish => 'Englisch';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Fügt einen Stundenplan sowie Kalender und Termine hinzu, ohne vorhandene Daten zu ersetzen.';
+
+  @override
+  String get developerAddSampleData => 'Beispieldaten hinzufügen';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Beispiel-Stundenplan und -Termine wurden hinzugefügt.';
+
+  @override
+  String get developerModeLongPressHint =>
+      '3 Sekunden gedrückt halten, um den Entwicklermodus zu öffnen';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Arbeitsbereichsnavigation einklappen';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Arbeitsbereichsnavigation ausklappen';
 }

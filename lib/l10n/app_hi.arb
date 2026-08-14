@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "यह पेज सुरक्षित आयात सीमा तक पहुँच गया है। विश्लेषण के लिए केवल कैप्चर किया गया भाग भेजा जाएगा।",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "अज्ञात साइट",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "डेवलपर मोड",
+  "@developerModeTitle": {},
+  "developerModeDescription": "दृश्य और इंटरैक्शन जाँच के लिए संपूर्ण नमूना डेटा जोड़ने के टूल।",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "नमूना डेटा की भाषा",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "चीनी",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "अंग्रेज़ी",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "मौजूदा डेटा को बदले बिना एक समय-सारणी और कैलेंडर व इवेंट का समूह जोड़ता है।",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "नमूना डेटा जोड़ें",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "नमूना समय-सारणी और इवेंट डेटा जोड़ दिया गया।",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "डेवलपर मोड खोलने के लिए 3 सेकंड तक दबाकर रखें",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "कार्यस्थान नेविगेशन संक्षिप्त करें",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "कार्यस्थान नेविगेशन विस्तृत करें",
+  "@expandWorkspaceNavigation": {}
 }

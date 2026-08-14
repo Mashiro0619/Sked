@@ -751,6 +751,7 @@ class _AppHomeSnapshot {
     required this.hasAcceptedCurrentPrivacyPolicy,
     required this.showFirstLaunchOnboarding,
     required this.hideHomeWorkspaceNavigation,
+    required this.homeWorkspaceNavigationCollapsed,
     required this.canWrite,
     required this.storageLoadStatus,
     required this.recoveryArtifacts,
@@ -763,6 +764,8 @@ class _AppHomeSnapshot {
       hasAcceptedCurrentPrivacyPolicy: provider.hasAcceptedCurrentPrivacyPolicy,
       showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
       hideHomeWorkspaceNavigation: provider.hideHomeWorkspaceNavigation,
+      homeWorkspaceNavigationCollapsed:
+          provider.homeWorkspaceNavigationCollapsed,
       canWrite: provider.canWrite,
       storageLoadStatus: provider.storageLoadStatus,
       recoveryArtifacts: provider.recoveryArtifacts,
@@ -774,6 +777,7 @@ class _AppHomeSnapshot {
   final bool hasAcceptedCurrentPrivacyPolicy;
   final bool showFirstLaunchOnboarding;
   final bool hideHomeWorkspaceNavigation;
+  final bool homeWorkspaceNavigationCollapsed;
   final bool canWrite;
   final StorageLoadStatus storageLoadStatus;
   final List<String> recoveryArtifacts;
@@ -787,6 +791,8 @@ class _AppHomeSnapshot {
             hasAcceptedCurrentPrivacyPolicy &&
         other.showFirstLaunchOnboarding == showFirstLaunchOnboarding &&
         other.hideHomeWorkspaceNavigation == hideHomeWorkspaceNavigation &&
+        other.homeWorkspaceNavigationCollapsed ==
+            homeWorkspaceNavigationCollapsed &&
         other.canWrite == canWrite &&
         other.storageLoadStatus == storageLoadStatus &&
         listEquals(other.recoveryArtifacts, recoveryArtifacts);
@@ -799,6 +805,7 @@ class _AppHomeSnapshot {
     hasAcceptedCurrentPrivacyPolicy,
     showFirstLaunchOnboarding,
     hideHomeWorkspaceNavigation,
+    homeWorkspaceNavigationCollapsed,
     canWrite,
     storageLoadStatus,
     Object.hashAll(recoveryArtifacts),
@@ -819,7 +826,8 @@ bool _hasDefaultFirstLaunchData(TimetableProvider provider) {
   }
   return _hasDefaultStudentData(provider.studentMode) &&
       _hasDefaultGeneralData(provider.generalMode) &&
-      !provider.hideHomeWorkspaceNavigation;
+      !provider.hideHomeWorkspaceNavigation &&
+      !provider.homeWorkspaceNavigationCollapsed;
 }
 
 bool _hasDefaultStudentData(StudentModeData data) {
@@ -835,6 +843,7 @@ bool _hasDefaultStudentData(StudentModeData data) {
       !data.fitDaySelectorToWidth ||
       !data.fitWeekColumnsToWidth ||
       !data.enableWeekSwipeNavigation ||
+      !data.enableLongPressAddCourse ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
         themeColorMode: data.themeColorMode,
@@ -937,6 +946,7 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
       data.dayEndHour != 23 ||
       data.timeGridMinutes != 60 ||
       !data.closeEventPopupOnOutsideTap ||
+      !data.enableLongPressAddEvent ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
         themeColorMode: data.themeColorMode,

@@ -2097,6 +2097,20 @@ class AppLocalizationsEt extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Kas avada kooli sisselogimine?';
 
@@ -2113,4 +2127,41 @@ class AppLocalizationsEt extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'See kooli sisselogimine kasutab HTTP-d. Igaüks, kes saab seda ühendust jälgida või muuta, võib lugeda või muuta teie sisselogimisandmeid ja lehe sisu. Jätkake ainult siis, kui nõustute selle riskiga saidi puhul:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Arendajarežiim';
+
+  @override
+  String get developerModeDescription =>
+      'Tööriistad täielike näidisandmete lisamiseks kujunduse ja kasutuse kontrollimiseks.';
+
+  @override
+  String get developerSampleLanguage => 'Näidisandmete keel';
+
+  @override
+  String get developerSampleChinese => 'Hiina';
+
+  @override
+  String get developerSampleEnglish => 'Inglise';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Lisab ühe tunniplaani ning kalendrid ja sündmused olemasolevaid andmeid asendamata.';
+
+  @override
+  String get developerAddSampleData => 'Lisa näidisandmed';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Näidistunniplaan ja sündmused on lisatud.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Arendajarežiimi avamiseks hoidke 3 sekundit all';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Ahenda tööruumi navigeerimine';
+
+  @override
+  String get expandWorkspaceNavigation => 'Laienda tööruumi navigeerimist';
 }

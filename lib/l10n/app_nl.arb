@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Deze pagina heeft de veilige importlimiet bereikt. Alleen het vastgelegde gedeelte wordt verzonden voor analyse.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Onbekende website",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Ontwikkelaarsmodus",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Hulpmiddelen om volledige voorbeeldgegevens toe te voegen voor controle van weergave en interactie.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Taal van voorbeeldgegevens",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chinees",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Engels",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Voegt één rooster en een set agenda's en afspraken toe zonder bestaande gegevens te vervangen.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Voorbeeldgegevens toevoegen",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Voorbeeldrooster en -afspraken toegevoegd.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Houd 3 seconden ingedrukt om de ontwikkelaarsmodus te openen",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Werkruimtenavigatie inklappen",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Werkruimtenavigatie uitklappen",
+  "@expandWorkspaceNavigation": {}
 }

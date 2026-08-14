@@ -102,7 +102,7 @@ class TimetableGrid extends StatefulWidget {
   final bool showFutureCourses;
   final bool showGridLines;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
-  final ValueChanged<TimetableEmptySlotTapInfo> onEmptySlotTap;
+  final ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap;
   final String themeColorMode;
   final Map<String, int> courseNameColorValues;
   final String colorfulCourseTextColorMode;
@@ -508,22 +508,29 @@ class _TimetableGridState extends State<TimetableGrid> {
                                             ),
                                             outlineWidth:
                                                 widget.liveCourseOutlineWidth,
-                                            onLongPressAt: (localPosition) {
-                                              final matchedPeriod = layout
-                                                  .slotForY(localPosition.dy);
-                                              widget.onEmptySlotTap(
-                                                TimetableEmptySlotTapInfo(
-                                                  weekday: weekday,
-                                                  startMinutes: matchedPeriod
-                                                      .startMinutes,
-                                                  endMinutes:
-                                                      matchedPeriod.endMinutes,
-                                                  periods: [
-                                                    matchedPeriod.index,
-                                                  ],
-                                                ),
-                                              );
-                                            },
+                                            onLongPressAt:
+                                                widget.onEmptySlotTap == null
+                                                ? null
+                                                : (localPosition) {
+                                                    final matchedPeriod = layout
+                                                        .slotForY(
+                                                          localPosition.dy,
+                                                        );
+                                                    widget.onEmptySlotTap!(
+                                                      TimetableEmptySlotTapInfo(
+                                                        weekday: weekday,
+                                                        startMinutes:
+                                                            matchedPeriod
+                                                                .startMinutes,
+                                                        endMinutes:
+                                                            matchedPeriod
+                                                                .endMinutes,
+                                                        periods: [
+                                                          matchedPeriod.index,
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
                                             onLayoutTap: (item) {
                                               if (useEntries &&
                                                   item.entry != null) {
@@ -617,7 +624,7 @@ class _DayColumn extends StatelessWidget {
   final String liveCourseOutlineMode;
   final Color outlineColor;
   final double outlineWidth;
-  final ValueChanged<Offset> onLongPressAt;
+  final ValueChanged<Offset>? onLongPressAt;
   final ValueChanged<CourseLayout> onLayoutTap;
 
   @override
@@ -637,40 +644,21 @@ class _DayColumn extends StatelessWidget {
         border: BorderDirectional(start: BorderSide(color: borderColor)),
       ),
       child: GestureDetector(
+        key: ValueKey('timetable-day-column-long-press-$weekday'),
         behavior: HitTestBehavior.opaque,
-        onLongPressStart: (details) {
-          final y = details.localPosition.dy;
-          _CourseGeometry? matchedCourse;
-          for (final geometry in geometries) {
-            if (y >= geometry.hitTop &&
-                y < geometry.hitTop + geometry.hitHeight) {
-              // Match the same topmost item that the stacked tap targets use.
-              matchedCourse = geometry;
-            }
-          }
-          if (matchedCourse != null) {
-            onLayoutTap(matchedCourse.layout);
-          } else {
-            onLongPressAt(details.localPosition);
-          }
-        },
-        onTapUp: hasDenseHitTargets
-            ? (details) {
+        onLongPressStart: onLongPressAt == null
+            ? null
+            : (details) {
                 final y = details.localPosition.dy;
-                // Dense adjacent courses cannot each own a non-overlapping
-                // 48dp pointer rectangle. Route their physical tap by the
-                // real visual interval while keeping their semantic actions
-                // independently focusable below.
-                for (final geometry in geometries.reversed) {
-                  if (geometry.hitHeight >= _minimumCourseHitExtent) continue;
-                  if (y >= geometry.visualTop &&
-                      y < geometry.visualTop + geometry.visualHeight) {
-                    onLayoutTap(geometry.layout);
+                for (final geometry in geometries) {
+                  if (y >= geometry.hitTop &&
+                      y < geometry.hitTop + geometry.hitHeight) {
+                    // Course hit targets own their long-press interaction.
                     return;
                   }
                 }
-              }
-            : null,
+                onLongPressAt!(details.localPosition);
+              },
         child: Material(
           color: Colors.transparent,
           child: Stack(
@@ -711,7 +699,8 @@ class _DayColumn extends StatelessWidget {
                   geometry: geometry,
                   metrics: metrics,
                   onTap: () => onLayoutTap(geometry.layout),
-                  ignorePointer:
+                  onLongPress: () => onLayoutTap(geometry.layout),
+                  useVisualBounds:
                       hasDenseHitTargets &&
                       geometry.hitHeight < _minimumCourseHitExtent,
                   includeSemantics:
@@ -1540,14 +1529,16 @@ class _CourseHitTarget extends StatelessWidget {
     required this.geometry,
     required this.metrics,
     required this.onTap,
-    this.ignorePointer = false,
+    required this.onLongPress,
+    this.useVisualBounds = false,
     this.includeSemantics = true,
   });
 
   final _CourseGeometry geometry;
   final _TimetableMetrics metrics;
   final VoidCallback onTap;
-  final bool ignorePointer;
+  final VoidCallback onLongPress;
+  final bool useVisualBounds;
   final bool includeSemantics;
 
   @override
@@ -1563,7 +1554,8 @@ class _CourseHitTarget extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           key: ValueKey('timetable-course-hit-$itemId'),
-          onTap: ignorePointer ? null : onTap,
+          onTap: onTap,
+          onLongPress: onLongPress,
           customBorder: skedShapeSchemeOf(context).compact,
           overlayColor: WidgetStatePropertyAll(
             Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
@@ -1571,18 +1563,14 @@ class _CourseHitTarget extends StatelessWidget {
         ),
       ),
     );
-    final interactive = ignorePointer
-        ? Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerUp: (_) {},
-            child: visual,
-          )
-        : visual;
     return PositionedDirectional(
-      top: geometry.hitTop,
+      // Dense courses keep physical hit regions on their exact visual
+      // intervals. Their separate semantic targets still provide 48dp
+      // accessibility actions without overlapping pointer targets.
+      top: useVisualBounds ? geometry.visualTop : geometry.hitTop,
       start: metrics.courseGap,
       width: width,
-      height: geometry.hitHeight,
+      height: useVisualBounds ? geometry.visualHeight : geometry.hitHeight,
       child: includeSemantics
           ? Semantics(
               container: true,
@@ -1590,9 +1578,9 @@ class _CourseHitTarget extends StatelessWidget {
               enabled: true,
               label: _semanticLabelForGeometry(geometry),
               onTap: onTap,
-              child: interactive,
+              child: visual,
             )
-          : ExcludeSemantics(child: interactive),
+          : ExcludeSemantics(child: visual),
     );
   }
 }

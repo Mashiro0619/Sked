@@ -2235,6 +2235,62 @@ void main() {
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
   });
 
+  testWidgets(
+    'long-press add setting removes day and week grid recognizers immediately',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final view in const [generalViewWeek, generalViewDay]) {
+        final calendar = const GeneralSchedule(
+          id: 'cal1',
+          name: 'Calendar',
+          events: [],
+        );
+        final provider = await _createGeneralProvider(
+          buildInitialAppData(
+            buildDefaultPeriodTimes(),
+            localeCode: defaultLocaleCode,
+          ).copyWith(
+            activeMode: AppMode.general,
+            generalMode: GeneralScheduleData(
+              activeScheduleId: 'cal1',
+              schedules: [calendar],
+              selectedDateIso: '2026-06-17',
+              defaultView: view,
+              enableLongPressAddEvent: false,
+            ),
+          ),
+        );
+        await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+        final slot = find.byKey(
+          const ValueKey('general-timeline-empty-slot-2026-06-17T00:00:00.000'),
+        );
+        expect(slot, findsOneWidget);
+        expect(tester.widget<GestureDetector>(slot).onLongPressStart, isNull);
+
+        final slotRect = tester.getRect(slot);
+        await tester.longPressAt(
+          Offset(slotRect.center.dx, slotRect.top + 160),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(GeneralEventEditorSheet), findsNothing);
+
+        await provider.updateGeneralDisplaySettings(
+          enableLongPressAddEvent: true,
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<GestureDetector>(slot).onLongPressStart,
+          isNotNull,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+  );
+
   testWidgets('general schedule home hides search and filter controls', (
     tester,
   ) async {

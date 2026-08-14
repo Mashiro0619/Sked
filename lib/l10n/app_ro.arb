@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Această pagină a atins limita de import sigur. Doar partea capturată va fi trimisă pentru analiză.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Site necunoscut",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Mod pentru dezvoltatori",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Instrumente pentru adăugarea unor date demonstrative complete, utile la verificarea aspectului și interacțiunilor.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Limba datelor demonstrative",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chineză",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Engleză",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Adaugă un orar și un set de calendare și evenimente fără a înlocui datele existente.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Adaugă date demonstrative",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Orarul și evenimentele demonstrative au fost adăugate.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Țineți apăsat timp de 3 secunde pentru a deschide modul pentru dezvoltatori",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Restrânge navigarea spațiului de lucru",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Extinde navigarea spațiului de lucru",
+  "@expandWorkspaceNavigation": {}
 }

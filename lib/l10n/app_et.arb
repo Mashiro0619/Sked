@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "See leht saavutas turvalise impordi piirangu. Analüüsimiseks saadetakse ainult jäädvustatud osa.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Tundmatu sait",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Arendajarežiim",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Tööriistad täielike näidisandmete lisamiseks kujunduse ja kasutuse kontrollimiseks.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Näidisandmete keel",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Hiina",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Inglise",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Lisab ühe tunniplaani ning kalendrid ja sündmused olemasolevaid andmeid asendamata.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Lisa näidisandmed",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Näidistunniplaan ja sündmused on lisatud.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Arendajarežiimi avamiseks hoidke 3 sekundit all",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Ahenda tööruumi navigeerimine",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Laienda tööruumi navigeerimist",
+  "@expandWorkspaceNavigation": {}
 }

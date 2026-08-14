@@ -241,6 +241,30 @@ void main() {
       expect(storage.data!.studentMode.showAddCourseFab, isFalse);
     });
 
+    test('long-press course add persists and rolls back on failure', () async {
+      final original = appData();
+      final storage = _MemoryTimetableStorage(original);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+
+      await provider.updateEnableLongPressAddCourse(false);
+      expect(provider.enableLongPressAddCourse, isFalse);
+      expect(storage.data!.studentMode.enableLongPressAddCourse, isFalse);
+
+      storage.saveFailures.add(Exception('disk full'));
+      await expectLater(
+        provider.updateEnableLongPressAddCourse(true),
+        throwsException,
+      );
+
+      expect(provider.enableLongPressAddCourse, isFalse);
+      expect(storage.data!.studentMode.enableLongPressAddCourse, isFalse);
+    });
+
     test('rolls back timetable layout settings when save fails', () async {
       final original = appData();
       final storage = _MemoryTimetableStorage(original);

@@ -3,6 +3,9 @@ part of 'timetable_provider.dart';
 mixin _TimetableProviderSettings on _TimetableProviderBase {
   bool get hideHomeWorkspaceNavigation => _appData.hideHomeWorkspaceNavigation;
 
+  bool get homeWorkspaceNavigationCollapsed =>
+      _appData.homeWorkspaceNavigationCollapsed;
+
   bool get fitDaySelectorToWidth => _appData.studentMode.fitDaySelectorToWidth;
 
   bool get fitWeekColumnsToWidth => _appData.studentMode.fitWeekColumnsToWidth;
@@ -12,8 +15,19 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   bool get showAddCourseFab => _appData.studentMode.showAddCourseFab;
 
+  bool get enableLongPressAddCourse =>
+      _appData.studentMode.enableLongPressAddCourse;
+
   Future<void> updateHideHomeWorkspaceNavigation(bool value) async {
     _appData = _settings.updateHideHomeWorkspaceNavigation(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateHomeWorkspaceNavigationCollapsed(bool value) async {
+    _appData = _settings.updateHomeWorkspaceNavigationCollapsed(
+      _appData,
+      value,
+    );
     await _saveAndNotify();
   }
 
@@ -44,6 +58,11 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateShowAddCourseFab(bool value) async {
     _appData = _settings.updateShowAddCourseFab(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateEnableLongPressAddCourse(bool value) async {
+    _appData = _settings.updateEnableLongPressAddCourse(_appData, value);
     await _saveAndNotify();
   }
 

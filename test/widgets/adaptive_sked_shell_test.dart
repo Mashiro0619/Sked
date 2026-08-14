@@ -112,7 +112,8 @@ Widget _appFor(
   TextScaler textScaler = TextScaler.noScaling,
   EdgeInsets safePadding = EdgeInsets.zero,
   bool disableAnimations = false,
-  VoidCallback? onOpenSettings,
+  bool enabled = true,
+  Future<void> Function()? onOpenSettings,
 }) {
   return ChangeNotifierProvider<TimetableProvider>.value(
     value: provider,
@@ -137,13 +138,17 @@ Widget _appFor(
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: Selector<TimetableProvider, (AppMode, bool)>(
-        selector: (_, provider) =>
-            (provider.activeMode, provider.hideHomeWorkspaceNavigation),
+      home: Selector<TimetableProvider, (AppMode, bool, bool)>(
+        selector: (_, provider) => (
+          provider.activeMode,
+          provider.hideHomeWorkspaceNavigation,
+          provider.homeWorkspaceNavigationCollapsed,
+        ),
         builder: (context, snapshot, child) => AdaptiveSkedShell(
           key: const ValueKey('adaptive-shell-test'),
           provider: context.read<TimetableProvider>(),
           activeMode: snapshot.$1,
+          enabled: enabled,
           onOpenSettings: () async => onOpenSettings?.call(),
         ),
       ),
@@ -160,6 +165,58 @@ NavigationIndicator _navigationIndicator(
     matching: find.byType(NavigationIndicator),
   );
   return tester.widget<NavigationIndicator>(indicator);
+}
+
+Finder _tooltipWithMessage(String message) {
+  return find.byWidgetPredicate(
+    (widget) => widget is Tooltip && widget.message == message,
+  );
+}
+
+Finder _semanticsWithLabel(String label) {
+  return find.byWidgetPredicate(
+    (widget) => widget is Semantics && widget.properties.label == label,
+  );
+}
+
+Map<String, Offset> _wideNavigationIconCenters(WidgetTester tester) {
+  final rail = find.byKey(const ValueKey('adaptive-shell-navigation-rail'));
+  return {
+    'brand': tester.getCenter(
+      find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+    ),
+    'student': tester.getCenter(
+      find.descendant(of: rail, matching: find.byIcon(Icons.school)),
+    ),
+    'general': tester.getCenter(
+      find.descendant(
+        of: rail,
+        matching: find.byIcon(Icons.event_note_outlined),
+      ),
+    ),
+    'settings': tester.getCenter(
+      find.byKey(const ValueKey('adaptive-shell-settings-action')),
+    ),
+  };
+}
+
+void _expectCentersClose(
+  Map<String, Offset> actual,
+  Map<String, Offset> expected, {
+  double tolerance = 0.01,
+}) {
+  for (final entry in expected.entries) {
+    expect(
+      actual[entry.key]!.dx,
+      closeTo(entry.value.dx, tolerance),
+      reason: '${entry.key} horizontal center moved',
+    );
+    expect(
+      actual[entry.key]!.dy,
+      closeTo(entry.value.dy, tolerance),
+      reason: '${entry.key} vertical center moved',
+    );
+  }
 }
 
 void main() {
@@ -202,58 +259,356 @@ void main() {
     );
     await expectNavigation(
       840,
-      find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      railExtended: false,
     );
     await expectNavigation(
       1199,
-      find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      railExtended: false,
     );
     await expectNavigation(
       1200,
-      find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      railExtended: true,
+    );
+    await expectNavigation(
+      1600,
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      railExtended: true,
     );
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('permanent drawer anchors settings above the bottom safe area', (
+  testWidgets('medium rail brand is static and cannot expand', (tester) async {
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final width in [600.0, 840.0, 1199.0]) {
+      await tester.binding.setSurfaceSize(Size(width, 800));
+      await tester.pumpWidget(_appFor(provider));
+      await tester.pumpAndSettle();
+
+      final brand = find.byKey(
+        const ValueKey('adaptive-shell-navigation-brand-icon'),
+      );
+      expect(brand, findsOneWidget, reason: '${width}px');
+      expect(tester.getSize(brand), const Size.square(48));
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+        findsNothing,
+        reason: '${width}px',
+      );
+      expect(_tooltipWithMessage('Expand workspace navigation'), findsNothing);
+      expect(
+        _tooltipWithMessage('Collapse workspace navigation'),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('large-screen brand toggles and persists navigation width', (
+    tester,
+  ) async {
+    final storage = _MemoryStorage(_shellData(populated: true));
+    final provider = await _providerFor(storage);
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    final workspace = find.byKey(
+      const ValueKey('adaptive-workspace-stack'),
+      skipOffstage: false,
+    );
+    final workspaceElement = tester.element(workspace);
+    final toggle = find.byKey(
+      const ValueKey('adaptive-shell-navigation-collapse-toggle'),
+    );
+    final rail = find.byKey(const ValueKey('adaptive-shell-navigation-rail'));
+    final expandedWidth = tester.getSize(rail).width;
+    final railElement = tester.element(rail);
+    expect(
+      _tooltipWithMessage('Collapse workspace navigation'),
+      findsOneWidget,
+    );
+    expect(tester.getSize(toggle), const Size.square(48));
+    final collapseSemanticsFinder = _semanticsWithLabel(
+      'Collapse workspace navigation',
+    );
+    expect(collapseSemanticsFinder, findsOneWidget);
+    final collapseSemantics = tester.widget<Semantics>(collapseSemanticsFinder);
+    expect(collapseSemantics.properties.button, isTrue);
+    expect(tester.widget<IconButton>(toggle).onPressed, isNotNull);
+    expect(tester.widget<NavigationRail>(rail).extended, isTrue);
+    expect(expandedWidth, greaterThan(80));
+
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(storage.saveCount, 1);
+    expect(tester.widget<NavigationRail>(rail).extended, isFalse);
+    expect(tester.getSize(rail).width, 80);
+    expect(identical(tester.element(rail), railElement), isTrue);
+    expect(_tooltipWithMessage('Expand workspace navigation'), findsOneWidget);
+    final expandSemanticsFinder = _semanticsWithLabel(
+      'Expand workspace navigation',
+    );
+    expect(expandSemanticsFinder, findsOneWidget);
+    final expandSemantics = tester.widget<Semantics>(expandSemanticsFinder);
+    expect(expandSemantics.properties.button, isTrue);
+    expect(tester.widget<IconButton>(toggle).onPressed, isNotNull);
+    expect(identical(tester.element(workspace), workspaceElement), isTrue);
+
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(storage.saveCount, 2);
+    expect(tester.widget<NavigationRail>(rail).extended, isTrue);
+    expect(tester.getSize(rail).width, closeTo(expandedWidth, 0.01));
+    expect(identical(tester.element(rail), railElement), isTrue);
+    expect(
+      _tooltipWithMessage('Collapse workspace navigation'),
+      findsOneWidget,
+    );
+    expect(identical(tester.element(workspace), workspaceElement), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collapsed preference survives resize without writing', (
+    tester,
+  ) async {
+    final storage = _MemoryStorage(
+      _shellData(populated: true)
+          .copyWith(homeWorkspaceNavigationCollapsed: true),
+    );
+    final provider = await _providerFor(storage);
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.binding.setSurfaceSize(const Size(1600, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+    expect(_tooltipWithMessage('Expand workspace navigation'), findsOneWidget);
+
+    await tester.binding.setSurfaceSize(const Size(1199, 800));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-navigation-brand-icon')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+      findsNothing,
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpAndSettle();
+    expect(_tooltipWithMessage('Expand workspace navigation'), findsOneWidget);
+    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(storage.saveCount, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collapse keeps one populated rail and stable icon centers', (
+    tester,
+  ) async {
+    final storage = _BlockingStorage(_shellData(populated: true));
+    final provider = await _providerFor(storage);
+    addTearDown(() {
+      storage.completeSave();
+      provider.dispose();
+    });
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    final rail = find.byKey(const ValueKey('adaptive-shell-navigation-rail'));
+    final railElement = tester.element(rail);
+    final initialCenters = _wideNavigationIconCenters(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+    );
+    await storage.firstSaveStarted.future;
+    await tester.pump();
+
+    for (final elapsed in const [
+      Duration.zero,
+      Duration(milliseconds: 40),
+      Duration(milliseconds: 60),
+    ]) {
+      if (elapsed > Duration.zero) await tester.pump(elapsed);
+      expect(rail, findsOneWidget);
+      expect(identical(tester.element(rail), railElement), isTrue);
+      expect(tester.widget<NavigationRail>(rail).destinations, hasLength(2));
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: rail, matching: find.byIcon(Icons.school)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: rail,
+          matching: find.byIcon(Icons.event_note_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-settings-action')),
+        findsOneWidget,
+      );
+      _expectCentersClose(_wideNavigationIconCenters(tester), initialCenters);
+      expect(tester.takeException(), isNull);
+    }
+
+    final animatedWidth = tester.getSize(rail).width;
+    expect(animatedWidth, greaterThan(80));
+    expect(animatedWidth, lessThan(240));
+    final inputGate = tester.widget<AbsorbPointer>(
+      find.ancestor(of: rail, matching: find.byType(AbsorbPointer)).first,
+    );
+    expect(inputGate.absorbing, isTrue);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+    expect(tester.getSize(rail).width, 80);
+    _expectCentersClose(_wideNavigationIconCenters(tester), initialCenters);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reduced motion switches extended rail immediately', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(reduceMotion: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    final storage = _BlockingStorage(_shellData(populated: true));
+    final provider = await _providerFor(storage);
+    addTearDown(() {
+      storage.completeSave();
+      provider.dispose();
+    });
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+    );
+    await storage.firstSaveStarted.future;
+    await tester.pump();
+
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('adaptive-shell-navigation-rail')))
+          .width,
+      80,
+    );
+    expect(
+      tester
+          .widget<NavigationRail>(
+            find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+          )
+          .extended,
+      isFalse,
+    );
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-wide-navigation-static-false')),
+      findsOneWidget,
+    );
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('disabled animations switch extended rail immediately', (
+    tester,
+  ) async {
+    final provider = await _providerFor(
+      _MemoryStorage(_shellData(populated: true)),
+    );
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider, disableAnimations: true));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('adaptive-shell-navigation-rail')))
+          .width,
+      80,
+    );
+    expect(
+      tester
+          .widget<NavigationRail>(
+            find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+          )
+          .extended,
+      isFalse,
+    );
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-wide-navigation-static-false')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expanded rail anchors settings above the bottom safe area', (
     tester,
   ) async {
     final provider = await _providerFor(_MemoryStorage(_shellData()));
     addTearDown(provider.dispose);
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    for (final width in [840.0, 1200.0]) {
+    for (final width in [1200.0, 1600.0]) {
       await tester.binding.setSurfaceSize(Size(width, 800));
       await tester.pumpWidget(
         _appFor(provider, safePadding: const EdgeInsets.only(bottom: 24)),
       );
       await tester.pumpAndSettle();
 
-      final drawer = find.byKey(
-        const ValueKey('adaptive-shell-navigation-drawer'),
-      );
+      final rail = find.byKey(const ValueKey('adaptive-shell-navigation-rail'));
       final settings = find.byKey(
         const ValueKey('adaptive-shell-settings-action'),
       );
-      final destinations = find.descendant(
-        of: drawer,
-        matching: find.byType(NavigationDrawerDestination),
+      final generalDestinationIcon = find.descendant(
+        of: rail,
+        matching: find.byIcon(Icons.event_note_outlined),
       );
-      final drawerRect = tester.getRect(drawer);
+      final railRect = tester.getRect(rail);
       final settingsRect = tester.getRect(settings);
 
-      expect(destinations, findsNWidgets(2));
-      expect(settingsRect.top, greaterThan(drawerRect.center.dy));
-      expect(drawerRect.bottom - settingsRect.bottom, closeTo(36, 0.01));
+      expect(tester.widget<NavigationRail>(rail).destinations, hasLength(2));
+      expect(settingsRect.top, greaterThan(railRect.center.dy));
+      expect(railRect.bottom - settingsRect.bottom, closeTo(36, 0.01));
       expect(
-        tester.getRect(destinations.last).bottom,
+        tester.getRect(generalDestinationIcon).bottom,
         lessThan(settingsRect.top),
       );
       expect(tester.takeException(), isNull);
     }
   });
 
-  testWidgets('permanent drawer aligns its brand icon and title', (
+  testWidgets('expanded rail keeps brand and settings in one leading column', (
     tester,
   ) async {
     final provider = await _providerFor(_MemoryStorage(_shellData()));
@@ -263,15 +618,22 @@ void main() {
     await tester.pumpWidget(_appFor(provider));
     await tester.pumpAndSettle();
 
-    final icon = tester.getRect(
-      find.byKey(const ValueKey('adaptive-shell-drawer-brand-icon')),
+    final centers = _wideNavigationIconCenters(tester);
+    expect(centers['settings']!.dx, closeTo(centers['brand']!.dx, 0.01));
+    expect(
+      tester
+          .widget<NavigationRail>(
+            find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+          )
+          .extended,
+      isTrue,
     );
-    final title = tester.getRect(
-      find.byKey(const ValueKey('adaptive-shell-drawer-brand-title')),
+    expect(
+      tester.getSize(
+        find.byKey(const ValueKey('adaptive-shell-navigation-collapse-toggle')),
+      ),
+      const Size.square(48),
     );
-    expect(icon.center.dy, closeTo(title.center.dy, 0.01));
-    expect(icon.height, 32);
-    expect(title.height, 40);
     expect(tester.takeException(), isNull);
   });
 
@@ -311,13 +673,13 @@ void main() {
     },
   );
 
-  testWidgets('short large-text drawer keeps settings reachable', (
+  testWidgets('short large-text expanded rail keeps settings reachable', (
     tester,
   ) async {
     final provider = await _providerFor(_MemoryStorage(_shellData()));
     addTearDown(provider.dispose);
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.binding.setSurfaceSize(const Size(840, 360));
+    await tester.binding.setSurfaceSize(const Size(1200, 360));
     await tester.pumpWidget(
       _appFor(
         provider,
@@ -327,21 +689,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final drawer = find.byKey(
-      const ValueKey('adaptive-shell-navigation-drawer'),
-    );
+    final rail = find.byKey(const ValueKey('adaptive-shell-navigation-rail'));
     final settings = find.byKey(
       const ValueKey('adaptive-shell-settings-action'),
     );
-    final drawerRect = tester.getRect(drawer);
+    final railRect = tester.getRect(rail);
     final settingsRect = tester.getRect(settings);
 
-    expect(
-      find.descendant(of: drawer, matching: find.byType(ListView)),
-      findsOneWidget,
-    );
-    expect(settingsRect.top, greaterThanOrEqualTo(drawerRect.top));
-    expect(settingsRect.bottom, lessThanOrEqualTo(drawerRect.bottom));
+    expect(tester.widget<NavigationRail>(rail).scrollable, isTrue);
+    expect(settingsRect.top, greaterThanOrEqualTo(railRect.top));
+    expect(settingsRect.bottom, lessThanOrEqualTo(railRect.bottom));
     expect(settingsRect.height, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
   });
@@ -369,10 +726,6 @@ void main() {
         );
         expect(
           find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
-          findsNothing,
-        );
-        expect(
-          find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
           findsNothing,
         );
         final toolbar = tester.getRect(
@@ -417,12 +770,17 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.binding.setSurfaceSize(const Size(1200, 800));
       await tester.pumpWidget(
-        _appFor(provider, onOpenSettings: () => settingsCalls += 1),
+        _appFor(
+          provider,
+          onOpenSettings: () async {
+            settingsCalls += 1;
+          },
+        ),
       );
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+        find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
         findsNothing,
       );
       final toolbar = tester.getRect(
@@ -450,14 +808,14 @@ void main() {
       );
       addTearDown(provider.dispose);
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      await tester.binding.setSurfaceSize(const Size(840, 800));
+      await tester.binding.setSurfaceSize(const Size(1200, 800));
       await tester.pumpWidget(_appFor(provider));
       await tester.pumpAndSettle();
 
-      final drawerSettings = tester.widget<ListTile>(
+      final railSettings = tester.widget<IconButton>(
         find.byKey(const ValueKey('adaptive-shell-settings-action')),
       );
-      final settingsFocusNode = drawerSettings.focusNode!;
+      final settingsFocusNode = railSettings.focusNode!;
       settingsFocusNode.requestFocus();
       await tester.pump();
       expect(settingsFocusNode.hasFocus, isTrue);
@@ -466,7 +824,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+        find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
         findsNothing,
       );
       final toolbarSettings = tester.widget<IconButton>(
@@ -479,17 +837,160 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('adaptive-shell-navigation-drawer')),
+        find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
         findsOneWidget,
       );
-      final restoredDrawerSettings = tester.widget<ListTile>(
+      final restoredRailSettings = tester.widget<IconButton>(
         find.byKey(const ValueKey('adaptive-shell-settings-action')),
       );
-      expect(restoredDrawerSettings.focusNode, same(settingsFocusNode));
+      expect(restoredRailSettings.focusNode, same(settingsFocusNode));
       expect(settingsFocusNode.hasFocus, isTrue);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('hidden navigation restores the saved collapsed preference', (
+    tester,
+  ) async {
+    final storage = _MemoryStorage(
+      _shellData(populated: true).copyWith(
+        hideHomeWorkspaceNavigation: true,
+        homeWorkspaceNavigationCollapsed: true,
+      ),
+    );
+    final provider = await _providerFor(storage);
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      findsNothing,
+    );
+    await provider.updateHideHomeWorkspaceNavigation(false);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(_tooltipWithMessage('Expand workspace navigation'), findsOneWidget);
+    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collapse save is gated and failure restores expanded rail', (
+    tester,
+  ) async {
+    final storage = _BlockingStorage(_shellData(populated: true), fail: true);
+    final provider = await _providerFor(storage);
+    addTearDown(() {
+      storage.completeSave();
+      provider.dispose();
+    });
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider));
+    await tester.pumpAndSettle();
+
+    final toggle = find.byKey(
+      const ValueKey('adaptive-shell-navigation-collapse-toggle'),
+    );
+    final rail = find.byKey(const ValueKey('adaptive-shell-navigation-rail'));
+    final expandedWidth = tester.getSize(rail).width;
+    await tester.tap(toggle);
+    await storage.firstSaveStarted.future;
+    await tester.pump();
+
+    expect(storage.saveCount, 1);
+    expect(
+      find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(tester.widget<NavigationRail>(rail).extended, isFalse);
+    expect(tester.widget<IconButton>(toggle).onPressed, isNotNull);
+    expect(
+      tester
+          .widget<AbsorbPointer>(
+            find
+                .ancestor(of: toggle, matching: find.byType(AbsorbPointer))
+                .first,
+          )
+          .absorbing,
+      isTrue,
+    );
+
+    await tester.tap(toggle, warnIfMissed: false);
+    await tester.pump();
+    expect(storage.saveCount, 1);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+
+    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(tester.widget<NavigationRail>(rail).extended, isTrue);
+    expect(tester.getSize(rail).width, closeTo(expandedWidth, 0.01));
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(storage.saveCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collapse toggle is disabled while settings are open', (
+    tester,
+  ) async {
+    final settingsClosed = Completer<void>();
+    final provider = await _providerFor(
+      _MemoryStorage(_shellData(populated: true)),
+    );
+    addTearDown(() {
+      if (!settingsClosed.isCompleted) settingsClosed.complete();
+      provider.dispose();
+    });
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(
+      _appFor(provider, onOpenSettings: () => settingsClosed.future),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('adaptive-shell-settings-action')),
+    );
+    await tester.pump();
+
+    final toggle = find.byKey(
+      const ValueKey('adaptive-shell-navigation-collapse-toggle'),
+    );
+    expect(tester.widget<IconButton>(toggle).onPressed, isNull);
+
+    settingsClosed.complete();
+    await tester.pumpAndSettle();
+    expect(tester.widget<IconButton>(toggle).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('disabled shell exposes a disabled collapse action', (
+    tester,
+  ) async {
+    final provider = await _providerFor(
+      _MemoryStorage(_shellData(populated: true)),
+    );
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(_appFor(provider, enabled: false));
+    await tester.pumpAndSettle();
+
+    final toggle = find.byKey(
+      const ValueKey('adaptive-shell-navigation-collapse-toggle'),
+    );
+    expect(tester.getSize(toggle), const Size.square(48));
+    expect(tester.widget<IconButton>(toggle).onPressed, isNull);
+    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('navigation keyboard focus survives adaptive layout changes', (
     tester,
@@ -1223,7 +1724,12 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      _appFor(provider, onOpenSettings: () => settingsCalls += 1),
+      _appFor(
+        provider,
+        onOpenSettings: () async {
+          settingsCalls += 1;
+        },
+      ),
     );
     await tester.pumpAndSettle();
     final navigationFinder = find.byKey(

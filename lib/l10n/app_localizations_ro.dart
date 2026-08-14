@@ -2113,6 +2113,20 @@ class AppLocalizationsRo extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Deschideți autentificarea în sistemul școlii?';
 
@@ -2129,4 +2143,43 @@ class AppLocalizationsRo extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Această autentificare școlară folosește HTTP. Oricine poate monitoriza sau modifica această conexiune vă poate citi ori schimba datele de conectare și conținutul paginii. Continuați numai dacă acceptați acest risc pentru:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Mod pentru dezvoltatori';
+
+  @override
+  String get developerModeDescription =>
+      'Instrumente pentru adăugarea unor date demonstrative complete, utile la verificarea aspectului și interacțiunilor.';
+
+  @override
+  String get developerSampleLanguage => 'Limba datelor demonstrative';
+
+  @override
+  String get developerSampleChinese => 'Chineză';
+
+  @override
+  String get developerSampleEnglish => 'Engleză';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Adaugă un orar și un set de calendare și evenimente fără a înlocui datele existente.';
+
+  @override
+  String get developerAddSampleData => 'Adaugă date demonstrative';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Orarul și evenimentele demonstrative au fost adăugate.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Țineți apăsat timp de 3 secunde pentru a deschide modul pentru dezvoltatori';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Restrânge navigarea spațiului de lucru';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Extinde navigarea spațiului de lucru';
 }

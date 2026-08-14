@@ -2103,6 +2103,20 @@ class AppLocalizationsFi extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Avataanko koulun kirjautuminen?';
 
@@ -2119,4 +2133,41 @@ class AppLocalizationsFi extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Kehittäjätila';
+
+  @override
+  String get developerModeDescription =>
+      'Työkalut kattavien esimerkkitietojen lisäämiseen ulkoasun ja käytön tarkistamista varten.';
+
+  @override
+  String get developerSampleLanguage => 'Esimerkkitietojen kieli';
+
+  @override
+  String get developerSampleChinese => 'Kiina';
+
+  @override
+  String get developerSampleEnglish => 'Englanti';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Lisää yhden lukujärjestyksen sekä kalentereita ja tapahtumia korvaamatta nykyisiä tietoja.';
+
+  @override
+  String get developerAddSampleData => 'Lisää esimerkkitiedot';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Esimerkkilukujärjestys ja tapahtumat lisättiin.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Avaa kehittäjätila painamalla 3 sekunnin ajan';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Tiivistä työtilan navigointi';
+
+  @override
+  String get expandWorkspaceNavigation => 'Laajenna työtilan navigointi';
 }

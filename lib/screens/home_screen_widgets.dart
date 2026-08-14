@@ -851,7 +851,7 @@ class _TimetableWeekPager extends StatefulWidget {
   final ValueChanged<int> onWeekdaySelected;
   final Future<void> Function(int offset) onJumpWeekBy;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
-  final ValueChanged<TimetableEmptySlotTapInfo> onEmptySlotTap;
+  final ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap;
 
   @override
   State<_TimetableWeekPager> createState() => _TimetableWeekPagerState();
@@ -1290,7 +1290,7 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                       : (_) {},
                   onEmptySlotTap: currentPageInteractive
                       ? widget.onEmptySlotTap
-                      : (_) {},
+                      : null,
                 ),
               ),
             ),

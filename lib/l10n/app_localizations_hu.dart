@@ -2115,6 +2115,20 @@ class AppLocalizationsHu extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Megnyitja az iskolai bejelentkezést?';
 
@@ -2131,4 +2145,42 @@ class AppLocalizationsHu extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Fejlesztői mód';
+
+  @override
+  String get developerModeDescription =>
+      'Eszközök teljes mintaadatok hozzáadásához a megjelenés és a működés ellenőrzésére.';
+
+  @override
+  String get developerSampleLanguage => 'Mintaadatok nyelve';
+
+  @override
+  String get developerSampleChinese => 'Kínai';
+
+  @override
+  String get developerSampleEnglish => 'Angol';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Egy órarendet, valamint naptárakat és eseményeket ad hozzá a meglévő adatok felülírása nélkül.';
+
+  @override
+  String get developerAddSampleData => 'Mintaadatok hozzáadása';
+
+  @override
+  String get developerSampleDataAdded =>
+      'A mintaórarend és az események hozzáadva.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Tartsa lenyomva 3 másodpercig a fejlesztői mód megnyitásához';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Munkaterület-navigáció összecsukása';
+
+  @override
+  String get expandWorkspaceNavigation => 'Munkaterület-navigáció kibontása';
 }

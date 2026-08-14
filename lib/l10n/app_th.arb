@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "หน้านี้ถึงขีดจำกัดการนำเข้าที่ปลอดภัยแล้ว ระบบจะส่งเฉพาะส่วนที่บันทึกไว้ไปวิเคราะห์",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "ไซต์ที่ไม่รู้จัก",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "โหมดนักพัฒนา",
+  "@developerModeTitle": {},
+  "developerModeDescription": "เครื่องมือสำหรับเพิ่มข้อมูลตัวอย่างแบบครบชุดเพื่อตรวจสอบหน้าตาและการโต้ตอบ",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "ภาษาของข้อมูลตัวอย่าง",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "ภาษาจีน",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "ภาษาอังกฤษ",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "เพิ่มตารางเรียนหนึ่งรายการพร้อมชุดปฏิทินและกิจกรรมโดยไม่แทนที่ข้อมูลเดิม",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "เพิ่มข้อมูลตัวอย่าง",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "เพิ่มตารางเรียนและข้อมูลกิจกรรมตัวอย่างแล้ว",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "กดค้าง 3 วินาทีเพื่อเปิดโหมดนักพัฒนา",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "ยุบการนำทางพื้นที่ทำงาน",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "ขยายการนำทางพื้นที่ทำงาน",
+  "@expandWorkspaceNavigation": {}
 }

@@ -2116,6 +2116,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       '¿Abrir el inicio de sesión de la escuela?';
 
@@ -2132,4 +2146,43 @@ class AppLocalizationsEs extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Este inicio de sesión escolar usa HTTP. Cualquiera que pueda observar o alterar esta conexión podría leer o cambiar sus credenciales y el contenido de la página. Continúe solo si acepta este riesgo para:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Modo de desarrollador';
+
+  @override
+  String get developerModeDescription =>
+      'Herramientas para añadir datos de ejemplo completos y comprobar la interfaz y la interacción.';
+
+  @override
+  String get developerSampleLanguage => 'Idioma de los datos de ejemplo';
+
+  @override
+  String get developerSampleChinese => 'Chino';
+
+  @override
+  String get developerSampleEnglish => 'Inglés';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Añade un horario y un conjunto de calendarios y eventos sin reemplazar los datos existentes.';
+
+  @override
+  String get developerAddSampleData => 'Añadir datos de ejemplo';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Se añadieron el horario y los eventos de ejemplo.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Mantén pulsado durante 3 segundos para abrir el modo de desarrollador';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Contraer navegación del espacio de trabajo';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Expandir navegación del espacio de trabajo';
 }

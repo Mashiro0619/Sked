@@ -2101,6 +2101,20 @@ class AppLocalizationsSv extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => 'Öppna skolans inloggning?';
 
   @override
@@ -2116,4 +2130,41 @@ class AppLocalizationsSv extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Den här skolinloggningen använder HTTP. Den som kan övervaka eller ändra anslutningen kan läsa eller ändra dina inloggningsuppgifter och sidans innehåll. Fortsätt bara om du accepterar den här risken för:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Utvecklarläge';
+
+  @override
+  String get developerModeDescription =>
+      'Verktyg för att lägga till fullständiga exempeldata och kontrollera utseende och interaktion.';
+
+  @override
+  String get developerSampleLanguage => 'Språk för exempeldata';
+
+  @override
+  String get developerSampleChinese => 'Kinesiska';
+
+  @override
+  String get developerSampleEnglish => 'Engelska';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Lägger till ett schema och en uppsättning kalendrar och händelser utan att ersätta befintliga data.';
+
+  @override
+  String get developerAddSampleData => 'Lägg till exempeldata';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Exempelschema och händelser har lagts till.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Håll ned i 3 sekunder för att öppna utvecklarläget';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Fäll ihop arbetsytenavigering';
+
+  @override
+  String get expandWorkspaceNavigation => 'Expandera arbetsytenavigering';
 }

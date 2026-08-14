@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -102,6 +103,7 @@ Widget _gridHarness({
   TextDirection textDirection = TextDirection.ltr,
   ValueChanged<TimetableCourseTapInfo>? onCourseTap,
   ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap,
+  bool enableLongPressAdd = true,
 }) {
   return MaterialApp(
     builder: (context, child) => MediaQuery(
@@ -123,7 +125,7 @@ Widget _gridHarness({
           showFutureCourses: true,
           showGridLines: true,
           onCourseTap: onCourseTap ?? (_) {},
-          onEmptySlotTap: onEmptySlotTap ?? (_) {},
+          onEmptySlotTap: enableLongPressAdd ? onEmptySlotTap ?? (_) {} : null,
           themeColorMode: themeColorModeSingle,
           courseNameColorValues: const {},
           colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
@@ -834,6 +836,86 @@ void main() {
 
     expect(tappedIds, const ['long-press-course']);
     expect(emptySlots, isEmpty);
+  });
+
+  testWidgets(
+    'disabled empty-slot long press removes the grid recognizer but keeps course interaction',
+    (tester) async {
+      final tappedIds = <String>[];
+      final timetable = _timetableWithCourses([
+        _course(
+          id: 'long-press-course-disabled-add',
+          weekday: DateTime.monday,
+          startMinutes: 480,
+          endMinutes: 540,
+        ),
+      ]);
+      await tester.pumpWidget(
+        _gridHarness(
+          timetable: timetable,
+          periodTimes: const [
+            CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+            CoursePeriodTime(index: 2, startMinutes: 550, endMinutes: 610),
+          ],
+          visibleWeekdays: const [DateTime.monday],
+          showDayHeader: false,
+          enableLongPressAdd: false,
+          onCourseTap: (info) => tappedIds.add(info.course.id),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final dayColumn = find.byKey(const ValueKey('timetable-day-column-1'));
+      final emptyGridLongPress = find.descendant(
+        of: dayColumn,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is GestureDetector && widget.onLongPressStart != null,
+        ),
+      );
+      expect(emptyGridLongPress, findsNothing);
+
+      await tester.longPress(
+        find.byKey(
+          const ValueKey('timetable-course-hit-long-press-course-disabled-add'),
+        ),
+      );
+      await tester.pump();
+
+      expect(tappedIds, const ['long-press-course-disabled-add']);
+    },
+  );
+
+  testWidgets('primary mouse long press can add from an empty slot', (
+    tester,
+  ) async {
+    final emptySlots = <TimetableEmptySlotTapInfo>[];
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: _timetableWithCourses(const []),
+        periodTimes: const [
+          CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+        ],
+        visibleWeekdays: const [DateTime.monday],
+        showDayHeader: false,
+        onEmptySlotTap: emptySlots.add,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(
+        find.byKey(const ValueKey('timetable-day-column-long-press-1')),
+      ),
+      kind: ui.PointerDeviceKind.mouse,
+    );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.up();
+    await tester.pump();
+
+    expect(emptySlots, hasLength(1));
+    expect(emptySlots.single.weekday, DateTime.monday);
+    expect(emptySlots.single.periods, const [1]);
   });
 
   testWidgets('short visual still exposes complete course semantics', (

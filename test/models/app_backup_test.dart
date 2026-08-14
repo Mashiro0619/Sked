@@ -16,8 +16,10 @@ void main() {
 
   test('round-trips app data and school sites without API keys', () {
     final data = appData(localeCode: 'zh').copyWith(
+      homeWorkspaceNavigationCollapsed: true,
       studentMode: appData().studentMode.copyWith(
         showAddCourseFab: false,
+        enableLongPressAddCourse: false,
         fitDaySelectorToWidth: false,
         fitWeekColumnsToWidth: false,
         enableWeekSwipeNavigation: false,
@@ -27,7 +29,10 @@ void main() {
           customModel: 'model-a',
         ),
       ),
-      generalMode: appData().generalMode.copyWith(showAddEventFab: false),
+      generalMode: appData().generalMode.copyWith(
+        showAddEventFab: false,
+        enableLongPressAddEvent: false,
+      ),
     );
 
     final source = encodeAppBackup(data, sites);
@@ -36,12 +41,15 @@ void main() {
     expect(source, isNot(contains('sk-secret')));
     expect(decoded.includesSchoolSites, isTrue);
     expect(decoded.appData.localeCode, 'zh');
+    expect(decoded.appData.homeWorkspaceNavigationCollapsed, isTrue);
     expect(decoded.schoolSites.single.name, 'Example University');
     expect(decoded.appData.studentMode.fitDaySelectorToWidth, isFalse);
     expect(decoded.appData.studentMode.fitWeekColumnsToWidth, isFalse);
     expect(decoded.appData.studentMode.enableWeekSwipeNavigation, isFalse);
     expect(decoded.appData.studentMode.showAddCourseFab, isFalse);
+    expect(decoded.appData.studentMode.enableLongPressAddCourse, isFalse);
     expect(decoded.appData.generalMode.showAddEventFab, isFalse);
+    expect(decoded.appData.generalMode.enableLongPressAddEvent, isFalse);
     expect(
       decoded.appData.studentMode.schoolImportParserSettings.customApiKey,
       isEmpty,

@@ -2057,6 +2057,20 @@ class AppLocalizationsKo extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => '학교 로그인 페이지를 열까요?';
 
   @override
@@ -2072,4 +2086,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return '이 학교 로그인은 HTTP를 사용합니다. 이 연결을 감시하거나 변경할 수 있는 사람은 로그인 정보와 페이지 내용을 읽거나 바꿀 수 있습니다. 다음 사이트에 대한 이러한 위험을 감수하는 경우에만 계속하세요:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => '개발자 모드';
+
+  @override
+  String get developerModeDescription =>
+      '화면과 상호작용을 확인할 수 있도록 전체 샘플 데이터를 추가하는 도구입니다.';
+
+  @override
+  String get developerSampleLanguage => '샘플 데이터 언어';
+
+  @override
+  String get developerSampleChinese => '중국어';
+
+  @override
+  String get developerSampleEnglish => '영어';
+
+  @override
+  String get developerSampleDataDescription =>
+      '기존 데이터를 바꾸지 않고 시간표 1개와 캘린더 및 일정 묶음을 추가합니다.';
+
+  @override
+  String get developerAddSampleData => '샘플 데이터 추가';
+
+  @override
+  String get developerSampleDataAdded => '샘플 시간표와 일정 데이터를 추가했습니다.';
+
+  @override
+  String get developerModeLongPressHint => '개발자 모드를 열려면 3초 동안 길게 누르세요';
+
+  @override
+  String get collapseWorkspaceNavigation => '작업 공간 탐색 접기';
+
+  @override
+  String get expandWorkspaceNavigation => '작업 공간 탐색 펼치기';
 }

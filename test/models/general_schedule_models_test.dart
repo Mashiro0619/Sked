@@ -443,21 +443,29 @@ void main() {
       expect(decoded.closeEventPopupOnOutsideTap, false);
     });
 
-    test('event FAB setting defaults true and round-trips independently', () {
+    test('event add settings default true and round-trip independently', () {
       final data = GeneralScheduleData(
         activeScheduleId: 'sched1',
         schedules: const [
           GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
         ],
         showAddEventFab: false,
+        enableLongPressAddEvent: false,
       );
 
       final decoded = GeneralScheduleData.fromJson(data.toJson());
 
       expect(decoded.showAddEventFab, isFalse);
+      expect(decoded.enableLongPressAddEvent, isFalse);
       expect(decoded.copyWith().showAddEventFab, isFalse);
+      expect(decoded.copyWith().enableLongPressAddEvent, isFalse);
       expect(decoded.normalized().showAddEventFab, isFalse);
+      expect(decoded.normalized().enableLongPressAddEvent, isFalse);
       expect(GeneralScheduleData.fromJson(const {}).showAddEventFab, isTrue);
+      expect(
+        GeneralScheduleData.fromJson(const {}).enableLongPressAddEvent,
+        isTrue,
+      );
     });
 
     test('view switch behavior round-trips and copyWith preserves it', () {

@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Tato stránka dosáhla bezpečného limitu importu. K analýze bude odeslána pouze zachycená část.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Neznámý web",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Vývojářský režim",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Nástroje pro přidání kompletních ukázkových dat k ověření vzhledu a ovládání.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Jazyk ukázkových dat",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Čínština",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Angličtina",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Přidá jeden rozvrh a sadu kalendářů a událostí, aniž by nahradil stávající data.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Přidat ukázková data",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Ukázkový rozvrh a data událostí byly přidány.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Dlouhým stisknutím na 3 sekundy otevřete vývojářský režim",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Sbalit navigaci pracovního prostoru",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Rozbalit navigaci pracovního prostoru",
+  "@expandWorkspaceNavigation": {}
 }

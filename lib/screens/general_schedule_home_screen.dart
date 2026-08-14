@@ -148,6 +148,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               widget.active &&
               widget.interactive &&
               !_pagerDateCommitInProgress;
+          final longPressAddEnabled =
+              snapshot.enableLongPressAddEvent &&
+              pagerActive &&
+              !_editorSheetOpen &&
+              !_detailsSheetOpen &&
+              !_moreOccurrencesSheetOpen;
           final settleDate = pagerActive
               ? (DateTime date) => _commitSettledPagerDate(provider, date)
               : (DateTime _) async {};
@@ -191,11 +197,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             syncRevision: _pagerSyncRevision,
                             onDaySelected: selectDate,
                             onPageSettled: settleDate,
-                            onEmptySlotTap: (date) => _openEditor(
-                              context,
-                              provider,
-                              initialDate: date,
-                            ),
+                            onEmptySlotTap: longPressAddEnabled
+                                ? (date) => _openEditor(
+                                    context,
+                                    provider,
+                                    initialDate: date,
+                                  )
+                                : null,
                             onOccurrenceTap: (occurrence) =>
                                 _openDetails(context, provider, occurrence),
                             onMoreOccurrencesTap: (occurrences) =>
@@ -234,11 +242,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             syncRevision: _pagerSyncRevision,
                             onDaySelected: selectDate,
                             onPageSettled: settleDate,
-                            onEmptySlotTap: (date) => _openEditor(
-                              context,
-                              provider,
-                              initialDate: date,
-                            ),
+                            onEmptySlotTap: longPressAddEnabled
+                                ? (date) => _openEditor(
+                                    context,
+                                    provider,
+                                    initialDate: date,
+                                  )
+                                : null,
                             onOccurrenceTap: (occurrence) =>
                                 _openDetails(context, provider, occurrence),
                             onMoreOccurrencesTap: (occurrences) =>
@@ -1188,6 +1198,7 @@ class _GeneralHomeSnapshot {
     required this.defaultView,
     required this.viewSwitchBehavior,
     required this.dateLabelFormat,
+    required this.enableLongPressAddEvent,
     required this.showAddEventFab,
     required this.toolbarWidthPolicy,
     required this.activeScheduleId,
@@ -1208,6 +1219,7 @@ class _GeneralHomeSnapshot {
       viewSwitchBehavior: data.viewSwitchBehavior,
       toolbarWidthPolicy: data.toolbarWidthPolicy,
       dateLabelFormat: data.dateLabelFormat,
+      enableLongPressAddEvent: data.enableLongPressAddEvent,
       showAddEventFab: data.showAddEventFab,
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
@@ -1225,6 +1237,7 @@ class _GeneralHomeSnapshot {
   final String viewSwitchBehavior;
   final String toolbarWidthPolicy;
   final String dateLabelFormat;
+  final bool enableLongPressAddEvent;
   final bool showAddEventFab;
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
@@ -1243,6 +1256,7 @@ class _GeneralHomeSnapshot {
         other.viewSwitchBehavior == viewSwitchBehavior &&
         other.toolbarWidthPolicy == toolbarWidthPolicy &&
         other.dateLabelFormat == dateLabelFormat &&
+        other.enableLongPressAddEvent == enableLongPressAddEvent &&
         other.showAddEventFab == showAddEventFab &&
         other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
@@ -1263,6 +1277,7 @@ class _GeneralHomeSnapshot {
     viewSwitchBehavior,
     toolbarWidthPolicy,
     dateLabelFormat,
+    enableLongPressAddEvent,
     showAddEventFab,
     activeScheduleId,
     identityHashCode(schedules),

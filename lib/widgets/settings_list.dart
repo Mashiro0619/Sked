@@ -5,6 +5,30 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
 
+/// Blocks a settings surface during persistence without switching every child
+/// to its disabled colors. Pointer and keyboard actions are unavailable while
+/// labels, values, and controls keep their stable visual state.
+class SettingsInteractionBlocker extends StatelessWidget {
+  const SettingsInteractionBlocker({
+    super.key,
+    required this.blocked,
+    required this.child,
+  });
+
+  final bool blocked;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      canRequestFocus: !blocked,
+      descendantsAreFocusable: !blocked,
+      descendantsAreTraversable: !blocked,
+      child: AbsorbPointer(absorbing: blocked, child: child),
+    );
+  }
+}
+
 /// A full-width scroll viewport for settings pages with centered, adaptive
 /// content. Wide layouts may split complete sections into two columns while
 /// compact and large-text layouts keep the caller-provided reading order.
@@ -326,6 +350,9 @@ class SettingsConnectedTile extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.semanticToggled,
+    this.onLongPress,
+    this.onLongPressHint,
+    this.onTapHint,
   });
 
   final Widget leading;
@@ -339,11 +366,18 @@ class SettingsConnectedTile extends StatelessWidget {
   /// announcements, so toggle state must be forwarded explicitly.
   final bool? semanticToggled;
 
+  /// Optional secondary action exposed on the same semantics node. Physical
+  /// gesture ownership remains with the caller so specialized timings do not
+  /// change the tap behavior of every settings row.
+  final VoidCallback? onLongPress;
+  final String? onLongPressHint;
+  final String? onTapHint;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final enabled = onTap != null;
+    final enabled = onTap != null || onLongPress != null;
     final trailingWidget = trailing == null
         ? null
         : IconTheme.merge(
@@ -381,11 +415,14 @@ class SettingsConnectedTile extends StatelessWidget {
       ],
     );
     return Semantics(
-      button: semanticToggled == null && onTap != null,
+      button: semanticToggled == null && enabled,
       toggled: semanticToggled,
       enabled: enabled,
       label: subtitle == null ? title : '$title, $subtitle',
       onTap: onTap,
+      onTapHint: onTapHint,
+      onLongPress: onLongPress,
+      onLongPressHint: onLongPressHint,
       child: ExcludeSemantics(
         child: ExpressiveTap(
           onTap: onTap,

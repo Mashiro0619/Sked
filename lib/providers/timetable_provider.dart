@@ -14,6 +14,7 @@ import '../services/general_calendar_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/general_occurrence_cache.dart';
 import '../services/general_occurrence_service.dart';
+import '../services/developer_sample_data_service.dart';
 import '../services/import_export_service.dart';
 import '../services/privacy_service.dart';
 import '../services/school_site_service.dart';
@@ -27,6 +28,7 @@ part 'timetable_provider_import_export.dart';
 part 'timetable_provider_lifecycle.dart';
 part 'timetable_provider_settings.dart';
 part 'timetable_provider_student.dart';
+part 'timetable_provider_developer.dart';
 
 const _calendarService = GeneralCalendarService();
 const _occurrenceService = GeneralOccurrenceService();
@@ -344,7 +346,8 @@ class TimetableProvider extends _TimetableProviderBase
         _TimetableProviderStudent,
         _TimetableProviderImportExport,
         _TimetableProviderLifecycle,
-        _TimetableProviderSettings {
+        _TimetableProviderSettings,
+        _TimetableProviderDeveloper {
   TimetableProvider({
     TimetableStorage? storage,
     AppRepository? repository,

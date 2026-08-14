@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Тази страница достигна безопасния лимит за импортиране. Само заснетата част ще бъде изпратена за анализиране.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Неизвестен сайт",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Режим за разработчици",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Инструменти за добавяне на пълни примерни данни за проверка на интерфейса и взаимодействията.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Език на примерните данни",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Китайски",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Английски",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Добавя едно разписание и набор от календари и събития, без да заменя съществуващите данни.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Добавяне на примерни данни",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Добавени са примерни данни за разписание и събития.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Задръжте за 3 секунди, за да отворите режима за разработчици",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Свиване на навигацията на работното пространство",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Разгъване на навигацията на работното пространство",
+  "@expandWorkspaceNavigation": {}
 }

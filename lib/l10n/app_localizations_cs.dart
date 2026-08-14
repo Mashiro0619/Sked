@@ -2099,6 +2099,20 @@ class AppLocalizationsCs extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Otevřít přihlášení do školního systému?';
 
@@ -2115,4 +2129,43 @@ class AppLocalizationsCs extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Vývojářský režim';
+
+  @override
+  String get developerModeDescription =>
+      'Nástroje pro přidání kompletních ukázkových dat k ověření vzhledu a ovládání.';
+
+  @override
+  String get developerSampleLanguage => 'Jazyk ukázkových dat';
+
+  @override
+  String get developerSampleChinese => 'Čínština';
+
+  @override
+  String get developerSampleEnglish => 'Angličtina';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Přidá jeden rozvrh a sadu kalendářů a událostí, aniž by nahradil stávající data.';
+
+  @override
+  String get developerAddSampleData => 'Přidat ukázková data';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Ukázkový rozvrh a data událostí byly přidány.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Dlouhým stisknutím na 3 sekundy otevřete vývojářský režim';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Sbalit navigaci pracovního prostoru';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Rozbalit navigaci pracovního prostoru';
 }

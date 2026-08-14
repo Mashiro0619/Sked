@@ -967,6 +967,7 @@ void _validateStorageStudentSettings(
     'showFutureCourses',
     'showTimetableGridLines',
     'showAddCourseFab',
+    'enableLongPressAddCourse',
     'fitDaySelectorToWidth',
     'fitWeekColumnsToWidth',
     'enableWeekSwipeNavigation',
@@ -1101,6 +1102,7 @@ void _validateStorageGeneralSettings(
     'showLunarCalendar',
     'closeEventPopupOnOutsideTap',
     'showAddEventFab',
+    'enableLongPressAddEvent',
   ]) {
     _validateStorageBooleanField(
       generalMode,
@@ -1527,6 +1529,7 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
   for (final key in const [
     'hideHomeWorkspaceNavigation',
     'hideHomeBottomNavigationBar',
+    'homeWorkspaceNavigationCollapsed',
   ]) {
     _validateStorageBooleanField(
       json,
@@ -1603,6 +1606,7 @@ class AppData {
     required GeneralScheduleData generalMode,
     String localeCode = defaultLocaleCode,
     bool hideHomeWorkspaceNavigation = false,
+    bool homeWorkspaceNavigationCollapsed = false,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1650,6 +1654,7 @@ class AppData {
       generalMode: nextGeneralMode,
       localeCode: localeCode,
       hideHomeWorkspaceNavigation: hideHomeWorkspaceNavigation,
+      homeWorkspaceNavigationCollapsed: homeWorkspaceNavigationCollapsed,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
       ignoredUpdateVersion: ignoredUpdateVersion,
@@ -1663,6 +1668,7 @@ class AppData {
     required this.generalMode,
     this.localeCode = defaultLocaleCode,
     this.hideHomeWorkspaceNavigation = false,
+    this.homeWorkspaceNavigationCollapsed = false,
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
     this.ignoredUpdateVersion,
@@ -1674,6 +1680,7 @@ class AppData {
   final GeneralScheduleData generalMode;
   final String localeCode;
   final bool hideHomeWorkspaceNavigation;
+  final bool homeWorkspaceNavigationCollapsed;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
   final String? ignoredUpdateVersion;
@@ -1697,6 +1704,7 @@ class AppData {
     // Keep the persisted key stable: the setting now controls every adaptive
     // navigation shape, but its storage representation is still schema v2.
     'hideHomeBottomNavigationBar': hideHomeWorkspaceNavigation,
+    'homeWorkspaceNavigationCollapsed': homeWorkspaceNavigationCollapsed,
     if (privacyPolicyAcceptedVersion != null)
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
@@ -1774,6 +1782,9 @@ class AppData {
       generalMode: generalMode,
       localeCode: localeCode,
       hideHomeWorkspaceNavigation: _decodeHideHomeWorkspaceNavigation(migrated),
+      homeWorkspaceNavigationCollapsed: _decodeHomeWorkspaceNavigationCollapsed(
+        migrated,
+      ),
       privacyPolicyAcceptedVersion: _nullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
@@ -1795,6 +1806,7 @@ class AppData {
     GeneralScheduleData? generalMode,
     String? localeCode,
     bool? hideHomeWorkspaceNavigation,
+    bool? homeWorkspaceNavigationCollapsed,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1844,6 +1856,9 @@ class AppData {
       localeCode: normalizeLocaleCode(localeCode ?? this.localeCode),
       hideHomeWorkspaceNavigation:
           hideHomeWorkspaceNavigation ?? this.hideHomeWorkspaceNavigation,
+      homeWorkspaceNavigationCollapsed:
+          homeWorkspaceNavigationCollapsed ??
+          this.homeWorkspaceNavigationCollapsed,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
           ? this.privacyPolicyAcceptedVersion
@@ -1887,6 +1902,20 @@ bool _decodeHideHomeWorkspaceNavigation(Map<String, dynamic> json) {
   final value = json[key];
   if (value is! bool) {
     throw const FormatException('Home navigation setting is invalid.');
+  }
+  return value;
+}
+
+bool _decodeHomeWorkspaceNavigationCollapsed(Map<String, dynamic> json) {
+  const key = 'homeWorkspaceNavigationCollapsed';
+  if (!json.containsKey(key)) {
+    return false;
+  }
+  final value = json[key];
+  if (value is! bool) {
+    throw const FormatException(
+      'Home workspace navigation collapsed setting is invalid.',
+    );
   }
   return value;
 }

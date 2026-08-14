@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Esta página alcanzó el límite seguro de importación. Solo se enviará para su análisis la parte capturada.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Sitio desconocido",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Modo de desarrollador",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Herramientas para añadir datos de ejemplo completos y comprobar la interfaz y la interacción.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Idioma de los datos de ejemplo",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Chino",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Inglés",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Añade un horario y un conjunto de calendarios y eventos sin reemplazar los datos existentes.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Añadir datos de ejemplo",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Se añadieron el horario y los eventos de ejemplo.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Mantén pulsado durante 3 segundos para abrir el modo de desarrollador",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Contraer navegación del espacio de trabajo",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Expandir navegación del espacio de trabajo",
+  "@expandWorkspaceNavigation": {}
 }

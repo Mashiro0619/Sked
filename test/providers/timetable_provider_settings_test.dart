@@ -64,6 +64,35 @@ void main() {
     },
   );
 
+  test(
+    'collapsed home navigation saves once and rolls back on failure',
+    () async {
+      final storage = _ControllableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _providerFor(storage);
+      addTearDown(provider.dispose);
+
+      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+
+      await provider.updateHomeWorkspaceNavigationCollapsed(true);
+
+      expect(storage.saveCount, 1);
+      expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(storage.data!.homeWorkspaceNavigationCollapsed, isTrue);
+
+      storage.nextSaveError = StateError('save failed');
+      await expectLater(
+        provider.updateHomeWorkspaceNavigationCollapsed(false),
+        throwsStateError,
+      );
+
+      expect(storage.saveCount, 2);
+      expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(storage.data!.homeWorkspaceNavigationCollapsed, isTrue);
+    },
+  );
+
   test('course text mode and custom color commit atomically', () async {
     final storage = _ControllableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),

@@ -358,6 +358,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     !_timetableSwitchInProgress &&
                     !_settingsPageOpen &&
                     _weekNavigationTarget == null;
+                final longPressAddEnabled =
+                    snapshot.enableLongPressAddCourse &&
+                    widget.active &&
+                    widget.interactive &&
+                    !_courseEditorOpen &&
+                    !_courseDetailsOpen;
 
                 return Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -441,12 +447,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _jumpWeekBy(provider, offset),
                               onCourseTap: (info) =>
                                   _openDetails(context, provider, info),
-                              onEmptySlotTap: (slotInfo) => _openEditor(
-                                context,
-                                provider,
-                                weekday: slotInfo.weekday,
-                                emptySlot: slotInfo,
-                              ),
+                              onEmptySlotTap: longPressAddEnabled
+                                  ? (slotInfo) => _openEditor(
+                                      context,
+                                      provider,
+                                      weekday: slotInfo.weekday,
+                                      emptySlot: slotInfo,
+                                    )
+                                  : null,
                             ),
                           ),
                         ],
@@ -626,6 +634,7 @@ class _StudentHomeSnapshot {
     required this.fitDaySelectorToWidth,
     required this.fitWeekColumnsToWidth,
     required this.enableWeekSwipeNavigation,
+    required this.enableLongPressAddCourse,
     required this.showAddCourseFab,
     required this.themeMode,
     required this.themeColorMode,
@@ -657,6 +666,7 @@ class _StudentHomeSnapshot {
       fitDaySelectorToWidth: data.fitDaySelectorToWidth,
       fitWeekColumnsToWidth: data.fitWeekColumnsToWidth,
       enableWeekSwipeNavigation: data.enableWeekSwipeNavigation,
+      enableLongPressAddCourse: data.enableLongPressAddCourse,
       showAddCourseFab: data.showAddCourseFab,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
@@ -686,6 +696,7 @@ class _StudentHomeSnapshot {
   final bool fitDaySelectorToWidth;
   final bool fitWeekColumnsToWidth;
   final bool enableWeekSwipeNavigation;
+  final bool enableLongPressAddCourse;
   final bool showAddCourseFab;
   final String themeMode;
   final String themeColorMode;
@@ -716,6 +727,7 @@ class _StudentHomeSnapshot {
         other.fitDaySelectorToWidth == fitDaySelectorToWidth &&
         other.fitWeekColumnsToWidth == fitWeekColumnsToWidth &&
         other.enableWeekSwipeNavigation == enableWeekSwipeNavigation &&
+        other.enableLongPressAddCourse == enableLongPressAddCourse &&
         other.showAddCourseFab == showAddCourseFab &&
         other.themeMode == themeMode &&
         other.themeColorMode == themeColorMode &&
@@ -746,6 +758,7 @@ class _StudentHomeSnapshot {
     fitDaySelectorToWidth,
     fitWeekColumnsToWidth,
     enableWeekSwipeNavigation,
+    enableLongPressAddCourse,
     showAddCourseFab,
     themeMode,
     themeColorMode,

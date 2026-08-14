@@ -2056,6 +2056,20 @@ class AppLocalizationsJa extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => '学校のログインページを開きますか？';
 
   @override
@@ -2070,4 +2084,38 @@ class AppLocalizationsJa extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => '開発者モード';
+
+  @override
+  String get developerModeDescription => '表示と操作の確認に使う一式のサンプルデータを追加できます。';
+
+  @override
+  String get developerSampleLanguage => 'サンプルデータの言語';
+
+  @override
+  String get developerSampleChinese => '中国語';
+
+  @override
+  String get developerSampleEnglish => '英語';
+
+  @override
+  String get developerSampleDataDescription =>
+      '既存のデータを置き換えずに、時間割 1 件とカレンダー・予定一式を追加します。';
+
+  @override
+  String get developerAddSampleData => 'サンプルデータを追加';
+
+  @override
+  String get developerSampleDataAdded => 'サンプルの時間割と予定を追加しました。';
+
+  @override
+  String get developerModeLongPressHint => '3 秒間長押しすると開発者モードが開きます';
+
+  @override
+  String get collapseWorkspaceNavigation => 'ワークスペースナビゲーションを折りたたむ';
+
+  @override
+  String get expandWorkspaceNavigation => 'ワークスペースナビゲーションを展開する';
 }

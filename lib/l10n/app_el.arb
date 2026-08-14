@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Αυτή η σελίδα έφτασε το ασφαλές όριο εισαγωγής. Μόνο το τμήμα που καταγράφηκε θα σταλεί για ανάλυση.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Άγνωστος ιστότοπος",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Λειτουργία προγραμματιστή",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Εργαλεία για την προσθήκη πλήρων δειγματικών δεδομένων για έλεγχο εμφάνισης και αλληλεπίδρασης.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Γλώσσα δειγματικών δεδομένων",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Κινεζικά",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Αγγλικά",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Προσθέτει ένα ωρολόγιο πρόγραμμα και ένα σύνολο ημερολογίων και συμβάντων χωρίς αντικατάσταση υπαρχόντων δεδομένων.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Προσθήκη δειγματικών δεδομένων",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Προστέθηκαν δείγματα ωρολογίου προγράμματος και συμβάντων.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Πατήστε παρατεταμένα για 3 δευτερόλεπτα για να ανοίξετε τη λειτουργία προγραμματιστή",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Σύμπτυξη πλοήγησης χώρου εργασίας",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Ανάπτυξη πλοήγησης χώρου εργασίας",
+  "@expandWorkspaceNavigation": {}
 }

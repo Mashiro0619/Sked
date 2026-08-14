@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Denne side har nået den sikre importgrænse. Kun den registrerede del sendes til analyse.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Ukendt websted",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Udviklertilstand",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Værktøjer til at tilføje komplette eksempeldata til kontrol af udseende og interaktion.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Sprog for eksempeldata",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Kinesisk",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Engelsk",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Tilføjer et skema og et sæt kalendere og begivenheder uden at erstatte eksisterende data.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Tilføj eksempeldata",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Eksempelskema og kalenderdata er tilføjet.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Hold nede i 3 sekunder for at åbne udviklertilstand",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Fold arbejdsområdenavigation sammen",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Udvid arbejdsområdenavigation",
+  "@expandWorkspaceNavigation": {}
 }

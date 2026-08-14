@@ -34,6 +34,17 @@ class _MemoryTimetableStorage
   final Object? recoveryReadError;
   bool failSaves = false;
   int saveCount = 0;
+  Completer<void>? _pendingSave;
+
+  void blockNextSave() {
+    _pendingSave = Completer<void>();
+  }
+
+  void completePendingSave() {
+    final pending = _pendingSave;
+    _pendingSave = null;
+    if (pending != null && !pending.isCompleted) pending.complete();
+  }
 
   @override
   Future<StorageLoadResult> load() async => StorageLoadResult(
@@ -48,6 +59,8 @@ class _MemoryTimetableStorage
     if (failSaves) {
       throw StateError('settings save failed');
     }
+    final pending = _pendingSave;
+    if (pending != null) await pending.future;
     this.data = data;
   }
 
@@ -465,6 +478,57 @@ void main() {
     expect(storage.data?.hideHomeWorkspaceNavigation, isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'home navigation save blocks duplicate input without dimming its switch',
+    (tester) async {
+      final data = _buildStudentData();
+      final storage = _MemoryTimetableStorage(data)..blockNextSave();
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(() {
+        storage.completePendingSave();
+        provider.dispose();
+      });
+      await _pumpSettingsPage(tester, provider);
+
+      final title = find.text('Hide workspace navigation');
+      final tile = find.ancestor(
+        of: title,
+        matching: find.byType(SettingsConnectedTile),
+      );
+      final toggle = find.descendant(of: tile, matching: find.byType(Switch));
+      final initialTitleColor = tester.widget<Text>(title).style?.color;
+
+      await tester.tap(toggle);
+      await tester.pump();
+
+      expect(storage.saveCount, 1);
+      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+      expect(tester.widget<Text>(title).style?.color, initialTitleColor);
+      expect(
+        tester
+            .widget<SettingsInteractionBlocker>(
+              find.ancestor(
+                of: tile,
+                matching: find.byType(SettingsInteractionBlocker),
+              ),
+            )
+            .blocked,
+        isTrue,
+      );
+
+      await tester.tap(toggle, warnIfMissed: false);
+      await tester.pump();
+      expect(storage.saveCount, 1);
+
+      storage.completePendingSave();
+      await tester.pumpAndSettle();
+      expect(provider.hideHomeWorkspaceNavigation, isTrue);
+      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('settings page keeps compact rows reachable at 2x text scale', (
     tester,

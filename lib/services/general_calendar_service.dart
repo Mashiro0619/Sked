@@ -124,6 +124,7 @@ class GeneralCalendarService {
       timeGridMinutes: data.timeGridMinutes,
       closeEventPopupOnOutsideTap: data.closeEventPopupOnOutsideTap,
       showAddEventFab: data.showAddEventFab,
+      enableLongPressAddEvent: data.enableLongPressAddEvent,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
       themeSeedColorValue: data.themeSeedColorValue,
@@ -145,6 +146,7 @@ class GeneralCalendarService {
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
+    bool? enableLongPressAddEvent,
   }) {
     return data.copyWith(
       defaultView: defaultView,
@@ -158,6 +160,7 @@ class GeneralCalendarService {
       timeGridMinutes: timeGridMinutes,
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab,
+      enableLongPressAddEvent: enableLongPressAddEvent,
     );
   }
 

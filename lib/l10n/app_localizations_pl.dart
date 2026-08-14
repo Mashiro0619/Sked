@@ -2107,6 +2107,20 @@ class AppLocalizationsPl extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Otworzyć logowanie do systemu szkoły?';
 
@@ -2123,4 +2137,41 @@ class AppLocalizationsPl extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'To logowanie do szkoły używa protokołu HTTP. Każdy, kto może obserwować lub modyfikować to połączenie, może odczytać albo zmienić Twoje dane logowania i zawartość strony. Kontynuuj tylko, jeśli akceptujesz to ryzyko dla:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Tryb deweloperski';
+
+  @override
+  String get developerModeDescription =>
+      'Narzędzia do dodawania pełnych danych przykładowych w celu sprawdzenia wyglądu i obsługi.';
+
+  @override
+  String get developerSampleLanguage => 'Język danych przykładowych';
+
+  @override
+  String get developerSampleChinese => 'Chiński';
+
+  @override
+  String get developerSampleEnglish => 'Angielski';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Dodaje jeden plan zajęć oraz zestaw kalendarzy i wydarzeń bez zastępowania istniejących danych.';
+
+  @override
+  String get developerAddSampleData => 'Dodaj dane przykładowe';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Dodano przykładowy plan zajęć i wydarzenia.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Przytrzymaj przez 3 sekundy, aby otworzyć tryb deweloperski';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Zwiń nawigację obszaru roboczego';
+
+  @override
+  String get expandWorkspaceNavigation => 'Rozwiń nawigację obszaru roboczego';
 }

@@ -277,6 +277,7 @@ void main() {
       expect(data.fitWeekColumnsToWidth, isTrue);
       expect(data.enableWeekSwipeNavigation, isTrue);
       expect(data.showAddCourseFab, isTrue);
+      expect(data.enableLongPressAddCourse, isTrue);
     });
 
     test('StudentModeData layout settings round-trip', () {
@@ -288,6 +289,7 @@ void main() {
         'fitWeekColumnsToWidth': false,
         'enableWeekSwipeNavigation': false,
         'showAddCourseFab': false,
+        'enableLongPressAddCourse': false,
       }, localeCode: defaultLocaleCode);
 
       final decoded = StudentModeData.fromJson(
@@ -298,7 +300,9 @@ void main() {
       expect(decoded.fitWeekColumnsToWidth, isFalse);
       expect(decoded.enableWeekSwipeNavigation, isFalse);
       expect(decoded.showAddCourseFab, isFalse);
+      expect(decoded.enableLongPressAddCourse, isFalse);
       expect(decoded.copyWith().showAddCourseFab, isFalse);
+      expect(decoded.copyWith().enableLongPressAddCourse, isFalse);
     });
   });
 }

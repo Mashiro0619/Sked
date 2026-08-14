@@ -2002,6 +2002,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showAddEventFabHint => '显示或隐藏日程右下角的悬浮添加日程按钮。';
 
   @override
+  String get enableLongPressAddCourse => '长按空白网格添加课程';
+
+  @override
+  String get enableLongPressAddCourseHint => '长按课表中的空白网格区域即可添加课程。';
+
+  @override
+  String get enableLongPressAddEvent => '长按空白网格添加日程';
+
+  @override
+  String get enableLongPressAddEventHint => '在日视图或周视图中，长按空白时间网格即可添加日程。';
+
+  @override
   String get schoolWebImportSignInConsentTitle => '打开学校登录页面？';
 
   @override
@@ -2016,6 +2028,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return '此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => '开发者模式';
+
+  @override
+  String get developerModeDescription => '用于添加完整示例数据，方便检查界面和交互。';
+
+  @override
+  String get developerSampleLanguage => '示例数据语言';
+
+  @override
+  String get developerSampleChinese => '中文';
+
+  @override
+  String get developerSampleEnglish => 'English';
+
+  @override
+  String get developerSampleDataDescription => '新增一张课表和一组日历、日程，不会覆盖已有数据。';
+
+  @override
+  String get developerAddSampleData => '添加示例数据';
+
+  @override
+  String get developerSampleDataAdded => '示例课表和日程数据已添加。';
+
+  @override
+  String get developerModeLongPressHint => '长按 3 秒打开开发者模式';
+
+  @override
+  String get collapseWorkspaceNavigation => '折叠工作区导航';
+
+  @override
+  String get expandWorkspaceNavigation => '展开工作区导航';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4005,6 +4050,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get showAddEventFabHint => '顯示或隱藏日程右下角的懸浮新增日程按鈕。';
 
   @override
+  String get enableLongPressAddCourse => '長按空白網格新增課程';
+
+  @override
+  String get enableLongPressAddCourseHint => '長按課表中的空白網格區域即可新增課程。';
+
+  @override
+  String get enableLongPressAddEvent => '長按空白網格新增日程';
+
+  @override
+  String get enableLongPressAddEventHint => '在日視圖或週視圖中，長按空白時間網格即可新增日程。';
+
+  @override
   String get schoolWebImportSignInConsentTitle => '開啟學校登入頁面？';
 
   @override
@@ -4019,4 +4076,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return '此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => '開發者模式';
+
+  @override
+  String get developerModeDescription => '可加入完整範例資料，用於檢查介面與操作。';
+
+  @override
+  String get developerSampleLanguage => '範例資料語言';
+
+  @override
+  String get developerSampleChinese => '中文';
+
+  @override
+  String get developerSampleEnglish => '英文';
+
+  @override
+  String get developerSampleDataDescription => '新增一份課表及一組行事曆和活動，不會覆蓋現有資料。';
+
+  @override
+  String get developerAddSampleData => '新增範例資料';
+
+  @override
+  String get developerSampleDataAdded => '已新增範例課表和行程資料。';
+
+  @override
+  String get developerModeLongPressHint => '長按 3 秒以開啟開發者模式';
+
+  @override
+  String get collapseWorkspaceNavigation => '摺疊工作區導覽';
+
+  @override
+  String get expandWorkspaceNavigation => '展開工作區導覽';
 }

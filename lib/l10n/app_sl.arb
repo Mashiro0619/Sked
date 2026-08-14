@@ -1467,6 +1467,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolImportContentTruncated": "Ta stran je dosegla varno omejitev uvoza. V razčlenjevanje bo poslan samo zajeti del.",
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Neznano spletno mesto",
@@ -1498,5 +1506,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Način za razvijalce",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Orodja za dodajanje celovitih vzorčnih podatkov za preverjanje videza in uporabe.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Jezik vzorčnih podatkov",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "Kitajščina",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "Angleščina",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Doda en urnik ter nabor koledarjev in dogodkov, ne da bi zamenjal obstoječe podatke.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Dodaj vzorčne podatke",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Vzorčni urnik in dogodki so dodani.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Za odprtje načina za razvijalce pridržite 3 sekunde",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Strni krmarjenje po delovnem prostoru",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Razširi krmarjenje po delovnem prostoru",
+  "@expandWorkspaceNavigation": {}
 }

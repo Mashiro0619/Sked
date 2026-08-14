@@ -2110,6 +2110,20 @@ class AppLocalizationsPt extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Abrir o início de sessão da escola?';
 
@@ -2126,4 +2140,43 @@ class AppLocalizationsPt extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Este início de sessão escolar utiliza HTTP. Qualquer pessoa que consiga observar ou alterar esta ligação poderá ler ou modificar as suas credenciais e o conteúdo da página. Continue apenas se aceitar este risco para:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Modo de programador';
+
+  @override
+  String get developerModeDescription =>
+      'Ferramentas para adicionar dados de exemplo completos e verificar o aspeto e as interações.';
+
+  @override
+  String get developerSampleLanguage => 'Idioma dos dados de exemplo';
+
+  @override
+  String get developerSampleChinese => 'Chinês';
+
+  @override
+  String get developerSampleEnglish => 'Inglês';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Adiciona um horário e um conjunto de calendários e eventos sem substituir os dados existentes.';
+
+  @override
+  String get developerAddSampleData => 'Adicionar dados de exemplo';
+
+  @override
+  String get developerSampleDataAdded =>
+      'O horário e os eventos de exemplo foram adicionados.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Prima durante 3 segundos para abrir o modo de programador';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Recolher navegação do espaço de trabalho';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Expandir navegação do espaço de trabalho';
 }

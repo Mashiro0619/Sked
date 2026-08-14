@@ -2094,6 +2094,20 @@ class AppLocalizationsDa extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle => 'Åbn skolens login?';
 
   @override
@@ -2109,4 +2123,42 @@ class AppLocalizationsDa extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Dette skolelogin bruger HTTP. Enhver, der kan overvåge eller ændre forbindelsen, kan læse eller ændre dine loginoplysninger og sidens indhold. Fortsæt kun, hvis du accepterer denne risiko for:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Udviklertilstand';
+
+  @override
+  String get developerModeDescription =>
+      'Værktøjer til at tilføje komplette eksempeldata til kontrol af udseende og interaktion.';
+
+  @override
+  String get developerSampleLanguage => 'Sprog for eksempeldata';
+
+  @override
+  String get developerSampleChinese => 'Kinesisk';
+
+  @override
+  String get developerSampleEnglish => 'Engelsk';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Tilføjer et skema og et sæt kalendere og begivenheder uden at erstatte eksisterende data.';
+
+  @override
+  String get developerAddSampleData => 'Tilføj eksempeldata';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Eksempelskema og kalenderdata er tilføjet.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Hold nede i 3 sekunder for at åbne udviklertilstand';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Fold arbejdsområdenavigation sammen';
+
+  @override
+  String get expandWorkspaceNavigation => 'Udvid arbejdsområdenavigation';
 }

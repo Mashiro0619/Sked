@@ -2104,6 +2104,20 @@ class AppLocalizationsVi extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Mở trang đăng nhập của trường?';
 
@@ -2120,4 +2134,43 @@ class AppLocalizationsVi extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Trang đăng nhập trường học này sử dụng HTTP. Bất kỳ ai có thể theo dõi hoặc can thiệp vào kết nối này đều có thể đọc hoặc thay đổi thông tin xác thực và nội dung trang của bạn. Chỉ tiếp tục nếu bạn chấp nhận rủi ro này đối với:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Chế độ nhà phát triển';
+
+  @override
+  String get developerModeDescription =>
+      'Công cụ thêm dữ liệu mẫu đầy đủ để kiểm tra giao diện và thao tác.';
+
+  @override
+  String get developerSampleLanguage => 'Ngôn ngữ dữ liệu mẫu';
+
+  @override
+  String get developerSampleChinese => 'Tiếng Trung';
+
+  @override
+  String get developerSampleEnglish => 'Tiếng Anh';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Thêm một thời khóa biểu cùng các lịch và sự kiện mà không thay thế dữ liệu hiện có.';
+
+  @override
+  String get developerAddSampleData => 'Thêm dữ liệu mẫu';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Đã thêm thời khóa biểu và sự kiện mẫu.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Nhấn giữ 3 giây để mở chế độ nhà phát triển';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Thu gọn điều hướng không gian làm việc';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Mở rộng điều hướng không gian làm việc';
 }

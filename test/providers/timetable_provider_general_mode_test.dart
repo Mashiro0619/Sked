@@ -858,4 +858,28 @@ END:VCALENDAR
     expect(provider.showAddEventFab, isFalse);
     expect(storage.data!.generalMode.showAddEventFab, isFalse);
   });
+
+  test('long-press event add persists and rolls back on failure', () async {
+    final initial = buildInitialAppData(buildDefaultPeriodTimes());
+    final storage = _MemoryTimetableStorage(initial);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+    await provider.load();
+
+    await provider.updateGeneralDisplaySettings(enableLongPressAddEvent: false);
+    expect(provider.enableLongPressAddEvent, isFalse);
+    expect(storage.data!.generalMode.enableLongPressAddEvent, isFalse);
+
+    storage.nextSaveError = StateError('save failed');
+    await expectLater(
+      provider.updateGeneralDisplaySettings(enableLongPressAddEvent: true),
+      throwsStateError,
+    );
+
+    expect(provider.enableLongPressAddEvent, isFalse);
+    expect(storage.data!.generalMode.enableLongPressAddEvent, isFalse);
+  });
 }

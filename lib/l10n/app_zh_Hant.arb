@@ -1487,6 +1487,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "顯示或隱藏日程右下角的懸浮新增日程按鈕。",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "長按空白網格新增課程",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "長按課表中的空白網格區域即可新增課程。",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "長按空白網格新增日程",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "在日視圖或週視圖中，長按空白時間網格即可新增日程。",
+  "@enableLongPressAddEventHint": {},
   "schoolWebImportSignInConsentTitle": "開啟學校登入頁面？",
   "@schoolWebImportSignInConsentTitle": {},
   "schoolWebImportSignInConsentMessage": "學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n{origin}",
@@ -1502,5 +1510,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "開發者模式",
+  "@developerModeTitle": {},
+  "developerModeDescription": "可加入完整範例資料，用於檢查介面與操作。",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "範例資料語言",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "中文",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "英文",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "新增一份課表及一組行事曆和活動，不會覆蓋現有資料。",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "新增範例資料",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "已新增範例課表和行程資料。",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "長按 3 秒以開啟開發者模式",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "摺疊工作區導覽",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "展開工作區導覽",
+  "@expandWorkspaceNavigation": {}
 }

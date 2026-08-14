@@ -3862,6 +3862,30 @@ abstract class AppLocalizations {
   /// **'Show or hide the floating add event button in the bottom-right corner of the schedule.'**
   String get showAddEventFabHint;
 
+  /// No description provided for @enableLongPressAddCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press blank grid to add courses'**
+  String get enableLongPressAddCourse;
+
+  /// No description provided for @enableLongPressAddCourseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press an empty area of the timetable grid to add a course.'**
+  String get enableLongPressAddCourseHint;
+
+  /// No description provided for @enableLongPressAddEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press blank grid to add events'**
+  String get enableLongPressAddEvent;
+
+  /// No description provided for @enableLongPressAddEventHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In day or week view, long-press an empty area of the time grid to add an event.'**
+  String get enableLongPressAddEventHint;
+
   /// No description provided for @schoolWebImportSignInConsentTitle.
   ///
   /// In en, this message translates to:
@@ -3885,6 +3909,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}'**
   String schoolWebImportInsecureSignInConsentMessage(Object origin);
+
+  /// No description provided for @developerModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer mode'**
+  String get developerModeTitle;
+
+  /// No description provided for @developerModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools for adding complete sample data for visual and interaction checks.'**
+  String get developerModeDescription;
+
+  /// No description provided for @developerSampleLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample data language'**
+  String get developerSampleLanguage;
+
+  /// No description provided for @developerSampleChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'中文'**
+  String get developerSampleChinese;
+
+  /// No description provided for @developerSampleEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get developerSampleEnglish;
+
+  /// No description provided for @developerSampleDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds one timetable and a set of calendars and events without replacing existing data.'**
+  String get developerSampleDataDescription;
+
+  /// No description provided for @developerAddSampleData.
+  ///
+  /// In en, this message translates to:
+  /// **'Add sample data'**
+  String get developerAddSampleData;
+
+  /// No description provided for @developerSampleDataAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample timetable and schedule data added.'**
+  String get developerSampleDataAdded;
+
+  /// No description provided for @developerModeLongPressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press for 3 seconds to open developer mode'**
+  String get developerModeLongPressHint;
+
+  /// No description provided for @collapseWorkspaceNavigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse workspace navigation'**
+  String get collapseWorkspaceNavigation;
+
+  /// No description provided for @expandWorkspaceNavigation.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand workspace navigation'**
+  String get expandWorkspaceNavigation;
 }
 
 class _AppLocalizationsDelegate

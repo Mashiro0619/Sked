@@ -2098,6 +2098,20 @@ class AppLocalizationsNl extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Aanmelden bij de school openen?';
 
@@ -2114,4 +2128,41 @@ class AppLocalizationsNl extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Deze schoolaanmelding gebruikt HTTP. Iedereen die deze verbinding kan volgen of wijzigen, kan uw aanmeldgegevens en de pagina-inhoud lezen of veranderen. Ga alleen door als u dit risico accepteert voor:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Ontwikkelaarsmodus';
+
+  @override
+  String get developerModeDescription =>
+      'Hulpmiddelen om volledige voorbeeldgegevens toe te voegen voor controle van weergave en interactie.';
+
+  @override
+  String get developerSampleLanguage => 'Taal van voorbeeldgegevens';
+
+  @override
+  String get developerSampleChinese => 'Chinees';
+
+  @override
+  String get developerSampleEnglish => 'Engels';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Voegt één rooster en een set agenda\'s en afspraken toe zonder bestaande gegevens te vervangen.';
+
+  @override
+  String get developerAddSampleData => 'Voorbeeldgegevens toevoegen';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Voorbeeldrooster en -afspraken toegevoegd.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Houd 3 seconden ingedrukt om de ontwikkelaarsmodus te openen';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Werkruimtenavigatie inklappen';
+
+  @override
+  String get expandWorkspaceNavigation => 'Werkruimtenavigatie uitklappen';
 }

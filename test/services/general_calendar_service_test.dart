@@ -122,11 +122,19 @@ void main() {
       final hidden = service.updateDisplaySettings(
         buildData(),
         showAddEventFab: false,
+        enableLongPressAddEvent: false,
       );
 
       expect(hidden.showAddEventFab, isFalse);
+      expect(hidden.enableLongPressAddEvent, isFalse);
       expect(
         service.setSelectedDate(hidden, DateTime(2026, 6, 1)).showAddEventFab,
+        isFalse,
+      );
+      expect(
+        service
+            .setSelectedDate(hidden, DateTime(2026, 6, 1))
+            .enableLongPressAddEvent,
         isFalse,
       );
     });

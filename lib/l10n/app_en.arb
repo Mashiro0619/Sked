@@ -1491,6 +1491,14 @@
   "@showAddEventFab": {},
   "showAddEventFabHint": "Show or hide the floating add event button in the bottom-right corner of the schedule.",
   "@showAddEventFabHint": {},
+  "enableLongPressAddCourse": "Long-press blank grid to add courses",
+  "@enableLongPressAddCourse": {},
+  "enableLongPressAddCourseHint": "Long-press an empty area of the timetable grid to add a course.",
+  "@enableLongPressAddCourseHint": {},
+  "enableLongPressAddEvent": "Long-press blank grid to add events",
+  "@enableLongPressAddEvent": {},
+  "enableLongPressAddEventHint": "In day or week view, long-press an empty area of the time grid to add an event.",
+  "@enableLongPressAddEventHint": {},
   "schoolWebImportSignInConsentTitle": "Open school sign-in?",
   "@schoolWebImportSignInConsentTitle": {},
   "schoolWebImportSignInConsentMessage": "School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}",
@@ -1506,5 +1514,27 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "developerModeTitle": "Developer mode",
+  "@developerModeTitle": {},
+  "developerModeDescription": "Tools for adding complete sample data for visual and interaction checks.",
+  "@developerModeDescription": {},
+  "developerSampleLanguage": "Sample data language",
+  "@developerSampleLanguage": {},
+  "developerSampleChinese": "中文",
+  "@developerSampleChinese": {},
+  "developerSampleEnglish": "English",
+  "@developerSampleEnglish": {},
+  "developerSampleDataDescription": "Adds one timetable and a set of calendars and events without replacing existing data.",
+  "@developerSampleDataDescription": {},
+  "developerAddSampleData": "Add sample data",
+  "@developerAddSampleData": {},
+  "developerSampleDataAdded": "Sample timetable and schedule data added.",
+  "@developerSampleDataAdded": {},
+  "developerModeLongPressHint": "Long-press for 3 seconds to open developer mode",
+  "@developerModeLongPressHint": {},
+  "collapseWorkspaceNavigation": "Collapse workspace navigation",
+  "@collapseWorkspaceNavigation": {},
+  "expandWorkspaceNavigation": "Expand workspace navigation",
+  "@expandWorkspaceNavigation": {}
 }

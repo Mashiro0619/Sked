@@ -27,6 +27,8 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   bool get closeGeneralEventPopupOnOutsideTap =>
       _appData.generalMode.closeEventPopupOnOutsideTap;
   bool get showAddEventFab => _appData.generalMode.showAddEventFab;
+  bool get enableLongPressAddEvent =>
+      _appData.generalMode.enableLongPressAddEvent;
 
   DateTime get selectedGeneralDate => _appData.generalMode.selectedDate;
 
@@ -122,6 +124,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
+    bool? enableLongPressAddEvent,
   }) async {
     _appData = _appData.copyWith(
       generalMode: _calendarService.updateDisplaySettings(
@@ -137,6 +140,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
         timeGridMinutes: timeGridMinutes,
         closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
         showAddEventFab: showAddEventFab,
+        enableLongPressAddEvent: enableLongPressAddEvent,
       ),
     );
     await _saveAndNotify();

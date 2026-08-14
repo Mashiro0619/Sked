@@ -164,6 +164,7 @@ class StudentModeData {
     this.showFutureCourses = true,
     this.showTimetableGridLines = true,
     this.showAddCourseFab = true,
+    this.enableLongPressAddCourse = true,
     this.fitDaySelectorToWidth = true,
     this.fitWeekColumnsToWidth = true,
     this.enableWeekSwipeNavigation = true,
@@ -193,6 +194,7 @@ class StudentModeData {
   final bool showFutureCourses;
   final bool showTimetableGridLines;
   final bool showAddCourseFab;
+  final bool enableLongPressAddCourse;
   final bool fitDaySelectorToWidth;
   final bool fitWeekColumnsToWidth;
   final bool enableWeekSwipeNavigation;
@@ -221,6 +223,7 @@ class StudentModeData {
     'showFutureCourses': showFutureCourses,
     'showTimetableGridLines': showTimetableGridLines,
     'showAddCourseFab': showAddCourseFab,
+    'enableLongPressAddCourse': enableLongPressAddCourse,
     'fitDaySelectorToWidth': fitDaySelectorToWidth,
     'fitWeekColumnsToWidth': fitWeekColumnsToWidth,
     'enableWeekSwipeNavigation': enableWeekSwipeNavigation,
@@ -325,6 +328,8 @@ class StudentModeData {
       showTimetableGridLines:
           _tryDecodeBool(json['showTimetableGridLines']) ?? true,
       showAddCourseFab: _tryDecodeBool(json['showAddCourseFab']) ?? true,
+      enableLongPressAddCourse:
+          _tryDecodeBool(json['enableLongPressAddCourse']) ?? true,
       fitDaySelectorToWidth:
           _tryDecodeBool(json['fitDaySelectorToWidth']) ?? true,
       fitWeekColumnsToWidth:
@@ -382,6 +387,7 @@ class StudentModeData {
     bool? showFutureCourses,
     bool? showTimetableGridLines,
     bool? showAddCourseFab,
+    bool? enableLongPressAddCourse,
     bool? fitDaySelectorToWidth,
     bool? fitWeekColumnsToWidth,
     bool? enableWeekSwipeNavigation,
@@ -414,6 +420,8 @@ class StudentModeData {
       showTimetableGridLines:
           showTimetableGridLines ?? this.showTimetableGridLines,
       showAddCourseFab: showAddCourseFab ?? this.showAddCourseFab,
+      enableLongPressAddCourse:
+          enableLongPressAddCourse ?? this.enableLongPressAddCourse,
       fitDaySelectorToWidth:
           fitDaySelectorToWidth ?? this.fitDaySelectorToWidth,
       fitWeekColumnsToWidth:

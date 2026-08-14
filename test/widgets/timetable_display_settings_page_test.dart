@@ -219,6 +219,24 @@ void main() {
 
     await _toggleSetting(tester, 'Show floating add course button');
     expect(provider.showAddCourseFab, isFalse);
+    final longPressSetting = find.byKey(
+      const ValueKey('enable-long-press-add-course-setting'),
+    );
+    expect(
+      find.descendant(
+        of: longPressSetting,
+        matching: find.byIcon(Icons.touch_app_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'Long-press an empty area of the timetable grid to add a course.',
+      ),
+      findsOneWidget,
+    );
+    await _toggleSetting(tester, 'Long-press blank grid to add courses');
+    expect(provider.enableLongPressAddCourse, isFalse);
     expect(find.text('Quick actions'), findsOneWidget);
   });
 }

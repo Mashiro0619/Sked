@@ -2116,6 +2116,20 @@ class AppLocalizationsBg extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Да се отвори ли входът в училищната система?';
 
@@ -2132,4 +2146,43 @@ class AppLocalizationsBg extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Този вход за училището използва HTTP. Всеки, който може да наблюдава или променя тази връзка, може да прочете или промени вашите идентификационни данни и съдържанието на страницата. Продължете само ако приемате този риск за:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Режим за разработчици';
+
+  @override
+  String get developerModeDescription =>
+      'Инструменти за добавяне на пълни примерни данни за проверка на интерфейса и взаимодействията.';
+
+  @override
+  String get developerSampleLanguage => 'Език на примерните данни';
+
+  @override
+  String get developerSampleChinese => 'Китайски';
+
+  @override
+  String get developerSampleEnglish => 'Английски';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Добавя едно разписание и набор от календари и събития, без да заменя съществуващите данни.';
+
+  @override
+  String get developerAddSampleData => 'Добавяне на примерни данни';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Добавени са примерни данни за разписание и събития.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Задръжте за 3 секунди, за да отворите режима за разработчици';
+
+  @override
+  String get collapseWorkspaceNavigation =>
+      'Свиване на навигацията на работното пространство';
+
+  @override
+  String get expandWorkspaceNavigation =>
+      'Разгъване на навигацията на работното пространство';
 }

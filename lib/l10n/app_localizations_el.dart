@@ -2120,6 +2120,20 @@ class AppLocalizationsEl extends AppLocalizations {
       'Show or hide the floating add event button in the bottom-right corner of the schedule.';
 
   @override
+  String get enableLongPressAddCourse => 'Long-press blank grid to add courses';
+
+  @override
+  String get enableLongPressAddCourseHint =>
+      'Long-press an empty area of the timetable grid to add a course.';
+
+  @override
+  String get enableLongPressAddEvent => 'Long-press blank grid to add events';
+
+  @override
+  String get enableLongPressAddEventHint =>
+      'In day or week view, long-press an empty area of the time grid to add an event.';
+
+  @override
   String get schoolWebImportSignInConsentTitle =>
       'Άνοιγμα σύνδεσης στο σχολικό σύστημα;';
 
@@ -2136,4 +2150,41 @@ class AppLocalizationsEl extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return 'Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n$origin';
   }
+
+  @override
+  String get developerModeTitle => 'Λειτουργία προγραμματιστή';
+
+  @override
+  String get developerModeDescription =>
+      'Εργαλεία για την προσθήκη πλήρων δειγματικών δεδομένων για έλεγχο εμφάνισης και αλληλεπίδρασης.';
+
+  @override
+  String get developerSampleLanguage => 'Γλώσσα δειγματικών δεδομένων';
+
+  @override
+  String get developerSampleChinese => 'Κινεζικά';
+
+  @override
+  String get developerSampleEnglish => 'Αγγλικά';
+
+  @override
+  String get developerSampleDataDescription =>
+      'Προσθέτει ένα ωρολόγιο πρόγραμμα και ένα σύνολο ημερολογίων και συμβάντων χωρίς αντικατάσταση υπαρχόντων δεδομένων.';
+
+  @override
+  String get developerAddSampleData => 'Προσθήκη δειγματικών δεδομένων';
+
+  @override
+  String get developerSampleDataAdded =>
+      'Προστέθηκαν δείγματα ωρολογίου προγράμματος και συμβάντων.';
+
+  @override
+  String get developerModeLongPressHint =>
+      'Πατήστε παρατεταμένα για 3 δευτερόλεπτα για να ανοίξετε τη λειτουργία προγραμματιστή';
+
+  @override
+  String get collapseWorkspaceNavigation => 'Σύμπτυξη πλοήγησης χώρου εργασίας';
+
+  @override
+  String get expandWorkspaceNavigation => 'Ανάπτυξη πλοήγησης χώρου εργασίας';
 }

@@ -245,6 +245,7 @@ class GeneralScheduleData {
     this.timeGridMinutes = 60,
     this.closeEventPopupOnOutsideTap = true,
     this.showAddEventFab = true,
+    this.enableLongPressAddEvent = true,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,
     this.themeSeedColorValue = defaultThemeSeedColorValue,
@@ -266,6 +267,7 @@ class GeneralScheduleData {
   final int timeGridMinutes;
   final bool closeEventPopupOnOutsideTap;
   final bool showAddEventFab;
+  final bool enableLongPressAddEvent;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -317,6 +319,7 @@ class GeneralScheduleData {
     'timeGridMinutes': timeGridMinutes,
     'closeEventPopupOnOutsideTap': closeEventPopupOnOutsideTap,
     'showAddEventFab': showAddEventFab,
+    'enableLongPressAddEvent': enableLongPressAddEvent,
     'themeMode': normalizeThemeMode(themeMode),
     'themeColorMode': normalizeThemeColorMode(themeColorMode),
     'themeSeedColorValue': themeSeedColorValue,
@@ -340,12 +343,15 @@ class GeneralScheduleData {
     final toolbarWidthPolicy = _decodeGeneralToolbarWidthPolicy(json);
     final dateLabelFormat = _decodeGeneralDateLabelFormat(json);
     final showAddEventFab = _boolValue(json['showAddEventFab']) ?? true;
+    final enableLongPressAddEvent =
+        _boolValue(json['enableLongPressAddEvent']) ?? true;
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
       return GeneralScheduleData.createDefault().copyWith(
         viewSwitchBehavior: viewSwitchBehavior,
         toolbarWidthPolicy: toolbarWidthPolicy,
         dateLabelFormat: dateLabelFormat,
         showAddEventFab: showAddEventFab,
+        enableLongPressAddEvent: enableLongPressAddEvent,
       );
     }
 
@@ -392,6 +398,7 @@ class GeneralScheduleData {
       closeEventPopupOnOutsideTap:
           _boolValue(json['closeEventPopupOnOutsideTap']) ?? true,
       showAddEventFab: showAddEventFab,
+      enableLongPressAddEvent: enableLongPressAddEvent,
       themeMode: normalizeThemeMode(
         _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
@@ -434,6 +441,7 @@ class GeneralScheduleData {
     int? timeGridMinutes,
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
+    bool? enableLongPressAddEvent,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -464,6 +472,8 @@ class GeneralScheduleData {
       closeEventPopupOnOutsideTap:
           closeEventPopupOnOutsideTap ?? this.closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab ?? this.showAddEventFab,
+      enableLongPressAddEvent:
+          enableLongPressAddEvent ?? this.enableLongPressAddEvent,
       themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
       themeColorMode: normalizeThemeColorMode(
         themeColorMode ?? this.themeColorMode,
@@ -598,6 +608,7 @@ class GeneralScheduleData {
       timeGridMinutes: _normalizeGridMinutes(timeGridMinutes),
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab,
+      enableLongPressAddEvent: enableLongPressAddEvent,
       themeMode: normalizeThemeMode(themeMode),
       themeColorMode: normalizeThemeColorMode(themeColorMode),
       themeSeedColorValue: themeSeedColorValue,
