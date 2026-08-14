@@ -1504,6 +1504,58 @@ void main() {
       );
     });
 
+    test('preserves and defaults the general time grid hour height', () {
+      for (final height in const [
+        generalTimeGridHourHeightMin,
+        generalTimeGridHourHeightDefault,
+        generalTimeGridHourHeightMax,
+        73,
+      ]) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['timeGridHourHeight'] = height;
+        snapshot['generalMode'] = general;
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+        expect(decoded.generalMode.timeGridHourHeight, height);
+        expect(decoded.toJson()['generalMode']['timeGridHourHeight'], height);
+      }
+
+      final legacySnapshot = validSnapshot();
+      final legacyGeneral = generalMode(legacySnapshot)
+        ..remove('timeGridHourHeight');
+      legacySnapshot['generalMode'] = legacyGeneral;
+
+      final decodedLegacy = AppData.decodeStorageSnapshot(
+        jsonEncode(legacySnapshot),
+      );
+      expect(
+        decodedLegacy.generalMode.timeGridHourHeight,
+        generalTimeGridHourHeightDefault,
+      );
+    });
+
+    test('strictly rejects malformed or out-of-range grid hour heights', () {
+      for (final value in const [
+        null,
+        true,
+        '72',
+        72.5,
+        <String, dynamic>{},
+        generalTimeGridHourHeightMin - 1,
+        generalTimeGridHourHeightMax + 1,
+      ]) {
+        final snapshot = validSnapshot();
+        final general = generalMode(snapshot)..['timeGridHourHeight'] = value;
+        snapshot['generalMode'] = general;
+
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: 'timeGridHourHeight=$value',
+        );
+      }
+    });
+
     test('preserves toolbar width policy and defaults missing field', () {
       const policies = [
         generalToolbarWidthPolicyContent,

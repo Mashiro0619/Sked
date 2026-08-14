@@ -18,6 +18,10 @@ const generalToolbarWidthPolicyDatePriority = 'datePriority';
 const generalDateLabelFormatLocalized = 'localized';
 const generalDateLabelFormatSlash = 'slash';
 const generalDateLabelFormatIso = 'iso';
+const generalTimeGridHourHeightDefault = 72;
+const generalTimeGridHourHeightMin = 36;
+const generalTimeGridHourHeightMax = 120;
+const generalTimeGridHourHeightStep = 4;
 const generalScheduleSchemaVersion = 4;
 
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
@@ -243,6 +247,7 @@ class GeneralScheduleData {
     this.dayStartHour = 6,
     this.dayEndHour = 23,
     this.timeGridMinutes = 60,
+    this.timeGridHourHeight = generalTimeGridHourHeightDefault,
     this.closeEventPopupOnOutsideTap = true,
     this.showAddEventFab = true,
     this.enableLongPressAddEvent = true,
@@ -265,6 +270,7 @@ class GeneralScheduleData {
   final int dayStartHour;
   final int dayEndHour;
   final int timeGridMinutes;
+  final int timeGridHourHeight;
   final bool closeEventPopupOnOutsideTap;
   final bool showAddEventFab;
   final bool enableLongPressAddEvent;
@@ -317,6 +323,7 @@ class GeneralScheduleData {
     'dayStartHour': dayStartHour,
     'dayEndHour': dayEndHour,
     'timeGridMinutes': timeGridMinutes,
+    'timeGridHourHeight': timeGridHourHeight,
     'closeEventPopupOnOutsideTap': closeEventPopupOnOutsideTap,
     'showAddEventFab': showAddEventFab,
     'enableLongPressAddEvent': enableLongPressAddEvent,
@@ -352,6 +359,9 @@ class GeneralScheduleData {
         dateLabelFormat: dateLabelFormat,
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
+        timeGridHourHeight: _normalizeTimeGridHourHeight(
+          _intValue(json['timeGridHourHeight']),
+        ),
       );
     }
 
@@ -394,6 +404,9 @@ class GeneralScheduleData {
       dayEndHour: (_intValue(json['dayEndHour']) ?? 23).clamp(1, 24).toInt(),
       timeGridMinutes: _normalizeGridMinutes(
         _intValue(json['timeGridMinutes']),
+      ),
+      timeGridHourHeight: _normalizeTimeGridHourHeight(
+        _intValue(json['timeGridHourHeight']),
       ),
       closeEventPopupOnOutsideTap:
           _boolValue(json['closeEventPopupOnOutsideTap']) ?? true,
@@ -439,6 +452,7 @@ class GeneralScheduleData {
     int? dayStartHour,
     int? dayEndHour,
     int? timeGridMinutes,
+    int? timeGridHourHeight,
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
@@ -469,6 +483,7 @@ class GeneralScheduleData {
       dayStartHour: dayStartHour ?? this.dayStartHour,
       dayEndHour: dayEndHour ?? this.dayEndHour,
       timeGridMinutes: timeGridMinutes ?? this.timeGridMinutes,
+      timeGridHourHeight: timeGridHourHeight ?? this.timeGridHourHeight,
       closeEventPopupOnOutsideTap:
           closeEventPopupOnOutsideTap ?? this.closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab ?? this.showAddEventFab,
@@ -606,6 +621,7 @@ class GeneralScheduleData {
       dayStartHour: start,
       dayEndHour: end,
       timeGridMinutes: _normalizeGridMinutes(timeGridMinutes),
+      timeGridHourHeight: _normalizeTimeGridHourHeight(timeGridHourHeight),
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
@@ -651,6 +667,12 @@ int _normalizeGridMinutes(int? value) {
     default:
       return 60;
   }
+}
+
+int _normalizeTimeGridHourHeight(int? value) {
+  return (value ?? generalTimeGridHourHeightDefault)
+      .clamp(generalTimeGridHourHeightMin, generalTimeGridHourHeightMax)
+      .toInt();
 }
 
 String _normalizeUniqueId(

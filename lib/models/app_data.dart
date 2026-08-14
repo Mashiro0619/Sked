@@ -1110,7 +1110,12 @@ void _validateStorageGeneralSettings(
       errorMessage: 'Stored general schedule settings are invalid.',
     );
   }
-  for (final key in const ['dayStartHour', 'dayEndHour', 'timeGridMinutes']) {
+  for (final key in const [
+    'dayStartHour',
+    'dayEndHour',
+    'timeGridMinutes',
+    'timeGridHourHeight',
+  ]) {
     _validateStorageIntegerField(
       generalMode,
       key,
@@ -1184,6 +1189,15 @@ void _validateStorageGeneralSettings(
       throw const FormatException(
         'Stored general schedule settings are invalid.',
       );
+    }
+    if (generalMode.containsKey('timeGridHourHeight')) {
+      final height = generalMode['timeGridHourHeight'] as num;
+      if (height < generalTimeGridHourHeightMin ||
+          height > generalTimeGridHourHeightMax) {
+        throw const FormatException(
+          'Stored general schedule settings are invalid.',
+        );
+      }
     }
   }
 }

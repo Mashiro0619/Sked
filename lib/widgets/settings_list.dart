@@ -762,14 +762,19 @@ class SettingsSliderTile extends StatefulWidget {
     required this.max,
     required this.labelBuilder,
     required this.onChangeEnd,
+    this.subtitle,
+    this.step = 1,
     this.enabled = true,
-  });
+  }) : assert(step > 0),
+       assert((max - min) % step == 0);
 
   final IconData icon;
   final String title;
+  final String? subtitle;
   final int value;
   final int min;
   final int max;
+  final int step;
   final String Function(int value) labelBuilder;
   final ValueChanged<int> onChangeEnd;
   final bool enabled;
@@ -784,13 +789,22 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
 
   int _clamp(int value) => value.clamp(widget.min, widget.max).toInt();
 
+  int _snapToStep(int value) {
+    final clamped = _clamp(value);
+    final offset = clamped - widget.min;
+    final snapped = widget.min + (offset / widget.step).round() * widget.step;
+    return snapped.clamp(widget.min, widget.max).toInt();
+  }
+
   @override
   void didUpdateWidget(covariant SettingsSliderTile oldWidget) {
     super.didUpdateWidget(oldWidget);
     final interactionCompleted = !oldWidget.enabled && widget.enabled;
     final externalValueChanged = oldWidget.value != widget.value;
     final rangeChanged =
-        oldWidget.min != widget.min || oldWidget.max != widget.max;
+        oldWidget.min != widget.min ||
+        oldWidget.max != widget.max ||
+        oldWidget.step != widget.step;
     if (!_isInteracting &&
         widget.enabled &&
         (interactionCompleted || externalValueChanged || rangeChanged)) {
@@ -878,25 +892,41 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                   );
                 },
               ),
+              if (widget.subtitle != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 52, end: 8),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      widget.subtitle!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: secondaryColor,
+                      ),
+                    ),
+                  ),
+                ),
               Semantics(
                 label: widget.title,
                 child: Slider(
                   value: safeValue.toDouble(),
                   min: widget.min.toDouble(),
                   max: widget.max.toDouble(),
-                  divisions: (widget.max - widget.min).clamp(1, 24).toInt(),
+                  divisions: ((widget.max - widget.min) ~/ widget.step).clamp(
+                    1,
+                    100,
+                  ),
                   label: label,
                   semanticFormatterCallback: (_) => label,
                   onChangeStart: enabled ? (_) => _isInteracting = true : null,
                   onChanged: enabled
                       ? (value) => setState(() {
-                          _previewValue = _clamp(value.round());
+                          _previewValue = _snapToStep(value.round());
                         })
                       : null,
                   onChangeEnd: enabled
                       ? (value) {
                           _isInteracting = false;
-                          final committedValue = _clamp(value.round());
+                          final committedValue = _snapToStep(value.round());
                           if (committedValue != widget.value) {
                             widget.onChangeEnd(committedValue);
                           }

@@ -468,6 +468,61 @@ void main() {
       );
     });
 
+    test(
+      'time grid hour height round-trips, defaults, and clamps at boundaries',
+      () {
+        const heights = [
+          generalTimeGridHourHeightMin,
+          generalTimeGridHourHeightDefault,
+          generalTimeGridHourHeightMax,
+        ];
+
+        for (final height in heights) {
+          final data = GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: const [
+              GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+            ],
+            timeGridHourHeight: height,
+          );
+          final decoded = GeneralScheduleData.fromJson(data.toJson());
+
+          expect(decoded.timeGridHourHeight, height);
+          expect(decoded.toJson()['timeGridHourHeight'], height);
+          expect(
+            decoded.copyWith(selectedDateIso: '2026-05-29').timeGridHourHeight,
+            height,
+          );
+          expect(decoded.normalized().timeGridHourHeight, height);
+        }
+
+        expect(
+          GeneralScheduleData.fromJson(const {}).timeGridHourHeight,
+          generalTimeGridHourHeightDefault,
+        );
+        expect(
+          GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: const [
+              GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+            ],
+            timeGridHourHeight: generalTimeGridHourHeightMin - 1,
+          ).normalized().timeGridHourHeight,
+          generalTimeGridHourHeightMin,
+        );
+        expect(
+          GeneralScheduleData(
+            activeScheduleId: 'sched1',
+            schedules: const [
+              GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+            ],
+            timeGridHourHeight: generalTimeGridHourHeightMax + 1,
+          ).normalized().timeGridHourHeight,
+          generalTimeGridHourHeightMax,
+        );
+      },
+    );
+
     test('view switch behavior round-trips and copyWith preserves it', () {
       final data = GeneralScheduleData(
         activeScheduleId: 'sched1',

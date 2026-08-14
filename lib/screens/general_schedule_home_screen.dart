@@ -1209,6 +1209,7 @@ class _GeneralHomeSnapshot {
     required this.dayStartHour,
     required this.dayEndHour,
     required this.timeGridMinutes,
+    required this.timeGridHourHeight,
   });
 
   factory _GeneralHomeSnapshot.from(TimetableProvider provider) {
@@ -1229,6 +1230,7 @@ class _GeneralHomeSnapshot {
       dayStartHour: data.dayStartHour,
       dayEndHour: data.dayEndHour,
       timeGridMinutes: data.timeGridMinutes,
+      timeGridHourHeight: data.timeGridHourHeight,
     );
   }
 
@@ -1247,6 +1249,7 @@ class _GeneralHomeSnapshot {
   final int dayStartHour;
   final int dayEndHour;
   final int timeGridMinutes;
+  final int timeGridHourHeight;
 
   @override
   bool operator ==(Object other) {
@@ -1265,7 +1268,8 @@ class _GeneralHomeSnapshot {
         other.showLunarCalendar == showLunarCalendar &&
         other.dayStartHour == dayStartHour &&
         other.dayEndHour == dayEndHour &&
-        other.timeGridMinutes == timeGridMinutes;
+        other.timeGridMinutes == timeGridMinutes &&
+        other.timeGridHourHeight == timeGridHourHeight;
   }
 
   @override
@@ -1287,6 +1291,7 @@ class _GeneralHomeSnapshot {
     dayStartHour,
     dayEndHour,
     timeGridMinutes,
+    timeGridHourHeight,
   );
 }
 

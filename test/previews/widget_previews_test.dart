@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/previews/period_times_editor_previews.dart';
 import 'package:sked/previews/period_time_set_picker_previews.dart';
 import 'package:sked/previews/settings_grouping_previews.dart';
 import 'package:sked/previews/sked_preview_support.dart';
@@ -10,6 +11,7 @@ void main() {
   final scenarios = <String, Widget Function()>{
     'timetable information form': timetableInformationFormPreview,
     'course time range': courseTimeRangePreview,
+    'period time-set editor': periodTimesEditorPreview,
     'period time-set picker': periodTimeSetPickerDialogPreview,
     'responsive settings grouping': responsiveSettingsGroupingPreview,
   };

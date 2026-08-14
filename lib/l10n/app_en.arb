@@ -476,6 +476,14 @@
   "@exportSwitchedToShare": {},
   "saveFailedRetry": "Save failed. Please try again later.",
   "@saveFailedRetry": {},
+  "periodTimesUnsavedExitTitle": "Changes not saved",
+  "@periodTimesUnsavedExitTitle": {},
+  "periodTimesSaveFailureExitMessage": "The latest period-time changes could not be saved. You can retry, continue editing, or discard them.",
+  "@periodTimesSaveFailureExitMessage": {},
+  "periodTimesInvalidExitMessage": "Some period times are invalid. Fix them before saving, or discard these changes and leave.",
+  "@periodTimesInvalidExitMessage": {},
+  "discardChangesAndExit": "Discard and exit",
+  "@discardChangesAndExit": {},
   "appInstanceBlockedTitle": "Sked is already open",
   "@appInstanceBlockedTitle": {},
   "appInstanceBlockedMessage": "Another Sked window or browser tab is using your local data. Close it, then retry.",
@@ -1293,6 +1301,18 @@
   "@endHour": {},
   "timeGridDensity": "Time grid density",
   "@timeGridDensity": {},
+  "timeGridHourHeight": "Hour row height",
+  "@timeGridHourHeight": {},
+  "timeGridHourHeightHint": "Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.",
+  "@timeGridHourHeightHint": {},
+  "timeGridHourHeightValue": "{height} dp",
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "Import JSON file",
   "@importJsonFile": {},
   "pasteJson": "Paste JSON",

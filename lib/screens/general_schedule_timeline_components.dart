@@ -214,6 +214,7 @@ class _OccurrenceCard extends StatelessWidget {
     required this.occurrence,
     required this.dense,
     required this.narrow,
+    required this.compactStrip,
     required this.overlapping,
     required this.onTap,
   });
@@ -221,6 +222,7 @@ class _OccurrenceCard extends StatelessWidget {
   final GeneralEventOccurrence occurrence;
   final bool dense;
   final bool narrow;
+  final bool compactStrip;
   final bool overlapping;
   final VoidCallback onTap;
 
@@ -239,7 +241,7 @@ class _OccurrenceCard extends StatelessWidget {
       alpha: colorScheme.brightness == Brightness.dark ? 0.78 : 0.72,
     );
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(narrow ? 7 : 8),
+      borderRadius: BorderRadius.circular(compactStrip ? 2 : (narrow ? 7 : 8)),
       side: BorderSide(
         color: overlapping
             ? accentColor.withValues(alpha: 0.74)
@@ -279,64 +281,69 @@ class _OccurrenceCard extends StatelessWidget {
           customBorder: shape,
           overlayColor: _timelineOccurrenceOverlayColor(accentColor),
           onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: narrow ? 2 : 7,
-              vertical: dense ? 4 : 6,
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final title = _TimelineOccurrenceTitleLayout(
-                  text: titleText,
-                  style: titleStyle,
-                  maxWidth: constraints.maxWidth,
-                  maxHeight: constraints.maxHeight,
-                  textDirection: Directionality.of(context),
-                  narrow: narrow,
-                );
-                final titleWidget = Text(
-                  titleText,
-                  maxLines: title.maxLines,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: true,
-                  strutStyle: _timelineTitleStrutStyle(titleStyle, narrow),
-                  textAlign: TextAlign.start,
-                  style: titleStyle,
-                );
-
-                if (dense || narrow || !title.showDetails) {
-                  return Align(
-                    alignment: AlignmentDirectional.topStart,
-                    child: titleWidget,
-                  );
-                }
-
-                final details = <Widget>[
-                  Text(
-                    _formatOccurrenceTime(context, occurrence),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: detailStyle,
+          child: compactStrip
+              ? const SizedBox.expand()
+              : Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: narrow ? 2 : 7,
+                    vertical: dense ? 4 : 6,
                   ),
-                  if (occurrence.event.location.isNotEmpty)
-                    Text(
-                      occurrence.event.location,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: locationStyle,
-                    ),
-                ];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    titleWidget,
-                    const SizedBox(height: 2),
-                    ...details,
-                  ],
-                );
-              },
-            ),
-          ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final title = _TimelineOccurrenceTitleLayout(
+                        text: titleText,
+                        style: titleStyle,
+                        maxWidth: constraints.maxWidth,
+                        maxHeight: constraints.maxHeight,
+                        textDirection: Directionality.of(context),
+                        narrow: narrow,
+                      );
+                      final titleWidget = Text(
+                        titleText,
+                        maxLines: title.maxLines,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                        strutStyle: _timelineTitleStrutStyle(
+                          titleStyle,
+                          narrow,
+                        ),
+                        textAlign: TextAlign.start,
+                        style: titleStyle,
+                      );
+
+                      if (dense || narrow || !title.showDetails) {
+                        return Align(
+                          alignment: AlignmentDirectional.topStart,
+                          child: titleWidget,
+                        );
+                      }
+
+                      final details = <Widget>[
+                        Text(
+                          _formatOccurrenceTime(context, occurrence),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: detailStyle,
+                        ),
+                        if (occurrence.event.location.isNotEmpty)
+                          Text(
+                            occurrence.event.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: locationStyle,
+                          ),
+                      ];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          titleWidget,
+                          const SizedBox(height: 2),
+                          ...details,
+                        ],
+                      );
+                    },
+                  ),
+                ),
         ),
       ),
     );
@@ -349,6 +356,7 @@ class _MoreOccurrencesCard extends StatelessWidget {
     required this.count,
     required this.dense,
     required this.narrow,
+    required this.compactStrip,
     required this.overlapping,
     required this.onTap,
   });
@@ -357,6 +365,7 @@ class _MoreOccurrencesCard extends StatelessWidget {
   final int count;
   final bool dense;
   final bool narrow;
+  final bool compactStrip;
   final bool overlapping;
   final VoidCallback onTap;
 
@@ -375,7 +384,7 @@ class _MoreOccurrencesCard extends StatelessWidget {
     final label = l10n.moreEvents(count);
     final visualLabel = narrow ? '+$count' : label;
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(narrow ? 7 : 8),
+      borderRadius: BorderRadius.circular(compactStrip ? 2 : (narrow ? 7 : 8)),
       side: BorderSide(
         color: accentColor.withValues(alpha: overlapping ? 0.70 : 0.50),
         width: overlapping ? 1.1 : 0.9,
@@ -410,23 +419,25 @@ class _MoreOccurrencesCard extends StatelessWidget {
           customBorder: shape,
           overlayColor: _timelineOccurrenceOverlayColor(accentColor),
           onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: narrow ? 2 : 7,
-              vertical: dense ? 4 : 6,
-            ),
-            child: Center(
-              child: narrow
-                  ? FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 1),
-                        child: text,
-                      ),
-                    )
-                  : text,
-            ),
-          ),
+          child: compactStrip
+              ? const SizedBox.expand()
+              : Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: narrow ? 2 : 7,
+                    vertical: dense ? 4 : 6,
+                  ),
+                  child: Center(
+                    child: narrow
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 1),
+                              child: text,
+                            ),
+                          )
+                        : text,
+                  ),
+                ),
         ),
       ),
     );

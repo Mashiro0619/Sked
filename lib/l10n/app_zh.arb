@@ -476,6 +476,14 @@
   "@exportSwitchedToShare": {},
   "saveFailedRetry": "保存失败，请稍后重试",
   "@saveFailedRetry": {},
+  "periodTimesUnsavedExitTitle": "更改尚未保存",
+  "@periodTimesUnsavedExitTitle": {},
+  "periodTimesSaveFailureExitMessage": "节次时间更改未能保存。你可以重试、继续编辑，或放弃这些更改。",
+  "@periodTimesSaveFailureExitMessage": {},
+  "periodTimesInvalidExitMessage": "部分节次时间无效。请修正后再保存，或放弃这些更改并离开。",
+  "@periodTimesInvalidExitMessage": {},
+  "discardChangesAndExit": "放弃更改并退出",
+  "@discardChangesAndExit": {},
   "appInstanceBlockedTitle": "Sked 已在其他窗口运行",
   "@appInstanceBlockedTitle": {},
   "appInstanceBlockedMessage": "另一个 Sked 窗口或浏览器标签页正在使用本地数据。请将其关闭后重试。",
@@ -1293,6 +1301,18 @@
   "@endHour": {},
   "timeGridDensity": "时间网格密度",
   "@timeGridDensity": {},
+  "timeGridHourHeight": "每小时高度",
+  "@timeGridHourHeight": {},
+  "timeGridHourHeightHint": "调整日视图和周视图的纵向比例，不会改变 15、30 或 60 分钟的网格间隔。",
+  "@timeGridHourHeightHint": {},
+  "timeGridHourHeightValue": "{height} dp",
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "导入 JSON 文件",
   "@importJsonFile": {},
   "pasteJson": "粘贴 JSON",

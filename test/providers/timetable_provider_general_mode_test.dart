@@ -809,6 +809,71 @@ END:VCALENDAR
     expect(storage.data!.studentMode.toJson(), initial.studentMode.toJson());
   });
 
+  test(
+    'general time grid hour height persists independently in one save',
+    () async {
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = _MemoryTimetableStorage(initial);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+
+      await provider.load();
+      storage.saveCount = 0;
+      expect(
+        provider.generalTimeGridHourHeight,
+        generalTimeGridHourHeightDefault,
+      );
+
+      await provider.updateGeneralDisplaySettings(
+        timeGridHourHeight: generalTimeGridHourHeightMax,
+      );
+
+      expect(provider.generalTimeGridHourHeight, generalTimeGridHourHeightMax);
+      expect(
+        storage.data!.generalMode.timeGridHourHeight,
+        generalTimeGridHourHeightMax,
+      );
+      expect(storage.saveCount, 1);
+      expect(
+        provider.generalTimeGridMinutes,
+        initial.generalMode.timeGridMinutes,
+      );
+      expect(storage.data!.studentMode.toJson(), initial.studentMode.toJson());
+    },
+  );
+
+  test('failed general time grid hour height save rolls back', () async {
+    final initial = buildInitialAppData(buildDefaultPeriodTimes());
+    final storage = _MemoryTimetableStorage(initial);
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+
+    await provider.load();
+    storage.nextSaveError = StateError('save failed');
+
+    await expectLater(
+      provider.updateGeneralDisplaySettings(
+        timeGridHourHeight: generalTimeGridHourHeightMin,
+      ),
+      throwsStateError,
+    );
+
+    expect(
+      provider.generalTimeGridHourHeight,
+      generalTimeGridHourHeightDefault,
+    );
+    expect(
+      storage.data!.generalMode.timeGridHourHeight,
+      generalTimeGridHourHeightDefault,
+    );
+  });
+
   test('failed general date label format save rolls back', () async {
     final initial = buildInitialAppData(buildDefaultPeriodTimes());
     final storage = _MemoryTimetableStorage(initial);

@@ -1417,6 +1417,30 @@ abstract class AppLocalizations {
   /// **'Save failed. Please try again later.'**
   String get saveFailedRetry;
 
+  /// No description provided for @periodTimesUnsavedExitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes not saved'**
+  String get periodTimesUnsavedExitTitle;
+
+  /// No description provided for @periodTimesSaveFailureExitMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.'**
+  String get periodTimesSaveFailureExitMessage;
+
+  /// No description provided for @periodTimesInvalidExitMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Some period times are invalid. Fix them before saving, or discard these changes and leave.'**
+  String get periodTimesInvalidExitMessage;
+
+  /// No description provided for @discardChangesAndExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard and exit'**
+  String get discardChangesAndExit;
+
   /// No description provided for @appInstanceBlockedTitle.
   ///
   /// In en, this message translates to:
@@ -3381,6 +3405,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Time grid density'**
   String get timeGridDensity;
+
+  /// No description provided for @timeGridHourHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Hour row height'**
+  String get timeGridHourHeight;
+
+  /// No description provided for @timeGridHourHeightHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.'**
+  String get timeGridHourHeightHint;
+
+  /// No description provided for @timeGridHourHeightValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{height} dp'**
+  String timeGridHourHeightValue(int height);
 
   /// No description provided for @importJsonFile.
   ///

@@ -291,6 +291,24 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             },
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        SettingsSliderTile(
+                          key: const ValueKey('general-time-grid-hour-height'),
+                          icon: Icons.height,
+                          title: l10n.timeGridHourHeight,
+                          subtitle: l10n.timeGridHourHeightHint,
+                          value: provider.generalTimeGridHourHeight,
+                          min: generalTimeGridHourHeightMin,
+                          max: generalTimeGridHourHeightMax,
+                          step: generalTimeGridHourHeightStep,
+                          labelBuilder: l10n.timeGridHourHeightValue,
+                          onChangeEnd: (value) => _updateSetting(
+                            'Update general time grid hour height',
+                            () => provider.updateGeneralDisplaySettings(
+                              timeGridHourHeight: value,
+                            ),
+                          ),
+                        ),
                         SettingsSectionHeader(title: l10n.generalPopupSection),
                         SettingsSwitchTile(
                           icon: Icons.open_in_full_outlined,

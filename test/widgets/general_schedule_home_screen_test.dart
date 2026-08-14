@@ -1952,6 +1952,126 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('day timeline scales with the configured hour height', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'short-a',
+          calendarId: 'cal1',
+          title: 'Short A',
+          startDateTimeIso: '2026-06-17T08:00:00.000',
+          endDateTimeIso: '2026-06-17T08:15:00.000',
+        ),
+        GeneralEvent(
+          id: 'short-b',
+          calendarId: 'cal1',
+          title: 'Short B',
+          startDateTimeIso: '2026-06-17T08:15:00.000',
+          endDateTimeIso: '2026-06-17T08:30:00.000',
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewDay,
+          dayStartHour: 8,
+          dayEndHour: 10,
+          timeGridMinutes: 15,
+          timeGridHourHeight: generalTimeGridHourHeightMin,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final grid = find.byKey(const ValueKey('general-timeline-grid'));
+    expect(tester.getSize(grid).height, closeTo(2 * 36 + 24, 0.1));
+    final firstCard = tester.getRect(
+      find.byKey(
+        const ValueKey(
+          'general-timed-occurrence-short-a-2026-06-17T08:00:00.000',
+        ),
+      ),
+    );
+    final secondCard = tester.getRect(
+      find.byKey(
+        const ValueKey(
+          'general-timed-occurrence-short-b-2026-06-17T08:15:00.000',
+        ),
+      ),
+    );
+    expect(firstCard.bottom, lessThanOrEqualTo(secondCard.top));
+    expect(find.bySemanticsLabel('Short A'), findsOneWidget);
+
+    await provider.updateGeneralDisplaySettings(
+      timeGridHourHeight: generalTimeGridHourHeightMax,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(grid).height, closeTo(2 * 120 + 24, 0.1));
+    expect(find.text('Short A'), findsOneWidget);
+    expect(provider.selectedGeneralDate, DateTime(2026, 6, 17));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('changing hour height preserves the visible top time', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const calendar = GeneralSchedule(id: 'cal1', name: 'Calendar', events: []);
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(
+        buildDefaultPeriodTimes(),
+        localeCode: defaultLocaleCode,
+      ).copyWith(
+        activeMode: AppMode.general,
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewDay,
+          dayStartHour: 0,
+          dayEndHour: 24,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final scrollView = find.byKey(
+      const ValueKey('general-timeline-scroll-view'),
+    );
+    await tester.drag(scrollView, const Offset(0, -360));
+    await tester.pumpAndSettle();
+    final scrollable = find.descendant(
+      of: scrollView,
+      matching: find.byType(Scrollable),
+    );
+    final oldOffset = tester.state<ScrollableState>(scrollable).position.pixels;
+    final visibleMinutes = (oldOffset - 12) * 60 / 72;
+
+    await provider.updateGeneralDisplaySettings(timeGridHourHeight: 120);
+    await tester.pumpAndSettle();
+
+    final newOffset = tester.state<ScrollableState>(scrollable).position.pixels;
+    expect(newOffset, closeTo(12 + visibleMinutes * 120 / 60, 1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('RTL timeline keeps headers, rail, and event columns aligned', (
     tester,
   ) async {

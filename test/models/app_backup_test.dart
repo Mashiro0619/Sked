@@ -32,6 +32,7 @@ void main() {
       generalMode: appData().generalMode.copyWith(
         showAddEventFab: false,
         enableLongPressAddEvent: false,
+        timeGridHourHeight: generalTimeGridHourHeightMax,
       ),
     );
 
@@ -50,6 +51,10 @@ void main() {
     expect(decoded.appData.studentMode.enableLongPressAddCourse, isFalse);
     expect(decoded.appData.generalMode.showAddEventFab, isFalse);
     expect(decoded.appData.generalMode.enableLongPressAddEvent, isFalse);
+    expect(
+      decoded.appData.generalMode.timeGridHourHeight,
+      generalTimeGridHourHeightMax,
+    );
     expect(
       decoded.appData.studentMode.schoolImportParserSettings.customApiKey,
       isEmpty,

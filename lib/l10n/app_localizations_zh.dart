@@ -671,6 +671,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveFailedRetry => '保存失败，请稍后重试';
 
   @override
+  String get periodTimesUnsavedExitTitle => '更改尚未保存';
+
+  @override
+  String get periodTimesSaveFailureExitMessage =>
+      '节次时间更改未能保存。你可以重试、继续编辑，或放弃这些更改。';
+
+  @override
+  String get periodTimesInvalidExitMessage => '部分节次时间无效。请修正后再保存，或放弃这些更改并离开。';
+
+  @override
+  String get discardChangesAndExit => '放弃更改并退出';
+
+  @override
   String get appInstanceBlockedTitle => 'Sked 已在其他窗口运行';
 
   @override
@@ -1745,6 +1758,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get timeGridDensity => '时间网格密度';
 
   @override
+  String get timeGridHourHeight => '每小时高度';
+
+  @override
+  String get timeGridHourHeightHint =>
+      '调整日视图和周视图的纵向比例，不会改变 15、30 或 60 分钟的网格间隔。';
+
+  @override
+  String timeGridHourHeightValue(int height) {
+    return '$height dp';
+  }
+
+  @override
   String get importJsonFile => '导入 JSON 文件';
 
   @override
@@ -2718,6 +2743,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get saveFailedRetry => '儲存失敗，請稍後重試';
+
+  @override
+  String get periodTimesUnsavedExitTitle => '變更尚未儲存';
+
+  @override
+  String get periodTimesSaveFailureExitMessage =>
+      '節次時間變更未能儲存。你可以重試、繼續編輯，或放棄這些變更。';
+
+  @override
+  String get periodTimesInvalidExitMessage => '部分節次時間無效。請修正後再儲存，或放棄這些變更並離開。';
+
+  @override
+  String get discardChangesAndExit => '放棄變更並退出';
 
   @override
   String get appInstanceBlockedTitle => 'Sked 已在其他視窗執行';
@@ -3791,6 +3829,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get timeGridDensity => '時間格線密度';
+
+  @override
+  String get timeGridHourHeight => '每小時高度';
+
+  @override
+  String get timeGridHourHeightHint =>
+      '調整日檢視和週檢視的垂直比例，不會變更 15、30 或 60 分鐘的格線間隔。';
+
+  @override
+  String timeGridHourHeightValue(int height) {
+    return '$height dp';
+  }
 
   @override
   String get importJsonFile => '匯入 JSON 檔案';

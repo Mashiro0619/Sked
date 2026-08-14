@@ -945,6 +945,7 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
       data.dayStartHour != 6 ||
       data.dayEndHour != 23 ||
       data.timeGridMinutes != 60 ||
+      data.timeGridHourHeight != generalTimeGridHourHeightDefault ||
       !data.closeEventPopupOnOutsideTap ||
       !data.enableLongPressAddEvent ||
       !_hasDefaultModeTheme(

@@ -705,6 +705,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveFailedRetry => 'Save failed. Please try again later.';
 
   @override
+  String get periodTimesUnsavedExitTitle => 'Changes not saved';
+
+  @override
+  String get periodTimesSaveFailureExitMessage =>
+      'The latest period-time changes could not be saved. You can retry, continue editing, or discard them.';
+
+  @override
+  String get periodTimesInvalidExitMessage =>
+      'Some period times are invalid. Fix them before saving, or discard these changes and leave.';
+
+  @override
+  String get discardChangesAndExit => 'Discard and exit';
+
+  @override
   String get appInstanceBlockedTitle => 'Sked is already open';
 
   @override
@@ -1825,6 +1839,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timeGridDensity => 'Time grid density';
+
+  @override
+  String get timeGridHourHeight => 'Hour row height';
+
+  @override
+  String get timeGridHourHeightHint =>
+      'Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.';
+
+  @override
+  String timeGridHourHeightValue(int height) {
+    return '$height dp';
+  }
 
   @override
   String get importJsonFile => 'Import JSON file';

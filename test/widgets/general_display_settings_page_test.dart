@@ -198,6 +198,46 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('hour height slider steps by four and saves on release', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+
+    await _pumpPage(tester, provider, textScaler: const TextScaler.linear(2));
+
+    final tile = find.byKey(const ValueKey('general-time-grid-hour-height'));
+    await tester.scrollUntilVisible(tile, 160);
+    final sliderFinder = find.descendant(
+      of: tile,
+      matching: find.byType(Slider),
+    );
+    var slider = tester.widget<Slider>(sliderFinder);
+    expect(slider.divisions, 21);
+    expect(
+      find.text(
+        'Adjusts the vertical scale of day and week views without changing '
+        'the 15, 30, or 60 minute grid interval.',
+      ),
+      findsOneWidget,
+    );
+
+    slider.onChanged!(75);
+    await tester.pump();
+    expect(provider.generalTimeGridHourHeight, 72);
+    expect(find.text('76 dp'), findsOneWidget);
+
+    slider = tester.widget<Slider>(sliderFinder);
+    slider.onChangeEnd!(75);
+    await tester.pumpAndSettle();
+    expect(provider.generalTimeGridHourHeight, 76);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('persists the view switch behavior setting', (tester) async {
     final provider = await _createProvider();
     addTearDown(provider.dispose);
@@ -343,7 +383,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(provider.generalDayStartHour, 7);
 
-    final endSlider = tester.widget<Slider>(find.byType(Slider).last);
+    final endHourTile = find.ancestor(
+      of: find.text('End hour'),
+      matching: find.byType(SettingsSliderTile),
+    );
+    final endSlider = tester.widget<Slider>(
+      find.descendant(of: endHourTile, matching: find.byType(Slider)),
+    );
     endSlider.onChangeEnd!(22);
     await tester.pumpAndSettle();
     expect(provider.generalDayEndHour, 22);

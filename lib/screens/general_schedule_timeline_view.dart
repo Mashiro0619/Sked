@@ -245,6 +245,7 @@ class _WeekTimelinePage extends StatelessWidget {
       startHour: provider.generalDayStartHour,
       endHour: provider.generalDayEndHour,
       gridMinutes: provider.generalTimeGridMinutes,
+      hourHeight: provider.generalTimeGridHourHeight.toDouble(),
       showHeader: true,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
@@ -694,6 +695,7 @@ class _DayTimelinePage extends StatelessWidget {
       startHour: provider.generalDayStartHour,
       endHour: provider.generalDayEndHour,
       gridMinutes: provider.generalTimeGridMinutes,
+      hourHeight: provider.generalTimeGridHourHeight.toDouble(),
       showHeader: false,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
@@ -963,6 +965,7 @@ class _CalendarTimeline extends StatelessWidget {
     required this.startHour,
     required this.endHour,
     required this.gridMinutes,
+    required this.hourHeight,
     required this.showHeader,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -971,7 +974,6 @@ class _CalendarTimeline extends StatelessWidget {
 
   static const double _headerHeight = 56;
   static const double _allDayHeight = 74;
-  static const double _hourHeight = 72;
   static const double _timeLabelVerticalPadding = 12;
 
   final List<DateTime> days;
@@ -980,6 +982,7 @@ class _CalendarTimeline extends StatelessWidget {
   final int startHour;
   final int endHour;
   final int gridMinutes;
+  final double hourHeight;
   final bool showHeader;
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
@@ -993,9 +996,13 @@ class _CalendarTimeline extends StatelessWidget {
     }
     final startMinutes = startHour * 60;
     final endMinutes = endHour * 60;
-    final gridHeight = math.max(1, endHour - startHour) * _hourHeight;
+    final safeHourHeight = hourHeight.clamp(
+      generalTimeGridHourHeightMin.toDouble(),
+      generalTimeGridHourHeightMax.toDouble(),
+    );
+    final gridHeight = math.max(1, endHour - startHour) * safeHourHeight;
     final contentHeight = gridHeight + _timeLabelVerticalPadding * 2;
-    final minuteHeight = _hourHeight / 60;
+    final minuteHeight = safeHourHeight / 60;
     final occurrenceIndex = _TimelineOccurrenceIndex.build(occurrences, days);
     final allDayOccurrencesByDay = [
       for (final day in days) occurrenceIndex.allDayFor(day),
@@ -1070,8 +1077,9 @@ class _CalendarTimeline extends StatelessWidget {
                   ),
                 ),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 96),
+                child: _TimelineVerticalScrollViewport(
+                  hourHeight: safeHourHeight,
+                  topOffset: _timeLabelVerticalPadding,
                   child: SizedBox(
                     height: contentHeight,
                     child: Stack(
@@ -1084,7 +1092,7 @@ class _CalendarTimeline extends StatelessWidget {
                           startHour: startHour,
                           endHour: endHour,
                           gridMinutes: gridMinutes,
-                          hourHeight: _hourHeight,
+                          hourHeight: safeHourHeight,
                           topOffset: _timeLabelVerticalPadding,
                         ),
                         for (var index = 0; index < days.length; index++)
@@ -1214,11 +1222,16 @@ class _CalendarTimeline extends StatelessWidget {
       _collapseCrowdedTimedOccurrenceSegments(segments),
     );
     for (final layout in layouts) {
-      final height = math.max(
-        28.0,
-        (layout.endMinutes - layout.startMinutes) * minuteHeight,
-      );
-      final cardHeight = math.max(1.0, height - 4.0);
+      final segmentHeight =
+          (layout.endMinutes - layout.startMinutes) * minuteHeight;
+      if (segmentHeight <= 0) {
+        continue;
+      }
+      final verticalInset = math.min(2.0, segmentHeight / 4);
+      // Keep the visual card inside its actual time segment. In particular,
+      // do not impose a pixel minimum that could overlap an adjacent event.
+      final cardHeight = segmentHeight - verticalInset * 2;
+      final compactStrip = cardHeight < 24;
       const laneGap = 2.0;
       final horizontalInset = width < 52 ? 2.0 : 4.0;
       final availableWidth = math.max(1.0, width - horizontalInset * 2);
@@ -1230,7 +1243,9 @@ class _CalendarTimeline extends StatelessWidget {
       yield PositionedDirectional(
         start: start + horizontalInset + laneLeftOffset,
         top:
-            topOffset + (layout.startMinutes - startMinutes) * minuteHeight + 2,
+            topOffset +
+            (layout.startMinutes - startMinutes) * minuteHeight +
+            verticalInset,
         width: laneWidth,
         height: cardHeight,
         child: layout.isMore
@@ -1239,6 +1254,7 @@ class _CalendarTimeline extends StatelessWidget {
                 count: layout.moreCount,
                 dense: cardHeight < 56 || laneWidth < 44,
                 narrow: laneWidth < 44,
+                compactStrip: compactStrip,
                 overlapping: layout.laneCount > 1,
                 onTap: () => onMoreOccurrencesTap(layout.moreOccurrences!),
               )
@@ -1246,11 +1262,79 @@ class _CalendarTimeline extends StatelessWidget {
                 occurrence: layout.occurrence,
                 dense: cardHeight < 56 || laneWidth < 44,
                 narrow: laneWidth < 44,
+                compactStrip: compactStrip,
                 overlapping: layout.laneCount > 1,
                 onTap: () => onOccurrenceTap(layout.occurrence),
               ),
       );
     }
+  }
+}
+
+class _TimelineVerticalScrollViewport extends StatefulWidget {
+  const _TimelineVerticalScrollViewport({
+    required this.hourHeight,
+    required this.topOffset,
+    required this.child,
+  });
+
+  final double hourHeight;
+  final double topOffset;
+  final Widget child;
+
+  @override
+  State<_TimelineVerticalScrollViewport> createState() =>
+      _TimelineVerticalScrollViewportState();
+}
+
+class _TimelineVerticalScrollViewportState
+    extends State<_TimelineVerticalScrollViewport> {
+  final ScrollController _controller = ScrollController();
+  int _anchorGeneration = 0;
+
+  @override
+  void didUpdateWidget(covariant _TimelineVerticalScrollViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hourHeight == widget.hourHeight || !_controller.hasClients) {
+      return;
+    }
+    final offset = _controller.offset;
+    final leadingInset = math.min(offset, oldWidget.topOffset);
+    final topMinutes = math.max(
+      0.0,
+      (offset - oldWidget.topOffset) * 60 / oldWidget.hourHeight,
+    );
+    final generation = ++_anchorGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          generation != _anchorGeneration ||
+          !_controller.hasClients) {
+        return;
+      }
+      final position = _controller.position;
+      final target = (leadingInset + topMinutes * widget.hourHeight / 60).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      _controller.jumpTo(target);
+    });
+  }
+
+  @override
+  void dispose() {
+    _anchorGeneration++;
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      key: const ValueKey('general-timeline-scroll-view'),
+      controller: _controller,
+      padding: const EdgeInsets.only(bottom: 96),
+      child: widget.child,
+    );
   }
 }
 

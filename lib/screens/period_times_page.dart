@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -8,9 +10,9 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
+import '../theme/sked_expressive_theme.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_popup_menu.dart';
-import '../widgets/settings_list.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/ui_command.dart';
 
@@ -23,36 +25,61 @@ enum _PeriodTimesMenuAction {
   deleteSet,
 }
 
+enum _UnsavedPeriodTimesExitAction { keepEditing, retry, discard }
+
+typedef PeriodTimesTextPicker = Future<String?> Function({
+  required List<String> allowedExtensions,
+});
+
 /// 这块单独拆页，不塞进设置弹窗里，不然一口气改多节时间会很难操作。
 class PeriodTimesPage extends StatefulWidget {
   const PeriodTimesPage({
     super.key,
     required this.periodTimeSetId,
     ExportService? exportService,
+    this.textFilePicker = TextFilePicker.pickText,
   }) : exportService = exportService ?? const ExportService();
 
   final String periodTimeSetId;
   final ExportService exportService;
+  final PeriodTimesTextPicker textFilePicker;
 
   @override
   State<PeriodTimesPage> createState() => _PeriodTimesPageState();
 }
 
-class _PeriodTimesPageState extends State<PeriodTimesPage> {
+class _PeriodTimesPageState extends State<PeriodTimesPage>
+    with WidgetsBindingObserver {
+  static const _autoSaveDelay = Duration(milliseconds: 400);
+
   late final TextEditingController _nameController;
   late List<CoursePeriodTime> _periodTimes;
   var _loading = true;
   var _timePickerOpen = false;
   var _menuActionInProgress = false;
-  var _saveInProgress = false;
+  var _autoSaveInProgress = false;
+  var _isDisposing = false;
+  var _allowPop = true;
+  var _isHandlingPop = false;
+  Timer? _autoSaveDebounce;
+  Future<bool>? _autoSaveFlushOperation;
+  TimetableProvider? _pendingAutoSaveProvider;
+  PeriodTimeSet? _pendingAutoSaveValue;
+  var _autoSaveRevision = 0;
+  int? _pendingAutoSaveRevision;
+  int? _failedAutoSaveRevision;
+  var _persistedAutoSaveRevision = 0;
 
-  bool get _interactionBlocked => _menuActionInProgress || _saveInProgress;
+  bool get _interactionBlocked => _menuActionInProgress || _isHandlingPop;
+
+  bool get _menuBlocked => _interactionBlocked || _autoSaveInProgress;
 
   ExportService get _exportService => widget.exportService;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _nameController = TextEditingController();
   }
 
@@ -77,8 +104,27 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _isDisposing = true;
+    unawaited(
+      _flushPendingAutoSave().catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Final period time auto-save failed: $error\n$stackTrace');
+        return false;
+      }),
+    );
+    _autoSaveDebounce?.cancel();
     _nameController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_flushPendingAutoSave());
+    }
   }
 
   @override
@@ -92,9 +138,14 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
       appBar: AppBar(
         title: Text(l10n.periodTimesTitle),
         actions: [
+          IconButton(
+            tooltip: l10n.addOnePeriod,
+            onPressed: _interactionBlocked ? null : _addPeriod,
+            icon: const Icon(Icons.add),
+          ),
           SkedPopupMenuButton<_PeriodTimesMenuAction>(
             tooltip: l10n.importExport,
-            enabled: !_interactionBlocked,
+            enabled: !_menuBlocked,
             onSelected: (action) {
               unawaited(_handleMenuAction(action));
             },
@@ -126,71 +177,139 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
               ),
             ],
           ),
-          IconButton(
-            tooltip: l10n.save,
-            onPressed: _interactionBlocked
-                ? null
-                : () {
-                    unawaited(_save());
-                  },
-            icon: _saveInProgress
-                ? Semantics(
-                    liveRegion: true,
-                    label: l10n.savingChanges,
-                    child: const SizedBox.square(
-                      dimension: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    ),
-                  )
-                : const Icon(Icons.save_outlined),
-          ),
         ],
       ),
       body: SafeArea(
         top: false,
         child: Column(
           children: [
-            UiCommandBusyIndicator(busy: _interactionBlocked),
+            UiCommandBusyIndicator(
+              busy: _menuActionInProgress || _autoSaveInProgress,
+              showDelay: const Duration(milliseconds: 250),
+            ),
             Expanded(
               child: AbsorbPointer(
                 key: const ValueKey('period-times-editor-guard'),
                 absorbing: _interactionBlocked,
-                child: ResponsiveSettingsSingleColumnBody(
-                  topPadding: 16,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: l10n.periodTimeSetName,
-                          prefixIcon: const Icon(Icons.schedule_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      for (
-                        var index = 0;
-                        index < _periodTimes.length;
-                        index++
-                      ) ...[
-                        _buildPeriodCard(index),
-                        const SizedBox(height: 12),
-                      ],
-                      FilledButton.icon(
-                        onPressed: _addPeriod,
-                        icon: const Icon(Icons.add),
-                        label: Text(l10n.addOnePeriod),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _buildEditorBody(l10n),
               ),
             ),
           ],
         ),
       ),
     );
-    return PopScope<void>(canPop: !_interactionBlocked, child: page);
+    return PopScope<void>(
+      canPop: _allowPop && !_menuActionInProgress,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          unawaited(_flushAndPop());
+        }
+      },
+      child: page,
+    );
+  }
+
+  Widget _buildEditorBody(AppLocalizations l10n) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth < 600 ? 16.0 : 24.0;
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final availableWidth = (constraints.maxWidth - horizontalPadding * 2)
+            .clamp(0.0, double.infinity);
+        final useTwoColumns =
+            constraints.maxWidth >= 840 &&
+            textScale <= 1.3 &&
+            (availableWidth - 12) / 2 >= 360;
+        final maxContentWidth = useTwoColumns ? 1120.0 : 720.0;
+
+        return ScrollConfiguration(
+          behavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.invertedStylus,
+            },
+          ),
+          child: ListView(
+            key: const ValueKey('period-times-editor-scroll-view'),
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              16,
+              horizontalPadding,
+              24,
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  key: const ValueKey(
+                    'responsive-settings-single-column-content',
+                  ),
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: _nameController,
+                          onChanged: (_) => _scheduleAutoSave(debounce: true),
+                          onSubmitted: (_) {
+                            unawaited(_flushPendingAutoSave());
+                          },
+                          decoration: InputDecoration(
+                            labelText: l10n.periodTimeSetName,
+                            prefixIcon: const Icon(Icons.schedule_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        LayoutBuilder(
+                          builder: (context, gridConstraints) {
+                            final cardWidth = useTwoColumns
+                                ? (gridConstraints.maxWidth - 12) / 2
+                                : gridConstraints.maxWidth;
+                            return Wrap(
+                              key: const ValueKey('period-times-editor-grid'),
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                for (
+                                  var index = 0;
+                                  index < _periodTimes.length;
+                                  index++
+                                )
+                                  SizedBox(
+                                    key: ValueKey(
+                                      'period-card-${_periodTimes[index].index}',
+                                    ),
+                                    width: cardWidth,
+                                    child: _buildPeriodCard(index),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: FilledButton.icon(
+                            onPressed: _interactionBlocked ? null : _addPeriod,
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.addOnePeriod),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildPeriodCard(int index) {
@@ -206,13 +325,20 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: colors.surfaceContainerLow,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      ),
+    final shapeScheme = Theme.of(context).extension<SkedShapeScheme>();
+    final cardShape =
+        shapeScheme?.control ??
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
+    final compactShape =
+        shapeScheme?.compact ??
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+
+    return Material(
+      color: colors.surfaceContainerLow,
+      shape: cardShape,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -221,24 +347,24 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
                 Expanded(
                   child: Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                    child: DecoratedBox(
                       decoration: ShapeDecoration(
                         color: colors.primary.withValues(alpha: 0.12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: compactShape,
                       ),
-                      child: Text(
-                        l10n.periodNumberLabel(period.index),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelLarge?.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w700,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        child: Text(
+                          l10n.periodNumberLabel(period.index),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -254,42 +380,21 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
                 ],
               ],
             ),
-            const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                final start = _TimeCell(
-                  label: l10n.startTime,
-                  value: formatMinutes(period.startMinutes),
-                  onTap: _timePickerOpen
-                      ? null
-                      : () => _pickPeriodTime(index, isStart: true),
-                );
-                final end = _TimeCell(
-                  label: l10n.endTime,
-                  value: formatMinutes(period.endMinutes),
-                  onTap: _timePickerOpen
-                      ? null
-                      : () => _pickPeriodTime(index, isStart: false),
-                );
-                if (constraints.maxWidth < 360 || textScale > 1.3) {
-                  return Column(
-                    children: [start, const SizedBox(height: 8), end],
-                  );
-                }
-                return Row(
-                  children: [
-                    Expanded(child: start),
-                    const SizedBox(width: 12),
-                    Expanded(child: end),
-                  ],
-                );
-              },
+            const SizedBox(height: 8),
+            _PeriodTimeRange(
+              startLabel: l10n.startTime,
+              startValue: formatMinutes(period.startMinutes),
+              endLabel: l10n.endTime,
+              endValue: formatMinutes(period.endMinutes),
+              error: invalid,
+              enabled: !_timePickerOpen,
+              onPickStart: () => _pickPeriodTime(index, isStart: true),
+              onPickEnd: () => _pickPeriodTime(index, isStart: false),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 4,
               children: [
                 _MetaChip(
                   label: l10n.durationMinutes(duration > 0 ? duration : 0),
@@ -305,11 +410,13 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
               ],
             ),
             if (invalid) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               Text(
                 duration <= 0
                     ? l10n.endTimeMustBeLater
                     : l10n.periodOverlapPrevious,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: colors.error),
               ),
             ],
@@ -325,6 +432,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
     }
     _setMenuActionInProgress(true);
     try {
+      final saved = await _flushPendingAutoSave();
+      if (!saved || !mounted) {
+        return;
+      }
       await runUiCommandWithFeedback(
         context: context,
         debugLabel: 'Run period time menu action ${action.name}',
@@ -365,15 +476,25 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   }
 
   void _addPeriod() {
+    if (_interactionBlocked) {
+      return;
+    }
     setState(() {
       _periodTimes = buildPeriodTimesForCount(
         _periodTimes.length + 1,
         source: _periodTimes,
       );
     });
+    _scheduleAutoSave();
   }
 
   void _removePeriod(int index) {
+    if (_interactionBlocked ||
+        index < 0 ||
+        index >= _periodTimes.length ||
+        _periodTimes.length <= 1) {
+      return;
+    }
     setState(() {
       final next = [..._periodTimes]..removeAt(index);
       _periodTimes = List.generate(
@@ -381,42 +502,282 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
         (itemIndex) => next[itemIndex].copyWith(index: itemIndex + 1),
       );
     });
+    _scheduleAutoSave();
   }
 
-  Future<void> _save() async {
-    if (_interactionBlocked) {
+  PeriodTimeSet _currentAutoSaveValue() {
+    return PeriodTimeSet(
+      id: widget.periodTimeSetId,
+      name: _nameController.text.trim(),
+      periodTimes: List.generate(
+        _periodTimes.length,
+        (index) => _periodTimes[index].copyWith(index: index + 1),
+      ),
+    );
+  }
+
+  bool get _hasInvalidPeriodTimes {
+    for (var index = 0; index < _periodTimes.length; index++) {
+      final period = _periodTimes[index];
+      if (period.endMinutes <= period.startMinutes) {
+        return true;
+      }
+      if (index > 0 &&
+          period.startMinutes < _periodTimes[index - 1].endMinutes) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _scheduleAutoSave({bool debounce = false}) {
+    if (!mounted || _isDisposing) {
       return;
     }
-    setState(() => _saveInProgress = true);
-    final provider = context.read<TimetableProvider>();
-    try {
-      final saved = await runUiCommandWithFeedback(
-        context: context,
-        debugLabel: 'Save period time set',
-        command: () async {
-          final normalized = buildPeriodTimesForCount(
-            _periodTimes.length,
-            source: _periodTimes,
-          );
-          await provider.updatePeriodTimeSet(
-            PeriodTimeSet(
-              id: widget.periodTimeSetId,
-              name: _nameController.text.trim(),
-              periodTimes: normalized,
-            ),
-          );
-        },
+    _allowPop = false;
+    final revision = ++_autoSaveRevision;
+    if (_hasInvalidPeriodTimes) {
+      _pendingAutoSaveProvider = null;
+      _pendingAutoSaveValue = null;
+      _pendingAutoSaveRevision = null;
+      _failedAutoSaveRevision = null;
+      _autoSaveDebounce?.cancel();
+      _autoSaveDebounce = null;
+      setState(() {});
+      return;
+    }
+    _pendingAutoSaveProvider = context.read<TimetableProvider>();
+    _pendingAutoSaveValue = _currentAutoSaveValue();
+    _pendingAutoSaveRevision = revision;
+    _failedAutoSaveRevision = null;
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = null;
+    if (debounce) {
+      _autoSaveDebounce = Timer(
+        _autoSaveDelay,
+        () => unawaited(_flushPendingAutoSave()),
       );
-      if (saved && mounted) {
-        _showMessage(AppLocalizations.of(context).periodTimesSaved);
+    } else {
+      unawaited(_flushPendingAutoSave());
+    }
+    setState(() {});
+  }
+
+  Future<bool> _flushPendingAutoSave() async {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = null;
+    if (_autoSaveFlushOperation == null &&
+        _pendingAutoSaveRevision != null &&
+        _pendingAutoSaveRevision == _failedAutoSaveRevision) {
+      _failedAutoSaveRevision = null;
+    }
+
+    while (true) {
+      final operation = _autoSaveFlushOperation ?? _startAutoSaveOperation();
+      if (operation == null) {
+        return true;
       }
-    } finally {
-      if (mounted) {
-        setState(() => _saveInProgress = false);
-      } else {
-        _saveInProgress = false;
+      try {
+        final saved = await operation;
+        if (!saved && _failedAutoSaveRevision == _pendingAutoSaveRevision) {
+          return false;
+        }
+      } catch (error, stackTrace) {
+        if (!_isDisposing) {
+          debugPrint(
+            'Period time auto-save ended unexpectedly: '
+            '$error\n$stackTrace',
+          );
+        }
+        return false;
       }
     }
+  }
+
+  Future<bool>? _startAutoSaveOperation() {
+    if (_pendingAutoSaveProvider == null ||
+        _pendingAutoSaveValue == null ||
+        _pendingAutoSaveRevision == null ||
+        _failedAutoSaveRevision == _pendingAutoSaveRevision) {
+      return null;
+    }
+
+    late final Future<bool> operation;
+    operation = _drainPendingAutoSaves().whenComplete(() {
+      if (identical(_autoSaveFlushOperation, operation)) {
+        _autoSaveFlushOperation = null;
+      }
+    });
+    _autoSaveFlushOperation = operation;
+    return operation;
+  }
+
+  Future<bool> _drainPendingAutoSaves() async {
+    _setAutoSaveInProgress(true);
+    try {
+      while (true) {
+        final provider = _pendingAutoSaveProvider;
+        final value = _pendingAutoSaveValue;
+        final revision = _pendingAutoSaveRevision;
+        if (provider == null || value == null || revision == null) {
+          _failedAutoSaveRevision = null;
+          final canPop =
+              _persistedAutoSaveRevision == _autoSaveRevision &&
+              !_hasInvalidPeriodTimes;
+          if (mounted && !_isDisposing) {
+            setState(() => _allowPop = canPop);
+          } else {
+            _allowPop = canPop;
+          }
+          return true;
+        }
+
+        _pendingAutoSaveProvider = null;
+        _pendingAutoSaveValue = null;
+        _pendingAutoSaveRevision = null;
+        _autoSaveDebounce?.cancel();
+        _autoSaveDebounce = null;
+        try {
+          await provider.updatePeriodTimeSet(value);
+          _persistedAutoSaveRevision = math.max(
+            _persistedAutoSaveRevision,
+            revision,
+          );
+        } catch (error, stackTrace) {
+          debugPrint('Period time auto-save failed: $error\n$stackTrace');
+          if (_pendingAutoSaveValue == null && revision == _autoSaveRevision) {
+            _pendingAutoSaveProvider = provider;
+            _pendingAutoSaveValue = value;
+            _pendingAutoSaveRevision = revision;
+            _failedAutoSaveRevision = revision;
+            if (mounted && !_isDisposing && !_isHandlingPop) {
+              showUiFailureFeedback(
+                context: context,
+                message: AppLocalizations.of(context).saveFailedRetry,
+              );
+            }
+            return false;
+          }
+        }
+      }
+    } finally {
+      _setAutoSaveInProgress(false);
+    }
+  }
+
+  void _setAutoSaveInProgress(bool value) {
+    if (mounted && !_isDisposing) {
+      setState(() => _autoSaveInProgress = value);
+    } else {
+      _autoSaveInProgress = value;
+    }
+  }
+
+  Future<void> _flushAndPop() async {
+    if (_isHandlingPop || _menuActionInProgress) {
+      return;
+    }
+    final route = ModalRoute.of(context);
+    final navigator = Navigator.of(context);
+    setState(() => _isHandlingPop = true);
+    FocusScope.of(context).unfocus();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) {
+      return;
+    }
+    while (mounted) {
+      final saved = await _flushPendingAutoSave();
+      if (!mounted) {
+        return;
+      }
+      if (saved && _allowPop) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (mounted && navigator.mounted && route?.isCurrent == true) {
+          navigator.pop();
+        } else if (mounted) {
+          setState(() => _isHandlingPop = false);
+        }
+        return;
+      }
+
+      final canRetry = _pendingAutoSaveRevision != null;
+      final action = await _showUnsavedExitDialog(canRetry: canRetry);
+      if (!mounted) {
+        return;
+      }
+      switch (action) {
+        case _UnsavedPeriodTimesExitAction.retry:
+          continue;
+        case _UnsavedPeriodTimesExitAction.discard:
+          _discardPendingAutoSave();
+          setState(() => _allowPop = true);
+          await WidgetsBinding.instance.endOfFrame;
+          if (mounted && navigator.mounted && route?.isCurrent == true) {
+            navigator.pop();
+          } else if (mounted) {
+            setState(() => _isHandlingPop = false);
+          }
+          return;
+        case _UnsavedPeriodTimesExitAction.keepEditing:
+        case null:
+          setState(() => _isHandlingPop = false);
+          return;
+      }
+    }
+  }
+
+  void _discardPendingAutoSave() {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = null;
+    _pendingAutoSaveProvider = null;
+    _pendingAutoSaveValue = null;
+    _pendingAutoSaveRevision = null;
+    _failedAutoSaveRevision = null;
+  }
+
+  Future<_UnsavedPeriodTimesExitAction?> _showUnsavedExitDialog({
+    required bool canRetry,
+  }) {
+    return showExpressiveDialog<_UnsavedPeriodTimesExitAction>(
+      context: context,
+      barrierDismissible: false,
+      waitForTransitionComplete: true,
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l10n.periodTimesUnsavedExitTitle),
+          content: Text(
+            canRetry
+                ? l10n.periodTimesSaveFailureExitMessage
+                : l10n.periodTimesInvalidExitMessage,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context)
+                      .pop(_UnsavedPeriodTimesExitAction.keepEditing),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: () =>
+                  Navigator.of(context)
+                      .pop(_UnsavedPeriodTimesExitAction.discard),
+              child: Text(l10n.discardChangesAndExit),
+            ),
+            if (canRetry)
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(context)
+                        .pop(_UnsavedPeriodTimesExitAction.retry),
+                child: Text(l10n.retrySave),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _deleteSet() async {
@@ -468,7 +829,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   Future<void> _importTemplate() async {
     final provider = context.read<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
-    final source = await TextFilePicker.pickText(
+    final source = await widget.textFilePicker(
       allowedExtensions: const ['json'],
     );
     if (!mounted) {
@@ -488,6 +849,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
       setState(() {
         _periodTimes = imported;
       });
+      _scheduleAutoSave();
       _showMessage(l10n.importedPeriodTimesCount(count));
     } on FormatException catch (error) {
       _showMessage(error.message);
@@ -521,6 +883,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
               setState(() {
                 _periodTimes = imported;
               });
+              _scheduleAutoSave();
               _showMessage(l10n.importedPeriodTimesCount(count));
               return true;
             } on FormatException catch (error) {
@@ -700,7 +1063,6 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
       return;
     }
     setState(() => _timePickerOpen = true);
-    // 这里先只改草稿，等用户点保存时再整体写回，避免改到一半就影响正在用的课表。
     final period = _periodTimes[index];
     final initialMinutes = normalizeMinuteOfDay(
       isStart ? period.startMinutes : period.endMinutes,
@@ -732,6 +1094,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
             ? currentPeriod.copyWith(startMinutes: minutes)
             : currentPeriod.copyWith(endMinutes: minutes);
       });
+      _scheduleAutoSave();
     } finally {
       if (mounted) {
         setState(() => _timePickerOpen = false);
@@ -742,48 +1105,201 @@ class _PeriodTimesPageState extends State<PeriodTimesPage> {
   }
 }
 
-class _TimeCell extends StatelessWidget {
-  const _TimeCell({
+class _PeriodTimeRange extends StatelessWidget {
+  const _PeriodTimeRange({
+    required this.startLabel,
+    required this.startValue,
+    required this.endLabel,
+    required this.endValue,
+    required this.error,
+    required this.enabled,
+    required this.onPickStart,
+    required this.onPickEnd,
+  });
+
+  final String startLabel;
+  final String startValue;
+  final String endLabel;
+  final String endValue;
+  final bool error;
+  final bool enabled;
+  final VoidCallback? onPickStart;
+  final VoidCallback? onPickEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final shapeScheme = theme.extension<SkedShapeScheme>();
+    final shape =
+        (shapeScheme?.control ??
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))
+            .copyWith(
+              side: BorderSide(
+                color: error ? colors.error : colors.outlineVariant,
+                width: error ? 1.2 : 0.8,
+              ),
+            );
+    return Material(
+      color: colors.surfaceContainerHighest.withValues(alpha: 0.72),
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final textScale = MediaQuery.textScalerOf(context).scale(1);
+          final textScaler = MediaQuery.textScalerOf(context);
+          final textDirection = Directionality.of(context);
+          final labelStyle = theme.textTheme.labelMedium;
+          final valueStyle = theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          );
+          final startWidth = math.max(
+            96.0,
+            _measurePeriodTimeActionWidth(
+              label: startLabel,
+              value: startValue,
+              labelStyle: labelStyle,
+              valueStyle: valueStyle,
+              textScaler: textScaler,
+              textDirection: textDirection,
+            ),
+          );
+          final endWidth = math.max(
+            96.0,
+            _measurePeriodTimeActionWidth(
+              label: endLabel,
+              value: endValue,
+              labelStyle: labelStyle,
+              valueStyle: valueStyle,
+              textScaler: textScaler,
+              textDirection: textDirection,
+            ),
+          );
+          final stacksVertically =
+              textScale > 1.3 ||
+              constraints.maxWidth < startWidth + endWidth + 40;
+          final start = _PeriodTimeAction(
+            key: const ValueKey('period-start-time-action'),
+            label: startLabel,
+            value: startValue,
+            enabled: enabled,
+            onTap: onPickStart,
+          );
+          final end = _PeriodTimeAction(
+            key: const ValueKey('period-end-time-action'),
+            label: endLabel,
+            value: endValue,
+            enabled: enabled,
+            onTap: onPickEnd,
+          );
+          if (stacksVertically) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(width: double.infinity, child: start),
+                Divider(height: 1, thickness: 1, color: colors.outlineVariant),
+                SizedBox(width: double.infinity, child: end),
+              ],
+            );
+          }
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: start),
+                SizedBox(
+                  key: const ValueKey('period-time-range-arrow'),
+                  width: 40,
+                  child: Center(
+                    child: ExcludeSemantics(
+                      child: Icon(
+                        Icons.arrow_forward,
+                        size: 18,
+                        color: enabled
+                            ? colors.onSurfaceVariant
+                            : colors.onSurface.withValues(alpha: 0.38),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(child: end),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PeriodTimeAction extends StatelessWidget {
+  const _PeriodTimeAction({
+    super.key,
     required this.label,
     required this.value,
+    required this.enabled,
     required this.onTap,
   });
 
   final String label;
   final String value;
+  final bool enabled;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: colors.onSurfaceVariant,
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      excludeSemantics: true,
+      label: label,
+      value: value,
+      onTap: enabled ? onTap : null,
+      child: InkWell(
+        customBorder:
+            theme.extension<SkedShapeScheme>()?.compact ??
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        excludeFromSemantics: true,
+        onTap: enabled ? onTap : null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: enabled
+                          ? colors.onSurfaceVariant
+                          : colors.onSurface.withValues(alpha: 0.38),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: enabled
+                          ? colors.onSurface
+                          : colors.onSurface.withValues(alpha: 0.38),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: colors.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -804,19 +1320,49 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: foregroundColor ?? colors.onSurfaceVariant,
-          fontWeight: FontWeight.w600,
+    return Semantics(
+      excludeSemantics: true,
+      label: label,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 28, maxWidth: 320),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: backgroundColor ?? colors.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: foregroundColor ?? colors.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
   }
+}
+
+double _measurePeriodTimeActionWidth({
+  required String label,
+  required String value,
+  required TextStyle? labelStyle,
+  required TextStyle? valueStyle,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
+  double measure(String text, TextStyle? style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
+  return math.max(measure(label, labelStyle), measure(value, valueStyle)) + 20;
 }

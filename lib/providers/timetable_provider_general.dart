@@ -24,6 +24,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   int get generalDayStartHour => _appData.generalMode.dayStartHour;
   int get generalDayEndHour => _appData.generalMode.dayEndHour;
   int get generalTimeGridMinutes => _appData.generalMode.timeGridMinutes;
+  int get generalTimeGridHourHeight => _appData.generalMode.timeGridHourHeight;
   bool get closeGeneralEventPopupOnOutsideTap =>
       _appData.generalMode.closeEventPopupOnOutsideTap;
   bool get showAddEventFab => _appData.generalMode.showAddEventFab;
@@ -122,6 +123,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     int? dayStartHour,
     int? dayEndHour,
     int? timeGridMinutes,
+    int? timeGridHourHeight,
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
@@ -138,6 +140,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
         dayStartHour: dayStartHour,
         dayEndHour: dayEndHour,
         timeGridMinutes: timeGridMinutes,
+        timeGridHourHeight: timeGridHourHeight,
         closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,

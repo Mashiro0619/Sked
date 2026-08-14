@@ -472,6 +472,14 @@
   "@exportSwitchedToShare": {},
   "saveFailedRetry": "儲存失敗，請稍後重試",
   "@saveFailedRetry": {},
+  "periodTimesUnsavedExitTitle": "變更尚未儲存",
+  "@periodTimesUnsavedExitTitle": {},
+  "periodTimesSaveFailureExitMessage": "節次時間變更未能儲存。你可以重試、繼續編輯，或放棄這些變更。",
+  "@periodTimesSaveFailureExitMessage": {},
+  "periodTimesInvalidExitMessage": "部分節次時間無效。請修正後再儲存，或放棄這些變更並離開。",
+  "@periodTimesInvalidExitMessage": {},
+  "discardChangesAndExit": "放棄變更並退出",
+  "@discardChangesAndExit": {},
   "appInstanceBlockedTitle": "Sked 已在其他視窗執行",
   "@appInstanceBlockedTitle": {},
   "appInstanceBlockedMessage": "另一個 Sked 視窗或瀏覽器分頁正在使用本機資料。請將其關閉後重試。",
@@ -1155,6 +1163,18 @@
   "@endHour": {},
   "timeGridDensity": "時間格線密度",
   "@timeGridDensity": {},
+  "timeGridHourHeight": "每小時高度",
+  "@timeGridHourHeight": {},
+  "timeGridHourHeightHint": "調整日檢視和週檢視的垂直比例，不會變更 15、30 或 60 分鐘的格線間隔。",
+  "@timeGridHourHeightHint": {},
+  "timeGridHourHeightValue": "{height} dp",
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "匯入 JSON 檔案",
   "@importJsonFile": {},
   "pasteJson": "貼上 JSON",
