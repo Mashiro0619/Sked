@@ -49,6 +49,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get timetable => '课表';
 
   @override
+  String get themeWorkspaceSchedule => '日程';
+
+  @override
   String get timetableName => '课表名称';
 
   @override
@@ -1387,7 +1390,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get firstLaunchStudentDesc => '管理课表、课程、周次、节次时间，并支持课表导入。';
 
   @override
-  String get firstLaunchGeneralDesc => '管理日历、事件、提醒，以及 JSON / ICS 导入导出。';
+  String get firstLaunchGeneralDesc => '管理分类、日程、提醒，以及 JSON / ICS 数据。';
 
   @override
   String get firstLaunchStartStudent => '使用学生课表';
@@ -1494,34 +1497,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showGridLines => '显示网格线';
 
   @override
-  String get generalScheduleImportExport => '日程导入导出';
+  String get generalScheduleImportExport => '分类导入导出';
 
   @override
-  String get generalScheduleImportExportDesc => '导入或分享通用日程';
+  String get generalScheduleImportExportDesc => '导入或分享日程分类';
 
   @override
-  String get importGeneralSchedules => '导入日程';
+  String get importGeneralSchedules => '导入分类';
 
   @override
-  String get importGeneralSchedulesDesc => '从 JSON 文件读取日程';
+  String get importGeneralSchedulesDesc => '从 JSON 文件读取分类';
 
   @override
-  String get shareGeneralSchedules => '分享日程';
+  String get shareGeneralSchedules => '分享分类';
 
   @override
-  String get shareGeneralSchedulesDesc => '以 JSON 文件分享日程';
+  String get shareGeneralSchedulesDesc => '以 JSON 文件分享分类';
 
   @override
-  String get saveGeneralSchedules => '保存日程';
+  String get saveGeneralSchedules => '保存分类';
 
   @override
-  String get saveGeneralSchedulesDesc => '保存为 JSON 文件';
+  String get saveGeneralSchedulesDesc => '将分类保存为 JSON 文件';
 
   @override
-  String get selectSchedulesToExport => '选择要导出的日程';
+  String get selectSchedulesToExport => '选择要导出的分类';
 
   @override
-  String get selectSchedulesToImport => '选择要导入的日程';
+  String get selectSchedulesToImport => '选择要导入的分类';
 
   @override
   String generalScheduleEventCount(int count) {
@@ -1530,35 +1533,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String importedSchedulesCount(int count) {
-    return '已导入 $count 个日程';
+    return '已导入 $count 个分类';
   }
 
   @override
-  String get replaceActiveSchedulePrompt => '用导入的日程替换当前日程？';
+  String get replaceActiveSchedulePrompt => '将导入内容新增为分类，还是替换已有分类？';
 
   @override
-  String get addAsNewSchedule => '新增';
+  String get addAsNewSchedule => '新增为分类';
 
   @override
-  String get selectAtLeastOneScheduleMessage => '请至少选择一个日程。';
+  String get selectAtLeastOneScheduleMessage => '请至少选择一个分类。';
 
   @override
-  String get noExportableScheduleMessage => '没有可导出的日程。';
+  String get noExportableScheduleMessage => '没有可导出的分类。';
 
   @override
-  String get noSchedulesInImportMessage => '导入文件没有日程。';
+  String get noSchedulesInImportMessage => '导入文件中没有分类。';
 
   @override
-  String get replaceActiveRequiresSingleScheduleMessage => '替换当前日程时只能选择一个日程。';
+  String get replaceActiveRequiresSingleScheduleMessage => '替换时只能选择一个导入分类。';
 
   @override
-  String get noActiveScheduleToReplaceMessage => '当前没有可替换的日程。';
+  String get noActiveScheduleToReplaceMessage => '选择的目标分类不可用。';
 
   @override
-  String get calendars => '日历';
+  String get calendars => '分类';
 
   @override
-  String get calendar => '日历';
+  String get calendar => '分类';
 
   @override
   String get viewWeek => '周';
@@ -1571,6 +1574,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get viewMonth => '月';
+
+  @override
+  String visibleCategoryCount(int count) {
+    return '$count 个分类';
+  }
+
+  @override
+  String get noVisibleCategories => '无可见分类';
+
+  @override
+  String get selectCategoryToReplace => '选择要替换的分类';
+
+  @override
+  String get replaceCategory => '替换分类';
+
+  @override
+  String get deleteEventTitle => '删除日程';
+
+  @override
+  String get deleteEventConfirmation => '此日程将被永久删除。';
+
+  @override
+  String get deleteRecurringEventTitle => '删除重复日程';
 
   @override
   String get eventDuplicated => '已复制日程';
@@ -1612,28 +1638,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noUpcomingEvents => '无即将开始事件';
 
   @override
-  String get addCalendar => '添加日历';
+  String get addCalendar => '添加分类';
 
   @override
-  String get newCalendar => '新日历';
+  String get newCalendar => '新分类';
 
   @override
-  String get hideCalendar => '隐藏日历';
+  String get hideCalendar => '隐藏分类';
 
   @override
-  String get showCalendar => '显示日历';
+  String get showCalendar => '显示分类';
 
   @override
   String get rename => '重命名';
 
   @override
-  String get renameCalendar => '重命名日历';
+  String get renameCalendar => '重命名分类';
 
   @override
   String get name => '名称';
 
   @override
-  String get deleteCalendar => '删除日历';
+  String get deleteCalendar => '删除分类';
 
   @override
   String deleteCalendarMessage(Object name) {
@@ -1644,10 +1670,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteThisOccurrence => '删除本次';
 
   @override
-  String get deleteFutureOccurrences => '删除后续';
+  String get deleteFutureOccurrences => '删除本次及后续';
 
   @override
-  String get deleteAllOccurrences => '删除全部';
+  String get deleteAllOccurrences => '删除整个系列';
 
   @override
   String get duplicateEvent => '复制';
@@ -1776,7 +1802,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pasteJson => '粘贴 JSON';
 
   @override
-  String get importGeneralSchedulesJsonTextDesc => '从复制的 JSON 导入日历';
+  String get importGeneralSchedulesJsonTextDesc => '从复制的 JSON 导入分类';
 
   @override
   String get importIcsFile => '导入 ICS 文件';
@@ -1794,7 +1820,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyJson => '复制 JSON';
 
   @override
-  String get copyJsonDesc => '将选中日历复制为 JSON 文本';
+  String get copyJsonDesc => '将选中分类复制为 JSON 文本';
 
   @override
   String get shareIcs => '分享 ICS';
@@ -1825,12 +1851,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return '发现 $count 个事件。要作为新日历导入，还是替换当前日历？';
+    return '发现 $count 个事件。要新增为分类，还是替换已有分类？';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return '已导入 $count 个日程，包含 $warningCount 条提示';
+    return '已导入 $count 个分类，包含 $warningCount 条提示';
   }
 
   @override
@@ -1982,7 +2008,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalToolbarWidthBalanced => '均衡';
 
   @override
-  String get generalToolbarWidthCalendarPriority => '日程优先';
+  String get generalToolbarWidthCalendarPriority => '分类优先';
 
   @override
   String get generalToolbarWidthDatePriority => '日期优先';
@@ -2070,7 +2096,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerSampleEnglish => 'English';
 
   @override
-  String get developerSampleDataDescription => '新增一张课表和一组日历、日程，不会覆盖已有数据。';
+  String get developerSampleDataDescription => '新增一张课表和一组分类、日程，不会覆盖已有数据。';
 
   @override
   String get developerAddSampleData => '添加示例数据';
@@ -2130,6 +2156,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get timetable => '課表';
+
+  @override
+  String get themeWorkspaceSchedule => '日程';
 
   @override
   String get timetableName => '課表名稱';
@@ -3460,7 +3489,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get firstLaunchStudentDesc => '管理課表、課程、週次、節次時間，並支援課表匯入。';
 
   @override
-  String get firstLaunchGeneralDesc => '管理日曆、事件、提醒，以及 JSON / ICS 匯入匯出。';
+  String get firstLaunchGeneralDesc => '管理分類、日程、提醒，以及 JSON / ICS 資料。';
 
   @override
   String get firstLaunchStartStudent => '使用學生課表';
@@ -3567,34 +3596,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get showGridLines => '顯示格線';
 
   @override
-  String get generalScheduleImportExport => '日程匯入匯出';
+  String get generalScheduleImportExport => '分類匯入匯出';
 
   @override
-  String get generalScheduleImportExportDesc => '匯入或分享通用日程';
+  String get generalScheduleImportExportDesc => '匯入或分享日程分類';
 
   @override
-  String get importGeneralSchedules => '匯入日程';
+  String get importGeneralSchedules => '匯入分類';
 
   @override
-  String get importGeneralSchedulesDesc => '從 JSON 檔案讀取日程';
+  String get importGeneralSchedulesDesc => '從 JSON 檔案讀取分類';
 
   @override
-  String get shareGeneralSchedules => '分享日程';
+  String get shareGeneralSchedules => '分享分類';
 
   @override
-  String get shareGeneralSchedulesDesc => '以 JSON 檔案分享日程';
+  String get shareGeneralSchedulesDesc => '以 JSON 檔案分享分類';
 
   @override
-  String get saveGeneralSchedules => '儲存日程';
+  String get saveGeneralSchedules => '儲存分類';
 
   @override
-  String get saveGeneralSchedulesDesc => '儲存為 JSON 檔案';
+  String get saveGeneralSchedulesDesc => '將分類儲存為 JSON 檔案';
 
   @override
-  String get selectSchedulesToExport => '選擇要匯出的日程';
+  String get selectSchedulesToExport => '選擇要匯出的分類';
 
   @override
-  String get selectSchedulesToImport => '選擇要匯入的日程';
+  String get selectSchedulesToImport => '選擇要匯入的分類';
 
   @override
   String generalScheduleEventCount(int count) {
@@ -3603,35 +3632,35 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String importedSchedulesCount(int count) {
-    return '已匯入 $count 個日程';
+    return '已匯入 $count 個分類';
   }
 
   @override
-  String get replaceActiveSchedulePrompt => '用匯入的日程取代目前日程？';
+  String get replaceActiveSchedulePrompt => '將匯入內容新增為分類，還是取代現有分類？';
 
   @override
-  String get addAsNewSchedule => '新增';
+  String get addAsNewSchedule => '新增為分類';
 
   @override
-  String get selectAtLeastOneScheduleMessage => '請至少選擇一個日程。';
+  String get selectAtLeastOneScheduleMessage => '請至少選擇一個分類。';
 
   @override
-  String get noExportableScheduleMessage => '沒有可匯出的日程。';
+  String get noExportableScheduleMessage => '沒有可匯出的分類。';
 
   @override
-  String get noSchedulesInImportMessage => '匯入檔案沒有日程。';
+  String get noSchedulesInImportMessage => '匯入檔案中沒有分類。';
 
   @override
-  String get replaceActiveRequiresSingleScheduleMessage => '取代目前日程時只能選擇一個日程。';
+  String get replaceActiveRequiresSingleScheduleMessage => '取代時只能選擇一個匯入分類。';
 
   @override
-  String get noActiveScheduleToReplaceMessage => '目前沒有可取代的日程。';
+  String get noActiveScheduleToReplaceMessage => '選擇的目標分類無法使用。';
 
   @override
-  String get calendars => '日曆';
+  String get calendars => '分類';
 
   @override
-  String get calendar => '日曆';
+  String get calendar => '分類';
 
   @override
   String get viewWeek => '週';
@@ -3644,6 +3673,29 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get viewMonth => '月';
+
+  @override
+  String visibleCategoryCount(int count) {
+    return '$count 個分類';
+  }
+
+  @override
+  String get noVisibleCategories => '沒有顯示的分類';
+
+  @override
+  String get selectCategoryToReplace => '選擇要取代的分類';
+
+  @override
+  String get replaceCategory => '取代分類';
+
+  @override
+  String get deleteEventTitle => '刪除日程';
+
+  @override
+  String get deleteEventConfirmation => '此日程將被永久刪除。';
+
+  @override
+  String get deleteRecurringEventTitle => '刪除重複日程';
 
   @override
   String get eventDuplicated => '已複製日程';
@@ -3685,28 +3737,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get noUpcomingEvents => '無即將開始事件';
 
   @override
-  String get addCalendar => '新增日曆';
+  String get addCalendar => '新增分類';
 
   @override
-  String get newCalendar => '新日曆';
+  String get newCalendar => '新分類';
 
   @override
-  String get hideCalendar => '隱藏日曆';
+  String get hideCalendar => '隱藏分類';
 
   @override
-  String get showCalendar => '顯示日曆';
+  String get showCalendar => '顯示分類';
 
   @override
   String get rename => '重新命名';
 
   @override
-  String get renameCalendar => '重新命名日曆';
+  String get renameCalendar => '重新命名分類';
 
   @override
   String get name => '名稱';
 
   @override
-  String get deleteCalendar => '刪除日曆';
+  String get deleteCalendar => '刪除分類';
 
   @override
   String deleteCalendarMessage(Object name) {
@@ -3717,10 +3769,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get deleteThisOccurrence => '刪除本次';
 
   @override
-  String get deleteFutureOccurrences => '刪除後續';
+  String get deleteFutureOccurrences => '刪除本次及後續';
 
   @override
-  String get deleteAllOccurrences => '刪除全部';
+  String get deleteAllOccurrences => '刪除整個系列';
 
   @override
   String get duplicateEvent => '複製';
@@ -3849,7 +3901,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get pasteJson => '貼上 JSON';
 
   @override
-  String get importGeneralSchedulesJsonTextDesc => '從複製的 JSON 匯入日曆';
+  String get importGeneralSchedulesJsonTextDesc => '從複製的 JSON 匯入分類';
 
   @override
   String get importIcsFile => '匯入 ICS 檔案';
@@ -3867,7 +3919,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get copyJson => '複製 JSON';
 
   @override
-  String get copyJsonDesc => '將選取日曆複製為 JSON 文字';
+  String get copyJsonDesc => '將選取分類複製為 JSON 文字';
 
   @override
   String get shareIcs => '分享 ICS';
@@ -3898,12 +3950,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return '發現 $count 個事件。要作為新日曆匯入，還是取代目前日曆？';
+    return '發現 $count 個事件。要新增為分類，還是取代現有分類？';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return '已匯入 $count 個日程，包含 $warningCount 條提示';
+    return '已匯入 $count 個分類，包含 $warningCount 條提示';
   }
 
   @override
@@ -4055,7 +4107,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get generalToolbarWidthBalanced => '均衡';
 
   @override
-  String get generalToolbarWidthCalendarPriority => '日曆優先';
+  String get generalToolbarWidthCalendarPriority => '分類優先';
 
   @override
   String get generalToolbarWidthDatePriority => '日期優先';
@@ -4143,7 +4195,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerSampleEnglish => '英文';
 
   @override
-  String get developerSampleDataDescription => '新增一份課表及一組行事曆和活動，不會覆蓋現有資料。';
+  String get developerSampleDataDescription => '新增一份課表及一組分類和日程，不會覆蓋現有資料。';
 
   @override
   String get developerAddSampleData => '新增範例資料';

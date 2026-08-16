@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -255,7 +256,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
       _popOnce(result);
       return;
     }
-    FocusScope.of(context).unfocus();
+    _dismissActiveInputFocus();
     setState(() => _actionInProgress = true);
     final saved = await runUiCommandWithFeedback(
       context: context,
@@ -278,7 +279,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
       _popOnce(result);
       return;
     }
-    FocusScope.of(context).unfocus();
+    _dismissActiveInputFocus();
     setState(() => _actionInProgress = true);
     final deleted = await runUiCommandWithFeedback(
       context: context,
@@ -375,7 +376,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
               UiCommandBusyIndicator(busy: _actionInProgress),
               const SizedBox(height: 8),
               FocusScope(
-                canRequestFocus: !_actionInProgress,
+                canRequestFocus: !_blocked,
                 child: AbsorbPointer(
                   absorbing: _actionInProgress,
                   child: Column(
@@ -623,12 +624,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
 
   Future<void> _openRecurrenceDialog() async {
     if (_blocked) return;
-    FocusScope.of(context).unfocus();
     setState(() => _selectionDialogOpen = true);
+    _dismissActiveInputFocus();
     _RecurrenceDialogValue? result;
     try {
       result = await showExpressiveDialog<_RecurrenceDialogValue>(
         context: context,
+        waitForTransitionComplete: true,
         builder: (_) => _RecurrencePickerDialog(
           initialValue: _RecurrenceDialogValue(
             recurrence: _recurrence,
@@ -661,12 +663,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
 
   Future<void> _openReminderDialog() async {
     if (_blocked) return;
-    FocusScope.of(context).unfocus();
     setState(() => _selectionDialogOpen = true);
+    _dismissActiveInputFocus();
     List<int>? result;
     try {
       result = await showExpressiveDialog<List<int>>(
         context: context,
+        waitForTransitionComplete: true,
         builder: (_) => _ReminderPickerDialog(initialReminders: _reminders),
       );
     } finally {
@@ -685,6 +688,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
       return null;
     }
     setState(() => _pickerOpen = true);
+    _dismissActiveInputFocus();
     try {
       return await picker();
     } finally {
@@ -897,6 +901,7 @@ class _RecurrencePickerDialog extends StatefulWidget {
 
 class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _intervalController;
   late final TextEditingController _repeatCountController;
   late GeneralEventRecurrence _recurrence;
   late int _interval;
@@ -912,9 +917,12 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
     super.initState();
     final initial = widget.initialValue;
     _recurrence = initial.recurrence;
-    _interval = initial.interval;
+    _interval = initial.interval
+        .clamp(_minimumRecurrenceInterval, _maximumRecurrenceInterval)
+        .toInt();
     _unit = initial.unit;
     _untilDate = initial.untilDate;
+    _intervalController = TextEditingController(text: '$_interval');
     _repeatCountController = TextEditingController(
       text: initial.repeatCount?.toString() ?? '',
     );
@@ -922,6 +930,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
 
   @override
   void dispose() {
+    _intervalController.dispose();
     _repeatCountController.dispose();
     super.dispose();
   }
@@ -980,6 +989,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
                       _RepeatOptions(
                         recurrence: _recurrence,
                         interval: _interval,
+                        intervalController: _intervalController,
                         customUnit: _unit,
                         untilDate: _untilDate,
                         repeatCountController: _repeatCountController,
@@ -1013,6 +1023,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
   Future<void> _pickUntilDate() async {
     if (_blocked) return;
     setState(() => _pickerOpen = true);
+    _dismissActiveInputFocus();
     try {
       final picked = await _pickDate(
         context,
@@ -1403,6 +1414,7 @@ class _RepeatOptions extends StatelessWidget {
   const _RepeatOptions({
     required this.recurrence,
     required this.interval,
+    required this.intervalController,
     required this.customUnit,
     required this.untilDate,
     required this.repeatCountController,
@@ -1414,6 +1426,7 @@ class _RepeatOptions extends StatelessWidget {
 
   final GeneralEventRecurrence recurrence;
   final int interval;
+  final TextEditingController intervalController;
   final GeneralEventRecurrenceUnit customUnit;
   final DateTime? untilDate;
   final TextEditingController repeatCountController;
@@ -1453,17 +1466,11 @@ class _RepeatOptions extends StatelessWidget {
           _ResponsiveFormRow(
             breakpoint: 420,
             children: [
-              SkedDropdownMenu<int>(
-                initialSelection: interval.clamp(1, 30).toInt(),
-                label: Text(l10n.recurrenceEvery),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (var value = 1; value <= 30; value++)
-                    DropdownMenuEntry(value: value, label: '$value'),
-                ],
-                onSelected: (value) {
-                  if (value != null) onIntervalChanged(value);
-                },
+              _RecurrenceIntervalStepper(
+                value: interval,
+                controller: intervalController,
+                unit: customUnit,
+                onChanged: onIntervalChanged,
               ),
               SkedDropdownMenu<GeneralEventRecurrenceUnit>(
                 initialSelection: customUnit,
@@ -1516,6 +1523,181 @@ class _RepeatOptions extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+const int _minimumRecurrenceInterval = 1;
+const int _maximumRecurrenceInterval = 999;
+
+class _RecurrenceIntervalStepper extends StatefulWidget {
+  const _RecurrenceIntervalStepper({
+    required this.value,
+    required this.controller,
+    required this.unit,
+    required this.onChanged,
+  });
+
+  final int value;
+  final TextEditingController controller;
+  final GeneralEventRecurrenceUnit unit;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_RecurrenceIntervalStepper> createState() =>
+      _RecurrenceIntervalStepperState();
+}
+
+class _RecurrenceIntervalStepperState
+    extends State<_RecurrenceIntervalStepper> {
+  late final FocusNode _valueFocusNode;
+
+  int get _value => widget.value
+      .clamp(_minimumRecurrenceInterval, _maximumRecurrenceInterval)
+      .toInt();
+
+  int? get _enteredValue {
+    final parsed = int.tryParse(widget.controller.text);
+    if (parsed == null ||
+        parsed < _minimumRecurrenceInterval ||
+        parsed > _maximumRecurrenceInterval) {
+      return null;
+    }
+    return parsed;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _valueFocusNode = FocusNode()..addListener(_handleFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    _valueFocusNode
+      ..removeListener(_handleFocusChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _setValue(int value, FormFieldState<int> field) {
+    final next = value
+        .clamp(_minimumRecurrenceInterval, _maximumRecurrenceInterval)
+        .toInt();
+    final text = '$next';
+    widget.controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    field.didChange(next);
+    widget.onChanged(next);
+  }
+
+  void _handleTextChanged(String text, FormFieldState<int> field) {
+    final parsed = int.tryParse(text);
+    final valid =
+        parsed != null &&
+        parsed >= _minimumRecurrenceInterval &&
+        parsed <= _maximumRecurrenceInterval;
+    field.didChange(valid ? parsed : null);
+    if (valid) widget.onChanged(parsed);
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final shapes = skedShapeSchemeOf(context);
+    final unitLabel = _recurrenceUnitLabel(widget.unit, l10n);
+    final value = _value;
+
+    String destinationLabel(int destination) =>
+        l10n.repeatsEvery(destination, unitLabel);
+
+    ButtonStyle actionStyle() => IconButton.styleFrom(
+      minimumSize: const Size.square(48),
+      tapTargetSize: MaterialTapTargetSize.padded,
+      shape: shapes.compact,
+    );
+
+    return FormField<int>(
+      key: const ValueKey('recurrence-interval-stepper'),
+      initialValue: _enteredValue,
+      validator: (current) =>
+          current == null ? l10n.recurrencePositiveNumber : null,
+      builder: (field) => InputDecorator(
+        isEmpty: widget.controller.text.isEmpty,
+        isFocused: _valueFocusNode.hasFocus,
+        decoration: InputDecoration(
+          labelText: l10n.recurrenceEvery,
+          errorText: field.errorText,
+          contentPadding: const EdgeInsetsDirectional.fromSTEB(4, 8, 4, 4),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              key: const ValueKey('recurrence-interval-decrement'),
+              tooltip: destinationLabel(
+                value > _minimumRecurrenceInterval
+                    ? value - 1
+                    : _minimumRecurrenceInterval,
+              ),
+              onPressed: value > _minimumRecurrenceInterval
+                  ? () => _setValue(value - 1, field)
+                  : null,
+              style: actionStyle(),
+              icon: const Icon(Icons.remove),
+            ),
+            Expanded(
+              child: Semantics(
+                label: l10n.recurrenceEvery,
+                child: TextField(
+                  key: const ValueKey('recurrence-interval-value'),
+                  controller: widget.controller,
+                  focusNode: _valueFocusNode,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 12,
+                    ),
+                  ),
+                  onChanged: (text) => _handleTextChanged(text, field),
+                ),
+              ),
+            ),
+            IconButton(
+              key: const ValueKey('recurrence-interval-increment'),
+              tooltip: destinationLabel(
+                value < _maximumRecurrenceInterval
+                    ? value + 1
+                    : _maximumRecurrenceInterval,
+              ),
+              onPressed: value < _maximumRecurrenceInterval
+                  ? () => _setValue(value + 1, field)
+                  : null,
+              style: actionStyle(),
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1704,6 +1886,10 @@ Future<DateTime?> _pickDate(
 
 Future<TimeOfDay?> _pickTime(BuildContext context, TimeOfDay initialTime) {
   return showTimePicker(context: context, initialTime: initialTime);
+}
+
+void _dismissActiveInputFocus() {
+  FocusManager.instance.primaryFocus?.unfocus();
 }
 
 String _fmtDate(DateTime date) {

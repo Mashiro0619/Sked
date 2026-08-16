@@ -482,6 +482,7 @@ void main() {
           source,
           scheduleIds: [preview.last.id],
           mode: GeneralScheduleImportMode.replaceActive,
+          replacementScheduleId: 'active',
           localeCode: defaultLocaleCode,
         );
 
@@ -697,6 +698,7 @@ void main() {
           source,
           scheduleIds: const ['replacement'],
           mode: GeneralScheduleImportMode.replaceActive,
+          replacementScheduleId: 'active',
           localeCode: defaultLocaleCode,
         );
 
@@ -732,6 +734,7 @@ void main() {
         source,
         scheduleIds: const ['replacement|raw'],
         mode: GeneralScheduleImportMode.replaceActive,
+        replacementScheduleId: 'active',
         localeCode: defaultLocaleCode,
       );
 
@@ -753,10 +756,42 @@ void main() {
           source,
           scheduleIds: const ['a', 'b'],
           mode: GeneralScheduleImportMode.replaceActive,
+          replacementScheduleId: data().activeScheduleId,
           localeCode: defaultLocaleCode,
         ),
         throwsFormatException,
       );
+    });
+
+    test('rejects missing or invalid replacement targets atomically', () {
+      final current = data(
+        schedules: [
+          schedule(
+            id: 'active',
+            name: 'Active',
+            events: [event(id: 'existing', calendarId: 'active')],
+          ),
+          schedule(id: 'other', name: 'Other'),
+        ],
+        activeScheduleId: 'active',
+      );
+      final before = jsonEncode(current.toJson());
+      final source = envelope([schedule(id: 'replacement')]);
+
+      for (final replacementId in <String?>[null, 'missing']) {
+        expect(
+          () => service.importSelectedGeneralSchedulesJson(
+            current,
+            source,
+            scheduleIds: const ['replacement'],
+            mode: GeneralScheduleImportMode.replaceActive,
+            replacementScheduleId: replacementId,
+            localeCode: defaultLocaleCode,
+          ),
+          throwsFormatException,
+        );
+        expect(jsonEncode(current.toJson()), before);
+      }
     });
   });
 
@@ -818,10 +853,51 @@ void main() {
           envelope([schedule(id: 'replacement')]),
           scheduleIds: const ['replacement'],
           mode: GeneralScheduleImportMode.replaceActive,
+          replacementScheduleId: 'missing',
           localeCode: defaultLocaleCode,
         ),
         throwsFormatException,
       );
+    });
+
+    test('ICS replacement requires a valid explicit target atomically', () {
+      final current = data(
+        schedules: [
+          schedule(
+            id: 'active',
+            name: 'Active',
+            events: [event(id: 'existing', calendarId: 'active')],
+          ),
+          schedule(id: 'other', name: 'Other'),
+        ],
+        activeScheduleId: 'active',
+      );
+      final before = jsonEncode(current.toJson());
+      const source = '''
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:replacement-event
+DTSTART:20260525T090000
+DTEND:20260525T100000
+SUMMARY:Replacement
+END:VEVENT
+END:VCALENDAR
+''';
+
+      for (final replacementId in <String?>[null, 'missing']) {
+        expect(
+          () => service.importGeneralSchedulesIcs(
+            current,
+            source,
+            mode: GeneralScheduleImportMode.replaceActive,
+            replacementScheduleId: replacementId,
+            localeCode: defaultLocaleCode,
+          ),
+          throwsFormatException,
+        );
+        expect(jsonEncode(current.toJson()), before);
+      }
     });
 
     test('imports warnings into the structured result', () {
@@ -864,7 +940,7 @@ END:VCALENDAR
           isA<FormatException>().having(
             (error) => error.message,
             'message',
-            '导入文件没有日程。',
+            '导入文件中没有分类。',
           ),
         ),
       );

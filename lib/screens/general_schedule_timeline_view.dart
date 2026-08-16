@@ -973,7 +973,6 @@ class _CalendarTimeline extends StatelessWidget {
   });
 
   static const double _headerHeight = 56;
-  static const double _allDayHeight = 74;
   static const double _timeLabelVerticalPadding = 12;
 
   final List<DateTime> days;
@@ -1004,12 +1003,11 @@ class _CalendarTimeline extends StatelessWidget {
     final contentHeight = gridHeight + _timeLabelVerticalPadding * 2;
     final minuteHeight = safeHourHeight / 60;
     final occurrenceIndex = _TimelineOccurrenceIndex.build(occurrences, days);
-    final allDayOccurrencesByDay = [
-      for (final day in days) occurrenceIndex.allDayFor(day),
-    ];
-    final hasAllDayOccurrences = allDayOccurrencesByDay.any(
-      (items) => items.isNotEmpty,
+    final allDayLayout = _AllDayTimelineLayout.build(
+      occurrences: occurrences,
+      days: days,
     );
+    final hasAllDayOccurrences = allDayLayout.segments.isNotEmpty;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1040,28 +1038,15 @@ class _CalendarTimeline extends StatelessWidget {
                 ),
               if (hasAllDayOccurrences)
                 SizedBox(
-                  height: _allDayHeight,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _TimelineTimeRailLabel(
-                        width: metrics.timeColumnWidth,
-                        child: Text(
-                          l10n.allDay,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
-                      for (var index = 0; index < days.length; index++)
-                        _AllDayColumn(
-                          date: days[index],
-                          width: metrics.dayWidth,
-                          occurrences: allDayOccurrencesByDay[index],
-                          onTap: onOccurrenceTap,
-                        ),
-                    ],
+                  height: allDayLayout.heightFor(context),
+                  child: _AllDayTimeline(
+                    timeColumnWidth: metrics.timeColumnWidth,
+                    dayWidth: metrics.dayWidth,
+                    dayCount: days.length,
+                    layout: allDayLayout,
+                    label: l10n.allDay,
+                    onOccurrenceTap: onOccurrenceTap,
+                    onMoreOccurrencesTap: onMoreOccurrencesTap,
                   ),
                 ),
               if (hasAllDayOccurrences)
@@ -1338,31 +1323,179 @@ class _TimelineVerticalScrollViewportState
   }
 }
 
-class _TimelineOccurrenceIndex {
-  const _TimelineOccurrenceIndex({
-    required this.allDayByDate,
-    required this.timedByDate,
+class _AllDayTimelineLayout {
+  const _AllDayTimelineLayout({
+    required this.segments,
+    required this.visibleSegments,
+    required this.overflowOccurrences,
+    required this.visibleLaneCount,
   });
 
-  final Map<String, List<GeneralEventOccurrence>> allDayByDate;
+  static const int maxVisibleLanes = 3;
+  static const double verticalPadding = 4;
+  static const double laneGap = 3;
+
+  final List<_AllDaySegment> segments;
+  final List<_AllDaySegment> visibleSegments;
+  final List<GeneralEventOccurrence> overflowOccurrences;
+  final int visibleLaneCount;
+
+  factory _AllDayTimelineLayout.build({
+    required List<GeneralEventOccurrence> occurrences,
+    required List<DateTime> days,
+  }) {
+    final segments = _layoutAllDaySegments(
+      _allDaySegmentsForDays(occurrences, days),
+    );
+    final laneCount = segments.fold<int>(
+      0,
+      (count, segment) => math.max(count, segment.lane + 1),
+    );
+    final visibleLaneCount = math.min(laneCount, maxVisibleLanes);
+    final visibleSegments = [
+      for (final segment in segments)
+        if (segment.lane < maxVisibleLanes) segment,
+    ];
+    final overflowOccurrences = [
+      for (final segment in segments)
+        if (segment.lane >= maxVisibleLanes) segment.occurrence,
+    ];
+    return _AllDayTimelineLayout(
+      segments: List.unmodifiable(segments),
+      visibleSegments: List.unmodifiable(visibleSegments),
+      overflowOccurrences: List.unmodifiable(overflowOccurrences),
+      visibleLaneCount: visibleLaneCount,
+    );
+  }
+
+  double laneHeightFor(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall;
+    final scaledFontSize = MediaQuery.textScalerOf(context)
+        .scale(style?.fontSize ?? 11);
+    return (scaledFontSize * (style?.height ?? 1.15) + 16).clamp(36, 52);
+  }
+
+  double heightFor(BuildContext context) {
+    final rowCount = visibleLaneCount + (overflowOccurrences.isEmpty ? 0 : 1);
+    if (rowCount == 0) {
+      return 0;
+    }
+    return verticalPadding * 2 +
+        rowCount * laneHeightFor(context) +
+        (rowCount - 1) * laneGap;
+  }
+}
+
+class _AllDaySegment {
+  const _AllDaySegment({
+    required this.occurrence,
+    required this.startIndex,
+    required this.endIndex,
+    this.lane = 0,
+  });
+
+  final GeneralEventOccurrence occurrence;
+  final int startIndex;
+  final int endIndex;
+  final int lane;
+
+  _AllDaySegment inLane(int value) => _AllDaySegment(
+    occurrence: occurrence,
+    startIndex: startIndex,
+    endIndex: endIndex,
+    lane: value,
+  );
+}
+
+List<_AllDaySegment> _allDaySegmentsForDays(
+  List<GeneralEventOccurrence> occurrences,
+  List<DateTime> days,
+) {
+  if (days.isEmpty) {
+    return const [];
+  }
+  final normalizedDays = [for (final day in days) normalizeDateOnly(day)];
+  final segments = <_AllDaySegment>[];
+  for (final occurrence in occurrences) {
+    final displayStart = occurrence.calendarDisplayStart;
+    final displayEnd = occurrence.calendarDisplayEnd;
+    if (!displayEnd.isAfter(displayStart) ||
+        (!occurrence.isAllDay && _sameDay(displayStart, displayEnd))) {
+      continue;
+    }
+
+    final eventStartDay = normalizeDateOnly(displayStart);
+    final eventLastDay = normalizeDateOnly(
+      displayEnd.subtract(const Duration(microseconds: 1)),
+    );
+    var startIndex = -1;
+    var endIndex = -1;
+    for (var index = 0; index < normalizedDays.length; index++) {
+      final day = normalizedDays[index];
+      final startsOnOrAfterEvent = calendarDaysBetween(eventStartDay, day) >= 0;
+      final endsOnOrBeforeEvent = calendarDaysBetween(day, eventLastDay) >= 0;
+      if (!startsOnOrAfterEvent || !endsOnOrBeforeEvent) {
+        continue;
+      }
+      startIndex = startIndex == -1 ? index : startIndex;
+      endIndex = index;
+    }
+    if (startIndex == -1 || endIndex < startIndex) {
+      continue;
+    }
+    segments.add(
+      _AllDaySegment(
+        occurrence: occurrence,
+        startIndex: startIndex,
+        endIndex: endIndex,
+      ),
+    );
+  }
+  return segments;
+}
+
+List<_AllDaySegment> _layoutAllDaySegments(List<_AllDaySegment> segments) {
+  final sorted = [...segments]
+    ..sort((a, b) {
+      final startCompare = a.startIndex.compareTo(b.startIndex);
+      if (startCompare != 0) return startCompare;
+      final spanCompare = b.endIndex.compareTo(a.endIndex);
+      if (spanCompare != 0) return spanCompare;
+      final startTimeCompare = a.occurrence.start.compareTo(b.occurrence.start);
+      if (startTimeCompare != 0) return startTimeCompare;
+      final titleCompare = a.occurrence.event.title.compareTo(
+        b.occurrence.event.title,
+      );
+      if (titleCompare != 0) return titleCompare;
+      return a.occurrence.event.id.compareTo(b.occurrence.event.id);
+    });
+  final laneEnds = <int>[];
+  final laidOut = <_AllDaySegment>[];
+  for (final segment in sorted) {
+    var lane = laneEnds.indexWhere((endIndex) => endIndex < segment.startIndex);
+    if (lane == -1) {
+      lane = laneEnds.length;
+      laneEnds.add(segment.endIndex);
+    } else {
+      laneEnds[lane] = segment.endIndex;
+    }
+    laidOut.add(segment.inLane(lane));
+  }
+  return laidOut;
+}
+
+class _TimelineOccurrenceIndex {
+  const _TimelineOccurrenceIndex({required this.timedByDate});
+
   final Map<String, List<GeneralEventOccurrence>> timedByDate;
 
   factory _TimelineOccurrenceIndex.build(
     List<GeneralEventOccurrence> occurrences,
     List<DateTime> days,
   ) {
-    final allDayByDate = <String, List<GeneralEventOccurrence>>{};
     final timedByDate = <String, List<GeneralEventOccurrence>>{};
-    if (days.isEmpty) {
-      return _TimelineOccurrenceIndex(
-        allDayByDate: allDayByDate,
-        timedByDate: timedByDate,
-      );
-    }
-
     for (final day in days) {
       final key = _calendarDateKey(day);
-      allDayByDate[key] = [];
       timedByDate[key] = [];
     }
     final firstDay = normalizeDateOnly(days.first);
@@ -1379,37 +1512,14 @@ class _TimelineOccurrenceIndex {
       }
 
       if (occurrence.isAllDay || !_sameDay(displayStart, displayEnd)) {
-        var bucketDay = normalizeDateOnly(displayStart);
-        if (bucketDay.isBefore(firstDay)) {
-          bucketDay = firstDay;
-        }
-        var lastBucketDay = normalizeDateOnly(
-          displayEnd.subtract(const Duration(microseconds: 1)),
-        );
-        if (lastBucketDay.isAfter(lastDay)) {
-          lastBucketDay = lastDay;
-        }
-        for (
-          var day = bucketDay;
-          !day.isAfter(lastBucketDay);
-          day = nextCalendarDate(day)
-        ) {
-          allDayByDate[_calendarDateKey(day)]?.add(occurrence);
-        }
         continue;
       }
 
       timedByDate[_calendarDateKey(displayStart)]?.add(occurrence);
     }
 
-    return _TimelineOccurrenceIndex(
-      allDayByDate: allDayByDate,
-      timedByDate: timedByDate,
-    );
+    return _TimelineOccurrenceIndex(timedByDate: timedByDate);
   }
-
-  List<GeneralEventOccurrence> allDayFor(DateTime day) =>
-      allDayByDate[_calendarDateKey(day)] ?? const [];
 
   List<GeneralEventOccurrence> timedFor(DateTime day) =>
       timedByDate[_calendarDateKey(day)] ?? const [];

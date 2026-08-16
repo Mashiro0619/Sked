@@ -65,6 +65,136 @@ void main() {
     );
   });
 
+  test('new events remember their category while edits preserve it', () async {
+    final storage = _MemoryTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'work',
+          schedules: [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+            GeneralSchedule(id: 'home', name: 'Home', events: []),
+          ],
+        ),
+      ),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+    await provider.load();
+
+    final created = GeneralEvent(
+      id: 'new_event',
+      calendarId: 'home',
+      title: 'Created',
+      startDateTimeIso: '2026-05-25T09:00:00.000',
+      endDateTimeIso: '2026-05-25T10:00:00.000',
+    );
+    await provider.saveGeneralEvent(created);
+
+    expect(provider.activeGeneralSchedule.id, 'home');
+    expect(storage.data!.generalMode.activeScheduleId, 'home');
+
+    await provider.switchGeneralSchedule('work');
+    await provider.saveGeneralEvent(created.copyWith(title: 'Edited'));
+
+    expect(provider.activeGeneralSchedule.id, 'work');
+    expect(storage.data!.generalMode.activeScheduleId, 'work');
+    expect(
+      provider.generalSchedules
+          .singleWhere((item) => item.id == 'home')
+          .events
+          .single
+          .title,
+      'Edited',
+    );
+  });
+
+  test(
+    'category visibility and deletion persist remembered fallbacks',
+    () async {
+      final storage = _MemoryTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+          generalMode: const GeneralScheduleData(
+            activeScheduleId: 'remembered',
+            schedules: [
+              GeneralSchedule(
+                id: 'hidden',
+                name: 'Hidden',
+                isVisible: false,
+                events: [],
+              ),
+              GeneralSchedule(id: 'remembered', name: 'Remembered', events: []),
+              GeneralSchedule(id: 'visible', name: 'Visible', events: []),
+            ],
+          ),
+        ),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+
+      await provider.updateGeneralScheduleVisibility('remembered', false);
+
+      expect(provider.activeGeneralSchedule.id, 'visible');
+      expect(storage.data!.generalMode.activeScheduleId, 'visible');
+
+      await provider.deleteGeneralSchedule('visible');
+
+      expect(provider.visibleGeneralSchedules, isEmpty);
+      expect(provider.activeGeneralSchedule.id, 'hidden');
+      expect(storage.data!.generalMode.activeScheduleId, 'hidden');
+    },
+  );
+
+  test(
+    'failed new-event save rolls back event and remembered category',
+    () async {
+      final initial = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
+        generalMode: const GeneralScheduleData(
+          activeScheduleId: 'work',
+          schedules: [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+            GeneralSchedule(id: 'home', name: 'Home', events: []),
+          ],
+        ),
+      );
+      final storage = _MemoryTimetableStorage(initial);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+      storage.nextSaveError = StateError('save failed');
+
+      await expectLater(
+        provider.saveGeneralEvent(
+          GeneralEvent(
+            id: 'unsaved',
+            calendarId: 'home',
+            title: 'Unsaved',
+            startDateTimeIso: '2026-05-25T09:00:00.000',
+            endDateTimeIso: '2026-05-25T10:00:00.000',
+          ),
+        ),
+        throwsStateError,
+      );
+
+      expect(provider.activeGeneralSchedule.id, 'work');
+      expect(provider.generalSchedules.expand((item) => item.events), isEmpty);
+      expect(storage.data!.generalMode.activeScheduleId, 'work');
+      expect(
+        storage.data!.generalMode.schedules.expand((item) => item.events),
+        isEmpty,
+      );
+    },
+  );
+
   test(
     'selected general date notifies immediately and defers persistence',
     () async {
@@ -431,6 +561,7 @@ void main() {
         source,
         scheduleIds: const ['replacement'],
         mode: GeneralScheduleImportMode.replaceActive,
+        replacementScheduleId: 'active',
       );
 
       final items = provider.generalReminderItems(
@@ -591,6 +722,7 @@ void main() {
       source,
       scheduleIds: const ['replacement'],
       mode: GeneralScheduleImportMode.replaceActive,
+      replacementScheduleId: activeId,
     );
 
     expect(result.importedCount, 1);
@@ -600,6 +732,64 @@ void main() {
       provider.activeGeneralSchedule.events.single.title,
       'Replacement Event',
     );
+  });
+
+  test('replacement imports reject invalid targets without mutation', () async {
+    final storage = _MemoryTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = TimetableProvider(
+      storage: storage,
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+    );
+    addTearDown(provider.dispose);
+    final source = encodeGeneralScheduleDataEnvelope(
+      const GeneralScheduleExportData(
+        schedules: [
+          GeneralSchedule(id: 'replacement', name: 'Replacement', events: []),
+        ],
+      ),
+    );
+    const icsSource = '''
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:replacement-event
+DTSTART:20260525T090000
+DTEND:20260525T100000
+SUMMARY:Replacement
+END:VEVENT
+END:VCALENDAR
+''';
+
+    await provider.load();
+    storage.saveCount = 0;
+    final before = storage.data!.generalMode.toJson();
+
+    for (final replacementId in <String?>[null, 'missing']) {
+      await expectLater(
+        provider.importSelectedGeneralSchedulesJson(
+          source,
+          scheduleIds: const ['replacement'],
+          mode: GeneralScheduleImportMode.replaceActive,
+          replacementScheduleId: replacementId,
+        ),
+        throwsFormatException,
+      );
+      await expectLater(
+        provider.importGeneralSchedulesIcs(
+          icsSource,
+          mode: GeneralScheduleImportMode.replaceActive,
+          replacementScheduleId: replacementId,
+        ),
+        throwsFormatException,
+      );
+    }
+
+    expect(storage.saveCount, 0);
+    expect(storage.data!.generalMode.toJson(), before);
+    expect(provider.generalSchedules, hasLength(1));
+    expect(provider.activeGeneralSchedule.name, isNot('Replacement'));
   });
 
   test(
@@ -685,7 +875,7 @@ END:VCALENDAR
           isA<FormatException>().having(
             (error) => error.message,
             'message',
-            '导入文件没有日程。',
+            '导入文件中没有分类。',
           ),
         ),
       );

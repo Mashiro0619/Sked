@@ -63,6 +63,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
     String source, {
     required List<String> scheduleIds,
     required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
     required String localeCode,
   }) {
     final imported = decodeGeneralScheduleDataEnvelope(
@@ -78,6 +79,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
       data,
       selected,
       mode: mode,
+      replacementScheduleId: replacementScheduleId,
       localeCode: localeCode,
     );
   }
@@ -86,6 +88,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
     GeneralScheduleData data,
     String source, {
     required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
     required String localeCode,
   }) {
     final imported = previewImportGeneralSchedulesIcs(
@@ -99,6 +102,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
       data,
       imported.schedules,
       mode: mode,
+      replacementScheduleId: replacementScheduleId,
       localeCode: localeCode,
       icsWarnings: imported.warningItems,
     );
@@ -138,6 +142,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
     GeneralScheduleData data,
     List<GeneralSchedule> selected, {
     required GeneralScheduleImportMode mode,
+    required String? replacementScheduleId,
     required String localeCode,
     List<GeneralCalendarIcsImportWarning> icsWarnings = const [],
   }) {
@@ -147,18 +152,26 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
           replaceActiveRequiresSingleScheduleMessage(localeCode: localeCode),
         );
       }
-      final current = data.activeScheduleOrNull;
+      final replacementId = replacementScheduleId?.trim() ?? '';
+      GeneralSchedule? current;
+      for (final schedule in data.schedules) {
+        if (schedule.id == replacementId) {
+          current = schedule;
+          break;
+        }
+      }
       if (current == null) {
         throw FormatException(
           noActiveScheduleToReplaceMessage(localeCode: localeCode),
         );
       }
+      final target = current;
       final existingEventIds = _generalEventIds(
-        data.schedules.where((schedule) => schedule.id != current.id),
+        data.schedules.where((schedule) => schedule.id != target.id),
       );
       final replaced = _sanitizeImportedGeneralSchedule(
         selected.first,
-        scheduleId: current.id,
+        scheduleId: target.id,
         existingEventIds: existingEventIds,
       );
       final updated = data
@@ -167,7 +180,7 @@ mixin _GeneralScheduleImportExport on _ImportExportServiceCore {
                 .where(
                   (item) => !_reminderKeyBelongsToSchedule(
                     item.occurrenceKey,
-                    current,
+                    target,
                   ),
                 )
                 .toList(),

@@ -21,6 +21,7 @@ import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
+import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
@@ -37,6 +38,19 @@ import 'timetable_display_settings_page.dart';
 import 'timetable_import_flow.dart';
 
 enum _ExportFormat { json, ics }
+
+List<String> _defaultGeneralScheduleSelectionIds(
+  List<GeneralSchedule> schedules,
+) {
+  final visibleIds = [
+    for (final schedule in schedules)
+      if (schedule.isVisible) schedule.id,
+  ];
+  if (visibleIds.isNotEmpty) {
+    return visibleIds;
+  }
+  return schedules.isEmpty ? const [] : [schedules.first.id];
+}
 
 enum _SettingsFlow {
   workspaceMode,
@@ -459,12 +473,31 @@ class _SettingsPageState extends State<SettingsPage> {
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    final mode = switch (provider.themeMode) {
+    final studentSummary = _themeSettingsForModeSummary(
+      provider.studentMode.themeMode,
+      provider.studentMode.themeColorMode,
+      l10n,
+    );
+    final generalSummary = _themeSettingsForModeSummary(
+      provider.generalMode.themeMode,
+      provider.generalMode.themeColorMode,
+      l10n,
+    );
+    return '${l10n.studentTimetable}: $studentSummary\n'
+        '${l10n.generalSchedule}: $generalSummary';
+  }
+
+  String _themeSettingsForModeSummary(
+    String themeMode,
+    String themeColorMode,
+    AppLocalizations l10n,
+  ) {
+    final mode = switch (themeMode) {
       'dark' => l10n.themeDark,
       'system' => l10n.themeFollowSystem,
       _ => l10n.themeLight,
     };
-    final colorMode = provider.themeColorMode == themeColorModeColorful
+    final colorMode = themeColorMode == themeColorModeColorful
         ? l10n.themeColorModeColorful
         : l10n.themeColorModeSingle;
     return '$mode / $colorMode';
@@ -1510,6 +1543,77 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<String?> _pickGeneralScheduleReplacementId({
+    required List<GeneralSchedule> schedules,
+  }) {
+    if (schedules.isEmpty) {
+      return Future<String?>.value();
+    }
+    var selectedId = _defaultGeneralScheduleSelectionIds(schedules).first;
+    return showExpressiveDialog<String>(
+      context: context,
+      builder: (context) {
+        var popped = false;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final l10n = AppLocalizations.of(context);
+            void popWith(String? value) {
+              if (popped) return;
+              popped = true;
+              Navigator.of(context).pop(value);
+            }
+
+            return AlertDialog(
+              title: Text(l10n.selectCategoryToReplace),
+              content: ExpressiveDialogContent(
+                maxWidth: 420,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 420),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: schedules.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final schedule = schedules[index];
+                      return ExpressiveDialogOption(
+                        selected: selectedId == schedule.id,
+                        leading: Icon(
+                          Icons.circle,
+                          size: 18,
+                          color: effectiveGeneralCalendarColor(
+                            context,
+                            schedule,
+                          ),
+                        ),
+                        title: Text(schedule.name),
+                        subtitle: Text(
+                          l10n.generalScheduleEventCount(
+                            schedule.events.length,
+                          ),
+                        ),
+                        onTap: () => setState(() => selectedId = schedule.id),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => popWith(null),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => popWith(selectedId),
+                  child: Text(l10n.replaceCategory),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _importGeneralSchedulesJsonFile(
     TimetableProvider provider,
   ) async {
@@ -1555,6 +1659,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (selectedIds == null || selectedIds.isEmpty) return false;
 
       var mode = GeneralScheduleImportMode.addAsNew;
+      String? replacementScheduleId;
       if (selectedIds.length == 1 &&
           provider.activeGeneralScheduleOrNull != null &&
           feedbackContext.mounted) {
@@ -1578,7 +1683,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 FilledButton(
                   onPressed: () => popWith('replace'),
-                  child: Text(l10n.save),
+                  child: Text(l10n.replaceCategory),
                 ),
               ],
             );
@@ -1588,6 +1693,12 @@ class _SettingsPageState extends State<SettingsPage> {
           return false;
         }
         if (choice == 'replace') {
+          replacementScheduleId = await _pickGeneralScheduleReplacementId(
+            schedules: provider.generalSchedules,
+          );
+          if (replacementScheduleId == null) {
+            return false;
+          }
           mode = GeneralScheduleImportMode.replaceActive;
         }
       }
@@ -1596,6 +1707,7 @@ class _SettingsPageState extends State<SettingsPage> {
         content,
         scheduleIds: selectedIds,
         mode: mode,
+        replacementScheduleId: replacementScheduleId,
       );
       if (feedbackContext.mounted) {
         ScaffoldMessenger.of(feedbackContext).showSnackBar(
@@ -1655,6 +1767,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final preview = provider.previewImportGeneralSchedulesIcs(content);
       if (!feedbackContext.mounted) return false;
       var mode = GeneralScheduleImportMode.addAsNew;
+      String? replacementScheduleId;
       if (preview.schedules.length == 1 &&
           provider.activeGeneralScheduleOrNull != null &&
           feedbackContext.mounted) {
@@ -1682,7 +1795,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 FilledButton(
                   onPressed: () => popWith('replace'),
-                  child: Text(l10n.save),
+                  child: Text(l10n.replaceCategory),
                 ),
               ],
             );
@@ -1692,12 +1805,19 @@ class _SettingsPageState extends State<SettingsPage> {
           return false;
         }
         if (choice == 'replace') {
+          replacementScheduleId = await _pickGeneralScheduleReplacementId(
+            schedules: provider.generalSchedules,
+          );
+          if (replacementScheduleId == null) {
+            return false;
+          }
           mode = GeneralScheduleImportMode.replaceActive;
         }
       }
       final result = await provider.importGeneralSchedulesIcs(
         content,
         mode: mode,
+        replacementScheduleId: replacementScheduleId,
       );
       if (feedbackContext.mounted) {
         ScaffoldMessenger.of(feedbackContext).showSnackBar(
@@ -1746,12 +1866,13 @@ class _SettingsPageState extends State<SettingsPage> {
     required bool share,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final activeId = provider.activeGeneralScheduleOrNull?.id;
     final selectedIds = await _pickGeneralScheduleIds(
       schedules: provider.generalSchedules,
       title: l10n.selectSchedulesToExport,
       confirmText: share ? l10n.share : l10n.save,
-      initialSelectedIds: activeId == null ? const [] : [activeId],
+      initialSelectedIds: _defaultGeneralScheduleSelectionIds(
+        provider.generalSchedules,
+      ),
     );
     if (selectedIds == null || selectedIds.isEmpty) return;
     try {
@@ -1774,14 +1895,15 @@ class _SettingsPageState extends State<SettingsPage> {
     required _ExportFormat format,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final activeId = provider.activeGeneralScheduleOrNull?.id;
     final selectedIds = await _pickGeneralScheduleIds(
       schedules: provider.generalSchedules,
       title: format == _ExportFormat.ics
           ? l10n.selectCalendarsToCopyIcs
           : l10n.selectSchedulesToExport,
       confirmText: l10n.copyText,
-      initialSelectedIds: activeId == null ? const [] : [activeId],
+      initialSelectedIds: _defaultGeneralScheduleSelectionIds(
+        provider.generalSchedules,
+      ),
     );
     if (selectedIds == null || selectedIds.isEmpty || !mounted) return;
     try {
@@ -1807,12 +1929,13 @@ class _SettingsPageState extends State<SettingsPage> {
     required bool share,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final activeId = provider.activeGeneralScheduleOrNull?.id;
     final selectedIds = await _pickGeneralScheduleIds(
       schedules: provider.generalSchedules,
       title: l10n.selectCalendarsToExportIcs,
       confirmText: share ? l10n.share : l10n.save,
-      initialSelectedIds: activeId == null ? const [] : [activeId],
+      initialSelectedIds: _defaultGeneralScheduleSelectionIds(
+        provider.generalSchedules,
+      ),
     );
     if (selectedIds == null || selectedIds.isEmpty) return;
     try {

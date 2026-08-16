@@ -98,7 +98,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         : 0;
     const filter = _GeneralOccurrenceFilter(query: '', colorValue: null);
 
-    final activeCalendar = provider.activeGeneralScheduleOrNull;
+    final visibleSchedules = snapshot.schedules
+        .where((schedule) => schedule.isVisible)
+        .toList(growable: false);
+    final categoryLabel = switch (visibleSchedules.length) {
+      0 => l10n.noVisibleCategories,
+      1 => visibleSchedules.single.name,
+      _ => l10n.visibleCategoryCount(visibleSchedules.length),
+    };
     final settingsAction = !widget.settingsEnabled || !widget.interactive
         ? null
         : widget.settingsAction ??
@@ -116,7 +123,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               vertical: constraints.maxHeight < 600 ? 6 : 8,
             ),
             title: _GeneralToolbarLayout(
-              schedule: activeCalendar,
+              categoryLabel: categoryLabel,
               toolbarWidthPolicy: snapshot.toolbarWidthPolicy,
               dateLabelFormat: snapshot.dateLabelFormat,
               showSettingsAction: widget.showSettingsAction,
@@ -595,7 +602,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         context: context,
         isDismissible: canDismiss,
         enableDrag: false,
-        maxWidth: 620,
+        maxWidth: appSheetWidthCompact,
         builder: (sheetContext) =>
             ChangeNotifierProvider<TimetableProvider>.value(
               value: provider,
@@ -632,13 +639,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
 
 class _GeneralCalendarSelector extends StatelessWidget {
   const _GeneralCalendarSelector({
-    required this.schedule,
+    required this.label,
     required this.disabled,
     required this.onPressed,
     required this.showIcon,
   });
 
-  final GeneralSchedule? schedule;
+  final String label;
   final bool disabled;
   final VoidCallback onPressed;
   final bool showIcon;
@@ -646,10 +653,9 @@ class _GeneralCalendarSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final name = schedule?.name ?? l10n.calendars;
     final labelStyle = Theme.of(context).textTheme.labelLarge;
     final labelPainter = TextPainter(
-      text: TextSpan(text: name, style: labelStyle),
+      text: TextSpan(text: label, style: labelStyle),
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
@@ -680,7 +686,7 @@ class _GeneralCalendarSelector extends StatelessWidget {
                       horizontal: showIcon ? 28 : 0,
                     ),
                     child: Text(
-                      name,
+                      label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -690,7 +696,7 @@ class _GeneralCalendarSelector extends StatelessWidget {
                 if (showIcon)
                   Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: const Icon(Icons.calendar_month_outlined, size: 20),
+                    child: const Icon(Icons.category_outlined, size: 20),
                   ),
               ],
             ),
@@ -703,7 +709,7 @@ class _GeneralCalendarSelector extends StatelessWidget {
 
 class _GeneralToolbarLayout extends StatelessWidget {
   const _GeneralToolbarLayout({
-    required this.schedule,
+    required this.categoryLabel,
     required this.toolbarWidthPolicy,
     required this.dateLabelFormat,
     required this.showSettingsAction,
@@ -722,7 +728,7 @@ class _GeneralToolbarLayout extends StatelessWidget {
     required this.onPickDate,
   });
 
-  final GeneralSchedule? schedule;
+  final String categoryLabel;
   final String toolbarWidthPolicy;
   final String dateLabelFormat;
   final bool showSettingsAction;
@@ -756,15 +762,14 @@ class _GeneralToolbarLayout extends StatelessWidget {
           final metrics = _GeneralToolbarMetrics.calculate(
             context: context,
             availableWidth: groupWidth,
-            scheduleName:
-                schedule?.name ?? AppLocalizations.of(context).calendars,
+            scheduleName: categoryLabel,
             policy: toolbarWidthPolicy,
             showSettingsAction: showSettingsAction,
           );
           final calendar = SizedBox(
             width: metrics.calendarWidth,
             child: _GeneralCalendarSelector(
-              schedule: schedule,
+              label: categoryLabel,
               disabled: calendarDisabled,
               onPressed: onOpenCalendar,
               showIcon: metrics.calendarShowIcon,
@@ -1618,10 +1623,6 @@ int _nowMinutes() {
 int _snapMinutes(int minutes, int gridMinutes) {
   final step = gridMinutes.clamp(15, 60).toInt();
   return (minutes / step).round() * step;
-}
-
-Color _readableColor(Color color) {
-  return color.computeLuminance() > 0.42 ? Colors.black87 : Colors.white;
 }
 
 int _nextCalendarColor(List<GeneralSchedule> schedules) {

@@ -386,7 +386,6 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
               startValue: formatMinutes(period.startMinutes),
               endLabel: l10n.endTime,
               endValue: formatMinutes(period.endMinutes),
-              error: invalid,
               enabled: !_timePickerOpen,
               onPickStart: () => _pickPeriodTime(index, isStart: true),
               onPickEnd: () => _pickPeriodTime(index, isStart: false),
@@ -1111,7 +1110,6 @@ class _PeriodTimeRange extends StatelessWidget {
     required this.startValue,
     required this.endLabel,
     required this.endValue,
-    required this.error,
     required this.enabled,
     required this.onPickStart,
     required this.onPickEnd,
@@ -1121,7 +1119,6 @@ class _PeriodTimeRange extends StatelessWidget {
   final String startValue;
   final String endLabel;
   final String endValue;
-  final bool error;
   final bool enabled;
   final VoidCallback? onPickStart;
   final VoidCallback? onPickEnd;
@@ -1132,16 +1129,11 @@ class _PeriodTimeRange extends StatelessWidget {
     final colors = theme.colorScheme;
     final shapeScheme = theme.extension<SkedShapeScheme>();
     final shape =
-        (shapeScheme?.control ??
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))
-            .copyWith(
-              side: BorderSide(
-                color: error ? colors.error : colors.outlineVariant,
-                width: error ? 1.2 : 0.8,
-              ),
-            );
+        shapeScheme?.control ??
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
     return Material(
-      color: colors.surfaceContainerHighest.withValues(alpha: 0.72),
+      key: const ValueKey('period-time-range'),
+      type: MaterialType.transparency,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
@@ -1197,7 +1189,6 @@ class _PeriodTimeRange extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(width: double.infinity, child: start),
-                Divider(height: 1, thickness: 1, color: colors.outlineVariant),
                 SizedBox(width: double.infinity, child: end),
               ],
             );

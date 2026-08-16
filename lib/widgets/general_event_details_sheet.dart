@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../utils/general_schedule_colors.dart';
+import 'expressive_dialog.dart';
 import 'ui_command.dart';
 
 class GeneralEventDetailsSheet extends StatefulWidget {
@@ -54,6 +55,134 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     }
   }
 
+  Future<void> _confirmDelete() async {
+    if (_actionTriggered) {
+      return;
+    }
+    setState(() => _actionTriggered = true);
+    final choice = await _showDeleteDialog();
+    if (!mounted) {
+      return;
+    }
+    final action = switch (choice) {
+      _DeleteEventAction.thisOccurrence => widget.onDeleteThis,
+      _DeleteEventAction.thisAndFollowing => widget.onDeleteFuture,
+      _DeleteEventAction.entireSeries => widget.onDeleteAll,
+      null => null,
+    };
+    if (action == null) {
+      setState(() => _actionTriggered = false);
+      return;
+    }
+    final succeeded = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Delete general event',
+      command: () async => action(),
+    );
+    if (!succeeded && mounted) {
+      setState(() => _actionTriggered = false);
+    }
+  }
+
+  Future<_DeleteEventAction?> _showDeleteDialog() {
+    final event = widget.occurrence.event;
+    final isRepeating = event.recurrenceRule.isRepeating;
+    return showExpressiveDialog<_DeleteEventAction>(
+      context: context,
+      waitForTransitionComplete: true,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        var popped = false;
+        void popWith([_DeleteEventAction? action]) {
+          if (popped) return;
+          popped = true;
+          Navigator.of(dialogContext).pop(action);
+        }
+
+        if (!isRepeating) {
+          return AlertDialog(
+            key: const ValueKey('general-event-delete-dialog'),
+            title: Text(l10n.deleteEventTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.deleteEventConfirmation),
+                const SizedBox(height: 8),
+                Text(
+                  event.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(dialogContext).textTheme.titleSmall,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: popWith, child: Text(l10n.cancel)),
+              FilledButton(
+                key: const ValueKey('general-event-confirm-delete'),
+                onPressed: () => popWith(_DeleteEventAction.thisOccurrence),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                  foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+                ),
+                child: Text(l10n.delete),
+              ),
+            ],
+          );
+        }
+        return AlertDialog(
+          key: const ValueKey('general-event-delete-scope-dialog'),
+          title: Text(l10n.deleteRecurringEventTitle),
+          contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          content: ExpressiveDialogContent(
+            maxWidth: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  child: Text(
+                    event.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(dialogContext).textTheme.bodyMedium,
+                  ),
+                ),
+                if (widget.onDeleteThis != null)
+                  ExpressiveDialogOption(
+                    key: const ValueKey('general-event-delete-this'),
+                    leading: const Icon(Icons.delete_outline),
+                    title: Text(l10n.deleteThisOccurrence),
+                    onTap: () => popWith(_DeleteEventAction.thisOccurrence),
+                  ),
+                if (widget.occurrence.sequence > 0 &&
+                    widget.onDeleteFuture != null)
+                  ExpressiveDialogOption(
+                    key: const ValueKey(
+                      'general-event-delete-this-and-following',
+                    ),
+                    leading: const Icon(Icons.delete_sweep_outlined),
+                    title: Text(l10n.deleteFutureOccurrences),
+                    onTap: () => popWith(_DeleteEventAction.thisAndFollowing),
+                  ),
+                if (widget.onDeleteAll != null)
+                  ExpressiveDialogOption(
+                    key: const ValueKey('general-event-delete-entire-series'),
+                    leading: const Icon(Icons.delete_forever_outlined),
+                    title: Text(l10n.deleteAllOccurrences),
+                    onTap: () => popWith(_DeleteEventAction.entireSeries),
+                  ),
+              ],
+            ),
+          ),
+          actions: [TextButton(onPressed: popWith, child: Text(l10n.cancel))],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,11 +190,16 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     final event = widget.occurrence.event;
     final color = effectiveGeneralOccurrenceColor(context, widget.occurrence);
     final isRepeating = event.recurrenceRule.isRepeating;
+    final canDelete = isRepeating
+        ? widget.onDeleteThis != null ||
+              widget.onDeleteAll != null ||
+              (widget.occurrence.sequence > 0 && widget.onDeleteFuture != null)
+        : widget.onDeleteThis != null;
 
     final content = SafeArea(
       top: false,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -106,9 +240,18 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                     ],
                   ),
                 ),
+                if (widget.onEdit != null)
+                  _EventIconButton(
+                    key: const ValueKey('general-event-edit-action'),
+                    tooltip: l10n.editEvent,
+                    onPressed: _actionTriggered
+                        ? null
+                        : () => unawaited(_runAction(widget.onEdit)),
+                    icon: Icons.edit_outlined,
+                  ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
             _InfoRow(
               icon: Icons.access_time,
               value: _formatOccurrenceTime(widget.occurrence, l10n),
@@ -128,117 +271,70 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
             if (event.location.isNotEmpty)
               _InfoRow(icon: Icons.location_on_outlined, value: event.location),
             if (event.notes.isNotEmpty) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Text(
                 l10n.eventNotes,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withAlpha(180),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(event.notes),
             ],
-            const SizedBox(height: 24),
-            _EventActionSection(
-              primaryActions: [
-                if (widget.onEdit != null)
-                  FilledButton.icon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onEdit));
-                          },
-                    icon: const Icon(Icons.edit_outlined),
-                    label: _ActionLabel(l10n.editEvent),
-                    style: _filledActionStyle(theme),
-                  ),
-              ],
-              secondaryActions: [
-                if (widget.onDuplicate != null)
-                  FilledButton.tonalIcon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onDuplicate));
-                          },
-                    icon: const Icon(Icons.content_copy_outlined),
-                    label: _ActionLabel(l10n.duplicateEvent),
-                    style: _filledActionStyle(theme),
-                  ),
-                if (event.reminders.isNotEmpty &&
-                    !widget.isReminderHandled &&
-                    widget.onDismissReminder != null)
-                  OutlinedButton.icon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onDismissReminder));
-                          },
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: _ActionLabel(l10n.markReminderHandled),
-                    style: _outlinedActionStyle(theme),
-                  ),
-                if (event.reminders.isNotEmpty &&
-                    widget.isReminderHandled &&
-                    widget.onRestoreReminder != null)
-                  OutlinedButton.icon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onRestoreReminder));
-                          },
-                    icon: const Icon(Icons.restore_outlined),
-                    label: _ActionLabel(l10n.restoreReminder),
-                    style: _outlinedActionStyle(theme),
-                  ),
-              ],
-              destructiveActions: [
-                if (widget.onDeleteThis != null)
-                  OutlinedButton.icon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onDeleteThis));
-                          },
-                    icon: const Icon(Icons.delete_outline),
-                    label: _ActionLabel(
-                      isRepeating ? l10n.deleteThisOccurrence : l10n.delete,
+            if (widget.onDuplicate != null ||
+                (event.reminders.isNotEmpty &&
+                    (widget.onDismissReminder != null ||
+                        widget.onRestoreReminder != null)) ||
+                canDelete) ...[
+              const SizedBox(height: 16),
+              _EventActionBar(
+                children: [
+                  if (widget.onDuplicate != null)
+                    _EventIconButton(
+                      key: const ValueKey('general-event-duplicate-action'),
+                      tooltip: l10n.duplicateEvent,
+                      onPressed: _actionTriggered
+                          ? null
+                          : () => unawaited(_runAction(widget.onDuplicate)),
+                      icon: Icons.content_copy_outlined,
                     ),
-                    style: _outlinedActionStyle(
-                      theme,
-                      foregroundColor: theme.colorScheme.error,
+                  if (event.reminders.isNotEmpty &&
+                      !widget.isReminderHandled &&
+                      widget.onDismissReminder != null)
+                    _EventIconButton(
+                      key: const ValueKey('general-event-reminder-action'),
+                      tooltip: l10n.markReminderHandled,
+                      onPressed: _actionTriggered
+                          ? null
+                          : () =>
+                                unawaited(_runAction(widget.onDismissReminder)),
+                      icon: Icons.check_circle_outline,
                     ),
-                  ),
-                if (isRepeating && widget.onDeleteFuture != null)
-                  OutlinedButton.icon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onDeleteFuture));
-                          },
-                    icon: const Icon(Icons.delete_sweep_outlined),
-                    label: _ActionLabel(l10n.deleteFutureOccurrences),
-                    style: _outlinedActionStyle(
-                      theme,
-                      foregroundColor: theme.colorScheme.error,
+                  if (event.reminders.isNotEmpty &&
+                      widget.isReminderHandled &&
+                      widget.onRestoreReminder != null)
+                    _EventIconButton(
+                      key: const ValueKey('general-event-reminder-action'),
+                      tooltip: l10n.restoreReminder,
+                      onPressed: _actionTriggered
+                          ? null
+                          : () =>
+                                unawaited(_runAction(widget.onRestoreReminder)),
+                      icon: Icons.restore_outlined,
                     ),
-                  ),
-                if (isRepeating && widget.onDeleteAll != null)
-                  OutlinedButton.icon(
-                    onPressed: _actionTriggered
-                        ? null
-                        : () {
-                            unawaited(_runAction(widget.onDeleteAll));
-                          },
-                    icon: const Icon(Icons.delete_forever_outlined),
-                    label: _ActionLabel(l10n.deleteAllOccurrences),
-                    style: _outlinedActionStyle(
-                      theme,
-                      foregroundColor: theme.colorScheme.error,
+                  if (canDelete)
+                    _EventIconButton(
+                      key: const ValueKey('general-event-delete-action'),
+                      tooltip: l10n.delete,
+                      color: theme.colorScheme.error,
+                      onPressed: _actionTriggered
+                          ? null
+                          : () => unawaited(_confirmDelete()),
+                      icon: Icons.delete_outline,
                     ),
-                  ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -247,124 +343,54 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
   }
 }
 
-class _EventActionSection extends StatelessWidget {
-  const _EventActionSection({
-    required this.primaryActions,
-    required this.secondaryActions,
-    required this.destructiveActions,
+enum _DeleteEventAction { thisOccurrence, thisAndFollowing, entireSeries }
+
+class _EventIconButton extends StatelessWidget {
+  const _EventIconButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.color,
   });
 
-  static const _spacing = 12.0;
-  static const _height = 52.0;
-  static const _singleColumnBreakpoint = 340.0;
-
-  final List<Widget> primaryActions;
-  final List<Widget> secondaryActions;
-  final List<Widget> destructiveActions;
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    if (primaryActions.isEmpty &&
-        secondaryActions.isEmpty &&
-        destructiveActions.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (primaryActions.isNotEmpty)
-          _ActionWrap(actions: primaryActions, maxColumns: 1),
-        if (secondaryActions.isNotEmpty) ...[
-          if (primaryActions.isNotEmpty)
-            const SizedBox(height: _EventActionSection._spacing),
-          _ActionWrap(actions: secondaryActions, maxColumns: 2),
-        ],
-        if (destructiveActions.isNotEmpty) ...[
-          if (primaryActions.isNotEmpty || secondaryActions.isNotEmpty)
-            const SizedBox(height: _EventActionSection._spacing),
-          _ActionWrap(actions: destructiveActions, maxColumns: 1),
-        ],
-      ],
+    return SizedBox.square(
+      dimension: 48,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        color: color,
+        icon: Icon(icon),
+      ),
     );
   }
 }
 
-class _ActionWrap extends StatelessWidget {
-  const _ActionWrap({required this.actions, required this.maxColumns});
+class _EventActionBar extends StatelessWidget {
+  const _EventActionBar({required this.children});
 
-  final List<Widget> actions;
-  final int maxColumns;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns =
-            constraints.maxWidth <
-                    _EventActionSection._singleColumnBreakpoint ||
-                maxColumns <= 1 ||
-                actions.length == 1
-            ? 1
-            : maxColumns;
-        final itemWidth = columns == 1
-            ? constraints.maxWidth
-            : (constraints.maxWidth -
-                      _EventActionSection._spacing * (columns - 1)) /
-                  columns;
-        return Wrap(
-          spacing: _EventActionSection._spacing,
-          runSpacing: _EventActionSection._spacing,
-          children: [
-            for (final action in actions)
-              SizedBox(
-                width: itemWidth,
-                height: _EventActionSection._height,
-                child: action,
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _ActionLabel extends StatelessWidget {
-  const _ActionLabel(this.text);
-
-  final String text;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: Material(
+        key: const ValueKey('general-event-action-bar'),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Row(mainAxisSize: MainAxisSize.min, children: children),
+      ),
     );
   }
-}
-
-ButtonStyle _filledActionStyle(ThemeData theme) {
-  return FilledButton.styleFrom(
-    minimumSize: const Size.fromHeight(_EventActionSection._height),
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-    textStyle: theme.textTheme.labelLarge?.copyWith(
-      fontWeight: FontWeight.w700,
-    ),
-  );
-}
-
-ButtonStyle _outlinedActionStyle(ThemeData theme, {Color? foregroundColor}) {
-  return OutlinedButton.styleFrom(
-    foregroundColor: foregroundColor,
-    minimumSize: const Size.fromHeight(_EventActionSection._height),
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-    textStyle: theme.textTheme.labelLarge?.copyWith(
-      fontWeight: FontWeight.w700,
-    ),
-  );
 }
 
 class _InfoRow extends StatelessWidget {
@@ -377,7 +403,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -386,7 +412,7 @@ class _InfoRow extends StatelessWidget {
             size: 19,
             color: theme.colorScheme.onSurface.withAlpha(160),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(child: Text(value)),
         ],
       ),

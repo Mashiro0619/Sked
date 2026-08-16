@@ -27,25 +27,25 @@ class _ColorfulThemeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _ColorSettingsGroup(
+          title: AppLocalizations.of(context).themeColorUiColors,
+          children: [
+            for (final key in [
+              colorfulUiPrimaryKey,
+              colorfulUiSecondaryKey,
+              colorfulUiTertiaryKey,
+              if (provider.isStudentMode) colorfulCourseTextColorKey,
+            ])
+              _ColorValueTile(
+                key: ValueKey('theme-ui-color-$key'),
+                title: _uiColorLabel(context, key),
+                colorValue: _effectiveUiColorValue(context, provider, key),
+                onTap: () => onPickUiColor(key),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         if (provider.isStudentMode) ...[
-          _ColorSettingsGroup(
-            title: AppLocalizations.of(context).themeColorUiColors,
-            children: [
-              for (final key in const [
-                colorfulUiPrimaryKey,
-                colorfulUiSecondaryKey,
-                colorfulUiTertiaryKey,
-                colorfulCourseTextColorKey,
-              ])
-                _ColorValueTile(
-                  key: ValueKey('theme-ui-color-$key'),
-                  title: _uiColorLabel(context, key),
-                  colorValue: _effectiveUiColorValue(context, provider, key),
-                  onTap: () => onPickUiColor(key),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
           _ColorSettingsGroup(
             title: AppLocalizations.of(context).themeColorCourseColors,
             children: courseNames.isEmpty

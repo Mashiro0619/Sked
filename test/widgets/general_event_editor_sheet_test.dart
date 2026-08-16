@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 
@@ -62,6 +63,25 @@ void _setTestViewport(WidgetTester tester, Size size) {
 void _resetTestViewport(WidgetTester tester) {
   tester.view.resetPhysicalSize();
   tester.view.resetDevicePixelRatio();
+}
+
+Future<FocusNode> _focusTextFormField(WidgetTester tester, Finder field) async {
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.showKeyboard(field);
+  await tester.pump();
+  final editable = tester.widget<EditableText>(
+    find.descendant(of: field, matching: find.byType(EditableText)),
+  );
+  expect(editable.focusNode.hasFocus, isTrue);
+  expect(tester.testTextInput.isVisible, isTrue);
+  return editable.focusNode;
+}
+
+void _expectInputFocusDismissed(WidgetTester tester, FocusNode previousFocus) {
+  expect(previousFocus.hasFocus, isFalse);
+  expect(FocusManager.instance.primaryFocus, isNot(same(previousFocus)));
+  expect(tester.testTextInput.isVisible, isFalse);
 }
 
 void main() {
@@ -609,6 +629,181 @@ void main() {
     expect(find.byType(DatePickerDialog), findsNothing);
   });
 
+  testWidgets(
+    'secondary pickers do not restore a previously focused editor field',
+    (tester) async {
+      GeneralEvent? savedEvent;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                onPressed: () => showAppModalSheet<void>(
+                  context: context,
+                  enableDrag: false,
+                  builder: (_) => GeneralEventEditorSheet(
+                    calendars: const [
+                      GeneralSchedule(id: 'work', name: 'Work', events: []),
+                    ],
+                    activeCalendarId: 'work',
+                    onSave: (event) async => savedEvent = event,
+                  ),
+                ),
+                child: const Text('Open event editor'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open event editor'));
+      await tester.pumpAndSettle();
+      final editor = find.byType(GeneralEventEditorSheet);
+      final l10n = AppLocalizations.of(tester.element(editor));
+      final titleField = find.byType(TextFormField).first;
+      await tester.enterText(titleField, 'Focus-safe draft');
+
+      Future<void> expectDismissedAfter(
+        Future<void> Function() interaction,
+      ) async {
+        final previousFocus = await _focusTextFormField(tester, titleField);
+        await interaction();
+        _expectInputFocusDismissed(tester, previousFocus);
+        expect(find.text('Focus-safe draft'), findsOneWidget);
+      }
+
+      await expectDismissedAfter(() async {
+        final recurrenceField = find.byKey(
+          const ValueKey('event-recurrence-field'),
+        );
+        await tester.ensureVisible(recurrenceField);
+        await tester.tap(recurrenceField);
+        await tester.pumpAndSettle();
+        await tester.tap(_dialogTextButton(l10n.cancel));
+        await tester.pumpAndSettle();
+      });
+
+      await expectDismissedAfter(() async {
+        final reminderField = find.byKey(
+          const ValueKey('event-reminder-field'),
+        );
+        await tester.ensureVisible(reminderField);
+        await tester.tap(reminderField);
+        await tester.pumpAndSettle();
+        await tester.tap(_dialogTextButton(l10n.cancel));
+        await tester.pumpAndSettle();
+      });
+
+      await expectDismissedAfter(() async {
+        final dateButton = find.byTooltip('Pick date').first;
+        await tester.ensureVisible(dateButton);
+        await tester.tap(dateButton);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DatePickerDialog),
+            matching: find.widgetWithText(TextButton, l10n.cancel),
+          ),
+        );
+        await tester.pumpAndSettle();
+      });
+
+      await expectDismissedAfter(() async {
+        final timeButton = find.byTooltip('Pick time').first;
+        await tester.ensureVisible(timeButton);
+        await tester.tap(timeButton);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(TimePickerDialog),
+            matching: find.widgetWithText(TextButton, l10n.cancel),
+          ),
+        );
+        await tester.pumpAndSettle();
+      });
+
+      await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+      await tester.pumpAndSettle();
+      expect(savedEvent?.title, 'Focus-safe draft');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'recurrence end-date picker does not restore repeat-count input focus',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                onPressed: () => showAppModalSheet<void>(
+                  context: context,
+                  enableDrag: false,
+                  builder: (_) => GeneralEventEditorSheet(
+                    calendars: const [
+                      GeneralSchedule(id: 'work', name: 'Work', events: []),
+                    ],
+                    activeCalendarId: 'work',
+                  ),
+                ),
+                child: const Text('Open event editor'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open event editor'));
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(GeneralEventEditorSheet)),
+      );
+      final recurrenceField = find.byKey(
+        const ValueKey('event-recurrence-field'),
+      );
+      await tester.ensureVisible(recurrenceField);
+      await tester.tap(recurrenceField);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.recurrenceWeekly).last);
+      await tester.pumpAndSettle();
+
+      final repeatCountField = find.widgetWithText(
+        TextFormField,
+        l10n.recurrenceRepeatCount,
+      );
+      await tester.ensureVisible(repeatCountField);
+      await tester.enterText(repeatCountField, '4');
+      final previousFocus = await _focusTextFormField(tester, repeatCountField);
+
+      final endDateButton = find.widgetWithText(
+        FilledButton,
+        l10n.recurrenceEndDate,
+      );
+      await tester.ensureVisible(endDateButton);
+      await tester.tap(endDateButton);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.widgetWithText(TextButton, l10n.cancel),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      _expectInputFocusDismissed(tester, previousFocus);
+      expect(find.widgetWithText(TextFormField, '4'), findsOneWidget);
+      await tester.tap(_dialogTextButton(l10n.cancel));
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('recurrence end picker starts no earlier than event start', (
     tester,
   ) async {
@@ -814,12 +1009,27 @@ void main() {
     await tester.tap(find.text(l10n.recurrenceCustom).last);
     await tester.pumpAndSettle();
 
-    final intervalMenu = find.byType(SkedDropdownMenu<int>);
-    await tester.ensureVisible(intervalMenu);
-    await tester.tap(intervalMenu);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('3').last);
-    await tester.pumpAndSettle();
+    final intervalStepper = find.byKey(
+      const ValueKey('recurrence-interval-stepper'),
+    );
+    final intervalIncrement = find.byKey(
+      const ValueKey('recurrence-interval-increment'),
+    );
+    await tester.ensureVisible(intervalStepper);
+    await tester.tap(intervalIncrement);
+    await tester.pump();
+    await tester.tap(intervalIncrement);
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey('recurrence-interval-value')),
+          )
+          .controller
+          ?.text,
+      '3',
+    );
+    expect(find.byType(SkedDropdownMenu<int>), findsNothing);
 
     final unitMenu = find.byType(SkedDropdownMenu<GeneralEventRecurrenceUnit>);
     await tester.ensureVisible(unitMenu);
@@ -866,6 +1076,129 @@ void main() {
     expect(savedEvent?.recurrenceRule.unit, GeneralEventRecurrenceUnit.month);
     expect(savedEvent?.recurrenceRule.untilDateIso, '2026-08-31');
     expect(savedEvent?.recurrenceRule.count, 5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('custom recurrence interval enforces the model boundaries', (
+    tester,
+  ) async {
+    GeneralEvent? savedEvent;
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+          initialEvent: GeneralEvent(
+            id: 'event',
+            calendarId: 'work',
+            title: 'Planning',
+            startDateTimeIso: '2026-05-25T09:00:00.000',
+            endDateTimeIso: '2026-05-25T10:00:00.000',
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.custom,
+            ),
+          ),
+          onSave: (event) async => savedEvent = event,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(GeneralEventEditorSheet)),
+    );
+
+    final recurrenceField = find.byKey(
+      const ValueKey('event-recurrence-field'),
+    );
+    await tester.ensureVisible(recurrenceField);
+    await tester.tap(recurrenceField);
+    await tester.pumpAndSettle();
+
+    final decrement = find.byKey(
+      const ValueKey('recurrence-interval-decrement'),
+    );
+    final valueField = find.byKey(const ValueKey('recurrence-interval-value'));
+    final increment = find.byKey(
+      const ValueKey('recurrence-interval-increment'),
+    );
+    expect(tester.widget<IconButton>(decrement).onPressed, isNull);
+
+    await tester.enterText(valueField, '999');
+    await tester.pump();
+    expect(tester.widget<TextField>(valueField).controller?.text, '999');
+    expect(tester.widget<IconButton>(increment).onPressed, isNull);
+
+    await tester.tap(find.widgetWithText(FilledButton, l10n.confirm));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, l10n.save));
+    await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+    await tester.pumpAndSettle();
+
+    expect(savedEvent?.recurrenceRule.interval, 999);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('custom recurrence interval fits compact 2x text layouts', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(320, 568));
+    addTearDown(() => _resetTestViewport(tester));
+    await tester.pumpWidget(
+      _localizedCompactApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+          initialEvent: GeneralEvent(
+            id: 'event',
+            calendarId: 'work',
+            title: 'Planning',
+            startDateTimeIso: '2026-05-25T09:00:00.000',
+            endDateTimeIso: '2026-05-25T10:00:00.000',
+            recurrenceRule: const GeneralEventRecurrenceRule(
+              type: GeneralEventRecurrence.custom,
+              interval: 12,
+            ),
+          ),
+        ),
+        textScaler: const TextScaler.linear(2),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final recurrenceField = find.byKey(
+      const ValueKey('event-recurrence-field'),
+    );
+    await tester.ensureVisible(recurrenceField);
+    await tester.tap(recurrenceField);
+    await tester.pumpAndSettle();
+
+    final stepper = find.byKey(const ValueKey('recurrence-interval-stepper'));
+    final decrement = find.byKey(
+      const ValueKey('recurrence-interval-decrement'),
+    );
+    final increment = find.byKey(
+      const ValueKey('recurrence-interval-increment'),
+    );
+    await tester.ensureVisible(stepper);
+    await tester.pumpAndSettle();
+
+    final dialogRect = tester.getRect(_dialogSurface());
+    final stepperRect = tester.getRect(stepper);
+    expect(stepperRect.left, greaterThanOrEqualTo(dialogRect.left));
+    expect(stepperRect.right, lessThanOrEqualTo(dialogRect.right));
+    expect(tester.getSize(decrement).width, greaterThanOrEqualTo(48));
+    expect(tester.getSize(decrement).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(increment).width, greaterThanOrEqualTo(48));
+    expect(tester.getSize(increment).height, greaterThanOrEqualTo(48));
+    expect(find.byType(SkedDropdownMenu<int>), findsNothing);
+    expect(
+      find.byType(SkedDropdownMenu<GeneralEventRecurrenceUnit>),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

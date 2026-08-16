@@ -7,10 +7,12 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../theme/sked_expressive_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/sked_expressive_components.dart';
 import '../widgets/ui_command.dart';
 
 part 'theme_settings_color_sections.dart';
@@ -27,6 +29,7 @@ const _themeSeedOptions = <int>[
   0xFFF9A825,
   0xFFEF6C00,
   0xFFF4511E,
+  0xFFD32F2F,
   0xFFD81B60,
   0xFFC2185B,
   0xFF6D4C41,
@@ -146,19 +149,100 @@ String _generalMonthTextColorLabel(BuildContext context, String key) {
 }
 
 class _SegmentOption {
-  const _SegmentOption({
-    required this.value,
-    required this.icon,
-    required this.label,
-  });
+  const _SegmentOption({required this.value, required this.label});
 
   final String value;
-  final IconData icon;
   final String label;
 }
 
 class _ResponsiveSegmentedButton extends StatelessWidget {
   const _ResponsiveSegmentedButton({
+    super.key,
+    required this.segments,
+    required this.selected,
+    required this.onSelectionChanged,
+    this.choiceListKey,
+  });
+
+  final List<_SegmentOption> segments;
+  final Set<String> selected;
+  final ValueChanged<Set<String>> onSelectionChanged;
+  final Key? choiceListKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final textStyle = theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+        );
+        final textScaler = MediaQuery.textScalerOf(context);
+        final direction = Directionality.of(context);
+        final segmentWidth = constraints.maxWidth / segments.length;
+        const horizontalLabelPadding = 8.0;
+        final labelsFit =
+            constraints.maxWidth.isFinite &&
+            segments.every((segment) {
+              final painter = TextPainter(
+                text: TextSpan(text: segment.label, style: textStyle),
+                textDirection: direction,
+                textScaler: textScaler,
+                locale: Localizations.maybeLocaleOf(context),
+                maxLines: 1,
+              )..layout();
+              return painter.width <=
+                  (segmentWidth - horizontalLabelPadding).clamp(
+                    0.0,
+                    double.infinity,
+                  );
+            });
+        final buttonSegments = [
+          for (final segment in segments)
+            ButtonSegment<String>(
+              value: segment.value,
+              label: Text(
+                segment.label,
+                maxLines: labelsFit ? 1 : null,
+                softWrap: !labelsFit,
+                overflow: labelsFit ? TextOverflow.clip : null,
+                textAlign: TextAlign.center,
+              ),
+              tooltip: segment.label,
+            ),
+        ];
+        final style = ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          ),
+          textStyle: WidgetStatePropertyAll(textStyle),
+        );
+        if (!labelsFit) {
+          return _ConnectedSingleChoiceList(
+            key: choiceListKey,
+            segments: segments,
+            selected: selected,
+            onSelectionChanged: onSelectionChanged,
+          );
+        }
+        return SkedExpressiveSegmentedButton<String>(
+          expandedInsets: EdgeInsets.zero,
+          segments: buttonSegments,
+          selected: selected,
+          showSelectedIcon: false,
+          movingIndicator: true,
+          movingIndicatorFillsSegment: true,
+          style: style,
+          onSelectionChanged: onSelectionChanged,
+        );
+      },
+    );
+  }
+}
+
+class _ConnectedSingleChoiceList extends StatelessWidget {
+  const _ConnectedSingleChoiceList({
     super.key,
     required this.segments,
     required this.selected,
@@ -171,27 +255,87 @@ class _ResponsiveSegmentedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 480;
-    return SegmentedButton<String>(
-      expandedInsets: EdgeInsets.zero,
-      segments: [
-        for (final segment in segments)
-          ButtonSegment<String>(
-            value: segment.value,
-            icon: Icon(segment.icon),
-            label: compact ? null : Text(segment.label),
-            tooltip: segment.label,
-          ),
-      ],
+    final colors = Theme.of(context).colorScheme;
+    final shapes = skedShapeSchemeOf(context);
+    return Material(
+      color: colors.surfaceContainerLow,
+      shape: shapes.container,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < segments.length; index++) ...[
+            if (index > 0)
+              Divider(
+                height: 1,
+                color: colors.outlineVariant.withValues(alpha: 0.55),
+              ),
+            _ConnectedSingleChoiceRow(
+              segment: segments[index],
+              selected: selected.contains(segments[index].value),
+              onTap: () => onSelectionChanged({segments[index].value}),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectedSingleChoiceRow extends StatelessWidget {
+  const _ConnectedSingleChoiceRow({
+    required this.segment,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _SegmentOption segment;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Semantics(
+      button: true,
       selected: selected,
-      showSelectedIcon: false,
-      style: compact
-          ? SegmentedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-            )
-          : null,
-      onSelectionChanged: onSelectionChanged,
+      inMutuallyExclusiveGroup: true,
+      label: segment.label,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: ExpressiveTap(
+          onTap: onTap,
+          borderRadius: BorderRadius.zero,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      segment.label,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    selected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: selected ? colors.primary : colors.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -209,6 +353,17 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   void _updateSetting(String debugLabel, Future<void> Function() command) {
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
+  }
+
+  void _switchWorkspace(TimetableProvider provider, String value) {
+    final targetMode = value == AppMode.general.value
+        ? AppMode.general
+        : AppMode.student;
+    if (targetMode == provider.activeMode) return;
+    _updateSetting(
+      'Switch theme workspace',
+      () => provider.switchMode(targetMode),
+    );
   }
 
   Future<void> _openOutlineSettingsPage(
@@ -243,6 +398,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
             ? _derivedOutlineColorValue(provider.themeSeedColorValue)
             : provider.liveCourseOutlineColorValue;
         final outlineWidth = provider.liveCourseOutlineWidth;
+        final switcherDuration = SkedMotionPolicy.of(context)
+            .effects(SkedMotionSpeed.fast);
         return Scaffold(
           appBar: AppBar(title: Text(l10n.theme)),
           body: SafeArea(
@@ -257,81 +414,105 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
-                      firstColumnSectionIndices: const {0},
+                      scrollViewKey: const PageStorageKey(
+                        'theme-settings-scroll-view',
+                      ),
+                      firstColumnSectionIndices: const {0, 1, 2},
                       children: [
-                        SettingsSectionHeader(title: l10n.theme),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _ResponsiveSegmentedButton(
-                            key: const ValueKey(
-                              'theme-brightness-mode-segmented',
-                            ),
-                            segments: [
-                              _SegmentOption(
-                                value: 'system',
-                                icon: Icons.settings_suggest_outlined,
-                                label: l10n.themeFollowSystem,
-                              ),
-                              _SegmentOption(
-                                value: 'light',
-                                icon: Icons.light_mode_outlined,
-                                label: l10n.themeLight,
-                              ),
-                              _SegmentOption(
-                                value: 'dark',
-                                icon: Icons.dark_mode_outlined,
-                                label: l10n.themeDark,
-                              ),
-                            ],
-                            selected: {provider.themeMode},
-                            onSelectionChanged: (selection) {
-                              if (selection.isEmpty) {
-                                return;
-                              }
-                              _updateSetting(
-                                'Update theme brightness mode',
-                                () => provider.updateThemeMode(selection.first),
-                              );
-                            },
+                        SettingsSectionHeader(
+                          title: l10n.settingsSectionWorkspace,
+                        ),
+                        _ResponsiveSegmentedButton(
+                          key: const ValueKey('theme-workspace-mode-segmented'),
+                          choiceListKey: const ValueKey(
+                            'theme-workspace-mode-choice-list',
                           ),
+                          segments: [
+                            _SegmentOption(
+                              value: AppMode.student.value,
+                              label: l10n.timetable,
+                            ),
+                            _SegmentOption(
+                              value: AppMode.general.value,
+                              label: l10n.themeWorkspaceSchedule,
+                            ),
+                          ],
+                          selected: {provider.activeMode.value},
+                          onSelectionChanged: (selection) {
+                            if (selection.isEmpty) return;
+                            _switchWorkspace(provider, selection.first);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        SettingsSectionHeader(title: l10n.theme),
+                        _ResponsiveSegmentedButton(
+                          key: const ValueKey(
+                            'theme-brightness-mode-segmented',
+                          ),
+                          choiceListKey: const ValueKey(
+                            'theme-brightness-mode-choice-list',
+                          ),
+                          segments: [
+                            _SegmentOption(
+                              value: 'system',
+                              label: l10n.themeFollowSystem,
+                            ),
+                            _SegmentOption(
+                              value: 'light',
+                              label: l10n.themeLight,
+                            ),
+                            _SegmentOption(
+                              value: 'dark',
+                              label: l10n.themeDark,
+                            ),
+                          ],
+                          selected: {provider.themeMode},
+                          onSelectionChanged: (selection) {
+                            if (selection.isEmpty) {
+                              return;
+                            }
+                            _updateSetting(
+                              'Update theme brightness mode',
+                              () => provider.updateThemeMode(selection.first),
+                            );
+                          },
                         ),
                         const SizedBox(height: 12),
                         SettingsSectionHeader(title: l10n.themeColor),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: _ResponsiveSegmentedButton(
-                            key: const ValueKey('theme-color-mode-segmented'),
-                            segments: [
-                              _SegmentOption(
-                                value: themeColorModeSingle,
-                                icon: Icons.palette_outlined,
-                                label: l10n.themeColorModeSingle,
-                              ),
-                              _SegmentOption(
-                                value: themeColorModeColorful,
-                                icon: Icons.color_lens_outlined,
-                                label: l10n.themeColorModeColorful,
-                              ),
-                            ],
-                            selected: {provider.themeColorMode},
-                            onSelectionChanged: (selection) {
-                              if (selection.isEmpty) {
-                                return;
-                              }
-                              _updateSetting(
-                                'Update theme color mode',
-                                () => provider.updateThemeColorMode(
-                                  selection.first,
-                                ),
-                              );
-                            },
+                        _ResponsiveSegmentedButton(
+                          key: const ValueKey('theme-color-mode-segmented'),
+                          choiceListKey: const ValueKey(
+                            'theme-color-mode-choice-list',
                           ),
+                          segments: [
+                            _SegmentOption(
+                              value: themeColorModeSingle,
+                              label: l10n.themeColorModeSingle,
+                            ),
+                            _SegmentOption(
+                              value: themeColorModeColorful,
+                              label: l10n.themeColorModeColorful,
+                            ),
+                          ],
+                          selected: {provider.themeColorMode},
+                          onSelectionChanged: (selection) {
+                            if (selection.isEmpty) {
+                              return;
+                            }
+                            _updateSetting(
+                              'Update theme color mode',
+                              () => provider.updateThemeColorMode(
+                                selection.first,
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
+                        const SettingsSectionBreak(),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 180),
+                            duration: switcherDuration,
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
                             child:
@@ -728,12 +909,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               segments: [
                                 _SegmentOption(
                                   value: colorfulCourseTextColorModeAuto,
-                                  icon: Icons.auto_mode_outlined,
                                   label: l10n.themeColorCourseTextAuto,
                                 ),
                                 _SegmentOption(
                                   value: colorfulCourseTextColorModeCustom,
-                                  icon: Icons.color_lens_outlined,
                                   label: l10n.themeColorCourseTextCustom,
                                 ),
                               ],
@@ -907,20 +1086,26 @@ class _SingleThemeColorSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (final colorValue in _themeSeedOptions)
-              _ThemeColorOption(
-                key: ValueKey(
-                  'theme-seed-color-${_formatColorHex(colorValue)}',
+        SizedBox(
+          key: const ValueKey('theme-seed-color-palette'),
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            runAlignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final colorValue in _themeSeedOptions)
+                _ThemeColorOption(
+                  key: ValueKey(
+                    'theme-seed-color-${_formatColorHex(colorValue)}',
+                  ),
+                  colorValue: colorValue,
+                  selected: provider.themeSeedColorValue == colorValue,
+                  onTap: () => onSelectColor(colorValue),
                 ),
-                colorValue: colorValue,
-                selected: provider.themeSeedColorValue == colorValue,
-                onTap: () => onSelectColor(colorValue),
-              ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         _ActionOptionCard(

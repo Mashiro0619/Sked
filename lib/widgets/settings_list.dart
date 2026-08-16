@@ -158,14 +158,28 @@ class ResponsiveSettingsBody extends StatelessWidget {
   }
 }
 
+/// Starts a new responsive settings section without adding visible content.
+///
+/// This is useful when a detail panel belongs in the next wide-screen column
+/// but should remain directly after its controlling section on narrow screens.
+class SettingsSectionBreak extends StatelessWidget {
+  const SettingsSectionBreak({super.key});
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
 List<Widget> _groupSettingsSections(List<Widget> children) {
   final sections = <List<Widget>>[];
   var currentSection = <Widget>[];
   for (final child in children) {
-    if (child is SettingsSectionHeader && currentSection.isNotEmpty) {
+    final startsSection = child is SettingsSectionHeader;
+    final breaksSection = child is SettingsSectionBreak;
+    if ((startsSection || breaksSection) && currentSection.isNotEmpty) {
       sections.add(currentSection);
       currentSection = <Widget>[];
     }
+    if (breaksSection) continue;
     currentSection.add(child);
   }
   if (currentSection.isNotEmpty) sections.add(currentSection);

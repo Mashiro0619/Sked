@@ -328,7 +328,7 @@ void main() {
 
     const options = [
       (generalToolbarWidthPolicyBalanced, 'Balanced'),
-      (generalToolbarWidthPolicyCalendarPriority, 'Calendar priority'),
+      (generalToolbarWidthPolicyCalendarPriority, 'Category priority'),
       (generalToolbarWidthPolicyDatePriority, 'Date priority'),
       (generalToolbarWidthPolicyContent, 'Automatic allocation'),
     ];

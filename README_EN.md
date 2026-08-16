@@ -1,92 +1,118 @@
 <div align="center">
 
 # Sked
-### Timetable and schedule manager
 
-<a href="README.md">中文</a>
-&nbsp;&nbsp;|&nbsp;&nbsp;
-English
+A timetable and schedule app
+
+[简体中文](README.md) · English
 
 [![GitHub release](https://img.shields.io/github/v/release/Mashiro0619/Sked?color=black&label=Stable&logo=github)](https://github.com/Mashiro0619/Sked/releases/latest/)
-[![GitHub all releases](https://img.shields.io/github/downloads/Mashiro0619/Sked/total?label=Downloads&logo=github)](https://github.com/Mashiro0619/Sked/releases/)
-[![GitHub Repo stars](https://img.shields.io/github/stars/Mashiro0619/Sked?color=informational&label=Stars)](https://github.com/Mashiro0619/Sked/stargazers)
-[![Flutter](https://img.shields.io/badge/Flutter-App-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![License](https://img.shields.io/badge/License-AGPL%20v3-A42E2B?logo=gnu)](LICENSE)
-
+[![GitHub downloads](https://img.shields.io/github/downloads/Mashiro0619/Sked/total?label=Downloads&logo=github)](https://github.com/Mashiro0619/Sked/releases/)
+[![GitHub stars](https://img.shields.io/github/stars/Mashiro0619/Sked?color=informational&label=Stars)](https://github.com/Mashiro0619/Sked/stargazers)
+[![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.47.0-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![License](https://img.shields.io/badge/License-AGPL--3.0-A42E2B?logo=gnu)](LICENSE)
+[![GitHub Releases](https://img.shields.io/badge/GitHub_Releases-download-181717?logo=github&logoColor=white)](https://github.com/Mashiro0619/Sked/releases)
 </div>
 
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked">
     <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="100">
   </a>
-  <br>
-  <a href="https://github.com/Mashiro0619/Sked/releases">
-    <img src="https://img.shields.io/badge/Get%20it%20on-GitHub%20Releases-blue?style=for-the-badge&logo=github" alt="Get it on GitHub Releases" height="28">
-  </a>
 </p>
 
-Sked helps manage student timetables and everyday schedules in one place. Use it to organize courses, semester weeks, period-time sets, and school sites, or switch to general schedule mode for events, reminders, and recurring plans. It also supports timetable import/export, full app backup and restore, and assisted import from school webpages or text / HTML timetable content through your own parser endpoint.
+Sked is a Flutter app for student timetables and everyday schedules. Courses are organized by semester, week, and period, while ordinary events are available in day, week, month, and list views. You can switch between the two modes at any time.
 
 ## Screenshots
 
-<div align="center">
-<img src="docs/screenshots/en/f6c73781063a03a5a8c9e9e5cead1f48.jpg" width="20%" />
-<img src="docs/screenshots/en/d008fb6a4c8f907e056acca811f39cf9.jpg" width="20%" />
-<img src="docs/screenshots/en/5d9be198e7277ce7dce7914e8d8a09be.jpg" width="20%" />
-<img src="docs/screenshots/en/b9414f9eaf8e56a2820f083023d31d84.jpg" width="20%" />
-<img src="docs/screenshots/en/db6c49f914953f5c5c039cce608b4c0d.jpg" width="20%" />
-<img src="docs/screenshots/en/297068daa1e485912f33e9ca835ee2c0.jpg" width="20%" />
-<img src="docs/screenshots/en/5178c7db3fe2f2b20d4b7c0ee1f413dd.jpg" width="20%" />
-</div>
+### Android Phone
+
+<p align="center">
+  <a href="docs/screenshots/en/student-week.jpg"><img src="docs/screenshots/en/student-week.jpg" width="200" alt="Student timetable week view on an Android phone" title="Student timetable · Week"></a>
+  <a href="docs/screenshots/en/course-details.jpg"><img src="docs/screenshots/en/course-details.jpg" width="200" alt="Course details on an Android phone" title="Course details"></a>
+  <a href="docs/screenshots/en/course-editor.jpg"><img src="docs/screenshots/en/course-editor.jpg" width="200" alt="Course editor on an Android phone" title="Course editor"></a>
+  <a href="docs/screenshots/en/general-week.jpg"><img src="docs/screenshots/en/general-week.jpg" width="200" alt="General schedule week view on an Android phone" title="General schedule · Week"></a>
+  <a href="docs/screenshots/en/general-month.jpg"><img src="docs/screenshots/en/general-month.jpg" width="200" alt="General schedule month view on an Android phone" title="General schedule · Month"></a>
+  <a href="docs/screenshots/en/general-list.jpg"><img src="docs/screenshots/en/general-list.jpg" width="200" alt="General schedule list view on an Android phone" title="General schedule · List"></a>
+  <a href="docs/screenshots/en/event-details.jpg"><img src="docs/screenshots/en/event-details.jpg" width="200" alt="Event details on an Android phone" title="Event details"></a>
+  <a href="docs/screenshots/en/event-editor.jpg"><img src="docs/screenshots/en/event-editor.jpg" width="200" alt="Event editor on an Android phone" title="Event editor"></a>
+</p>
+
+### Android Tablet / Windows Desktop
+
+<p align="center">
+  <a href="docs/screenshots/en/student-week-tablet.jpg"><img src="docs/screenshots/en/student-week-tablet.jpg" width="400" alt="Student timetable week view on an Android tablet" title="Student timetable · Week"></a>
+  <a href="docs/screenshots/en/settings-tablet.jpg"><img src="docs/screenshots/en/settings-tablet.jpg" width="400" alt="Settings on an Android tablet" title="Settings"></a>
+</p>
 
 ## Features
 
-- **Student timetables**: create, switch, edit, and delete multiple timetables, browse by week, and highlight the current or next course.
-- **Course editing**: maintain course name, location, teacher, weeks, periods, linked times, notes, and custom fields.
-- **Period-time sets**: reuse, edit, import, and export period templates across multiple timetables.
-- **General schedules**: manage events, calendars, reminders, recurrence rules, month/day/week views, and list view in a separate schedule mode.
-- **Import and export**: handle timetable JSON files, timetable JSON text import / export, general schedule JSON / ICS, school-site JSON, period templates, sharing, and full app backup / restore.
-- **Text / HTML parsing import**: open school sites in-app, or paste plain timetable text, page text, or HTML source, then parse timetable data through your own OpenAI-compatible endpoint.
-- **Import preview**: review parsed results before saving, choose the period-time set, and decide whether to import as a new timetable or replace the current one.
-- **Appearance**: supports light mode, dark mode, system mode, theme colors, colorful UI settings, and an ongoing Material 3 Expressive migration.
-- **Data control**: native builds keep timetables, schedules, and settings in the operating system's application-support directory, while browser builds use browser storage; full backups do not include custom parser API keys.
+### Student Timetable
 
-## Data And Privacy
+- Create, edit, and switch between multiple timetables, with day and week views.
+- Arrange course weeks from a semester start date and total week count, with quick date and week navigation.
+- Record course names, teachers, locations, periods, notes, and custom fields.
+- Save multiple period-time sets for use across different timetables.
+- Customize course colors, outlines, visible details, and timetable layout.
+- Import timetables from JSON, plain text, HTML, or school webpages, with a preview before saving.
 
-On native platforms, Sked stores student timetables, general schedules, app settings, period-time sets, and school-site configuration in the operating system's application-support directory; browser builds use browser storage. Full app backups export this data, but they do not include custom parser API keys.
+### General Schedule
 
-When upgrading from an earlier version, files previously written to the user Documents directory remain in place, but the new version does not read or migrate them automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward.
+- Create multiple calendars and browse events in day, week, month, or list views.
+- Add all-day or timed events with colors, notes, and calendar assignment.
+- Repeat events daily, weekly, monthly, or at a custom interval, with count and end-date limits.
+- Add multiple in-app reminders to an event.
+- Import and export schedules as JSON or ICS.
 
-On desktop platforms, after confirming that the old data is backed up or no longer needed and closing Sked, you may selectively delete the old Sked data files, sidecar files, lock files, and recovery directories inside the user Documents directory. The new version does not remove these legacy items for you. On Android, do not manually search for or delete the app's private directories; use **Clear storage / Clear data** in system settings or uninstall the app to remove legacy data. These actions also remove the current version's local data, so create a backup first.
+### Backup, Appearance, and Controls
 
-The app reads files, writes files, invokes system sharing, opens external links, checks updates, fetches model lists, imports school webpages, or parses timetable text / HTML content only when you explicitly start the corresponding action.
+- Back up and restore timetables, schedules, period-time sets, and app settings.
+- Light, dark, system, and custom-color themes.
+- Configurable course styles, date formats, toolbar sizing, and common interactions.
+- Optional workspace navigation and floating add buttons on the home screen.
+- Layouts that adapt to phone and desktop window sizes, with a multilingual interface.
 
-On first launch, choosing a starting workspace confirms that you have read and agree to the privacy policy; the onboarding screen provides a link to the full policy. The full policy is also available at [https://sked.mashiro.tech/privacy.html](https://sked.mashiro.tech/privacy.html).
+## Getting Started
 
-## Custom Parser Endpoint
+Choose Student Timetable or General Schedule on first launch. You can switch modes later from Settings and optionally hide the workspace navigation on the home screen.
 
-Sked does not include a built-in timetable parser endpoint. School webpage import and text / HTML parsing import only use the OpenAI-compatible endpoint configured by the user in the app.
+For a student timetable, create a timetable and period-time set before adding courses, or import an existing timetable from a file, text, HTML, or a school webpage. For general scheduling, create a calendar and then add events or import a JSON or ICS file.
 
-Parser settings include:
+## Downloads and Platform Support
 
-- `Base URL`: OpenAI-compatible API base URL, such as `https://api.example.com/v1` or a trusted local-network endpoint like `http://192.168.1.10:8000/v1`
-- `API key`: Bearer token sent to that endpoint; the app stores it with platform secure storage where available
-- `Model`: chat completion model name, entered manually or fetched from the custom endpoint
-- `Custom prompt`: optional; when empty, the built-in timetable extraction prompt is used
+Android is Sked's primary release platform. Install it from [Google Play](https://play.google.com/store/apps/details?id=com.mashiro.sked), or download the APK from this repository's [GitHub Releases](https://github.com/Mashiro0619/Sked/releases). Windows packages are also published through GitHub Releases.
 
-Request behavior:
+macOS and Linux are currently kept source-build compatible but do not have prebuilt packages. The project does not provide a hosted Web app or publish Web build artifacts; the Web project remains in the repository only for source compatibility.
 
-- Fetching models requests `/models` under the configured `Base URL`
-- Parsing a timetable requests `/chat/completions` under the configured `Base URL`
-- Requests include the submitted plain timetable text, page text or HTML content, optional page title, page URL, current app language, and parser prompt content
-- If you use an `http://` Base URL, only use it on trusted devices, trusted networks, and trusted endpoint services, because content and API keys may not be protected by transport encryption
+## Official Distribution
+
+> [!IMPORTANT]
+> Official Sked releases are published only through Google Play and this repository's GitHub Releases. Packages and derivative builds offered through other app stores, download sites, mirrors, or distribution channels are not official releases and have not been verified by the maintainer.
+
+Without explicit written authorization, a third party must not claim, label, or promote its channel or build as an "official Sked release," "official mirror," or "official partner," or use the project name, icon, or maintainer identity in a way that falsely implies official authorization, partnership, or endorsement.
+
+Sked is currently licensed under AGPL-3.0. Anyone may redistribute the source code or independently built versions provided that the license is followed. Distributors must preserve the license and copyright notices, provide the Corresponding Source as required by AGPL-3.0, and prominently state the changes and relevant dates for modified versions.
+
+## Custom Timetable Parsing
+
+When importing a school webpage, text, or HTML timetable, Sked can use an OpenAI-compatible API to structure the timetable. The project does not provide a public parsing service, so the following settings must be configured in the app:
+
+- `Base URL`: the API address, for example `https://api.example.com/v1`.
+- `API key`: the Bearer token used by the API.
+- `Model`: enter a model name or select one returned by the API.
+- `Custom prompt`: optional; leave it empty to use the built-in timetable extraction prompt.
+
+Sked uses `/models` for model discovery and `/chat/completions` for timetable parsing. HTTPS is recommended except for trusted local development endpoints.
 
 ## Contributing
 
-Issues and pull requests are welcome. Contributions to `assets/school_sites.json` are also welcome. Please preserve the existing privacy boundaries, data compatibility, and import/export behavior where possible.
+Issues and pull requests are welcome. Before submitting code, run the formatting check, static analysis, and tests, and add coverage for new behavior.
 
-## License And Notices
+School-site definitions are stored in [`assets/school_sites.json`](assets/school_sites.json); contributions for unlisted schools are welcome as well.
 
-- Source code is licensed under the [GNU Affero General Public License v3.0](LICENSE).
-- Bundled launcher icon and platform icon assets include third-party licensed material; see [NOTICE](NOTICE).
-- Flutter package and third-party library licenses can be viewed in the app under `Settings -> Open-source licenses`.
+## License and Links
+
+Sked is released under the [GNU Affero General Public License v3.0](LICENSE). See [NOTICE](NOTICE) for third-party licensing information about icons and other assets. Package licenses are available in the app under **Settings → Open-source licenses**.
+
+- [Releases](https://github.com/Mashiro0619/Sked/releases)
+- [Issue tracker](https://github.com/Mashiro0619/Sked/issues)
+- [Privacy Policy](https://sked.mashiro.tech/privacy.html)

@@ -202,15 +202,12 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                           _SegmentOption(
                                             value:
                                                 liveCourseOutlineModeCurrentOrNext,
-                                            icon:
-                                                Icons.event_available_outlined,
                                             label: l10n
                                                 .liveCourseOutlineTargetCurrentOrNext,
                                           ),
                                           _SegmentOption(
                                             value:
                                                 liveCourseOutlineModeAllDisplayed,
-                                            icon: Icons.view_timeline_outlined,
                                             label: l10n
                                                 .liveCourseOutlineTargetAllDisplayed,
                                           ),

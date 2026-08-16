@@ -72,7 +72,20 @@ class GeneralCalendarService {
   ) {
     final existing = _scheduleById(data, scheduleId);
     if (existing == null) return data;
-    return data.withSchedule(existing.copyWith(isVisible: isVisible));
+    final schedules = [
+      for (final schedule in data.schedules)
+        if (schedule.id == scheduleId)
+          schedule.copyWith(isVisible: isVisible)
+        else
+          schedule,
+    ];
+    return data.copyWith(
+      schedules: schedules,
+      activeScheduleId: _preferredActiveScheduleId(
+        schedules,
+        requestedId: data.activeScheduleId,
+      ),
+    );
   }
 
   GeneralScheduleData deleteSchedule(
@@ -87,9 +100,10 @@ class GeneralCalendarService {
     if (remaining.isEmpty) {
       remaining = [createDefaultGeneralSchedule()];
     }
-    final nextActiveId = remaining.any((s) => s.id == data.activeScheduleId)
-        ? data.activeScheduleId
-        : remaining.first.id;
+    final nextActiveId = _preferredActiveScheduleId(
+      remaining,
+      requestedId: data.activeScheduleId,
+    );
     return data.copyWith(
       activeScheduleId: nextActiveId,
       schedules: remaining,
@@ -215,6 +229,9 @@ class GeneralCalendarService {
               .toList()
         : base.reminderAcknowledgements;
     return base.copyWith(
+      activeScheduleId: existing == null
+          ? targetScheduleId
+          : base.activeScheduleId,
       schedules: updatedSchedules,
       reminderAcknowledgements: reminderAcknowledgements,
     );
@@ -411,6 +428,24 @@ GeneralSchedule? _scheduleById(GeneralScheduleData data, String scheduleId) {
     }
   }
   return null;
+}
+
+String _preferredActiveScheduleId(
+  List<GeneralSchedule> schedules, {
+  required String requestedId,
+}) {
+  assert(schedules.isNotEmpty);
+  for (final schedule in schedules) {
+    if (schedule.id == requestedId && schedule.isVisible) {
+      return schedule.id;
+    }
+  }
+  for (final schedule in schedules) {
+    if (schedule.isVisible) {
+      return schedule.id;
+    }
+  }
+  return schedules.first.id;
 }
 
 ({GeneralSchedule schedule, GeneralEvent event})? _eventLocationById(

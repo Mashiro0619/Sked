@@ -445,7 +445,7 @@ void main() {
   });
 
   testWidgets(
-    'active calendar switch rebuilds selector and keeps visible events',
+    'active calendar state does not filter or rename the visible scope',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -490,15 +490,28 @@ void main() {
       );
       await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-      expect(find.text('Primary calendar'), findsOneWidget);
+      final selector = find.byKey(const ValueKey('general-calendar-selector'));
+      final l10n = AppLocalizations.of(tester.element(selector));
+      expect(
+        find.descendant(
+          of: selector,
+          matching: find.text(l10n.visibleCategoryCount(2)),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Primary event'), findsOneWidget);
       expect(find.text('Secondary event'), findsOneWidget);
 
       await provider.switchGeneralSchedule('cal2');
       await tester.pump();
 
-      expect(find.text('Primary calendar'), findsNothing);
-      expect(find.text('Secondary calendar'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: selector,
+          matching: find.text(l10n.visibleCategoryCount(2)),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Primary event'), findsOneWidget);
       expect(find.text('Secondary event'), findsOneWidget);
     },
@@ -1236,17 +1249,28 @@ void main() {
     );
     final storage = _BlockingTimetableStorage(initialData);
     final provider = await _createProviderWithStorage(storage);
+    final initialScheduleId = provider.generalSchedules.single.id;
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    final calendarsButton = find.byTooltip('Calendars');
+    final selector = find.byKey(const ValueKey('general-calendar-selector'));
+    final l10n = AppLocalizations.of(tester.element(selector));
+    final calendarsButton = find.byTooltip(l10n.calendars);
     expect(calendarsButton, findsOneWidget);
 
     await tester.tap(calendarsButton);
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilledButton, 'Add calendar'), findsOneWidget);
-    final addCalendarButton = find.byTooltip('Add calendar');
+    final addCalendarButton = find.byTooltip(l10n.addCalendar);
     expect(addCalendarButton, findsOneWidget);
+    expect(tester.getSize(addCalendarButton), const Size(48, 48));
+    expect(
+      tester
+          .getSize(
+            find.byKey(ValueKey('calendar-manager-tile-$initialScheduleId')),
+          )
+          .height,
+      closeTo(64, 1),
+    );
 
     await tester.tap(addCalendarButton);
     await tester.tap(addCalendarButton, warnIfMissed: false);
@@ -1258,13 +1282,21 @@ void main() {
     final managerSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
     expect(managerSheet.enableDrag, isFalse);
     expect(managerSheet.showDragHandle, isFalse);
+    expect(
+      tester
+          .getSize(
+            find.byKey(ValueKey('calendar-manager-tile-$initialScheduleId')),
+          )
+          .width,
+      lessThanOrEqualTo(536),
+    );
 
     await tester.binding.handlePopRoute();
     await tester.pump();
     await tester.tapAt(const Offset(8, 8));
     await tester.pump();
 
-    expect(find.byTooltip('Add calendar'), findsOneWidget);
+    expect(find.byTooltip(l10n.addCalendar), findsOneWidget);
     expect(storage.saveCount, 1);
 
     storage.completeFirstSave();
@@ -1321,19 +1353,181 @@ void main() {
       textScaler: const TextScaler.linear(2),
     );
 
-    await tester.tap(find.byTooltip('Calendars'));
+    final selector = find.byKey(const ValueKey('general-calendar-selector'));
+    final l10n = AppLocalizations.of(tester.element(selector));
+    await tester.tap(find.byTooltip(l10n.calendars));
     await tester.pumpAndSettle();
 
-    expect(find.text('Calendars'), findsWidgets);
-    expect(find.byTooltip('Add calendar'), findsOneWidget);
-    final activeCalendar = tester.getSemantics(
+    expect(find.text(l10n.calendars), findsWidgets);
+    expect(find.byTooltip(l10n.addCalendar), findsOneWidget);
+    final firstCalendar = tester.getSemantics(
       find.byKey(const ValueKey('calendar-manager-tile-cal1')),
     );
-    final flags = activeCalendar.getSemanticsData().flagsCollection;
-    expect(flags.isSelected, ui.Tristate.isTrue);
+    final flags = firstCalendar.getSemanticsData().flagsCollection;
+    expect(flags.isSelected, ui.Tristate.none);
+    expect(flags.isToggled, ui.Tristate.isTrue);
     expect(flags.isButton, isTrue);
+    final visibilityButton = find.byKey(
+      const ValueKey('calendar-visibility-cal1'),
+    );
+    final actionsButton = find.byKey(const ValueKey('calendar-actions-cal1'));
+    expect(tester.getSize(visibilityButton), const Size(48, 48));
+    expect(tester.getSize(actionsButton), const Size(48, 48));
+    expect(
+      tester.getCenter(visibilityButton).dy,
+      closeTo(tester.getCenter(actionsButton).dy, 1),
+    );
     expect(tester.takeException(), isNull);
     semantics.dispose();
+  });
+
+  testWidgets('calendar manager keeps actions inline in RTL', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(560, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const schedule = GeneralSchedule(
+      id: 'cal1',
+      name: 'A long category name that still leaves both actions reachable',
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      _buildGeneralDataWithCalendars(const [schedule], activeId: schedule.id),
+    );
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(1.3),
+      textDirection: TextDirection.rtl,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('general-calendar-selector')));
+    await tester.pumpAndSettle();
+
+    final tile = find.byKey(const ValueKey('calendar-manager-tile-cal1'));
+    final visibility = find.byKey(const ValueKey('calendar-visibility-cal1'));
+    final actions = find.byKey(const ValueKey('calendar-actions-cal1'));
+    expect(tester.getSize(tile).width, lessThanOrEqualTo(536));
+    expect(tester.getSize(visibility), const Size(48, 48));
+    expect(tester.getSize(actions), const Size(48, 48));
+    expect(
+      tester.getCenter(visibility).dy,
+      closeTo(tester.getCenter(actions).dy, 1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('calendar row and visibility action each save once', (
+    tester,
+  ) async {
+    const primary = GeneralSchedule(
+      id: 'cal1',
+      name: 'Primary category',
+      events: [],
+    );
+    const secondary = GeneralSchedule(
+      id: 'cal2',
+      name: 'Secondary category',
+      events: [],
+    );
+    final storage = _FailOnceTimetableStorage(
+      _buildGeneralDataWithCalendars(const [
+        primary,
+        secondary,
+      ], activeId: primary.id),
+    );
+    final provider = await _createProviderWithStorage(storage);
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byKey(const ValueKey('general-calendar-selector')));
+    await tester.pumpAndSettle();
+    final baselineSaveCount = storage.saveCount;
+
+    await tester.tap(find.byKey(const ValueKey('calendar-manager-tile-cal2')));
+    await tester.pumpAndSettle();
+    expect(storage.saveCount, baselineSaveCount + 1);
+    expect(provider.generalSchedules.last.isVisible, isFalse);
+    expect(provider.activeGeneralSchedule.id, primary.id);
+
+    await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
+    await tester.pumpAndSettle();
+    expect(storage.saveCount, baselineSaveCount + 2);
+    expect(provider.generalSchedules.last.isVisible, isTrue);
+    expect(provider.activeGeneralSchedule.id, primary.id);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('calendar selector summarizes all visible categories', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const primary = GeneralSchedule(
+      id: 'cal1',
+      name: 'Primary category',
+      events: [],
+    );
+    const secondary = GeneralSchedule(
+      id: 'cal2',
+      name: 'Secondary category',
+      isVisible: false,
+      events: [],
+    );
+    final provider = await _createGeneralProvider(
+      _buildGeneralDataWithCalendars([
+        primary,
+        secondary,
+      ], activeId: primary.id),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final selector = find.byKey(const ValueKey('general-calendar-selector'));
+    final l10n = AppLocalizations.of(tester.element(selector));
+    expect(
+      find.descendant(of: selector, matching: find.text(primary.name)),
+      findsOneWidget,
+    );
+
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('calendar-manager-tile-cal2')));
+    await tester.pumpAndSettle();
+    expect(provider.generalSchedules.last.isVisible, isTrue);
+    expect(provider.activeGeneralSchedule.id, primary.id);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: selector,
+        matching: find.text(l10n.visibleCategoryCount(2)),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal1')));
+    await tester.pumpAndSettle();
+    expect(provider.generalSchedules.first.isVisible, isFalse);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: selector, matching: find.text(secondary.name)),
+      findsOneWidget,
+    );
+
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: selector,
+        matching: find.text(l10n.noVisibleCategories),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('calendar manager reports save failure and remains usable', (
@@ -1351,22 +1545,18 @@ void main() {
     final provider = await _createProviderWithStorage(storage);
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    await tester.tap(find.byTooltip('Calendars'));
+    final selector = find.byKey(const ValueKey('general-calendar-selector'));
+    final l10n = AppLocalizations.of(tester.element(selector));
+    await tester.tap(find.byTooltip(l10n.calendars));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Add calendar'));
+    await tester.tap(find.byTooltip(l10n.addCalendar));
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
     expect(provider.generalSchedules, hasLength(1));
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Add calendar'),
-          )
-          .onPressed,
-      isNotNull,
-    );
+    final addButton = find.widgetWithIcon(IconButton, Icons.add);
+    expect(tester.widget<IconButton>(addButton).onPressed, isNotNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -1388,9 +1578,13 @@ void main() {
     storage.failNextSave = true;
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    await tester.tap(find.byTooltip('Calendars'));
+    final selector = find.byKey(const ValueKey('general-calendar-selector'));
+    final l10n = AppLocalizations.of(tester.element(selector));
+    await tester.tap(find.byTooltip(l10n.calendars));
     await _pumpRouteTransition(tester);
-    await tester.tap(find.byTooltip('Rename'));
+    await tester.tap(find.byKey(const ValueKey('calendar-actions-cal1')));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.text(l10n.rename).last);
     await _pumpRouteTransition(tester);
 
     final nameField = find.byKey(const ValueKey('rename-calendar-field'));
@@ -1438,14 +1632,18 @@ void main() {
     storage.failNextSave = true;
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    await tester.tap(find.byTooltip('Calendars'));
+    final selector = find.byKey(const ValueKey('general-calendar-selector'));
+    final l10n = AppLocalizations.of(tester.element(selector));
+    await tester.tap(find.byTooltip(l10n.calendars));
     await _pumpRouteTransition(tester);
-    await tester.tap(find.byTooltip('Delete').last);
+    await tester.tap(find.byKey(const ValueKey('calendar-actions-cal2')));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.text(l10n.delete).last);
     await _pumpRouteTransition(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await _pumpRouteTransition(tester);
 
-    expect(find.text('Delete calendar'), findsOneWidget);
+    expect(find.text(l10n.deleteCalendar), findsOneWidget);
     expect(provider.generalSchedules, hasLength(2));
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -1453,7 +1651,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await _pumpRouteTransition(tester);
 
-    expect(find.text('Delete calendar'), findsNothing);
+    expect(find.text(l10n.deleteCalendar), findsNothing);
     expect(provider.generalSchedules.map((item) => item.id), [primary.id]);
     expect(storage.saveCount, baselineSaveCount + 2);
   });
@@ -2140,6 +2338,197 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'week all-day events span dates and keep Chinese labels legible',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final calendar = GeneralSchedule(
+        id: 'cal1',
+        name: '分类',
+        events: [
+          GeneralEvent(
+            id: 'single-all-day',
+            calendarId: 'cal1',
+            title: '中文全天事项',
+            startDateTimeIso: '2026-06-16T00:00:00.000',
+            endDateTimeIso: '2026-06-17T00:00:00.000',
+            isAllDay: true,
+            colorValue: 0xFFFFC1CC,
+          ),
+          GeneralEvent(
+            id: 'spanning-all-day',
+            calendarId: 'cal1',
+            title: '跨天活动',
+            startDateTimeIso: '2026-06-18T00:00:00.000',
+            endDateTimeIso: '2026-06-21T00:00:00.000',
+            isAllDay: true,
+            colorValue: 0xFFC4DDF8,
+          ),
+        ],
+      );
+      final provider = await _createGeneralProvider(
+        buildInitialAppData(
+          buildDefaultPeriodTimes(),
+          localeCode: 'zh',
+        ).copyWith(
+          activeMode: AppMode.general,
+          generalMode: GeneralScheduleData(
+            activeScheduleId: 'cal1',
+            schedules: [calendar],
+            selectedDateIso: '2026-06-17',
+            defaultView: generalViewWeek,
+          ),
+        ),
+      );
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+      final timeline = find.byKey(const ValueKey('general-all-day-timeline'));
+      expect(timeline, findsOneWidget);
+      expect(tester.getSize(timeline).height, lessThan(74));
+      expect(find.text('中文全天事项'), findsOneWidget);
+      expect(find.text('跨天活动'), findsOneWidget);
+
+      final spanningChip = find.byKey(
+        const ValueKey(
+          'general-all-day-occurrence-'
+          'spanning-all-day-2026-06-18T00:00:00.000',
+        ),
+      );
+      final dayHeader = find.byKey(
+        const ValueKey('general-week-day-header-2026-06-18T00:00:00.000'),
+      );
+      expect(
+        tester.getSize(spanningChip).width,
+        greaterThan(tester.getSize(dayHeader).width * 2.5),
+      );
+
+      final singleChip = find.byKey(
+        const ValueKey(
+          'general-all-day-occurrence-'
+          'single-all-day-2026-06-16T00:00:00.000',
+        ),
+      );
+      final material = tester.widget<Material>(singleChip);
+      final title = tester.widget<Text>(
+        find.descendant(of: singleChip, matching: find.text('中文全天事项')),
+      );
+      final backgroundLuminance = material.color!.computeLuminance();
+      final foregroundLuminance = title.style!.color!.computeLuminance();
+      final lighter = backgroundLuminance > foregroundLuminance
+          ? backgroundLuminance
+          : foregroundLuminance;
+      final darker = backgroundLuminance < foregroundLuminance
+          ? backgroundLuminance
+          : foregroundLuminance;
+      expect((lighter + 0.05) / (darker + 0.05), greaterThanOrEqualTo(4.5));
+
+      await tester.tap(singleChip);
+      await tester.pumpAndSettle();
+      expect(find.byType(GeneralEventDetailsSheet), findsOneWidget);
+      Navigator.of(tester.element(find.byType(GeneralEventDetailsSheet))).pop();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('week all-day labels fit 320dp at 2x text scale', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: '分类',
+      events: [
+        GeneralEvent(
+          id: 'compact-all-day',
+          calendarId: 'cal1',
+          title: '中文全天事项',
+          startDateTimeIso: '2026-06-16T00:00:00.000',
+          endDateTimeIso: '2026-06-17T00:00:00.000',
+          isAllDay: true,
+          colorValue: 0xFFFFC1CC,
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'zh').copyWith(
+        activeMode: AppMode.general,
+        generalMode: GeneralScheduleData(
+          activeScheduleId: 'cal1',
+          schedules: [calendar],
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewWeek,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    expect(
+      find.byKey(const ValueKey('general-all-day-timeline')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey(
+          'general-all-day-occurrence-'
+          'compact-all-day-2026-06-16T00:00:00.000',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('中文全天事项'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('crowded all-day lanes expose hidden events through more', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        for (var index = 1; index <= 4; index++)
+          GeneralEvent(
+            id: 'all-day-$index',
+            calendarId: 'cal1',
+            title: 'All-day $index',
+            startDateTimeIso: '2026-06-16T00:00:00.000',
+            endDateTimeIso: index == 1
+                ? '2026-06-18T00:00:00.000'
+                : '2026-06-17T00:00:00.000',
+            isAllDay: true,
+          ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      _buildGeneralDataWithCalendars([calendar], activeId: 'cal1'),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final more = find.byKey(const ValueKey('general-all-day-more-occurrences'));
+    expect(more, findsOneWidget);
+    expect(find.text('All-day 4'), findsNothing);
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    expect(find.text('All-day 4'), findsOneWidget);
+    await tester.tap(find.text('All-day 4'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GeneralEventDetailsSheet), findsOneWidget);
+    Navigator.of(tester.element(find.byType(GeneralEventDetailsSheet))).pop();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('week view collapses three crowded timed events into more card', (
     tester,
   ) async {
@@ -2222,7 +2611,10 @@ void main() {
 
     expect(find.text('17, 3 events'), findsNothing);
     expect(find.text('Gamma'), findsOneWidget);
-    expect(find.text('Edit event'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('general-event-edit-action')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

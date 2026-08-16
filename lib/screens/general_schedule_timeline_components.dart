@@ -24,84 +24,208 @@ class _TimelineTimeRailLabel extends StatelessWidget {
   }
 }
 
-class _AllDayColumn extends StatelessWidget {
-  const _AllDayColumn({
-    required this.date,
-    required this.width,
-    required this.occurrences,
-    required this.onTap,
+class _AllDayTimeline extends StatelessWidget {
+  const _AllDayTimeline({
+    required this.timeColumnWidth,
+    required this.dayWidth,
+    required this.dayCount,
+    required this.layout,
+    required this.label,
+    required this.onOccurrenceTap,
+    required this.onMoreOccurrencesTap,
   });
 
-  final DateTime date;
-  final double width;
-  final List<GeneralEventOccurrence> occurrences;
-  final ValueChanged<GeneralEventOccurrence> onTap;
+  final double timeColumnWidth;
+  final double dayWidth;
+  final int dayCount;
+  final _AllDayTimelineLayout layout;
+  final String label;
+  final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      width: width,
-      decoration: BoxDecoration(
-        border: BorderDirectional(
-          start: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant
-                .withValues(alpha: 0.55),
+    final laneHeight = layout.laneHeightFor(context);
+    final dayAreaWidth = dayWidth * dayCount;
+    final lineColor = Theme.of(context).colorScheme.outlineVariant
+        .withValues(alpha: 0.55);
+    return Row(
+      key: const ValueKey('general-all-day-timeline'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _TimelineTimeRailLabel(
+          width: timeColumnWidth,
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall,
           ),
         ),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: occurrences.isEmpty
-          ? const SizedBox.shrink()
-          : ListView(
-              physics: const NeverScrollableScrollPhysics(),
-              children: <Widget>[
-                for (final occurrence in occurrences.take(2))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 3),
+        SizedBox(
+          width: dayAreaWidth,
+          child: ClipRect(
+            child: Stack(
+              children: [
+                for (var index = 1; index <= dayCount; index++)
+                  PositionedDirectional(
+                    start: index * dayWidth,
+                    top: 0,
+                    bottom: 0,
+                    width: 1,
+                    child: ColoredBox(color: lineColor),
+                  ),
+                for (final segment in layout.visibleSegments)
+                  PositionedDirectional(
+                    start: segment.startIndex * dayWidth,
+                    top:
+                        _AllDayTimelineLayout.verticalPadding +
+                        segment.lane *
+                            (laneHeight + _AllDayTimelineLayout.laneGap),
+                    width:
+                        (segment.endIndex - segment.startIndex + 1) * dayWidth,
+                    height: laneHeight,
                     child: _AllDayChip(
-                      occurrence: occurrence,
-                      onTap: () => onTap(occurrence),
+                      occurrence: segment.occurrence,
+                      narrow:
+                          (segment.endIndex - segment.startIndex + 1) *
+                              dayWidth <
+                          64,
+                      onTap: () => onOccurrenceTap(segment.occurrence),
                     ),
                   ),
-                if (occurrences.length > 2)
-                  Text(
-                    l10n.moreEvents(occurrences.length - 2),
-                    style: Theme.of(context).textTheme.labelSmall,
+                if (layout.overflowOccurrences.isNotEmpty)
+                  PositionedDirectional(
+                    start: 0,
+                    end: 0,
+                    top:
+                        _AllDayTimelineLayout.verticalPadding +
+                        layout.visibleLaneCount *
+                            (laneHeight + _AllDayTimelineLayout.laneGap),
+                    height: laneHeight,
+                    child: _AllDayMoreChip(
+                      count: layout.overflowOccurrences.length,
+                      onTap: () =>
+                          onMoreOccurrencesTap(layout.overflowOccurrences),
+                    ),
                   ),
               ],
             ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _AllDayChip extends StatelessWidget {
-  const _AllDayChip({required this.occurrence, required this.onTap});
+  const _AllDayChip({
+    required this.occurrence,
+    required this.narrow,
+    required this.onTap,
+  });
 
   final GeneralEventOccurrence occurrence;
+  final bool narrow;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final color = effectiveGeneralOccurrenceColor(context, occurrence);
-    return Material(
-      color: color.withAlpha(36),
+    final fillColor = _timelineOccurrenceFillColor(color, colorScheme);
+    final accentColor = _timelineOccurrenceAccentColor(
+      color,
+      colorScheme,
+      fillColor,
+      minimumContrast: 4.5,
+    );
+    final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
-      child: Semantics(
-        button: true,
-        label: occurrence.event.title,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-            child: Text(
-              occurrence.event.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: _readableColor(color),
-                fontWeight: FontWeight.w600,
+      side: BorderSide(color: accentColor.withValues(alpha: 0.42), width: 0.8),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: Tooltip(
+        message: occurrence.event.title,
+        excludeFromSemantics: true,
+        child: Material(
+          key: ValueKey(
+            'general-all-day-occurrence-'
+            '${occurrence.event.id}-${occurrence.start.toIso8601String()}',
+          ),
+          color: fillColor,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: Semantics(
+            button: true,
+            label: occurrence.event.title,
+            child: InkWell(
+              customBorder: shape,
+              overlayColor: _timelineOccurrenceOverlayColor(accentColor),
+              onTap: onTap,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: narrow ? 3 : 8),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    occurrence.event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.fade,
+                    softWrap: false,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: accentColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AllDayMoreChip extends StatelessWidget {
+  const _AllDayMoreChip({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final label = AppLocalizations.of(context).moreEvents(count);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: Material(
+        key: const ValueKey('general-all-day-more-occurrences'),
+        color: colors.secondaryContainer,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: Semantics(
+          button: true,
+          label: label,
+          child: InkWell(
+            customBorder: shape,
+            onTap: onTap,
+            child: Center(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.onSecondaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -505,25 +629,24 @@ Color _timelineOccurrenceFillColor(Color color, ColorScheme colorScheme) {
 Color _timelineOccurrenceAccentColor(
   Color color,
   ColorScheme colorScheme,
-  Color fillColor,
-) {
+  Color fillColor, {
+  double minimumContrast = 3.0,
+}) {
   var candidate = color.withValues(alpha: 1);
-  if (_contrastRatio(candidate, fillColor) >= 3.0) {
+  if (_contrastRatio(candidate, fillColor) >= minimumContrast) {
     return candidate;
   }
 
   final target = colorScheme.brightness == Brightness.dark
       ? Colors.white
       : Colors.black;
-  for (final alpha in const [0.18, 0.32, 0.46, 0.60]) {
+  for (final alpha in const [0.18, 0.32, 0.46, 0.60, 0.76, 0.88]) {
     candidate = Color.alphaBlend(target.withValues(alpha: alpha), color);
-    if (_contrastRatio(candidate, fillColor) >= 3.0) {
+    if (_contrastRatio(candidate, fillColor) >= minimumContrast) {
       return candidate;
     }
   }
-  return colorScheme.brightness == Brightness.dark
-      ? colorScheme.primaryContainer
-      : colorScheme.primary;
+  return colorScheme.onSurface;
 }
 
 WidgetStateProperty<Color?> _timelineOccurrenceOverlayColor(Color accentColor) {

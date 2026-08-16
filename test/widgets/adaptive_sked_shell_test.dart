@@ -195,7 +195,10 @@ Map<String, Offset> _wideNavigationIconCenters(WidgetTester tester) {
       ),
     ),
     'settings': tester.getCenter(
-      find.byKey(const ValueKey('adaptive-shell-settings-action')),
+      find.descendant(
+        of: find.byKey(const ValueKey('adaptive-shell-settings-action')),
+        matching: find.byIcon(Icons.settings_outlined),
+      ),
     ),
   };
 }
@@ -637,6 +640,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('expanded rail opens settings from the entire action row', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    var settingsCalls = 0;
+    final provider = await _providerFor(_MemoryStorage(_shellData()));
+    addTearDown(provider.dispose);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(
+      _appFor(
+        provider,
+        onOpenSettings: () async {
+          settingsCalls += 1;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final action = find.byKey(const ValueKey('adaptive-shell-settings-action'));
+    final actionRect = tester.getRect(action);
+    expect(actionRect.width, greaterThan(180));
+    expect(actionRect.height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getSemantics(action),
+      matchesSemantics(
+        label: 'Settings',
+        hasTapAction: true,
+        hasFocusAction: true,
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        isFocusable: true,
+      ),
+    );
+
+    await tester.tapAt(Offset(actionRect.right - 8, actionRect.center.dy));
+    await tester.pumpAndSettle();
+
+    expect(settingsCalls, 1);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
   testWidgets(
     'expanded workspace navigation replaces the empty timetable header',
     (tester) async {
@@ -812,7 +859,7 @@ void main() {
       await tester.pumpWidget(_appFor(provider));
       await tester.pumpAndSettle();
 
-      final railSettings = tester.widget<IconButton>(
+      final railSettings = tester.widget<InkWell>(
         find.byKey(const ValueKey('adaptive-shell-settings-action')),
       );
       final settingsFocusNode = railSettings.focusNode!;
@@ -840,7 +887,7 @@ void main() {
         find.byKey(const ValueKey('adaptive-shell-navigation-rail')),
         findsOneWidget,
       );
-      final restoredRailSettings = tester.widget<IconButton>(
+      final restoredRailSettings = tester.widget<InkWell>(
         find.byKey(const ValueKey('adaptive-shell-settings-action')),
       );
       expect(restoredRailSettings.focusNode, same(settingsFocusNode));

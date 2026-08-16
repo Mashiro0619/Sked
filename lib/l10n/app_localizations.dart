@@ -211,6 +211,12 @@ abstract class AppLocalizations {
   /// **'Timetable'**
   String get timetable;
 
+  /// Short general schedule workspace label in the theme selector.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get themeWorkspaceSchedule;
+
   /// No description provided for @timetableName.
   ///
   /// In en, this message translates to:
@@ -2707,7 +2713,7 @@ abstract class AppLocalizations {
   /// No description provided for @firstLaunchGeneralDesc.
   ///
   /// In en, this message translates to:
-  /// **'Manage calendars, events, reminders, and JSON / ICS data.'**
+  /// **'Manage categories, events, reminders, and JSON / ICS data.'**
   String get firstLaunchGeneralDesc;
 
   /// No description provided for @firstLaunchStartStudent.
@@ -2917,61 +2923,61 @@ abstract class AppLocalizations {
   /// No description provided for @generalScheduleImportExport.
   ///
   /// In en, this message translates to:
-  /// **'Schedule import & export'**
+  /// **'Category import & export'**
   String get generalScheduleImportExport;
 
   /// No description provided for @generalScheduleImportExportDesc.
   ///
   /// In en, this message translates to:
-  /// **'Import or share general schedules'**
+  /// **'Import or share schedule categories'**
   String get generalScheduleImportExportDesc;
 
   /// No description provided for @importGeneralSchedules.
   ///
   /// In en, this message translates to:
-  /// **'Import schedules'**
+  /// **'Import categories'**
   String get importGeneralSchedules;
 
   /// No description provided for @importGeneralSchedulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Read schedules from a JSON file'**
+  /// **'Read categories from a JSON file'**
   String get importGeneralSchedulesDesc;
 
   /// No description provided for @shareGeneralSchedules.
   ///
   /// In en, this message translates to:
-  /// **'Share schedules'**
+  /// **'Share categories'**
   String get shareGeneralSchedules;
 
   /// No description provided for @shareGeneralSchedulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Share schedules as a JSON file'**
+  /// **'Share categories as a JSON file'**
   String get shareGeneralSchedulesDesc;
 
   /// No description provided for @saveGeneralSchedules.
   ///
   /// In en, this message translates to:
-  /// **'Save schedules'**
+  /// **'Save categories'**
   String get saveGeneralSchedules;
 
   /// No description provided for @saveGeneralSchedulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Save schedules as a JSON file'**
+  /// **'Save categories as a JSON file'**
   String get saveGeneralSchedulesDesc;
 
   /// No description provided for @selectSchedulesToExport.
   ///
   /// In en, this message translates to:
-  /// **'Select schedules to export'**
+  /// **'Select categories to export'**
   String get selectSchedulesToExport;
 
   /// No description provided for @selectSchedulesToImport.
   ///
   /// In en, this message translates to:
-  /// **'Select schedules to import'**
+  /// **'Select categories to import'**
   String get selectSchedulesToImport;
 
   /// No description provided for @generalScheduleEventCount.
@@ -2983,61 +2989,61 @@ abstract class AppLocalizations {
   /// No description provided for @importedSchedulesCount.
   ///
   /// In en, this message translates to:
-  /// **'Imported {count} schedules'**
+  /// **'Imported {count} categories'**
   String importedSchedulesCount(int count);
 
   /// No description provided for @replaceActiveSchedulePrompt.
   ///
   /// In en, this message translates to:
-  /// **'Replace current schedule with the imported one?'**
+  /// **'Add the import as a new category or replace an existing category?'**
   String get replaceActiveSchedulePrompt;
 
   /// No description provided for @addAsNewSchedule.
   ///
   /// In en, this message translates to:
-  /// **'Add as new'**
+  /// **'Add as new category'**
   String get addAsNewSchedule;
 
   /// No description provided for @selectAtLeastOneScheduleMessage.
   ///
   /// In en, this message translates to:
-  /// **'Please select at least one schedule.'**
+  /// **'Please select at least one category.'**
   String get selectAtLeastOneScheduleMessage;
 
   /// No description provided for @noExportableScheduleMessage.
   ///
   /// In en, this message translates to:
-  /// **'No schedule available to export.'**
+  /// **'No category available to export.'**
   String get noExportableScheduleMessage;
 
   /// No description provided for @noSchedulesInImportMessage.
   ///
   /// In en, this message translates to:
-  /// **'Import file contains no schedules.'**
+  /// **'Import file contains no categories.'**
   String get noSchedulesInImportMessage;
 
   /// No description provided for @replaceActiveRequiresSingleScheduleMessage.
   ///
   /// In en, this message translates to:
-  /// **'Choose exactly one schedule to replace the current one.'**
+  /// **'Choose exactly one imported category for replacement.'**
   String get replaceActiveRequiresSingleScheduleMessage;
 
   /// No description provided for @noActiveScheduleToReplaceMessage.
   ///
   /// In en, this message translates to:
-  /// **'No current schedule to replace.'**
+  /// **'The selected replacement category is unavailable.'**
   String get noActiveScheduleToReplaceMessage;
 
   /// No description provided for @calendars.
   ///
   /// In en, this message translates to:
-  /// **'Calendars'**
+  /// **'Categories'**
   String get calendars;
 
   /// No description provided for @calendar.
   ///
   /// In en, this message translates to:
-  /// **'Calendar'**
+  /// **'Category'**
   String get calendar;
 
   /// No description provided for @viewWeek.
@@ -3063,6 +3069,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Month'**
   String get viewMonth;
+
+  /// No description provided for @visibleCategoryCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} categories'**
+  String visibleCategoryCount(int count);
+
+  /// No description provided for @noVisibleCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'No visible categories'**
+  String get noVisibleCategories;
+
+  /// No description provided for @selectCategoryToReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose category to replace'**
+  String get selectCategoryToReplace;
+
+  /// No description provided for @replaceCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace category'**
+  String get replaceCategory;
+
+  /// No description provided for @deleteEventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete event'**
+  String get deleteEventTitle;
+
+  /// No description provided for @deleteEventConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'This event will be permanently deleted.'**
+  String get deleteEventConfirmation;
+
+  /// No description provided for @deleteRecurringEventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete recurring event'**
+  String get deleteRecurringEventTitle;
 
   /// No description provided for @eventDuplicated.
   ///
@@ -3133,25 +3181,25 @@ abstract class AppLocalizations {
   /// No description provided for @addCalendar.
   ///
   /// In en, this message translates to:
-  /// **'Add calendar'**
+  /// **'Add category'**
   String get addCalendar;
 
   /// No description provided for @newCalendar.
   ///
   /// In en, this message translates to:
-  /// **'New calendar'**
+  /// **'New category'**
   String get newCalendar;
 
   /// No description provided for @hideCalendar.
   ///
   /// In en, this message translates to:
-  /// **'Hide calendar'**
+  /// **'Hide category'**
   String get hideCalendar;
 
   /// No description provided for @showCalendar.
   ///
   /// In en, this message translates to:
-  /// **'Show calendar'**
+  /// **'Show category'**
   String get showCalendar;
 
   /// No description provided for @rename.
@@ -3163,7 +3211,7 @@ abstract class AppLocalizations {
   /// No description provided for @renameCalendar.
   ///
   /// In en, this message translates to:
-  /// **'Rename calendar'**
+  /// **'Rename category'**
   String get renameCalendar;
 
   /// No description provided for @name.
@@ -3175,7 +3223,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteCalendar.
   ///
   /// In en, this message translates to:
-  /// **'Delete calendar'**
+  /// **'Delete category'**
   String get deleteCalendar;
 
   /// No description provided for @deleteCalendarMessage.
@@ -3187,19 +3235,19 @@ abstract class AppLocalizations {
   /// No description provided for @deleteThisOccurrence.
   ///
   /// In en, this message translates to:
-  /// **'Delete this'**
+  /// **'Delete this occurrence'**
   String get deleteThisOccurrence;
 
   /// No description provided for @deleteFutureOccurrences.
   ///
   /// In en, this message translates to:
-  /// **'Delete future'**
+  /// **'Delete this and following'**
   String get deleteFutureOccurrences;
 
   /// No description provided for @deleteAllOccurrences.
   ///
   /// In en, this message translates to:
-  /// **'Delete all'**
+  /// **'Delete entire series'**
   String get deleteAllOccurrences;
 
   /// No description provided for @duplicateEvent.
@@ -3439,7 +3487,7 @@ abstract class AppLocalizations {
   /// No description provided for @importGeneralSchedulesJsonTextDesc.
   ///
   /// In en, this message translates to:
-  /// **'Import calendars from copied JSON'**
+  /// **'Import categories from copied JSON'**
   String get importGeneralSchedulesJsonTextDesc;
 
   /// No description provided for @importIcsFile.
@@ -3475,7 +3523,7 @@ abstract class AppLocalizations {
   /// No description provided for @copyJsonDesc.
   ///
   /// In en, this message translates to:
-  /// **'Copy selected calendars as JSON text'**
+  /// **'Copy selected categories as JSON text'**
   String get copyJsonDesc;
 
   /// No description provided for @shareIcs.
@@ -3535,13 +3583,13 @@ abstract class AppLocalizations {
   /// No description provided for @importIcsPreviewPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Found {count} events. Import as a new calendar or replace the active calendar?'**
+  /// **'Found {count} events. Add them as a new category or replace an existing category?'**
   String importIcsPreviewPrompt(int count);
 
   /// No description provided for @importedSchedulesWithWarnings.
   ///
   /// In en, this message translates to:
-  /// **'Imported {count} schedules with {warningCount} warnings'**
+  /// **'Imported {count} categories with {warningCount} warnings'**
   String importedSchedulesWithWarnings(int count, int warningCount);
 
   /// No description provided for @importWarningSkippedMissingStart.
@@ -3817,7 +3865,7 @@ abstract class AppLocalizations {
   /// No description provided for @generalToolbarWidthCalendarPriority.
   ///
   /// In en, this message translates to:
-  /// **'Calendar priority'**
+  /// **'Category priority'**
   String get generalToolbarWidthCalendarPriority;
 
   /// No description provided for @generalToolbarWidthDatePriority.
@@ -3985,7 +4033,7 @@ abstract class AppLocalizations {
   /// No description provided for @developerSampleDataDescription.
   ///
   /// In en, this message translates to:
-  /// **'Adds one timetable and a set of calendars and events without replacing existing data.'**
+  /// **'Adds one timetable and a set of categories and events without replacing existing data.'**
   String get developerSampleDataDescription;
 
   /// No description provided for @developerAddSampleData.

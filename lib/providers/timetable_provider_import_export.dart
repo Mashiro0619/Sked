@@ -66,12 +66,14 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     String source, {
     required List<String> scheduleIds,
     required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
   }) async {
     final mutation = _importExportService.importSelectedGeneralSchedulesJson(
       _appData.generalMode,
       source,
       scheduleIds: scheduleIds,
       mode: mode,
+      replacementScheduleId: replacementScheduleId,
       localeCode: _appData.localeCode,
     );
     _appData = _appData.copyWith(generalMode: mutation.data);
@@ -82,11 +84,13 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   Future<GeneralScheduleImportResult> importGeneralSchedulesIcs(
     String source, {
     required GeneralScheduleImportMode mode,
+    String? replacementScheduleId,
   }) async {
     final mutation = _importExportService.importGeneralSchedulesIcs(
       _appData.generalMode,
       source,
       mode: mode,
+      replacementScheduleId: replacementScheduleId,
       localeCode: _appData.localeCode,
     );
     _appData = _appData.copyWith(generalMode: mutation.data);

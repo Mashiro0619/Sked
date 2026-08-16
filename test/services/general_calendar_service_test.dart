@@ -115,6 +115,95 @@ void main() {
       expect(updated.schedules.single.events, isEmpty);
       expect(updated.reminderAcknowledgements, isEmpty);
     });
+
+    test('hiding the remembered schedule prefers the first visible one', () {
+      final data = buildData(
+        activeScheduleId: 'remembered',
+        schedules: const [
+          GeneralSchedule(
+            id: 'hidden',
+            name: 'Hidden',
+            isVisible: false,
+            events: [],
+          ),
+          GeneralSchedule(id: 'remembered', name: 'Remembered', events: []),
+          GeneralSchedule(id: 'visible', name: 'Visible', events: []),
+        ],
+      );
+
+      final updated = service.updateScheduleVisibility(
+        data,
+        'remembered',
+        false,
+      );
+
+      expect(updated.activeScheduleId, 'visible');
+    });
+
+    test('hiding the last visible schedule falls back to the first one', () {
+      final data = buildData(
+        activeScheduleId: 'remembered',
+        schedules: const [
+          GeneralSchedule(
+            id: 'fallback',
+            name: 'Fallback',
+            isVisible: false,
+            events: [],
+          ),
+          GeneralSchedule(id: 'remembered', name: 'Remembered', events: []),
+        ],
+      );
+
+      final updated = service.updateScheduleVisibility(
+        data,
+        'remembered',
+        false,
+      );
+
+      expect(updated.visibleSchedules, isEmpty);
+      expect(updated.activeScheduleId, 'fallback');
+    });
+
+    test('deleting the remembered schedule uses the same fallback order', () {
+      final withVisibleFallback = buildData(
+        activeScheduleId: 'remembered',
+        schedules: const [
+          GeneralSchedule(
+            id: 'hidden',
+            name: 'Hidden',
+            isVisible: false,
+            events: [],
+          ),
+          GeneralSchedule(id: 'remembered', name: 'Remembered', events: []),
+          GeneralSchedule(id: 'visible', name: 'Visible', events: []),
+        ],
+      );
+      final withOnlyHiddenFallbacks = buildData(
+        activeScheduleId: 'remembered',
+        schedules: const [
+          GeneralSchedule(
+            id: 'fallback',
+            name: 'Fallback',
+            isVisible: false,
+            events: [],
+          ),
+          GeneralSchedule(id: 'remembered', name: 'Remembered', events: []),
+        ],
+      );
+
+      expect(
+        service
+            .deleteSchedule(withVisibleFallback, 'remembered')
+            .activeScheduleId,
+        'visible',
+      );
+      expect(
+        service
+            .deleteSchedule(withOnlyHiddenFallbacks, 'remembered')
+            .activeScheduleId,
+        'fallback',
+      );
+    });
   });
 
   group('GeneralCalendarService display settings', () {
@@ -199,6 +288,54 @@ void main() {
               .single
               .calendarId,
           'home',
+        );
+      },
+    );
+
+    test('saving a new event remembers its target schedule', () {
+      final data = buildData(
+        schedules: const [
+          GeneralSchedule(id: 'cal', name: 'Work', events: []),
+          GeneralSchedule(id: 'home', name: 'Home', events: []),
+        ],
+      );
+
+      final updated = service.saveEvent(
+        data,
+        buildEvent(id: 'new', calendarId: 'home'),
+      );
+
+      expect(updated.activeScheduleId, 'home');
+      expect(
+        updated.schedules.singleWhere((item) => item.id == 'home').events,
+        hasLength(1),
+      );
+    });
+
+    test(
+      'editing an existing event does not change the remembered schedule',
+      () {
+        final existing = buildEvent(id: 'existing', calendarId: 'home');
+        final data = buildData(
+          schedules: [
+            const GeneralSchedule(id: 'cal', name: 'Work', events: []),
+            GeneralSchedule(id: 'home', name: 'Home', events: [existing]),
+          ],
+        );
+
+        final updated = service.saveEvent(
+          data,
+          existing.copyWith(title: 'Edited'),
+        );
+
+        expect(updated.activeScheduleId, 'cal');
+        expect(
+          updated.schedules
+              .singleWhere((item) => item.id == 'home')
+              .events
+              .single
+              .title,
+          'Edited',
         );
       },
     );

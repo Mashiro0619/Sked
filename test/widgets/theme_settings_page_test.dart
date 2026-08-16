@@ -12,6 +12,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/theme/app_theme.dart';
+import 'package:sked/widgets/expressive_motion.dart';
 
 class _BlockingTimetableStorage implements TimetableStorage {
   _BlockingTimetableStorage(this.data);
@@ -195,6 +196,22 @@ void main() {
     );
     expect(tester.getRect(list).bottom, lessThanOrEqualTo(720));
     expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
+    final workspaceRect = tester.getRect(
+      find.byKey(const ValueKey('theme-workspace-mode-segmented')),
+    );
+    final brightnessRect = tester.getRect(
+      find.byKey(const ValueKey('theme-brightness-mode-segmented')),
+    );
+    final colorModeRect = tester.getRect(
+      find.byKey(const ValueKey('theme-color-mode-segmented')),
+    );
+    final colorDetailsRect = tester.getRect(
+      find.byKey(const ValueKey('single-theme-color-section')),
+    );
+    expect(colorModeRect.center.dx, closeTo(workspaceRect.center.dx, 1));
+    expect(colorModeRect.center.dx, closeTo(brightnessRect.center.dx, 1));
+    expect(colorModeRect.top, greaterThan(brightnessRect.bottom));
+    expect(colorDetailsRect.center.dx, greaterThan(colorModeRect.right));
     expect(tester.takeException(), isNull);
   });
 
@@ -215,9 +232,162 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey('theme-workspace-mode-segmented')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('theme-workspace-mode-choice-list')),
+      findsNothing,
+    );
+    expect(
       find.byKey(const ValueKey('theme-color-mode-segmented')),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact controls are text only and center the palette', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(320, 640));
+    addTearDown(() => _resetTestViewport(tester));
+
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(
+      _ThemeSettingsHost(provider: provider, locale: const Locale('zh')),
+    );
+    await tester.pumpAndSettle();
+
+    final brightnessSelector = find.byKey(
+      const ValueKey('theme-brightness-mode-segmented'),
+    );
+    final workspaceSelector = find.byKey(
+      const ValueKey('theme-workspace-mode-segmented'),
+    );
+    final colorModeSelector = find.byKey(
+      const ValueKey('theme-color-mode-segmented'),
+    );
+    expect(
+      find.byKey(const ValueKey('theme-workspace-mode-choice-list')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('theme-brightness-mode-choice-list')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('theme-color-mode-choice-list')),
+      findsNothing,
+    );
+    final selectors = {
+      workspaceSelector: 2,
+      brightnessSelector: 3,
+      colorModeSelector: 2,
+    };
+    for (final entry in selectors.entries) {
+      final selector = entry.key;
+      expect(tester.getSize(selector).height, greaterThanOrEqualTo(48));
+      expect(
+        find.descendant(of: selector, matching: find.byType(Icon)),
+        findsNothing,
+      );
+      final indicator = find.descendant(
+        of: selector,
+        matching: find.byKey(
+          const ValueKey('sked-segmented-selection-indicator'),
+        ),
+      );
+      final controlClip = find.descendant(
+        of: selector,
+        matching: find.byKey(const ValueKey('sked-segmented-control-clip')),
+      );
+      expect(indicator, findsOneWidget);
+      expect(controlClip, findsOneWidget);
+      expect(tester.widget(indicator), isA<ColoredBox>());
+      final clip = tester.widget<ClipPath>(controlClip);
+      expect(clip.clipper, isA<ShapeBorderClipper>());
+      expect(clip.clipBehavior, Clip.antiAlias);
+      final selectorRect = tester.getRect(selector);
+      final clipRect = tester.getRect(controlClip);
+      expect(clipRect.left, closeTo(selectorRect.left, 0.01));
+      expect(clipRect.right, closeTo(selectorRect.right, 0.01));
+      expect(clipRect.top, greaterThan(selectorRect.top));
+      expect(clipRect.bottom, lessThan(selectorRect.bottom));
+      expect(
+        clipRect.top - selectorRect.top,
+        closeTo(selectorRect.bottom - clipRect.bottom, 0.01),
+      );
+      expect(tester.getSize(indicator).height, closeTo(clipRect.height, 0.01));
+      expect(
+        tester.getSize(indicator).width,
+        closeTo(clipRect.width / entry.value, 0.01),
+      );
+    }
+    final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
+    final labelsBySelector = <Finder, List<String>>{
+      workspaceSelector: [l10n.timetable, l10n.themeWorkspaceSchedule],
+      brightnessSelector: [
+        l10n.themeFollowSystem,
+        l10n.themeLight,
+        l10n.themeDark,
+      ],
+      colorModeSelector: [
+        l10n.themeColorModeSingle,
+        l10n.themeColorModeColorful,
+      ],
+    };
+    for (final entry in labelsBySelector.entries) {
+      for (final label in entry.value) {
+        final labelFinder = find.descendant(
+          of: entry.key,
+          matching: find.text(label),
+        );
+        expect(labelFinder, findsOneWidget);
+        final text = tester.widget<Text>(labelFinder);
+        expect(text.maxLines, 1);
+        expect(text.softWrap, isFalse);
+      }
+    }
+
+    final palette = find.byKey(const ValueKey('theme-seed-color-palette'));
+    expect(palette, findsOneWidget);
+    final paletteRect = tester.getRect(palette);
+    const presetHexes = [
+      '#6750A4',
+      '#5E35B1',
+      '#3949AB',
+      '#1E88E5',
+      '#00897B',
+      '#2E7D32',
+      '#7CB342',
+      '#F9A825',
+      '#EF6C00',
+      '#F4511E',
+      '#D32F2F',
+      '#D81B60',
+      '#C2185B',
+      '#6D4C41',
+      '#455A64',
+      '#546E7A',
+    ];
+    final swatchRects = [
+      for (final hex in presetHexes)
+        tester.getRect(find.byKey(ValueKey('theme-seed-color-$hex'))),
+    ];
+    final rows = <int, List<Rect>>{};
+    for (final rect in swatchRects) {
+      rows.putIfAbsent(rect.top.round(), () => []).add(rect);
+    }
+    for (final row in rows.values) {
+      final rowCenter =
+          row.map((rect) => rect.center.dx).reduce((a, b) => a + b) /
+          row.length;
+      expect(rowCenter, closeTo(paletteRect.center.dx, 1));
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -241,8 +411,134 @@ void main() {
 
       final scaffoldContext = tester.element(find.byType(Scaffold));
       expect(Directionality.of(scaffoldContext), TextDirection.ltr);
+      expect(
+        find.byKey(const ValueKey('theme-workspace-mode-choice-list')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('theme-brightness-mode-choice-list')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('theme-color-mode-choice-list')),
+        findsOneWidget,
+      );
+      for (final key in const [
+        'theme-workspace-mode-choice-list',
+        'theme-brightness-mode-choice-list',
+        'theme-color-mode-choice-list',
+      ]) {
+        final rows = find.descendant(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byType(ExpressiveTap),
+        );
+        expect(rows, findsAtLeast(2));
+        for (final row in rows.evaluate()) {
+          final rowFinder = find.byElementPredicate(
+            (element) => element == row,
+          );
+          expect(tester.getSize(rowFinder).height, greaterThanOrEqualTo(48));
+        }
+      }
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('workspace selector switches mode and edits its own theme', (
+    tester,
+  ) async {
+    final base = buildInitialAppData(buildDefaultPeriodTimes());
+    final data = base.copyWith(
+      activeMode: AppMode.student,
+      studentMode: base.studentMode.copyWith(
+        themeMode: 'system',
+        themeColorMode: themeColorModeSingle,
+        themeSeedColorValue: 0xFF6750A4,
+      ),
+      generalMode: base.generalMode.copyWith(
+        themeMode: 'dark',
+        themeColorMode: themeColorModeColorful,
+        themeSeedColorValue: 0xFF3949AB,
+        colorfulUiColorValues: const {colorfulUiPrimaryKey: 0xFF00897B},
+      ),
+    );
+    final storage = _BlockingTimetableStorage(data);
+    final provider = await _createProvider(storage);
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Schedule'));
+    await tester.pumpAndSettle();
+
+    expect(provider.activeMode, AppMode.general);
+    expect(provider.themeMode, 'dark');
+    expect(provider.themeColorMode, themeColorModeColorful);
+    expect(provider.themeSeedColorValue, 0xFF3949AB);
+    expect(storage.saveCount, 1);
+    expect(find.byType(ThemeSettingsPage), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('theme-outline-settings-card')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('theme-ui-color-primary')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<MaterialApp>(find.byType(MaterialApp))
+          .theme!
+          .colorScheme
+          .primary,
+      const Color(0xFF00897B),
+    );
+
+    await tester.tap(find.text('Light'));
+    await tester.pumpAndSettle();
+
+    expect(provider.generalMode.themeMode, 'light');
+    expect(provider.studentMode.themeMode, 'system');
+    expect(storage.saveCount, 2);
+  });
+
+  testWidgets('failed workspace switch rolls back and remains retryable', (
+    tester,
+  ) async {
+    final storage = _BlockingTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    );
+    final provider = await _createProvider(storage);
+    storage.blockNextSave();
+    storage.failNextSave();
+
+    await tester.pumpWidget(_ThemeSettingsHost(provider: provider));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Schedule'));
+    await tester.pump();
+    await tester.tap(find.text('Schedule'), warnIfMissed: false);
+    await tester.pump();
+
+    expect(storage.saveCount, 1);
+    expect(provider.activeMode, AppMode.student);
+
+    storage.completeSave();
+    await tester.pumpAndSettle();
+
+    expect(provider.activeMode, AppMode.student);
+    expect(storage.data?.activeMode, AppMode.student);
+    expect(storage.saveCount, 1);
+    expect(find.byType(ThemeSettingsPage), findsOneWidget);
+    expect(find.text('Save failed. Please try again later.'), findsOneWidget);
+
+    await tester.tap(find.text('Schedule'));
+    await tester.pumpAndSettle();
+
+    expect(provider.activeMode, AppMode.general);
+    expect(storage.data?.activeMode, AppMode.general);
+    expect(storage.saveCount, 2);
+    expect(find.byType(ThemeSettingsPage), findsOneWidget);
   });
 
   testWidgets('custom color dialog fits compact phone width', (tester) async {
@@ -559,15 +855,15 @@ void main() {
     var materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(materialApp.theme!.colorScheme.primary, const Color(0xFF6750A4));
 
-    await tester.tap(find.byKey(const ValueKey('theme-seed-color-#00897B')));
+    await tester.tap(find.byKey(const ValueKey('theme-seed-color-#D32F2F')));
     await tester.pumpAndSettle();
 
     materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(provider.themeSeedColorValue, 0xFF00897B);
-    expect(materialApp.theme!.colorScheme.primary, const Color(0xFF00897B));
+    expect(provider.themeSeedColorValue, 0xFFD32F2F);
+    expect(materialApp.theme!.colorScheme.primary, const Color(0xFFD32F2F));
     expect(
       materialApp.theme!.navigationBarTheme.indicatorColor,
-      const Color(0xFF00897B).withValues(alpha: 0.12),
+      const Color(0xFFD32F2F).withValues(alpha: 0.12),
     );
   });
 
@@ -746,19 +1042,19 @@ void main() {
 
       expect(
         find.byKey(const ValueKey('theme-ui-color-primary')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(
         find.byKey(const ValueKey('theme-ui-color-secondary')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(
         find.byKey(const ValueKey('theme-ui-color-tertiary')),
-        findsNothing,
+        findsOneWidget,
       );
-      expect(find.text('Primary'), findsNothing);
-      expect(find.text('Secondary'), findsNothing);
-      expect(find.text('Tertiary'), findsNothing);
+      expect(find.text('Primary'), findsOneWidget);
+      expect(find.text('Secondary'), findsOneWidget);
+      expect(find.text('Tertiary'), findsOneWidget);
     },
   );
 

@@ -121,6 +121,58 @@ AppData _buildGeneralData() {
   ).copyWith(activeMode: AppMode.general);
 }
 
+GeneralSchedule _generalSchedule({
+  required String id,
+  required String name,
+  bool isVisible = true,
+  int sortOrder = 0,
+  List<GeneralEvent> events = const [],
+}) {
+  return GeneralSchedule(
+    id: id,
+    name: name,
+    isVisible: isVisible,
+    sortOrder: sortOrder,
+    events: events,
+  );
+}
+
+AppData _buildGeneralDataWithSchedules(
+  List<GeneralSchedule> schedules, {
+  required String activeScheduleId,
+}) {
+  final data = _buildGeneralData();
+  return data.copyWith(
+    generalMode: data.generalMode.copyWith(
+      activeScheduleId: activeScheduleId,
+      schedules: schedules,
+    ),
+  );
+}
+
+String _buildGeneralImportSource() {
+  const sourceId = 'import-source';
+  return encodeGeneralScheduleDataEnvelope(
+    GeneralScheduleExportData(
+      schedules: [
+        _generalSchedule(
+          id: sourceId,
+          name: 'Imported category',
+          events: [
+            GeneralEvent(
+              id: 'imported-event',
+              calendarId: sourceId,
+              title: 'Imported event',
+              startDateTimeIso: '2026-08-15T09:00:00.000',
+              endDateTimeIso: '2026-08-15T10:00:00.000',
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 Future<TimetableProvider> _createProvider(
   AppData data, {
   RecoveryStatus recoveryStatus = RecoveryStatus.none,
@@ -247,6 +299,25 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500));
 }
 
+Future<void> _openGeneralDataActions(
+  WidgetTester tester,
+  TimetableProvider provider,
+) async {
+  await _pumpSettingsPage(tester, provider);
+  final tile = find.text('Category import & export');
+  await tester.ensureVisible(tile);
+  await tester.pumpAndSettle();
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
+}
+
+Finder _generalSelectionTile(String name) {
+  return find.ancestor(
+    of: find.text(name),
+    matching: find.byType(ExpressiveTap),
+  );
+}
+
 const _settingsGroupKeys = <String>[
   'settings-group-workspace',
   'settings-group-timetable',
@@ -321,7 +392,7 @@ void main() {
       find.text('Views, toolbar, date format, and quick add'),
       findsOneWidget,
     );
-    expect(find.text('Schedule import & export'), findsOneWidget);
+    expect(find.text('Category import & export'), findsOneWidget);
 
     final groupTops = _settingsGroupKeys
         .map((key) => tester.getTopLeft(find.byKey(ValueKey(key))).dy)
@@ -400,10 +471,44 @@ void main() {
     expect(find.text('Timetable display and interaction'), findsOneWidget);
     expect(find.text('Import and export data'), findsOneWidget);
     expect(find.text('General display settings'), findsOneWidget);
-    expect(find.text('Schedule import & export'), findsOneWidget);
+    expect(find.text('Category import & export'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('About Sked'), 120);
     expect(find.text('About Sked'), findsOneWidget);
+  });
+
+  testWidgets('theme summary shows both themes for either active workspace', (
+    tester,
+  ) async {
+    final base = _buildStudentData();
+    for (final activeMode in AppMode.values) {
+      final data = base.copyWith(
+        activeMode: activeMode,
+        studentMode: base.studentMode.copyWith(
+          themeMode: 'dark',
+          themeColorMode: themeColorModeColorful,
+        ),
+        generalMode: base.generalMode.copyWith(
+          themeMode: 'system',
+          themeColorMode: themeColorModeSingle,
+        ),
+      );
+      final provider = await _createProvider(data);
+
+      await _pumpSettingsPage(tester, provider);
+
+      expect(
+        find.text(
+          'Student timetable: Dark / Colorful\n'
+          'General schedule: Follow system / Single theme color',
+        ),
+        findsOneWidget,
+        reason: 'Active workspace: ${activeMode.value}',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+    }
   });
 
   testWidgets('Chinese settings summaries describe the current controls', (
@@ -882,7 +987,7 @@ void main() {
     final provider = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, provider);
 
-    final importExportTile = find.text('Schedule import & export');
+    final importExportTile = find.text('Category import & export');
     expect(importExportTile, findsOneWidget);
 
     await tester.ensureVisible(importExportTile);
@@ -900,7 +1005,7 @@ void main() {
     final provider = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, provider);
 
-    final importExportTile = find.text('Schedule import & export');
+    final importExportTile = find.text('Category import & export');
     await tester.ensureVisible(importExportTile);
     await tester.pumpAndSettle();
     await tester.tap(importExportTile);
@@ -947,7 +1052,7 @@ void main() {
     await tester.tap(find.text('Open settings host'));
     await _pumpRouteTransition(tester);
 
-    final importExportTile = find.text('Schedule import & export');
+    final importExportTile = find.text('Category import & export');
     expect(importExportTile, findsOneWidget);
 
     await tester.ensureVisible(importExportTile);
@@ -971,6 +1076,195 @@ void main() {
     );
   });
 
+  testWidgets('JSON replacement target cancellation does not import or save', (
+    tester,
+  ) async {
+    final data = _buildGeneralDataWithSchedules([
+      _generalSchedule(id: 'existing-a', name: 'Existing Alpha'),
+      _generalSchedule(id: 'existing-b', name: 'Existing Beta', sortOrder: 1),
+    ], activeScheduleId: 'existing-a');
+    final storage = _MemoryTimetableStorage(data);
+    final provider = await _createProvider(data, storage: storage);
+    addTearDown(provider.dispose);
+
+    await _openGeneralDataActions(tester, provider);
+    await tester.tap(find.text('Paste JSON'));
+    await _pumpRouteTransition(tester);
+    await tester.enterText(find.byType(TextField), _buildGeneralImportSource());
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.text('Select categories to import'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _pumpRouteTransition(tester);
+    expect(
+      find.text(
+        'Add the import as a new category or replace an existing category?',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace category'));
+    await _pumpRouteTransition(tester);
+    expect(find.text('Choose category to replace'), findsOneWidget);
+    expect(find.text('Existing Alpha'), findsOneWidget);
+    expect(find.text('Existing Beta'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.byType(TextImportPage), findsOneWidget);
+    expect(storage.saveCount, 0);
+    expect(provider.generalSchedules.map((schedule) => schedule.name), [
+      'Existing Alpha',
+      'Existing Beta',
+    ]);
+    expect(
+      provider.generalSchedules.every((schedule) => schedule.events.isEmpty),
+      isTrue,
+    );
+  });
+
+  testWidgets('JSON replacement uses the explicitly selected category', (
+    tester,
+  ) async {
+    final data = _buildGeneralDataWithSchedules([
+      _generalSchedule(id: 'existing-a', name: 'Existing Alpha'),
+      _generalSchedule(id: 'existing-b', name: 'Existing Beta', sortOrder: 1),
+    ], activeScheduleId: 'existing-a');
+    final storage = _MemoryTimetableStorage(data);
+    final provider = await _createProvider(data, storage: storage);
+    addTearDown(provider.dispose);
+
+    await _openGeneralDataActions(tester, provider);
+    await tester.tap(find.text('Paste JSON'));
+    await _pumpRouteTransition(tester);
+    await tester.enterText(find.byType(TextField), _buildGeneralImportSource());
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _pumpRouteTransition(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace category'));
+    await _pumpRouteTransition(tester);
+
+    await tester.tap(find.text('Existing Beta'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Replace category'));
+    await _pumpRouteTransition(tester);
+
+    expect(find.byType(TextImportPage), findsNothing);
+    expect(storage.saveCount, 1);
+    final alpha = provider.generalSchedules.singleWhere(
+      (schedule) => schedule.id == 'existing-a',
+    );
+    final beta = provider.generalSchedules.singleWhere(
+      (schedule) => schedule.id == 'existing-b',
+    );
+    expect(alpha.name, 'Existing Alpha');
+    expect(alpha.events, isEmpty);
+    expect(beta.name, 'Imported category');
+    expect(beta.events.single.title, 'Imported event');
+  });
+
+  testWidgets('copy JSON defaults to all visible categories', (tester) async {
+    final data = _buildGeneralDataWithSchedules([
+      _generalSchedule(id: 'visible-a', name: 'Visible Alpha'),
+      _generalSchedule(
+        id: 'hidden-b',
+        name: 'Hidden Beta',
+        isVisible: false,
+        sortOrder: 1,
+      ),
+      _generalSchedule(id: 'visible-c', name: 'Visible Gamma', sortOrder: 2),
+    ], activeScheduleId: 'visible-a');
+    final provider = await _createProvider(data);
+    addTearDown(provider.dispose);
+
+    await _openGeneralDataActions(tester, provider);
+    final copyJson = find.text('Copy JSON');
+    await tester.ensureVisible(copyJson);
+    await tester.pumpAndSettle();
+    await tester.tap(copyJson);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select categories to export'), findsOneWidget);
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: _generalSelectionTile('Visible Alpha'),
+        matching: find.byIcon(Icons.check_circle),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _generalSelectionTile('Hidden Beta'),
+        matching: find.byIcon(Icons.radio_button_unchecked),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _generalSelectionTile('Visible Gamma'),
+        matching: find.byIcon(Icons.check_circle),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('copy ICS falls back to the first category when all are hidden', (
+    tester,
+  ) async {
+    final data = _buildGeneralDataWithSchedules([
+      _generalSchedule(id: 'hidden-a', name: 'Hidden Alpha', isVisible: false),
+      _generalSchedule(
+        id: 'hidden-b',
+        name: 'Hidden Beta',
+        isVisible: false,
+        sortOrder: 1,
+      ),
+      _generalSchedule(
+        id: 'hidden-c',
+        name: 'Hidden Gamma',
+        isVisible: false,
+        sortOrder: 2,
+      ),
+    ], activeScheduleId: 'hidden-a');
+    final provider = await _createProvider(data);
+    addTearDown(provider.dispose);
+
+    await _openGeneralDataActions(tester, provider);
+    final copyIcs = find.text('Copy ICS');
+    await tester.ensureVisible(copyIcs);
+    await tester.pumpAndSettle();
+    await tester.tap(copyIcs);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select calendars to copy as ICS'), findsOneWidget);
+    expect(find.text('1 / 3'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: _generalSelectionTile('Hidden Alpha'),
+        matching: find.byIcon(Icons.check_circle),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _generalSelectionTile('Hidden Beta'),
+        matching: find.byIcon(Icons.radio_button_unchecked),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _generalSelectionTile('Hidden Gamma'),
+        matching: find.byIcon(Icons.radio_button_unchecked),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('JSON import storage failure is reported without losing text', (
     tester,
   ) async {
@@ -984,7 +1278,7 @@ void main() {
     storage.failSaves = true;
     await _pumpSettingsPage(tester, provider);
 
-    final importExportTile = find.text('Schedule import & export');
+    final importExportTile = find.text('Category import & export');
     await tester.ensureVisible(importExportTile);
     await tester.pumpAndSettle();
     await tester.tap(importExportTile);
@@ -996,7 +1290,7 @@ void main() {
     await _pumpRouteTransition(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await _pumpRouteTransition(tester);
-    await tester.tap(find.widgetWithText(TextButton, 'Add as new'));
+    await tester.tap(find.widgetWithText(TextButton, 'Add as new category'));
     await _pumpRouteTransition(tester);
 
     expect(find.byType(TextImportPage), findsOneWidget);
@@ -1038,7 +1332,7 @@ void main() {
     storage.failSaves = true;
     await _pumpSettingsPage(tester, provider);
 
-    final importExportTile = find.text('Schedule import & export');
+    final importExportTile = find.text('Category import & export');
     await tester.ensureVisible(importExportTile);
     await tester.pumpAndSettle();
     await tester.tap(importExportTile);
@@ -1048,7 +1342,7 @@ void main() {
     await tester.enterText(find.byType(TextField), source);
     await tester.tap(find.widgetWithText(FilledButton, 'Import'));
     await _pumpRouteTransition(tester);
-    await tester.tap(find.widgetWithText(TextButton, 'Add as new'));
+    await tester.tap(find.widgetWithText(TextButton, 'Add as new category'));
     await _pumpRouteTransition(tester);
 
     expect(find.byType(TextImportPage), findsOneWidget);

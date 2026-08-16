@@ -74,6 +74,35 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# flutter_inappwebview_linux 0.1.0-beta.1 unconditionally enables
+# -Wno-deprecated-literal-operator. Clang 14 (used by the Ubuntu 22.04 release
+# runner) does not recognize that warning name, and the Flutter template's
+# target-scoped -Werror turns the resulting diagnostic into a build failure.
+# The plugin also calls webkit_web_view_get_theme_color unconditionally even
+# though WPE WebKit only added that API in 2.50. Keep both compatibility
+# workarounds target-scoped so the app and every other plugin retain -Werror.
+if(
+  TARGET flutter_inappwebview_linux_plugin
+)
+  target_compile_options(
+    flutter_inappwebview_linux_plugin
+    PRIVATE
+    -include
+    "${CMAKE_CURRENT_SOURCE_DIR}/flutter_inappwebview_linux_compat.h"
+  )
+endif()
+
+if(
+  TARGET flutter_inappwebview_linux_plugin
+  AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+  AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 18
+)
+  target_compile_options(
+    flutter_inappwebview_linux_plugin
+    PRIVATE -Wno-error=unknown-warning-option
+  )
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

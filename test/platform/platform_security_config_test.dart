@@ -383,10 +383,93 @@ void main() {
     );
   });
 
+  test('Linux WebView warning compatibility stays target-scoped', () {
+    final cmake = File('linux/CMakeLists.txt').readAsStringSync();
+    final generatedPluginsIndex = cmake.indexOf(
+      'include(flutter/generated_plugins.cmake)',
+    );
+    final compatibilityIndex = cmake.indexOf(
+      'TARGET flutter_inappwebview_linux_plugin',
+    );
+
+    expect(generatedPluginsIndex, greaterThanOrEqualTo(0));
+    expect(compatibilityIndex, greaterThan(generatedPluginsIndex));
+    expect(
+      RegExp(
+        r'if\(\s*'
+        r'TARGET flutter_inappwebview_linux_plugin\s*'
+        r'AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"\s*'
+        r'AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 18\s*'
+        r'\)\s*'
+        r'target_compile_options\(\s*'
+        r'flutter_inappwebview_linux_plugin\s+PRIVATE\s+'
+        r'-Wno-error=unknown-warning-option\s*\)',
+      ).hasMatch(cmake),
+      isTrue,
+    );
+    expect(
+      cmake,
+      isNot(contains('add_compile_options(-Wno-error=unknown-warning-option)')),
+    );
+  });
+
+  test('Linux WebView theme color compatibility is target-scoped', () {
+    final cmake = File('linux/CMakeLists.txt').readAsStringSync();
+    final compatHeader = File('linux/flutter_inappwebview_linux_compat.h')
+        .readAsStringSync();
+    final generatedPluginsIndex = cmake.indexOf(
+      'include(flutter/generated_plugins.cmake)',
+    );
+    final compatibilityIndex = cmake.indexOf(
+      'TARGET flutter_inappwebview_linux_plugin',
+    );
+
+    expect(generatedPluginsIndex, greaterThanOrEqualTo(0));
+    expect(compatibilityIndex, greaterThan(generatedPluginsIndex));
+    expect(
+      RegExp(
+        r'target_compile_options\(\s*'
+        r'flutter_inappwebview_linux_plugin\s+PRIVATE\s+'
+        r'-include\s+'
+        r'"\$\{CMAKE_CURRENT_SOURCE_DIR\}/'
+        r'flutter_inappwebview_linux_compat\.h"\s*\)',
+      ).hasMatch(cmake),
+      isTrue,
+    );
+    expect(cmake, isNot(contains('add_compile_options(-include')));
+    expect(compatHeader, contains('#include <wpe/webkit.h>'));
+    expect(compatHeader, contains('WEBKIT_CHECK_VERSION(2, 50, 0)'));
+    expect(compatHeader, contains('#define webkit_web_view_get_theme_color'));
+    expect(compatHeader, contains('return FALSE;'));
+  });
+
+  test('Apple WebView availability fix is pinned to an immutable commit', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final lockfile = File('pubspec.lock').readAsStringSync();
+    const fixedCommit = 'fc33a449b9290b127a471808e22eb7b0edebad92';
+
+    expect(
+      RegExp(
+        r'url:\s+https://github\.com/wangqiang1588/'
+        r'flutter_inappwebview\.git',
+      ).allMatches(pubspec),
+      hasLength(2),
+    );
+    expect(RegExp('ref: $fixedCommit').allMatches(pubspec), hasLength(2));
+    expect(pubspec, contains('path: flutter_inappwebview_macos'));
+    expect(pubspec, contains('path: flutter_inappwebview_ios'));
+    expect(
+      RegExp('resolved-ref: $fixedCommit').allMatches(lockfile),
+      hasLength(2),
+    );
+    expect(lockfile, contains('path: flutter_inappwebview_macos'));
+    expect(lockfile, contains('path: flutter_inappwebview_ios'));
+  });
+
   test('CI uses Node 24 actions and guards generated Android artifacts', () {
     final workflow = File('.github/workflows/flutter.yml').readAsStringSync();
 
-    expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(2));
+    expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(3));
     expect(
       RegExp(r'actions/upload-artifact@v7').allMatches(workflow),
       hasLength(2),
@@ -394,13 +477,15 @@ void main() {
     expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
     expect(
       RegExp(r"flutter-version: '3\.47\.0'").allMatches(workflow),
-      hasLength(2),
+      hasLength(3),
     );
     expect(workflow, isNot(contains('actions/checkout@v4')));
     expect(workflow, isNot(contains('actions/upload-artifact@v4')));
     expect(workflow, isNot(contains('NuGet/setup-nuget@v2')));
-    expect(workflow, contains('os: ubuntu-22.04'));
+    expect(workflow, contains('runs-on: ubuntu-24.04'));
+    expect(workflow, contains('image: debian:13-slim'));
     expect(workflow, isNot(contains('os: ubuntu-latest')));
+    expect(workflow, isNot(contains('os: ubuntu-22.04')));
     expect(workflow, contains('id: android-security-artifacts'));
     expect(
       workflow,
@@ -410,14 +495,26 @@ void main() {
       ),
     );
     for (final linuxPackage in <String>[
+      'jq',
       'libepoxy-dev',
       'libwayland-dev',
       'libwpe-1.0-dev',
       'libwpebackend-fdo-1.0-dev',
-      'libwpewebkit-1.0-dev',
+      'libwpewebkit-2.0-dev',
+      'zstd',
     ]) {
       expect(workflow, contains(linuxPackage));
     }
+    expect(workflow, contains('pkg-config --modversion wpe-webkit-2.0'));
+    expect(
+      workflow,
+      contains(r'dpkg --compare-versions "$wpe_version" ge 2.40'),
+    );
+    expect(
+      workflow,
+      contains(r'git config --global --add safe.directory "$FLUTTER_ROOT"'),
+    );
+    expect(workflow, isNot(contains('libwpewebkit-1.0-dev')));
     expect(workflow, isNot(contains('libwpewebkit-1.1-dev')));
     expect(workflow, contains('flutter build ios --release --no-codesign'));
   });

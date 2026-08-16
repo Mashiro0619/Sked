@@ -24,79 +24,81 @@ class _CalendarManagerSheetState extends State<_CalendarManagerSheet> {
           _CalendarManagerBusyIndicator(busy: _actionInProgress),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compactHeader = constraints.maxWidth < 420;
-                return Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.calendars,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.calendars,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(width: 12),
-                    _CalendarManagerAddAction(
-                      compact: compactHeader,
-                      disabled: _actionInProgress,
-                      onPressed: () {
-                        unawaited(_addCalendar(provider, l10n));
-                      },
-                    ),
-                  ],
-                );
-              },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _CalendarManagerAddAction(
+                  disabled: _actionInProgress,
+                  onPressed: () {
+                    unawaited(_addCalendar(provider, l10n));
+                  },
+                ),
+              ],
             ),
           ),
           Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              itemCount: provider.generalSchedules.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final schedule = provider.generalSchedules[index];
-                final active = schedule.id == provider.activeGeneralSchedule.id;
-                return _CalendarManagerTile(
-                  schedule: schedule,
-                  active: active,
-                  eventCountLabel: l10n.generalScheduleEventCount(
-                    schedule.events.length,
+              child: Material(
+                color: colors.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: BorderSide(color: colors.outlineVariant),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: provider.generalSchedules.length,
+                  separatorBuilder: (_, _) => Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 12,
+                    endIndent: 12,
+                    color: colors.outlineVariant,
                   ),
-                  disabled: _actionInProgress,
-                  onSelect: () {
-                    unawaited(
-                      _runCalendarAction(
-                        debugLabel: 'Switch general calendar',
-                        action: () =>
-                            provider.switchGeneralSchedule(schedule.id),
-                      ),
-                    );
-                  },
-                  onToggleVisibility: () {
-                    unawaited(
-                      _runCalendarAction(
-                        debugLabel: 'Update general calendar visibility',
-                        action: () => provider.updateGeneralScheduleVisibility(
-                          schedule.id,
-                          !schedule.isVisible,
+                  itemBuilder: (context, index) {
+                    final schedule = provider.generalSchedules[index];
+                    void toggleVisibility() {
+                      unawaited(
+                        _runCalendarAction(
+                          debugLabel: 'Update general calendar visibility',
+                          action: () =>
+                              provider.updateGeneralScheduleVisibility(
+                                schedule.id,
+                                !schedule.isVisible,
+                              ),
                         ),
+                      );
+                    }
+
+                    return _CalendarManagerTile(
+                      schedule: schedule,
+                      eventCountLabel: l10n.generalScheduleEventCount(
+                        schedule.events.length,
                       ),
+                      disabled: _actionInProgress,
+                      onToggleVisibility: toggleVisibility,
+                      onRename: () {
+                        unawaited(_renameCalendar(schedule));
+                      },
+                      onDelete: () {
+                        unawaited(_deleteCalendar(schedule));
+                      },
                     );
                   },
-                  onRename: () {
-                    unawaited(_renameCalendar(schedule));
-                  },
-                  onDelete: () {
-                    unawaited(_deleteCalendar(schedule));
-                  },
-                );
-              },
+                ),
+              ),
             ),
           ),
         ],
@@ -350,12 +352,10 @@ class _CalendarManagerBusyIndicator extends StatelessWidget {
 
 class _CalendarManagerAddAction extends StatelessWidget {
   const _CalendarManagerAddAction({
-    required this.compact,
     required this.disabled,
     required this.onPressed,
   });
 
-  final bool compact;
   final bool disabled;
   final VoidCallback onPressed;
 
@@ -363,20 +363,12 @@ class _CalendarManagerAddAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final callback = disabled ? null : onPressed;
-    if (compact) {
-      return IconButton(
+    return SizedBox.square(
+      dimension: 48,
+      child: IconButton(
         tooltip: l10n.addCalendar,
         icon: const Icon(Icons.add),
         onPressed: callback,
-      );
-    }
-
-    return Tooltip(
-      message: l10n.addCalendar,
-      child: FilledButton.tonalIcon(
-        onPressed: callback,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.addCalendar),
       ),
     );
   }
@@ -385,20 +377,16 @@ class _CalendarManagerAddAction extends StatelessWidget {
 class _CalendarManagerTile extends StatelessWidget {
   const _CalendarManagerTile({
     required this.schedule,
-    required this.active,
     required this.eventCountLabel,
     required this.disabled,
-    required this.onSelect,
     required this.onToggleVisibility,
     required this.onRename,
     required this.onDelete,
   });
 
   final GeneralSchedule schedule;
-  final bool active;
   final String eventCountLabel;
   final bool disabled;
-  final VoidCallback onSelect;
   final VoidCallback onToggleVisibility;
   final VoidCallback onRename;
   final VoidCallback onDelete;
@@ -406,92 +394,58 @@ class _CalendarManagerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final borderColor = active
-        ? colors.primary.withValues(alpha: 0.44)
-        : colors.outlineVariant.withValues(alpha: 0.7);
+    final toggleLabel = schedule.isVisible
+        ? l10n.hideCalendar
+        : l10n.showCalendar;
 
     return Semantics(
       key: ValueKey('calendar-manager-tile-${schedule.id}'),
       container: true,
+      explicitChildNodes: true,
       button: true,
       enabled: !disabled,
-      selected: active,
-      onTap: disabled ? null : onSelect,
-      child: Material(
-        color: active
-            ? colors.primary.withValues(alpha: 0.10)
-            : colors.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: borderColor),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          excludeFromSemantics: true,
-          onTap: disabled ? null : onSelect,
+      toggled: schedule.isVisible,
+      label: '${schedule.name}, $eventCountLabel',
+      hint: toggleLabel,
+      onTap: disabled ? null : onToggleVisibility,
+      child: InkWell(
+        excludeFromSemantics: true,
+        onTap: disabled ? null : onToggleVisibility,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 360;
-                final titleBlock = _CalendarManagerTileTitle(
-                  schedule: schedule,
-                  active: active,
-                  eventCountLabel: eventCountLabel,
-                );
-                final actions = _CalendarManagerTileActions(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 4, 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ExcludeSemantics(
+                  child: _ColorDot(
+                    color: effectiveGeneralCalendarColor(context, schedule),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ExcludeSemantics(
+                    child: _CalendarManagerTileTitle(
+                      schedule: schedule,
+                      eventCountLabel: eventCountLabel,
+                    ),
+                  ),
+                ),
+                _CalendarManagerTileActions(
+                  scheduleId: schedule.id,
                   visible: schedule.isVisible,
                   disabled: disabled,
                   showTooltip: l10n.showCalendar,
                   hideTooltip: l10n.hideCalendar,
-                  renameTooltip: l10n.rename,
-                  deleteTooltip: l10n.delete,
+                  moreTooltip: l10n.more,
+                  renameLabel: l10n.rename,
+                  deleteLabel: l10n.delete,
                   onToggleVisibility: onToggleVisibility,
                   onRename: onRename,
                   onDelete: onDelete,
-                );
-
-                if (compact) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _ColorDot(
-                            color: effectiveGeneralCalendarColor(
-                              context,
-                              schedule,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: titleBlock),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: actions,
-                      ),
-                    ],
-                  );
-                }
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _ColorDot(
-                      color: effectiveGeneralCalendarColor(context, schedule),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: titleBlock),
-                    const SizedBox(width: 8),
-                    actions,
-                  ],
-                );
-              },
+                ),
+              ],
             ),
           ),
         ),
@@ -503,12 +457,10 @@ class _CalendarManagerTile extends StatelessWidget {
 class _CalendarManagerTileTitle extends StatelessWidget {
   const _CalendarManagerTileTitle({
     required this.schedule,
-    required this.active,
     required this.eventCountLabel,
   });
 
   final GeneralSchedule schedule;
-  final bool active;
   final String eventCountLabel;
 
   @override
@@ -517,25 +469,16 @@ class _CalendarManagerTileTitle extends StatelessWidget {
     final colors = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                schedule.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: active ? colors.primary : colors.onSurface,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                ),
-              ),
-            ),
-            if (active) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.check_circle, size: 18, color: colors.primary),
-            ],
-          ],
+        Text(
+          schedule.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
@@ -543,7 +486,7 @@ class _CalendarManagerTileTitle extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: active ? colors.primary : colors.onSurfaceVariant,
+            color: colors.onSurfaceVariant,
           ),
         ),
       ],
@@ -553,52 +496,99 @@ class _CalendarManagerTileTitle extends StatelessWidget {
 
 class _CalendarManagerTileActions extends StatelessWidget {
   const _CalendarManagerTileActions({
+    required this.scheduleId,
     required this.visible,
     required this.disabled,
     required this.showTooltip,
     required this.hideTooltip,
-    required this.renameTooltip,
-    required this.deleteTooltip,
+    required this.moreTooltip,
+    required this.renameLabel,
+    required this.deleteLabel,
     required this.onToggleVisibility,
     required this.onRename,
     required this.onDelete,
   });
 
+  final String scheduleId;
   final bool visible;
   final bool disabled;
   final String showTooltip;
   final String hideTooltip;
-  final String renameTooltip;
-  final String deleteTooltip;
+  final String moreTooltip;
+  final String renameLabel;
+  final String deleteLabel;
   final VoidCallback onToggleVisibility;
   final VoidCallback onRename;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 2,
-      runSpacing: 2,
-      alignment: WrapAlignment.end,
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          tooltip: visible ? hideTooltip : showTooltip,
-          icon: Icon(
-            visible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        SizedBox.square(
+          dimension: 48,
+          child: IconButton(
+            key: ValueKey('calendar-visibility-$scheduleId'),
+            tooltip: visible ? hideTooltip : showTooltip,
+            icon: Icon(
+              visible
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+            ),
+            onPressed: disabled ? null : onToggleVisibility,
           ),
-          onPressed: disabled ? null : onToggleVisibility,
         ),
-        IconButton(
-          tooltip: renameTooltip,
-          icon: const Icon(Icons.edit_outlined),
-          onPressed: disabled ? null : onRename,
-        ),
-        IconButton(
-          tooltip: deleteTooltip,
-          icon: const Icon(Icons.delete_outline),
-          onPressed: disabled ? null : onDelete,
+        SizedBox.square(
+          dimension: 48,
+          child: SkedPopupMenuButton<_CalendarManagerMenuAction>(
+            key: ValueKey('calendar-actions-$scheduleId'),
+            enabled: !disabled,
+            tooltip: moreTooltip,
+            icon: const Icon(Icons.more_vert),
+            onSelected: (action) {
+              switch (action) {
+                case _CalendarManagerMenuAction.rename:
+                  onRename();
+                case _CalendarManagerMenuAction.delete:
+                  onDelete();
+              }
+            },
+            itemBuilder: (context) => [
+              SkedPopupMenuItem<_CalendarManagerMenuAction>(
+                value: _CalendarManagerMenuAction.rename,
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_outlined),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(renameLabel)),
+                  ],
+                ),
+              ),
+              SkedPopupMenuDivider<_CalendarManagerMenuAction>(),
+              SkedPopupMenuItem<_CalendarManagerMenuAction>(
+                value: _CalendarManagerMenuAction.delete,
+                child: IconTheme.merge(
+                  data: IconThemeData(color: colors.error),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(color: colors.error),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_outline),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(deleteLabel)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
+
+enum _CalendarManagerMenuAction { rename, delete }

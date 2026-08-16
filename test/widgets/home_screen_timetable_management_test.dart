@@ -935,7 +935,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('Manage calendars, events, reminders, and JSON / ICS data.'),
+      find.text('Manage categories, events, reminders, and JSON / ICS data.'),
       findsOneWidget,
     );
     final studentSemantics = tester

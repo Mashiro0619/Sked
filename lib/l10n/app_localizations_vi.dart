@@ -49,6 +49,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get timetable => 'Thời gian';
 
   @override
+  String get themeWorkspaceSchedule => 'Schedule';
+
+  @override
   String get timetableName => 'Tên lịch trình';
 
   @override
@@ -1473,7 +1476,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get firstLaunchGeneralDesc =>
-      'Quản lý lịch, sự kiện, nhắc nhở và dữ liệu JSON / ICS.';
+      'Quản lý danh mục, sự kiện, nhắc nhở và dữ liệu JSON / ICS.';
 
   @override
   String get firstLaunchStartStudent => 'Bắt đầu với thời khóa biểu';
@@ -1582,35 +1585,35 @@ class AppLocalizationsVi extends AppLocalizations {
   String get showGridLines => 'Show grid lines';
 
   @override
-  String get generalScheduleImportExport => 'Schedule import & export';
+  String get generalScheduleImportExport => 'Category import & export';
 
   @override
   String get generalScheduleImportExportDesc =>
-      'Import or share general schedules';
+      'Import or share schedule categories';
 
   @override
-  String get importGeneralSchedules => 'Import schedules';
+  String get importGeneralSchedules => 'Import categories';
 
   @override
-  String get importGeneralSchedulesDesc => 'Read schedules from a JSON file';
+  String get importGeneralSchedulesDesc => 'Read categories from a JSON file';
 
   @override
-  String get shareGeneralSchedules => 'Share schedules';
+  String get shareGeneralSchedules => 'Share categories';
 
   @override
-  String get shareGeneralSchedulesDesc => 'Share schedules as a JSON file';
+  String get shareGeneralSchedulesDesc => 'Share categories as a JSON file';
 
   @override
-  String get saveGeneralSchedules => 'Save schedules';
+  String get saveGeneralSchedules => 'Save categories';
 
   @override
-  String get saveGeneralSchedulesDesc => 'Save schedules as a JSON file';
+  String get saveGeneralSchedulesDesc => 'Save categories as a JSON file';
 
   @override
-  String get selectSchedulesToExport => 'Select schedules to export';
+  String get selectSchedulesToExport => 'Select categories to export';
 
   @override
-  String get selectSchedulesToImport => 'Select schedules to import';
+  String get selectSchedulesToImport => 'Select categories to import';
 
   @override
   String generalScheduleEventCount(int count) {
@@ -1619,39 +1622,40 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String importedSchedulesCount(int count) {
-    return 'Imported $count schedules';
+    return 'Imported $count categories';
   }
 
   @override
   String get replaceActiveSchedulePrompt =>
-      'Replace current schedule with the imported one?';
+      'Add the import as a new category or replace an existing category?';
 
   @override
-  String get addAsNewSchedule => 'Add as new';
+  String get addAsNewSchedule => 'Add as new category';
 
   @override
   String get selectAtLeastOneScheduleMessage =>
-      'Please select at least one schedule.';
+      'Please select at least one category.';
 
   @override
-  String get noExportableScheduleMessage => 'No schedule available to export.';
+  String get noExportableScheduleMessage => 'No category available to export.';
 
   @override
-  String get noSchedulesInImportMessage => 'Import file contains no schedules.';
+  String get noSchedulesInImportMessage =>
+      'Import file contains no categories.';
 
   @override
   String get replaceActiveRequiresSingleScheduleMessage =>
-      'Choose exactly one schedule to replace the current one.';
+      'Choose exactly one imported category for replacement.';
 
   @override
   String get noActiveScheduleToReplaceMessage =>
-      'No current schedule to replace.';
+      'The selected replacement category is unavailable.';
 
   @override
-  String get calendars => 'Calendars';
+  String get calendars => 'Categories';
 
   @override
-  String get calendar => 'Calendar';
+  String get calendar => 'Category';
 
   @override
   String get viewWeek => 'Tuần';
@@ -1664,6 +1668,30 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get viewMonth => 'Month';
+
+  @override
+  String visibleCategoryCount(int count) {
+    return '$count categories';
+  }
+
+  @override
+  String get noVisibleCategories => 'No visible categories';
+
+  @override
+  String get selectCategoryToReplace => 'Choose category to replace';
+
+  @override
+  String get replaceCategory => 'Replace category';
+
+  @override
+  String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventConfirmation =>
+      'This event will be permanently deleted.';
+
+  @override
+  String get deleteRecurringEventTitle => 'Delete recurring event';
 
   @override
   String get eventDuplicated => 'Event duplicated';
@@ -1705,28 +1733,28 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noUpcomingEvents => 'No upcoming events';
 
   @override
-  String get addCalendar => 'Add calendar';
+  String get addCalendar => 'Add category';
 
   @override
-  String get newCalendar => 'New calendar';
+  String get newCalendar => 'New category';
 
   @override
-  String get hideCalendar => 'Hide calendar';
+  String get hideCalendar => 'Hide category';
 
   @override
-  String get showCalendar => 'Show calendar';
+  String get showCalendar => 'Show category';
 
   @override
   String get rename => 'Rename';
 
   @override
-  String get renameCalendar => 'Rename calendar';
+  String get renameCalendar => 'Rename category';
 
   @override
   String get name => 'Name';
 
   @override
-  String get deleteCalendar => 'Delete calendar';
+  String get deleteCalendar => 'Delete category';
 
   @override
   String deleteCalendarMessage(Object name) {
@@ -1734,13 +1762,13 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get deleteThisOccurrence => 'Delete this';
+  String get deleteThisOccurrence => 'Delete this occurrence';
 
   @override
-  String get deleteFutureOccurrences => 'Delete future';
+  String get deleteFutureOccurrences => 'Delete this and following';
 
   @override
-  String get deleteAllOccurrences => 'Delete all';
+  String get deleteAllOccurrences => 'Delete entire series';
 
   @override
   String get duplicateEvent => 'Duplicate';
@@ -1870,7 +1898,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get importGeneralSchedulesJsonTextDesc =>
-      'Import calendars from copied JSON';
+      'Import categories from copied JSON';
 
   @override
   String get importIcsFile => 'Import ICS file';
@@ -1888,7 +1916,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get copyJson => 'Copy JSON';
 
   @override
-  String get copyJsonDesc => 'Copy selected calendars as JSON text';
+  String get copyJsonDesc => 'Copy selected categories as JSON text';
 
   @override
   String get shareIcs => 'Share ICS';
@@ -1919,12 +1947,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String importIcsPreviewPrompt(int count) {
-    return 'Found $count events. Import as a new calendar or replace the active calendar?';
+    return 'Found $count events. Add them as a new category or replace an existing category?';
   }
 
   @override
   String importedSchedulesWithWarnings(int count, int warningCount) {
-    return 'Imported $count schedules with $warningCount warnings';
+    return 'Imported $count categories with $warningCount warnings';
   }
 
   @override
@@ -2083,7 +2111,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get generalToolbarWidthBalanced => 'Balanced';
 
   @override
-  String get generalToolbarWidthCalendarPriority => 'Calendar priority';
+  String get generalToolbarWidthCalendarPriority => 'Category priority';
 
   @override
   String get generalToolbarWidthDatePriority => 'Date priority';
@@ -2179,7 +2207,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get developerSampleDataDescription =>
-      'Thêm một thời khóa biểu cùng các lịch và sự kiện mà không thay thế dữ liệu hiện có.';
+      'Thêm một thời khóa biểu cùng các danh mục và sự kiện mà không thay thế dữ liệu hiện có.';
 
   @override
   String get developerAddSampleData => 'Thêm dữ liệu mẫu';

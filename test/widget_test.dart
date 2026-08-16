@@ -2319,7 +2319,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final generalImportExportTile = find.text('Schedule import & export');
+        final generalImportExportTile = find.text('Category import & export');
         await tester.ensureVisible(generalImportExportTile);
         await tester.pumpAndSettle();
         await tester.tap(generalImportExportTile);
@@ -3053,7 +3053,7 @@ void main() {
       expect(find.text('自定义颜色'), findsNothing);
     });
 
-    testWidgets('通用模式五彩缤纷会显示日历颜色并隐藏课程专属设置', (tester) async {
+    testWidgets('通用模式五彩缤纷会显示分类颜色并隐藏课程专属设置', (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -3107,7 +3107,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('日历'), findsOneWidget);
+      expect(find.text('分类'), findsOneWidget);
       expect(find.text('生活日程'), findsOneWidget);
       expect(find.text('#225577'), findsOneWidget);
       expect(
@@ -3151,10 +3151,10 @@ void main() {
       expect(find.text('#223344'), findsOneWidget);
       expect(find.text('#AA5500'), findsOneWidget);
       expect(find.text('#336600'), findsOneWidget);
-      expect(find.text('UI 配色'), findsNothing);
-      expect(find.text('主色'), findsNothing);
-      expect(find.text('辅色'), findsNothing);
-      expect(find.text('强调色'), findsNothing);
+      expect(find.text('UI 配色'), findsOneWidget);
+      expect(find.text('主色'), findsOneWidget);
+      expect(find.text('辅色'), findsOneWidget);
+      expect(find.text('强调色'), findsOneWidget);
       expect(find.text('课程颜色'), findsNothing);
       expect(find.text('课程文字色'), findsNothing);
       expect(find.text('课程描边'), findsNothing);

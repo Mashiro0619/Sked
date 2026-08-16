@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_expressive_theme.dart';
@@ -24,6 +26,7 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
     this.selectedIcon,
     this.direction = Axis.horizontal,
     this.movingIndicator = false,
+    this.movingIndicatorFillsSegment = false,
   });
 
   final List<ButtonSegment<T>> segments;
@@ -43,6 +46,10 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
   /// owner. This opt-in layer is used only for the two primary workspace
   /// selectors; multi-select callers retain the stock rendering.
   final bool movingIndicator;
+
+  /// Lets the moving indicator fill its segment. The outer control clips the
+  /// first and last segments, so internal boundaries stay square.
+  final bool movingIndicatorFillsSegment;
 
   @override
   Widget build(BuildContext context) {
@@ -135,17 +142,27 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
                 heightFactor: direction == Axis.vertical
                     ? 1 / segments.length
                     : 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(2),
-                  child: DecoratedBox(
-                    key: const ValueKey('sked-segmented-selection-indicator'),
-                    decoration: ShapeDecoration(
-                      color: indicatorColor,
-                      shape: shapes.selectionIndicator,
-                    ),
-                    child: child,
-                  ),
-                ),
+                child: movingIndicatorFillsSegment
+                    ? ColoredBox(
+                        key: const ValueKey(
+                          'sked-segmented-selection-indicator',
+                        ),
+                        color: indicatorColor,
+                        child: child,
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: DecoratedBox(
+                          key: const ValueKey(
+                            'sked-segmented-selection-indicator',
+                          ),
+                          decoration: ShapeDecoration(
+                            color: indicatorColor,
+                            shape: shapes.selectionIndicator,
+                          ),
+                          child: child,
+                        ),
+                      ),
               ),
             );
           },
@@ -172,16 +189,37 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
           selectedIcon: selectedIcon,
           direction: direction,
         );
+        final tapTargetVerticalPadding = _segmentedTapTargetVerticalPadding(
+          context,
+          style: effectiveStyle,
+          selected: selected.isNotEmpty,
+          enabled: onSelectionChanged != null,
+        );
+        final visualInsets = (expandedInsets ?? EdgeInsets.zero).add(
+          EdgeInsets.symmetric(vertical: tapTargetVerticalPadding / 2),
+        );
         return Material(
           type: MaterialType.transparency,
-          color: colors.surfaceContainerLow,
-          shape: shapes.control,
-          clipBehavior: Clip.antiAlias,
           child: Stack(
             fit: StackFit.passthrough,
             children: [
               Positioned.fill(
-                child: IgnorePointer(child: ExcludeSemantics(child: indicator)),
+                child: Padding(
+                  padding: visualInsets,
+                  child: ClipPath(
+                    key: const ValueKey('sked-segmented-control-clip'),
+                    clipper: ShapeBorderClipper(
+                      shape: shapes.selectionIndicator,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ColoredBox(
+                      color: colors.surfaceContainerLow,
+                      child: IgnorePointer(
+                        child: ExcludeSemantics(child: indicator),
+                      ),
+                    ),
+                  ),
+                ),
               ),
               movingButton,
             ],
@@ -190,6 +228,51 @@ class SkedExpressiveSegmentedButton<T> extends StatelessWidget {
       },
     );
   }
+}
+
+double _segmentedTapTargetVerticalPadding(
+  BuildContext context, {
+  required ButtonStyle style,
+  required bool selected,
+  required bool enabled,
+}) {
+  final theme = Theme.of(context);
+  final themeStyle = SegmentedButtonTheme.of(context).style;
+  final states = <WidgetState>{
+    if (selected) WidgetState.selected,
+    if (!enabled) WidgetState.disabled,
+  };
+  final resolvedPadding =
+      style.padding?.resolve(states) ??
+      themeStyle?.padding?.resolve(states) ??
+      EdgeInsets.zero;
+  final visualDensity =
+      style.visualDensity ?? themeStyle?.visualDensity ?? theme.visualDensity;
+  final tapTargetSize =
+      style.tapTargetSize ??
+      themeStyle?.tapTargetSize ??
+      theme.materialTapTargetSize;
+  final fontSize =
+      style.textStyle?.resolve(states)?.fontSize ??
+      themeStyle?.textStyle?.resolve(states)?.fontSize ??
+      theme.textTheme.labelLarge?.fontSize ??
+      20;
+  final densityAdjustment = visualDensity.baseSizeAdjustment;
+  const textButtonMinHeight = 40.0;
+  final adjustedButtonMinHeight = textButtonMinHeight + densityAdjustment.dy;
+  final effectiveVerticalPadding =
+      resolvedPadding.vertical + densityAdjustment.dy * 2;
+  final buttonHeight = math.max(
+    fontSize + effectiveVerticalPadding,
+    adjustedButtonMinHeight,
+  );
+  return switch (tapTargetSize) {
+    MaterialTapTargetSize.shrinkWrap => 0,
+    MaterialTapTargetSize.padded => math.max(
+      0,
+      kMinInteractiveDimension + densityAdjustment.dy - buttonHeight,
+    ),
+  };
 }
 
 /// A responsive, context-bearing toolbar primitive for the adaptive shell.

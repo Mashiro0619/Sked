@@ -47,6 +47,23 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
   xml: ^6.6.1
 
+# Temporary pins for https://github.com/pichillilorenzo/flutter_inappwebview/pull/2809.
+# Xcode 26 rejects the published beta.3 Apple plugins because their
+# ASWebAuthenticationPresentationContextProviding conformance has an invalid
+# availability boundary. Keep the immutable commit until the upstream fix is
+# released on pub.dev.
+dependency_overrides:
+  flutter_inappwebview_macos:
+    git:
+      url: https://github.com/wangqiang1588/flutter_inappwebview.git
+      ref: fc33a449b9290b127a471808e22eb7b0edebad92
+      path: flutter_inappwebview_macos
+  flutter_inappwebview_ios:
+    git:
+      url: https://github.com/wangqiang1588/flutter_inappwebview.git
+      ref: fc33a449b9290b127a471808e22eb7b0edebad92
+      path: flutter_inappwebview_ios
+
 flutter:
   generate: true
 

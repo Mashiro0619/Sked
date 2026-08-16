@@ -1069,6 +1069,7 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final animation = NavigationRail.extendedAnimation(context);
     final l10n = AppLocalizations.of(context);
+    final actionEnabled = !busy && !settingsBusy && enabled;
     return SafeArea(
       top: false,
       child: Padding(
@@ -1092,54 +1093,66 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
                     padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: Divider(),
                   ),
-                  SizedBox(
-                    height: 48,
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: _compactRailWidth,
-                          child: Center(
-                            child: IconButton(
-                              key: const ValueKey(
-                                'adaptive-shell-settings-action',
-                              ),
-                              focusNode: settingsFocusNode,
-                              onPressed: busy || settingsBusy || !enabled
-                                  ? null
-                                  : onOpenSettings,
-                              tooltip: l10n.settings,
-                              icon: settingsBusy
-                                  ? const SizedBox.square(
-                                      dimension: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.settings_outlined),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ClipRect(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Semantics(
+                      button: true,
+                      enabled: actionEnabled,
+                      child: Tooltip(
+                        message: l10n.settings,
+                        child: InkWell(
+                          key: const ValueKey('adaptive-shell-settings-action'),
+                          focusNode: settingsFocusNode,
+                          onTap: actionEnabled ? onOpenSettings : null,
+                          borderRadius: BorderRadius.circular(16),
+                          child: SizedBox(
+                            height: 48,
                             child: Opacity(
-                              opacity: labelOpacity,
-                              child: Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: Padding(
-                                  padding: const EdgeInsetsDirectional.only(
-                                    end: 16,
+                              opacity: busy || !enabled ? 0.38 : 1,
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: _compactRailWidth - 24,
+                                    child: Center(
+                                      child: settingsBusy
+                                          ? const SizedBox.square(
+                                              dimension: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.settings_outlined),
+                                    ),
                                   ),
-                                  child: Text(
-                                    l10n.settings,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  Expanded(
+                                    child: ClipRect(
+                                      child: Opacity(
+                                        opacity: labelOpacity,
+                                        child: Align(
+                                          alignment:
+                                              AlignmentDirectional.centerStart,
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsetsDirectional.only(
+                                                  start: 12,
+                                                  end: 4,
+                                                ),
+                                            child: Text(
+                                              l10n.settings,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],

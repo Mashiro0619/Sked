@@ -576,9 +576,16 @@ class GeneralScheduleData {
         ),
       );
     }
-    final activeId = normalizedSchedules.any((s) => s.id == activeScheduleId)
-        ? activeScheduleId
-        : normalizedSchedules.first.id;
+    final requestedActive = normalizedSchedules
+        .where((schedule) => schedule.id == activeScheduleId)
+        .firstOrNull;
+    final activeId = requestedActive?.isVisible ?? false
+        ? requestedActive!.id
+        : normalizedSchedules
+                  .where((schedule) => schedule.isVisible)
+                  .firstOrNull
+                  ?.id ??
+              normalizedSchedules.first.id;
     final start = dayStartHour.clamp(0, 23).toInt();
     final end = dayEndHour.clamp(start + 1, 24).toInt();
     final acknowledgementsByKey = <String, GeneralReminderAcknowledgement>{};

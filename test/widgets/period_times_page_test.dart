@@ -294,6 +294,19 @@ void main() {
       findsWidgets,
     );
     expect(find.byKey(const ValueKey('period-end-time-action')), findsWidgets);
+    final firstCard = find.byKey(const ValueKey('period-card-1'));
+    final timeRange = find.descendant(
+      of: firstCard,
+      matching: find.byKey(const ValueKey('period-time-range')),
+    );
+    final timeRangeMaterial = tester.widget<Material>(timeRange);
+    expect(timeRangeMaterial.type, MaterialType.transparency);
+    expect(timeRangeMaterial.color, isNull);
+    expect((timeRangeMaterial.shape! as OutlinedBorder).side, BorderSide.none);
+    expect(
+      find.descendant(of: timeRange, matching: find.byType(Divider)),
+      findsNothing,
+    );
     final startRect = tester.getRect(
       find.byKey(const ValueKey('period-start-time-action')).first,
     );
@@ -346,6 +359,10 @@ void main() {
       of: firstCard,
       matching: find.byIcon(Icons.arrow_forward),
     );
+    final timeRange = find.descendant(
+      of: firstCard,
+      matching: find.byKey(const ValueKey('period-time-range')),
+    );
     expect(startAction, findsOneWidget);
     expect(endAction, findsOneWidget);
     expect(startLabel, findsOneWidget);
@@ -353,6 +370,18 @@ void main() {
     expect(endLabel, findsOneWidget);
     expect(endValue, findsOneWidget);
     expect(arrow, findsOneWidget);
+    expect(
+      find.descendant(of: timeRange, matching: find.byType(Divider)),
+      findsNothing,
+    );
+
+    for (final action in [startAction, endAction]) {
+      final inkWell = tester.widget<InkWell>(
+        find.descendant(of: action, matching: find.byType(InkWell)),
+      );
+      expect(inkWell.onTap, isNotNull);
+      expect(inkWell.customBorder, isA<OutlinedBorder>());
+    }
 
     final startRect = tester.getRect(startAction);
     final endRect = tester.getRect(endAction);
@@ -723,6 +752,10 @@ void main() {
 
     expect(find.text('08:50'), findsWidgets);
     expect(find.text('08:45'), findsWidgets);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(PeriodTimesPage)),
+    );
+    expect(find.text(l10n.endTimeMustBeLater), findsOneWidget);
     expect(storage.saveCount, 0);
     expect(
       _storedDefaultPeriodTimeSet(storage).periodTimes.first.startMinutes,
@@ -741,6 +774,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text(l10n.endTimeMustBeLater), findsNothing);
     expect(storage.saveCount, 1);
     expect(
       _storedDefaultPeriodTimeSet(storage).periodTimes.first.startMinutes,
