@@ -26,6 +26,16 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/utils/constants.dart': 'contains compile-time constants only',
   'lib/widgets/app_layout_tokens.dart':
       'contains compile-time layout constants only',
+  'lib/services/app_data_clear_service.dart':
+      'contains a conditional platform factory interface only',
+  'lib/services/app_data_clear_service_stub.dart':
+      'is selected only when dart:io is unavailable',
+  'lib/services/app_exit_controller.dart':
+      'contains a conditional platform exit interface only',
+  'lib/services/app_exit_controller_stub.dart':
+      'is selected only when dart:io is unavailable',
+  'lib/services/app_exit_controller_io.dart':
+      'terminates the native process and cannot be exercised in VM tests',
 };
 
 final RegExp _localizationSourcePattern = RegExp(

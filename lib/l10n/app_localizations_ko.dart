@@ -425,7 +425,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appBackupSheetSubtitle =>
-      '전체 복원은 현재 앱 데이터를 대체합니다. 사용자 지정 파서 API 키는 보안 저장소에 보관되며 백업 파일에 기록되지 않습니다.';
+      '전체 복원은 현재 앱 데이터를 대체합니다. AI API 키는 보안 저장소에 보관되며 백업 파일에 기록되지 않습니다.';
 
   @override
   String get restoreBackupFileTitle => 'JSON 파일에서 복원';
@@ -469,7 +469,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreBackupSuccessMessage =>
-      '전체 앱 백업이 복원되었습니다. 파서 API 키를 다시 입력해야 합니다.';
+      '전체 앱 백업이 복원되었습니다. AI API 키를 다시 입력해야 합니다.';
 
   @override
   String get restoreBackupFailureMessage => '복원에 실패했습니다. 백업 내용을 확인하고 다시 시도하세요.';
@@ -528,6 +528,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get githubRepository => 'GitHub 저장소';
+
+  @override
+  String get googlePlayStoreDesc => 'View Sked on Google Play';
+
+  @override
+  String get openGooglePlayFailed => 'Unable to open Google Play';
+
+  @override
+  String get starSkedOnGithub => 'Star Sked on GitHub!';
+
+  @override
+  String get starSkedOnGithubDesc =>
+      'Open the project repository and give Sked a Star';
 
   @override
   String get openGithubFailed => 'GitHub 저장소 링크를 열 수 없습니다';
@@ -849,7 +862,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => '가져오기 및 내보내기';
@@ -1175,11 +1188,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolWebImportSuccess => '웹 시간표를 가져왔습니다';
 
   @override
-  String get schoolImportParserSettingsTitle => '시간표 파서 설정';
+  String get schoolImportParserSettingsTitle => 'AI API configuration';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
+      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+
+  @override
+  String get schoolImportParserSettingsLocationHint =>
+      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => '파서 소스';
@@ -1253,6 +1270,31 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       '사용자 지정 파서 설정이 완전하지 않습니다. 먼저 Base URL, API key, 모델을 입력하세요.';
+
+  @override
+  String get clearAppData => 'Clear data';
+
+  @override
+  String get clearAppDataDesc =>
+      'Permanently delete all local Sked data and exit the app';
+
+  @override
+  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+
+  @override
+  String get clearAppDataConfirmMessage =>
+      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+
+  @override
+  String get clearAppDataAction => 'Clear data and exit';
+
+  @override
+  String get clearAppDataFailed =>
+      'Unable to clear all local data. Sked will remain open so you can retry.';
+
+  @override
+  String get clearAppDataExitFailed =>
+      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

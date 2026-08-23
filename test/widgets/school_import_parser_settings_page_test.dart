@@ -206,6 +206,11 @@ AppData _buildTestData() {
     periodTimes,
     localeCode: defaultLocaleCode,
   ).copyWith(
+    aiApiSettings: const AiApiSettings(
+      source: schoolImportParserSourceCustomOpenAi,
+      customBaseUrl: 'https://api.example.com/v1',
+      customApiKey: '',
+    ),
     studentMode: StudentModeData(
       activeTimetableId: 'table-1',
       timetables: [
@@ -227,11 +232,6 @@ AppData _buildTestData() {
           periodTimes: periodTimes,
         ),
       ],
-      schoolImportParserSettings: const SchoolImportParserSettings(
-        source: schoolImportParserSourceCustomOpenAi,
-        customBaseUrl: 'https://api.example.com/v1',
-        customApiKey: '',
-      ),
     ),
   );
 }

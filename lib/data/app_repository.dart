@@ -164,6 +164,13 @@ class AppRepository {
     return null;
   }
 
+  Future<void> sanitizeLegacyAiApiSecretArtifacts() async {
+    final storage = _storage;
+    if (storage case final TimetableLegacySecretSanitizer sanitizer) {
+      await sanitizer.sanitizeLegacyAiApiSecretArtifacts();
+    }
+  }
+
   void _ensureWritable() {
     if (!_canWrite) {
       throw RecoveryWriteBlockedException(_lastLoadStatus);

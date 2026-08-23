@@ -258,4 +258,9 @@ const _coverageUnavailableSourcePaths = <String>[
   'lib/theme/app_motion.dart',
   'lib/utils/constants.dart',
   'lib/widgets/app_layout_tokens.dart',
+  'lib/services/app_data_clear_service.dart',
+  'lib/services/app_data_clear_service_stub.dart',
+  'lib/services/app_exit_controller.dart',
+  'lib/services/app_exit_controller_stub.dart',
+  'lib/services/app_exit_controller_io.dart',
 ];

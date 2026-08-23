@@ -414,7 +414,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appBackupSheetSubtitle =>
-      '完整备份会覆盖当前应用数据。自定义解析 API 密钥存放在系统安全存储中，不会写入备份文件。';
+      '完整备份会覆盖当前应用数据。AI API 密钥存放在系统安全存储中，不会写入备份文件。';
 
   @override
   String get restoreBackupFileTitle => '从 JSON 文件恢复';
@@ -457,7 +457,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreBackupConfirmAction => '恢复备份';
 
   @override
-  String get restoreBackupSuccessMessage => '完整应用备份已恢复。解析 API 密钥需要重新填写。';
+  String get restoreBackupSuccessMessage => '完整应用备份已恢复。AI API 密钥需要重新填写。';
 
   @override
   String get restoreBackupFailureMessage => '恢复失败，请检查备份内容后重试。';
@@ -515,6 +515,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get githubRepository => 'GitHub 仓库';
+
+  @override
+  String get googlePlayStoreDesc => '在 Google Play 中查看 Sked';
+
+  @override
+  String get openGooglePlayFailed => '无法打开 Google Play';
+
+  @override
+  String get starSkedOnGithub => '为 Sked 点亮 Star！';
+
+  @override
+  String get starSkedOnGithubDesc => '打开项目仓库并为 Sked 点亮 Star';
 
   @override
   String get openGithubFailed => '无法打开 GitHub 仓库链接';
@@ -829,7 +841,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '在原生平台上，Sked 会将课表数据、通用日程、相关设置和可编辑的学校站点配置保存在操作系统管理的应用支持目录中；浏览器版本使用浏览器本地存储。旧版本写入用户“文档 / Documents”目录的文件会继续留在原处，但不会被自动读取或迁移；如需保留这些数据，请在升级前从旧版本导出完整应用备份，并在升级后恢复。自定义课表解析设置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。';
+      '在原生平台上，Sked 会将课表数据、通用日程、相关设置和可编辑的学校站点配置保存在操作系统管理的应用支持目录中；浏览器版本使用浏览器本地存储。旧版本写入用户“文档 / Documents”目录的文件会继续留在原处，但不会被自动读取或迁移；如需保留这些数据，请在升级前从旧版本导出完整应用备份，并在升级后恢复。AI API 配置会保存在本地；自定义 API 密钥会在可用时通过平台安全存储层保存。完整应用备份不会包含自定义 API 密钥。应用不会自动把这些本地数据上传到开发者控制的服务器。';
 
   @override
   String get privacyPolicyImportExportTitle => '导入与导出';
@@ -1140,11 +1152,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportSuccess => '网页课表已导入';
 
   @override
-  String get schoolImportParserSettingsTitle => '课表解析设置';
+  String get schoolImportParserSettingsTitle => 'AI API 配置';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      '配置你自己的 OpenAI 兼容接口。支持 HTTP 和 HTTPS Base URL。';
+      '配置课表解析及其他 AI 功能使用的 OpenAI 兼容接口。';
+
+  @override
+  String get schoolImportParserSettingsLocationHint =>
+      '请前往“设置 > 数据与安全 > AI API 配置”完成配置。';
 
   @override
   String get schoolImportParserSourceTitle => '解析来源';
@@ -1216,6 +1232,28 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       '自定义解析配置不完整，请先填写 Base URL、API 密钥和模型名称。';
+
+  @override
+  String get clearAppData => '清除数据';
+
+  @override
+  String get clearAppDataDesc => '永久删除 Sked 的全部本地数据并退出软件';
+
+  @override
+  String get clearAppDataConfirmTitle => '清除 Sked 的全部数据？';
+
+  @override
+  String get clearAppDataConfirmMessage =>
+      '这会永久删除课表、日程、设置、学校站点、本地备份、恢复副本和 AI API 密钥，然后退出 Sked。你已导出到其他位置的文件不会被删除。此操作无法撤销。';
+
+  @override
+  String get clearAppDataAction => '清除数据并退出';
+
+  @override
+  String get clearAppDataFailed => '未能清除全部本地数据。Sked 不会退出，你可以检查存储权限后重试。';
+
+  @override
+  String get clearAppDataExitFailed => '本地数据已清除，但 Sked 无法自动退出。请手动关闭应用后再重新使用。';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {
@@ -2312,6 +2350,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsSectionWorkspace => '工作區';
 
   @override
+  String get settingsSectionDataSecurity => '資料與安全性';
+
+  @override
   String get noTimetableSettings => '當前沒有可設定的課表';
 
   @override
@@ -2514,7 +2555,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get appBackupSheetSubtitle =>
-      '完整備份會覆蓋目前應用資料。自訂解析 API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
+      '完整備份會覆蓋目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
 
   @override
   String get restoreBackupFileTitle => '從 JSON 檔案恢復';
@@ -2557,7 +2598,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get restoreBackupConfirmAction => '恢復備份';
 
   @override
-  String get restoreBackupSuccessMessage => '完整應用備份已恢復。解析 API 金鑰需要重新填寫。';
+  String get restoreBackupSuccessMessage => '完整應用備份已恢復。AI API 金鑰需要重新填寫。';
 
   @override
   String get restoreBackupFailureMessage => '恢復失敗，請檢查備份內容後重試。';
@@ -2615,6 +2656,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get githubRepository => 'GitHub 倉庫';
+
+  @override
+  String get googlePlayStoreDesc => '在 Google Play 中查看 Sked';
+
+  @override
+  String get openGooglePlayFailed => '無法開啟 Google Play';
+
+  @override
+  String get starSkedOnGithub => '為 Sked 點亮 Star！';
+
+  @override
+  String get starSkedOnGithubDesc => '開啟專案倉庫並為 Sked 點亮 Star';
 
   @override
   String get openGithubFailed => '無法開啟 GitHub 倉庫連結';
@@ -2928,7 +2981,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      '在原生平台上，Sked 會將課表資料、通用日程、相關設定和可編輯的學校站點設定儲存在作業系統管理的應用程式支援目錄中；瀏覽器版本使用瀏覽器本機儲存。舊版本寫入使用者「文件 / Documents」目錄的檔案會繼續留在原處，但不會被自動讀取或遷移；如需保留這些資料，請在升級前從舊版本匯出完整應用備份，並在升級後還原。自訂課表解析設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
+      '在原生平台上，Sked 會將課表資料、通用日程、相關設定和可編輯的學校站點設定儲存在作業系統管理的應用程式支援目錄中；瀏覽器版本使用瀏覽器本機儲存。舊版本寫入使用者「文件 / Documents」目錄的檔案會繼續留在原處，但不會被自動讀取或遷移；如需保留這些資料，請在升級前從舊版本匯出完整應用備份，並在升級後還原。AI API 設定會儲存在本機；自訂 API 金鑰會在可用時透過平台安全儲存層保存。完整應用備份不會包含自訂 API 金鑰。應用不會自動把這些本機資料上傳到開發者控制的伺服器。';
 
   @override
   String get privacyPolicyImportExportTitle => '匯入與匯出';
@@ -3239,11 +3292,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportSuccess => '網頁課表已匯入';
 
   @override
-  String get schoolImportParserSettingsTitle => '課表解析設定';
+  String get schoolImportParserSettingsTitle => 'AI API 設定';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      '設定你自己的 OpenAI 相容介面。支援 HTTP 和 HTTPS Base URL。';
+      '設定課表解析及其他 AI 功能使用的 OpenAI 相容介面。';
+
+  @override
+  String get schoolImportParserSettingsLocationHint =>
+      '請前往「設定 > 資料與安全性 > AI API 設定」完成設定。';
 
   @override
   String get schoolImportParserSourceTitle => '解析來源';
@@ -3315,6 +3372,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       '自訂解析設定不完整，請先填寫 Base URL、API 金鑰和模型名稱。';
+
+  @override
+  String get clearAppData => '清除資料';
+
+  @override
+  String get clearAppDataDesc => '永久刪除 Sked 的全部本機資料並退出軟體';
+
+  @override
+  String get clearAppDataConfirmTitle => '清除 Sked 的全部資料？';
+
+  @override
+  String get clearAppDataConfirmMessage =>
+      '這會永久刪除課表、日程、設定、學校站點、本機備份、復原副本和 AI API 金鑰，然後退出 Sked。你已匯出到其他位置的檔案不會被刪除。此操作無法復原。';
+
+  @override
+  String get clearAppDataAction => '清除資料並退出';
+
+  @override
+  String get clearAppDataFailed => '未能清除全部本機資料。Sked 不會退出，你可以檢查儲存權限後重試。';
+
+  @override
+  String get clearAppDataExitFailed => '本機資料已清除，但 Sked 無法自動退出。請手動關閉應用程式後再重新使用。';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

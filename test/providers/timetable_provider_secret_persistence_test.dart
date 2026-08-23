@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/app_repository.dart';
@@ -306,11 +307,8 @@ void main() {
       const legacyKey = 'sk-legacy';
       final storage = _RecordingStorage(
         initial.copyWith(
-          studentMode: initial.studentMode.copyWith(
-            schoolImportParserSettings: initial
-                .studentMode
-                .schoolImportParserSettings
-                .copyWith(customApiKey: legacyKey),
+          aiApiSettings: initial.aiApiSettings.copyWith(
+            customApiKey: legacyKey,
           ),
         ),
       );
@@ -342,11 +340,8 @@ void main() {
       const legacyKey = 'sk-legacy';
       final storage = _RecordingStorage(
         initial.copyWith(
-          studentMode: initial.studentMode.copyWith(
-            schoolImportParserSettings: initial
-                .studentMode
-                .schoolImportParserSettings
-                .copyWith(customApiKey: legacyKey),
+          aiApiSettings: initial.aiApiSettings.copyWith(
+            customApiKey: legacyKey,
           ),
         ),
       );
@@ -365,6 +360,51 @@ void main() {
       expect(provider.customSchoolImportApiKey, 'sk-newer');
       expect(secrets.value, 'sk-newer');
       expect(secrets.writeCount, 0);
+    },
+  );
+
+  test(
+    'legacy nested settings cannot overwrite first-session global edits',
+    () async {
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final snapshot = initial.toJson()..remove('aiApiSettings');
+      final student = Map<String, dynamic>.from(snapshot['studentMode'] as Map)
+        ..['schoolImportParserSettings'] = {
+          'source': schoolImportParserSourceCustomOpenAi,
+          'customBaseUrl': 'https://legacy.example.com/v1',
+          'customApiKey': 'sk-legacy',
+          'customModel': 'legacy-model',
+          'customPrompt': 'legacy prompt',
+        };
+      snapshot['studentMode'] = student;
+      final storage = _RecordingStorage(
+        AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+      );
+      final secrets = _MemorySecretStore('');
+      final provider = await _provider(storage: storage, secrets: secrets);
+
+      expect(secrets.value, 'sk-legacy');
+      await provider.updateCustomSchoolImportTextSettings(
+        baseUrl: 'https://new.example.com/v1',
+        model: 'new-model',
+        prompt: 'new prompt',
+      );
+      await provider.updateCustomSchoolImportApiKey('sk-new');
+      await provider.updateThemeMode(
+        provider.themeMode == 'dark' ? 'light' : 'dark',
+      );
+
+      expect(provider.customSchoolImportBaseUrl, 'https://new.example.com/v1');
+      expect(provider.customSchoolImportModel, 'new-model');
+      expect(provider.customSchoolImportPrompt, 'new prompt');
+      expect(provider.customSchoolImportApiKey, 'sk-new');
+      expect(
+        storage.data!.aiApiSettings.customBaseUrl,
+        'https://new.example.com/v1',
+      );
+      expect(storage.data!.aiApiSettings.customModel, 'new-model');
+      expect(storage.data!.aiApiSettings.customPrompt, 'new prompt');
+      expect(secrets.value, 'sk-new');
     },
   );
 

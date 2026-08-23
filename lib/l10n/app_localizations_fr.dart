@@ -437,7 +437,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get appBackupSheetSubtitle =>
-      'Une restauration complète remplace les données actuelles de l’application. Les clés API du parseur personnalisé restent dans le stockage sécurisé et ne sont pas écrites dans les fichiers de sauvegarde.';
+      'Une restauration complète remplace les données actuelles de l’application. Les clés d’API IA restent dans le stockage sécurisé et ne sont pas écrites dans les fichiers de sauvegarde.';
 
   @override
   String get restoreBackupFileTitle => 'Restaurer depuis un fichier JSON';
@@ -486,7 +486,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreBackupSuccessMessage =>
-      'Sauvegarde complète de l’application restaurée. Les clés API du parseur doivent être saisies à nouveau.';
+      'Sauvegarde complète de l’application restaurée. Les clés d’API IA doivent être saisies à nouveau.';
 
   @override
   String get restoreBackupFailureMessage =>
@@ -547,6 +547,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get githubRepository => 'Dépôt GitHub';
+
+  @override
+  String get googlePlayStoreDesc => 'View Sked on Google Play';
+
+  @override
+  String get openGooglePlayFailed => 'Unable to open Google Play';
+
+  @override
+  String get starSkedOnGithub => 'Star Sked on GitHub!';
+
+  @override
+  String get starSkedOnGithubDesc =>
+      'Open the project repository and give Sked a Star';
 
   @override
   String get openGithubFailed => 'Impossible d\'ouvrir le lien du dépôt GitHub';
@@ -890,7 +903,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyPolicyLocalStorageBody =>
-      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
+      'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.';
 
   @override
   String get privacyPolicyImportExportTitle => 'Importation et exportation';
@@ -1228,12 +1241,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get schoolWebImportSuccess => 'Emploi du temps web importé';
 
   @override
-  String get schoolImportParserSettingsTitle =>
-      'Paramètres de l\'analyseur d\'emploi du temps';
+  String get schoolImportParserSettingsTitle => 'AI API configuration';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.';
+      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+
+  @override
+  String get schoolImportParserSettingsLocationHint =>
+      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Source de l\'analyseur';
@@ -1312,6 +1328,31 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get schoolImportParserCustomConfigIncomplete =>
       'La configuration de l\'analyseur personnalisé est incomplète. Renseignez d\'abord la Base URL, l\'API key et le modèle.';
+
+  @override
+  String get clearAppData => 'Clear data';
+
+  @override
+  String get clearAppDataDesc =>
+      'Permanently delete all local Sked data and exit the app';
+
+  @override
+  String get clearAppDataConfirmTitle => 'Clear all Sked data?';
+
+  @override
+  String get clearAppDataConfirmMessage =>
+      'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.';
+
+  @override
+  String get clearAppDataAction => 'Clear data and exit';
+
+  @override
+  String get clearAppDataFailed =>
+      'Unable to clear all local data. Sked will remain open so you can retry.';
+
+  @override
+  String get clearAppDataExitFailed =>
+      'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.';
 
   @override
   String schoolImportParserCurrentSourceCustom(Object model) {

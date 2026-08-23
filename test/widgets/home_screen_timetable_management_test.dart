@@ -1094,6 +1094,8 @@ void main() {
 
         expect(storage.saveCount, 1);
         expect(storage.data?.activeMode, scenario.mode);
+        expect(storage.data?.hideHomeWorkspaceNavigation, isFalse);
+        expect(storage.data?.homeWorkspaceNavigationCollapsed, isTrue);
         expect(
           storage.data?.privacyPolicyAcceptedVersion,
           bundledPrivacyPolicyVersion,
@@ -1103,6 +1105,8 @@ void main() {
           isNotNull,
         );
         expect(provider.activeMode, scenario.mode);
+        expect(provider.hideHomeWorkspaceNavigation, isFalse);
+        expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
         expect(
           provider.acceptedPrivacyPolicyVersion,
           bundledPrivacyPolicyVersion,
@@ -1122,6 +1126,61 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'first launch derives navigation defaults from the current window width',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      for (final scenario in <({double width, bool hidden})>[
+        (width: 599, hidden: true),
+        (width: 600, hidden: false),
+        (width: 1199, hidden: false),
+        (width: 1200, hidden: false),
+      ]) {
+        final storage = _MemoryTimetableStorage(_buildDefaultFirstLaunchData());
+        final provider = TimetableProvider(
+          storage: storage,
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+          privacyService: const _NoopPrivacyService(),
+          secretStore: const _NoopSecretStore(),
+        );
+        addTearDown(provider.dispose);
+        await provider.load();
+        storage.saveCount = 0;
+
+        await _pumpAppHomeScreenWithProvider(tester, provider);
+        tester.view.physicalSize = Size(scenario.width, 800);
+        await tester.pumpAndSettle();
+        expect(
+          MediaQuery.sizeOf(
+            tester.element(
+              find.byKey(const ValueKey('first-launch-onboarding')),
+            ),
+          ).width,
+          scenario.width,
+          reason: 'width=${scenario.width}',
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('first-launch-student-card')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(storage.saveCount, 1, reason: 'width=${scenario.width}');
+        expect(
+          provider.hideHomeWorkspaceNavigation,
+          scenario.hidden,
+          reason: 'width=${scenario.width}',
+        );
+        expect(
+          provider.homeWorkspaceNavigationCollapsed,
+          isTrue,
+          reason: 'width=${scenario.width}',
+        );
+      }
+    },
+  );
 
   testWidgets('existing empty general calendars skip first launch onboarding', (
     tester,
@@ -1294,9 +1353,13 @@ void main() {
     expect(provider.activeMode, AppMode.student);
     expect(provider.acceptedPrivacyPolicyVersion, isNull);
     expect(provider.privacyPolicyAcceptedAt, isNull);
+    expect(provider.hideHomeWorkspaceNavigation, isFalse);
+    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
     expect(storage.data.activeMode, AppMode.student);
     expect(storage.data.privacyPolicyAcceptedVersion, isNull);
     expect(storage.data.privacyPolicyAcceptedAtIso, isNull);
+    expect(storage.data.hideHomeWorkspaceNavigation, isFalse);
+    expect(storage.data.homeWorkspaceNavigationCollapsed, isFalse);
     expect(provider.canWrite, isFalse);
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);

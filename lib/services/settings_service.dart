@@ -188,56 +188,41 @@ class SettingsService {
 
   AppData updateCustomSchoolImportBaseUrl(AppData data, String value) {
     final normalized = value.trim();
-    if (data.studentMode.schoolImportParserSettings.customBaseUrl ==
-        normalized) {
+    if (data.aiApiSettings.customBaseUrl == normalized) {
       return data;
     }
     return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: data.studentMode.schoolImportParserSettings
-            .copyWith(customBaseUrl: normalized),
-      ),
+      aiApiSettings: data.aiApiSettings.copyWith(customBaseUrl: normalized),
     );
   }
 
   AppData updateCustomSchoolImportApiKey(AppData data, String value) {
     final normalized = value.trim();
-    if (data.studentMode.schoolImportParserSettings.customApiKey ==
-        normalized) {
+    if (data.aiApiSettings.customApiKey == normalized) {
       return data;
     }
     return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: data.studentMode.schoolImportParserSettings
-            .copyWith(customApiKey: normalized),
-      ),
+      aiApiSettings: data.aiApiSettings.copyWith(customApiKey: normalized),
     );
   }
 
   AppData updateCustomSchoolImportModel(AppData data, String value) {
     final normalized = value.trim();
-    if (data.studentMode.schoolImportParserSettings.customModel == normalized) {
+    if (data.aiApiSettings.customModel == normalized) {
       return data;
     }
     return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: data.studentMode.schoolImportParserSettings
-            .copyWith(customModel: normalized),
-      ),
+      aiApiSettings: data.aiApiSettings.copyWith(customModel: normalized),
     );
   }
 
   AppData updateCustomSchoolImportPrompt(AppData data, String value) {
     final normalized = value.trim();
-    if (data.studentMode.schoolImportParserSettings.customPrompt ==
-        normalized) {
+    if (data.aiApiSettings.customPrompt == normalized) {
       return data;
     }
     return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: data.studentMode.schoolImportParserSettings
-            .copyWith(customPrompt: normalized),
-      ),
+      aiApiSettings: data.aiApiSettings.copyWith(customPrompt: normalized),
     );
   }
 
@@ -245,7 +230,7 @@ class SettingsService {
     AppData data,
     SchoolImportParserSettings settings,
   ) {
-    final current = data.studentMode.schoolImportParserSettings;
+    final current = data.aiApiSettings;
     final normalized = settings.copyWith();
     if (current.source == normalized.source &&
         current.customBaseUrl == normalized.customBaseUrl &&
@@ -254,11 +239,7 @@ class SettingsService {
         current.customPrompt == normalized.customPrompt) {
       return data;
     }
-    return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: normalized,
-      ),
-    );
+    return data.copyWith(aiApiSettings: normalized);
   }
 
   AppData updateLiveCourseOutlineColorValue(AppData data, int colorValue) {

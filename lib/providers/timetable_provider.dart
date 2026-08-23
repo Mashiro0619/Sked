@@ -174,14 +174,12 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
 
   AppData _withRuntimeCustomSchoolImportApiKey(AppData data, String value) {
     final normalized = value.trim();
-    final settings = data.studentMode.schoolImportParserSettings;
+    final settings = data.aiApiSettings;
     if (settings.customApiKey == normalized) {
       return data;
     }
     return data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        schoolImportParserSettings: settings.copyWith(customApiKey: normalized),
-      ),
+      aiApiSettings: settings.copyWith(customApiKey: normalized),
     );
   }
 
@@ -236,8 +234,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
       final value = (await _secrets.readCustomSchoolImportApiKey()).trim();
       _lastPersistedCustomSchoolImportApiKey = value;
       _customSchoolImportApiKeyPersistenceKnown = true;
-      final current =
-          _appData.studentMode.schoolImportParserSettings.customApiKey;
+      final current = _appData.aiApiSettings.customApiKey;
       if (current != value) {
         _replaceRuntimeCustomSchoolImportApiKey(value);
         notifyListeners();
@@ -257,8 +254,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<void> _persistCustomSchoolImportApiKey(String value) async {
     _ensureAppBackupRestoreMutationAllowed();
     final normalized = value.trim();
-    final current =
-        _appData.studentMode.schoolImportParserSettings.customApiKey;
+    final current = _appData.aiApiSettings.customApiKey;
     if (current == normalized &&
         _customSchoolImportApiKeyPersistenceKnown &&
         _lastPersistedCustomSchoolImportApiKey == normalized) {
@@ -438,6 +434,9 @@ class TimetableProvider extends _TimetableProviderBase
   Timer? _uiStateSaveTimer;
   Future<void>? _uiStateSaveInFlight;
   var _isDisposed = false;
+  var _dataClearReserved = false;
+  Future<void>? _dataClearInFlight;
+  SchoolSiteRestoreLease? _permanentDataClearSchoolSiteLease;
   final Duration _uiStateSaveDelay;
 
   static const _defaultUiStateSaveDelay = Duration(milliseconds: 450);
@@ -465,6 +464,8 @@ class TimetableProvider extends _TimetableProviderBase
   StorageLoadStatus get storageLoadStatus =>
       _journalRecoveryLoadStatus ?? _repository.lastLoadStatus;
   bool get canWrite => _repository.canWrite;
+  bool get isDataClearCommitted =>
+      _dataClearReserved && _permanentDataClearSchoolSiteLease != null;
   List<String> get recoveryArtifacts => List.unmodifiable({
     ..._repository.recoveryArtifacts,
     ..._journalRecoveryArtifacts,
@@ -498,18 +499,14 @@ class TimetableProvider extends _TimetableProviderBase
       : _appData.studentMode.colorfulUiColorValues;
   Map<String, int> get courseNameColorValues =>
       _appData.studentMode.courseNameColorValues;
-  SchoolImportParserSettings get schoolImportParserSettings =>
-      _appData.studentMode.schoolImportParserSettings;
-  String get schoolImportParserSource =>
-      _appData.studentMode.schoolImportParserSettings.source;
-  String get customSchoolImportBaseUrl =>
-      _appData.studentMode.schoolImportParserSettings.customBaseUrl;
-  String get customSchoolImportApiKey =>
-      _appData.studentMode.schoolImportParserSettings.customApiKey;
-  String get customSchoolImportModel =>
-      _appData.studentMode.schoolImportParserSettings.customModel;
-  String get customSchoolImportPrompt =>
-      _appData.studentMode.schoolImportParserSettings.customPrompt;
+  AiApiSettings get aiApiSettings => _appData.aiApiSettings;
+  @Deprecated('Use aiApiSettings.')
+  AiApiSettings get schoolImportParserSettings => _appData.aiApiSettings;
+  String get schoolImportParserSource => _appData.aiApiSettings.source;
+  String get customSchoolImportBaseUrl => _appData.aiApiSettings.customBaseUrl;
+  String get customSchoolImportApiKey => _appData.aiApiSettings.customApiKey;
+  String get customSchoolImportModel => _appData.aiApiSettings.customModel;
+  String get customSchoolImportPrompt => _appData.aiApiSettings.customPrompt;
   int get liveCourseOutlineColorValue =>
       _appData.studentMode.liveCourseOutlineColorValue;
   bool get liveCourseOutlineEnabled =>
@@ -688,6 +685,29 @@ class TimetableProvider extends _TimetableProviderBase
   }
 
   Future<void> quiesceForShutdown() async {
+    final dataClear = _dataClearInFlight;
+    if (dataClear != null) {
+      try {
+        await dataClear;
+      } catch (error, stackTrace) {
+        // The clear caller owns user-facing failure reporting. Shutdown only
+        // needs the operation to settle before deciding which queues can be
+        // awaited without racing a newly permanent maintenance lease.
+        debugPrint(
+          'Data clear settled with an error during shutdown: '
+          '$error\n$stackTrace',
+        );
+      }
+    }
+    await _quiesceForShutdown(
+      // A committed clear intentionally keeps a permanent school-site lease.
+      // Waiting for that queue again would deadlock application teardown after
+      // SystemNavigator.pop returns.
+      waitForSchoolSites: !isDataClearCommitted,
+    );
+  }
+
+  Future<void> _quiesceForShutdown({required bool waitForSchoolSites}) async {
     while (true) {
       final appDataEpoch = _appDataMutationEpoch;
       final secretEpoch = _customSchoolImportApiKeyMutationEpoch;
@@ -702,7 +722,7 @@ class TimetableProvider extends _TimetableProviderBase
       await Future.wait<void>([
         _repository.waitForPendingWrites(),
         _waitForPendingSecretWrites(),
-        _schoolSites.waitForPendingOperations(),
+        if (waitForSchoolSites) _schoolSites.waitForPendingOperations(),
       ]);
       await Future<void>.microtask(() {});
       if (appDataEpoch == _appDataMutationEpoch &&
@@ -712,6 +732,69 @@ class TimetableProvider extends _TimetableProviderBase
           _modeSwitchInFlight == null &&
           _modeSwitchBarrier == null) {
         return;
+      }
+    }
+  }
+
+  /// Prevents new writes while local data is removed and the process exits.
+  ///
+  /// A failed [clear] releases both maintenance reservations so the user can
+  /// retry. Once [clear] completes, the reservations intentionally remain for
+  /// the rest of the process lifetime. This is required even when [exit]
+  /// throws or unexpectedly returns: the in-memory pre-clear snapshot must
+  /// never be allowed to recreate data that was just deleted.
+  Future<void> runExclusiveDataClear({
+    required Future<void> Function() clear,
+    required Future<void> Function() exit,
+  }) {
+    if (_dataClearReserved || _permanentDataClearSchoolSiteLease != null) {
+      return Future<void>.error(
+        StateError('A local app-data clear is already active or complete.'),
+      );
+    }
+    final operation = _runExclusiveDataClear(clear: clear, exit: exit);
+    _dataClearInFlight = operation;
+    operation.whenComplete(() {
+      if (identical(_dataClearInFlight, operation)) {
+        _dataClearInFlight = null;
+      }
+    }).ignore();
+    return operation;
+  }
+
+  Future<void> _runExclusiveDataClear({
+    required Future<void> Function() clear,
+    required Future<void> Function() exit,
+  }) async {
+    _dataClearReserved = true;
+    final token = _reserveAppBackupRestore();
+    final schoolSiteLeaseFuture = _schoolSites.reserveRestore();
+    SchoolSiteRestoreLease? schoolSiteLease;
+    var dataWasCleared = false;
+    try {
+      await _runWithAppBackupRestoreLease(token, () async {
+        // reserveRestore blocks new writes synchronously and resolves only
+        // after previously accepted school-site operations have completed.
+        schoolSiteLease = await schoolSiteLeaseFuture;
+        await _quiesceForShutdown(waitForSchoolSites: false);
+        await clear();
+
+        dataWasCleared = true;
+        _permanentDataClearSchoolSiteLease = schoolSiteLease;
+        schoolSiteLease = null;
+        await exit();
+      }, allowRecoveryBlocked: true);
+    } finally {
+      if (!dataWasCleared) {
+        // The lease may still be queued behind another maintenance operation.
+        // Await it before releasing so its synchronous reservation cannot leak.
+        try {
+          final lease = schoolSiteLease ?? await schoolSiteLeaseFuture;
+          await lease.release();
+        } finally {
+          _releaseAppBackupRestore();
+          _dataClearReserved = false;
+        }
       }
     }
   }

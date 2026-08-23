@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -15,6 +15,8 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/app_data_clear_coordinator.dart';
+import 'package:sked/services/school_site_service.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
@@ -81,6 +83,28 @@ class _NoopPrivacyService extends PrivacyService {
 
   @override
   Future<String?> fetchCurrentPrivacyPolicyVersion() async => null;
+}
+
+class _FakeDataClearCoordinator extends AppDataClearCoordinator {
+  var calls = 0;
+  Object? failure;
+
+  @override
+  Future<void> clearAndExit(TimetableProvider provider) async {
+    calls += 1;
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+class _CommittedDataClearCoordinator extends AppDataClearCoordinator {
+  @override
+  Future<void> clearAndExit(TimetableProvider provider) {
+    return provider.runExclusiveDataClear(
+      clear: () async {},
+      exit: () async => throw StateError('exit failed'),
+    );
+  }
 }
 
 AppData _buildStudentData() {
@@ -179,6 +203,7 @@ Future<TimetableProvider> _createProvider(
   Map<String, String> recoverySources = const {},
   Object? recoveryReadError,
   _MemoryTimetableStorage? storage,
+  SchoolSiteService? schoolSiteService,
 }) async {
   final provider = TimetableProvider(
     storage:
@@ -191,6 +216,7 @@ Future<TimetableProvider> _createProvider(
         ),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     privacyService: const _NoopPrivacyService(),
+    schoolSiteService: schoolSiteService,
   );
   await provider.load();
   return provider;
@@ -200,6 +226,8 @@ Future<void> _pumpSettingsPage(
   WidgetTester tester,
   TimetableProvider provider, {
   Future<PackageInfo> Function()? packageInfoLoader,
+  AppDataClearCoordinator? dataClearCoordinator,
+  SettingsUrlLauncher? urlLauncher,
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
   EdgeInsets viewPadding = EdgeInsets.zero,
@@ -227,7 +255,11 @@ Future<void> _pumpSettingsPage(
               viewPadding: viewPadding,
               viewInsets: viewInsets,
             ),
-            child: SettingsPage(packageInfoLoader: packageInfoLoader),
+            child: SettingsPage(
+              packageInfoLoader: packageInfoLoader,
+              dataClearCoordinator: dataClearCoordinator,
+              urlLauncher: urlLauncher,
+            ),
           ),
         ),
       ),
@@ -334,6 +366,182 @@ void _expectAllSettingsGroups() {
 }
 
 void main() {
+  testWidgets('clear data requires confirmation and runs once', (tester) async {
+    final provider = await _createProvider(_buildStudentData());
+    final coordinator = _FakeDataClearCoordinator();
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      dataClearCoordinator: coordinator,
+    );
+
+    final tile = find.byKey(const ValueKey('settings-clear-app-data'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    expect(find.text('Clear all Sked data?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(coordinator.calls, 0);
+
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear data and exit'));
+    await tester.pumpAndSettle();
+    expect(coordinator.calls, 1);
+  });
+
+  testWidgets('clear data failure keeps settings open for retry', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildStudentData());
+    final coordinator = _FakeDataClearCoordinator()
+      ..failure = StateError('clear failed');
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      dataClearCoordinator: coordinator,
+    );
+    final tile = find.byKey(const ValueKey('settings-clear-app-data'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear data and exit'));
+    await tester.pumpAndSettle();
+    expect(coordinator.calls, 1);
+    expect(find.byType(SettingsPage), findsOneWidget);
+    expect(
+      find.textContaining('Unable to clear all local data'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a completed clear stays blocked when exit fails', (
+    tester,
+  ) async {
+    final provider = await _createProvider(
+      _buildStudentData(),
+      schoolSiteService: SchoolSiteService(
+        coordinator: SchoolSiteStorageCoordinator(),
+      ),
+    );
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      dataClearCoordinator: _CommittedDataClearCoordinator(),
+    );
+    final tile = find.byKey(const ValueKey('settings-clear-app-data'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear data and exit'));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(provider.isDataClearCommitted, isTrue);
+    expect(find.textContaining('Your local data was cleared'), findsOneWidget);
+    expect(find.byType(AbsorbPointer), findsWidgets);
+
+    // Remove the indeterminate progress indicator before the test binding
+    // verifies that no frame callbacks remain.
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
+
+  testWidgets('clear data confirmation stays reachable on a scaled phone', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(320, 568));
+    addTearDown(() => _resetTestViewport(tester));
+    final provider = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      textScaler: const TextScaler.linear(2),
+    );
+
+    final tile = find.byKey(const ValueKey('settings-clear-app-data'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+
+    final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    expect(dialog.scrollable, isTrue);
+    expect(find.text('Clear data and exit').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('clear data is not offered on iOS', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final provider = await _createProvider(_buildStudentData());
+
+      await _pumpSettingsPage(tester, provider);
+
+      expect(
+        find.byKey(const ValueKey('settings-clear-app-data')),
+        findsNothing,
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('Google Play falls back from the Android market URI', (
+    tester,
+  ) async {
+    final provider = await _createProvider(_buildStudentData());
+    final urls = <Uri>[];
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      urlLauncher: (uri, _) async {
+        urls.add(uri);
+        return urls.length > 1;
+      },
+    );
+    final entry = find.text('Google Play');
+    await tester.ensureVisible(entry);
+    await tester.pumpAndSettle();
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(urls, hasLength(2));
+    expect(urls.first.scheme, 'market');
+    expect(urls.last.toString(), contains('play.google.com/store/apps'));
+  });
+
+  testWidgets(
+    'GitHub repository launcher failures are contained and reported',
+    (tester) async {
+      final provider = await _createProvider(_buildStudentData());
+      Uri? launchedUri;
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        urlLauncher: (uri, _) async {
+          launchedUri = uri;
+          throw StateError('launcher unavailable');
+        },
+      );
+      final entry = find.text('GitHub repository');
+      await tester.ensureVisible(entry);
+      await tester.pumpAndSettle();
+      expect(find.text('Star Sked on GitHub!'), findsOneWidget);
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+
+      expect(launchedUri, Uri.parse('https://github.com/Mashiro0619/Sked'));
+      expect(
+        find.text('Unable to open the GitHub repository link'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('background package info failure is contained', (tester) async {
     final provider = await _createProvider(_buildStudentData());
     await _pumpSettingsPage(
@@ -943,6 +1151,8 @@ void main() {
     final importExportTile = find.text('Import and export data');
     expect(importExportTile, findsOneWidget);
 
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
     await tester.tap(importExportTile);
     await tester.tap(importExportTile, warnIfMissed: false);
     await tester.pumpAndSettle();
@@ -962,6 +1172,8 @@ void main() {
     final importExportTile = find.text('Import and export data');
     expect(importExportTile, findsOneWidget);
 
+    await tester.ensureVisible(importExportTile);
+    await tester.pumpAndSettle();
     await tester.tap(importExportTile);
     await tester.pumpAndSettle();
 

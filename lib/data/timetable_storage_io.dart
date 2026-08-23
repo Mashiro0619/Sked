@@ -12,13 +12,17 @@ import 'timetable_storage.dart';
 TimetableStorage createTimetableStorage() => IoTimetableStorage();
 
 class IoTimetableStorage
-    implements TimetableStorage, TimetableRecoveryArtifactReader {
+    implements
+        TimetableStorage,
+        TimetableRecoveryArtifactReader,
+        TimetableLegacySecretSanitizer {
   IoTimetableStorage({
     AppStorageLayout? layout,
     Future<Directory> Function()? directoryProvider,
     DateTime Function()? clock,
     this._fileReader,
     this._beforeMainReplace,
+    this._beforeLegacySecretArtifactReplace,
     Stream<FileSystemEntity> Function(Directory)? directoryLister,
   }) : _layout =
            layout ?? AppStorageLayout(directoryProvider: directoryProvider),
@@ -30,6 +34,8 @@ class IoTimetableStorage
   static const _fileName = AppStorageLayout.appDataFileName;
   static const _backupSuffix = AppStorageLayout.backupSuffix;
   static const _tempSuffix = AppStorageLayout.temporarySuffix;
+  static const _legacySecretScrubTemporarySuffix = '.secret-scrub.tmp';
+  static const _legacySecretScrubRollbackSuffix = '.secret-scrub.rollback';
   static const _recoveryDirectoryPrefix =
       AppStorageLayout.appDataRecoveryDirectoryPrefix;
   static final _recoveryDirectoryNamePattern = RegExp(
@@ -40,6 +46,7 @@ class IoTimetableStorage
   final DateTime Function() _clock;
   final Future<List<int>> Function(File)? _fileReader;
   final Future<void> Function()? _beforeMainReplace;
+  final Future<void> Function(File)? _beforeLegacySecretArtifactReplace;
   final Stream<FileSystemEntity> Function(Directory) _directoryLister;
 
   @override
@@ -47,6 +54,7 @@ class IoTimetableStorage
     late final AppDataStoragePaths storagePaths;
     try {
       storagePaths = await _resolvePaths();
+      await _recoverInterruptedLegacySecretScrubs(storagePaths);
     } catch (_) {
       return const StorageLoadResult(
         data: null,
@@ -403,6 +411,224 @@ class IoTimetableStorage
     }
   }
 
+  @override
+  Future<void> sanitizeLegacyAiApiSecretArtifacts() async {
+    final storagePaths = await _resolvePaths();
+    await _recoverInterruptedLegacySecretScrubs(storagePaths);
+    final recoveryScan = await _scanExistingRecoveryArtifacts(
+      storagePaths.root,
+    );
+    final scanError = recoveryScan.error;
+    if (scanError != null) {
+      Error.throwWithStackTrace(
+        scanError,
+        recoveryScan.stackTrace ?? StackTrace.current,
+      );
+    }
+    final files = <File>{
+      storagePaths.main,
+      storagePaths.backup,
+      storagePaths.temporary,
+      ...recoveryScan.artifacts.map(File.new),
+    };
+    for (final file in files) {
+      await _sanitizeLegacyAiApiSecretArtifact(file);
+    }
+  }
+
+  Future<void> _sanitizeLegacyAiApiSecretArtifact(File file) async {
+    final type = await _regularFileOrMissing(file);
+    if (type == FileSystemEntityType.notFound) return;
+
+    final originalBytes = await (_fileReader?.call(file) ?? file.readAsBytes());
+    final source = utf8.decode(originalBytes, allowMalformed: false);
+    if (!source.contains('"customApiKey"')) return;
+    final decodedJson = jsonDecode(source);
+    if (decodedJson is! Map || !_containsLegacyAiApiSecret(decodedJson)) {
+      return;
+    }
+
+    final sanitized = AppData.decodeStorageSnapshot(source).encode();
+    final sanitizedJson = jsonDecode(sanitized);
+    if (sanitizedJson is! Map || _containsLegacyAiApiSecret(sanitizedJson)) {
+      throw const StorageWriteException(
+        'Failed to remove a legacy API key from AppData storage.',
+      );
+    }
+
+    final temporary = _legacySecretScrubTemporaryFile(file);
+    final rollback = _legacySecretScrubRollbackFile(file);
+    final temporaryType = await _regularFileOrMissing(temporary);
+    if (temporaryType == FileSystemEntityType.file) {
+      await temporary.delete();
+    }
+    if (await _regularFileOrMissing(rollback) !=
+        FileSystemEntityType.notFound) {
+      throw FileSystemException(
+        'Legacy API key scrub rollback must be recovered before replacement.',
+        rollback.path,
+      );
+    }
+    final raf = await temporary.open(mode: FileMode.write);
+    try {
+      await raf.writeString(sanitized);
+      await raf.flush();
+    } finally {
+      await raf.close();
+    }
+    AppData.decodeStorageSnapshot(await temporary.readAsString());
+
+    final currentBytes = await (_fileReader?.call(file) ?? file.readAsBytes());
+    if (!_sameBytes(originalBytes, currentBytes)) {
+      throw const _StaleStorageSnapshotException();
+    }
+    var originalMovedToRollback = false;
+    try {
+      await file.rename(rollback.path);
+      originalMovedToRollback = true;
+      await _bestEffortFlushDirectory(file.parent);
+      final rollbackBytes =
+          await (_fileReader?.call(rollback) ?? rollback.readAsBytes());
+      if (!_sameBytes(originalBytes, rollbackBytes)) {
+        throw const _StaleStorageSnapshotException();
+      }
+
+      await _beforeLegacySecretArtifactReplace?.call(file);
+      await temporary.rename(file.path);
+      await _bestEffortFlushDirectory(file.parent);
+      await rollback.delete();
+      await _bestEffortFlushDirectory(file.parent);
+    } catch (_) {
+      if (originalMovedToRollback &&
+          await _regularFileOrMissing(file) == FileSystemEntityType.notFound &&
+          await _regularFileOrMissing(rollback) == FileSystemEntityType.file) {
+        try {
+          await rollback.rename(file.path);
+          await _bestEffortFlushDirectory(file.parent);
+        } catch (_) {
+          // Both files remain under recognized scrub names. The next load
+          // retries recovery before considering the ordinary backup.
+        }
+      }
+      rethrow;
+    }
+  }
+
+  bool _containsLegacyAiApiSecret(Map<dynamic, dynamic> json) {
+    final globalSettings = json['aiApiSettings'];
+    if (globalSettings is Map &&
+        _isNonEmptyLegacyApiKey(globalSettings['customApiKey'])) {
+      return true;
+    }
+    final studentMode = json['studentMode'];
+    if (studentMode is Map) {
+      final nestedSettings = studentMode['schoolImportParserSettings'];
+      if (nestedSettings is Map &&
+          _isNonEmptyLegacyApiKey(nestedSettings['customApiKey'])) {
+        return true;
+      }
+    }
+    final flatSettings = json['schoolImportParserSettings'];
+    return flatSettings is Map &&
+        _isNonEmptyLegacyApiKey(flatSettings['customApiKey']);
+  }
+
+  bool _isNonEmptyLegacyApiKey(Object? value) {
+    return value is String && value.isNotEmpty;
+  }
+
+  Future<void> _recoverInterruptedLegacySecretScrubs(
+    AppDataStoragePaths storagePaths,
+  ) async {
+    await _recoverInterruptedLegacySecretScrub(storagePaths.main);
+    await _recoverInterruptedLegacySecretScrub(storagePaths.backup);
+    await _recoverInterruptedLegacySecretScrub(storagePaths.temporary);
+    await _recoverInterruptedLegacySecretScrubsInRecoveryDirectories(
+      storagePaths.root,
+    );
+  }
+
+  Future<void> _recoverInterruptedLegacySecretScrubsInRecoveryDirectories(
+    Directory root,
+  ) async {
+    if (await FileSystemEntity.type(root.path, followLinks: false) !=
+        FileSystemEntityType.directory) {
+      return;
+    }
+    await for (final entity in _directoryLister(root)) {
+      if (await FileSystemEntity.type(entity.path, followLinks: false) !=
+              FileSystemEntityType.directory ||
+          !_recoveryDirectoryNamePattern.hasMatch(path.basename(entity.path))) {
+        continue;
+      }
+      for (final name in _allowedRecoveryArtifactNames) {
+        await _recoverInterruptedLegacySecretScrub(
+          File(path.join(entity.path, name)),
+        );
+      }
+    }
+  }
+
+  Future<void> _recoverInterruptedLegacySecretScrub(File file) async {
+    final temporary = _legacySecretScrubTemporaryFile(file);
+    final rollback = _legacySecretScrubRollbackFile(file);
+    var fileType = await _regularFileOrMissing(file);
+    var temporaryType = await _regularFileOrMissing(temporary);
+    var rollbackType = await _regularFileOrMissing(rollback);
+
+    if (rollbackType == FileSystemEntityType.notFound) {
+      if (temporaryType == FileSystemEntityType.notFound) return;
+      if (fileType == FileSystemEntityType.file) {
+        AppData.decodeStorageSnapshot(await file.readAsString());
+        await temporary.delete();
+      } else {
+        await _validateSanitizedLegacySecretScrubTarget(temporary);
+        await temporary.rename(file.path);
+      }
+      await _bestEffortFlushDirectory(file.parent);
+      return;
+    }
+
+    if (fileType == FileSystemEntityType.file) {
+      AppData.decodeStorageSnapshot(await file.readAsString());
+      if (temporaryType == FileSystemEntityType.file) {
+        await temporary.delete();
+      }
+      await rollback.delete();
+      await _bestEffortFlushDirectory(file.parent);
+      return;
+    }
+
+    if (temporaryType == FileSystemEntityType.file) {
+      await _validateSanitizedLegacySecretScrubTarget(temporary);
+      await temporary.rename(file.path);
+      await _bestEffortFlushDirectory(file.parent);
+      await rollback.delete();
+      await _bestEffortFlushDirectory(file.parent);
+      return;
+    }
+
+    await rollback.rename(file.path);
+    await _bestEffortFlushDirectory(file.parent);
+  }
+
+  Future<void> _validateSanitizedLegacySecretScrubTarget(File file) async {
+    final source = await file.readAsString();
+    final json = jsonDecode(source);
+    if (json is! Map || _containsLegacyAiApiSecret(json)) {
+      throw const StorageWriteException(
+        'Interrupted API key scrub target is not safely sanitized.',
+      );
+    }
+    AppData.decodeStorageSnapshot(source);
+  }
+
+  File _legacySecretScrubTemporaryFile(File file) =>
+      File('${file.path}$_legacySecretScrubTemporarySuffix');
+
+  File _legacySecretScrubRollbackFile(File file) =>
+      File('${file.path}$_legacySecretScrubRollbackSuffix');
+
   Future<AppDataStoragePaths> _resolvePaths() => _layout.appDataPaths();
 
   Future<void> _promoteTempToMain({
@@ -707,10 +933,14 @@ class IoTimetableStorage
   }
 
   bool _isAllowedRecoveryArtifactName(String name) {
-    return name == _fileName ||
-        name == '$_fileName$_backupSuffix' ||
-        name == '$_fileName$_tempSuffix';
+    return _allowedRecoveryArtifactNames.contains(name);
   }
+
+  List<String> get _allowedRecoveryArtifactNames => [
+    _fileName,
+    '$_fileName$_backupSuffix',
+    '$_fileName$_tempSuffix',
+  ];
 
   Future<FileSystemEntityType> _regularFileOrMissing(File file) async {
     final type = await FileSystemEntity.type(file.path, followLinks: false);

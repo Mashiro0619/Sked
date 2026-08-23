@@ -367,6 +367,7 @@ class SettingsConnectedTile extends StatelessWidget {
     this.onLongPress,
     this.onLongPressHint,
     this.onTapHint,
+    this.foregroundColor,
   });
 
   final Widget leading;
@@ -386,19 +387,21 @@ class SettingsConnectedTile extends StatelessWidget {
   final VoidCallback? onLongPress;
   final String? onLongPressHint;
   final String? onTapHint;
+  final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final enabled = onTap != null || onLongPress != null;
+    final resolvedForegroundColor = enabled
+        ? foregroundColor
+        : colors.onSurface.withValues(alpha: 0.38);
     final trailingWidget = trailing == null
         ? null
         : IconTheme.merge(
             data: IconThemeData(
-              color: enabled
-                  ? colors.onSurfaceVariant
-                  : colors.onSurface.withValues(alpha: 0.38),
+              color: resolvedForegroundColor ?? colors.onSurfaceVariant,
             ),
             child: trailing!,
           );
@@ -409,9 +412,7 @@ class SettingsConnectedTile extends StatelessWidget {
         Text(
           title,
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: enabled
-                ? colors.onSurface
-                : colors.onSurface.withValues(alpha: 0.38),
+            color: resolvedForegroundColor ?? colors.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -420,9 +421,7 @@ class SettingsConnectedTile extends StatelessWidget {
           Text(
             subtitle!,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: enabled
-                  ? colors.onSurfaceVariant
-                  : colors.onSurface.withValues(alpha: 0.38),
+              color: resolvedForegroundColor ?? colors.onSurfaceVariant,
             ),
           ),
         ],
@@ -454,7 +453,11 @@ class SettingsConnectedTile extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _SettingsTileIcon(enabled: enabled, child: leading),
+                      _SettingsTileIcon(
+                        enabled: enabled,
+                        color: foregroundColor,
+                        child: leading,
+                      ),
                       SizedBox(width: compact ? 8 : 12),
                       Expanded(child: textContent),
                       if (trailingWidget != null) ...[
@@ -577,10 +580,15 @@ class SettingsListTile extends StatelessWidget {
 }
 
 class _SettingsTileIcon extends StatelessWidget {
-  const _SettingsTileIcon({required this.child, this.enabled = true});
+  const _SettingsTileIcon({
+    required this.child,
+    this.enabled = true,
+    this.color,
+  });
 
   final Widget child;
   final bool enabled;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -592,7 +600,7 @@ class _SettingsTileIcon extends StatelessWidget {
         child: IconTheme.merge(
           data: IconThemeData(
             color: enabled
-                ? colors.onSurfaceVariant
+                ? color ?? colors.onSurfaceVariant
                 : colors.onSurface.withValues(alpha: 0.38),
           ),
           child: child,

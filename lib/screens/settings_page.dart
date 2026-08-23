@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/app_update_coordinator.dart';
+import '../services/app_data_clear_coordinator.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
@@ -32,6 +34,7 @@ import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
 import 'school_html_import_page.dart';
+import 'school_import_parser_settings_page.dart';
 import 'settings_data_transfer_controller.dart';
 import 'theme_settings_page.dart';
 import 'timetable_display_settings_page.dart';
@@ -57,6 +60,7 @@ enum _SettingsFlow {
   homeNavigation,
   periodTimePicker,
   schoolSitesPage,
+  parserSettingsPage,
   themeSettingsPage,
   timetableDisplaySettingsPage,
   generalDisplaySettingsPage,
@@ -68,13 +72,24 @@ enum _SettingsFlow {
   licensesPage,
   updateCheck,
   developerModePage,
+  googlePlay,
   githubRepo,
+  clearAppData,
 }
 
+typedef SettingsUrlLauncher = Future<bool> Function(Uri uri, LaunchMode mode);
+
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.packageInfoLoader});
+  const SettingsPage({
+    super.key,
+    this.packageInfoLoader,
+    this.dataClearCoordinator,
+    this.urlLauncher,
+  });
 
   final Future<PackageInfo> Function()? packageInfoLoader;
+  final AppDataClearCoordinator? dataClearCoordinator;
+  final SettingsUrlLauncher? urlLauncher;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -88,6 +103,10 @@ class _SettingsPageState extends State<SettingsPage> {
   String _currentVersion = '';
   String? _selectedPeriodTimeSetId;
   final Set<_SettingsFlow> _openFlows = <_SettingsFlow>{};
+  bool _clearingAppData = false;
+
+  AppDataClearCoordinator get _dataClearCoordinator =>
+      widget.dataClearCoordinator ?? AppDataClearCoordinator();
 
   @override
   void initState() {
@@ -266,6 +285,16 @@ class _SettingsPageState extends State<SettingsPage> {
         ];
         final dataChildren = [
           SettingsConnectedTile(
+            key: const ValueKey('settings-parser-settings'),
+            leading: const Icon(Icons.tune_outlined),
+            title: l10n.schoolImportParserSettingsTitle,
+            subtitle: l10n.schoolImportParserSettingsDesc,
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.parserSettingsPage)
+                ? null
+                : () => _openParserSettingsPage(provider),
+          ),
+          SettingsConnectedTile(
             leading: const Icon(Icons.inventory_2_outlined),
             title: l10n.appBackupTitle,
             subtitle: l10n.appBackupSubtitle,
@@ -287,6 +316,26 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? null
                 : _openPrivacyPolicyPage,
           ),
+          // iOS does not provide an app-initiated exit contract. Keep this
+          // destructive flow available only where Sked can actually finish
+          // by closing the process or Android activity.
+          if (!kIsWeb && defaultTargetPlatform != TargetPlatform.iOS)
+            SettingsConnectedTile(
+              key: const ValueKey('settings-clear-app-data'),
+              leading: const Icon(Icons.delete_forever_outlined),
+              title: l10n.clearAppData,
+              subtitle: l10n.clearAppDataDesc,
+              trailing: _clearingAppData
+                  ? const SizedBox.square(
+                      dimension: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.chevron_right),
+              foregroundColor: Theme.of(context).colorScheme.error,
+              onTap: _clearingAppData || _isFlowOpen(_SettingsFlow.clearAppData)
+                  ? null
+                  : () => _confirmClearAppData(provider),
+            ),
         ];
         final updateEntryBusy =
             _isFlowOpen(_SettingsFlow.updateCheck) ||
@@ -301,6 +350,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? null
                 : _openLicensesPage,
           ),
+          SettingsConnectedTile(
+            leading: const FaIcon(FontAwesomeIcons.googlePlay),
+            title: l10n.googlePlay,
+            subtitle: l10n.googlePlayStoreDesc,
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _isFlowOpen(_SettingsFlow.googlePlay)
+                ? null
+                : _openGooglePlay,
+          ),
+          SettingsConnectedTile(
+            leading: const FaIcon(FontAwesomeIcons.github),
+            title: l10n.githubRepository,
+            subtitle: l10n.starSkedOnGithub,
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _isFlowOpen(_SettingsFlow.githubRepo)
+                ? null
+                : _openGithubRepo,
+          ),
           _DeveloperModeEntryTile(
             key: const ValueKey('settings-check-for-updates'),
             title: l10n.checkForUpdates,
@@ -310,125 +377,133 @@ class _SettingsPageState extends State<SettingsPage> {
             onLongPressHint: l10n.developerModeLongPressHint,
             onTapHint: l10n.checkForUpdates,
           ),
-          SettingsConnectedTile(
-            leading: const FaIcon(FontAwesomeIcons.github),
-            title: l10n.githubRepository,
-            subtitle: l10n.githubRepositoryUrl,
-            trailing: const Icon(Icons.open_in_new),
-            onTap: _isFlowOpen(_SettingsFlow.githubRepo)
-                ? null
-                : _openGithubRepo,
-          ),
         ];
         // Scaffold removes the IME inset from its body when it resizes. Keep
         // the value captured above the Scaffold so the final row still gets a
         // scrollable tail while the keyboard is visible.
         final rootImeInset = MediaQuery.viewInsetsOf(context).bottom;
-        return Scaffold(
-          appBar: AppBar(title: Text(l10n.settingsTitle)),
-          body: SafeArea(
-            top: false,
-            bottom: true,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final textScale =
-                    MediaQuery.textScalerOf(context).scale(14) / 14;
-                final horizontalPadding = constraints.maxWidth < 600
-                    ? 16.0
-                    : 24.0;
-                final maxContentWidth = constraints.maxWidth >= 840
-                    ? 1120.0
-                    : 720.0;
-                final contentWidth =
-                    (constraints.maxWidth - horizontalPadding * 2)
-                        .clamp(0, maxContentWidth)
-                        .toDouble();
-                final availableColumnWidth = (contentWidth - 20) / 2;
-                final useTwoColumns =
-                    constraints.maxWidth >= 840 &&
-                    textScale <= 1.3 &&
-                    availableColumnWidth >= 360;
-                final workspaceGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-workspace'),
-                  title: l10n.settingsSectionWorkspace,
-                  children: workspaceChildren,
-                );
-                final timetableGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-timetable'),
-                  title: l10n.settingsSectionTimetable,
-                  children: timetableChildren,
-                );
-                final generalScheduleGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-general-schedule'),
-                  title: l10n.settingsSectionGeneralSchedule,
-                  children: generalScheduleChildren,
-                );
-                final appearanceGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-appearance-language'),
-                  title: l10n.settingsSectionAppearanceLanguage,
-                  children: appearanceChildren,
-                );
-                final dataGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-data-security'),
-                  title: l10n.settingsSectionDataSecurity,
-                  children: dataChildren,
-                );
-                final aboutGroup = SettingsConnectedGroup(
-                  key: const ValueKey('settings-group-about'),
-                  title: l10n.settingsSectionAbout,
-                  children: aboutChildren,
-                );
-                final left = [
-                  workspaceGroup,
-                  timetableGroup,
-                  generalScheduleGroup,
-                ];
-                final right = [appearanceGroup, dataGroup, aboutGroup];
-                final groups = useTwoColumns
-                    ? KeyedSubtree(
-                        key: const ValueKey('settings-groups-two-column'),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: Column(children: left)),
-                            const SizedBox(width: 20),
-                            Expanded(child: Column(children: right)),
-                          ],
-                        ),
-                      )
-                    : KeyedSubtree(
-                        key: const ValueKey('settings-groups-single-column'),
-                        child: Column(children: [...left, ...right]),
+        return PopScope(
+          canPop: !_clearingAppData,
+          child: Scaffold(
+            appBar: AppBar(title: Text(l10n.settingsTitle)),
+            body: Focus(
+              canRequestFocus: !_clearingAppData,
+              descendantsAreFocusable: !_clearingAppData,
+              descendantsAreTraversable: !_clearingAppData,
+              child: AbsorbPointer(
+                absorbing: _clearingAppData,
+                child: SafeArea(
+                  top: false,
+                  bottom: true,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final textScale =
+                          MediaQuery.textScalerOf(context).scale(14) / 14;
+                      final horizontalPadding = constraints.maxWidth < 600
+                          ? 16.0
+                          : 24.0;
+                      final maxContentWidth = constraints.maxWidth >= 840
+                          ? 1120.0
+                          : 720.0;
+                      final contentWidth =
+                          (constraints.maxWidth - horizontalPadding * 2)
+                              .clamp(0, maxContentWidth)
+                              .toDouble();
+                      final availableColumnWidth = (contentWidth - 20) / 2;
+                      final useTwoColumns =
+                          constraints.maxWidth >= 840 &&
+                          textScale <= 1.3 &&
+                          availableColumnWidth >= 360;
+                      final workspaceGroup = SettingsConnectedGroup(
+                        key: const ValueKey('settings-group-workspace'),
+                        title: l10n.settingsSectionWorkspace,
+                        children: workspaceChildren,
                       );
-                return ListView(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    12,
-                    horizontalPadding,
-                    28 + rootImeInset,
-                  ),
-                  children: [
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: maxContentWidth),
-                        child: Column(
-                          children: [
-                            if (provider.lastRecoveryStatus !=
-                                RecoveryStatus.none)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _RecoveryNoticeTile(
-                                  status: provider.lastRecoveryStatus,
-                                ),
-                              ),
-                            groups,
-                          ],
+                      final timetableGroup = SettingsConnectedGroup(
+                        key: const ValueKey('settings-group-timetable'),
+                        title: l10n.settingsSectionTimetable,
+                        children: timetableChildren,
+                      );
+                      final generalScheduleGroup = SettingsConnectedGroup(
+                        key: const ValueKey('settings-group-general-schedule'),
+                        title: l10n.settingsSectionGeneralSchedule,
+                        children: generalScheduleChildren,
+                      );
+                      final appearanceGroup = SettingsConnectedGroup(
+                        key: const ValueKey(
+                          'settings-group-appearance-language',
                         ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                        title: l10n.settingsSectionAppearanceLanguage,
+                        children: appearanceChildren,
+                      );
+                      final dataGroup = SettingsConnectedGroup(
+                        key: const ValueKey('settings-group-data-security'),
+                        title: l10n.settingsSectionDataSecurity,
+                        children: dataChildren,
+                      );
+                      final aboutGroup = SettingsConnectedGroup(
+                        key: const ValueKey('settings-group-about'),
+                        title: l10n.settingsSectionAbout,
+                        children: aboutChildren,
+                      );
+                      final left = [
+                        workspaceGroup,
+                        timetableGroup,
+                        generalScheduleGroup,
+                      ];
+                      final right = [appearanceGroup, dataGroup, aboutGroup];
+                      final groups = useTwoColumns
+                          ? KeyedSubtree(
+                              key: const ValueKey('settings-groups-two-column'),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: Column(children: left)),
+                                  const SizedBox(width: 20),
+                                  Expanded(child: Column(children: right)),
+                                ],
+                              ),
+                            )
+                          : KeyedSubtree(
+                              key: const ValueKey(
+                                'settings-groups-single-column',
+                              ),
+                              child: Column(children: [...left, ...right]),
+                            );
+                      return ListView(
+                        padding: EdgeInsets.fromLTRB(
+                          horizontalPadding,
+                          12,
+                          horizontalPadding,
+                          28 + rootImeInset,
+                        ),
+                        children: [
+                          Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: maxContentWidth,
+                              ),
+                              child: Column(
+                                children: [
+                                  if (provider.lastRecoveryStatus !=
+                                      RecoveryStatus.none)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: _RecoveryNoticeTile(
+                                        status: provider.lastRecoveryStatus,
+                                      ),
+                                    ),
+                                  groups,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -576,6 +651,19 @@ class _SettingsPageState extends State<SettingsPage> {
           builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
             value: provider,
             child: const LanguageSettingsPage(),
+          ),
+        ),
+      );
+    });
+  }
+
+  Future<void> _openParserSettingsPage(TimetableProvider provider) async {
+    await _guardFlow(_SettingsFlow.parserSettingsPage, () async {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: const SchoolImportParserSettingsPage(),
           ),
         ),
       );
@@ -771,11 +859,104 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _openGithubRepo() async {
     await _guardFlow(_SettingsFlow.githubRepo, () async {
       final uri = Uri.parse('https://github.com/Mashiro0619/Sked');
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final opened = await _tryLaunchExternal(uri);
       if (!opened && mounted) {
         _showMessage(AppLocalizations.of(context).openGithubFailed);
       }
     });
+  }
+
+  Future<bool> _launchExternal(Uri uri) {
+    final launcher = widget.urlLauncher;
+    if (launcher != null) {
+      return launcher(uri, LaunchMode.externalApplication);
+    }
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<bool> _tryLaunchExternal(Uri uri) async {
+    try {
+      return await _launchExternal(uri);
+    } catch (error, stackTrace) {
+      debugPrint('Opening external URL failed for $uri: $error\n$stackTrace');
+      return false;
+    }
+  }
+
+  Future<void> _openGooglePlay() async {
+    await _guardFlow(_SettingsFlow.googlePlay, () async {
+      var opened = false;
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        opened = await _tryLaunchExternal(
+          Uri.parse('market://details?id=com.mashiro.sked'),
+        );
+      }
+      if (!opened) {
+        opened = await _tryLaunchExternal(
+          Uri.parse(
+            'https://play.google.com/store/apps/details?id=com.mashiro.sked',
+          ),
+        );
+      }
+      if (!opened && mounted) {
+        _showMessage(AppLocalizations.of(context).openGooglePlayFailed);
+      }
+    });
+  }
+
+  Future<void> _confirmClearAppData(TimetableProvider provider) async {
+    if (_clearingAppData || _isFlowOpen(_SettingsFlow.clearAppData)) return;
+    final confirmed = await showExpressiveDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        final colors = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          scrollable: true,
+          title: Text(l10n.clearAppDataConfirmTitle),
+          content: Text(l10n.clearAppDataConfirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.clearAppDataAction),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    _setFlowOpen(_SettingsFlow.clearAppData, true);
+    setState(() => _clearingAppData = true);
+    try {
+      await _dataClearCoordinator.clearAndExit(provider);
+    } catch (error, stackTrace) {
+      debugPrint('Clearing local app data failed: $error\n$stackTrace');
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        _showMessage(
+          provider.isDataClearCommitted
+              ? l10n.clearAppDataExitFailed
+              : l10n.clearAppDataFailed,
+        );
+      }
+    } finally {
+      // A completed clear is intentionally a permanent maintenance state.
+      // Keep the page blocked if the platform exit unexpectedly returns or
+      // fails, so the user cannot interact with stale in-memory data.
+      if (mounted && !provider.isDataClearCommitted) {
+        setState(() => _clearingAppData = false);
+        _setFlowOpen(_SettingsFlow.clearAppData, false);
+      }
+    }
   }
 
   Future<void> _showDataActions(TimetableProvider provider) async {

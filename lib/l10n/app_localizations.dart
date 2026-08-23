@@ -928,7 +928,7 @@ abstract class AppLocalizations {
   /// No description provided for @appBackupSheetSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'A full restore replaces current app data. Custom parser API keys live in secure storage and are not written to backup files.'**
+  /// **'A full restore replaces current app data. AI API keys live in secure storage and are not written to backup files.'**
   String get appBackupSheetSubtitle;
 
   /// No description provided for @restoreBackupFileTitle.
@@ -1012,7 +1012,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreBackupSuccessMessage.
   ///
   /// In en, this message translates to:
-  /// **'Full app backup restored. Parser API keys must be re-entered.'**
+  /// **'Full app backup restored. AI API keys must be re-entered.'**
   String get restoreBackupSuccessMessage;
 
   /// No description provided for @restoreBackupFailureMessage.
@@ -1122,6 +1122,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'GitHub repository'**
   String get githubRepository;
+
+  /// No description provided for @googlePlayStoreDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View Sked on Google Play'**
+  String get googlePlayStoreDesc;
+
+  /// No description provided for @openGooglePlayFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open Google Play'**
+  String get openGooglePlayFailed;
+
+  /// No description provided for @starSkedOnGithub.
+  ///
+  /// In en, this message translates to:
+  /// **'Star Sked on GitHub!'**
+  String get starSkedOnGithub;
+
+  /// No description provided for @starSkedOnGithubDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the project repository and give Sked a Star'**
+  String get starSkedOnGithubDesc;
 
   /// No description provided for @openGithubFailed.
   ///
@@ -1696,7 +1720,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyLocalStorageBody.
   ///
   /// In en, this message translates to:
-  /// **'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. Custom timetable parser settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.'**
+  /// **'On native platforms, Sked stores timetable data, general schedules, related settings, and editable school-site configuration in the operating system\'s application-support directory; browser builds use browser storage. Files written by earlier versions to the user Documents directory remain in place, but they are not read or migrated automatically. To retain that data, export a full app backup from the old version before upgrading, then restore it afterward. AI API settings are stored locally; the custom API key is stored through the platform secure-storage layer when available. Full app backups do not include the custom API key. The app does not automatically upload this local data to a developer-controlled server.'**
   String get privacyPolicyLocalStorageBody;
 
   /// No description provided for @privacyPolicyImportExportTitle.
@@ -2251,14 +2275,20 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportParserSettingsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Timetable parser settings'**
+  /// **'AI API configuration'**
   String get schoolImportParserSettingsTitle;
 
   /// No description provided for @schoolImportParserSettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Configure your own OpenAI-compatible endpoint. HTTP and HTTPS base URLs are supported.'**
+  /// **'Configure the OpenAI-compatible API used by timetable parsing and other AI features.'**
   String get schoolImportParserSettingsDesc;
+
+  /// No description provided for @schoolImportParserSettingsLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure it in Settings > Data & security > AI API configuration.'**
+  String get schoolImportParserSettingsLocationHint;
 
   /// No description provided for @schoolImportParserSourceTitle.
   ///
@@ -2385,6 +2415,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom parser configuration is incomplete. Fill in the base URL, API key, and model first.'**
   String get schoolImportParserCustomConfigIncomplete;
+
+  /// No description provided for @clearAppData.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear data'**
+  String get clearAppData;
+
+  /// No description provided for @clearAppDataDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete all local Sked data and exit the app'**
+  String get clearAppDataDesc;
+
+  /// No description provided for @clearAppDataConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all Sked data?'**
+  String get clearAppDataConfirmTitle;
+
+  /// No description provided for @clearAppDataConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes timetables, schedules, settings, school sites, local backups, recovery copies, and the AI API key, then exits Sked. Files you exported elsewhere are not deleted. This cannot be undone.'**
+  String get clearAppDataConfirmMessage;
+
+  /// No description provided for @clearAppDataAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear data and exit'**
+  String get clearAppDataAction;
+
+  /// No description provided for @clearAppDataFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to clear all local data. Sked will remain open so you can retry.'**
+  String get clearAppDataFailed;
+
+  /// No description provided for @clearAppDataExitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your local data was cleared, but Sked could not exit. Close the app manually before using it again.'**
+  String get clearAppDataExitFailed;
 
   /// No description provided for @schoolImportParserCurrentSourceCustom.
   ///

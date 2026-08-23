@@ -41,7 +41,7 @@ void main() {
 
       final updated = service.updateSchoolImportParserSettings(data, next);
 
-      final s = updated.studentMode.schoolImportParserSettings;
+      final s = updated.aiApiSettings;
       expect(s.source, equals(next.source));
       expect(s.customBaseUrl, equals(next.customBaseUrl));
       expect(s.customApiKey, equals(next.customApiKey));
@@ -85,7 +85,7 @@ void main() {
         ),
       );
 
-      final settings = updated.studentMode.schoolImportParserSettings;
+      final settings = updated.aiApiSettings;
       expect(settings.source, schoolImportParserSourceCustomOpenAi);
       expect(settings.customBaseUrl, 'https://api.example.com/v1');
       expect(settings.customApiKey, 'sk-secret');

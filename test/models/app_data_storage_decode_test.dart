@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/migrations/migration.dart';
+import 'package:sked/models/ai_api_settings.dart';
 import 'package:sked/models/app_data.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule_data.dart';
@@ -1347,14 +1348,6 @@ void main() {
         final snapshot = validSnapshot();
         invalidStudents.add(studentMode(snapshot)..[entry.$1] = entry.$2);
       }
-      final parserSnapshot = validSnapshot();
-      final parserStudent = studentMode(parserSnapshot);
-      parserStudent['schoolImportParserSettings'] = {
-        ...parserStudent['schoolImportParserSettings']! as Map<String, dynamic>,
-        'source': 'official',
-      };
-      invalidStudents.add(parserStudent);
-
       for (final student in invalidStudents) {
         final snapshot = validSnapshot()..['studentMode'] = student;
 
@@ -1363,6 +1356,17 @@ void main() {
           throwsFormatException,
         );
       }
+
+      final parserSnapshot = validSnapshot();
+      final parserSettings = Map<String, dynamic>.from(
+        parserSnapshot['aiApiSettings'] as Map,
+      )..['source'] = 'official';
+      parserSnapshot['aiApiSettings'] = parserSettings;
+
+      expect(
+        () => AppData.decodeStorageSnapshot(jsonEncode(parserSnapshot)),
+        throwsFormatException,
+      );
     });
 
     test('rejects color maps that would silently drop entries', () {
@@ -1390,6 +1394,87 @@ void main() {
         () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
         throwsFormatException,
       );
+    });
+
+    test('rejects malformed global AI API settings without falling back', () {
+      final snapshot = validSnapshot();
+      final student = studentMode(snapshot)
+        ..['schoolImportParserSettings'] = {
+          'source': 'customOpenAi',
+          'customBaseUrl': 'https://legacy.example.com/v1',
+          'customApiKey': '',
+          'customModel': 'legacy-model',
+          'customPrompt': '',
+        };
+      snapshot['studentMode'] = student;
+      snapshot['aiApiSettings'] = 'invalid';
+
+      expect(
+        () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+        throwsFormatException,
+      );
+    });
+
+    test(
+      'consumes legacy nested AI API settings without retaining a shadow',
+      () {
+        final snapshot = validSnapshot()..remove('aiApiSettings');
+        final student = studentMode(snapshot)
+          ..['schoolImportParserSettings'] = {
+            'source': schoolImportParserSourceCustomOpenAi,
+            'customBaseUrl': 'https://legacy.example.com/v1',
+            'customApiKey': 'sk-legacy',
+            'customModel': 'legacy-model',
+            'customPrompt': 'legacy prompt',
+          };
+        snapshot['studentMode'] = student;
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+        expect(
+          decoded.aiApiSettings.customBaseUrl,
+          'https://legacy.example.com/v1',
+        );
+        expect(decoded.aiApiSettings.customApiKey, 'sk-legacy');
+        expect(
+          decoded.studentMode.toJson(),
+          isNot(contains('schoolImportParserSettings')),
+        );
+
+        final updated = decoded.copyWith(
+          aiApiSettings: decoded.aiApiSettings.copyWith(
+            customBaseUrl: 'https://new.example.com/v1',
+            customModel: 'new-model',
+            customPrompt: 'new prompt',
+          ),
+          studentMode: decoded.studentMode.copyWith(showFutureCourses: false),
+        );
+        expect(
+          updated.aiApiSettings.customBaseUrl,
+          'https://new.example.com/v1',
+        );
+        expect(updated.aiApiSettings.customModel, 'new-model');
+        expect(updated.aiApiSettings.customPrompt, 'new prompt');
+      },
+    );
+
+    test('explicit global defaults win over non-default legacy settings', () {
+      final snapshot = validSnapshot();
+      final student = studentMode(snapshot)
+        ..['schoolImportParserSettings'] = {
+          'source': schoolImportParserSourceCustomOpenAi,
+          'customBaseUrl': 'https://legacy.example.com/v1',
+          'customApiKey': 'sk-legacy',
+          'customModel': 'legacy-model',
+          'customPrompt': 'legacy prompt',
+        };
+      snapshot['studentMode'] = student;
+      snapshot['aiApiSettings'] = const AiApiSettings().toJson();
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+      expect(decoded.aiApiSettings.customBaseUrl, isEmpty);
+      expect(decoded.aiApiSettings.customApiKey, isEmpty);
+      expect(decoded.aiApiSettings.customModel, isEmpty);
+      expect(decoded.aiApiSettings.customPrompt, isEmpty);
     });
 
     test('rejects malformed general display settings', () {

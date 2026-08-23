@@ -17,7 +17,6 @@ import '../widgets/expressive_empty_state.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
-import 'school_import_parser_settings_page.dart';
 
 class SchoolHtmlImportPage extends StatefulWidget {
   const SchoolHtmlImportPage({
@@ -53,7 +52,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
 
   bool _isSubmitting = false;
   bool _isContentPrepared = false;
-  bool _parserSettingsPageOpen = false;
   bool _returnToWebPagePopped = false;
   late bool _contentWasTruncated;
   late final TextInputFormatter _boundedInputFormatter;
@@ -67,16 +65,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     return isValidCustomOpenAiBaseUrl(provider.customSchoolImportBaseUrl) &&
         provider.customSchoolImportApiKey.trim().isNotEmpty &&
         provider.customSchoolImportModel.trim().isNotEmpty;
-  }
-
-  String _buildParserSummary(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
-    final model = provider.customSchoolImportModel.trim();
-    return model.isEmpty
-        ? l10n.schoolImportParserSourceCustomOpenAi
-        : l10n.schoolImportParserCurrentSourceCustom(model);
   }
 
   String _buildConfigMessage(
@@ -156,14 +144,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _ParserSettingsTile(
-                            summary: _buildParserSummary(provider, l10n),
-                            enabled: !_parserSettingsPageOpen,
-                            onTap: _parserSettingsPageOpen
-                                ? null
-                                : _openParserSettingsPage,
-                          ),
-                          const SizedBox(height: 12),
                           TextField(
                             controller: _htmlController,
                             enabled: !_isSubmitting,
@@ -258,14 +238,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     return ExpressiveEmptyState(
       icon: Icons.tune_outlined,
       title: l10n.schoolImportParserSettingsTitle,
-      message: _buildConfigMessage(provider, l10n),
-      actions: [
-        FilledButton.icon(
-          onPressed: _parserSettingsPageOpen ? null : _openParserSettingsPage,
-          icon: const Icon(Icons.tune_outlined),
-          label: Text(l10n.schoolImportParserSettingsTitle),
-        ),
-      ],
+      message:
+          '${_buildConfigMessage(provider, l10n)}\n\n'
+          '${l10n.schoolImportParserSettingsLocationHint}',
     );
   }
 
@@ -369,24 +344,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     }
   }
 
-  Future<void> _openParserSettingsPage() async {
-    if (_parserSettingsPageOpen) {
-      return;
-    }
-    setState(() => _parserSettingsPageOpen = true);
-    try {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const SchoolImportParserSettingsPage(),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _parserSettingsPageOpen = false);
-      }
-    }
-  }
-
   void _returnToWebPageOnce() {
     if (_returnToWebPagePopped) {
       return;
@@ -427,7 +384,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
 
     final localeCode = provider.localeCode;
     final canReplaceCurrent = provider.activeTimetableOrNull != null;
-    final parserSettings = provider.schoolImportParserSettings;
+    final parserSettings = provider.aiApiSettings;
     final sanitizedContent = _htmlController.text.trim();
 
     setState(() => _isSubmitting = true);
@@ -545,90 +502,4 @@ String mapSchoolImportApplyError(Object error, AppLocalizations l10n) {
     return error.message;
   }
   return l10n.importFailedCheckContent;
-}
-
-class _ParserSettingsTile extends StatelessWidget {
-  const _ParserSettingsTile({
-    required this.summary,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String summary;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
-    final contentColor = enabled
-        ? colors.onSurface
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondaryColor = enabled
-        ? colors.onSurfaceVariant
-        : colors.onSurface.withValues(alpha: 0.38);
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: ShapeDecoration(
-                  color: colors.primary.withValues(
-                    alpha: enabled ? 0.10 : 0.05,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Icon(
-                  Icons.tune_outlined,
-                  color: enabled ? colors.primary : secondaryColor,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.schoolImportParserSettingsTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: contentColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      summary,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: secondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: secondaryColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

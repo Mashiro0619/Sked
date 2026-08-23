@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../utils/localized_names.dart';
 import '../utils/time_utils.dart';
 import 'app_mode.dart';
+import 'ai_api_settings.dart';
 import 'course_item.dart';
 import 'general_event.dart';
 import 'general_event_occurrence.dart';
@@ -1013,26 +1014,11 @@ void _validateStorageStudentSettings(
     validateCurrentSemantics: validateCurrentSemantics,
   );
 
-  final parserSettings = _storageMapField(
+  _validateStorageAiApiSettings(
     studentMode,
-    'schoolImportParserSettings',
-    errorMessage: 'Stored school import parser settings are invalid.',
+    key: 'schoolImportParserSettings',
+    validateCurrentSemantics: validateCurrentSemantics,
   );
-  if (parserSettings != null) {
-    for (final key in const [
-      'source',
-      'customBaseUrl',
-      'customApiKey',
-      'customModel',
-      'customPrompt',
-    ]) {
-      _validateStorageStringField(
-        parserSettings,
-        key,
-        errorMessage: 'Stored school import parser settings are invalid.',
-      );
-    }
-  }
   if (validateCurrentSemantics) {
     if ((studentMode.containsKey('colorfulCourseTextColorMode') &&
             !const {
@@ -1057,28 +1043,51 @@ void _validateStorageStudentSettings(
         );
       }
     }
-    if (parserSettings != null) {
-      if (parserSettings.containsKey('source') &&
-          parserSettings['source'] != schoolImportParserSourceCustomOpenAi) {
-        throw const FormatException(
-          'Stored school import parser settings are invalid.',
-        );
-      }
-      for (final key in const [
-        'customBaseUrl',
-        'customApiKey',
-        'customModel',
-        'customPrompt',
-      ]) {
-        final value = parserSettings[key];
-        if (value is String && value != value.trim()) {
-          throw const FormatException(
-            'Stored school import parser settings are invalid.',
-          );
-        }
+  }
+}
+
+Map<String, dynamic>? _validateStorageAiApiSettings(
+  Map<String, dynamic> container, {
+  String key = 'aiApiSettings',
+  bool validateCurrentSemantics = true,
+}) {
+  final settings = _storageMapField(
+    container,
+    key,
+    errorMessage: 'Stored AI API settings are invalid.',
+  );
+  if (settings == null) return null;
+  for (final field in const [
+    'source',
+    'customBaseUrl',
+    'customApiKey',
+    'customModel',
+    'customPrompt',
+  ]) {
+    _validateStorageStringField(
+      settings,
+      field,
+      errorMessage: 'Stored AI API settings are invalid.',
+    );
+  }
+  if (validateCurrentSemantics) {
+    if (settings.containsKey('source') &&
+        settings['source'] != schoolImportParserSourceCustomOpenAi) {
+      throw const FormatException('Stored AI API settings are invalid.');
+    }
+    for (final field in const [
+      'customBaseUrl',
+      'customApiKey',
+      'customModel',
+      'customPrompt',
+    ]) {
+      final value = settings[field];
+      if (value is String && value != value.trim()) {
+        throw const FormatException('Stored AI API settings are invalid.');
       }
     }
   }
+  return settings;
 }
 
 void _validateStorageGeneralSettings(
@@ -1552,6 +1561,7 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
     );
   }
   _validateStorageThemeSettings(json, validateCurrentSemantics: true);
+  _validateStorageAiApiSettings(json);
   final hasStudentMode = json.containsKey('studentMode');
   final hasGeneralMode = json.containsKey('generalMode');
   if (hasStudentMode || hasGeneralMode) {
@@ -1621,6 +1631,7 @@ class AppData {
     String localeCode = defaultLocaleCode,
     bool hideHomeWorkspaceNavigation = false,
     bool homeWorkspaceNavigationCollapsed = false,
+    AiApiSettings aiApiSettings = const AiApiSettings(),
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1669,6 +1680,7 @@ class AppData {
       localeCode: localeCode,
       hideHomeWorkspaceNavigation: hideHomeWorkspaceNavigation,
       homeWorkspaceNavigationCollapsed: homeWorkspaceNavigationCollapsed,
+      aiApiSettings: aiApiSettings,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
       ignoredUpdateVersion: ignoredUpdateVersion,
@@ -1683,6 +1695,7 @@ class AppData {
     this.localeCode = defaultLocaleCode,
     this.hideHomeWorkspaceNavigation = false,
     this.homeWorkspaceNavigationCollapsed = false,
+    this.aiApiSettings = const AiApiSettings(),
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
     this.ignoredUpdateVersion,
@@ -1695,6 +1708,7 @@ class AppData {
   final String localeCode;
   final bool hideHomeWorkspaceNavigation;
   final bool homeWorkspaceNavigationCollapsed;
+  final AiApiSettings aiApiSettings;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
   final String? ignoredUpdateVersion;
@@ -1719,6 +1733,7 @@ class AppData {
     // navigation shape, but its storage representation is still schema v2.
     'hideHomeBottomNavigationBar': hideHomeWorkspaceNavigation,
     'homeWorkspaceNavigationCollapsed': homeWorkspaceNavigationCollapsed,
+    'aiApiSettings': aiApiSettings.toJson(),
     if (privacyPolicyAcceptedVersion != null)
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
@@ -1799,6 +1814,9 @@ class AppData {
       homeWorkspaceNavigationCollapsed: _decodeHomeWorkspaceNavigationCollapsed(
         migrated,
       ),
+      aiApiSettings: AiApiSettings.fromJson(
+        _decodeAiApiSettingsJson(migrated, studentModeJson),
+      ),
       privacyPolicyAcceptedVersion: _nullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
@@ -1821,6 +1839,7 @@ class AppData {
     String? localeCode,
     bool? hideHomeWorkspaceNavigation,
     bool? homeWorkspaceNavigationCollapsed,
+    AiApiSettings? aiApiSettings,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1833,6 +1852,7 @@ class AppData {
     final nextActiveMode = activeMode ?? this.activeMode;
     var nextStudentMode = studentMode ?? this.studentMode;
     var nextGeneralMode = generalMode ?? this.generalMode;
+    final nextAiApiSettings = aiApiSettings ?? this.aiApiSettings;
     final hasThemeUpdate =
         themeMode != null ||
         themeColorMode != null ||
@@ -1873,6 +1893,7 @@ class AppData {
       homeWorkspaceNavigationCollapsed:
           homeWorkspaceNavigationCollapsed ??
           this.homeWorkspaceNavigationCollapsed,
+      aiApiSettings: nextAiApiSettings,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
           ? this.privacyPolicyAcceptedVersion
@@ -1902,6 +1923,31 @@ class AppData {
     _validateStorageSnapshotShape(migrated);
     return AppData.fromJson(migrated);
   }
+}
+
+Map<String, dynamic> _decodeAiApiSettingsJson(
+  Map<String, dynamic> json,
+  Map<String, dynamic> studentModeJson,
+) {
+  if (json.containsKey('aiApiSettings')) {
+    final value = _asStringKeyedMap(json['aiApiSettings']);
+    if (value == null) {
+      throw const FormatException('AI API settings must be an object.');
+    }
+    return value;
+  }
+  // Keep reading the legacy nested location so existing data migrates on the
+  // next save, while preserving strict decoding when it is present.
+  if (studentModeJson.containsKey('schoolImportParserSettings')) {
+    final value = _asStringKeyedMap(
+      studentModeJson['schoolImportParserSettings'],
+    );
+    if (value == null) {
+      throw const FormatException('Legacy AI API settings must be an object.');
+    }
+    return value;
+  }
+  return const {};
 }
 
 bool _decodeHideHomeWorkspaceNavigation(Map<String, dynamic> json) {

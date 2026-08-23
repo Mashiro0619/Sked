@@ -86,13 +86,11 @@ AppData _buildConfiguredCustomParserData({
   );
   return baseData.copyWith(
     activeMode: AppMode.student,
-    studentMode: baseData.studentMode.copyWith(
-      schoolImportParserSettings: SchoolImportParserSettings(
-        source: schoolImportParserSourceCustomOpenAi,
-        customBaseUrl: baseUrl,
-        customApiKey: 'sk-test',
-        customModel: 'gpt-4.1-mini',
-      ),
+    aiApiSettings: AiApiSettings(
+      source: schoolImportParserSourceCustomOpenAi,
+      customBaseUrl: baseUrl,
+      customApiKey: 'sk-test',
+      customModel: 'gpt-4.1-mini',
     ),
   );
 }
@@ -224,23 +222,15 @@ void main() {
     );
   });
 
-  testWidgets('parser settings entry ignores rapid duplicate taps', (
+  testWidgets('parser settings are no longer nested in the import page', (
     tester,
   ) async {
     final provider = await _createProvider();
     await _pumpSchoolHtmlImportPage(tester, provider);
 
-    final parserSettingsTile = find.text('Timetable parser settings');
-    expect(parserSettingsTile, findsOneWidget);
-
-    await tester.tap(parserSettingsTile);
-    await tester.tap(parserSettingsTile, warnIfMissed: false);
-    await _pumpRouteTransition(tester);
-
-    expect(
-      find.byType(SchoolImportParserSettingsPage, skipOffstage: false),
-      findsOneWidget,
-    );
+    expect(find.text('AI API configuration'), findsNothing);
+    expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
   });
 
   testWidgets('return to webpage button cannot pop the parent route twice', (

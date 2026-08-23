@@ -17,17 +17,17 @@ void main() {
   test('round-trips app data and school sites without API keys', () {
     final data = appData(localeCode: 'zh').copyWith(
       homeWorkspaceNavigationCollapsed: true,
+      aiApiSettings: const AiApiSettings(
+        customBaseUrl: 'https://api.example.test/v1',
+        customApiKey: 'sk-secret',
+        customModel: 'model-a',
+      ),
       studentMode: appData().studentMode.copyWith(
         showAddCourseFab: false,
         enableLongPressAddCourse: false,
         fitDaySelectorToWidth: false,
         fitWeekColumnsToWidth: false,
         enableWeekSwipeNavigation: false,
-        schoolImportParserSettings: const SchoolImportParserSettings(
-          customBaseUrl: 'https://api.example.test/v1',
-          customApiKey: 'sk-secret',
-          customModel: 'model-a',
-        ),
       ),
       generalMode: appData().generalMode.copyWith(
         showAddEventFab: false,
@@ -55,10 +55,7 @@ void main() {
       decoded.appData.generalMode.timeGridHourHeight,
       generalTimeGridHourHeightMax,
     );
-    expect(
-      decoded.appData.studentMode.schoolImportParserSettings.customApiKey,
-      isEmpty,
-    );
+    expect(decoded.appData.aiApiSettings.customApiKey, isEmpty);
   });
 
   test('keeps backup and nested AppData schema versions independent', () {

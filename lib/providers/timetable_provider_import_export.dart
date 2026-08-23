@@ -194,8 +194,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     }
 
     final previousAppData = _appData;
-    final previousApiKey =
-        previousAppData.studentMode.schoolImportParserSettings.customApiKey;
+    final previousApiKey = previousAppData.aiApiSettings.customApiKey;
     final journalAppData = _withRuntimeCustomSchoolImportApiKey(imported, '');
     final restoredAppData = _withRuntimeCustomSchoolImportApiKey(
       imported,
@@ -490,8 +489,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
 
     try {
       await _ensureCustomSchoolImportApiKeyPersistenceKnown();
-      final runtimeApiKey =
-          _appData.studentMode.schoolImportParserSettings.customApiKey;
+      final runtimeApiKey = _appData.aiApiSettings.customApiKey;
       final schoolSiteLease = _schoolSiteRestoreLease;
       final siteResult = await schoolSiteLease.loadSitesResult();
       if (!siteResult.canWrite && !siteResult.canReplaceAfterRecovery) {
@@ -567,8 +565,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     var pendingRestore = result;
 
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.prepared) {
-      final existingApiKey =
-          _appData.studentMode.schoolImportParserSettings.customApiKey;
+      final existingApiKey = _appData.aiApiSettings.customApiKey;
       final restoredAppData = _withRuntimeCustomSchoolImportApiKey(
         _importExportService.normalizeAppData(
           backup.appData,

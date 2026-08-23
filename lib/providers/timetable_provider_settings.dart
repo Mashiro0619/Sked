@@ -151,17 +151,11 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateCustomSchoolImportBaseUrl(String value) async {
     final normalized = value.trim();
-    if (_appData.studentMode.schoolImportParserSettings.customBaseUrl ==
-        normalized) {
+    if (_appData.aiApiSettings.customBaseUrl == normalized) {
       return;
     }
     _appData = _appData.copyWith(
-      studentMode: _appData.studentMode.copyWith(
-        schoolImportParserSettings: _appData
-            .studentMode
-            .schoolImportParserSettings
-            .copyWith(customBaseUrl: normalized),
-      ),
+      aiApiSettings: _appData.aiApiSettings.copyWith(customBaseUrl: normalized),
     );
     await _saveAndNotify();
   }
@@ -172,34 +166,22 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateCustomSchoolImportModel(String value) async {
     final normalized = value.trim();
-    if (_appData.studentMode.schoolImportParserSettings.customModel ==
-        normalized) {
+    if (_appData.aiApiSettings.customModel == normalized) {
       return;
     }
     _appData = _appData.copyWith(
-      studentMode: _appData.studentMode.copyWith(
-        schoolImportParserSettings: _appData
-            .studentMode
-            .schoolImportParserSettings
-            .copyWith(customModel: normalized),
-      ),
+      aiApiSettings: _appData.aiApiSettings.copyWith(customModel: normalized),
     );
     await _saveAndNotify();
   }
 
   Future<void> updateCustomSchoolImportPrompt(String value) async {
     final normalized = value.trim();
-    if (_appData.studentMode.schoolImportParserSettings.customPrompt ==
-        normalized) {
+    if (_appData.aiApiSettings.customPrompt == normalized) {
       return;
     }
     _appData = _appData.copyWith(
-      studentMode: _appData.studentMode.copyWith(
-        schoolImportParserSettings: _appData
-            .studentMode
-            .schoolImportParserSettings
-            .copyWith(customPrompt: normalized),
-      ),
+      aiApiSettings: _appData.aiApiSettings.copyWith(customPrompt: normalized),
     );
     await _saveAndNotify();
   }
@@ -212,19 +194,17 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     final normalizedBaseUrl = baseUrl.trim();
     final normalizedModel = model.trim();
     final normalizedPrompt = prompt.trim();
-    final current = _appData.studentMode.schoolImportParserSettings;
+    final current = _appData.aiApiSettings;
     if (current.customBaseUrl == normalizedBaseUrl &&
         current.customModel == normalizedModel &&
         current.customPrompt == normalizedPrompt) {
       return;
     }
     _appData = _appData.copyWith(
-      studentMode: _appData.studentMode.copyWith(
-        schoolImportParserSettings: current.copyWith(
-          customBaseUrl: normalizedBaseUrl,
-          customModel: normalizedModel,
-          customPrompt: normalizedPrompt,
-        ),
+      aiApiSettings: current.copyWith(
+        customBaseUrl: normalizedBaseUrl,
+        customModel: normalizedModel,
+        customPrompt: normalizedPrompt,
       ),
     );
     await _saveAndNotify();

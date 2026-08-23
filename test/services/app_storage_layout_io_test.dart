@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -163,5 +164,343 @@ void main() {
     );
 
     await expectLater(layout.directory(), throwsA(isA<FileSystemException>()));
+  });
+
+  group('Windows application data migration', () {
+    AppStorageLayout windowsLayout({
+      Future<void> Function(Directory source, Directory target)? mover,
+      Future<void> Function(Directory target)? emptyTargetDeleter,
+    }) {
+      return AppStorageLayout(
+        isWindows: true,
+        windowsRoamingDirectoryProvider: () async => tempDirectory,
+        windowsDirectoryMover: mover,
+        windowsEmptyTargetDirectoryDeleter: emptyTargetDeleter,
+      );
+    }
+
+    Directory targetDirectory() => Directory(
+      path.join(tempDirectory.path, AppStorageLayout.windowsDirectoryName),
+    );
+
+    Directory legacyCompanyDirectory() => Directory(
+      path.join(
+        tempDirectory.path,
+        AppStorageLayout.legacyWindowsCompanyDirectoryName,
+      ),
+    );
+
+    Directory legacyDirectory() => Directory(
+      path.join(
+        legacyCompanyDirectory().path,
+        AppStorageLayout.windowsDirectoryName,
+      ),
+    );
+
+    test(
+      'uses the roaming Sked directory when legacy data is absent',
+      () async {
+        final root = await windowsLayout().directory();
+
+        expect(root.path, targetDirectory().path);
+        expect(root.existsSync(), isTrue);
+        expect(legacyCompanyDirectory().existsSync(), isFalse);
+      },
+    );
+
+    test('moves the complete legacy directory into an absent target', () async {
+      final legacy = legacyDirectory();
+      await legacy.create(recursive: true);
+      await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+      await Directory(path.join(legacy.path, 'recovery')).create();
+
+      final root = await windowsLayout().directory();
+
+      expect(root.path, targetDirectory().path);
+      expect(
+        File(path.join(root.path, 'data.json')).readAsStringSync(),
+        'legacy',
+      );
+      expect(Directory(path.join(root.path, 'recovery')).existsSync(), isTrue);
+      expect(legacy.existsSync(), isFalse);
+      expect(legacyCompanyDirectory().existsSync(), isFalse);
+    });
+
+    test('moves legacy data when the target directory is empty', () async {
+      await targetDirectory().create();
+      final legacy = legacyDirectory();
+      await legacy.create(recursive: true);
+      await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+
+      final root = await windowsLayout().directory();
+
+      expect(
+        File(path.join(root.path, 'data.json')).readAsStringSync(),
+        'legacy',
+      );
+      expect(legacy.existsSync(), isFalse);
+    });
+
+    test(
+      'continues when another process removes the empty target first',
+      () async {
+        final target = targetDirectory();
+        await target.create();
+        final legacy = legacyDirectory();
+        await legacy.create(recursive: true);
+        await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+        final deleteError = FileSystemException(
+          'target disappeared during delete',
+          target.path,
+        );
+
+        final root = await windowsLayout(
+          emptyTargetDeleter: (directory) async {
+            await directory.delete();
+            throw deleteError;
+          },
+        ).directory();
+
+        expect(root.path, target.path);
+        expect(legacy.existsSync(), isFalse);
+        expect(
+          File(path.join(root.path, 'data.json')).readAsStringSync(),
+          'legacy',
+        );
+      },
+    );
+
+    test(
+      'accepts a delete failure after another process completed migration',
+      () async {
+        final target = targetDirectory();
+        await target.create();
+        final legacy = legacyDirectory();
+        await legacy.create(recursive: true);
+        await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+        final deleteError = FileSystemException(
+          'target changed during delete',
+          target.path,
+        );
+        var moveCalls = 0;
+
+        final root = await windowsLayout(
+          emptyTargetDeleter: (directory) async {
+            await directory.delete();
+            await legacy.rename(directory.path);
+            throw deleteError;
+          },
+          mover: (source, destination) async {
+            moveCalls += 1;
+          },
+        ).directory();
+
+        expect(root.path, target.path);
+        expect(moveCalls, 0);
+        expect(legacy.existsSync(), isFalse);
+        expect(
+          File(path.join(root.path, 'data.json')).readAsStringSync(),
+          'legacy',
+        );
+      },
+    );
+
+    test('does not swallow an ambiguous empty-target delete failure', () async {
+      final target = targetDirectory();
+      await target.create();
+      final legacy = legacyDirectory();
+      await legacy.create(recursive: true);
+      final deleteError = FileSystemException('delete denied', target.path);
+
+      await expectLater(
+        windowsLayout(
+          emptyTargetDeleter: (directory) async => throw deleteError,
+        ).directory(),
+        throwsA(same(deleteError)),
+      );
+
+      expect(target.existsSync(), isTrue);
+      expect(legacy.existsSync(), isTrue);
+    });
+
+    test('keeps populated target and legacy directories unchanged', () async {
+      final target = targetDirectory();
+      final legacy = legacyDirectory();
+      await target.create();
+      await legacy.create(recursive: true);
+      await File(path.join(target.path, 'data.json')).writeAsString('current');
+      await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+      var moveCalls = 0;
+
+      final root = await windowsLayout(
+        mover: (source, destination) async {
+          moveCalls += 1;
+        },
+      ).directory();
+
+      expect(
+        File(path.join(root.path, 'data.json')).readAsStringSync(),
+        'current',
+      );
+      expect(
+        File(path.join(legacy.path, 'data.json')).readAsStringSync(),
+        'legacy',
+      );
+      expect(moveCalls, 0);
+    });
+
+    test(
+      'retains a non-empty legacy company directory after migration',
+      () async {
+        final legacy = legacyDirectory();
+        await legacy.create(recursive: true);
+        await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+        final sibling = File(
+          path.join(legacyCompanyDirectory().path, 'other.txt'),
+        );
+        await sibling.writeAsString('keep');
+
+        await windowsLayout().directory();
+
+        expect(sibling.readAsStringSync(), 'keep');
+        expect(legacyCompanyDirectory().existsSync(), isTrue);
+      },
+    );
+
+    test('propagates migration failures without creating a new root', () async {
+      final legacy = legacyDirectory();
+      await legacy.create(recursive: true);
+      await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+      final error = FileSystemException('move denied', legacy.path);
+
+      await expectLater(
+        windowsLayout(mover: (source, destination) async => throw error)
+            .directory(),
+        throwsA(same(error)),
+      );
+
+      expect(legacy.existsSync(), isTrue);
+      expect(targetDirectory().existsSync(), isFalse);
+    });
+
+    test(
+      'accepts a rename failure after another process completed migration',
+      () async {
+        final legacy = legacyDirectory();
+        await legacy.create(recursive: true);
+        await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+        final renameError = FileSystemException(
+          'source disappeared during rename',
+          legacy.path,
+        );
+
+        final root = await windowsLayout(
+          mover: (source, destination) async {
+            // Simulate an independent process winning between this process's
+            // preflight checks and its rename attempt.
+            await source.rename(destination.path);
+            throw renameError;
+          },
+        ).directory();
+
+        expect(root.path, targetDirectory().path);
+        expect(legacy.existsSync(), isFalse);
+        expect(
+          File(path.join(root.path, 'data.json')).readAsStringSync(),
+          'legacy',
+        );
+      },
+    );
+
+    test(
+      'does not swallow a rename failure while the legacy source remains',
+      () async {
+        final legacy = legacyDirectory();
+        await legacy.create(recursive: true);
+        await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+        final renameError = FileSystemException('move denied', legacy.path);
+
+        await expectLater(
+          windowsLayout(
+            mover: (source, destination) async {
+              await destination.create();
+              throw renameError;
+            },
+          ).directory(),
+          throwsA(same(renameError)),
+        );
+
+        expect(legacy.existsSync(), isTrue);
+        expect(targetDirectory().existsSync(), isTrue);
+      },
+    );
+
+    test(
+      'does not swallow a rename failure when the target is not a directory',
+      () async {
+        final legacy = legacyDirectory();
+        await legacy.create(recursive: true);
+        await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+        final renameError = FileSystemException(
+          'invalid migration target',
+          legacy.path,
+        );
+
+        await expectLater(
+          windowsLayout(
+            mover: (source, destination) async {
+              await source.delete(recursive: true);
+              await File(destination.path).writeAsString('not a directory');
+              throw renameError;
+            },
+          ).directory(),
+          throwsA(same(renameError)),
+        );
+
+        expect(legacy.existsSync(), isFalse);
+        expect(
+          await FileSystemEntity.type(
+            targetDirectory().path,
+            followLinks: false,
+          ),
+          FileSystemEntityType.file,
+        );
+      },
+    );
+
+    test('coordinates concurrent layout migrations as one move', () async {
+      final legacy = legacyDirectory();
+      await legacy.create(recursive: true);
+      await File(path.join(legacy.path, 'data.json')).writeAsString('legacy');
+      final moveStarted = Completer<void>();
+      final allowMove = Completer<void>();
+      var moveCalls = 0;
+
+      Future<void> mover(Directory source, Directory target) async {
+        moveCalls += 1;
+        moveStarted.complete();
+        await allowMove.future;
+        await source.rename(target.path);
+      }
+
+      final first = windowsLayout(mover: mover).directory();
+      final second = windowsLayout(mover: mover).directory();
+      await moveStarted.future;
+      await Future<void>.delayed(Duration.zero);
+      expect(moveCalls, 1);
+
+      allowMove.complete();
+      final roots = await Future.wait([first, second]);
+
+      expect(moveCalls, 1);
+      expect(
+        roots.map((root) => root.path),
+        everyElement(targetDirectory().path),
+      );
+      expect(
+        File(path.join(targetDirectory().path, 'data.json')).readAsStringSync(),
+        'legacy',
+      );
+    });
   });
 }

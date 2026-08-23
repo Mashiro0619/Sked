@@ -233,9 +233,13 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     if (_firstLaunchPendingMode != null || !provider.canWrite) {
       return;
     }
+    final hideWorkspaceNavigation = MediaQuery.sizeOf(context).width < 600;
     setState(() => _firstLaunchPendingMode = mode);
     try {
-      await provider.completeFirstLaunch(mode);
+      await provider.completeFirstLaunch(
+        mode,
+        hideWorkspaceNavigation: hideWorkspaceNavigation,
+      );
     } catch (error, stackTrace) {
       debugPrint('First launch completion failed: $error\n$stackTrace');
       if (mounted && provider.canWrite) {
@@ -826,6 +830,7 @@ bool _hasDefaultFirstLaunchData(TimetableProvider provider) {
   }
   return _hasDefaultStudentData(provider.studentMode) &&
       _hasDefaultGeneralData(provider.generalMode) &&
+      _hasDefaultAiApiSettings(provider.aiApiSettings) &&
       !provider.hideHomeWorkspaceNavigation &&
       !provider.homeWorkspaceNavigationCollapsed;
 }
@@ -856,9 +861,6 @@ bool _hasDefaultStudentData(StudentModeData data) {
     return false;
   }
   if (data.courseNameColorValues.isNotEmpty) return false;
-  if (!_hasDefaultSchoolImportParserSettings(data.schoolImportParserSettings)) {
-    return false;
-  }
   return data.liveCourseOutlineColorValue ==
           defaultLiveCourseOutlineColorValue &&
       data.liveCourseOutlineEnabled == defaultLiveCourseOutlineEnabled &&
@@ -870,9 +872,7 @@ bool _hasDefaultStudentData(StudentModeData data) {
       data.liveCourseOutlineWidth == defaultLiveCourseOutlineWidth;
 }
 
-bool _hasDefaultSchoolImportParserSettings(
-  SchoolImportParserSettings settings,
-) {
+bool _hasDefaultAiApiSettings(AiApiSettings settings) {
   return settings.source == defaultSchoolImportParserSource &&
       settings.customBaseUrl.isEmpty &&
       settings.customApiKey.isEmpty &&

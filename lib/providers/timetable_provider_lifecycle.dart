@@ -70,8 +70,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _repository.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
-        final runtimeApiKey =
-            _appData.studentMode.schoolImportParserSettings.customApiKey;
+        final runtimeApiKey = _appData.aiApiSettings.customApiKey;
         _appData = _withRuntimeCustomSchoolImportApiKey(loaded, runtimeApiKey);
       } else {
         try {
@@ -106,8 +105,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _repository.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
-        final runtimeApiKey =
-            _appData.studentMode.schoolImportParserSettings.customApiKey;
+        final runtimeApiKey = _appData.aiApiSettings.customApiKey;
         _appData = _withRuntimeCustomSchoolImportApiKey(loaded, runtimeApiKey);
       }
       debugPrint('Storage retry initialization failed: $error\n$stackTrace');
@@ -187,8 +185,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       fileData,
       localeCode: fileData.localeCode,
     );
-    final legacyApiKey =
-        normalized.studentMode.schoolImportParserSettings.customApiKey;
+    final legacyApiKey = normalized.aiApiSettings.customApiKey;
     final secureApiKey = await _readSecureCustomSchoolImportApiKey();
     final secureApiKeyReadKnown = _customSchoolImportApiKeyPersistenceKnown;
     final runtimeApiKey = secureApiKeyReadKnown && secureApiKey.isNotEmpty
@@ -220,13 +217,30 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
         canDropLegacyApiKey &&
         (!_jsonLikeEquals(normalized.toJson(), fileData.toJson()) ||
             legacyApiKey.isNotEmpty);
+    var sanitizedMainSnapshotIsDurable = !shouldWriteBack;
     if (shouldWriteBack) {
       try {
         await _repository.save(normalized);
+        sanitizedMainSnapshotIsDurable = true;
       } catch (e, st) {
         debugPrint(
           'Storage normalization save failed, keeping loaded data: $e\n$st',
         );
+      }
+    }
+    if (secureApiKeyReadKnown &&
+        canDropLegacyApiKey &&
+        sanitizedMainSnapshotIsDurable &&
+        _repository.canWrite) {
+      try {
+        await _repository.sanitizeLegacyAiApiSecretArtifacts();
+      } catch (e, st) {
+        _repository.blockWritesAfterInitializationFailure();
+        debugPrint(
+          'Legacy API key artifact sanitization failed; writes are blocked: '
+          '$e\n$st',
+        );
+        rethrow;
       }
     }
     _storagePath = await _repository.filePath();
@@ -250,7 +264,10 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> completeFirstLaunch(AppMode mode) async {
+  Future<void> completeFirstLaunch(
+    AppMode mode, {
+    required bool hideWorkspaceNavigation,
+  }) async {
     final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
     if (_parsePrivacyPolicyVersion(active) == null) {
       throw StateError('Invalid active privacy policy version: $active');
@@ -260,12 +277,17 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _appData.privacyPolicyAcceptedVersion,
       active,
     );
-    if (_appData.activeMode == mode && preservesExistingAcceptance) {
+    if (_appData.activeMode == mode &&
+        preservesExistingAcceptance &&
+        _appData.hideHomeWorkspaceNavigation == hideWorkspaceNavigation &&
+        _appData.homeWorkspaceNavigationCollapsed) {
       return;
     }
 
     _appData = _appData.copyWith(
       activeMode: mode,
+      hideHomeWorkspaceNavigation: hideWorkspaceNavigation,
+      homeWorkspaceNavigationCollapsed: true,
       privacyPolicyAcceptedVersion: preservesExistingAcceptance
           ? _appData.privacyPolicyAcceptedVersion
           : active,

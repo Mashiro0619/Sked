@@ -142,13 +142,13 @@ void main() {
       localeCode: defaultLocaleCode,
     ).copyWith(
       activeMode: activeMode,
+      aiApiSettings: schoolImportParserSettings,
       studentMode: StudentModeData(
         activeTimetableId: activeTimetableId,
         timetables: timetables ?? [timetable()],
         periodTimeSets: periodTimeSets ?? [periodSet()],
         conflictDisplayCourseIds: conflictDisplayCourseIds,
         courseNameColorValues: courseNameColorValues,
-        schoolImportParserSettings: schoolImportParserSettings,
       ),
     );
   }

@@ -115,17 +115,14 @@ String? _encodeInitialMemoryData(AppData? data) {
     return null;
   }
   final encoded = data.encode();
-  final apiKey = data.studentMode.schoolImportParserSettings.customApiKey;
+  final apiKey = data.aiApiSettings.customApiKey;
   if (apiKey.trim().isEmpty) {
     return encoded;
   }
   final json = jsonDecode(encoded) as Map<String, dynamic>;
-  final studentMode = json['studentMode'];
-  if (studentMode is Map<String, dynamic>) {
-    final parserSettings = studentMode['schoolImportParserSettings'];
-    if (parserSettings is Map<String, dynamic>) {
-      parserSettings['customApiKey'] = apiKey.trim();
-    }
+  final apiSettings = json['aiApiSettings'];
+  if (apiSettings is Map<String, dynamic>) {
+    apiSettings['customApiKey'] = apiKey.trim();
   }
   return jsonEncode(json);
 }
@@ -246,11 +243,7 @@ Future<BuildContext> _pumpUpdateHarness(
 
 AppData _withSchoolImportSettings(SchoolImportParserSettings settings) {
   final data = _buildTestAppData();
-  return data.copyWith(
-    studentMode: data.studentMode.copyWith(
-      schoolImportParserSettings: settings,
-    ),
-  );
+  return data.copyWith(aiApiSettings: settings);
 }
 
 AppData _buildTestAppData() {
@@ -1650,40 +1643,32 @@ void main() {
     });
   });
 
-  group('课表解析设置', () {
-    test('课表解析设置字段可以正确编码解码并兼容旧数据默认值', () {
+  group('AI API 配置', () {
+    test('AI API 配置字段可以正确编码解码并兼容旧数据默认值', () {
       final themed = _buildTestAppData();
       final customized = themed.copyWith(
-        studentMode: themed.studentMode.copyWith(
-          schoolImportParserSettings: const SchoolImportParserSettings(
-            source: schoolImportParserSourceCustomOpenAi,
-            customBaseUrl: 'https://api.example.com/v1',
-            customApiKey: 'sk-test',
-            customModel: 'gpt-4.1-mini',
-            customPrompt: 'Keep teacher names when available.',
-          ),
+        aiApiSettings: const AiApiSettings(
+          source: schoolImportParserSourceCustomOpenAi,
+          customBaseUrl: 'https://api.example.com/v1',
+          customApiKey: 'sk-test',
+          customModel: 'gpt-4.1-mini',
+          customPrompt: 'Keep teacher names when available.',
         ),
       );
       final decodedCustomized = AppData.decode(customized.encode());
 
       expect(
-        decodedCustomized.studentMode.schoolImportParserSettings.source,
+        decodedCustomized.aiApiSettings.source,
         schoolImportParserSourceCustomOpenAi,
       );
       expect(
-        decodedCustomized.studentMode.schoolImportParserSettings.customBaseUrl,
+        decodedCustomized.aiApiSettings.customBaseUrl,
         'https://api.example.com/v1',
       );
+      expect(decodedCustomized.aiApiSettings.customApiKey, isEmpty);
+      expect(decodedCustomized.aiApiSettings.customModel, 'gpt-4.1-mini');
       expect(
-        decodedCustomized.studentMode.schoolImportParserSettings.customApiKey,
-        isEmpty,
-      );
-      expect(
-        decodedCustomized.studentMode.schoolImportParserSettings.customModel,
-        'gpt-4.1-mini',
-      );
-      expect(
-        decodedCustomized.studentMode.schoolImportParserSettings.customPrompt,
+        decodedCustomized.aiApiSettings.customPrompt,
         'Keep teacher names when available.',
       );
 
@@ -1703,30 +1688,15 @@ void main() {
         }),
       );
 
-      expect(
-        legacy.studentMode.schoolImportParserSettings.source,
-        schoolImportParserSourceCustomOpenAi,
-      );
-      expect(
-        legacy.studentMode.schoolImportParserSettings.customBaseUrl,
-        isEmpty,
-      );
-      expect(
-        legacy.studentMode.schoolImportParserSettings.customApiKey,
-        isEmpty,
-      );
-      expect(
-        legacy.studentMode.schoolImportParserSettings.customModel,
-        isEmpty,
-      );
-      expect(
-        legacy.studentMode.schoolImportParserSettings.customPrompt,
-        isEmpty,
-      );
+      expect(legacy.aiApiSettings.source, schoolImportParserSourceCustomOpenAi);
+      expect(legacy.aiApiSettings.customBaseUrl, isEmpty);
+      expect(legacy.aiApiSettings.customApiKey, isEmpty);
+      expect(legacy.aiApiSettings.customModel, isEmpty);
+      expect(legacy.aiApiSettings.customPrompt, isEmpty);
       expect(legacy.activeMode, AppMode.general);
     });
 
-    test('provider 更新自定义课表解析设置后会持久化', () async {
+    test('provider 更新自定义AI API 配置后会持久化', () async {
       final storage = MemoryTimetableStorage(initialData: _buildTestAppData());
       final secrets = MemorySecretStore();
       final provider = TimetableProvider(
@@ -1947,7 +1917,9 @@ void main() {
       expect(models, ['a-model', 'z-model']);
     });
 
-    testWidgets('课表解析设置页在自定义模式显示 Base URL API 密钥 模型和获取模型列表按钮', (tester) async {
+    testWidgets('AI API 配置页在自定义模式显示 Base URL API 密钥 模型和获取模型列表按钮', (
+      tester,
+    ) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -1981,7 +1953,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('课表解析设置'), findsOneWidget);
+      expect(find.text('AI API 配置'), findsOneWidget);
       expect(find.text('Base URL'), findsOneWidget);
       expect(find.text('API 密钥'), findsOneWidget);
       expect(find.text('模型名称'), findsOneWidget);
@@ -2129,7 +2101,7 @@ void main() {
       );
     });
 
-    testWidgets('解析页可跳转到课表解析设置页且标题显示为解析', (tester) async {
+    testWidgets('解析页不再嵌套AI API 配置入口', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2163,13 +2135,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('解析文本 / HTML 课表内容'), findsOneWidget);
-      expect(find.text('课表解析设置'), findsOneWidget);
-
-      await tester.tap(find.text('课表解析设置'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('课表解析设置'), findsWidgets);
-      expect(find.text('Base URL'), findsOneWidget);
+      expect(find.text('AI API 配置'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     testWidgets('设置页语言入口会进入独立页面并更新 provider', (tester) async {
@@ -2235,7 +2202,7 @@ void main() {
       expect(find.text('简体中文'), findsOneWidget);
     });
 
-    testWidgets('设置-导入导出数据中可进入解析课表页面', (tester) async {
+    testWidgets('设置主页可直接进入AI API 配置', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2268,21 +2235,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final dataImportExportTile = find.text('导入导出数据');
-      await tester.ensureVisible(dataImportExportTile);
+      final parserSettingsTile = find.byKey(
+        const ValueKey('settings-parser-settings'),
+      );
+      await tester.ensureVisible(parserSettingsTile);
       await tester.pumpAndSettle();
-      await tester.tap(dataImportExportTile);
-      await tester.pumpAndSettle();
-
-      final schoolHtmlImportEntry = find.text('从文本 / HTML 解析课表');
-      expect(schoolHtmlImportEntry, findsOneWidget);
-      await tester.ensureVisible(schoolHtmlImportEntry);
-      await tester.pumpAndSettle();
-      await tester.tap(schoolHtmlImportEntry);
+      await tester.tap(parserSettingsTile);
       await tester.pumpAndSettle();
 
-      expect(find.text('解析文本 / HTML 课表内容'), findsOneWidget);
-      expect(find.text('课表解析设置'), findsOneWidget);
+      expect(find.text('AI API 配置'), findsOneWidget);
+      expect(find.text('Base URL'), findsOneWidget);
     });
 
     testWidgets(
@@ -2339,7 +2301,7 @@ void main() {
       },
     );
 
-    testWidgets('文本 / HTML 解析页在自定义解析配置不完整时显示跳转配置页按钮', (tester) async {
+    testWidgets('文本 / HTML 解析页在配置不完整时提示设置位置', (tester) async {
       final incompleteProvider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2373,13 +2335,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('自定义解析配置不完整'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, '课表解析设置'), findsOneWidget);
-
-      await tester.tap(find.widgetWithText(FilledButton, '课表解析设置'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('课表解析设置'), findsWidgets);
-      expect(find.text('Base URL'), findsOneWidget);
+      expect(find.textContaining('设置 > 数据与安全'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'AI API 配置'), findsNothing);
     });
 
     testWidgets('文本 / HTML 解析页会区分自定义配置缺失与完整状态', (tester) async {
@@ -2451,7 +2408,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('解析并导入'), findsOneWidget);
-      expect(find.textContaining('gpt-4.1-mini'), findsOneWidget);
+      expect(find.textContaining('gpt-4.1-mini'), findsNothing);
     });
 
     test('网页解析导入会保留 customFields 并导入内含节次时间集', () async {

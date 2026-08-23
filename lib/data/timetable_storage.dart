@@ -111,3 +111,9 @@ abstract class TimetableStorage {
 abstract interface class TimetableRecoveryArtifactReader {
   Future<Uint8List?> readRecoveryArtifact(String artifactPath);
 }
+
+/// Optional native-storage maintenance used after legacy plaintext API keys
+/// have been committed to secure storage.
+abstract interface class TimetableLegacySecretSanitizer {
+  Future<void> sanitizeLegacyAiApiSecretArtifacts();
+}

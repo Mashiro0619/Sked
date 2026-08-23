@@ -58,57 +58,6 @@ List<dynamic> _listValue(Object? value) {
   return value is List ? value : const <dynamic>[];
 }
 
-class SchoolImportParserSettings {
-  const SchoolImportParserSettings({
-    this.source = defaultSchoolImportParserSource,
-    this.customBaseUrl = '',
-    this.customApiKey = '',
-    this.customModel = '',
-    this.customPrompt = '',
-  });
-
-  final String source;
-  final String customBaseUrl;
-  final String customApiKey;
-  final String customModel;
-  final String customPrompt;
-
-  Map<String, dynamic> toJson() => {
-    'source': normalizeSchoolImportParserSource(source),
-    'customBaseUrl': customBaseUrl.trim(),
-    'customModel': customModel.trim(),
-    'customPrompt': customPrompt.trim(),
-  };
-
-  factory SchoolImportParserSettings.fromJson(Map<String, dynamic> json) {
-    return SchoolImportParserSettings(
-      source: normalizeSchoolImportParserSource(
-        _nullableStringValue(json['source']),
-      ),
-      customBaseUrl: _stringValue(json['customBaseUrl']).trim(),
-      customApiKey: _stringValue(json['customApiKey']).trim(),
-      customModel: _stringValue(json['customModel']).trim(),
-      customPrompt: _stringValue(json['customPrompt']).trim(),
-    );
-  }
-
-  SchoolImportParserSettings copyWith({
-    String? source,
-    String? customBaseUrl,
-    String? customApiKey,
-    String? customModel,
-    String? customPrompt,
-  }) {
-    return SchoolImportParserSettings(
-      source: normalizeSchoolImportParserSource(source ?? this.source),
-      customBaseUrl: (customBaseUrl ?? this.customBaseUrl).trim(),
-      customApiKey: (customApiKey ?? this.customApiKey).trim(),
-      customModel: (customModel ?? this.customModel).trim(),
-      customPrompt: (customPrompt ?? this.customPrompt).trim(),
-    );
-  }
-}
-
 PeriodTimeSet _normalizePeriodTimeSet(
   PeriodTimeSet periodTimeSet, {
   String localeCode = defaultLocaleCode,
@@ -174,7 +123,6 @@ class StudentModeData {
     this.colorfulUiColorValues = const {},
     this.colorfulCourseTextColorMode = defaultColorfulCourseTextColorMode,
     this.courseNameColorValues = const {},
-    this.schoolImportParserSettings = const SchoolImportParserSettings(),
     this.liveCourseOutlineColorValue = defaultLiveCourseOutlineColorValue,
     this.liveCourseOutlineEnabled = defaultLiveCourseOutlineEnabled,
     this.liveCourseOutlineFollowTheme = defaultLiveCourseOutlineFollowTheme,
@@ -204,7 +152,6 @@ class StudentModeData {
   final Map<String, int> colorfulUiColorValues;
   final String colorfulCourseTextColorMode;
   final Map<String, int> courseNameColorValues;
-  final SchoolImportParserSettings schoolImportParserSettings;
   final int liveCourseOutlineColorValue;
   final bool liveCourseOutlineEnabled;
   final bool liveCourseOutlineFollowTheme;
@@ -233,7 +180,6 @@ class StudentModeData {
     'colorfulUiColorValues': colorfulUiColorValues,
     'colorfulCourseTextColorMode': colorfulCourseTextColorMode,
     'courseNameColorValues': courseNameColorValues,
-    'schoolImportParserSettings': schoolImportParserSettings.toJson(),
     'liveCourseOutlineColorValue': liveCourseOutlineColorValue,
     'liveCourseOutlineEnabled': liveCourseOutlineEnabled,
     'liveCourseOutlineFollowTheme': liveCourseOutlineFollowTheme,
@@ -351,9 +297,6 @@ class StudentModeData {
             defaultColorfulCourseTextColorMode,
       ),
       courseNameColorValues: decodeColorValueMap(json['courseNameColorValues']),
-      schoolImportParserSettings: SchoolImportParserSettings.fromJson(
-        _asStringKeyedMap(json['schoolImportParserSettings']) ?? const {},
-      ),
       liveCourseOutlineColorValue:
           _tryDecodeInt(json['liveCourseOutlineColorValue']) ??
           defaultLiveCourseOutlineColorValue,
@@ -397,7 +340,6 @@ class StudentModeData {
     Map<String, int>? colorfulUiColorValues,
     String? colorfulCourseTextColorMode,
     Map<String, int>? courseNameColorValues,
-    SchoolImportParserSettings? schoolImportParserSettings,
     int? liveCourseOutlineColorValue,
     bool? liveCourseOutlineEnabled,
     bool? liveCourseOutlineFollowTheme,
@@ -440,8 +382,6 @@ class StudentModeData {
       ),
       courseNameColorValues:
           courseNameColorValues ?? this.courseNameColorValues,
-      schoolImportParserSettings:
-          schoolImportParserSettings ?? this.schoolImportParserSettings,
       liveCourseOutlineColorValue:
           liveCourseOutlineColorValue ?? this.liveCourseOutlineColorValue,
       liveCourseOutlineEnabled:

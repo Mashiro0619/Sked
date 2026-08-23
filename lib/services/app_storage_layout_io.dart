@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as path;
@@ -7,11 +8,36 @@ import 'package:path_provider/path_provider.dart';
 ///
 /// A layout instance can be given a directory provider by tests (or by a
 /// platform host that needs an explicit root). Production callers use
-/// [getApplicationSupportDirectory], so data is kept in the platform's
-/// application-specific support area instead of the user's Documents root.
+/// `%APPDATA%\\Sked` on Windows and
+/// [getApplicationSupportDirectory] elsewhere, so data is kept outside the
+/// user's Documents root.
 class AppStorageLayout {
-  AppStorageLayout({Future<Directory> Function()? directoryProvider})
-    : _directoryProvider = directoryProvider ?? getApplicationSupportDirectory;
+  factory AppStorageLayout({
+    Future<Directory> Function()? directoryProvider,
+    bool? isWindows,
+    Future<Directory> Function()? windowsRoamingDirectoryProvider,
+    Future<void> Function(Directory source, Directory target)?
+    windowsDirectoryMover,
+    Future<void> Function(Directory target)? windowsEmptyTargetDirectoryDeleter,
+  }) {
+    return AppStorageLayout._(
+      directoryProvider: directoryProvider,
+      isWindows: isWindows ?? Platform.isWindows,
+      windowsRoamingDirectoryProvider:
+          windowsRoamingDirectoryProvider ?? _productionWindowsRoamingDirectory,
+      windowsDirectoryMover: windowsDirectoryMover ?? _renameWindowsDirectory,
+      windowsEmptyTargetDirectoryDeleter:
+          windowsEmptyTargetDirectoryDeleter ?? _deleteWindowsEmptyDirectory,
+    );
+  }
+
+  AppStorageLayout._({
+    required this._directoryProvider,
+    required this._isWindows,
+    required this._windowsRoamingDirectoryProvider,
+    required this._windowsDirectoryMover,
+    required this._windowsEmptyTargetDirectoryDeleter,
+  });
 
   static const appDataFileName = 'Sked_data.json';
   static const schoolSitesFileName = 'Sked_school_sites.json';
@@ -27,7 +53,18 @@ class AppStorageLayout {
   static const backupRestoreRecoveryDirectoryPrefix =
       'Sked_backup_restore_recovery_';
 
-  final Future<Directory> Function() _directoryProvider;
+  static const windowsDirectoryName = 'Sked';
+  static const legacyWindowsCompanyDirectoryName = 'Mashiro';
+
+  static final Map<String, Future<void>> _windowsMigrationFlights = {};
+
+  final Future<Directory> Function()? _directoryProvider;
+  final bool _isWindows;
+  final Future<Directory> Function() _windowsRoamingDirectoryProvider;
+  final Future<void> Function(Directory source, Directory target)
+  _windowsDirectoryMover;
+  final Future<void> Function(Directory target)
+  _windowsEmptyTargetDirectoryDeleter;
 
   /// Resolves and creates the common application-support directory.
   ///
@@ -36,10 +73,188 @@ class AppStorageLayout {
   /// time. Callers can therefore preserve the existing fail-closed recovery
   /// behavior.
   Future<Directory> directory() async {
-    final supplied = await _directoryProvider();
+    final supplied = await _resolveDirectory();
     final normalized = Directory(path.normalize(path.absolute(supplied.path)));
+    if (_directoryProvider == null && _isWindows) {
+      await _migrateLegacyWindowsDirectory(normalized);
+    }
     await normalized.create(recursive: true);
     return normalized;
+  }
+
+  Future<Directory> _resolveDirectory() async {
+    final directoryProvider = _directoryProvider;
+    if (directoryProvider != null) return await directoryProvider();
+    if (!_isWindows) return await getApplicationSupportDirectory();
+
+    final roaming = await _windowsRoamingDirectoryProvider();
+    return Directory(path.join(roaming.path, windowsDirectoryName));
+  }
+
+  /// Resolves the legacy Windows storage directory without creating or
+  /// migrating it. Other platforms and explicitly injected roots have none.
+  Future<Directory?> legacyWindowsStorageDirectory() async {
+    if (!_isWindows || _directoryProvider != null) return null;
+    final roaming = await _windowsRoamingDirectoryProvider();
+    return Directory(
+      path.join(
+        roaming.path,
+        legacyWindowsCompanyDirectoryName,
+        windowsDirectoryName,
+      ),
+    );
+  }
+
+  Future<void> _migrateLegacyWindowsDirectory(Directory target) async {
+    final migrationKey = path
+        .normalize(path.absolute(target.path))
+        .toLowerCase();
+    final migration = _windowsMigrationFlights.putIfAbsent(
+      migrationKey,
+      () => _performLegacyWindowsMigration(target),
+    );
+    try {
+      await migration;
+    } finally {
+      if (identical(_windowsMigrationFlights[migrationKey], migration)) {
+        unawaited(_windowsMigrationFlights.remove(migrationKey));
+      }
+    }
+  }
+
+  Future<void> _performLegacyWindowsMigration(Directory target) async {
+    final roaming = Directory(path.dirname(target.path));
+    final legacyCompanyDirectory = Directory(
+      path.join(roaming.path, legacyWindowsCompanyDirectoryName),
+    );
+    final legacy = Directory(
+      path.join(legacyCompanyDirectory.path, windowsDirectoryName),
+    );
+
+    final legacyType = await FileSystemEntity.type(
+      legacy.path,
+      followLinks: false,
+    );
+    if (legacyType == FileSystemEntityType.notFound) return;
+    if (legacyType != FileSystemEntityType.directory) {
+      throw FileSystemException(
+        'The legacy Sked storage path is not a directory.',
+        legacy.path,
+      );
+    }
+
+    final targetType = await FileSystemEntity.type(
+      target.path,
+      followLinks: false,
+    );
+    if (targetType == FileSystemEntityType.directory) {
+      if (!await target.list(followLinks: false).isEmpty) return;
+      try {
+        await _windowsEmptyTargetDirectoryDeleter(target);
+      } catch (error, stackTrace) {
+        if (await _migrationWasCompletedByAnotherProcess(legacy, target)) {
+          await _deleteDirectoryIfEmpty(legacyCompanyDirectory);
+          return;
+        }
+        if (!await _pathIsMissing(target.path)) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+        // Another process removed the shared empty target but has not yet
+        // completed its rename. Continue; the mover's post-failure check
+        // resolves whichever process wins the remaining race.
+      }
+    } else if (targetType != FileSystemEntityType.notFound) {
+      throw FileSystemException(
+        'The Sked storage path is not a directory.',
+        target.path,
+      );
+    }
+
+    try {
+      await _windowsDirectoryMover(legacy, target);
+    } catch (error, stackTrace) {
+      // Migration runs before the instance lease is acquired, so a second
+      // process can observe the legacy source and then lose the rename race.
+      // Accept only the exact completed state produced by the winner. Any
+      // ambiguous or inaccessible state remains fail-closed.
+      if (!await _migrationWasCompletedByAnotherProcess(legacy, target)) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+    }
+    await _deleteDirectoryIfEmpty(legacyCompanyDirectory);
+  }
+
+  static Future<bool> _migrationWasCompletedByAnotherProcess(
+    Directory legacy,
+    Directory target,
+  ) async {
+    try {
+      final legacyType = await FileSystemEntity.type(
+        legacy.path,
+        followLinks: false,
+      );
+      if (legacyType != FileSystemEntityType.notFound) return false;
+
+      final targetType = await FileSystemEntity.type(
+        target.path,
+        followLinks: false,
+      );
+      if (targetType != FileSystemEntityType.directory) return false;
+
+      // Force an actual directory read so an inaccessible or otherwise
+      // unusable target is not mistaken for a successful migration.
+      await target.list(followLinks: false).isEmpty;
+      return true;
+    } on FileSystemException {
+      return false;
+    }
+  }
+
+  static Future<bool> _pathIsMissing(String entityPath) async {
+    try {
+      return await FileSystemEntity.type(entityPath, followLinks: false) ==
+          FileSystemEntityType.notFound;
+    } on FileSystemException {
+      return false;
+    }
+  }
+
+  static Future<Directory> _productionWindowsRoamingDirectory() async {
+    final appData = Platform.environment['APPDATA'];
+    if (appData == null || appData.trim().isEmpty) {
+      throw const FileSystemException(
+        'The APPDATA environment variable is unavailable.',
+      );
+    }
+    return Directory(appData);
+  }
+
+  static Future<void> _renameWindowsDirectory(
+    Directory source,
+    Directory target,
+  ) async {
+    await source.rename(target.path);
+  }
+
+  static Future<void> _deleteWindowsEmptyDirectory(Directory target) {
+    return target.delete();
+  }
+
+  static Future<void> _deleteDirectoryIfEmpty(Directory directory) async {
+    final type = await FileSystemEntity.type(
+      directory.path,
+      followLinks: false,
+    );
+    if (type != FileSystemEntityType.directory ||
+        !await directory.list(followLinks: false).isEmpty) {
+      return;
+    }
+    try {
+      await directory.delete();
+    } on FileSystemException {
+      // Another process may have populated the legacy company directory after
+      // the emptiness check. The migrated data is already safe at the target.
+    }
   }
 
   /// Resolves a file directly below the application-support directory.

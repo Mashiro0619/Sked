@@ -258,11 +258,6 @@ void main() {
       expect(data.activeTimetableId, 'table1');
       expect(data.conflictDisplayCourseIds, {'valid-key': 'course1'});
       expect(data.courseNameColorValues, {'Algebra': 0xFF123456});
-      expect(
-        data.schoolImportParserSettings.source,
-        schoolImportParserSourceCustomOpenAi,
-      );
-      expect(data.schoolImportParserSettings.customBaseUrl, '');
       expect(data.liveCourseOutlineWidth, defaultLiveCourseOutlineWidth);
     });
 
