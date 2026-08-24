@@ -468,6 +468,38 @@ void main() {
       );
     });
 
+    test('all-day timeline collapse defaults false and round-trips', () {
+      const data = GeneralScheduleData(
+        activeScheduleId: 'sched1',
+        schedules: [
+          GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+        ],
+        allDayTimelineCollapsed: true,
+      );
+
+      final decoded = GeneralScheduleData.fromJson(data.toJson());
+
+      expect(decoded.allDayTimelineCollapsed, isTrue);
+      expect(decoded.toJson()['allDayTimelineCollapsed'], isTrue);
+      expect(decoded.copyWith().allDayTimelineCollapsed, isTrue);
+      expect(decoded.normalized().allDayTimelineCollapsed, isTrue);
+      expect(
+        GeneralScheduleData.fromJson(const {}).allDayTimelineCollapsed,
+        isFalse,
+      );
+    });
+
+    test('all-day timeline collapse rejects non-boolean values', () {
+      for (final value in [null, 1, 'true', <String, dynamic>{}]) {
+        expect(
+          () =>
+              GeneralScheduleData.fromJson({'allDayTimelineCollapsed': value}),
+          throwsFormatException,
+          reason: 'allDayTimelineCollapsed=$value',
+        );
+      }
+    });
+
     test(
       'time grid hour height round-trips, defaults, and clamps at boundaries',
       () {

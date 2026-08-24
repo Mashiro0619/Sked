@@ -212,10 +212,12 @@ void main() {
         buildData(),
         showAddEventFab: false,
         enableLongPressAddEvent: false,
+        allDayTimelineCollapsed: true,
       );
 
       expect(hidden.showAddEventFab, isFalse);
       expect(hidden.enableLongPressAddEvent, isFalse);
+      expect(hidden.allDayTimelineCollapsed, isTrue);
       expect(
         service.setSelectedDate(hidden, DateTime(2026, 6, 1)).showAddEventFab,
         isFalse,
@@ -225,6 +227,12 @@ void main() {
             .setSelectedDate(hidden, DateTime(2026, 6, 1))
             .enableLongPressAddEvent,
         isFalse,
+      );
+      expect(
+        service
+            .setSelectedDate(hidden, DateTime(2026, 6, 1))
+            .allDayTimelineCollapsed,
+        isTrue,
       );
     });
   });

@@ -1112,6 +1112,7 @@ void _validateStorageGeneralSettings(
     'closeEventPopupOnOutsideTap',
     'showAddEventFab',
     'enableLongPressAddEvent',
+    'allDayTimelineCollapsed',
   ]) {
     _validateStorageBooleanField(
       generalMode,

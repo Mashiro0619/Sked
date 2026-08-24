@@ -1218,6 +1218,18 @@
   },
   "allDay": "全天",
   "@allDay": {},
+  "collapseAllDayTimeline": "折叠全天日程",
+  "@collapseAllDayTimeline": {},
+  "expandAllDayTimeline": "展开全天日程",
+  "@expandAllDayTimeline": {},
+  "allDayEventsCount": "{count} 个全天日程",
+  "@allDayEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "moreEvents": "+{count} 个",
   "@moreEvents": {
     "placeholders": {

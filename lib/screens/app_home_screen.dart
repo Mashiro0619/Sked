@@ -948,6 +948,7 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
       data.timeGridHourHeight != generalTimeGridHourHeightDefault ||
       !data.closeEventPopupOnOutsideTap ||
       !data.enableLongPressAddEvent ||
+      data.allDayTimelineCollapsed ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
         themeColorMode: data.themeColorMode,

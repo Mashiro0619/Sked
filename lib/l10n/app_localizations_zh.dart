@@ -1665,6 +1665,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get allDay => '全天';
 
   @override
+  String get collapseAllDayTimeline => '折叠全天日程';
+
+  @override
+  String get expandAllDayTimeline => '展开全天日程';
+
+  @override
+  String allDayEventsCount(int count) {
+    return '$count 个全天日程';
+  }
+
+  @override
   String moreEvents(int count) {
     return '+$count 个';
   }
@@ -3803,6 +3814,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get allDay => '全天';
+
+  @override
+  String get collapseAllDayTimeline => '收合全天行程';
+
+  @override
+  String get expandAllDayTimeline => '展開全天行程';
+
+  @override
+  String allDayEventsCount(int count) {
+    return '$count 個全天行程';
+  }
 
   @override
   String moreEvents(int count) {

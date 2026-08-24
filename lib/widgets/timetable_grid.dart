@@ -633,6 +633,7 @@ class _DayColumn extends StatelessWidget {
     final geometries = _buildCourseGeometries(
       layouts: layouts,
       verticalLayout: verticalLayout,
+      visualGap: metrics.courseVerticalGap,
     );
     final hasDenseHitTargets = geometries.any(
       (geometry) => geometry.hitHeight < _minimumCourseHitExtent,
@@ -801,6 +802,7 @@ class _TimetableMetrics {
     required this.dayColumnWidth,
     required this.daysContentWidth,
     required this.courseGap,
+    required this.courseVerticalGap,
     required this.cardPadding,
     required this.sidePadding,
     required this.compact,
@@ -810,6 +812,7 @@ class _TimetableMetrics {
   final double dayColumnWidth;
   final double daysContentWidth;
   final double courseGap;
+  final double courseVerticalGap;
   final double cardPadding;
   final double sidePadding;
   final bool compact;
@@ -876,6 +879,11 @@ class _TimetableMetrics {
       dayColumnWidth: dayColumnWidth,
       daysContentWidth: daysContentWidth,
       courseGap: dayColumnWidth < 72
+          ? 2.0
+          : compact
+          ? 4.0
+          : 6.0,
+      courseVerticalGap: dayColumnWidth < 72
           ? 2.0
           : compact
           ? 4.0
@@ -1194,6 +1202,7 @@ class _CourseGeometry {
 List<_CourseGeometry> _buildCourseGeometries({
   required List<CourseLayout> layouts,
   required _TimetableVerticalLayout verticalLayout,
+  required double visualGap,
 }) {
   final ranges =
       <
@@ -1240,6 +1249,36 @@ List<_CourseGeometry> _buildCourseGeometries({
             nextTop = other.top;
           }
         }
+
+        // When timetable gaps are collapsed, two courses can otherwise share
+        // the exact same visual boundary and read as one card. Reserve a
+        // small, responsive gap between adjacent non-overlapping cards while
+        // leaving their hit regions tied to the original time geometry.
+        final previousDistance = previousBottom == null
+            ? double.infinity
+            : range.top - previousBottom;
+        final nextDistance = nextTop == null
+            ? double.infinity
+            : nextTop - range.bottom;
+        final topInset =
+            previousDistance >= -0.5 && previousDistance < visualGap
+            ? (visualGap - math.max(0.0, previousDistance)) / 2
+            : 0.0;
+        final bottomInset = nextDistance >= -0.5 && nextDistance < visualGap
+            ? (visualGap - math.max(0.0, nextDistance)) / 2
+            : 0.0;
+        final requestedInset = topInset + bottomInset;
+        // Keep very short courses visible. Longer cards receive the full
+        // requested separation; tiny cards proportionally keep at least a
+        // one-pixel visual surface.
+        final insetScale = requestedInset <= 0 || visualHeight <= 1
+            ? 0.0
+            : math.min(1.0, (visualHeight - 1) / requestedInset);
+        final visualTop = range.top + (topInset * insetScale);
+        final visualBottom = math.max(
+          visualTop + (visualHeight > 0 ? math.min(1.0, visualHeight) : 0.0),
+          range.bottom - (bottomInset * insetScale),
+        );
         final previousBoundary = previousBottom == null
             ? 0.0
             : (previousBottom + range.top) / 2;
@@ -1270,8 +1309,8 @@ List<_CourseGeometry> _buildCourseGeometries({
           layout: range.layout,
           startMinutes: range.startMinutes,
           endMinutes: range.endMinutes,
-          visualTop: range.top,
-          visualHeight: visualHeight,
+          visualTop: visualTop,
+          visualHeight: math.max(0.0, visualBottom - visualTop),
           hitTop: hitTop,
           hitHeight: math.max(0.0, hitBottom - hitTop),
         );

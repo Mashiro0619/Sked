@@ -1761,6 +1761,17 @@ class AppLocalizationsSv extends AppLocalizations {
   String get allDay => 'All-day';
 
   @override
+  String get collapseAllDayTimeline => 'Collapse all-day events';
+
+  @override
+  String get expandAllDayTimeline => 'Expand all-day events';
+
+  @override
+  String allDayEventsCount(int count) {
+    return '$count all-day events';
+  }
+
+  @override
   String moreEvents(int count) {
     return '+$count more';
   }

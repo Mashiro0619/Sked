@@ -1137,4 +1137,36 @@ END:VCALENDAR
     expect(provider.enableLongPressAddEvent, isFalse);
     expect(storage.data!.generalMode.enableLongPressAddEvent, isFalse);
   });
+
+  test(
+    'all-day timeline collapse persists once and rolls back on failure',
+    () async {
+      final initial = buildInitialAppData(buildDefaultPeriodTimes());
+      final storage = _MemoryTimetableStorage(initial);
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+      storage.saveCount = 0;
+
+      await provider.updateGeneralDisplaySettings(
+        allDayTimelineCollapsed: true,
+      );
+      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(storage.data!.generalMode.allDayTimelineCollapsed, isTrue);
+      expect(storage.saveCount, 1);
+
+      storage.nextSaveError = StateError('save failed');
+      await expectLater(
+        provider.updateGeneralDisplaySettings(allDayTimelineCollapsed: false),
+        throwsStateError,
+      );
+
+      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(storage.data!.generalMode.allDayTimelineCollapsed, isTrue);
+      expect(storage.saveCount, 2);
+    },
+  );
 }

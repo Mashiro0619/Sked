@@ -1026,6 +1026,18 @@
   },
   "allDay": "All-day",
   "@allDay": {},
+  "collapseAllDayTimeline": "Collapse all-day events",
+  "@collapseAllDayTimeline": {},
+  "expandAllDayTimeline": "Expand all-day events",
+  "@expandAllDayTimeline": {},
+  "allDayEventsCount": "{count} all-day events",
+  "@allDayEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "moreEvents": "+{count} more",
   "@moreEvents": {
     "placeholders": {

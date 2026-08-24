@@ -60,6 +60,7 @@ void main() {
         dateLabelFormat: generalDateLabelFormatLocalized,
         showAddEventFab: false,
         enableLongPressAddEvent: false,
+        allDayTimelineCollapsed: true,
       ),
     );
 
@@ -74,6 +75,7 @@ void main() {
     expect(normalized.studentMode.enableLongPressAddCourse, isFalse);
     expect(normalized.generalMode.showAddEventFab, isFalse);
     expect(normalized.generalMode.enableLongPressAddEvent, isFalse);
+    expect(normalized.generalMode.allDayTimelineCollapsed, isTrue);
     expect(
       normalized.generalMode.toolbarWidthPolicy,
       generalToolbarWidthPolicyDatePriority,

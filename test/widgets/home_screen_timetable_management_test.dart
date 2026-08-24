@@ -1033,6 +1033,29 @@ void main() {
     );
   }
 
+  testWidgets('collapsed all-day timeline skips first-launch onboarding', (
+    tester,
+  ) async {
+    final data = _buildDefaultFirstLaunchData();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(
+        data.copyWith(
+          generalMode: data.generalMode.copyWith(allDayTimelineCollapsed: true),
+        ),
+      ),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+
+    await _pumpAppHomeScreenWithProvider(tester, provider);
+
+    expect(provider.allDayTimelineCollapsed, isTrue);
+    expect(find.byKey(const ValueKey('first-launch-onboarding')), findsNothing);
+    expect(find.byKey(const ValueKey('student-home')), findsOneWidget);
+  });
+
   testWidgets('collapsed workspace navigation skips first-launch onboarding', (
     tester,
   ) async {

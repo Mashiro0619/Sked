@@ -32,6 +32,7 @@ void main() {
       generalMode: appData().generalMode.copyWith(
         showAddEventFab: false,
         enableLongPressAddEvent: false,
+        allDayTimelineCollapsed: true,
         timeGridHourHeight: generalTimeGridHourHeightMax,
       ),
     );
@@ -51,6 +52,7 @@ void main() {
     expect(decoded.appData.studentMode.enableLongPressAddCourse, isFalse);
     expect(decoded.appData.generalMode.showAddEventFab, isFalse);
     expect(decoded.appData.generalMode.enableLongPressAddEvent, isFalse);
+    expect(decoded.appData.generalMode.allDayTimelineCollapsed, isTrue);
     expect(
       decoded.appData.generalMode.timeGridHourHeight,
       generalTimeGridHourHeightMax,

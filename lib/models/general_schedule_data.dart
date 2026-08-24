@@ -95,6 +95,19 @@ bool? _boolValue(Object? value) {
   return value is bool ? value : null;
 }
 
+bool _decodeGeneralAllDayTimelineCollapsed(Map<String, dynamic> json) {
+  if (!json.containsKey('allDayTimelineCollapsed')) {
+    return false;
+  }
+  final value = json['allDayTimelineCollapsed'];
+  if (value is! bool) {
+    throw const FormatException(
+      'General schedule all-day timeline collapsed setting is invalid.',
+    );
+  }
+  return value;
+}
+
 bool _hasLegacySchedulePayload(Map<String, dynamic> json) {
   return json.containsKey('schedules') || json.containsKey('activeScheduleId');
 }
@@ -251,6 +264,7 @@ class GeneralScheduleData {
     this.closeEventPopupOnOutsideTap = true,
     this.showAddEventFab = true,
     this.enableLongPressAddEvent = true,
+    this.allDayTimelineCollapsed = false,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,
     this.themeSeedColorValue = defaultThemeSeedColorValue,
@@ -274,6 +288,7 @@ class GeneralScheduleData {
   final bool closeEventPopupOnOutsideTap;
   final bool showAddEventFab;
   final bool enableLongPressAddEvent;
+  final bool allDayTimelineCollapsed;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -327,6 +342,7 @@ class GeneralScheduleData {
     'closeEventPopupOnOutsideTap': closeEventPopupOnOutsideTap,
     'showAddEventFab': showAddEventFab,
     'enableLongPressAddEvent': enableLongPressAddEvent,
+    'allDayTimelineCollapsed': allDayTimelineCollapsed,
     'themeMode': normalizeThemeMode(themeMode),
     'themeColorMode': normalizeThemeColorMode(themeColorMode),
     'themeSeedColorValue': themeSeedColorValue,
@@ -352,6 +368,7 @@ class GeneralScheduleData {
     final showAddEventFab = _boolValue(json['showAddEventFab']) ?? true;
     final enableLongPressAddEvent =
         _boolValue(json['enableLongPressAddEvent']) ?? true;
+    final allDayTimelineCollapsed = _decodeGeneralAllDayTimelineCollapsed(json);
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
       return GeneralScheduleData.createDefault().copyWith(
         viewSwitchBehavior: viewSwitchBehavior,
@@ -359,6 +376,7 @@ class GeneralScheduleData {
         dateLabelFormat: dateLabelFormat,
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
+        allDayTimelineCollapsed: allDayTimelineCollapsed,
         timeGridHourHeight: _normalizeTimeGridHourHeight(
           _intValue(json['timeGridHourHeight']),
         ),
@@ -412,6 +430,7 @@ class GeneralScheduleData {
           _boolValue(json['closeEventPopupOnOutsideTap']) ?? true,
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
+      allDayTimelineCollapsed: allDayTimelineCollapsed,
       themeMode: normalizeThemeMode(
         _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
@@ -456,6 +475,7 @@ class GeneralScheduleData {
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
+    bool? allDayTimelineCollapsed,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -489,6 +509,8 @@ class GeneralScheduleData {
       showAddEventFab: showAddEventFab ?? this.showAddEventFab,
       enableLongPressAddEvent:
           enableLongPressAddEvent ?? this.enableLongPressAddEvent,
+      allDayTimelineCollapsed:
+          allDayTimelineCollapsed ?? this.allDayTimelineCollapsed,
       themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
       themeColorMode: normalizeThemeColorMode(
         themeColorMode ?? this.themeColorMode,
@@ -632,6 +654,7 @@ class GeneralScheduleData {
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
+      allDayTimelineCollapsed: allDayTimelineCollapsed,
       themeMode: normalizeThemeMode(themeMode),
       themeColorMode: normalizeThemeColorMode(themeColorMode),
       themeSeedColorValue: themeSeedColorValue,

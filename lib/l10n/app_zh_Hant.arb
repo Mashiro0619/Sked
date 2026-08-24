@@ -1082,6 +1082,18 @@
   },
   "allDay": "全天",
   "@allDay": {},
+  "collapseAllDayTimeline": "收合全天行程",
+  "@collapseAllDayTimeline": {},
+  "expandAllDayTimeline": "展開全天行程",
+  "@expandAllDayTimeline": {},
+  "allDayEventsCount": "{count} 個全天行程",
+  "@allDayEventsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "moreEvents": "+{count} 個",
   "@moreEvents": {
     "placeholders": {

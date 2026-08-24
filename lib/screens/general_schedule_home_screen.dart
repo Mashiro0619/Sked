@@ -66,6 +66,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   bool _moreOccurrencesSheetOpen = false;
   bool _calendarManagerOpen = false;
   bool _settingsPageOpen = false;
+  bool _allDayCollapseUpdateInProgress = false;
   DateTime? _dateNavigationTarget;
   int _dateNavigationGeneration = 0;
   int _dateNavigationDirection = 0;
@@ -219,6 +220,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                   provider,
                                   occurrences,
                                 ),
+                            onAllDayCollapsedGroupTap: (occurrences, day) =>
+                                _openMoreOccurrences(
+                                  context,
+                                  provider,
+                                  occurrences,
+                                  contextDate: day,
+                                ),
+                            allDayTimelineCollapsed:
+                                snapshot.allDayTimelineCollapsed,
+                            onAllDayTimelineCollapsedChanged: (collapsed) =>
+                                unawaited(
+                                  _setAllDayTimelineCollapsed(
+                                    provider,
+                                    collapsed,
+                                  ),
+                                ),
                           ),
                           generalViewList => _ListCalendarView(
                             date: selectedDate,
@@ -263,6 +280,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                   context,
                                   provider,
                                   occurrences,
+                                ),
+                            onAllDayCollapsedGroupTap: (occurrences, day) =>
+                                _openMoreOccurrences(
+                                  context,
+                                  provider,
+                                  occurrences,
+                                  contextDate: day,
+                                ),
+                            allDayTimelineCollapsed:
+                                snapshot.allDayTimelineCollapsed,
+                            onAllDayTimelineCollapsedChanged: (collapsed) =>
+                                unawaited(
+                                  _setAllDayTimelineCollapsed(
+                                    provider,
+                                    collapsed,
+                                  ),
                                 ),
                           ),
                         },
@@ -385,6 +418,29 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           if (needsPagerResync) _pagerSyncRevision += 1;
         });
       }
+    }
+  }
+
+  Future<void> _setAllDayTimelineCollapsed(
+    TimetableProvider provider,
+    bool collapsed,
+  ) async {
+    if (_allDayCollapseUpdateInProgress ||
+        !widget.interactive ||
+        provider.allDayTimelineCollapsed == collapsed) {
+      return;
+    }
+    _setUiBusyFlag(() => _allDayCollapseUpdateInProgress = true);
+    try {
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Persist all-day timeline collapsed state',
+        command: () => provider.updateGeneralDisplaySettings(
+          allDayTimelineCollapsed: collapsed,
+        ),
+      );
+    } finally {
+      _setUiBusyFlag(() => _allDayCollapseUpdateInProgress = false);
     }
   }
 
@@ -558,8 +614,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   Future<void> _openMoreOccurrences(
     BuildContext context,
     TimetableProvider provider,
-    List<GeneralEventOccurrence> occurrences,
-  ) async {
+    List<GeneralEventOccurrence> occurrences, {
+    DateTime? contextDate,
+  }) async {
     if (_moreOccurrencesSheetOpen ||
         occurrences.isEmpty ||
         !widget.interactive) {
@@ -576,6 +633,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         maxWidth: appSheetWidthCompact,
         builder: (sheetContext) => _MoreGeneralOccurrencesSheet(
           occurrences: occurrences,
+          contextDate: contextDate,
           onOccurrenceTap: (occurrence) =>
               Navigator.of(sheetContext).pop(occurrence),
         ),
@@ -1204,6 +1262,7 @@ class _GeneralHomeSnapshot {
     required this.viewSwitchBehavior,
     required this.dateLabelFormat,
     required this.enableLongPressAddEvent,
+    required this.allDayTimelineCollapsed,
     required this.showAddEventFab,
     required this.toolbarWidthPolicy,
     required this.activeScheduleId,
@@ -1226,6 +1285,7 @@ class _GeneralHomeSnapshot {
       toolbarWidthPolicy: data.toolbarWidthPolicy,
       dateLabelFormat: data.dateLabelFormat,
       enableLongPressAddEvent: data.enableLongPressAddEvent,
+      allDayTimelineCollapsed: data.allDayTimelineCollapsed,
       showAddEventFab: data.showAddEventFab,
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
@@ -1245,6 +1305,7 @@ class _GeneralHomeSnapshot {
   final String toolbarWidthPolicy;
   final String dateLabelFormat;
   final bool enableLongPressAddEvent;
+  final bool allDayTimelineCollapsed;
   final bool showAddEventFab;
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
@@ -1265,6 +1326,7 @@ class _GeneralHomeSnapshot {
         other.toolbarWidthPolicy == toolbarWidthPolicy &&
         other.dateLabelFormat == dateLabelFormat &&
         other.enableLongPressAddEvent == enableLongPressAddEvent &&
+        other.allDayTimelineCollapsed == allDayTimelineCollapsed &&
         other.showAddEventFab == showAddEventFab &&
         other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
@@ -1287,6 +1349,7 @@ class _GeneralHomeSnapshot {
     toolbarWidthPolicy,
     dateLabelFormat,
     enableLongPressAddEvent,
+    allDayTimelineCollapsed,
     showAddEventFab,
     activeScheduleId,
     identityHashCode(schedules),
@@ -1303,20 +1366,28 @@ class _GeneralHomeSnapshot {
 class _MoreGeneralOccurrencesSheet extends StatelessWidget {
   const _MoreGeneralOccurrencesSheet({
     required this.occurrences,
+    this.contextDate,
     required this.onOccurrenceTap,
   });
 
   final List<GeneralEventOccurrence> occurrences;
+  final DateTime? contextDate;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final first = occurrences.first;
+    final headingDate = contextDate ?? first.start;
     return AppSheetScaffold(
-      title: Text(l10n.monthDayEvents(first.start.day, occurrences.length)),
+      key: const ValueKey('general-more-occurrences-sheet'),
+      title: Text(l10n.monthDayEvents(headingDate.day, occurrences.length)),
       subtitle: Text(
-        '${_formatDate(first.start)}  ${_formatOccurrenceTime(context, first)}',
+        contextDate == null
+            ? '${_formatDate(first.start)}  '
+                  '${_formatOccurrenceTime(context, first)}'
+            : '${_formatDate(headingDate)}  '
+                  '${_weekdayLabel(context, headingDate)}',
       ),
       heightFactor: occurrences.length > 5 ? 0.72 : null,
       actions: [

@@ -3232,6 +3232,24 @@ abstract class AppLocalizations {
   /// **'All-day'**
   String get allDay;
 
+  /// No description provided for @collapseAllDayTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all-day events'**
+  String get collapseAllDayTimeline;
+
+  /// No description provided for @expandAllDayTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all-day events'**
+  String get expandAllDayTimeline;
+
+  /// No description provided for @allDayEventsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} all-day events'**
+  String allDayEventsCount(int count);
+
   /// No description provided for @moreEvents.
   ///
   /// In en, this message translates to:

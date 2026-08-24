@@ -1,26 +1,67 @@
 part of 'general_schedule_home_screen.dart';
 
 class _TimelineTimeRailLabel extends StatelessWidget {
-  const _TimelineTimeRailLabel({required this.width, required this.child});
+  const _TimelineTimeRailLabel({
+    required this.width,
+    required this.child,
+    this.onTap,
+    this.tooltip,
+    this.expanded = false,
+  });
 
   final double width;
   final Widget child;
+  final VoidCallback? onTap;
+  final String? tooltip;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Container(
+    final content = SizedBox(
       width: width,
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow.withValues(alpha: 0.72),
-        border: BorderDirectional(
-          end: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.55)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Align(
+          alignment: Alignment.center,
+          child: FittedBox(fit: BoxFit.scaleDown, child: child),
         ),
       ),
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: FittedBox(fit: BoxFit.scaleDown, child: child),
     );
+    final border = BoxDecoration(
+      border: BorderDirectional(
+        end: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.55)),
+      ),
+    );
+    final background = colors.surfaceContainerLow.withValues(alpha: 0.72);
+    final onTap = this.onTap;
+    if (onTap == null) {
+      return DecoratedBox(
+        decoration: border.copyWith(color: background),
+        child: content,
+      );
+    }
+    final interactive = Semantics(
+      button: true,
+      expanded: expanded,
+      label: tooltip,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: border,
+        child: Material(
+          color: background,
+          child: InkWell(onTap: onTap, child: content),
+        ),
+      ),
+    );
+    return tooltip == null
+        ? interactive
+        : Tooltip(
+            message: tooltip!,
+            excludeFromSemantics: true,
+            child: interactive,
+          );
   }
 }
 
@@ -31,6 +72,10 @@ class _AllDayTimeline extends StatelessWidget {
     required this.dayCount,
     required this.layout,
     required this.label,
+    required this.collapsed,
+    required this.canCollapse,
+    required this.onToggleCollapsed,
+    required this.onCollapsedGroupTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
   });
@@ -40,6 +85,10 @@ class _AllDayTimeline extends StatelessWidget {
   final int dayCount;
   final _AllDayTimelineLayout layout;
   final String label;
+  final bool collapsed;
+  final bool canCollapse;
+  final VoidCallback? onToggleCollapsed;
+  final ValueChanged<_AllDayCollapsedGroup> onCollapsedGroupTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
 
@@ -49,12 +98,19 @@ class _AllDayTimeline extends StatelessWidget {
     final dayAreaWidth = dayWidth * dayCount;
     final lineColor = Theme.of(context).colorScheme.outlineVariant
         .withValues(alpha: 0.55);
+    final l10n = AppLocalizations.of(context);
+    final toggleLabel = collapsed
+        ? l10n.expandAllDayTimeline
+        : l10n.collapseAllDayTimeline;
     return Row(
       key: const ValueKey('general-all-day-timeline'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _TimelineTimeRailLabel(
           width: timeColumnWidth,
+          onTap: canCollapse ? onToggleCollapsed : null,
+          tooltip: canCollapse ? toggleLabel : null,
+          expanded: !collapsed,
           child: Text(
             label,
             maxLines: 1,
@@ -76,40 +132,60 @@ class _AllDayTimeline extends StatelessWidget {
                     width: 1,
                     child: ColoredBox(color: lineColor),
                   ),
-                for (final segment in layout.visibleSegments)
-                  PositionedDirectional(
-                    start: segment.startIndex * dayWidth,
-                    top:
-                        _AllDayTimelineLayout.verticalPadding +
-                        segment.lane *
-                            (laneHeight + _AllDayTimelineLayout.laneGap),
-                    width:
-                        (segment.endIndex - segment.startIndex + 1) * dayWidth,
-                    height: laneHeight,
-                    child: _AllDayChip(
-                      occurrence: segment.occurrence,
-                      narrow:
+                if (collapsed)
+                  for (final group in layout.collapsedGroups)
+                    PositionedDirectional(
+                      start: group.dayIndex * dayWidth,
+                      top: 0,
+                      width: dayWidth,
+                      height: math.max(48, laneHeight),
+                      child: _AllDayCollapsedChip(
+                        count: group.occurrences.length,
+                        keySuffix: dayCount > 1
+                            ? group.dayIndex.toString()
+                            : null,
+                        onTap: () => onCollapsedGroupTap(group),
+                      ),
+                    )
+                else ...[
+                  for (final segment in layout.visibleSegments)
+                    PositionedDirectional(
+                      start: segment.startIndex * dayWidth,
+                      top:
+                          _AllDayTimelineLayout.verticalPadding +
+                          segment.lane *
+                              (laneHeight + _AllDayTimelineLayout.laneGap),
+                      width:
                           (segment.endIndex - segment.startIndex + 1) *
-                              dayWidth <
-                          64,
-                      onTap: () => onOccurrenceTap(segment.occurrence),
+                          dayWidth,
+                      height: laneHeight,
+                      child: _AllDayChip(
+                        occurrence: segment.occurrence,
+                        narrow:
+                            (segment.endIndex - segment.startIndex + 1) *
+                                dayWidth <
+                            64,
+                        onTap: () => onOccurrenceTap(segment.occurrence),
+                      ),
                     ),
-                  ),
-                if (layout.overflowOccurrences.isNotEmpty)
-                  PositionedDirectional(
-                    start: 0,
-                    end: 0,
-                    top:
-                        _AllDayTimelineLayout.verticalPadding +
-                        layout.visibleLaneCount *
-                            (laneHeight + _AllDayTimelineLayout.laneGap),
-                    height: laneHeight,
-                    child: _AllDayMoreChip(
-                      count: layout.overflowOccurrences.length,
-                      onTap: () =>
-                          onMoreOccurrencesTap(layout.overflowOccurrences),
+                  for (final group in layout.overflowGroups)
+                    PositionedDirectional(
+                      start: group.startIndex * dayWidth,
+                      top:
+                          _AllDayTimelineLayout.verticalPadding +
+                          layout.visibleLaneCount *
+                              (laneHeight + _AllDayTimelineLayout.laneGap),
+                      width: (group.endIndex - group.startIndex + 1) * dayWidth,
+                      height: laneHeight,
+                      child: _AllDayMoreChip(
+                        count: group.occurrences.length,
+                        keySuffix: layout.overflowGroups.length > 1
+                            ? '${group.startIndex}-${group.endIndex}'
+                            : null,
+                        onTap: () => onMoreOccurrencesTap(group.occurrences),
+                      ),
                     ),
-                  ),
+                ],
               ],
             ),
           ),
@@ -190,41 +266,117 @@ class _AllDayChip extends StatelessWidget {
   }
 }
 
-class _AllDayMoreChip extends StatelessWidget {
-  const _AllDayMoreChip({required this.count, required this.onTap});
+class _AllDayCollapsedChip extends StatelessWidget {
+  const _AllDayCollapsedChip({
+    required this.count,
+    required this.onTap,
+    this.keySuffix,
+  });
 
   final int count;
   final VoidCallback onTap;
+  final String? keySuffix;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final label = AppLocalizations.of(context).moreEvents(count);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    );
+    final label = count.toString();
+    final semanticLabel = AppLocalizations.of(context).allDayEventsCount(count);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 3,
+        vertical: _AllDayTimelineLayout.verticalPadding,
+      ),
+      child: Tooltip(
+        message: semanticLabel,
+        excludeFromSemantics: true,
+        child: Material(
+          key: ValueKey(
+            'general-all-day-collapsed${keySuffix == null ? '' : '-$keySuffix'}',
+          ),
+          color: colors.secondaryContainer,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: Semantics(
+            button: true,
+            label: semanticLabel,
+            onTap: onTap,
+            excludeSemantics: true,
+            child: InkWell(
+              customBorder: shape,
+              onTap: onTap,
+              child: Center(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AllDayMoreChip extends StatelessWidget {
+  const _AllDayMoreChip({
+    required this.count,
+    required this.onTap,
+    this.keySuffix,
+  });
+
+  final int count;
+  final VoidCallback onTap;
+  final String? keySuffix;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final semanticLabel = AppLocalizations.of(context).moreEvents(count);
+    final label = '+$count';
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Material(
-        key: const ValueKey('general-all-day-more-occurrences'),
-        color: colors.secondaryContainer,
-        shape: shape,
-        clipBehavior: Clip.antiAlias,
-        child: Semantics(
-          button: true,
-          label: label,
-          child: InkWell(
-            customBorder: shape,
+      child: Tooltip(
+        message: semanticLabel,
+        excludeFromSemantics: true,
+        child: Material(
+          key: ValueKey(
+            'general-all-day-more-occurrences${keySuffix == null ? '' : '-$keySuffix'}',
+          ),
+          color: colors.secondaryContainer,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: Semantics(
+            button: true,
+            label: semanticLabel,
             onTap: onTap,
-            child: Center(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.onSecondaryContainer,
-                  fontWeight: FontWeight.w700,
+            excludeSemantics: true,
+            child: InkWell(
+              customBorder: shape,
+              onTap: onTap,
+              child: Center(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),

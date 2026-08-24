@@ -1641,6 +1641,42 @@ void main() {
       }
     });
 
+    test('preserves and strictly decodes all-day timeline collapse', () {
+      final snapshot = validSnapshot();
+      final general = generalMode(snapshot)..['allDayTimelineCollapsed'] = true;
+      snapshot['generalMode'] = general;
+
+      final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+      expect(decoded.generalMode.allDayTimelineCollapsed, isTrue);
+      expect(
+        decoded.toJson()['generalMode']['allDayTimelineCollapsed'],
+        isTrue,
+      );
+
+      final legacySnapshot = validSnapshot();
+      final legacyGeneral = generalMode(legacySnapshot)
+        ..remove('allDayTimelineCollapsed');
+      legacySnapshot['generalMode'] = legacyGeneral;
+      expect(
+        AppData.decodeStorageSnapshot(jsonEncode(legacySnapshot))
+            .generalMode
+            .allDayTimelineCollapsed,
+        isFalse,
+      );
+
+      for (final value in [null, 1, 'true', <String, dynamic>{}]) {
+        final malformed = validSnapshot();
+        final malformedGeneral = generalMode(malformed)
+          ..['allDayTimelineCollapsed'] = value;
+        malformed['generalMode'] = malformedGeneral;
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(malformed)),
+          throwsFormatException,
+          reason: 'allDayTimelineCollapsed=$value',
+        );
+      }
+    });
+
     test('preserves toolbar width policy and defaults missing field', () {
       const policies = [
         generalToolbarWidthPolicyContent,

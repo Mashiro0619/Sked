@@ -2486,6 +2486,372 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('one all-day event stays expanded and cannot be collapsed', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'only-all-day',
+          calendarId: 'cal1',
+          title: 'Only all-day event',
+          startDateTimeIso: '2026-06-17T00:00:00.000',
+          endDateTimeIso: '2026-06-18T00:00:00.000',
+          isAllDay: true,
+        ),
+      ],
+    );
+    final base = _buildGeneralDataWithCalendars([calendar], activeId: 'cal1');
+    final storage = _FailOnceTimetableStorage(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(allDayTimelineCollapsed: true),
+      ),
+    );
+    final provider = await _createProviderWithStorage(storage);
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final label = find.text('All-day');
+    expect(label, findsOneWidget);
+    expect(find.text('Only all-day event'), findsOneWidget);
+    expect(
+      find.ancestor(of: label, matching: find.byType(InkWell)),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('general-all-day-collapsed')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'all-day label collapses, persists, and expands multiple events',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final calendar = GeneralSchedule(
+        id: 'cal1',
+        name: 'Calendar',
+        events: [
+          GeneralEvent(
+            id: 'first-all-day',
+            calendarId: 'cal1',
+            title: 'First all-day event',
+            startDateTimeIso: '2026-06-16T00:00:00.000',
+            endDateTimeIso: '2026-06-17T00:00:00.000',
+            isAllDay: true,
+          ),
+          GeneralEvent(
+            id: 'second-all-day',
+            calendarId: 'cal1',
+            title: 'Second all-day event',
+            startDateTimeIso: '2026-06-18T00:00:00.000',
+            endDateTimeIso: '2026-06-19T00:00:00.000',
+            isAllDay: true,
+          ),
+        ],
+      );
+      final storage = _FailOnceTimetableStorage(
+        _buildGeneralDataWithCalendars([calendar], activeId: 'cal1'),
+      );
+      final provider = await _createProviderWithStorage(storage);
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+      final baselineSaveCount = storage.saveCount;
+
+      await tester.tap(find.text('All-day'));
+      await tester.pumpAndSettle();
+
+      final collapsed = find.byWidgetPredicate(
+        (widget) =>
+            widget is Material &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'general-all-day-collapsed',
+            ),
+      );
+      expect(collapsed, findsNWidgets(2));
+      expect(
+        find.descendant(of: collapsed, matching: find.text('1')),
+        findsNWidgets(2),
+      );
+      expect(find.text('First all-day event'), findsNothing);
+      expect(find.text('Second all-day event'), findsNothing);
+      expect(provider.allDayTimelineCollapsed, isTrue);
+      expect(storage.data!.generalMode.allDayTimelineCollapsed, isTrue);
+      expect(storage.saveCount, baselineSaveCount + 1);
+
+      await tester.tap(find.text('All-day'));
+      await tester.pumpAndSettle();
+
+      expect(collapsed, findsNothing);
+      expect(find.text('First all-day event'), findsOneWidget);
+      expect(find.text('Second all-day event'), findsOneWidget);
+      expect(provider.allDayTimelineCollapsed, isFalse);
+      expect(storage.data!.generalMode.allDayTimelineCollapsed, isFalse);
+      expect(storage.saveCount, baselineSaveCount + 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('day view collapses all all-day events into one count', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'day-all-day-first',
+          calendarId: 'cal1',
+          title: 'Day all-day first',
+          startDateTimeIso: '2026-06-17T00:00:00.000',
+          endDateTimeIso: '2026-06-18T00:00:00.000',
+          isAllDay: true,
+        ),
+        GeneralEvent(
+          id: 'day-all-day-second',
+          calendarId: 'cal1',
+          title: 'Day all-day second',
+          startDateTimeIso: '2026-06-17T00:00:00.000',
+          endDateTimeIso: '2026-06-18T00:00:00.000',
+          isAllDay: true,
+        ),
+      ],
+    );
+    final base = _buildGeneralDataWithCalendars([calendar], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          selectedDateIso: '2026-06-17',
+          defaultView: generalViewDay,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(find.text('Day all-day first'), findsOneWidget);
+    expect(find.text('Day all-day second'), findsOneWidget);
+
+    final expandedTransition = find.byKey(
+      const ValueKey('general-all-day-transition'),
+    );
+    final expandedHeight = tester.getSize(expandedTransition).height;
+
+    await tester.tap(find.text('All-day'));
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(provider.allDayTimelineCollapsed, isTrue);
+    await tester.pump(const Duration(milliseconds: 120));
+    final midTransitionHeight = tester.getSize(expandedTransition).height;
+    expect(midTransitionHeight, lessThan(expandedHeight));
+    expect(midTransitionHeight, greaterThan(48));
+    await tester.pumpAndSettle();
+
+    final collapsed = find.byKey(const ValueKey('general-all-day-collapsed'));
+    expect(collapsed, findsOneWidget);
+    expect(
+      find.descendant(of: collapsed, matching: find.text('2')),
+      findsOneWidget,
+    );
+    expect(find.text('Day all-day first'), findsNothing);
+    expect(find.text('Day all-day second'), findsNothing);
+
+    await tester.tap(find.text('All-day'));
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(provider.allDayTimelineCollapsed, isFalse);
+    await tester.pump(const Duration(milliseconds: 120));
+    final midExpandHeight = tester.getSize(expandedTransition).height;
+    expect(midExpandHeight, greaterThan(48));
+    expect(midExpandHeight, lessThan(expandedHeight));
+    await tester.pumpAndSettle();
+    expect(find.text('Day all-day first'), findsOneWidget);
+    expect(find.text('Day all-day second'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collapsed week blocks open the events for their own day', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        GeneralEvent(
+          id: 'collapsed-tuesday',
+          calendarId: 'cal1',
+          title: 'Tuesday all-day',
+          startDateTimeIso: '2026-06-16T00:00:00.000',
+          endDateTimeIso: '2026-06-17T00:00:00.000',
+          isAllDay: true,
+        ),
+        GeneralEvent(
+          id: 'collapsed-thursday',
+          calendarId: 'cal1',
+          title: 'Thursday all-day',
+          startDateTimeIso: '2026-06-18T00:00:00.000',
+          endDateTimeIso: '2026-06-19T00:00:00.000',
+          isAllDay: true,
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      _buildGeneralDataWithCalendars([calendar], activeId: 'cal1'),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.text('All-day'));
+    await tester.pumpAndSettle();
+
+    final tuesday = find.byKey(const ValueKey('general-all-day-collapsed-1'));
+    expect(tuesday, findsOneWidget);
+    await tester.tap(tuesday);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tuesday all-day'), findsOneWidget);
+    expect(find.text('Thursday all-day'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('general-more-occurrences-sheet')),
+      findsOneWidget,
+    );
+
+    Navigator.of(
+      tester.element(
+        find.byKey(const ValueKey('general-more-occurrences-sheet')),
+      ),
+    ).pop();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('all-day overflow chip matches its Wednesday-to-Saturday range', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        for (var index = 1; index <= 3; index++)
+          GeneralEvent(
+            id: 'week-lane-$index',
+            calendarId: 'cal1',
+            title: 'Week lane $index',
+            startDateTimeIso: '2026-06-15T00:00:00.000',
+            endDateTimeIso: '2026-06-22T00:00:00.000',
+            isAllDay: true,
+          ),
+        GeneralEvent(
+          id: 'hidden-wed-sat',
+          calendarId: 'cal1',
+          title: 'Hidden Wednesday to Saturday',
+          startDateTimeIso: '2026-06-17T00:00:00.000',
+          endDateTimeIso: '2026-06-21T00:00:00.000',
+          isAllDay: true,
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      _buildGeneralDataWithCalendars([calendar], activeId: 'cal1'),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final more = find.byKey(const ValueKey('general-all-day-more-occurrences'));
+    final wednesday = find.byKey(
+      const ValueKey('general-week-day-header-2026-06-17T00:00:00.000'),
+    );
+    final saturday = find.byKey(
+      const ValueKey('general-week-day-header-2026-06-20T00:00:00.000'),
+    );
+    final tuesday = find.byKey(
+      const ValueKey('general-week-day-header-2026-06-16T00:00:00.000'),
+    );
+    final sunday = find.byKey(
+      const ValueKey('general-week-day-header-2026-06-21T00:00:00.000'),
+    );
+
+    expect(more, findsOneWidget);
+    expect(find.text('+1'), findsOneWidget);
+    final moreRect = tester.getRect(more);
+    final wednesdayRect = tester.getRect(wednesday);
+    final saturdayRect = tester.getRect(saturday);
+    expect(moreRect.left, closeTo(wednesdayRect.left + 3, 1));
+    expect(moreRect.right, closeTo(saturdayRect.right - 3, 1));
+    expect(moreRect.left, greaterThan(tester.getRect(tuesday).right));
+    expect(moreRect.right, lessThan(tester.getRect(sunday).left));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('non-contiguous all-day overflow ranges stay separate', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final calendar = GeneralSchedule(
+      id: 'cal1',
+      name: 'Calendar',
+      events: [
+        for (var index = 1; index <= 3; index++)
+          GeneralEvent(
+            id: 'full-week-$index',
+            calendarId: 'cal1',
+            title: 'Full week $index',
+            startDateTimeIso: '2026-06-15T00:00:00.000',
+            endDateTimeIso: '2026-06-22T00:00:00.000',
+            isAllDay: true,
+          ),
+        GeneralEvent(
+          id: 'hidden-monday',
+          calendarId: 'cal1',
+          title: 'Hidden Monday',
+          startDateTimeIso: '2026-06-15T00:00:00.000',
+          endDateTimeIso: '2026-06-16T00:00:00.000',
+          isAllDay: true,
+        ),
+        GeneralEvent(
+          id: 'hidden-wednesday',
+          calendarId: 'cal1',
+          title: 'Hidden Wednesday',
+          startDateTimeIso: '2026-06-17T00:00:00.000',
+          endDateTimeIso: '2026-06-18T00:00:00.000',
+          isAllDay: true,
+        ),
+      ],
+    );
+    final provider = await _createGeneralProvider(
+      _buildGeneralDataWithCalendars([calendar], activeId: 'cal1'),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(
+      find.byKey(const ValueKey('general-all-day-more-occurrences-0-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('general-all-day-more-occurrences-2-2')),
+      findsOneWidget,
+    );
+    expect(find.text('+1'), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('general-all-day-more-occurrences')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('crowded all-day lanes expose hidden events through more', (
     tester,
   ) async {

@@ -30,6 +30,8 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   bool get showAddEventFab => _appData.generalMode.showAddEventFab;
   bool get enableLongPressAddEvent =>
       _appData.generalMode.enableLongPressAddEvent;
+  bool get allDayTimelineCollapsed =>
+      _appData.generalMode.allDayTimelineCollapsed;
 
   DateTime get selectedGeneralDate => _appData.generalMode.selectedDate;
 
@@ -127,6 +129,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
+    bool? allDayTimelineCollapsed,
   }) async {
     _appData = _appData.copyWith(
       generalMode: _calendarService.updateDisplaySettings(
@@ -144,6 +147,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
         closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
+        allDayTimelineCollapsed: allDayTimelineCollapsed,
       ),
     );
     await _saveAndNotify();

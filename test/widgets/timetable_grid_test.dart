@@ -802,6 +802,59 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('adjacent course cards keep a visible vertical gap', (
+    tester,
+  ) async {
+    final tappedIds = <String>[];
+    final timetable = _timetableWithCourses([
+      _course(
+        id: 'first-adjacent',
+        weekday: DateTime.monday,
+        startMinutes: 480,
+        endMinutes: 525,
+      ),
+      _course(
+        id: 'second-adjacent',
+        weekday: DateTime.monday,
+        startMinutes: 525,
+        endMinutes: 570,
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      _gridHarness(
+        timetable: timetable,
+        periodTimes: const [
+          CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 570),
+        ],
+        visibleWeekdays: const [DateTime.monday],
+        showDayHeader: false,
+        preserveGaps: false,
+        onCourseTap: (info) => tappedIds.add(info.course.id),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstVisual = tester.getRect(
+      find.byKey(const ValueKey('timetable-course-visual-first-adjacent')),
+    );
+    final secondVisual = tester.getRect(
+      find.byKey(const ValueKey('timetable-course-visual-second-adjacent')),
+    );
+    expect(secondVisual.top - firstVisual.bottom, greaterThanOrEqualTo(3));
+
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-course-hit-first-adjacent')),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-course-hit-second-adjacent')),
+    );
+    await tester.pump();
+    expect(tappedIds, const ['first-adjacent', 'second-adjacent']);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('long press on a course never activates the empty slot action', (
     tester,
   ) async {

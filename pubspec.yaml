@@ -2,7 +2,7 @@ name: sked
 description: "A local-first timetable and schedule management app."
 publish_to: 'none'
 
-version: 2.1.0+10
+version: 2.1.1+11
 
 environment:
   sdk: ^3.13.0

@@ -10,6 +10,11 @@ const _generalDayPickerSelectionIndicatorKey = ValueKey<String>(
   'general-day-picker-selection-indicator',
 );
 
+typedef _AllDayCollapsedGroupTap = void Function(
+  List<GeneralEventOccurrence> occurrences,
+  DateTime day,
+);
+
 class _WeekCalendarView extends StatefulWidget {
   const _WeekCalendarView({
     required this.date,
@@ -22,6 +27,9 @@ class _WeekCalendarView extends StatefulWidget {
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
+    required this.onAllDayCollapsedGroupTap,
+    required this.allDayTimelineCollapsed,
+    required this.onAllDayTimelineCollapsedChanged,
   });
 
   final DateTime date;
@@ -34,6 +42,9 @@ class _WeekCalendarView extends StatefulWidget {
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
+  final bool allDayTimelineCollapsed;
+  final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
   State<_WeekCalendarView> createState() => _WeekCalendarViewState();
@@ -203,6 +214,10 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
             onEmptySlotTap: widget.onEmptySlotTap,
             onOccurrenceTap: widget.onOccurrenceTap,
             onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
+            onAllDayCollapsedGroupTap: widget.onAllDayCollapsedGroupTap,
+            allDayTimelineCollapsed: widget.allDayTimelineCollapsed,
+            onAllDayTimelineCollapsedChanged:
+                widget.onAllDayTimelineCollapsedChanged,
           );
         },
       ),
@@ -219,6 +234,9 @@ class _WeekTimelinePage extends StatelessWidget {
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
+    required this.onAllDayCollapsedGroupTap,
+    required this.allDayTimelineCollapsed,
+    required this.onAllDayTimelineCollapsedChanged,
   });
 
   final DateTime weekStart;
@@ -228,6 +246,9 @@ class _WeekTimelinePage extends StatelessWidget {
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
+  final bool allDayTimelineCollapsed;
+  final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -250,6 +271,9 @@ class _WeekTimelinePage extends StatelessWidget {
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
       onMoreOccurrencesTap: onMoreOccurrencesTap,
+      onAllDayCollapsedGroupTap: onAllDayCollapsedGroupTap,
+      allDayTimelineCollapsed: allDayTimelineCollapsed,
+      onAllDayTimelineCollapsedChanged: onAllDayTimelineCollapsedChanged,
     );
   }
 }
@@ -266,6 +290,9 @@ class _DayCalendarView extends StatefulWidget {
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
+    required this.onAllDayCollapsedGroupTap,
+    required this.allDayTimelineCollapsed,
+    required this.onAllDayTimelineCollapsedChanged,
   });
 
   final DateTime date;
@@ -278,6 +305,9 @@ class _DayCalendarView extends StatefulWidget {
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
+  final bool allDayTimelineCollapsed;
+  final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
   State<_DayCalendarView> createState() => _DayCalendarViewState();
@@ -652,6 +682,10 @@ class _DayCalendarViewState extends State<_DayCalendarView> {
                   onEmptySlotTap: widget.onEmptySlotTap,
                   onOccurrenceTap: widget.onOccurrenceTap,
                   onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
+                  onAllDayCollapsedGroupTap: widget.onAllDayCollapsedGroupTap,
+                  allDayTimelineCollapsed: widget.allDayTimelineCollapsed,
+                  onAllDayTimelineCollapsedChanged:
+                      widget.onAllDayTimelineCollapsedChanged,
                 );
               },
             ),
@@ -670,6 +704,9 @@ class _DayTimelinePage extends StatelessWidget {
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
+    required this.onAllDayCollapsedGroupTap,
+    required this.allDayTimelineCollapsed,
+    required this.onAllDayTimelineCollapsedChanged,
   });
 
   final DateTime date;
@@ -678,6 +715,9 @@ class _DayTimelinePage extends StatelessWidget {
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
+  final bool allDayTimelineCollapsed;
+  final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -700,6 +740,9 @@ class _DayTimelinePage extends StatelessWidget {
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
       onMoreOccurrencesTap: onMoreOccurrencesTap,
+      onAllDayCollapsedGroupTap: onAllDayCollapsedGroupTap,
+      allDayTimelineCollapsed: allDayTimelineCollapsed,
+      onAllDayTimelineCollapsedChanged: onAllDayTimelineCollapsedChanged,
     );
   }
 }
@@ -970,6 +1013,9 @@ class _CalendarTimeline extends StatelessWidget {
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
+    required this.onAllDayCollapsedGroupTap,
+    required this.allDayTimelineCollapsed,
+    required this.onAllDayTimelineCollapsedChanged,
   });
 
   static const double _headerHeight = 56;
@@ -986,6 +1032,9 @@ class _CalendarTimeline extends StatelessWidget {
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
+  final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
+  final bool allDayTimelineCollapsed;
+  final ValueChanged<bool> onAllDayTimelineCollapsedChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1007,7 +1056,17 @@ class _CalendarTimeline extends StatelessWidget {
       occurrences: occurrences,
       days: days,
     );
-    final hasAllDayOccurrences = allDayLayout.segments.isNotEmpty;
+    final allDayCount = allDayLayout.segments.length;
+    final hasAllDayOccurrences = allDayCount > 0;
+    final canCollapseAllDay = allDayCount > 1;
+    final isAllDayCollapsed = canCollapseAllDay && allDayTimelineCollapsed;
+    final motion = SkedMotionPolicy.of(context);
+    final allDayTransitionDuration = motion.animationsEnabled
+        ? motion.effects(SkedMotionSpeed.standard)
+        : Duration.zero;
+    final allDaySizeTransitionDuration = motion.spatialAnimationsEnabled
+        ? allDayTransitionDuration
+        : Duration.zero;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1037,16 +1096,86 @@ class _CalendarTimeline extends StatelessWidget {
                   ),
                 ),
               if (hasAllDayOccurrences)
-                SizedBox(
-                  height: allDayLayout.heightFor(context),
-                  child: _AllDayTimeline(
-                    timeColumnWidth: metrics.timeColumnWidth,
-                    dayWidth: metrics.dayWidth,
-                    dayCount: days.length,
-                    layout: allDayLayout,
-                    label: l10n.allDay,
-                    onOccurrenceTap: onOccurrenceTap,
-                    onMoreOccurrencesTap: onMoreOccurrencesTap,
+                AnimatedSize(
+                  key: const ValueKey('general-all-day-transition'),
+                  alignment: Alignment.topCenter,
+                  duration: allDaySizeTransitionDuration,
+                  curve: isAllDayCollapsed
+                      ? motion.scheme.exitCurve
+                      : motion.scheme.enterCurve,
+                  clipBehavior: Clip.hardEdge,
+                  child: AnimatedSwitcher(
+                    duration: allDayTransitionDuration,
+                    reverseDuration: allDayTransitionDuration,
+                    switchInCurve: motion.scheme.enterCurve,
+                    switchOutCurve: motion.scheme.exitCurve,
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        alignment: Alignment.topCenter,
+                        clipBehavior: Clip.none,
+                        children: [
+                          for (final previousChild in previousChildren)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                ignoring: true,
+                                child: ExcludeSemantics(child: previousChild),
+                              ),
+                            ),
+                          ?currentChild,
+                        ],
+                      );
+                    },
+                    transitionBuilder: (child, animation) {
+                      final curved = CurvedAnimation(
+                        parent: animation,
+                        curve: motion.scheme.enterCurve,
+                        reverseCurve: motion.scheme.exitCurve,
+                      );
+                      final faded = FadeTransition(
+                        opacity: curved,
+                        child: child,
+                      );
+                      if (motion.reduceMotion) return faded;
+                      return ScaleTransition(
+                        scale: Tween<double>(
+                          begin: 0.98,
+                          end: 1,
+                        ).animate(curved),
+                        child: faded,
+                      );
+                    },
+                    child: SizedBox(
+                      key: ValueKey(
+                        isAllDayCollapsed
+                            ? 'general-all-day-collapsed-state'
+                            : 'general-all-day-expanded-state',
+                      ),
+                      height: allDayLayout.heightFor(
+                        context,
+                        collapsed: isAllDayCollapsed,
+                      ),
+                      child: _AllDayTimeline(
+                        timeColumnWidth: metrics.timeColumnWidth,
+                        dayWidth: metrics.dayWidth,
+                        dayCount: days.length,
+                        layout: allDayLayout,
+                        label: l10n.allDay,
+                        collapsed: isAllDayCollapsed,
+                        canCollapse: canCollapseAllDay,
+                        onToggleCollapsed: canCollapseAllDay
+                            ? () => onAllDayTimelineCollapsedChanged(
+                                !isAllDayCollapsed,
+                              )
+                            : null,
+                        onOccurrenceTap: onOccurrenceTap,
+                        onMoreOccurrencesTap: onMoreOccurrencesTap,
+                        onCollapsedGroupTap: (group) =>
+                            onAllDayCollapsedGroupTap(
+                              group.occurrences,
+                              days[group.dayIndex],
+                            ),
+                      ),
+                    ),
                   ),
                 ),
               if (hasAllDayOccurrences)
@@ -1327,17 +1456,19 @@ class _AllDayTimelineLayout {
   const _AllDayTimelineLayout({
     required this.segments,
     required this.visibleSegments,
-    required this.overflowOccurrences,
+    required this.overflowGroups,
+    required this.collapsedGroups,
     required this.visibleLaneCount,
   });
 
   static const int maxVisibleLanes = 3;
-  static const double verticalPadding = 4;
+  static const double verticalPadding = 6;
   static const double laneGap = 3;
 
   final List<_AllDaySegment> segments;
   final List<_AllDaySegment> visibleSegments;
-  final List<GeneralEventOccurrence> overflowOccurrences;
+  final List<_AllDayOverflowGroup> overflowGroups;
+  final List<_AllDayCollapsedGroup> collapsedGroups;
   final int visibleLaneCount;
 
   factory _AllDayTimelineLayout.build({
@@ -1356,14 +1487,16 @@ class _AllDayTimelineLayout {
       for (final segment in segments)
         if (segment.lane < maxVisibleLanes) segment,
     ];
-    final overflowOccurrences = [
+    final overflowGroups = _groupAllDayOverflowSegments([
       for (final segment in segments)
-        if (segment.lane >= maxVisibleLanes) segment.occurrence,
-    ];
+        if (segment.lane >= maxVisibleLanes) segment,
+    ]);
+    final collapsedGroups = _groupAllDayCollapsedSegments(segments);
     return _AllDayTimelineLayout(
       segments: List.unmodifiable(segments),
       visibleSegments: List.unmodifiable(visibleSegments),
-      overflowOccurrences: List.unmodifiable(overflowOccurrences),
+      overflowGroups: List.unmodifiable(overflowGroups),
+      collapsedGroups: List.unmodifiable(collapsedGroups),
       visibleLaneCount: visibleLaneCount,
     );
   }
@@ -1375,15 +1508,43 @@ class _AllDayTimelineLayout {
     return (scaledFontSize * (style?.height ?? 1.15) + 16).clamp(36, 52);
   }
 
-  double heightFor(BuildContext context) {
-    final rowCount = visibleLaneCount + (overflowOccurrences.isEmpty ? 0 : 1);
+  double heightFor(BuildContext context, {bool collapsed = false}) {
+    if (collapsed) {
+      return math.max(48, verticalPadding * 2 + laneHeightFor(context));
+    }
+    final rowCount = visibleLaneCount + (overflowGroups.isEmpty ? 0 : 1);
     if (rowCount == 0) {
       return 0;
     }
-    return verticalPadding * 2 +
-        rowCount * laneHeightFor(context) +
-        (rowCount - 1) * laneGap;
+    return math.max(
+      48,
+      verticalPadding * 2 +
+          rowCount * laneHeightFor(context) +
+          (rowCount - 1) * laneGap,
+    );
   }
+}
+
+class _AllDayOverflowGroup {
+  const _AllDayOverflowGroup({
+    required this.startIndex,
+    required this.endIndex,
+    required this.occurrences,
+  });
+
+  final int startIndex;
+  final int endIndex;
+  final List<GeneralEventOccurrence> occurrences;
+}
+
+class _AllDayCollapsedGroup {
+  const _AllDayCollapsedGroup({
+    required this.dayIndex,
+    required this.occurrences,
+  });
+
+  final int dayIndex;
+  final List<GeneralEventOccurrence> occurrences;
 }
 
 class _AllDaySegment {
@@ -1419,6 +1580,8 @@ List<_AllDaySegment> _allDaySegmentsForDays(
   for (final occurrence in occurrences) {
     final displayStart = occurrence.calendarDisplayStart;
     final displayEnd = occurrence.calendarDisplayEnd;
+    // Multi-day timed events keep their existing all-day-lane representation;
+    // same-day timed events remain in the hourly grid instead.
     if (!displayEnd.isAfter(displayStart) ||
         (!occurrence.isAllDay && _sameDay(displayStart, displayEnd))) {
       continue;
@@ -1482,6 +1645,78 @@ List<_AllDaySegment> _layoutAllDaySegments(List<_AllDaySegment> segments) {
     laidOut.add(segment.inLane(lane));
   }
   return laidOut;
+}
+
+List<_AllDayOverflowGroup> _groupAllDayOverflowSegments(
+  List<_AllDaySegment> segments,
+) {
+  if (segments.isEmpty) {
+    return const [];
+  }
+  final sorted = [...segments]
+    ..sort((a, b) {
+      final start = a.startIndex.compareTo(b.startIndex);
+      if (start != 0) return start;
+      return a.endIndex.compareTo(b.endIndex);
+    });
+  final groups = <_AllDayOverflowGroup>[];
+  var start = sorted.first.startIndex;
+  var end = sorted.first.endIndex;
+  var occurrences = <GeneralEventOccurrence>[sorted.first.occurrence];
+  for (final segment in sorted.skip(1)) {
+    // Merge only intervals that overlap or touch. This keeps a more chip
+    // within the actual occupied date range and avoids a week-wide bar.
+    if (segment.startIndex <= end + 1) {
+      end = math.max(end, segment.endIndex);
+      occurrences.add(segment.occurrence);
+      continue;
+    }
+    groups.add(
+      _AllDayOverflowGroup(
+        startIndex: start,
+        endIndex: end,
+        occurrences: List.unmodifiable(occurrences),
+      ),
+    );
+    start = segment.startIndex;
+    end = segment.endIndex;
+    occurrences = <GeneralEventOccurrence>[segment.occurrence];
+  }
+  groups.add(
+    _AllDayOverflowGroup(
+      startIndex: start,
+      endIndex: end,
+      occurrences: List.unmodifiable(occurrences),
+    ),
+  );
+  return groups;
+}
+
+List<_AllDayCollapsedGroup> _groupAllDayCollapsedSegments(
+  List<_AllDaySegment> segments,
+) {
+  if (segments.isEmpty) {
+    return const [];
+  }
+  final grouped = <int, List<GeneralEventOccurrence>>{};
+  for (final segment in segments) {
+    for (
+      var dayIndex = segment.startIndex;
+      dayIndex <= segment.endIndex;
+      dayIndex++
+    ) {
+      grouped
+          .putIfAbsent(dayIndex, () => <GeneralEventOccurrence>[])
+          .add(segment.occurrence);
+    }
+  }
+  return [
+    for (final entry in grouped.entries)
+      _AllDayCollapsedGroup(
+        dayIndex: entry.key,
+        occurrences: List.unmodifiable(entry.value),
+      ),
+  ];
 }
 
 class _TimelineOccurrenceIndex {

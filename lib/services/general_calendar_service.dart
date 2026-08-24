@@ -140,6 +140,7 @@ class GeneralCalendarService {
       closeEventPopupOnOutsideTap: data.closeEventPopupOnOutsideTap,
       showAddEventFab: data.showAddEventFab,
       enableLongPressAddEvent: data.enableLongPressAddEvent,
+      allDayTimelineCollapsed: data.allDayTimelineCollapsed,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
       themeSeedColorValue: data.themeSeedColorValue,
@@ -163,6 +164,7 @@ class GeneralCalendarService {
     bool? closeEventPopupOnOutsideTap,
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
+    bool? allDayTimelineCollapsed,
   }) {
     return data.copyWith(
       defaultView: defaultView,
@@ -178,6 +180,7 @@ class GeneralCalendarService {
       closeEventPopupOnOutsideTap: closeEventPopupOnOutsideTap,
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
+      allDayTimelineCollapsed: allDayTimelineCollapsed,
     );
   }
 
