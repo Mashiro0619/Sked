@@ -9,85 +9,12 @@ import 'school_import_content_sanitizer.dart';
 class SchoolWebImportPageService {
   const SchoolWebImportPageService();
 
-  static const String navigationApprovalHandlerName =
-      'skedConfirmNavigationOrigin';
   static const int maxPlatformResultLength = 512 * 1024;
   static const int maxDomNodeCount = 50000;
   static const int maxDomDepth = 64;
   static const int maxSourceOriginLength = 2048;
   static const int maxSourceTitleLength = 512;
   static const String extractionProtocolPrefix = 'SKED_WEB_IMPORT_V1\n';
-
-  static final String formNavigationGuardScript =
-      '''
-(() => {
-  if (window.__skedFormNavigationGuardInstalled) return;
-  window.__skedFormNavigationGuardInstalled = true;
-  const approvedOrigins = new Set();
-  const nativeSubmit = HTMLFormElement.prototype.submit;
-  const nativeRequestSubmit = HTMLFormElement.prototype.requestSubmit;
-
-  const targetOrigin = (form, submitter) => {
-    try {
-      const action = (submitter && submitter.formAction) || form.action || location.href;
-      return new URL(action, location.href).origin;
-    } catch (_) {
-      return '';
-    }
-  };
-
-  const continueSubmission = (form, submitter, useRequestSubmit) => {
-    if (useRequestSubmit && nativeRequestSubmit) {
-      nativeRequestSubmit.call(form, submitter || undefined);
-    } else {
-      nativeSubmit.call(form);
-    }
-  };
-
-  const guardSubmission = async (form, submitter, useRequestSubmit) => {
-    const origin = targetOrigin(form, submitter);
-    if (!origin) return;
-    if (origin === location.origin || approvedOrigins.has(origin)) {
-      continueSubmission(form, submitter, useRequestSubmit);
-      return;
-    }
-    try {
-      const approved = await window.flutter_inappwebview.callHandler(
-        '$navigationApprovalHandlerName',
-        origin
-      );
-      if (approved === true) {
-        const approvedOrigin = targetOrigin(form, submitter);
-        if (approvedOrigin !== origin) {
-          void guardSubmission(form, submitter, useRequestSubmit);
-          return;
-        }
-        approvedOrigins.add(origin);
-        continueSubmission(form, submitter, useRequestSubmit);
-      }
-    } catch (_) {}
-  };
-
-  HTMLFormElement.prototype.submit = function() {
-    void guardSubmission(this, null, false);
-  };
-  HTMLFormElement.prototype.requestSubmit = function(submitter) {
-    void guardSubmission(this, submitter || null, true);
-  };
-  document.addEventListener('submit', (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    const submitter = event.submitter || null;
-    const origin = targetOrigin(form, submitter);
-    if (!origin || origin === location.origin || approvedOrigins.has(origin)) {
-      return;
-    }
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    void guardSubmission(form, submitter, true);
-  }, true);
-})()
-''';
 
   static final String extractImportSourceScript =
       '''

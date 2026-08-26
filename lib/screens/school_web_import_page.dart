@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:collection';
 
-import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
@@ -14,29 +12,27 @@ import '../services/school_import_api.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
 import '../utils/platform_capabilities.dart';
-import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
 
 class SchoolWebImportPage extends StatefulWidget {
-  const SchoolWebImportPage({super.key, required this.site});
+  const SchoolWebImportPage({super.key, required this.site, this.windowId});
 
   final SchoolSite site;
+  final int? windowId;
+
+  bool get isPopupWindow => windowId != null;
 
   @override
   State<SchoolWebImportPage> createState() => _SchoolWebImportPageState();
 }
 
 class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
-  static const _pageLoadTimeout = Duration(seconds: 15);
-
   final SchoolSiteService _siteService = SchoolSiteService();
   final SchoolWebImportPageService _pageService =
       const SchoolWebImportPageService();
 
   InAppWebViewController? _controller;
-  Timer? _pageLoadWatchdog;
   int _pageLoadGeneration = 0;
-  bool _pageLoadTimedOut = false;
   bool _awaitingPageLoadStart = false;
   bool _hasSuccessfulPageLoad = false;
   bool _isLoadingPage = false;
@@ -45,32 +41,36 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   bool _canGoBack = false;
   bool _hasRequestedSchoolsLoad = false;
   bool _hasStartedInitialLoad = false;
-  bool _hasApprovedInitialNavigation = false;
+  bool _isClosingPopupWindow = false;
   String _currentUrl = '';
   String _currentTitle = '';
   String _entryUrl = '';
   List<SchoolSite> _sites = const [];
   SchoolSite? _selectedSite;
   String? _schoolLoadError;
-  final Set<String> _approvedNavigationOrigins = <String>{};
-  late final SchoolWebImportNavigationDecisionQueue _navigationDecisionQueue;
-  NavigatorState? _activeSecurityDialogNavigator;
-  ModalRoute<dynamic>? _activeSecurityDialogRoute;
-  Object? _activeSecurityDialogToken;
+  final Set<int> _openPopupWindowIds = <int>{};
 
   bool get _supportsWebView => supportsInAppWebView;
+
+  bool get _supportsPopupWindows => InAppWebView.isPropertySupported(
+    PlatformWebViewCreationParamsProperty.windowId,
+  );
 
   @override
   void initState() {
     super.initState();
-    _navigationDecisionQueue = SchoolWebImportNavigationDecisionQueue(
-      decide: _confirmNavigationOrigin,
-    );
+    if (widget.isPopupWindow) {
+      _selectedSite = widget.site;
+      _isLoadingSchools = false;
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (widget.isPopupWindow) {
+      return;
+    }
     if (!_hasRequestedSchoolsLoad) {
       _hasRequestedSchoolsLoad = true;
       unawaited(_loadSchools());
@@ -80,14 +80,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   @override
   void dispose() {
     _pageLoadGeneration += 1;
-    _cancelPageLoadWatchdog();
-    _navigationDecisionQueue.dispose();
-    final dialogNavigator = _activeSecurityDialogNavigator;
-    if (dialogNavigator != null &&
-        dialogNavigator.mounted &&
-        _activeSecurityDialogRoute?.isCurrent == true) {
-      dialogNavigator.pop(false);
-    }
     final controller = _controller;
     if (controller != null) {
       unawaited(controller.stopLoading().catchError((_) {}));
@@ -110,14 +102,14 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         title: Text(_selectedSite?.name ?? widget.site.name),
         actions: [
           IconButton(
-            onPressed: _canGoBack && !_isLoadingPage && !_isParsing
+            onPressed: _canGoBack && !_isParsing
                 ? _goBackInWebView
                 : null,
             icon: const Icon(Icons.arrow_back),
             tooltip: l10n.schoolWebImportGoBack,
           ),
           IconButton(
-            onPressed: _controller == null || _isLoadingPage || _isParsing
+            onPressed: _controller == null || _isParsing
                 ? null
                 : _reload,
             icon: const Icon(Icons.refresh),
@@ -149,7 +141,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
           ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
           : _schoolLoadError != null
           ? _buildMessage(_schoolLoadError!)
-          : _sites.isEmpty || _selectedSite == null
+          : !widget.isPopupWindow && (_sites.isEmpty || _selectedSite == null)
           ? _buildMessage(l10n.schoolWebImportNoSchools)
           : Column(
               children: [
@@ -179,54 +171,15 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                   child: _isLoadingSchools
                       ? const Center(child: CircularProgressIndicator())
                       : InAppWebView(
-                          initialUserScripts: UnmodifiableListView<UserScript>([
-                            UserScript(
-                              source: SchoolWebImportPageService
-                                  .formNavigationGuardScript,
-                              injectionTime:
-                                  UserScriptInjectionTime.AT_DOCUMENT_START,
-                              contentWorld: ContentWorld.PAGE,
-                            ),
-                          ]),
-                          initialSettings: InAppWebViewSettings(
-                            javaScriptEnabled: true,
-                            javaScriptCanOpenWindowsAutomatically: false,
-                            useShouldOverrideUrlLoading: true,
-                          ),
+                          windowId: widget.windowId,
+                          initialSettings: schoolWebImportWebViewSettings(),
                           onWebViewCreated: (controller) {
                             _controller = controller;
-                            controller.addJavaScriptHandler(
-                              handlerName: SchoolWebImportPageService
-                                  .navigationApprovalHandlerName,
-                              callback: (arguments) async {
-                                if (!mounted ||
-                                    arguments.isEmpty ||
-                                    arguments.first is! String) {
-                                  return false;
-                                }
-                                final origin = schoolWebImportOrigin(
-                                  arguments.first as String,
-                                );
-                                if (origin == null) return false;
-                                return _requestNavigationOriginApproval(origin);
-                              },
-                            );
-                            _scheduleInitialSchoolOpen();
-                          },
-                          onLoadStart: (_, url) {
-                            _startPageLoadWatchdog();
-                            if (!mounted) {
-                              return;
+                            if (!widget.isPopupWindow) {
+                              _scheduleInitialSchoolOpen();
                             }
-                            setState(() {
-                              _awaitingPageLoadStart = false;
-                              _hasSuccessfulPageLoad = false;
-                              _isLoadingPage = true;
-                              _pageLoadTimedOut = false;
-                              _currentTitle = '';
-                              _currentUrl = url?.toString() ?? _currentUrl;
-                            });
                           },
+                          onLoadStart: _handlePageLoadStart,
                           onLoadStop: (controller, url) {
                             unawaited(_handlePageLoadStop(controller, url));
                           },
@@ -246,9 +199,10 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                                   entryUrl.isNotEmpty && nextUrl != entryUrl;
                             });
                           },
-                          shouldOverrideUrlLoading: (_, navigationAction) {
-                            return _handleNavigation(navigationAction);
-                          },
+                          onCreateWindow: _supportsPopupWindows
+                              ? _handleCreateWindow
+                              : null,
+                          onCloseWindow: (_) => _handlePopupWindowClosed(),
                           onTitleChanged: (_, title) {
                             if (!mounted ||
                                 title == null ||
@@ -258,19 +212,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                             setState(() => _currentTitle = title);
                           },
                           onReceivedError: (controller, request, error) {
-                            if (request.isForMainFrame == false) {
-                              return;
-                            }
-                            unawaited(
-                              _handlePageLoadFailure(
-                                controller,
-                                request.url,
-                                AppLocalizations.of(context)
-                                    .schoolWebImportLoadFailed,
-                              ),
-                            );
-                          },
-                          onReceivedHttpError: (controller, request, _) {
                             if (request.isForMainFrame == false) {
                               return;
                             }
@@ -351,6 +292,72 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     return l10n.schoolImportParserCustomConfigIncomplete;
   }
 
+  void _handlePageLoadStart(InAppWebViewController _, WebUri? url) {
+    final nextUrl = url?.toString() ?? '';
+    _pageLoadGeneration += 1;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _awaitingPageLoadStart = false;
+      _hasSuccessfulPageLoad = false;
+      _isLoadingPage = true;
+      _currentTitle = '';
+      _currentUrl = nextUrl.isEmpty ? _currentUrl : nextUrl;
+    });
+  }
+
+  Future<bool?> _handleCreateWindow(
+    InAppWebViewController _,
+    CreateWindowAction action,
+  ) async {
+    if (!mounted) {
+      return false;
+    }
+
+    final windowId = action.windowId;
+    if (_supportsPopupWindows) {
+      if (_openPopupWindowIds.add(windowId)) {
+        unawaited(
+          Navigator.of(context)
+              .push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => SchoolWebImportPage(
+                    site: widget.site,
+                    windowId: windowId,
+                  ),
+                ),
+              )
+              .whenComplete(() {
+                _openPopupWindowIds.remove(windowId);
+              }),
+        );
+        return true;
+      }
+      return false;
+    }
+    // A support change during a route transition is handled by the platform's
+    // native callback without a Dart-side URL replay.
+    return false;
+  }
+
+  void _handlePopupWindowClosed() {
+    if (!widget.isPopupWindow || !mounted || _isClosingPopupWindow) {
+      return;
+    }
+    _isClosingPopupWindow = true;
+    final route = ModalRoute.of(context);
+    if (route == null) {
+      return;
+    }
+    final navigator = Navigator.of(context);
+    if (route.isCurrent) {
+      navigator.pop();
+      return;
+    }
+    navigator.removeRoute(route);
+  }
+
   Future<void> _loadSchools() async {
     final l10n = AppLocalizations.of(context);
     try {
@@ -410,29 +417,9 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       _hasStartedInitialLoad = false;
       return;
     }
-    final initialOrigin = schoolWebImportOrigin(site.loginUrl);
-    if (initialOrigin == null) {
-      _hasStartedInitialLoad = false;
-      return;
-    }
-    if (!_hasApprovedInitialNavigation) {
-      final approved = await _confirmInitialNavigation(initialOrigin);
-      if (!mounted || !approved) {
-        _hasStartedInitialLoad = false;
-        if (mounted) {
-          setState(() {
-            _hasSuccessfulPageLoad = false;
-            _isLoadingPage = false;
-          });
-        }
-        return;
-      }
-      _hasApprovedInitialNavigation = true;
-      _approvedNavigationOrigins.add(initialOrigin);
-    }
     final loadFailedMessage = AppLocalizations.of(context)
         .schoolWebImportLoadFailed;
-    _startPageLoadWatchdog();
+    _pageLoadGeneration += 1;
     if (mounted) {
       setState(() {
         _awaitingPageLoadStart = true;
@@ -455,17 +442,12 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
 
   Future<void> _reload() async {
     final controller = _controller;
-    if (controller == null || _isLoadingPage) {
-      return;
-    }
-    if (!_hasApprovedInitialNavigation) {
-      _hasStartedInitialLoad = true;
-      await _openSelectedSchool();
+    if (controller == null) {
       return;
     }
     final loadFailedMessage = AppLocalizations.of(context)
         .schoolWebImportLoadFailed;
-    _startPageLoadWatchdog();
+    _pageLoadGeneration += 1;
     if (mounted) {
       setState(() {
         _awaitingPageLoadStart = true;
@@ -482,12 +464,12 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
 
   Future<void> _goBackInWebView() async {
     final controller = _controller;
-    if (controller == null || !_canGoBack || _isLoadingPage) {
+    if (controller == null || !_canGoBack) {
       return;
     }
     final loadFailedMessage = AppLocalizations.of(context)
         .schoolWebImportLoadFailed;
-    _startPageLoadWatchdog();
+    _pageLoadGeneration += 1;
     if (mounted) {
       setState(() {
         _awaitingPageLoadStart = true;
@@ -500,115 +482,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     } catch (_) {
       await _handlePageLoadFailure(controller, null, loadFailedMessage);
     }
-  }
-
-  Future<NavigationActionPolicy> _handleNavigation(
-    NavigationAction navigationAction,
-  ) async {
-    if (!navigationAction.isForMainFrame) {
-      return NavigationActionPolicy.ALLOW;
-    }
-    final targetUrl = navigationAction.request.url?.toString() ?? '';
-    final targetOrigin = schoolWebImportOrigin(targetUrl);
-    if (targetOrigin == null) {
-      return NavigationActionPolicy.CANCEL;
-    }
-    return await _requestNavigationOriginApproval(targetOrigin)
-        ? NavigationActionPolicy.ALLOW
-        : NavigationActionPolicy.CANCEL;
-  }
-
-  Future<bool> _requestNavigationOriginApproval(String targetOrigin) async {
-    if (_approvedNavigationOrigins.contains(targetOrigin)) return true;
-    final approved = await _navigationDecisionQueue.request(targetOrigin);
-    if (!mounted || !approved) return false;
-    _approvedNavigationOrigins.add(targetOrigin);
-    return true;
-  }
-
-  Future<bool> _confirmInitialNavigation(String origin) async {
-    if (!requiresSchoolWebImportSignInDisclosure()) return true;
-    if (!mounted) return false;
-    final dialogToken = Object();
-    _activeSecurityDialogNavigator = Navigator.of(context, rootNavigator: true);
-    _activeSecurityDialogToken = dialogToken;
-    try {
-      return await showSchoolWebImportSecurityConsentDialog(
-        context: context,
-        origin: origin,
-        isInitialNavigation: true,
-        onShown: (route) {
-          if (identical(_activeSecurityDialogToken, dialogToken)) {
-            _activeSecurityDialogRoute = route;
-          }
-        },
-      );
-    } finally {
-      if (identical(_activeSecurityDialogToken, dialogToken)) {
-        _activeSecurityDialogNavigator = null;
-        _activeSecurityDialogRoute = null;
-        _activeSecurityDialogToken = null;
-      }
-    }
-  }
-
-  Future<bool> _confirmNavigationOrigin(String targetOrigin) async {
-    if (!mounted) return false;
-    final dialogToken = Object();
-    _activeSecurityDialogNavigator = Navigator.of(context, rootNavigator: true);
-    _activeSecurityDialogToken = dialogToken;
-    try {
-      return await showSchoolWebImportSecurityConsentDialog(
-        context: context,
-        origin: targetOrigin,
-        isInitialNavigation: false,
-        onShown: (route) {
-          if (identical(_activeSecurityDialogToken, dialogToken)) {
-            _activeSecurityDialogRoute = route;
-          }
-        },
-      );
-    } finally {
-      if (identical(_activeSecurityDialogToken, dialogToken)) {
-        _activeSecurityDialogNavigator = null;
-        _activeSecurityDialogRoute = null;
-        _activeSecurityDialogToken = null;
-      }
-    }
-  }
-
-  void _startPageLoadWatchdog() {
-    _cancelPageLoadWatchdog();
-    final generation = ++_pageLoadGeneration;
-    _pageLoadTimedOut = false;
-    _pageLoadWatchdog = Timer(
-      _pageLoadTimeout,
-      () => unawaited(_handlePageLoadTimeout(generation)),
-    );
-  }
-
-  Future<void> _handlePageLoadTimeout(int generation) async {
-    if (!mounted || !_isLoadingPage || generation != _pageLoadGeneration) {
-      return;
-    }
-    _pageLoadTimedOut = true;
-    setState(() {
-      _awaitingPageLoadStart = false;
-      _hasSuccessfulPageLoad = false;
-      _isLoadingPage = false;
-    });
-    try {
-      await _controller?.stopLoading();
-    } catch (_) {}
-    if (!mounted || generation != _pageLoadGeneration) {
-      return;
-    }
-    _showMessage(AppLocalizations.of(context).schoolWebImportLoadTimedOut);
-  }
-
-  void _cancelPageLoadWatchdog() {
-    _pageLoadWatchdog?.cancel();
-    _pageLoadWatchdog = null;
   }
 
   Future<void> _handlePageLoadStop(
@@ -629,7 +502,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         generation != _pageLoadGeneration ||
         !shouldAcceptSchoolWebImportLoadCompletion(
           isLoading: _isLoadingPage,
-          timedOut: _pageLoadTimedOut,
           awaitingLoadStart: _awaitingPageLoadStart,
           callbackUrl: callbackUrl,
           controllerUrl: controllerUrl?.toString() ?? '',
@@ -637,7 +509,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         )) {
       return;
     }
-    _cancelPageLoadWatchdog();
     final nextUrl = callbackUrl.isEmpty ? _currentUrl : callbackUrl;
     final entryUrl = _entryUrl.isEmpty && nextUrl.isNotEmpty
         ? nextUrl
@@ -670,8 +541,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         failedUrlText != controllerUrl) {
       return;
     }
-    _cancelPageLoadWatchdog();
-    if (_pageLoadTimedOut) return;
     if (_awaitingPageLoadStart || _hasSuccessfulPageLoad || _isLoadingPage) {
       setState(() {
         _awaitingPageLoadStart = false;
@@ -771,181 +640,16 @@ bool shouldUseSchoolWebImportExtraction({
 @visibleForTesting
 bool shouldAcceptSchoolWebImportLoadCompletion({
   required bool isLoading,
-  required bool timedOut,
   required bool awaitingLoadStart,
   required String callbackUrl,
   required String controllerUrl,
   required int? progress,
 }) {
   return isLoading &&
-      !timedOut &&
       !awaitingLoadStart &&
       callbackUrl.isNotEmpty &&
       callbackUrl == controllerUrl &&
       (progress == null || progress >= 100);
-}
-
-@visibleForTesting
-bool requiresSchoolWebImportSignInDisclosure({
-  bool? isWeb,
-  TargetPlatform? platform,
-}) {
-  return !(isWeb ?? kIsWeb) &&
-      (platform ?? defaultTargetPlatform) == TargetPlatform.android;
-}
-
-@visibleForTesting
-String schoolWebImportSignInConsentMessage(
-  AppLocalizations l10n,
-  String origin,
-) {
-  return Uri.tryParse(origin)?.scheme == 'http'
-      ? l10n.schoolWebImportInsecureSignInConsentMessage(origin)
-      : l10n.schoolWebImportSignInConsentMessage(origin);
-}
-
-@visibleForTesting
-String schoolWebImportNavigationConsentMessage(
-  AppLocalizations l10n,
-  String origin,
-) {
-  return Uri.tryParse(origin)?.scheme == 'http'
-      ? l10n.schoolWebImportInsecureSignInConsentMessage(origin)
-      : l10n.schoolWebImportCrossOriginMessage(origin);
-}
-
-typedef SchoolWebImportSecurityDialogShown = void Function(
-  ModalRoute<dynamic>? route,
-);
-
-@visibleForTesting
-Future<bool> showSchoolWebImportSecurityConsentDialog({
-  required BuildContext context,
-  required String origin,
-  required bool isInitialNavigation,
-  SchoolWebImportSecurityDialogShown? onShown,
-}) async {
-  var popped = false;
-  ModalRoute<dynamic>? dialogRoute;
-  final confirmed = await showExpressiveDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      dialogRoute ??= ModalRoute.of(dialogContext);
-      onShown?.call(dialogRoute);
-      final l10n = AppLocalizations.of(dialogContext);
-      final isInsecure = Uri.tryParse(origin)?.scheme == 'http';
-      void close(bool value) {
-        if (popped || dialogRoute?.isCurrent != true) return;
-        popped = true;
-        Navigator.of(dialogContext).pop(value);
-      }
-
-      return PopScope(
-        canPop: false,
-        child: AlertDialog(
-          icon: Icon(
-            isInsecure ? Icons.warning_amber_rounded : Icons.login_outlined,
-          ),
-          title: Text(
-            isInsecure
-                ? l10n.schoolWebImportInsecureSignInConsentTitle
-                : isInitialNavigation
-                ? l10n.schoolWebImportSignInConsentTitle
-                : l10n.schoolWebImportCrossOriginTitle,
-          ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Text(
-              isInitialNavigation
-                  ? schoolWebImportSignInConsentMessage(l10n, origin)
-                  : schoolWebImportNavigationConsentMessage(l10n, origin),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => close(false), child: Text(l10n.cancel)),
-            FilledButton(
-              onPressed: () => close(true),
-              child: Text(l10n.confirm),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-  return confirmed == true;
-}
-
-typedef SchoolWebImportNavigationDecision = Future<bool> Function(
-  String origin,
-);
-
-@visibleForTesting
-class SchoolWebImportNavigationDecisionQueue {
-  SchoolWebImportNavigationDecisionQueue({
-    required this._decide,
-    this.maxPendingOrigins = 8,
-  }) : assert(maxPendingOrigins > 0);
-
-  final SchoolWebImportNavigationDecision _decide;
-  final int maxPendingOrigins;
-  final Queue<_SchoolWebImportNavigationDecisionEntry> _queue = Queue();
-  final Map<String, _SchoolWebImportNavigationDecisionEntry> _pending = {};
-  bool _isDraining = false;
-  bool _isDisposed = false;
-
-  Future<bool> request(String origin) {
-    if (_isDisposed) return Future.value(false);
-    final existing = _pending[origin];
-    if (existing != null) return existing.result.future;
-    if (_pending.length >= maxPendingOrigins) return Future.value(false);
-
-    final entry = _SchoolWebImportNavigationDecisionEntry(origin);
-    _pending[origin] = entry;
-    _queue.addLast(entry);
-    unawaited(_drain());
-    return entry.result.future;
-  }
-
-  void dispose() {
-    if (_isDisposed) return;
-    _isDisposed = true;
-    for (final entry in _pending.values) {
-      if (!entry.result.isCompleted) entry.result.complete(false);
-    }
-    _pending.clear();
-    _queue.clear();
-  }
-
-  Future<void> _drain() async {
-    if (_isDraining || _isDisposed) return;
-    _isDraining = true;
-    try {
-      while (!_isDisposed && _queue.isNotEmpty) {
-        final entry = _queue.removeFirst();
-        var approved = false;
-        try {
-          approved = await _decide(entry.origin);
-        } catch (_) {
-          approved = false;
-        }
-        if (_isDisposed) return;
-        if (identical(_pending[entry.origin], entry)) {
-          _pending.remove(entry.origin);
-        }
-        if (!entry.result.isCompleted) entry.result.complete(approved);
-      }
-    } finally {
-      _isDraining = false;
-    }
-  }
-}
-
-class _SchoolWebImportNavigationDecisionEntry {
-  _SchoolWebImportNavigationDecisionEntry(this.origin);
-
-  final String origin;
-  final Completer<bool> result = Completer<bool>();
 }
 
 @visibleForTesting
@@ -964,6 +668,19 @@ String? schoolWebImportOrigin(String source) {
     host: uri.host,
     port: uri.hasPort && !isDefaultPort ? uri.port : null,
   ).toString();
+}
+
+@visibleForTesting
+InAppWebViewSettings schoolWebImportWebViewSettings() {
+  return InAppWebViewSettings(
+    javaScriptEnabled: true,
+    javaScriptCanOpenWindowsAutomatically: true,
+    supportMultipleWindows: true,
+    thirdPartyCookiesEnabled: true,
+    // Let the platform WebView own the whole navigation session, including
+    // redirects and form POSTs used by campus authentication systems.
+    useShouldOverrideUrlLoading: false,
+  );
 }
 
 extension _FirstWhereOrNull<E> on Iterable<E> {

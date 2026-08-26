@@ -114,24 +114,19 @@ void main() {
       }
     });
 
-    test('form guard pauses cross-origin submissions for approval', () {
-      final script = SchoolWebImportPageService.formNavigationGuardScript;
+    test('only exposes the content extraction script', () {
+      final script = SchoolWebImportPageService.extractImportSourceScript;
 
-      expect(script, contains('HTMLFormElement.prototype.submit'));
-      expect(script, contains('HTMLFormElement.prototype.requestSubmit'));
-      expect(script, contains("document.addEventListener('submit'"));
-      expect(script, contains('submitter.formAction'));
-      expect(script, contains('targetOrigin(form, submitter)'));
-      expect(script, contains('approvedOrigin !== origin'));
+      expect(script, contains('document.documentElement'));
+      expect(script, isNot(contains('HTMLFormElement.prototype.submit')));
       expect(
         script,
-        contains('guardSubmission(form, submitter, useRequestSubmit)'),
+        isNot(contains('HTMLFormElement.prototype.requestSubmit')),
       );
-      expect(script, contains('event.preventDefault()'));
-      expect(
-        script,
-        contains(SchoolWebImportPageService.navigationApprovalHandlerName),
-      );
+      expect(script, isNot(contains("document.addEventListener('submit'")));
+      expect(script, isNot(contains('event.preventDefault()')));
+      expect(script, isNot(contains('flutter_inappwebview.callHandler')));
+      expect(script, isNot(contains('skedConfirmNavigationOrigin')));
     });
 
     test('decodes one atomic result and removes URL secrets', () {
