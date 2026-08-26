@@ -1166,6 +1166,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolWebImportWarnings => 'Importuj notatki';
 
   @override
+  String get schoolWebImportParserDetails => 'Szczegóły analizy';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Rozwiń szczegóły analizy';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => 'Zwiń szczegóły analizy';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Zaloguj się na stronie szkoły w aplikacji, a następnie przejdź ręcznie do strony harmonogramu.';
 

@@ -1159,6 +1159,17 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolWebImportWarnings => 'Importovat poznámky';
 
   @override
+  String get schoolWebImportParserDetails => 'Podrobnosti analýzy';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Rozbalit podrobnosti analýzy';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Sbalit podrobnosti analýzy';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Přihlaste se na stránku školy v aplikaci a přejděte na stránku časového rozvrhu ručně.';
 

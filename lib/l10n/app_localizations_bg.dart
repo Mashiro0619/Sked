@@ -1172,6 +1172,17 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolWebImportWarnings => 'Внос на бележки';
 
   @override
+  String get schoolWebImportParserDetails => 'Подробности за анализа';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Разгъване на подробностите за анализа';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Свиване на подробностите за анализа';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Влезте в сайта на училището в приложението, след което навигирайте ръчно към страницата с график.';
 

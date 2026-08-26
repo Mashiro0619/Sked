@@ -1155,6 +1155,16 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolWebImportWarnings => 'Importér noter';
 
   @override
+  String get schoolWebImportParserDetails => 'Analyseringsdetaljer';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Udvid analyseringsdetaljer';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Skjul analyseringsdetaljer';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Log på skolens websted i appen, og naviger derefter manuelt til tidsplanen.';
 

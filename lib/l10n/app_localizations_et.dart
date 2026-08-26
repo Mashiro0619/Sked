@@ -1158,6 +1158,16 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolWebImportWarnings => 'Märkide importimine';
 
   @override
+  String get schoolWebImportParserDetails => 'Parsimise üksikasjad';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Kuva parsimise üksikasjad';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Ahenda parsimise üksikasjad';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Logige sisse kooli saidile rakenduses, seejärel liikuge ajakava lehele käsitsi.';
 

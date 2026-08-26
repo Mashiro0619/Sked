@@ -1163,6 +1163,17 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolWebImportWarnings => 'Tuo muistiinpanot';
 
   @override
+  String get schoolWebImportParserDetails => 'Jäsennyksen tiedot';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Laajenna jäsennyksen tiedot';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Kutista jäsennyksen tiedot';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Kirjaudu koulun sivustolle sovelluksessa ja siirry sitten aikataulun sivulle manuaalisesti.';
 

@@ -1171,6 +1171,17 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolWebImportWarnings => 'Importáljon jegyzeteket';
 
   @override
+  String get schoolWebImportParserDetails => 'Az elemzés részletei';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Az elemzés részleteinek kibontása';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Az elemzés részleteinek összecsukása';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Jelentkezzen be az iskola webhelyére az alkalmazásban, majd navigáljon a menetrend oldalára manuálisan.';
 

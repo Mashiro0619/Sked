@@ -1130,6 +1130,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolWebImportWarnings => 'インポート時の注意';
 
   @override
+  String get schoolWebImportParserDetails => '解析の詳細';
+
+  @override
+  String get schoolWebImportExpandParserDetails => '解析の詳細を展開';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => '解析の詳細を折りたたむ';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'アプリ内で学校サイトにログインし、その後手動で時間割ページへ移動してください。';
 

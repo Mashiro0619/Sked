@@ -18,6 +18,52 @@ Widget _localizedApp(Widget home) {
 }
 
 void main() {
+  testWidgets('custom footer stays fixed while the sheet body scrolls', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _localizedApp(
+        Scaffold(
+          body: AppSheetScaffold(
+            title: const Text('Import preview'),
+            leading: const Text('Legacy leading action'),
+            actions: const [Text('Legacy trailing action')],
+            footer: const FilledButton(
+              onPressed: null,
+              child: Text('Import as new timetable'),
+            ),
+            child: const SizedBox(
+              height: 1200,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Text('Scrollable import content'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final footer = find.text('Import as new timetable');
+    expect(footer, findsOneWidget);
+    expect(find.text('Legacy leading action'), findsNothing);
+    expect(find.text('Legacy trailing action'), findsNothing);
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+
+    final beforeScroll = tester.getRect(footer);
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -320),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(footer), beforeScroll);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('disabling sheet drag also removes the draggable handle', (
     tester,
   ) async {

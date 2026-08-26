@@ -1,9 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
+import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
+import 'package:sked/widgets/expressive_empty_state.dart';
 
 void main() {
   test('origin display removes paths, credentials, query, and fragment', () {
@@ -180,4 +184,129 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'missing API configuration uses a compact prompt with a settings shortcut',
+    (tester) async {
+      tester.view.physicalSize = const Size(640, 1136);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final provider = TimetableProvider();
+      addTearDown(provider.dispose);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: const SchoolWebImportPage(
+              site: SchoolSite(
+                name: '示例大学',
+                loginUrl: 'https://example.edu/login',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(SchoolWebImportPage));
+      final l10n = AppLocalizations.of(context);
+      final messageFinder = find.text(
+        l10n.schoolImportParserCustomConfigIncomplete,
+      );
+      final settingsButton = find.widgetWithText(
+        FilledButton,
+        l10n.schoolImportParserSettingsTitle,
+      );
+      final importButton = find.ancestor(
+        of: find.byIcon(Icons.file_download_outlined),
+        matching: find.byType(IconButton),
+      );
+
+      expect(messageFinder, findsOneWidget);
+      expect(settingsButton, findsOneWidget);
+      expect(find.byType(ExpressiveEmptyState), findsNothing);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(tester.widget<IconButton>(importButton).onPressed, isNull);
+      expect(
+        tester.widget<Text>(messageFinder).maxLines,
+        isNull,
+        reason: 'The configuration explanation must remain fully readable.',
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(settingsButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SchoolWebImportPage), findsOneWidget);
+      expect(messageFinder, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'missing API configuration keeps compact content centered on wide screens',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final provider = TimetableProvider();
+      addTearDown(provider.dispose);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SchoolWebImportPage(
+              site: SchoolSite(
+                name: '示例大学',
+                loginUrl: 'https://example.edu/login',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(SchoolWebImportPage));
+      final l10n = AppLocalizations.of(context);
+      final message = find.text(l10n.schoolImportParserCustomConfigIncomplete);
+      final settingsButton = find.widgetWithText(
+        FilledButton,
+        l10n.schoolImportParserSettingsTitle,
+      );
+      final messageRect = tester.getRect(message);
+      final settingsButtonRect = tester.getRect(settingsButton);
+
+      final screenCenter = tester.view.physicalSize.width / 2;
+
+      expect(messageRect.center.dx, closeTo(screenCenter, 1));
+      expect(settingsButtonRect.center.dx, closeTo(screenCenter, 1));
+      expect(messageRect.top, greaterThan(200));
+      expect(settingsButtonRect.top, greaterThan(messageRect.bottom));
+      expect(tester.getRect(settingsButton).width, lessThan(280));
+      expect(tester.getRect(settingsButton).height, greaterThanOrEqualTo(48));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

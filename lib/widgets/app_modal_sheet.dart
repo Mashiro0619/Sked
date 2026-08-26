@@ -40,8 +40,9 @@ class AppSheetScaffold extends StatelessWidget {
     super.key,
     required this.title,
     required this.child,
-    required this.actions,
     this.leading,
+    this.actions = const [],
+    this.footer,
     this.subtitle,
     this.heightFactor,
     this.contentPadding = const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -53,6 +54,13 @@ class AppSheetScaffold extends StatelessWidget {
   final Widget child;
   final Widget? leading;
   final List<Widget> actions;
+
+  /// A custom fixed footer that replaces the standard leading/actions layout.
+  ///
+  /// The footer uses the same safe-area and keyboard-aware placement as the
+  /// standard action area, so callers only provide its responsive contents.
+  /// When it is present, [leading] and [actions] are ignored.
+  final Widget? footer;
   final double? heightFactor;
   final EdgeInsetsGeometry contentPadding;
   final EdgeInsetsGeometry? actionPadding;
@@ -99,7 +107,8 @@ class AppSheetScaffold extends StatelessWidget {
             padding:
                 actionPadding ??
                 EdgeInsets.fromLTRB(16, 8, 16, viewInsets.bottom + 16),
-            child: _AppSheetActions(leading: leading, actions: actions),
+            child:
+                footer ?? _AppSheetActions(leading: leading, actions: actions),
           ),
         ],
       ),

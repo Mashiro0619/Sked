@@ -1170,6 +1170,16 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolWebImportWarnings => 'Import de note';
 
   @override
+  String get schoolWebImportParserDetails => 'Detalii de analiză';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Extinde detaliile analizei';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Restrânge detaliile analizei';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Conectați-vă la site-ul școlii în aplicație, apoi navigați manual la pagina de orar.';
 

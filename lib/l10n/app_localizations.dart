@@ -2176,6 +2176,24 @@ abstract class AppLocalizations {
   /// **'Import notes'**
   String get schoolWebImportWarnings;
 
+  /// No description provided for @schoolWebImportParserDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing details'**
+  String get schoolWebImportParserDetails;
+
+  /// No description provided for @schoolWebImportExpandParserDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand parsing details'**
+  String get schoolWebImportExpandParserDetails;
+
+  /// No description provided for @schoolWebImportCollapseParserDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse parsing details'**
+  String get schoolWebImportCollapseParserDetails;
+
   /// No description provided for @schoolWebImportOpenPageHint.
   ///
   /// In en, this message translates to:

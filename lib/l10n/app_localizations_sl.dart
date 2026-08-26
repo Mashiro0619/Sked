@@ -1161,6 +1161,17 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolWebImportWarnings => 'Uvozi opombe';
 
   @override
+  String get schoolWebImportParserDetails => 'Podrobnosti razčlenjevanja';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Razširi podrobnosti razčlenjevanja';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Strni podrobnosti razčlenjevanja';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Vpišite se v šolsko spletno mesto v aplikaciji in se ročno pomaknite na stran s časovnim razporedom.';
 

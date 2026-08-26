@@ -1177,6 +1177,17 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolWebImportWarnings => 'Εισαγωγή σημειώσεων';
 
   @override
+  String get schoolWebImportParserDetails => 'Λεπτομέρειες ανάλυσης';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Ανάπτυξη λεπτομερειών ανάλυσης';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Σύμπτυξη λεπτομερειών ανάλυσης';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Συνδεθείτε στην ιστοσελίδα του σχολείου μέσα στην εφαρμογή και, στη συνέχεια, πλοηγηθείτε στη σελίδα του προγράμματος με μη αυτόματο τρόπο.';
 

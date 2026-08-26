@@ -1149,6 +1149,17 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolWebImportWarnings => 'นำเข้าบันทึก';
 
   @override
+  String get schoolWebImportParserDetails => 'รายละเอียดการแยกวิเคราะห์';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'ขยายรายละเอียดการแยกวิเคราะห์';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'ยุบรายละเอียดการแยกวิเคราะห์';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'เข้าสู่เว็บไซต์โรงเรียนในแอป จากนั้นเดินทางไปยังหน้าตารางเวลาด้วยมือ';
 

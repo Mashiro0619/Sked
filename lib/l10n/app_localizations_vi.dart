@@ -1162,6 +1162,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolWebImportWarnings => 'Nhập ghi chú';
 
   @override
+  String get schoolWebImportParserDetails => 'Chi tiết phân tích';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Mở rộng chi tiết phân tích';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Thu gọn chi tiết phân tích';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Đăng nhập vào trang web của trường trong ứng dụng, sau đó điều hướng đến trang lịch trình thủ công.';
 

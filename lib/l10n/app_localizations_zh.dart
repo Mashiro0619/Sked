@@ -1100,6 +1100,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportWarnings => '导入提示';
 
   @override
+  String get schoolWebImportParserDetails => '解析详情';
+
+  @override
+  String get schoolWebImportExpandParserDetails => '展开解析详情';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => '收起解析详情';
+
+  @override
   String get schoolWebImportOpenPageHint => '请在应用内登录学校网站，并手动切换到课表页。';
 
   @override
@@ -3285,6 +3294,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebImportWarnings => '匯入提示';
+
+  @override
+  String get schoolWebImportParserDetails => '解析詳情';
+
+  @override
+  String get schoolWebImportExpandParserDetails => '展開解析詳情';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => '收起解析詳情';
 
   @override
   String get schoolWebImportOpenPageHint => '請在應用內登入學校網站，並手動切換到課表頁。';

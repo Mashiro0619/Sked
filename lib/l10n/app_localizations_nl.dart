@@ -1157,6 +1157,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolWebImportWarnings => 'Import notes';
 
   @override
+  String get schoolWebImportParserDetails => 'Analysedetails';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Analysedetails uitvouwen';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Analysedetails samenvouwen';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Sign in to the school site in-app, then navigate to the timetable page manually.';
 

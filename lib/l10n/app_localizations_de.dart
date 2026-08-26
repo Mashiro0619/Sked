@@ -1171,6 +1171,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get schoolWebImportWarnings => 'Importhinweise';
 
   @override
+  String get schoolWebImportParserDetails => 'Analysedetails';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Analysedetails einblenden';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Analysedetails ausblenden';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Melden Sie sich in der App auf der Schulwebsite an und navigieren Sie dann manuell zur Stundenplanseite.';
 

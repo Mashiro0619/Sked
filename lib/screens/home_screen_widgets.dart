@@ -305,29 +305,43 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           final availableWidth = constraints.hasBoundedWidth
               ? constraints.maxWidth
               : screenWidth - (phoneWidth ? 16 : 32);
-          final fixedWidth = 48.0 + (showSettings ? 48.0 : 0.0);
           const gap = 4.0;
-          final gapWidth = showSettings ? gap * 3 : gap * 2;
           const selectorMinimum = 48.0;
           final weekMinimum = phoneWidth ? 80.0 : 96.0;
+          final hasTimetable = orderedIds.contains('timetable');
+          final hasWeek = orderedIds.contains('week');
+          final nonFlexibleWidth = orderedIds
+              .where((id) => id != 'timetable' && id != 'week')
+              .fold<double>(0, (sum, _) => sum + 48);
+          final gapWidth = math.max(0, orderedIds.length - 1) * gap;
           final maximumWeekWidth = math.max(
             48.0,
-            availableWidth - fixedWidth - gapWidth - selectorMinimum,
+            availableWidth -
+                nonFlexibleWidth -
+                gapWidth -
+                (hasTimetable ? selectorMinimum : 0),
           );
           final desiredWeekWidth = math.max(
             weekMinimum,
             measuredWeekWidth + 12,
           );
-          final weekWidth = math
-              .min(desiredWeekWidth, maximumWeekWidth)
-              .clamp(48.0, desiredWeekWidth)
-              .toDouble();
+          final weekWidth = hasWeek
+              ? math
+                    .min(desiredWeekWidth, maximumWeekWidth)
+                    .clamp(48.0, desiredWeekWidth)
+                    .toDouble()
+              : 0.0;
           final flexibleWidth = math.max(
             selectorMinimum,
-            availableWidth - fixedWidth - gapWidth - weekWidth,
+            availableWidth - nonFlexibleWidth - gapWidth - weekWidth,
           );
-          final selectorMaximum = phoneWidth ? 168.0 : 240.0;
-          final selectorWidth = math.min(selectorMaximum, flexibleWidth);
+          // The first timetable selector is the toolbar's content anchor.
+          // Let it use the whole remaining row on phones instead of leaving a
+          // blank spacer before the fixed navigation actions.
+          final selectorMaximum = phoneWidth ? flexibleWidth : 240.0;
+          final selectorWidth = hasTimetable
+              ? math.min(selectorMaximum, flexibleWidth)
+              : 0.0;
           final widths = <String, double>{
             'timetable': selectorWidth,
             'week': weekWidth,

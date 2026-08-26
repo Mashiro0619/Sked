@@ -1131,6 +1131,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolWebImportWarnings => '가져오기 참고사항';
 
   @override
+  String get schoolWebImportParserDetails => '분석 세부정보';
+
+  @override
+  String get schoolWebImportExpandParserDetails => '분석 세부정보 펼치기';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => '분석 세부정보 접기';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       '앱 내에서 학교 사이트에 로그인한 뒤, 시간표 페이지로 직접 이동하세요.';
 

@@ -1161,6 +1161,15 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolWebImportWarnings => 'Importera anteckningar';
 
   @override
+  String get schoolWebImportParserDetails => 'Analysdetaljer';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'Visa analysdetaljer';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => 'Dölj analysdetaljer';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Logga in på skolans webbplats i appen och navigera sedan till tidtabellsidan manuellt.';
 

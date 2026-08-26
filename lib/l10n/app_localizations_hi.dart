@@ -1159,6 +1159,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolWebImportWarnings => 'आयात नोट्स';
 
   @override
+  String get schoolWebImportParserDetails => 'पार्सिंग विवरण';
+
+  @override
+  String get schoolWebImportExpandParserDetails => 'पार्सिंग विवरण फैलाएं';
+
+  @override
+  String get schoolWebImportCollapseParserDetails => 'पार्सिंग विवरण समेटें';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'ऐप के भीतर स्कूल साइट में साइन इन करें, फिर मैन्युअल रूप से टाइमटेबल पेज पर जाएँ।';
 

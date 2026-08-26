@@ -1174,6 +1174,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get schoolWebImportWarnings => 'Notas de importación';
 
   @override
+  String get schoolWebImportParserDetails => 'Detalles del análisis';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Expandir los detalles del análisis';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Contraer los detalles del análisis';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Inicia sesión en el sitio escolar dentro de la app y luego navega manualmente a la página del horario.';
 

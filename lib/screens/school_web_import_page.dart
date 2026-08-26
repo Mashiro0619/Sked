@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/school_html_import_page.dart';
+import '../screens/school_import_parser_settings_page.dart';
 import '../services/school_import_api.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
@@ -102,23 +103,20 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         title: Text(_selectedSite?.name ?? widget.site.name),
         actions: [
           IconButton(
-            onPressed: _canGoBack && !_isParsing
-                ? _goBackInWebView
-                : null,
+            onPressed: _canGoBack && !_isParsing ? _goBackInWebView : null,
             icon: const Icon(Icons.arrow_back),
             tooltip: l10n.schoolWebImportGoBack,
           ),
           IconButton(
-            onPressed: _controller == null || _isParsing
-                ? null
-                : _reload,
+            onPressed: _controller == null || _isParsing ? null : _reload,
             icon: const Icon(Icons.refresh),
             tooltip: MaterialLocalizations.of(context)
                 .refreshIndicatorSemanticLabel,
           ),
           IconButton(
             onPressed:
-                _controller == null ||
+                !isConfigured ||
+                    _controller == null ||
                     !_hasSuccessfulPageLoad ||
                     _isLoadingPage ||
                     _isParsing
@@ -136,7 +134,10 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         ],
       ),
       body: !isConfigured
-          ? _buildMessage(_buildConfigMessage(provider, l10n))
+          ? _buildConfigurationRequired(
+              message: _buildConfigMessage(provider, l10n),
+              settingsLabel: l10n.schoolImportParserSettingsTitle,
+            )
           : !_supportsWebView
           ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
           : _schoolLoadError != null
@@ -241,6 +242,73 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
             title: message,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildConfigurationRequired({
+    required String message,
+    required String settingsLabel,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return SafeArea(
+      top: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compactAction =
+              constraints.maxWidth < 480 ||
+              MediaQuery.textScalerOf(context).scale(1) > 1.3;
+          final settingsAction = ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SchoolImportParserSettingsPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.settings_outlined),
+              label: Text(settingsLabel),
+            ),
+          );
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (compactAction)
+                          SizedBox(
+                            width: double.infinity,
+                            child: settingsAction,
+                          )
+                        else
+                          settingsAction,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

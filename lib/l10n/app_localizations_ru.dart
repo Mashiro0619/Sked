@@ -1169,6 +1169,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolWebImportWarnings => 'Примечания к импорту';
 
   @override
+  String get schoolWebImportParserDetails => 'Сведения об анализе';
+
+  @override
+  String get schoolWebImportExpandParserDetails =>
+      'Развернуть сведения об анализе';
+
+  @override
+  String get schoolWebImportCollapseParserDetails =>
+      'Свернуть сведения об анализе';
+
+  @override
   String get schoolWebImportOpenPageHint =>
       'Войдите на школьный сайт внутри приложения, затем вручную перейдите на страницу расписания.';
 
