@@ -15,7 +15,6 @@ import '../services/school_import_workflow.dart';
 import '../utils/text_input_limits.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_dialog.dart';
-import '../widgets/expressive_empty_state.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
@@ -326,25 +325,52 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
-    return ExpressiveEmptyState(
-      icon: Icons.tune_outlined,
-      title: l10n.schoolImportParserSettingsTitle,
-      message:
-          '${_buildConfigMessage(provider, l10n)}\n\n'
-          '${l10n.schoolImportParserSettingsLocationHint}',
-      actions: [
-        FilledButton.icon(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const SchoolImportParserSettingsPage(),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: math.max(0, constraints.maxHeight - 48),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(Icons.tune_outlined, size: 28, color: colors.primary),
+                    const SizedBox(height: 12),
+                    Text(
+                      _buildConfigMessage(provider, l10n),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                const SchoolImportParserSettingsPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.settings_outlined),
+                      label: Text(l10n.openSettings),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
-          icon: const Icon(Icons.settings_outlined),
-          label: Text(l10n.openSettings),
-        ),
-      ],
+            ),
+          ),
+        );
+      },
     );
   }
 

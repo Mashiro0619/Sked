@@ -2335,7 +2335,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('自定义解析配置不完整'), findsOneWidget);
-      expect(find.textContaining('设置 > 数据与安全'), findsOneWidget);
+      expect(find.textContaining('设置 > 数据与安全'), findsNothing);
+      expect(find.widgetWithText(FilledButton, '打开设置'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'AI API 配置'), findsNothing);
     });
 

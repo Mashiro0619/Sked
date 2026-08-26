@@ -2292,31 +2292,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('wide timetable toolbar anchors the selector to the leading edge', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(1600, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = await _createProvider();
-    addTearDown(provider.dispose);
-    await _pumpHomeScreenWithProvider(tester, provider);
+  testWidgets(
+    'wide timetable toolbar anchors the selector to the leading edge',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1600, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      await _pumpHomeScreenWithProvider(tester, provider);
 
-    final toolbar = tester.getRect(
-      find.byKey(const ValueKey('student-workspace-toolbar')),
-    );
-    final selector = tester.getRect(
-      find.byKey(const ValueKey('student-timetable-picker-button')),
-    );
-    final settings = tester.getRect(
-      find.byKey(const ValueKey('student-settings-button')),
-    );
+      final toolbar = tester.getRect(
+        find.byKey(const ValueKey('student-workspace-toolbar')),
+      );
+      final selector = tester.getRect(
+        find.byKey(const ValueKey('student-timetable-picker-button')),
+      );
+      final settings = tester.getRect(
+        find.byKey(const ValueKey('student-settings-button')),
+      );
 
-    expect(selector.left, lessThan(toolbar.center.dx));
-    expect(selector.left, lessThanOrEqualTo(toolbar.left + 32));
-    expect(settings.right, greaterThan(toolbar.center.dx));
-    expect(selector.center.dy, closeTo(settings.center.dy, 1));
-    expect(tester.takeException(), isNull);
-  });
+      expect(selector.left, lessThan(toolbar.center.dx));
+      expect(selector.left, lessThanOrEqualTo(toolbar.left + 32));
+      expect(settings.right, greaterThan(toolbar.center.dx));
+      expect(selector.center.dy, closeTo(settings.center.dy, 1));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('large text does not change the initial week view', (
     tester,
