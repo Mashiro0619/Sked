@@ -101,6 +101,13 @@ class _FailingSchoolImportApi extends SchoolImportApi {
   }
 }
 
+class _ThrowingHttpConsentStore extends SchoolImportHttpConsentStore {
+  @override
+  bool requiresConfirmation(String baseUrl) {
+    throw StateError('synthetic consent store failure');
+  }
+}
+
 class _CapturingBlockingSchoolImportApi extends SchoolImportApi {
   final started = Completer<void>();
   final result = Completer<List<String>>();
@@ -322,23 +329,32 @@ Finder _modelTextField() {
   );
 }
 
+Finder _fetchModelsButton() {
+  return find.widgetWithText(FilledButton, 'Fetch model list');
+}
+
+Finder _modelDialog() {
+  return find.byKey(const ValueKey('school-import-model-list-dialog'));
+}
+
 void main() {
   testWidgets('fetch model list ignores rapid duplicate taps', (tester) async {
     final provider = await _createProvider();
     final api = _BlockingSchoolImportApi();
     await _pumpPage(tester, provider, api);
 
-    final fetchButton = find.text('Fetch model list');
+    final fetchButton = _fetchModelsButton();
     expect(fetchButton, findsOneWidget);
     await tester.ensureVisible(fetchButton);
     await tester.pumpAndSettle();
 
     await tester.tap(fetchButton);
     await tester.tap(fetchButton, warnIfMissed: false);
+    await tester.pump();
 
     expect(api.callCount, 1);
 
-    await tester.pump();
+    expect(_modelDialog(), findsOneWidget);
     expect(find.text('Fetching models...'), findsOneWidget);
 
     api.completer.complete(['model-a']);
@@ -346,6 +362,32 @@ void main() {
 
     expect(api.callCount, 1);
     expect(find.text('model-a'), findsOneWidget);
+    await tester.tap(find.text('model-a'));
+    await tester.pumpAndSettle();
+    expect(_modelDialog(), findsNothing);
+    expect(
+      tester.widget<TextField>(_modelTextField()).controller?.text,
+      'model-a',
+    );
+  });
+
+  testWidgets('model list dialog stays bounded on a narrow surface', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    final provider = await _createProvider();
+    final api = _ImmediateSchoolImportApi();
+    await _pumpPage(tester, provider, api);
+
+    await tester.tap(_fetchModelsButton());
+    await tester.pumpAndSettle();
+
+    expect(_modelDialog(), findsOneWidget);
+    expect(find.text('model-1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('HTTP base URL allows model fetching', (tester) async {
@@ -365,7 +407,7 @@ void main() {
       find.text('Base URL must be an HTTP or HTTPS URL with a host.'),
       findsNothing,
     );
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pump();
 
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
@@ -379,6 +421,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('local-model'), findsOneWidget);
+    await tester.tap(find.text('local-model'));
+    await tester.pumpAndSettle();
+    expect(_modelDialog(), findsNothing);
+    expect(
+      tester.widget<TextField>(_modelTextField()).controller?.text,
+      'local-model',
+    );
   });
 
   testWidgets('HTTP confirmation and request use one settings snapshot', (
@@ -395,7 +444,7 @@ void main() {
     await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pump();
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
 
@@ -424,7 +473,7 @@ void main() {
     final api = _CapturingBlockingSchoolImportApi();
     await _pumpPage(tester, provider, api);
 
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pump();
     await api.started.future;
 
@@ -447,12 +496,13 @@ void main() {
     await _pumpPage(tester, provider, api);
 
     await tester.enterText(_modelTextField(), 'draft-model');
-    final fetchButton = find.widgetWithText(FilledButton, 'Fetch model list');
+    final fetchButton = _fetchModelsButton();
     await tester.ensureVisible(fetchButton);
     await tester.tap(fetchButton);
     await tester.pumpAndSettle();
 
     expect(api.callCount, 1);
+    expect(_modelDialog(), findsOneWidget);
     expect(
       find.text('Unable to fetch models. Check the endpoint and try again.'),
       findsOneWidget,
@@ -461,13 +511,37 @@ void main() {
       tester.widget<TextField>(_modelTextField()).controller?.text,
       'draft-model',
     );
-    expect(tester.widget<FilledButton>(fetchButton).onPressed, isNotNull);
+    expect(find.text('Retry'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(fetchButton);
+    await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
 
     expect(api.callCount, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unexpected setup failures show a user-facing error', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    final api = _ImmediateSchoolImportApi();
+    await _pumpPage(
+      tester,
+      provider,
+      api,
+      httpConsentStore: _ThrowingHttpConsentStore(),
+    );
+
+    await tester.ensureVisible(_fetchModelsButton());
+    await tester.tap(_fetchModelsButton());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Unable to fetch models. Check the endpoint and try again.'),
+      findsOneWidget,
+    );
+    expect(api.callCount, 0);
     expect(tester.takeException(), isNull);
   });
 
@@ -481,7 +555,7 @@ void main() {
 
     await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v1');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(api.callCount, 0);
@@ -490,25 +564,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.callCount, 0);
 
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
     expect(api.callCount, 1);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pumpAndSettle();
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsNothing);
     expect(api.callCount, 2);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
 
     await tester.enterText(_baseUrlTextField(), 'http://api.example.com/v2');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
     expect(api.callCount, 2);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('non-web base URL shows an error and disables model fetching', (
@@ -727,8 +807,13 @@ void main() {
 
     expect(provider.customSchoolImportApiKey, 'sk-new');
     expect(secrets.writes, ['sk-new']);
-    await tester.tap(find.text('Fetch model list'));
+    await tester.tap(_fetchModelsButton());
+    await tester.pump();
     expect(api.callCount, 1);
+    api.completer.complete(const <String>[]);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('API key save failures are shown to the user', (tester) async {

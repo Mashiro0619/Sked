@@ -2292,6 +2292,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('wide timetable toolbar anchors the selector to the leading edge', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1600, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final toolbar = tester.getRect(
+      find.byKey(const ValueKey('student-workspace-toolbar')),
+    );
+    final selector = tester.getRect(
+      find.byKey(const ValueKey('student-timetable-picker-button')),
+    );
+    final settings = tester.getRect(
+      find.byKey(const ValueKey('student-settings-button')),
+    );
+
+    expect(selector.left, lessThan(toolbar.center.dx));
+    expect(selector.left, lessThanOrEqualTo(toolbar.left + 32));
+    expect(settings.right, greaterThan(toolbar.center.dx));
+    expect(selector.center.dy, closeTo(settings.center.dy, 1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('large text does not change the initial week view', (
     tester,
   ) async {
@@ -3823,4 +3849,207 @@ void main() {
 
     expect(find.byType(SchoolSitesPage, skipOffstage: false), findsOneWidget);
   });
+
+  testWidgets(
+    'student toolbar follows custom order and keeps settings reachable',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final data = _buildPopulatedStudentData().copyWith(
+        studentMode: _buildPopulatedStudentData().studentMode.copyWith(
+          toolbarNavigationOrder: const [
+            'view',
+            'settings',
+            'week',
+            'timetable',
+          ],
+        ),
+      );
+      final provider = TimetableProvider(
+        storage: _MemoryTimetableStorage(data),
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      addTearDown(provider.dispose);
+      await _pumpHomeScreenWithProvider(tester, provider);
+
+      final view = tester.getRect(
+        find.byKey(const ValueKey('student-view-toggle-button')),
+      );
+      final settings = tester.getRect(
+        find.byKey(const ValueKey('student-settings-button')),
+      );
+      final week = tester.getRect(
+        find.byKey(const ValueKey('student-week-picker-button')),
+      );
+      final timetable = tester.getRect(
+        find.byKey(const ValueKey('student-timetable-picker-button')),
+      );
+      expect(view.left, lessThan(settings.left));
+      expect(settings.left, lessThan(week.left));
+      expect(week.left, lessThan(timetable.left));
+      expect(
+        find.byKey(const ValueKey('student-settings-button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('student-toolbar-more-button')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('student timetable selector stays leading on wide screens', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    final selector = tester.getRect(
+      find.byKey(const ValueKey('student-timetable-picker-button')),
+    );
+    final week = tester.getRect(
+      find.byKey(const ValueKey('student-week-picker-button')),
+    );
+    final view = tester.getRect(
+      find.byKey(const ValueKey('student-view-toggle-button')),
+    );
+    final settings = tester.getRect(
+      find.byKey(const ValueKey('student-settings-button')),
+    );
+
+    expect(selector.left, lessThan(week.left));
+    expect(selector.right, lessThan(week.left));
+    expect(week.left, lessThan(view.left));
+    expect(view.left, lessThan(settings.left));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('student toolbar removes hidden items or exposes them in More', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildPopulatedStudentData();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(
+        base.copyWith(
+          studentMode: base.studentMode.copyWith(
+            hiddenToolbarNavigationIds: const ['week', 'view', 'timetable'],
+          ),
+        ),
+      ),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+
+    expect(
+      find.byKey(const ValueKey('student-week-picker-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('student-toolbar-more-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('student-settings-button')),
+      findsOneWidget,
+    );
+
+    await provider.updateStudentToolbarHiddenItemsBehavior(
+      toolbarHiddenItemsBehaviorMore,
+    );
+    expect(
+      provider.studentToolbarHiddenItemsBehavior,
+      toolbarHiddenItemsBehaviorMore,
+    );
+    expect(provider.studentHiddenToolbarNavigationIds, [
+      'week',
+      'view',
+      'timetable',
+    ]);
+    await tester.pumpAndSettle();
+    final more = find.byKey(const ValueKey('student-toolbar-more-button'));
+    expect(more, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('student-week-picker-button')),
+      findsNothing,
+    );
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    expect(find.text('Week ${provider.selectedWeek}').last, findsOneWidget);
+    expect(find.text('View switcher').last, findsOneWidget);
+    expect(find.text('Timetable').last, findsOneWidget);
+
+    await tester.tap(find.text('View switcher').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Week ${provider.selectedWeek}').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Jump to week'), findsOneWidget);
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Timetable').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Switch timetables'), findsOneWidget);
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.text('Week ${provider.selectedWeek}'), findsNothing);
+
+    await provider.updateStudentToolbarNavigationVisibility('more', false);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('student-toolbar-more-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('student-week-picker-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('student-settings-button')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'student toolbar scrolls horizontally when all actions cannot fit',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(200, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      await _pumpHomeScreenWithProvider(tester, provider);
+
+      final toolbar = find.byKey(const ValueKey('student-workspace-toolbar'));
+      expect(
+        find.descendant(
+          of: toolbar,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

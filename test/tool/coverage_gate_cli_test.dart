@@ -256,7 +256,6 @@ const _coverageUnavailableSourcePaths = <String>[
   'lib/services/app_storage_layout.dart',
   'lib/services/app_storage_layout_stub.dart',
   'lib/theme/app_motion.dart',
-  'lib/utils/constants.dart',
   'lib/widgets/app_layout_tokens.dart',
   'lib/services/app_data_clear_service.dart',
   'lib/services/app_data_clear_service_stub.dart',

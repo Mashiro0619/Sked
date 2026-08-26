@@ -34,6 +34,8 @@
   },
   "editTimetable": "時間割を編集",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "解析結果を編集",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "新しい時間割",
   "@createTimetable": {},
   "jumpToWeek": "週へ移動",

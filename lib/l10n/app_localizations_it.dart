@@ -40,6 +40,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get editTimetable => 'Modifica orario';
 
   @override
+  String get schoolImportResultEditorTitle =>
+      'Modifica il risultato analizzato';
+
+  @override
   String get createTimetable => 'Nuovo orario';
 
   @override
@@ -2160,6 +2164,39 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get generalToolbarSection => 'Toolbar layout';
+
+  @override
+  String get toolbarNavigationSection => 'Toolbar navigation';
+
+  @override
+  String get toolbarNavigationHiddenBehavior => 'Hidden items';
+
+  @override
+  String get toolbarNavigationRemove => 'Hide completely';
+
+  @override
+  String get toolbarNavigationMore => 'Move into More';
+
+  @override
+  String get toolbarNavigationReorder => 'Reorder toolbar items';
+
+  @override
+  String get toolbarNavigationVisibility => 'Show toolbar item';
+
+  @override
+  String get toolbarNavigationTimetable => 'Timetable selector';
+
+  @override
+  String get toolbarNavigationWeek => 'Week selector';
+
+  @override
+  String get toolbarNavigationView => 'View switcher';
+
+  @override
+  String get toolbarNavigationCategory => 'Category selector';
+
+  @override
+  String get toolbarNavigationDate => 'Date selector';
 
   @override
   String get generalToolbarWidthPolicy => 'Toolbar space allocation';

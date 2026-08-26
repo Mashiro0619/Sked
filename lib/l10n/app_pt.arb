@@ -34,6 +34,8 @@
   },
   "editTimetable": "Editar horário",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Editar resultado analisado",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Novo horário",
   "@createTimetable": {},
   "jumpToWeek": "Ir para a semana",

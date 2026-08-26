@@ -34,6 +34,8 @@
   },
   "editTimetable": "Redigera tidtabell",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Ny tidtabell",
   "@createTimetable": {},
   "jumpToWeek": "Hoppa till veckan",

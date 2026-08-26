@@ -18,6 +18,15 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   bool get enableLongPressAddCourse =>
       _appData.studentMode.enableLongPressAddCourse;
 
+  List<String> get studentToolbarNavigationOrder =>
+      _appData.studentMode.toolbarNavigationOrder;
+
+  List<String> get studentHiddenToolbarNavigationIds =>
+      _appData.studentMode.hiddenToolbarNavigationIds;
+
+  String get studentToolbarHiddenItemsBehavior =>
+      _appData.studentMode.toolbarHiddenItemsBehavior;
+
   Future<void> updateHideHomeWorkspaceNavigation(bool value) async {
     _appData = _settings.updateHideHomeWorkspaceNavigation(_appData, value);
     await _saveAndNotify();
@@ -63,6 +72,49 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
 
   Future<void> updateEnableLongPressAddCourse(bool value) async {
     _appData = _settings.updateEnableLongPressAddCourse(_appData, value);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateStudentToolbarNavigationOrder(List<String> order) async {
+    final next = _settings.updateStudentToolbarNavigationOrder(_appData, order);
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateStudentToolbarNavigationVisibility(
+    String id,
+    bool visible,
+  ) async {
+    final next = _settings.updateStudentToolbarNavigationVisibility(
+      _appData,
+      id,
+      visible,
+    );
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateStudentToolbarNavigationHiddenIds(
+    List<String> hiddenIds,
+  ) async {
+    final next = _settings.updateStudentToolbarNavigationHiddenIds(
+      _appData,
+      hiddenIds,
+    );
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateStudentToolbarHiddenItemsBehavior(String behavior) async {
+    final next = _settings.updateStudentToolbarHiddenItemsBehavior(
+      _appData,
+      behavior,
+    );
+    if (identical(next, _appData)) return;
+    _appData = next;
     await _saveAndNotify();
   }
 

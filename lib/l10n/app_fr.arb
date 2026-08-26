@@ -34,6 +34,8 @@
   },
   "editTimetable": "Modifier l'emploi du temps",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Modifier le résultat analysé",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Nouvel emploi du temps",
   "@createTimetable": {},
   "jumpToWeek": "Aller à la semaine",

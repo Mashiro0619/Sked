@@ -34,6 +34,8 @@
   },
   "editTimetable": "Stundenplan bearbeiten",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Analysiertes Ergebnis bearbeiten",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Neuer Stundenplan",
   "@createTimetable": {},
   "jumpToWeek": "Zu Woche springen",

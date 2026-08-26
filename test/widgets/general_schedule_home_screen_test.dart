@@ -4369,4 +4369,220 @@ void main() {
     expect(find.text('端午节'), findsOneWidget);
     expect(find.text('夏至'), findsOneWidget);
   });
+
+  testWidgets(
+    'general toolbar follows custom order and keeps settings reachable',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final base = _buildGeneralDataWithCalendars(const [
+        GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+      ], activeId: 'cal1');
+      final provider = await _createGeneralProvider(
+        base.copyWith(
+          generalMode: base.generalMode.copyWith(
+            toolbarNavigationOrder: const [
+              'view',
+              'settings',
+              'date',
+              'category',
+            ],
+          ),
+        ),
+      );
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+      final view = tester.getRect(
+        find.byKey(const ValueKey('general-view-switcher')),
+      );
+      final settings = tester.getRect(
+        find.byKey(const ValueKey('general-settings-button')),
+      );
+      final date = tester.getRect(
+        find.byKey(const ValueKey('general-date-title-button')),
+      );
+      final category = tester.getRect(
+        find.byKey(const ValueKey('general-calendar-selector')),
+      );
+      expect(view.left, lessThan(settings.left));
+      expect(settings.left, lessThan(date.left));
+      expect(date.left, lessThan(category.left));
+      expect(
+        find.byKey(const ValueKey('general-toolbar-more-button')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('general category selector stays leading on wide screens', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars(const [
+      GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(base);
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    final category = tester.getRect(
+      find.byKey(const ValueKey('general-calendar-selector')),
+    );
+    final date = tester.getRect(
+      find.byKey(const ValueKey('general-date-title-button')),
+    );
+    final view = tester.getRect(
+      find.byKey(const ValueKey('general-view-switcher')),
+    );
+    final settings = tester.getRect(
+      find.byKey(const ValueKey('general-settings-button')),
+    );
+
+    expect(category.left, lessThan(date.left));
+    expect(category.right, lessThan(date.left));
+    expect(date.left, lessThan(view.left));
+    expect(view.left, lessThan(settings.left));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('general toolbar removes hidden items or exposes them in More', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars(const [
+      GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          hiddenToolbarNavigationIds: const ['category', 'date', 'view'],
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    expect(
+      find.byKey(const ValueKey('general-calendar-selector')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('general-toolbar-more-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('general-settings-button')),
+      findsOneWidget,
+    );
+
+    await provider.updateGeneralToolbarHiddenItemsBehavior(
+      toolbarHiddenItemsBehaviorMore,
+    );
+    await tester.pumpAndSettle();
+    final more = find.byKey(const ValueKey('general-toolbar-more-button'));
+    expect(more, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('general-calendar-selector')),
+      findsNothing,
+    );
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    expect(find.text('Categories').last, findsOneWidget);
+    expect(find.text('Pick date').last, findsOneWidget);
+    expect(find.text('View switcher').last, findsOneWidget);
+
+    await tester.tap(find.text('View switcher').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('general-day-pager')), findsOneWidget);
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pick date').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    Navigator.of(tester.element(find.byType(DatePickerDialog))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Categories').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Categories').last, findsOneWidget);
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DatePickerDialog), findsNothing);
+
+    await provider.updateGeneralToolbarNavigationVisibility('more', false);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('general-toolbar-more-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('general-calendar-selector')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('general-settings-button')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('hidden view in More opens the configured view menu behavior', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildGeneralDataWithCalendars(const [
+      GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+    ], activeId: 'cal1');
+    final provider = await _createGeneralProvider(
+      base.copyWith(
+        generalMode: base.generalMode.copyWith(
+          viewSwitchBehavior: generalViewSwitchBehaviorMenu,
+          hiddenToolbarNavigationIds: const ['view'],
+          toolbarHiddenItemsBehavior: toolbarHiddenItemsBehaviorMore,
+        ),
+      ),
+    );
+    await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+    await tester.tap(find.byKey(const ValueKey('general-toolbar-more-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View switcher').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Day').last, findsOneWidget);
+    expect(find.text('Month').last, findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.text('Week').last, findsOneWidget);
+  });
+
+  testWidgets(
+    'general toolbar scrolls horizontally when all actions cannot fit',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(100, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final base = _buildGeneralDataWithCalendars(const [
+        GeneralSchedule(id: 'cal1', name: 'Calendar', events: []),
+      ], activeId: 'cal1');
+      final provider = await _createGeneralProvider(base);
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
+
+      final toolbar = find.byKey(const ValueKey('general-workspace-toolbar'));
+      expect(toolbar, findsOneWidget);
+      expect(
+        find.descendant(
+          of: toolbar,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

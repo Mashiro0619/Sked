@@ -849,6 +849,12 @@ bool _hasDefaultStudentData(StudentModeData data) {
       !data.fitWeekColumnsToWidth ||
       !data.enableWeekSwipeNavigation ||
       !data.enableLongPressAddCourse ||
+      !_isDefaultToolbarNavigationOrder(
+        data.toolbarNavigationOrder,
+        studentToolbarNavigationDefaultOrder,
+      ) ||
+      data.hiddenToolbarNavigationIds.isNotEmpty ||
+      data.toolbarHiddenItemsBehavior != toolbarHiddenItemsBehaviorRemove ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
         themeColorMode: data.themeColorMode,
@@ -949,6 +955,12 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
       !data.closeEventPopupOnOutsideTap ||
       !data.enableLongPressAddEvent ||
       data.allDayTimelineCollapsed ||
+      !_isDefaultToolbarNavigationOrder(
+        data.toolbarNavigationOrder,
+        generalToolbarNavigationDefaultOrder,
+      ) ||
+      data.hiddenToolbarNavigationIds.isNotEmpty ||
+      data.toolbarHiddenItemsBehavior != toolbarHiddenItemsBehaviorRemove ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
         themeColorMode: data.themeColorMode,
@@ -972,6 +984,18 @@ bool _hasDefaultModeTheme({
       themeColorMode == defaultThemeColorMode &&
       themeSeedColorValue == defaultThemeSeedColorValue &&
       colorfulUiColorValues.isEmpty;
+}
+
+bool _isDefaultToolbarNavigationOrder(
+  List<String> actual,
+  List<String> defaultOrder,
+) {
+  if (listEquals(actual, defaultOrder)) return true;
+  // The normalized persisted form may include the optional More destination
+  // at the end even when the user has never customized the toolbar.
+  return actual.length == defaultOrder.length + 1 &&
+      listEquals(actual.take(defaultOrder.length).toList(), defaultOrder) &&
+      actual.last == 'more';
 }
 
 class _FirstLaunchOnboardingScreen extends StatelessWidget {

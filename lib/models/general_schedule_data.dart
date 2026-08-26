@@ -265,6 +265,9 @@ class GeneralScheduleData {
     this.showAddEventFab = true,
     this.enableLongPressAddEvent = true,
     this.allDayTimelineCollapsed = false,
+    this.toolbarNavigationOrder = generalToolbarNavigationDefaultOrder,
+    this.hiddenToolbarNavigationIds = const <String>[],
+    this.toolbarHiddenItemsBehavior = toolbarHiddenItemsBehaviorRemove,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,
     this.themeSeedColorValue = defaultThemeSeedColorValue,
@@ -289,6 +292,9 @@ class GeneralScheduleData {
   final bool showAddEventFab;
   final bool enableLongPressAddEvent;
   final bool allDayTimelineCollapsed;
+  final List<String> toolbarNavigationOrder;
+  final List<String> hiddenToolbarNavigationIds;
+  final String toolbarHiddenItemsBehavior;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -343,6 +349,18 @@ class GeneralScheduleData {
     'showAddEventFab': showAddEventFab,
     'enableLongPressAddEvent': enableLongPressAddEvent,
     'allDayTimelineCollapsed': allDayTimelineCollapsed,
+    'toolbarNavigationOrder': normalizeToolbarNavigationOrder(
+      toolbarNavigationOrder,
+      knownIds: generalToolbarNavigationKnownIds,
+      defaultOrder: generalToolbarNavigationDefaultOrder,
+    ),
+    'hiddenToolbarNavigationIds': normalizeToolbarHiddenNavigationIds(
+      hiddenToolbarNavigationIds,
+      knownIds: generalToolbarNavigationKnownIds,
+    ),
+    'toolbarHiddenItemsBehavior': normalizeToolbarHiddenItemsBehavior(
+      toolbarHiddenItemsBehavior,
+    ),
     'themeMode': normalizeThemeMode(themeMode),
     'themeColorMode': normalizeThemeColorMode(themeColorMode),
     'themeSeedColorValue': themeSeedColorValue,
@@ -369,6 +387,21 @@ class GeneralScheduleData {
     final enableLongPressAddEvent =
         _boolValue(json['enableLongPressAddEvent']) ?? true;
     final allDayTimelineCollapsed = _decodeGeneralAllDayTimelineCollapsed(json);
+    final toolbarNavigationOrder = decodeToolbarNavigationStringList(
+      json,
+      'toolbarNavigationOrder',
+      knownIds: generalToolbarNavigationKnownIds,
+      defaultOrder: generalToolbarNavigationDefaultOrder,
+    );
+    final hiddenToolbarNavigationIds = decodeToolbarHiddenNavigationStringList(
+      json,
+      'hiddenToolbarNavigationIds',
+      knownIds: generalToolbarNavigationKnownIds,
+    );
+    final toolbarHiddenItemsBehavior = decodeToolbarHiddenItemsBehavior(
+      json,
+      'toolbarHiddenItemsBehavior',
+    );
     if ((schemaVersion ?? 0) < 2 && !_hasLegacySchedulePayload(json)) {
       return GeneralScheduleData.createDefault().copyWith(
         viewSwitchBehavior: viewSwitchBehavior,
@@ -377,6 +410,9 @@ class GeneralScheduleData {
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
         allDayTimelineCollapsed: allDayTimelineCollapsed,
+        toolbarNavigationOrder: toolbarNavigationOrder,
+        hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
+        toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
         timeGridHourHeight: _normalizeTimeGridHourHeight(
           _intValue(json['timeGridHourHeight']),
         ),
@@ -431,6 +467,9 @@ class GeneralScheduleData {
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
       allDayTimelineCollapsed: allDayTimelineCollapsed,
+      toolbarNavigationOrder: toolbarNavigationOrder,
+      hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
+      toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
       themeMode: normalizeThemeMode(
         _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
@@ -476,6 +515,9 @@ class GeneralScheduleData {
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
     bool? allDayTimelineCollapsed,
+    List<String>? toolbarNavigationOrder,
+    List<String>? hiddenToolbarNavigationIds,
+    String? toolbarHiddenItemsBehavior,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -511,6 +553,18 @@ class GeneralScheduleData {
           enableLongPressAddEvent ?? this.enableLongPressAddEvent,
       allDayTimelineCollapsed:
           allDayTimelineCollapsed ?? this.allDayTimelineCollapsed,
+      toolbarNavigationOrder: normalizeToolbarNavigationOrder(
+        toolbarNavigationOrder ?? this.toolbarNavigationOrder,
+        knownIds: generalToolbarNavigationKnownIds,
+        defaultOrder: generalToolbarNavigationDefaultOrder,
+      ),
+      hiddenToolbarNavigationIds: normalizeToolbarHiddenNavigationIds(
+        hiddenToolbarNavigationIds ?? this.hiddenToolbarNavigationIds,
+        knownIds: generalToolbarNavigationKnownIds,
+      ),
+      toolbarHiddenItemsBehavior: normalizeToolbarHiddenItemsBehavior(
+        toolbarHiddenItemsBehavior ?? this.toolbarHiddenItemsBehavior,
+      ),
       themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
       themeColorMode: normalizeThemeColorMode(
         themeColorMode ?? this.themeColorMode,
@@ -655,6 +709,18 @@ class GeneralScheduleData {
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
       allDayTimelineCollapsed: allDayTimelineCollapsed,
+      toolbarNavigationOrder: normalizeToolbarNavigationOrder(
+        toolbarNavigationOrder,
+        knownIds: generalToolbarNavigationKnownIds,
+        defaultOrder: generalToolbarNavigationDefaultOrder,
+      ),
+      hiddenToolbarNavigationIds: normalizeToolbarHiddenNavigationIds(
+        hiddenToolbarNavigationIds,
+        knownIds: generalToolbarNavigationKnownIds,
+      ),
+      toolbarHiddenItemsBehavior: normalizeToolbarHiddenItemsBehavior(
+        toolbarHiddenItemsBehavior,
+      ),
       themeMode: normalizeThemeMode(themeMode),
       themeColorMode: normalizeThemeColorMode(themeColorMode),
       themeSeedColorValue: themeSeedColorValue,

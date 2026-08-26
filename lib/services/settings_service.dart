@@ -65,11 +65,86 @@ class SettingsService {
     );
   }
 
+  AppData updateStudentToolbarNavigationOrder(
+    AppData data,
+    List<String> order,
+  ) {
+    final normalized = normalizeToolbarNavigationOrder(
+      order,
+      knownIds: studentToolbarNavigationKnownIds,
+      defaultOrder: studentToolbarNavigationDefaultOrder,
+    );
+    if (_sameStrings(data.studentMode.toolbarNavigationOrder, normalized)) {
+      return data;
+    }
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(
+        toolbarNavigationOrder: normalized,
+      ),
+    );
+  }
+
+  AppData updateStudentToolbarNavigationVisibility(
+    AppData data,
+    String id,
+    bool visible,
+  ) {
+    final current = data.studentMode.hiddenToolbarNavigationIds;
+    final hidden = List<String>.from(current);
+    if (id == 'settings') return data;
+    if (visible) {
+      hidden.remove(id);
+    } else if (!hidden.contains(id) &&
+        studentToolbarNavigationKnownIds.contains(id)) {
+      hidden.add(id);
+    }
+    return updateStudentToolbarNavigationHiddenIds(data, hidden);
+  }
+
+  AppData updateStudentToolbarNavigationHiddenIds(
+    AppData data,
+    List<String> hiddenIds,
+  ) {
+    final normalized = normalizeToolbarHiddenNavigationIds(
+      hiddenIds,
+      knownIds: studentToolbarNavigationKnownIds,
+    );
+    if (_sameStrings(data.studentMode.hiddenToolbarNavigationIds, normalized)) {
+      return data;
+    }
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(
+        hiddenToolbarNavigationIds: normalized,
+      ),
+    );
+  }
+
+  AppData updateStudentToolbarHiddenItemsBehavior(
+    AppData data,
+    String behavior,
+  ) {
+    final normalized = normalizeToolbarHiddenItemsBehavior(behavior);
+    if (data.studentMode.toolbarHiddenItemsBehavior == normalized) return data;
+    return data.copyWith(
+      studentMode: data.studentMode.copyWith(
+        toolbarHiddenItemsBehavior: normalized,
+      ),
+    );
+  }
+
   AppData updateFitDaySelectorToWidth(AppData data, bool value) {
     if (data.studentMode.fitDaySelectorToWidth == value) return data;
     return data.copyWith(
       studentMode: data.studentMode.copyWith(fitDaySelectorToWidth: value),
     );
+  }
+
+  bool _sameStrings(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
   }
 
   AppData updateFitWeekColumnsToWidth(AppData data, bool value) {

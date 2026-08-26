@@ -34,6 +34,8 @@
   },
   "editTimetable": "Chỉnh sửa lịch trình",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Thời gian mới",
   "@createTimetable": {},
   "jumpToWeek": "Nhảy đến tuần",

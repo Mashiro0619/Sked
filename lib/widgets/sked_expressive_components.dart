@@ -307,7 +307,13 @@ class SkedWorkspaceToolbar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 520;
-        final titleBlock = Flexible(
+        // Toolbars own the full width of their surface.  A loose Flexible
+        // lets a title slot shrink to its intrinsic width when there are no
+        // sibling actions, which leaves dynamically sized navigation rows
+        // floating away from the trailing edge (most visible when the global
+        // workspace navigation is hidden).  Keep the slot expanded so its
+        // caller can align controls against the actual toolbar bounds.
+        final titleBlock = Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

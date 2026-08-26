@@ -8,6 +8,7 @@ import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../services/school_import_http_consent.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
+import '../widgets/expressive_dialog.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 
@@ -56,8 +57,6 @@ class _SchoolImportParserSettingsPageState
   _ParserTextSettingsDraft? _pendingTextSettingsValue;
   int _textSettingsSaveToken = 0;
   String _promptStorageValue = '';
-  List<String> _availableModels = const [];
-  _ModelFetchSettings? _availableModelsSettings;
 
   static const _apiKeySaveDelay = Duration(milliseconds: 500);
   static const _textSettingsSaveDelay = Duration(milliseconds: 500);
@@ -123,14 +122,6 @@ class _SchoolImportParserSettingsPageState
         final baseUrl = _baseUrlController.text.trim();
         final apiKey = _apiKeyController.text.trim();
         final hasValidBaseUrl = isValidCustomOpenAiBaseUrl(baseUrl);
-        final currentModelFetchSettings = _ModelFetchSettings(
-          baseUrl: baseUrl,
-          apiKey: apiKey,
-        );
-        final availableModels =
-            _availableModelsSettings == currentModelFetchSettings
-            ? _availableModels
-            : const <String>[];
         return PopScope<void>(
           canPop: _allowPop,
           onPopInvokedWithResult: (didPop, _) {
@@ -175,6 +166,13 @@ class _SchoolImportParserSettingsPageState
                               errorText: baseUrl.isNotEmpty && !hasValidBaseUrl
                                   ? l10n.schoolImportParserBaseUrlInvalid
                                   : null,
+                              // Keep the full localized validation message
+                              // visible at narrow widths and large text sizes.
+                              errorMaxLines: 8,
+                              errorStyle: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
                             ),
                             keyboardType: TextInputType.url,
                             onChanged: (_) =>
@@ -228,47 +226,9 @@ class _SchoolImportParserSettingsPageState
                                     apiKey.isEmpty
                                 ? null
                                 : _fetchModels,
-                            icon: _isFetchingModels
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.refresh_outlined),
-                            label: Text(
-                              _isFetchingModels
-                                  ? l10n.schoolImportParserFetchingModels
-                                  : l10n.schoolImportParserFetchModels,
-                            ),
+                            icon: const Icon(Icons.refresh_outlined),
+                            label: Text(l10n.schoolImportParserFetchModels),
                           ),
-                          if (availableModels.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final model in availableModels)
-                                  ChoiceChip(
-                                    label: Text(model),
-                                    selected:
-                                        _modelController.text.trim() == model,
-                                    onSelected: (_) {
-                                      _modelController.text = model;
-                                      _modelController.selection =
-                                          TextSelection.collapsed(
-                                            offset: model.length,
-                                          );
-                                      _scheduleTextSettingsUpdate(provider);
-                                      unawaited(
-                                        _flushPendingTextSettingsSave(),
-                                      );
-                                    },
-                                  ),
-                              ],
-                            ),
-                          ],
                           const SizedBox(height: 16),
                           ExpansionTile(
                             tilePadding: EdgeInsets.zero,
@@ -390,10 +350,6 @@ class _SchoolImportParserSettingsPageState
     String? promptOverride,
   }) {
     _allowPop = false;
-    if (_availableModelsSettings?.baseUrl != _baseUrlController.text.trim()) {
-      _availableModels = const [];
-      _availableModelsSettings = null;
-    }
     _pendingTextSettingsProvider = provider;
     _pendingTextSettingsValue = _ParserTextSettingsDraft(
       baseUrl: _baseUrlController.text,
@@ -500,8 +456,6 @@ class _SchoolImportParserSettingsPageState
 
   void _scheduleApiKeyUpdate(TimetableProvider provider, String value) {
     _allowPop = false;
-    _availableModels = const [];
-    _availableModelsSettings = null;
     _pendingApiKeyProvider = provider;
     _pendingApiKeyValue = value;
     _apiKeySaveDebounce?.cancel();
@@ -617,7 +571,6 @@ class _SchoolImportParserSettingsPageState
     if (_isFetchingModels) {
       return;
     }
-    final l10n = AppLocalizations.of(context);
     _ModelFetchSettings? requestSettings;
     setState(() => _isFetchingModels = true);
     try {
@@ -631,6 +584,9 @@ class _SchoolImportParserSettingsPageState
         return;
       }
       requestSettings = settings;
+      // The picker is a modal surface.  Clear any field focus first so an
+      // on-screen keyboard cannot consume the dialog's usable height.
+      FocusManager.instance.primaryFocus?.unfocus();
       final confirmed = await confirmSchoolImportHttpEndpoint(
         context: context,
         baseUrl: settings.baseUrl,
@@ -640,41 +596,69 @@ class _SchoolImportParserSettingsPageState
       if (!confirmed || !mounted || settings != _currentModelFetchSettings()) {
         return;
       }
-      final models = await widget.api.fetchCustomModels(
-        baseUrl: settings.baseUrl,
-        apiKey: settings.apiKey,
+      final selectedModel = await showExpressiveDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        waitForTransitionComplete: true,
+        builder: (_) => _ModelListDialog(
+          initialModel: _modelController.text.trim(),
+          loadModels: () => _fetchModelsForDialog(settings),
+        ),
       );
-      if (!mounted || settings != _currentModelFetchSettings()) {
-        return;
-      }
-      setState(() {
-        _availableModels = models;
-        _availableModelsSettings = settings;
-      });
-      _showMessage(
-        models.isEmpty
-            ? l10n.schoolImportParserNoModelsFound
-            : l10n.schoolImportParserModelsFetched(models.length),
-      );
-    } on FormatException catch (error) {
       if (!mounted ||
-          (requestSettings != null &&
-              requestSettings != _currentModelFetchSettings())) {
+          selectedModel == null ||
+          settings != _currentModelFetchSettings()) {
         return;
       }
-      _showMessage(error.message);
+      final provider = context.read<TimetableProvider>();
+      _modelController.value = TextEditingValue(
+        text: selectedModel,
+        selection: TextSelection.collapsed(offset: selectedModel.length),
+      );
+      _scheduleTextSettingsUpdate(provider);
+      await _flushPendingTextSettingsSave();
     } catch (error, stackTrace) {
       if (!mounted ||
           (requestSettings != null &&
               requestSettings != _currentModelFetchSettings())) {
         return;
       }
-      debugPrint('Fetching custom parser models failed: $error\n$stackTrace');
-      _showMessage(l10n.schoolImportParserFetchModelsFailed);
+      debugPrint(
+        'Opening custom parser model dialog failed: $error\n$stackTrace',
+      );
+      final l10n = AppLocalizations.of(context);
+      final message =
+          error is FormatException && error.message.trim().isNotEmpty
+          ? error.message
+          : l10n.schoolImportParserFetchModelsFailed;
+      _showMessage(message);
     } finally {
       if (mounted) {
         setState(() => _isFetchingModels = false);
       }
+    }
+  }
+
+  Future<List<String>> _fetchModelsForDialog(
+    _ModelFetchSettings settings,
+  ) async {
+    if (!mounted || settings != _currentModelFetchSettings()) {
+      throw const _StaleModelFetchException();
+    }
+    try {
+      final models = await widget.api.fetchCustomModels(
+        baseUrl: settings.baseUrl,
+        apiKey: settings.apiKey,
+      );
+      if (!mounted || settings != _currentModelFetchSettings()) {
+        throw const _StaleModelFetchException();
+      }
+      return models;
+    } catch (error) {
+      if (!mounted || settings != _currentModelFetchSettings()) {
+        throw const _StaleModelFetchException();
+      }
+      rethrow;
     }
   }
 
@@ -721,4 +705,231 @@ class _ModelFetchSettings {
 
   @override
   int get hashCode => Object.hash(baseUrl, apiKey);
+}
+
+class _StaleModelFetchException implements Exception {
+  const _StaleModelFetchException();
+}
+
+class _ModelListDialog extends StatefulWidget {
+  const _ModelListDialog({
+    required this.initialModel,
+    required this.loadModels,
+  });
+
+  final String initialModel;
+  final Future<List<String>> Function() loadModels;
+
+  @override
+  State<_ModelListDialog> createState() => _ModelListDialogState();
+}
+
+class _ModelListDialogState extends State<_ModelListDialog> {
+  bool _isLoading = true;
+  bool _requestInFlight = false;
+  String? _errorMessage;
+  List<String> _models = const <String>[];
+  String? _selectedModel;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialModel = widget.initialModel.trim();
+    _selectedModel = initialModel.isEmpty ? null : initialModel;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_loadModels());
+      }
+    });
+  }
+
+  Future<void> _loadModels() async {
+    if (_requestInFlight) {
+      return;
+    }
+    _requestInFlight = true;
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+    try {
+      final models = await widget.loadModels();
+      if (!mounted) {
+        return;
+      }
+      final selected = _selectedModel;
+      setState(() {
+        _models = models;
+        _selectedModel = selected != null && models.contains(selected)
+            ? selected
+            : null;
+        _isLoading = false;
+      });
+    } on _StaleModelFetchException {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } on FormatException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = error.message.trim().isEmpty
+            ? AppLocalizations.of(context).schoolImportParserFetchModelsFailed
+            : error.message;
+        _isLoading = false;
+      });
+    } catch (error, stackTrace) {
+      if (!mounted) {
+        return;
+      }
+      debugPrint('Fetching custom parser models failed: $error\n$stackTrace');
+      setState(() {
+        _errorMessage = AppLocalizations.of(context)
+            .schoolImportParserFetchModelsFailed;
+        _isLoading = false;
+      });
+    } finally {
+      _requestInFlight = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    // Keep the list inside the safe viewport.  A fixed height works on a
+    // desktop window, but can push the actions below the keyboard on a phone
+    // or a short landscape window.
+    final availableHeight =
+        mediaQuery.size.height -
+        mediaQuery.viewPadding.vertical -
+        mediaQuery.viewInsets.vertical -
+        96;
+    final listMaxHeight = (availableHeight * 0.58)
+        .clamp(160.0, 420.0)
+        .toDouble();
+    final contentWidth = (mediaQuery.size.width - 80)
+        .clamp(200.0, 480.0)
+        .toDouble();
+    final contentHeight = _isLoading
+        ? 120.0
+        : _errorMessage != null
+        ? 180.0
+        : _models.isEmpty
+        ? 96.0
+        : listMaxHeight;
+
+    return PopScope<void>(
+      canPop: !_isLoading,
+      child: AlertDialog(
+        key: const ValueKey('school-import-model-list-dialog'),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        title: Text(l10n.schoolImportParserFetchModels),
+        content: SizedBox(
+          width: contentWidth,
+          height: contentHeight,
+          child: _buildContent(context, l10n),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, AppLocalizations l10n) {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.schoolImportParserFetchingModels),
+          ],
+        ),
+      );
+    }
+
+    final errorMessage = _errorMessage;
+    if (errorMessage != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: SingleChildScrollView(child: Text(errorMessage))),
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              onPressed: _requestInFlight ? null : _loadModels,
+              icon: const Icon(Icons.refresh_outlined),
+              label: Text(l10n.dataRecoveryRetryAction),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_models.isEmpty) {
+      return Center(child: Text(l10n.schoolImportParserNoModelsFound));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.schoolImportParserModelsFetched(_models.length),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Scrollbar(
+            child: RadioGroup<String>(
+              groupValue: _selectedModel,
+              onChanged: _selectModel,
+              child: ListView.separated(
+                itemCount: _models.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 4),
+                itemBuilder: (context, index) {
+                  final model = _models[index];
+                  return RadioListTile<String>(
+                    value: model,
+                    // Treat tapping the already selected row as selecting it
+                    // again; the picker closes on every model choice.
+                    toggleable: true,
+                    selected: _selectedModel == model,
+                    title: Text(model),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _selectModel(String? value) {
+    final selected = value ?? _selectedModel;
+    if (selected == null || !mounted || !_models.contains(selected)) {
+      return;
+    }
+    // Model selection is the only commit action in this picker.  Closing
+    // immediately mirrors the old inline chips and leaves the editor's Model
+    // field as the single source of truth once the parent saves the choice.
+    Navigator.of(context).pop(selected);
+  }
 }

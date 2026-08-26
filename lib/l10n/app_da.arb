@@ -34,6 +34,8 @@
   },
   "editTimetable": "Rediger tidsplan",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Ny tidsplan",
   "@createTimetable": {},
   "jumpToWeek": "Hop til ugen",

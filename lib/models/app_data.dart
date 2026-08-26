@@ -961,6 +961,10 @@ void _validateStorageStudentSettings(
     'conflictDisplayCourseIds',
     errorMessage: 'Stored timetable conflict selections are invalid.',
   );
+  _validateStorageToolbarNavigationSettings(
+    studentMode,
+    validateCurrentSemantics: validateCurrentSemantics,
+  );
   for (final key in const [
     'closeCoursePopupOnOutsideTap',
     'preserveTimetableGaps',
@@ -1106,6 +1110,10 @@ void _validateStorageGeneralSettings(
       errorMessage: 'Stored general schedule settings are invalid.',
     );
   }
+  _validateStorageToolbarNavigationSettings(
+    generalMode,
+    validateCurrentSemantics: validateCurrentSemantics,
+  );
   for (final key in const [
     'showWeekends',
     'showLunarCalendar',
@@ -1209,6 +1217,37 @@ void _validateStorageGeneralSettings(
         );
       }
     }
+  }
+}
+
+void _validateStorageToolbarNavigationSettings(
+  Map<String, dynamic> mode, {
+  required bool validateCurrentSemantics,
+}) {
+  const errorMessage = 'Stored toolbar navigation settings are invalid.';
+  _validateStorageStringListField(
+    mode,
+    'toolbarNavigationOrder',
+    errorMessage: errorMessage,
+  );
+  _validateStorageStringListField(
+    mode,
+    'hiddenToolbarNavigationIds',
+    errorMessage: errorMessage,
+  );
+  _validateStorageStringField(
+    mode,
+    'toolbarHiddenItemsBehavior',
+    errorMessage: errorMessage,
+  );
+  if (!validateCurrentSemantics) return;
+  final behavior = mode['toolbarHiddenItemsBehavior'];
+  if (behavior != null &&
+      !const {
+        toolbarHiddenItemsBehaviorRemove,
+        toolbarHiddenItemsBehaviorMore,
+      }.contains(behavior)) {
+    throw const FormatException(errorMessage);
   }
 }
 

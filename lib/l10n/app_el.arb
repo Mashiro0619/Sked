@@ -34,6 +34,8 @@
   },
   "editTimetable": "Επεξεργασία προγράμματος",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Νέο χρονοδιάγραμμα",
   "@createTimetable": {},
   "jumpToWeek": "Μετάβαση στην εβδομάδα",

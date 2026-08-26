@@ -34,6 +34,8 @@
   },
   "editTimetable": "編輯課表",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "編輯解析結果",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "新建課表",
   "@createTimetable": {},
   "jumpToWeek": "快捷跳轉週數",

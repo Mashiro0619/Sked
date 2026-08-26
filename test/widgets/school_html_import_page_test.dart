@@ -233,6 +233,42 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
   });
 
+  testWidgets('unconfigured parser offers a direct settings shortcut', (
+    tester,
+  ) async {
+    final provider = await _createProvider(baseUrl: '');
+    await _pumpSchoolHtmlImportPage(tester, provider);
+
+    final openSettingsButton = find.widgetWithText(
+      FilledButton,
+      'Open settings',
+    );
+    expect(openSettingsButton, findsOneWidget);
+
+    await tester.tap(openSettingsButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
+  });
+
+  testWidgets('import actions stay usable in a narrow viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider();
+    await _pumpSchoolHtmlImportPage(
+      tester,
+      provider,
+      initialContent: 'Monday period 1 Mathematics',
+    );
+
+    expect(find.text('Prepare content'), findsOneWidget);
+    expect(find.text('Parse and import'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('return to webpage button cannot pop the parent route twice', (
     tester,
   ) async {

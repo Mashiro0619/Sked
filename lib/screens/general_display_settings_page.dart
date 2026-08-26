@@ -45,7 +45,13 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
-                      firstColumnSectionIndices: const {0, 3},
+                      scrollViewKey: const ValueKey(
+                        'general-display-settings-list',
+                      ),
+                      // Keep startup, toolbar, schedule display, and toolbar
+                      // navigation together; time-grid, popup, and quick
+                      // actions form the adjacent work column on wide views.
+                      firstColumnSectionIndices: const {0, 1, 2, 5},
                       children: [
                         SettingsSectionHeader(
                           title: l10n.generalDefaultViewSection,
@@ -61,11 +67,11 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             ),
                             expandedInsets: EdgeInsets.zero,
                             dropdownMenuEntries: [
-                              DropdownMenuEntry(
+                              DropdownMenuEntry<String>(
                                 value: generalViewWeek,
                                 label: l10n.viewWeek,
                               ),
-                              DropdownMenuEntry(
+                              DropdownMenuEntry<String>(
                                 value: generalViewDay,
                                 label: l10n.viewDay,
                               ),
@@ -101,11 +107,11 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             leadingIcon: const Icon(Icons.swap_horiz_outlined),
                             expandedInsets: EdgeInsets.zero,
                             dropdownMenuEntries: [
-                              DropdownMenuEntry(
+                              DropdownMenuEntry<String>(
                                 value: generalViewSwitchBehaviorCycle,
                                 label: l10n.generalViewSwitchCycle,
                               ),
-                              DropdownMenuEntry(
+                              DropdownMenuEntry<String>(
                                 value: generalViewSwitchBehaviorMenu,
                                 label: l10n.generalViewSwitchMenu,
                               ),
@@ -321,6 +327,66 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             ),
                           ),
                         ),
+                        SettingsSectionHeader(
+                          title: l10n.toolbarNavigationSection,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: SkedDropdownMenu<Object>(
+                            key: const ValueKey(
+                              'general-toolbar-hidden-behavior',
+                            ),
+                            initialSelection:
+                                provider.generalToolbarHiddenItemsBehavior,
+                            label: Text(l10n.toolbarNavigationHiddenBehavior),
+                            leadingIcon: const Icon(Icons.more_horiz_outlined),
+                            expandedInsets: EdgeInsets.zero,
+                            dropdownMenuEntries: <DropdownMenuEntry<Object>>[
+                              DropdownMenuEntry<Object>(
+                                value: toolbarHiddenItemsBehaviorRemove,
+                                label: l10n.toolbarNavigationRemove,
+                              ),
+                              DropdownMenuEntry<Object>(
+                                value: toolbarHiddenItemsBehaviorMore,
+                                label: l10n.toolbarNavigationMore,
+                              ),
+                            ],
+                            onSelected: (value) {
+                              if (value is String) {
+                                _updateSetting(
+                                  'Update general toolbar hidden items behavior',
+                                  () => provider
+                                      .updateGeneralToolbarHiddenItemsBehavior(
+                                        value,
+                                      ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        SettingsToolbarNavigationEditor(
+                          key: const ValueKey(
+                            'general-toolbar-navigation-editor',
+                          ),
+                          items: _generalToolbarItems(l10n, provider),
+                          busy: uiCommandBusy,
+                          reorderLabel: l10n.toolbarNavigationReorder,
+                          visibilityLabel: l10n.toolbarNavigationVisibility,
+                          onReorder: (order) => _updateSetting(
+                            'Update general toolbar navigation order',
+                            () => provider.updateGeneralToolbarNavigationOrder(
+                              order,
+                            ),
+                          ),
+                          onVisibilityChanged: (id, visible) => _updateSetting(
+                            'Update general toolbar navigation visibility',
+                            () => provider
+                                .updateGeneralToolbarNavigationVisibility(
+                                  id,
+                                  visible,
+                                ),
+                          ),
+                        ),
                         SettingsSectionHeader(title: l10n.quickActionsSection),
                         SettingsSwitchTile(
                           key: const ValueKey('show-add-event-fab-setting'),
@@ -364,3 +430,39 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
 }
 
 String _hourLabel(int hour) => '${hour.toString().padLeft(2, '0')}:00';
+
+List<SettingsToolbarNavigationItem> _generalToolbarItems(
+  AppLocalizations l10n,
+  TimetableProvider provider,
+) {
+  final labels = <String, String>{
+    'category': l10n.toolbarNavigationCategory,
+    'date': l10n.toolbarNavigationDate,
+    'view': l10n.toolbarNavigationView,
+    'settings': l10n.settings,
+    'more': l10n.more,
+  };
+  final icons = <String, IconData>{
+    'category': Icons.label_outline,
+    'date': Icons.calendar_today_outlined,
+    'view': Icons.view_agenda_outlined,
+    'settings': Icons.settings_outlined,
+    'more': Icons.more_horiz_outlined,
+  };
+  final hidden = provider.generalHiddenToolbarNavigationIds.toSet();
+  final order = [
+    ...provider.generalToolbarNavigationOrder,
+    if (!provider.generalToolbarNavigationOrder.contains('more')) 'more',
+  ];
+  return [
+    for (final id in order)
+      if (labels.containsKey(id))
+        SettingsToolbarNavigationItem(
+          id: id,
+          label: labels[id]!,
+          icon: icons[id]!,
+          visible: !hidden.contains(id),
+          canHide: id != 'settings',
+        ),
+  ];
+}

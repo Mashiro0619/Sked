@@ -40,6 +40,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editTimetable => '编辑课表';
 
   @override
+  String get schoolImportResultEditorTitle => '编辑解析结果';
+
+  @override
   String get createTimetable => '新建课表';
 
   @override
@@ -2048,6 +2051,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalToolbarSection => '工具栏布局';
 
   @override
+  String get toolbarNavigationSection => '工具栏导航';
+
+  @override
+  String get toolbarNavigationHiddenBehavior => '隐藏项目处理方式';
+
+  @override
+  String get toolbarNavigationRemove => '完全隐藏';
+
+  @override
+  String get toolbarNavigationMore => '收进更多菜单';
+
+  @override
+  String get toolbarNavigationReorder => '调整工具栏项目顺序';
+
+  @override
+  String get toolbarNavigationVisibility => '显示工具栏项目';
+
+  @override
+  String get toolbarNavigationTimetable => '课表选择器';
+
+  @override
+  String get toolbarNavigationWeek => '周次选择器';
+
+  @override
+  String get toolbarNavigationView => '视图切换';
+
+  @override
+  String get toolbarNavigationCategory => '分类选择器';
+
+  @override
+  String get toolbarNavigationDate => '日期选择器';
+
+  @override
   String get generalToolbarWidthPolicy => '工具栏空间分配';
 
   @override
@@ -2196,6 +2232,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get editTimetable => '編輯課表';
+
+  @override
+  String get schoolImportResultEditorTitle => '編輯解析結果';
 
   @override
   String get createTimetable => '新建課表';

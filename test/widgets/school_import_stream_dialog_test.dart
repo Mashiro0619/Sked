@@ -6,7 +6,30 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/widgets/school_import_stream_dialog.dart';
+
+const _validEditableJson = '''{
+  "name": "Sample",
+  "startDate": "2026-05-25",
+  "totalWeeks": 18,
+  "periodTimeSet": {
+    "name": "Default",
+    "periodTimes": [
+      {"index": 1, "startMinutes": 480, "endMinutes": 525}
+    ]
+  },
+  "courses": [
+    {
+      "name": "Mathematics",
+      "dayOfWeek": 1,
+      "semesterWeeks": [1],
+      "periods": [1],
+      "startMinutes": 480,
+      "endMinutes": 525
+    }
+  ]
+}''';
 
 SchoolImportResponse _buildResponse() {
   return SchoolImportResponse(
@@ -129,80 +152,137 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('stream preview is bounded while edit mode keeps full content', (
+  testWidgets(
+    'stream preview is bounded while full-screen edit keeps content',
+    (tester) async {
+      final controller = StreamController<SchoolImportStreamEvent>();
+      final fullContent = 'BEGIN-${'x' * 10000}-TAIL';
+      final results = <SchoolImportResponse?>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  unawaited(
+                    showDialog<SchoolImportResponse>(
+                      context: context,
+                      builder: (_) =>
+                          SchoolImportStreamDialog(stream: controller.stream),
+                    ).then(results.add),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      for (final chunk in [
+        fullContent.substring(0, 3500),
+        fullContent.substring(3500, 7000),
+        fullContent.substring(7000),
+      ]) {
+        controller.add(ParseDelta(chunk));
+        await tester.pump();
+        final currentPreview = tester.widget<SelectableText>(
+          find.byType(SelectableText),
+        );
+        expect(
+          currentPreview.data!.length,
+          lessThanOrEqualTo(SchoolImportStreamDialog.maxPreviewCodeUnits),
+        );
+      }
+
+      final preview = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
+      expect(preview.data, endsWith('-TAIL'));
+      expect(preview.data, isNot(contains('BEGIN-')));
+
+      controller.add(ParseDone(response: _buildResponse()));
+      await tester.pump();
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pump();
+
+      expect(find.byType(SchoolImportResultEditorPage), findsOneWidget);
+      final editor = tester.widget<TextField>(find.byType(TextField));
+      expect(editor.controller!.text, fullContent);
+
+      await tester.enterText(
+        find.byType(TextField),
+        '\u{1f600}' * (SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2 + 1),
+      );
+      expect(
+        editor.controller!.text.length,
+        SchoolImportStreamDialog.maxEditableCodeUnits,
+      );
+      expect(
+        editor.controller!.text.runes.length,
+        SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2,
+      );
+
+      await tester.enterText(find.byType(TextField), _validEditableJson);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.check));
+      await tester.pumpAndSettle();
+
+      expect(results, hasLength(1));
+      expect(results.single?.timetable.name, 'Sample');
+
+      unawaited(controller.close());
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('full-screen result editor keeps draft when validation fails', (
     tester,
   ) async {
-    final controller = StreamController<SchoolImportStreamEvent>();
-    final fullContent = 'BEGIN-${'x' * 10000}-TAIL';
-
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () {
-                unawaited(
-                  showDialog<SchoolImportResponse>(
-                    context: context,
-                    builder: (_) =>
-                        SchoolImportStreamDialog(stream: controller.stream),
-                  ),
-                );
-              },
-              child: const Text('Open'),
-            ),
-          ),
-        ),
+        home: const SchoolImportResultEditorPage(initialText: '{'),
       ),
     );
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Open'));
+    await tester.tap(find.byIcon(Icons.check));
     await tester.pump();
-    for (final chunk in [
-      fullContent.substring(0, 3500),
-      fullContent.substring(3500, 7000),
-      fullContent.substring(7000),
-    ]) {
-      controller.add(ParseDelta(chunk));
-      await tester.pump();
-      final currentPreview = tester.widget<SelectableText>(
-        find.byType(SelectableText),
-      );
-      expect(
-        currentPreview.data!.length,
-        lessThanOrEqualTo(SchoolImportStreamDialog.maxPreviewCodeUnits),
-      );
-    }
+    expect(
+      find.text('Import failed. Please check the file content.'),
+      findsOneWidget,
+    );
 
-    final preview = tester.widget<SelectableText>(find.byType(SelectableText));
-    expect(preview.data, endsWith('-TAIL'));
-    expect(preview.data, isNot(contains('BEGIN-')));
-
-    controller.add(ParseDone(response: _buildResponse()));
+    await tester.enterText(find.byType(TextField), '{}');
+    await tester.tap(find.byIcon(Icons.check));
     await tester.pump();
-    await tester.tap(find.byType(OutlinedButton));
-    await tester.pump();
-
-    final editor = tester.widget<TextField>(find.byType(TextField));
-    expect(editor.controller!.text, fullContent);
+    expect(
+      find.text('No usable timetables were found in the imported file.'),
+      findsOneWidget,
+    );
 
     await tester.enterText(
       find.byType(TextField),
-      '\u{1f600}' * (SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2 + 1),
+      '{"name":"Sample","courses":[]}',
     );
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pump();
     expect(
-      editor.controller!.text.length,
-      SchoolImportStreamDialog.maxEditableCodeUnits,
-    );
-    expect(
-      editor.controller!.text.runes.length,
-      SchoolImportStreamDialog.maxEditableCodeUnits ~/ 2,
+      find.textContaining('Import failed. Please check the file content.'),
+      findsOneWidget,
     );
 
-    unawaited(controller.close());
-    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.enterText(find.byType(TextField), '');
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pump();
+    expect(find.text('Paste JSON content first.'), findsOneWidget);
   });
 
   testWidgets(

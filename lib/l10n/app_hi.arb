@@ -34,6 +34,8 @@
   },
   "editTimetable": "टाइमटेबल संपादित करें",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "नया टाइमटेबल",
   "@createTimetable": {},
   "jumpToWeek": "सप्ताह पर जाएँ",

@@ -2,6 +2,7 @@ import '../models/general_event.dart';
 import '../models/general_event_occurrence.dart';
 import '../models/general_schedule.dart';
 import '../models/general_schedule_data.dart';
+import '../utils/constants.dart';
 import '../utils/time_utils.dart';
 import 'general_occurrence_service.dart';
 
@@ -141,6 +142,9 @@ class GeneralCalendarService {
       showAddEventFab: data.showAddEventFab,
       enableLongPressAddEvent: data.enableLongPressAddEvent,
       allDayTimelineCollapsed: data.allDayTimelineCollapsed,
+      toolbarNavigationOrder: data.toolbarNavigationOrder,
+      hiddenToolbarNavigationIds: data.hiddenToolbarNavigationIds,
+      toolbarHiddenItemsBehavior: data.toolbarHiddenItemsBehavior,
       themeMode: data.themeMode,
       themeColorMode: data.themeColorMode,
       themeSeedColorValue: data.themeSeedColorValue,
@@ -165,6 +169,9 @@ class GeneralCalendarService {
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
     bool? allDayTimelineCollapsed,
+    List<String>? toolbarNavigationOrder,
+    List<String>? hiddenToolbarNavigationIds,
+    String? toolbarHiddenItemsBehavior,
   }) {
     return data.copyWith(
       defaultView: defaultView,
@@ -181,7 +188,69 @@ class GeneralCalendarService {
       showAddEventFab: showAddEventFab,
       enableLongPressAddEvent: enableLongPressAddEvent,
       allDayTimelineCollapsed: allDayTimelineCollapsed,
+      toolbarNavigationOrder: toolbarNavigationOrder,
+      hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
+      toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
     );
+  }
+
+  GeneralScheduleData updateToolbarNavigationOrder(
+    GeneralScheduleData data,
+    List<String> order,
+  ) {
+    final normalized = normalizeToolbarNavigationOrder(
+      order,
+      knownIds: generalToolbarNavigationKnownIds,
+      defaultOrder: generalToolbarNavigationDefaultOrder,
+    );
+    if (_sameStrings(data.toolbarNavigationOrder, normalized)) return data;
+    return data.copyWith(toolbarNavigationOrder: normalized);
+  }
+
+  GeneralScheduleData updateToolbarNavigationVisibility(
+    GeneralScheduleData data,
+    String id,
+    bool visible,
+  ) {
+    if (id == 'settings') return data;
+    final hidden = List<String>.from(data.hiddenToolbarNavigationIds);
+    if (visible) {
+      hidden.remove(id);
+    } else if (!hidden.contains(id) &&
+        generalToolbarNavigationKnownIds.contains(id)) {
+      hidden.add(id);
+    }
+    if (_sameStrings(data.hiddenToolbarNavigationIds, hidden)) return data;
+    return data.copyWith(hiddenToolbarNavigationIds: hidden);
+  }
+
+  GeneralScheduleData updateToolbarNavigationHiddenIds(
+    GeneralScheduleData data,
+    List<String> hiddenIds,
+  ) {
+    final normalized = normalizeToolbarHiddenNavigationIds(
+      hiddenIds,
+      knownIds: generalToolbarNavigationKnownIds,
+    );
+    if (_sameStrings(data.hiddenToolbarNavigationIds, normalized)) return data;
+    return data.copyWith(hiddenToolbarNavigationIds: normalized);
+  }
+
+  GeneralScheduleData updateToolbarHiddenItemsBehavior(
+    GeneralScheduleData data,
+    String behavior,
+  ) {
+    final normalized = normalizeToolbarHiddenItemsBehavior(behavior);
+    if (data.toolbarHiddenItemsBehavior == normalized) return data;
+    return data.copyWith(toolbarHiddenItemsBehavior: normalized);
+  }
+
+  bool _sameStrings(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
   }
 
   GeneralScheduleData saveEvent(

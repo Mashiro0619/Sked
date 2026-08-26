@@ -4,7 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../utils/constants.dart';
 import '../providers/timetable_provider.dart';
+import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 
@@ -157,6 +159,66 @@ class _TimetableDisplaySettingsPageState
                             () => provider.updateShowTimetableGridLines(value),
                           ),
                         ),
+                        SettingsSectionHeader(
+                          title: l10n.toolbarNavigationSection,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: SkedDropdownMenu<String>(
+                            key: const ValueKey(
+                              'timetable-toolbar-hidden-behavior',
+                            ),
+                            initialSelection:
+                                provider.studentToolbarHiddenItemsBehavior,
+                            label: Text(l10n.toolbarNavigationHiddenBehavior),
+                            leadingIcon: const Icon(Icons.more_horiz_outlined),
+                            expandedInsets: EdgeInsets.zero,
+                            dropdownMenuEntries: [
+                              DropdownMenuEntry<String>(
+                                value: toolbarHiddenItemsBehaviorRemove,
+                                label: l10n.toolbarNavigationRemove,
+                              ),
+                              DropdownMenuEntry<String>(
+                                value: toolbarHiddenItemsBehaviorMore,
+                                label: l10n.toolbarNavigationMore,
+                              ),
+                            ],
+                            onSelected: (value) {
+                              if (value != null) {
+                                _updateSetting(
+                                  'Update timetable toolbar hidden items behavior',
+                                  () => provider
+                                      .updateStudentToolbarHiddenItemsBehavior(
+                                        value,
+                                      ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        SettingsToolbarNavigationEditor(
+                          key: const ValueKey(
+                            'timetable-toolbar-navigation-editor',
+                          ),
+                          items: _studentToolbarItems(l10n, provider),
+                          busy: uiCommandBusy,
+                          reorderLabel: l10n.toolbarNavigationReorder,
+                          visibilityLabel: l10n.toolbarNavigationVisibility,
+                          onReorder: (order) => _updateSetting(
+                            'Update timetable toolbar navigation order',
+                            () => provider.updateStudentToolbarNavigationOrder(
+                              order,
+                            ),
+                          ),
+                          onVisibilityChanged: (id, visible) => _updateSetting(
+                            'Update timetable toolbar navigation visibility',
+                            () => provider
+                                .updateStudentToolbarNavigationVisibility(
+                                  id,
+                                  visible,
+                                ),
+                          ),
+                        ),
                         SettingsSectionHeader(title: l10n.quickActionsSection),
                         SettingsSwitchTile(
                           key: const ValueKey('show-add-course-fab-setting'),
@@ -194,4 +256,40 @@ class _TimetableDisplaySettingsPageState
       },
     );
   }
+}
+
+List<SettingsToolbarNavigationItem> _studentToolbarItems(
+  AppLocalizations l10n,
+  TimetableProvider provider,
+) {
+  final labels = <String, String>{
+    'timetable': l10n.toolbarNavigationTimetable,
+    'week': l10n.toolbarNavigationWeek,
+    'view': l10n.toolbarNavigationView,
+    'settings': l10n.settings,
+    'more': l10n.more,
+  };
+  final icons = <String, IconData>{
+    'timetable': Icons.table_chart_outlined,
+    'week': Icons.date_range_outlined,
+    'view': Icons.view_agenda_outlined,
+    'settings': Icons.settings_outlined,
+    'more': Icons.more_horiz_outlined,
+  };
+  final hidden = provider.studentHiddenToolbarNavigationIds.toSet();
+  final order = [
+    ...provider.studentToolbarNavigationOrder,
+    if (!provider.studentToolbarNavigationOrder.contains('more')) 'more',
+  ];
+  return [
+    for (final id in order)
+      if (labels.containsKey(id))
+        SettingsToolbarNavigationItem(
+          id: id,
+          label: labels[id]!,
+          icon: icons[id]!,
+          visible: !hidden.contains(id),
+          canHide: id != 'settings',
+        ),
+  ];
 }

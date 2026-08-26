@@ -489,6 +489,61 @@ void main() {
       );
     });
 
+    test('toolbar navigation defaults and round-trip', () {
+      final defaults = GeneralScheduleData.fromJson(const {});
+      expect(defaults.toolbarNavigationOrder, [
+        'category',
+        'date',
+        'view',
+        'settings',
+      ]);
+      expect(defaults.hiddenToolbarNavigationIds, isEmpty);
+      expect(defaults.toolbarHiddenItemsBehavior, 'remove');
+
+      const data = GeneralScheduleData(
+        activeScheduleId: 'sched1',
+        schedules: [
+          GeneralSchedule(id: 'sched1', name: 'My Schedule', events: []),
+        ],
+        toolbarNavigationOrder: ['date', 'more', 'category', 'settings'],
+        hiddenToolbarNavigationIds: ['category'],
+        toolbarHiddenItemsBehavior: 'more',
+      );
+      final decoded = GeneralScheduleData.fromJson(data.toJson());
+      expect(decoded.toolbarNavigationOrder, [
+        'date',
+        'more',
+        'category',
+        'settings',
+        'view',
+      ]);
+      expect(decoded.hiddenToolbarNavigationIds, ['category']);
+      expect(decoded.toolbarHiddenItemsBehavior, 'more');
+    });
+
+    test('general toolbar navigation rejects invalid storage', () {
+      Map<String, dynamic> payload(String key, Object value) => {key: value};
+
+      expect(
+        () => GeneralScheduleData.fromJson(
+          payload('toolbarNavigationOrder', [1]),
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => GeneralScheduleData.fromJson(
+          payload('hiddenToolbarNavigationIds', [null]),
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => GeneralScheduleData.fromJson(
+          payload('toolbarHiddenItemsBehavior', 'invalid'),
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('all-day timeline collapse rejects non-boolean values', () {
       for (final value in [null, 1, 'true', <String, dynamic>{}]) {
         expect(

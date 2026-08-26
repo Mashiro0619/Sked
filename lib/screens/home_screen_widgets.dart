@@ -38,6 +38,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     required this.week,
     required this.weekNavigationDirection,
     required this.viewMode,
+    required this.navigationOrder,
+    required this.hiddenNavigationIds,
+    required this.hiddenItemsBehavior,
     required this.compactWidth,
     required this.compactHeight,
     required this.interactive,
@@ -54,6 +57,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final int week;
   final int weekNavigationDirection;
   final _StudentTimetableView viewMode;
+  final List<String> navigationOrder;
+  final List<String> hiddenNavigationIds;
+  final String hiddenItemsBehavior;
   final bool compactWidth;
   final bool compactHeight;
   final bool interactive;
@@ -209,6 +215,84 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       tooltip: l10n.settings,
       style: iconButtonStyle,
     );
+    // Snapshots normally arrive normalized from the provider, but keep the
+    // renderer defensive for manually constructed or restored data. Unknown
+    // ids and the protected settings entry must never create a dead More menu.
+    final hidden = hiddenNavigationIds
+        .where(studentToolbarNavigationKnownIds.contains)
+        .where((id) => id != 'settings')
+        .toSet();
+    final order = normalizeToolbarNavigationOrder(
+      navigationOrder,
+      knownIds: studentToolbarNavigationKnownIds,
+      defaultOrder: studentToolbarNavigationDefaultOrder,
+    );
+    final canShowMore =
+        hiddenItemsBehavior == toolbarHiddenItemsBehaviorMore &&
+        hidden.isNotEmpty &&
+        !hidden.contains('more');
+    final hiddenActions = <String>{...hidden, if (!canShowMore) 'more'};
+    final actionById = <String, Widget>{
+      'timetable': buildTimetableSelector(),
+      // The surrounding slot supplies the responsive width computed below.
+      'week': buildWeekPicker(width: double.infinity),
+      'view': viewToggle,
+      if (showSettings) 'settings': settingsAction,
+      if (canShowMore)
+        'more': SkedPopupMenuButton<String>(
+          key: const ValueKey('student-toolbar-more-button'),
+          icon: const Icon(Icons.more_horiz),
+          tooltip: l10n.more,
+          enabled: interactive,
+          onSelected: (id) {
+            switch (id) {
+              case 'timetable':
+                onOpenTimetablePicker?.call();
+              case 'week':
+                onOpenWeekPicker?.call();
+              case 'today':
+                onJumpToToday?.call();
+              case 'view':
+                onViewChanged?.call(
+                  viewMode == _StudentTimetableView.day
+                      ? _StudentTimetableView.week
+                      : _StudentTimetableView.day,
+                );
+            }
+          },
+          itemBuilder: (context) => [
+            for (final id in order)
+              if (hidden.contains(id) && id != 'settings')
+                SkedPopupMenuItem<String>(
+                  value: id,
+                  child: Text(switch (id) {
+                    'timetable' => l10n.timetable,
+                    'week' => l10n.weekLabel(week),
+                    'view' => l10n.toolbarNavigationView,
+                    _ => id,
+                  }),
+                ),
+            if (hidden.contains('week') && onJumpToToday != null)
+              SkedPopupMenuItem<String>(
+                value: 'today',
+                child: Text(l10n.today),
+              ),
+          ],
+        ),
+    };
+    final orderedIds = <String>[];
+    for (final id in order) {
+      if (!hiddenActions.contains(id) && actionById.containsKey(id)) {
+        orderedIds.add(id);
+      }
+    }
+    if (canShowMore && !orderedIds.contains('more')) {
+      orderedIds.add('more');
+    }
+    // Keep settings reachable even when an older snapshot omitted it.
+    if (showSettings && !orderedIds.contains('settings')) {
+      orderedIds.add('settings');
+    }
     return SkedWorkspaceToolbar(
       key: const ValueKey('student-workspace-toolbar'),
       padding: EdgeInsets.symmetric(
@@ -244,20 +328,56 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           );
           final selectorMaximum = phoneWidth ? 168.0 : 240.0;
           final selectorWidth = math.min(selectorMaximum, flexibleWidth);
-          final remainingWidth = math.max(
-            0.0,
-            availableWidth - fixedWidth - gapWidth - selectorWidth - weekWidth,
-          );
-          return Row(
-            children: [
-              SizedBox(width: selectorWidth, child: buildTimetableSelector()),
-              if (remainingWidth > 0) SizedBox(width: remainingWidth),
-              const SizedBox(width: gap),
-              buildWeekPicker(width: weekWidth),
-              const SizedBox(width: gap),
-              viewToggle,
-              if (showSettings) ...[const SizedBox(width: gap), settingsAction],
+          final widths = <String, double>{
+            'timetable': selectorWidth,
+            'week': weekWidth,
+            'view': 48,
+            'settings': 48,
+            'more': 48,
+          };
+          final contentWidth =
+              orderedIds.fold<double>(
+                0,
+                (sum, id) => sum + (widths[id] ?? 48),
+              ) +
+              math.max(0, orderedIds.length - 1) * gap;
+          final children = [
+            for (var i = 0; i < orderedIds.length; i++) ...[
+              if (i > 0) const SizedBox(width: gap),
+              SizedBox(
+                width: widths[orderedIds[i]],
+                child: actionById[orderedIds[i]],
+              ),
             ],
+          ];
+          if (contentWidth > availableWidth + 0.5) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              child: Row(children: children),
+            );
+          }
+          if (children.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          // Keep the first navigation item anchored to the leading edge and
+          // the remaining actions at the trailing edge.  This is the layout
+          // used by the original timetable toolbar (the timetable selector
+          // on the left, week/view/settings on the right) and prevents a
+          // wide window from making the selector appear centered.  The
+          // configured order still controls the order within each side; if a
+          // user moves another item to the first position, that item becomes
+          // the leading control.
+          final first = children.first;
+          final trailing = children.skip(1).toList(growable: false);
+          return SizedBox(
+            width: availableWidth,
+            child: Row(
+              children: [
+                first,
+                if (trailing.isNotEmpty) ...[const Spacer(), ...trailing],
+              ],
+            ),
           );
         },
       ),

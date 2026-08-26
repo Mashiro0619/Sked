@@ -1,3 +1,6 @@
+import 'dart:ui' show PointerDeviceKind;
+
+import 'package:flutter/gestures.dart' show kPrimaryButton;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -73,15 +76,13 @@ Future<void> _pumpPage(
 
 Future<void> _toggleSetting(WidgetTester tester, String title) async {
   final titleFinder = find.text(title);
-  final verticalScrollable = find.byWidgetPredicate(
-    (widget) =>
-        widget is Scrollable && widget.axisDirection == AxisDirection.down,
-  );
+  final verticalScrollable = find.byType(Scrollable).first;
   await tester.scrollUntilVisible(
     titleFinder,
     120,
     scrollable: verticalScrollable,
   );
+  await tester.pumpAndSettle();
   final tile = find.ancestor(
     of: titleFinder,
     matching: find.byType(SettingsSwitchTile),
@@ -238,5 +239,68 @@ void main() {
     await _toggleSetting(tester, 'Long-press blank grid to add courses');
     expect(provider.enableLongPressAddCourse, isFalse);
     expect(find.text('Quick actions'), findsOneWidget);
+  });
+
+  testWidgets('persists the timetable toolbar hidden-items behavior', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider);
+
+    final dropdown = find.byKey(
+      const ValueKey('timetable-toolbar-hidden-behavior'),
+    );
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move into More').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      provider.studentToolbarHiddenItemsBehavior,
+      toolbarHiddenItemsBehaviorMore,
+    );
+  });
+
+  testWidgets('toolbar navigation can be reordered from the settings page', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 1800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider);
+
+    final editor = find.byKey(
+      const ValueKey('timetable-toolbar-navigation-editor'),
+    );
+    final handles = find.descendant(
+      of: editor,
+      matching: find.byIcon(Icons.drag_indicator),
+    );
+    expect(handles, findsNWidgets(5));
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(handles.at(0)),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    for (var step = 0; step < 5; step++) {
+      await gesture.moveBy(const Offset(0, 16));
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    await tester.pump(const Duration(milliseconds: 50));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(provider.studentToolbarNavigationOrder.first, 'week');
+    expect(tester.takeException(), isNull);
   });
 }

@@ -33,6 +33,15 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   bool get allDayTimelineCollapsed =>
       _appData.generalMode.allDayTimelineCollapsed;
 
+  List<String> get generalToolbarNavigationOrder =>
+      _appData.generalMode.toolbarNavigationOrder;
+
+  List<String> get generalHiddenToolbarNavigationIds =>
+      _appData.generalMode.hiddenToolbarNavigationIds;
+
+  String get generalToolbarHiddenItemsBehavior =>
+      _appData.generalMode.toolbarHiddenItemsBehavior;
+
   DateTime get selectedGeneralDate => _appData.generalMode.selectedDate;
 
   Future<void> switchGeneralSchedule(String scheduleId) async {
@@ -130,6 +139,9 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     bool? showAddEventFab,
     bool? enableLongPressAddEvent,
     bool? allDayTimelineCollapsed,
+    List<String>? toolbarNavigationOrder,
+    List<String>? hiddenToolbarNavigationIds,
+    String? toolbarHiddenItemsBehavior,
   }) async {
     _appData = _appData.copyWith(
       generalMode: _calendarService.updateDisplaySettings(
@@ -148,8 +160,57 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
         allDayTimelineCollapsed: allDayTimelineCollapsed,
+        toolbarNavigationOrder: toolbarNavigationOrder,
+        hiddenToolbarNavigationIds: hiddenToolbarNavigationIds,
+        toolbarHiddenItemsBehavior: toolbarHiddenItemsBehavior,
       ),
     );
+    await _saveAndNotify();
+  }
+
+  Future<void> updateGeneralToolbarNavigationOrder(List<String> order) async {
+    final next = _calendarService.updateToolbarNavigationOrder(
+      _appData.generalMode,
+      order,
+    );
+    if (identical(next, _appData.generalMode)) return;
+    _appData = _appData.copyWith(generalMode: next);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateGeneralToolbarNavigationVisibility(
+    String id,
+    bool visible,
+  ) async {
+    final next = _calendarService.updateToolbarNavigationVisibility(
+      _appData.generalMode,
+      id,
+      visible,
+    );
+    if (identical(next, _appData.generalMode)) return;
+    _appData = _appData.copyWith(generalMode: next);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateGeneralToolbarNavigationHiddenIds(
+    List<String> hiddenIds,
+  ) async {
+    final next = _calendarService.updateToolbarNavigationHiddenIds(
+      _appData.generalMode,
+      hiddenIds,
+    );
+    if (identical(next, _appData.generalMode)) return;
+    _appData = _appData.copyWith(generalMode: next);
+    await _saveAndNotify();
+  }
+
+  Future<void> updateGeneralToolbarHiddenItemsBehavior(String behavior) async {
+    final next = _calendarService.updateToolbarHiddenItemsBehavior(
+      _appData.generalMode,
+      behavior,
+    );
+    if (identical(next, _appData.generalMode)) return;
+    _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
 

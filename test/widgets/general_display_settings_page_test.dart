@@ -108,7 +108,13 @@ Future<void> _pumpPage(
 
 Future<void> _toggleSwitch(WidgetTester tester, String title) async {
   final titleFinder = find.text(title);
-  await tester.scrollUntilVisible(titleFinder, 120);
+  final verticalScrollable = find.byType(Scrollable).first;
+  await tester.scrollUntilVisible(
+    titleFinder,
+    120,
+    scrollable: verticalScrollable,
+  );
+  await tester.pumpAndSettle();
   final tile = find.ancestor(
     of: titleFinder,
     matching: find.byType(SettingsSwitchTile),
@@ -159,6 +165,10 @@ void main() {
     expect(find.text('Time grid'), findsOneWidget);
     expect(find.byType(SegmentedButton<String>), findsNothing);
     expect(find.byType(SkedDropdownMenu<String>), findsNWidgets(4));
+    expect(
+      find.byKey(const ValueKey('general-toolbar-hidden-behavior')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('general-default-view')));
     await tester.pumpAndSettle();
@@ -167,7 +177,11 @@ void main() {
 
     expect(provider.generalDefaultView, generalViewMonth);
 
-    await tester.scrollUntilVisible(find.text('Popup behavior'), 160);
+    await tester.scrollUntilVisible(
+      find.text('Popup behavior'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Popup behavior'), findsOneWidget);
   });
 
@@ -183,7 +197,11 @@ void main() {
     await _pumpPage(tester, provider, textScaler: const TextScaler.linear(2));
 
     final title = find.text('Start hour');
-    await tester.scrollUntilVisible(title, 160);
+    await tester.scrollUntilVisible(
+      title,
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     final tile = find.ancestor(
       of: title,
       matching: find.byType(SettingsSliderTile),
@@ -211,7 +229,11 @@ void main() {
     await _pumpPage(tester, provider, textScaler: const TextScaler.linear(2));
 
     final tile = find.byKey(const ValueKey('general-time-grid-hour-height'));
-    await tester.scrollUntilVisible(tile, 160);
+    await tester.scrollUntilVisible(
+      tile,
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     final sliderFinder = find.descendant(
       of: tile,
       matching: find.byType(Slider),
@@ -250,6 +272,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(provider.generalViewSwitchBehavior, generalViewSwitchBehaviorMenu);
+  });
+
+  testWidgets('persists the general toolbar hidden-items behavior', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpPage(tester, provider);
+
+    final dropdown = find.byKey(
+      const ValueKey('general-toolbar-hidden-behavior'),
+    );
+    await tester.tap(dropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move into More').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      provider.generalToolbarHiddenItemsBehavior,
+      toolbarHiddenItemsBehaviorMore,
+    );
   });
 
   testWidgets(
@@ -395,7 +442,11 @@ void main() {
     expect(provider.generalDayEndHour, 22);
 
     final gridMenu = find.byKey(const ValueKey('general-time-grid'));
-    await tester.scrollUntilVisible(gridMenu, 120);
+    await tester.scrollUntilVisible(
+      gridMenu,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(gridMenu);
     await tester.pumpAndSettle();
     await tester.tap(find.text('30 min').last);

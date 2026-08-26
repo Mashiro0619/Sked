@@ -23,7 +23,6 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/l10n/app_localization_delegates.dart':
       'contains compile-time localization delegate constants only',
   'lib/theme/app_motion.dart': 'contains compile-time theme constants only',
-  'lib/utils/constants.dart': 'contains compile-time constants only',
   'lib/widgets/app_layout_tokens.dart':
       'contains compile-time layout constants only',
   'lib/services/app_data_clear_service.dart':

@@ -34,6 +34,8 @@
   },
   "editTimetable": "시간표 수정",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "분석 결과 편집",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "새 시간표",
   "@createTimetable": {},
   "jumpToWeek": "주차로 이동",

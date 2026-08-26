@@ -1,32 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../services/school_import_api.dart';
-import '../utils/text_input_limits.dart';
+import '../screens/school_import_result_editor_page.dart';
 import 'expressive_dialog.dart';
-
-Map<String, dynamic>? _tryDecodeJsonObject(String source) {
-  try {
-    final decoded = jsonDecode(source);
-    if (decoded is! Map) {
-      return null;
-    }
-    final result = <String, dynamic>{};
-    for (final entry in decoded.entries) {
-      final key = entry.key;
-      if (key is String) {
-        result[key] = entry.value;
-      }
-    }
-    return result;
-  } catch (_) {
-    return null;
-  }
-}
 
 class SchoolImportStreamDialog extends StatefulWidget {
   const SchoolImportStreamDialog({super.key, required this.stream});
@@ -45,10 +25,9 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   final _textBuffer = StringBuffer();
   String _previewText = '';
   final _scrollController = ScrollController();
-  late final TextEditingController _editController;
   StreamSubscription<SchoolImportStreamEvent>? _subscription;
   bool _isDone = false;
-  bool _isEditing = false;
+  bool _isOpeningEditor = false;
   String? _error;
   SchoolImportResponse? _response;
   bool _hasPopped = false;
@@ -60,7 +39,6 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   @override
   void initState() {
     super.initState();
-    _editController = TextEditingController();
     _subscription = widget.stream.listen(
       (event) {
         switch (event) {
@@ -93,7 +71,6 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   void dispose() {
     unawaited(_cancelSubscription());
     _scrollController.dispose();
-    _editController.dispose();
     super.dispose();
   }
 
@@ -112,7 +89,6 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   }
 
   void _scrollToBottom() {
-    if (_isEditing) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         unawaited(_animateScrollToBottom());
@@ -163,52 +139,27 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
     return codeUnit >= 0xdc00 && codeUnit <= 0xdfff ? start + 1 : start;
   }
 
-  void _enterEditMode() {
-    if (!_canEdit) {
+  Future<void> _openEditor() async {
+    if (!_canEdit || _isOpeningEditor) {
       return;
     }
-    _editController.text = _textBuffer.toString();
-    setState(() => _isEditing = true);
-  }
-
-  void _confirmEdit() {
-    final l10n = AppLocalizations.of(context);
-    final rawText = _editController.text.trim();
-    if (rawText.isEmpty) {
-      setState(() => _error = l10n.jsonContentEmpty);
+    setState(() => _isOpeningEditor = true);
+    final result = await Navigator.of(context).push<SchoolImportResponse>(
+      MaterialPageRoute(
+        builder: (_) => SchoolImportResultEditorPage(
+          initialText: _textBuffer.toString(),
+          maxEditableCodeUnits: SchoolImportStreamDialog.maxEditableCodeUnits,
+        ),
+      ),
+    );
+    if (!mounted) {
       return;
     }
-
-    final json = _tryDecodeJsonObject(rawText);
-    if (json == null) {
-      setState(() => _error = l10n.importFailedCheckContent);
-      return;
+    setState(() => _isOpeningEditor = false);
+    if (result != null) {
+      _response = result;
+      _popOnce(result);
     }
-
-    try {
-      if (json.containsKey('timetable')) {
-        _response = SchoolImportApi.buildResponseFromDoneEvent(json);
-      } else if (json.containsKey('name') || json.containsKey('courses')) {
-        _response = SchoolImportApi.buildResponseFromDoneEvent(json);
-      } else {
-        setState(() => _error = l10n.noImportableTimetables);
-        return;
-      }
-    } catch (e) {
-      setState(() => _error = '${l10n.importFailedCheckContent}\n\n$e');
-      return;
-    }
-
-    _error = null;
-    _popOnce(_response);
-  }
-
-  void _cancelEdit() {
-    _editController.text = _textBuffer.toString();
-    setState(() {
-      _isEditing = false;
-      _error = null;
-    });
   }
 
   void _popOnce([SchoolImportResponse? result]) {
@@ -223,19 +174,13 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final title = _isEditing
-        ? '${l10n.schoolWebImportParsing} - ${l10n.editTimetable}'
-        : l10n.schoolWebImportParsing;
 
     return PopScope(
       canPop: false,
       child: AlertDialog(
         title: Row(
           children: [
-            if (_isEditing) ...[
-              Icon(Icons.edit_outlined, color: theme.colorScheme.tertiary),
-              const SizedBox(width: 8),
-            ] else if (_error != null) ...[
+            if (_error != null) ...[
               Icon(Icons.error_outline, color: theme.colorScheme.error),
               const SizedBox(width: 8),
             ] else if (_isDone) ...[
@@ -252,7 +197,7 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
               ),
               const SizedBox(width: 12),
             ],
-            Expanded(child: Text(title)),
+            Expanded(child: Text(l10n.schoolWebImportParsing)),
           ],
         ),
         content: ExpressiveDialogContent(
@@ -274,39 +219,21 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: _isEditing
-                    ? TextField(
-                        controller: _editController,
-                        inputFormatters: const [
-                          Utf16CodeUnitLimitingTextInputFormatter(
-                            SchoolImportStreamDialog.maxEditableCodeUnits,
-                          ),
-                        ],
-                        maxLines: null,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                          height: 1.5,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(12),
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(12),
-                        child: SelectableText(
-                          _previewText.isNotEmpty
-                              ? _previewText
-                              : (_error != null
-                                    ? l10n.importFailedCheckContent
-                                    : l10n.schoolWebImportParsing),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontFamily: 'monospace',
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(12),
+                  child: SelectableText(
+                    _previewText.isNotEmpty
+                        ? _previewText
+                        : (_error != null
+                              ? l10n.importFailedCheckContent
+                              : l10n.schoolWebImportParsing),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                      height: 1.5,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               ExpressiveDialogActions(
@@ -318,25 +245,16 @@ class _SchoolImportStreamDialogState extends State<SchoolImportStreamDialog> {
                     },
                     child: Text(l10n.cancel),
                   ),
-                  if (_isEditing) ...[
-                    OutlinedButton(
-                      onPressed: _cancelEdit,
-                      child: Text(l10n.cancel),
-                    ),
-                    FilledButton(
-                      onPressed: _confirmEdit,
-                      child: Text(l10n.confirm),
-                    ),
-                  ] else ...[
-                    OutlinedButton(
-                      onPressed: _canEdit ? _enterEditMode : null,
-                      child: Text(l10n.editTimetable),
-                    ),
-                    FilledButton(
-                      onPressed: _isDone ? () => _popOnce(_response) : null,
-                      child: Text(l10n.confirm),
-                    ),
-                  ],
+                  OutlinedButton(
+                    onPressed: _canEdit && !_isOpeningEditor
+                        ? _openEditor
+                        : null,
+                    child: Text(l10n.editTimetable),
+                  ),
+                  FilledButton(
+                    onPressed: _isDone ? () => _popOnce(_response) : null,
+                    child: Text(l10n.confirm),
+                  ),
                 ],
               ),
             ],

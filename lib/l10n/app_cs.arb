@@ -34,6 +34,8 @@
   },
   "editTimetable": "Upravit rozvrh",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Nový rozvrh",
   "@createTimetable": {},
   "jumpToWeek": "Skočit na týden",

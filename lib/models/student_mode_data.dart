@@ -117,6 +117,9 @@ class StudentModeData {
     this.fitDaySelectorToWidth = true,
     this.fitWeekColumnsToWidth = true,
     this.enableWeekSwipeNavigation = true,
+    this.toolbarNavigationOrder = studentToolbarNavigationDefaultOrder,
+    this.hiddenToolbarNavigationIds = const <String>[],
+    this.toolbarHiddenItemsBehavior = toolbarHiddenItemsBehaviorRemove,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,
     this.themeSeedColorValue = defaultThemeSeedColorValue,
@@ -146,6 +149,9 @@ class StudentModeData {
   final bool fitDaySelectorToWidth;
   final bool fitWeekColumnsToWidth;
   final bool enableWeekSwipeNavigation;
+  final List<String> toolbarNavigationOrder;
+  final List<String> hiddenToolbarNavigationIds;
+  final String toolbarHiddenItemsBehavior;
   final String themeMode;
   final String themeColorMode;
   final int themeSeedColorValue;
@@ -174,6 +180,18 @@ class StudentModeData {
     'fitDaySelectorToWidth': fitDaySelectorToWidth,
     'fitWeekColumnsToWidth': fitWeekColumnsToWidth,
     'enableWeekSwipeNavigation': enableWeekSwipeNavigation,
+    'toolbarNavigationOrder': normalizeToolbarNavigationOrder(
+      toolbarNavigationOrder,
+      knownIds: studentToolbarNavigationKnownIds,
+      defaultOrder: studentToolbarNavigationDefaultOrder,
+    ),
+    'hiddenToolbarNavigationIds': normalizeToolbarHiddenNavigationIds(
+      hiddenToolbarNavigationIds,
+      knownIds: studentToolbarNavigationKnownIds,
+    ),
+    'toolbarHiddenItemsBehavior': normalizeToolbarHiddenItemsBehavior(
+      toolbarHiddenItemsBehavior,
+    ),
     'themeMode': normalizeThemeMode(themeMode),
     'themeColorMode': normalizeThemeColorMode(themeColorMode),
     'themeSeedColorValue': themeSeedColorValue,
@@ -282,6 +300,21 @@ class StudentModeData {
           _tryDecodeBool(json['fitWeekColumnsToWidth']) ?? true,
       enableWeekSwipeNavigation:
           _tryDecodeBool(json['enableWeekSwipeNavigation']) ?? true,
+      toolbarNavigationOrder: decodeToolbarNavigationStringList(
+        json,
+        'toolbarNavigationOrder',
+        knownIds: studentToolbarNavigationKnownIds,
+        defaultOrder: studentToolbarNavigationDefaultOrder,
+      ),
+      hiddenToolbarNavigationIds: decodeToolbarHiddenNavigationStringList(
+        json,
+        'hiddenToolbarNavigationIds',
+        knownIds: studentToolbarNavigationKnownIds,
+      ),
+      toolbarHiddenItemsBehavior: decodeToolbarHiddenItemsBehavior(
+        json,
+        'toolbarHiddenItemsBehavior',
+      ),
       themeMode: normalizeThemeMode(
         _nullableStringValue(json['themeMode']) ?? defaultThemeMode,
       ),
@@ -334,6 +367,9 @@ class StudentModeData {
     bool? fitDaySelectorToWidth,
     bool? fitWeekColumnsToWidth,
     bool? enableWeekSwipeNavigation,
+    List<String>? toolbarNavigationOrder,
+    List<String>? hiddenToolbarNavigationIds,
+    String? toolbarHiddenItemsBehavior,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -370,6 +406,18 @@ class StudentModeData {
           fitWeekColumnsToWidth ?? this.fitWeekColumnsToWidth,
       enableWeekSwipeNavigation:
           enableWeekSwipeNavigation ?? this.enableWeekSwipeNavigation,
+      toolbarNavigationOrder: normalizeToolbarNavigationOrder(
+        toolbarNavigationOrder ?? this.toolbarNavigationOrder,
+        knownIds: studentToolbarNavigationKnownIds,
+        defaultOrder: studentToolbarNavigationDefaultOrder,
+      ),
+      hiddenToolbarNavigationIds: normalizeToolbarHiddenNavigationIds(
+        hiddenToolbarNavigationIds ?? this.hiddenToolbarNavigationIds,
+        knownIds: studentToolbarNavigationKnownIds,
+      ),
+      toolbarHiddenItemsBehavior: normalizeToolbarHiddenItemsBehavior(
+        toolbarHiddenItemsBehavior ?? this.toolbarHiddenItemsBehavior,
+      ),
       themeMode: normalizeThemeMode(themeMode ?? this.themeMode),
       themeColorMode: normalizeThemeColorMode(
         themeColorMode ?? this.themeColorMode,

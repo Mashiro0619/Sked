@@ -34,6 +34,8 @@
   },
   "editTimetable": "Muokkaa aikataulua",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Uusi aikataulu",
   "@createTimetable": {},
   "jumpToWeek": "Hyppää viikkoon",

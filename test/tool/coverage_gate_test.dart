@@ -256,7 +256,7 @@ rename to lib/new name.dart
       final result = evaluateCoverage(
         dataset: dataset,
         changedLines: ChangedLines(<String, Set<int>>{
-          'lib/utils/constants.dart': <int>{1, 2},
+          'lib/theme/app_motion.dart': <int>{1, 2},
         }),
         minimumTotalCoverage: 0,
         minimumDiffCoverage: 100,
@@ -266,7 +266,7 @@ rename to lib/new name.dart
       expect(result.missingCoverageFiles, isEmpty);
       expect(
         result.coverageUnavailableFiles.single.reason,
-        contains('compile-time constants'),
+        contains('compile-time theme constants'),
       );
     });
 

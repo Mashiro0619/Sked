@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +19,7 @@ import '../widgets/expressive_empty_state.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
+import 'school_import_parser_settings_page.dart';
 
 class SchoolHtmlImportPage extends StatefulWidget {
   const SchoolHtmlImportPage({
@@ -134,100 +137,188 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
         top: false,
         child: !isConfigured
             ? _buildConfigMissingState(provider, l10n)
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                children: [
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            controller: _htmlController,
-                            enabled: !_isSubmitting,
-                            inputFormatters: [_boundedInputFormatter],
-                            onChanged: _handleContentChanged,
-                            minLines: 12,
-                            maxLines: 20,
-                            decoration: InputDecoration(
-                              labelText: l10n.schoolHtmlImportHtmlLabel,
-                              hintText: l10n.schoolHtmlImportHtmlHint,
-                              prefixIcon: const Icon(Icons.code),
-                              alignLabelWithHint: true,
-                            ),
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final mediaQuery = MediaQuery.of(context);
+                  final horizontalPadding = constraints.maxWidth < 600
+                      ? 16.0
+                      : 24.0;
+                  final availableHeight = math.max(
+                    0.0,
+                    constraints.maxHeight - mediaQuery.viewInsets.bottom,
+                  );
+                  final editorHeight = _editorHeight(
+                    availableHeight: availableHeight,
+                    isNarrow: constraints.maxWidth < 600,
+                  );
+                  final maxContentWidth = constraints.maxWidth < 840
+                      ? 720.0
+                      : 960.0;
+                  return ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      16,
+                      horizontalPadding,
+                      24,
+                    ),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    children: [
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: maxContentWidth,
                           ),
-                          if (_contentWasTruncated) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.tertiary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    l10n.schoolImportContentTruncated,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(
+                                height: editorHeight,
+                                child: TextField(
+                                  controller: _htmlController,
+                                  enabled: !_isSubmitting,
+                                  inputFormatters: [_boundedInputFormatter],
+                                  onChanged: _handleContentChanged,
+                                  expands: true,
+                                  maxLines: null,
+                                  minLines: null,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.schoolHtmlImportHtmlLabel,
+                                    hintText: l10n.schoolHtmlImportHtmlHint,
+                                    prefixIconConstraints: const BoxConstraints(
+                                      minWidth: 48,
+                                      maxWidth: 48,
+                                      minHeight: 48,
+                                      maxHeight: 48,
+                                    ),
+                                    prefixIcon: const Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Padding(
+                                        padding: EdgeInsets.only(top: 12),
+                                        child: Icon(Icons.code),
+                                      ),
+                                    ),
+                                    alignLabelWithHint: true,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.schoolHtmlImportNonHtmlHint,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                          ),
-                          const SizedBox(height: 20),
-                          FilledButton.tonalIcon(
-                            onPressed: _isSubmitting ? null : _prepareContent,
-                            icon: Icon(
-                              _isContentPrepared
-                                  ? Icons.check_circle_outline
-                                  : Icons.auto_fix_high_outlined,
-                            ),
-                            label: Text(
-                              _isContentPrepared
-                                  ? l10n.schoolHtmlImportCompressed
-                                  : l10n.schoolHtmlImportCompress,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          FilledButton.icon(
-                            onPressed: _isSubmitting ? null : _submit,
-                            icon: _isSubmitting
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                              ),
+                              if (_contentWasTruncated) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 18,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .tertiary,
                                     ),
-                                  )
-                                : const Icon(Icons.file_download_outlined),
-                            label: Text(l10n.schoolHtmlImportSubmit),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        l10n.schoolImportContentTruncated,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.schoolHtmlImportNonHtmlHint,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildImportActions(
+                                l10n,
+                                useHorizontalLayout:
+                                    constraints.maxWidth >= 560,
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
       ),
+    );
+  }
+
+  double _editorHeight({
+    required double availableHeight,
+    required bool isNarrow,
+  }) {
+    final minimum = isNarrow ? 200.0 : 240.0;
+    final maximum = isNarrow ? 420.0 : 520.0;
+    if (availableHeight <= 0) {
+      return minimum;
+    }
+    // Keep the actions in the initial viewport when possible, while leaving
+    // enough room for real-world pasted HTML and text.
+    final preferred = availableHeight * (isNarrow ? 0.45 : 0.55);
+    final spaceAware = availableHeight - 230;
+    return preferred
+        .clamp(minimum, math.max(minimum, maximum))
+        .clamp(minimum, math.max(minimum, spaceAware))
+        .toDouble();
+  }
+
+  Widget _buildImportActions(
+    AppLocalizations l10n, {
+    required bool useHorizontalLayout,
+  }) {
+    final prepareButton = FilledButton.tonalIcon(
+      onPressed: _isSubmitting ? null : _prepareContent,
+      icon: Icon(
+        _isContentPrepared
+            ? Icons.check_circle_outline
+            : Icons.auto_fix_high_outlined,
+      ),
+      label: Text(
+        _isContentPrepared
+            ? l10n.schoolHtmlImportCompressed
+            : l10n.schoolHtmlImportCompress,
+      ),
+    );
+    final submitButton = FilledButton.icon(
+      onPressed: _isSubmitting ? null : _submit,
+      icon: _isSubmitting
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.file_download_outlined),
+      label: Text(l10n.schoolHtmlImportSubmit),
+    );
+    if (useHorizontalLayout) {
+      return Row(
+        children: [
+          Expanded(child: prepareButton),
+          const SizedBox(width: 12),
+          Expanded(child: submitButton),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [prepareButton, const SizedBox(height: 12), submitButton],
     );
   }
 
@@ -241,6 +332,19 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
       message:
           '${_buildConfigMessage(provider, l10n)}\n\n'
           '${l10n.schoolImportParserSettingsLocationHint}',
+      actions: [
+        FilledButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SchoolImportParserSettingsPage(),
+              ),
+            );
+          },
+          icon: const Icon(Icons.settings_outlined),
+          label: Text(l10n.openSettings),
+        ),
+      ],
     );
   }
 

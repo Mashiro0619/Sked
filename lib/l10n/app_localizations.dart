@@ -193,6 +193,12 @@ abstract class AppLocalizations {
   /// **'Edit timetable'**
   String get editTimetable;
 
+  /// No description provided for @schoolImportResultEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit parsed result'**
+  String get schoolImportResultEditorTitle;
+
   /// No description provided for @createTimetable.
   ///
   /// In en, this message translates to:
@@ -3933,6 +3939,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Toolbar layout'**
   String get generalToolbarSection;
+
+  /// No description provided for @toolbarNavigationSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Toolbar navigation'**
+  String get toolbarNavigationSection;
+
+  /// No description provided for @toolbarNavigationHiddenBehavior.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden items'**
+  String get toolbarNavigationHiddenBehavior;
+
+  /// No description provided for @toolbarNavigationRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide completely'**
+  String get toolbarNavigationRemove;
+
+  /// No description provided for @toolbarNavigationMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Move into More'**
+  String get toolbarNavigationMore;
+
+  /// No description provided for @toolbarNavigationReorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder toolbar items'**
+  String get toolbarNavigationReorder;
+
+  /// No description provided for @toolbarNavigationVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Show toolbar item'**
+  String get toolbarNavigationVisibility;
+
+  /// No description provided for @toolbarNavigationTimetable.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable selector'**
+  String get toolbarNavigationTimetable;
+
+  /// No description provided for @toolbarNavigationWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week selector'**
+  String get toolbarNavigationWeek;
+
+  /// No description provided for @toolbarNavigationView.
+  ///
+  /// In en, this message translates to:
+  /// **'View switcher'**
+  String get toolbarNavigationView;
+
+  /// No description provided for @toolbarNavigationCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category selector'**
+  String get toolbarNavigationCategory;
+
+  /// No description provided for @toolbarNavigationDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date selector'**
+  String get toolbarNavigationDate;
 
   /// No description provided for @generalToolbarWidthPolicy.
   ///

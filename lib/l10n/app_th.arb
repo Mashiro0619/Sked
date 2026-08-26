@@ -34,6 +34,8 @@
   },
   "editTimetable": "แก้ไขตารางเวลา",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "แก้ไขผลการวิเคราะห์",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "ตารางเวลาใหม่",
   "@createTimetable": {},
   "jumpToWeek": "กระโดดไปสัปดาห์",

@@ -34,6 +34,8 @@
   },
   "editTimetable": "Edit timetable",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "New timetable",
   "@createTimetable": {},
   "jumpToWeek": "Jump to week",

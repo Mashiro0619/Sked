@@ -385,6 +385,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ? _weekNavigationDirection
                                 : 0,
                             viewMode: viewMode,
+                            navigationOrder: snapshot.toolbarNavigationOrder,
+                            hiddenNavigationIds:
+                                snapshot.hiddenToolbarNavigationIds,
+                            hiddenItemsBehavior:
+                                snapshot.toolbarHiddenItemsBehavior,
                             compactWidth: constraints.maxWidth < 600,
                             compactHeight: constraints.maxHeight < 600,
                             interactive: widget.interactive,
@@ -648,6 +653,9 @@ class _StudentHomeSnapshot {
     required this.liveCourseOutlineColorValue,
     required this.liveCourseOutlineMode,
     required this.liveCourseOutlineWidth,
+    required this.toolbarNavigationOrder,
+    required this.hiddenToolbarNavigationIds,
+    required this.toolbarHiddenItemsBehavior,
   });
 
   factory _StudentHomeSnapshot.from(TimetableProvider provider) {
@@ -680,6 +688,9 @@ class _StudentHomeSnapshot {
       liveCourseOutlineColorValue: data.liveCourseOutlineColorValue,
       liveCourseOutlineMode: data.liveCourseOutlineMode,
       liveCourseOutlineWidth: data.liveCourseOutlineWidth,
+      toolbarNavigationOrder: data.toolbarNavigationOrder,
+      hiddenToolbarNavigationIds: data.hiddenToolbarNavigationIds,
+      toolbarHiddenItemsBehavior: data.toolbarHiddenItemsBehavior,
     );
   }
 
@@ -710,6 +721,9 @@ class _StudentHomeSnapshot {
   final int liveCourseOutlineColorValue;
   final String liveCourseOutlineMode;
   final double liveCourseOutlineWidth;
+  final List<String> toolbarNavigationOrder;
+  final List<String> hiddenToolbarNavigationIds;
+  final String toolbarHiddenItemsBehavior;
 
   @override
   bool operator ==(Object other) {
@@ -740,7 +754,13 @@ class _StudentHomeSnapshot {
         other.liveCourseOutlineFollowTheme == liveCourseOutlineFollowTheme &&
         other.liveCourseOutlineColorValue == liveCourseOutlineColorValue &&
         other.liveCourseOutlineMode == liveCourseOutlineMode &&
-        other.liveCourseOutlineWidth == liveCourseOutlineWidth;
+        other.liveCourseOutlineWidth == liveCourseOutlineWidth &&
+        _listEquals(other.toolbarNavigationOrder, toolbarNavigationOrder) &&
+        _listEquals(
+          other.hiddenToolbarNavigationIds,
+          hiddenToolbarNavigationIds,
+        ) &&
+        other.toolbarHiddenItemsBehavior == toolbarHiddenItemsBehavior;
   }
 
   @override
@@ -772,5 +792,17 @@ class _StudentHomeSnapshot {
     liveCourseOutlineColorValue,
     liveCourseOutlineMode,
     liveCourseOutlineWidth,
+    Object.hashAll(toolbarNavigationOrder),
+    Object.hashAll(hiddenToolbarNavigationIds),
+    toolbarHiddenItemsBehavior,
   ]);
+}
+
+bool _listEquals(List<String> a, List<String> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

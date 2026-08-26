@@ -1,5 +1,7 @@
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:async';
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_expressive_theme.dart';
@@ -803,6 +805,536 @@ class SettingsSliderTile extends StatefulWidget {
 
   @override
   State<SettingsSliderTile> createState() => _SettingsSliderTileState();
+}
+
+/// A compact editor for the controls that make up a workspace toolbar.
+///
+/// The surrounding settings page owns persistence.  This widget deliberately
+/// keeps the reorder interaction local and reports only the completed order,
+/// so dragging does not trigger a save for every intermediate position.
+class SettingsToolbarNavigationItem {
+  const SettingsToolbarNavigationItem({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.visible,
+    this.canHide = true,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final bool visible;
+  final bool canHide;
+}
+
+class SettingsToolbarNavigationEditor extends StatefulWidget {
+  const SettingsToolbarNavigationEditor({
+    super.key,
+    required this.items,
+    required this.onReorder,
+    required this.onVisibilityChanged,
+    this.reorderLabel = 'Reorder',
+    this.visibilityLabel = 'Visibility',
+    this.busy = false,
+  });
+
+  final List<SettingsToolbarNavigationItem> items;
+  final ValueChanged<List<String>> onReorder;
+  final void Function(String id, bool visible) onVisibilityChanged;
+  final String reorderLabel;
+  final String visibilityLabel;
+
+  /// Whether the surrounding settings page is saving a toolbar change.
+  ///
+  /// Reorders are optimistic so the list can settle in its new position before
+  /// persistence completes. The parent uses this to distinguish its initial
+  /// busy rebuild from a failed save's rollback rebuild.
+  final bool busy;
+
+  @override
+  State<SettingsToolbarNavigationEditor> createState() =>
+      _SettingsToolbarNavigationEditorState();
+}
+
+/// Starts the native reorder recognizer for the pointer device under the
+/// handle. Keeping both recognizers in one listener is important: nesting two
+/// [ReorderableDragStartListener]s makes both call
+/// [ReorderableListState.startItemDragReorder] for the same pointer and the
+/// second recognizer cancels the first one before it can start.
+class _ToolbarReorderIntent extends Intent {
+  const _ToolbarReorderIntent(this.delta);
+
+  final int delta;
+}
+
+class _ToolbarReorderHandle extends StatefulWidget {
+  const _ToolbarReorderHandle({
+    super.key,
+    required this.index,
+    required this.itemId,
+    required this.enabled,
+    required this.tooltipMessage,
+    required this.semanticsLabel,
+    required this.semanticsHint,
+    required this.onPointerDown,
+    required this.onPointerUp,
+    required this.onPointerCancel,
+    required this.onPointerMove,
+    required this.onMoveBy,
+    this.onIncrease,
+    this.onDecrease,
+  });
+
+  final int index;
+  final String itemId;
+  final bool enabled;
+  final String tooltipMessage;
+  final String semanticsLabel;
+  final String semanticsHint;
+  final ValueChanged<PointerDeviceKind> onPointerDown;
+  final VoidCallback onPointerUp;
+  final VoidCallback onPointerCancel;
+  final ValueChanged<PointerMoveEvent> onPointerMove;
+  final ValueChanged<int> onMoveBy;
+  final VoidCallback? onIncrease;
+  final VoidCallback? onDecrease;
+
+  @override
+  State<_ToolbarReorderHandle> createState() => _ToolbarReorderHandleState();
+}
+
+class _ToolbarReorderHandleState extends State<_ToolbarReorderHandle> {
+  var _showFocusHighlight = false;
+  var _showHoverHighlight = false;
+
+  MultiDragGestureRecognizer? _recognizerFor(PointerDownEvent event) {
+    final MultiDragGestureRecognizer? recognizer = switch (event.kind) {
+      PointerDeviceKind.mouse || PointerDeviceKind.trackpad =>
+        ImmediateMultiDragGestureRecognizer(debugOwner: this),
+      PointerDeviceKind.touch ||
+      PointerDeviceKind.stylus ||
+      PointerDeviceKind.invertedStylus => DelayedMultiDragGestureRecognizer(
+        debugOwner: this,
+      ),
+      _ => null,
+    };
+    if (recognizer == null) return null;
+    recognizer
+      ..supportedDevices = {event.kind}
+      ..gestureSettings = MediaQuery.maybeGestureSettingsOf(context);
+    return recognizer;
+  }
+
+  void _startReorder(PointerDownEvent event) {
+    if (!widget.enabled) return;
+    if ((event.kind == PointerDeviceKind.mouse ||
+            event.kind == PointerDeviceKind.trackpad) &&
+        event.buttons != kPrimaryButton) {
+      return;
+    }
+    final recognizer = _recognizerFor(event);
+    if (recognizer == null) return;
+    widget.onPointerDown(event.kind);
+    ReorderableList.maybeOf(context)?.startItemDragReorder(
+      index: widget.index,
+      event: event,
+      recognizer: recognizer,
+    );
+  }
+
+  void _setFocusHighlight(bool value) {
+    if (_showFocusHighlight == value) return;
+    setState(() => _showFocusHighlight = value);
+  }
+
+  void _setHoverHighlight(bool value) {
+    if (_showHoverHighlight == value) return;
+    setState(() => _showHoverHighlight = value);
+  }
+
+  Widget _buildHandleVisual(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final motion = SkedMotionPolicy.of(context);
+    final foreground = colors.onSurfaceVariant;
+    final background = _showFocusHighlight
+        ? colors.primary.withValues(alpha: 0.12)
+        : _showHoverHighlight
+        ? colors.onSurface.withValues(alpha: 0.08)
+        : Colors.transparent;
+    final border = _showFocusHighlight
+        ? BorderSide(color: colors.primary, width: 2)
+        : BorderSide.none;
+    return AnimatedContainer(
+      key: ValueKey('toolbar-navigation-drag-handle-visual-${widget.itemId}'),
+      duration: motion.effects(SkedMotionSpeed.fast),
+      curve: Curves.easeOutCubic,
+      decoration: ShapeDecoration(
+        color: background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: border,
+        ),
+      ),
+      child: SizedBox.square(
+        dimension: 48,
+        child: Icon(Icons.drag_indicator, color: foreground),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusableActionDetector(
+      enabled: widget.enabled,
+      includeFocusSemantics: false,
+      mouseCursor: SystemMouseCursors.grab,
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.arrowUp): _ToolbarReorderIntent(-1),
+        SingleActivator(LogicalKeyboardKey.arrowDown): _ToolbarReorderIntent(1),
+      },
+      actions: <Type, Action<Intent>>{
+        _ToolbarReorderIntent: CallbackAction<_ToolbarReorderIntent>(
+          onInvoke: (intent) {
+            widget.onMoveBy(intent.delta);
+            return null;
+          },
+        ),
+      },
+      onShowFocusHighlight: _setFocusHighlight,
+      onShowHoverHighlight: _setHoverHighlight,
+      child: Listener(
+        onPointerDown: widget.enabled ? _startReorder : null,
+        onPointerUp: widget.enabled ? (_) => widget.onPointerUp() : null,
+        onPointerCancel: widget.enabled
+            ? (_) => widget.onPointerCancel()
+            : null,
+        onPointerMove: widget.enabled ? widget.onPointerMove : null,
+        child: Tooltip(
+          message: widget.tooltipMessage,
+          // Keep touch interactions reserved for the delayed drag recognizer.
+          // RawTooltip still shows this message for mouse hover in manual mode.
+          triggerMode: TooltipTriggerMode.manual,
+          child: Semantics(
+            container: true,
+            button: true,
+            enabled: widget.enabled,
+            label: widget.semanticsLabel,
+            hint: widget.semanticsHint,
+            onIncrease: widget.enabled ? widget.onIncrease : null,
+            onDecrease: widget.enabled ? widget.onDecrease : null,
+            child: _buildHandleVisual(context),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsToolbarNavigationEditorState
+    extends State<SettingsToolbarNavigationEditor> {
+  static const _dropSettlementDuration = Duration(milliseconds: 300);
+
+  late List<SettingsToolbarNavigationItem> _items = List.of(widget.items);
+  PointerDeviceKind? _lastPointerKind;
+  var _dragInProgress = false;
+  var _dropSettlementPending = false;
+  var _reorderSavePending = false;
+  Timer? _dropSettlementTimer;
+  final _reorderableListKey = GlobalKey<ReorderableListState>();
+
+  bool get _reorderInteractionEnabled =>
+      !widget.busy &&
+      !_dragInProgress &&
+      !_dropSettlementPending &&
+      !_reorderSavePending;
+
+  @override
+  void didUpdateWidget(covariant SettingsToolbarNavigationEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_sameItems(_items, widget.items)) {
+      // The Provider has published the optimistic order, so later external
+      // changes can again become the source of truth.
+      _reorderSavePending = false;
+      return;
+    }
+
+    // Starting a command rebuilds the page before the Provider has published
+    // the new order. Keep the native list's settled local order through that
+    // frame. If saving fails, the page later leaves its busy state with the
+    // old provider order, which is then deliberately restored below.
+    if (_reorderSavePending && widget.busy) {
+      return;
+    }
+
+    _items = List.of(widget.items);
+    _reorderSavePending = false;
+  }
+
+  bool _sameItems(
+    List<SettingsToolbarNavigationItem> left,
+    List<SettingsToolbarNavigationItem> right,
+  ) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (left[index].id != right[index].id ||
+          left[index].visible != right[index].visible ||
+          left[index].label != right[index].label ||
+          left[index].icon != right[index].icon ||
+          left[index].canHide != right[index].canHide) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    if (widget.busy ||
+        oldIndex == newIndex ||
+        oldIndex < 0 ||
+        newIndex < 0 ||
+        oldIndex >= _items.length ||
+        newIndex >= _items.length) {
+      return;
+    }
+    _dropSettlementTimer?.cancel();
+    setState(() {
+      _dropSettlementPending = false;
+      final item = _items.removeAt(oldIndex);
+      _items.insert(newIndex, item);
+      _reorderSavePending = true;
+    });
+    widget.onReorder(_items.map((item) => item.id).toList(growable: false));
+  }
+
+  void _moveBy(int index, int delta) {
+    if (!_reorderInteractionEnabled) return;
+    final target = index + delta;
+    if (target < 0 || target >= _items.length) return;
+    _onReorder(index, target);
+  }
+
+  void _onReorderStart(int index) {
+    setState(() {
+      _dragInProgress = true;
+      _dropSettlementPending = false;
+    });
+    final kind = _lastPointerKind;
+    if (kind == PointerDeviceKind.touch ||
+        kind == PointerDeviceKind.stylus ||
+        kind == PointerDeviceKind.invertedStylus) {
+      // ReorderableDelayedDragStartListener starts only after the long press
+      // timeout, so this feedback acknowledges the actual drag start rather
+      // than every pointer-down event.
+      unawaited(Feedback.forLongPress(context));
+    }
+  }
+
+  void _onReorderEnd(int index) {
+    // Native ReorderableList calls onReorderEnd before its 250 ms drop
+    // animation invokes onReorderItem. Keep the handle gated for that short
+    // settlement window so a second pointer cannot cancel the first drop.
+    _dropSettlementTimer?.cancel();
+    setState(() {
+      _dragInProgress = false;
+      _dropSettlementPending = true;
+      _lastPointerKind = null;
+    });
+    _dropSettlementTimer = Timer(
+      _dropSettlementDuration,
+      _finishDropSettlement,
+    );
+  }
+
+  void _finishDropSettlement() {
+    if (!mounted || !_dropSettlementPending) return;
+    setState(() => _dropSettlementPending = false);
+  }
+
+  void _onPointerUp() {
+    // A completed drop triggers onReorderEnd. A simple press never starts the
+    // drag recognizer and must clear its device hint here instead.
+    if (_dragInProgress) return;
+    _lastPointerKind = null;
+  }
+
+  void _onPointerCancel() {
+    // Flutter only calls onReorderEnd for a drop. Explicitly reset the native
+    // gap on cancellation so an interrupted pointer cannot leave a stale
+    // placeholder behind or publish an order.
+    _dropSettlementTimer?.cancel();
+    _reorderableListKey.currentState?.cancelReorder();
+    if (!mounted) return;
+    setState(() {
+      _dragInProgress = false;
+      _dropSettlementPending = false;
+      _lastPointerKind = null;
+    });
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (!_dragInProgress) return;
+    final renderObject = _reorderableListKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return;
+    final listBounds =
+        renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    // This editor has no nested scrolling. Once the pointer leaves its local
+    // surface, cancel rather than committing an accidental edge drop.
+    if (!listBounds.inflate(12).contains(event.position)) {
+      _onPointerCancel();
+    }
+  }
+
+  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = skedShapeSchemeOf(context).container;
+    final motion = SkedMotionPolicy.of(context);
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final progress = Curves.easeOutCubic.transform(animation.value);
+        final scale = motion.spatialAnimationsEnabled
+            ? 1 + progress * 0.02
+            : 1.0;
+        final lift = motion.spatialAnimationsEnabled ? -2 * progress : 0.0;
+        final elevation = motion.animationsEnabled ? progress * 4 : 0.0;
+        return Transform.translate(
+          offset: Offset(0, lift),
+          child: Transform.scale(
+            scale: scale,
+            child: Material(
+              color: colors.surfaceContainerLow,
+              shape: shape,
+              clipBehavior: Clip.antiAlias,
+              elevation: elevation,
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = skedShapeSchemeOf(context).container;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Material(
+        color: colors.surfaceContainerLow,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        // This list is shrink-wrapped and cannot scroll independently. The
+        // surrounding settings ListView remains the only scrollable surface,
+        // while ReorderableList supplies the live gap animation and proxy.
+        child: DragBoundary(
+          child: KeyedSubtree(
+            key: const ValueKey('toolbar-navigation-reorderable-list'),
+            child: ReorderableList(
+              key: _reorderableListKey,
+              itemCount: _items.length,
+              shrinkWrap: true,
+              primary: false,
+              physics: const NeverScrollableScrollPhysics(),
+              dragBoundaryProvider: (context) =>
+                  DragBoundary.forRectOf(context),
+              onReorderItem: _onReorder,
+              onReorderStart: _onReorderStart,
+              onReorderEnd: _onReorderEnd,
+              proxyDecorator: _proxyDecorator,
+              itemBuilder: (context, index) =>
+                  _buildItemRow(context, index, colors),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemRow(BuildContext context, int index, ColorScheme colors) {
+    final item = _items[index];
+    final enabled = item.canHide;
+    final foreground = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.58);
+    final dragHandle = _ToolbarReorderHandle(
+      key: ValueKey('toolbar-navigation-drag-handle-${item.id}'),
+      index: index,
+      itemId: item.id,
+      enabled: _reorderInteractionEnabled,
+      tooltipMessage: widget.reorderLabel,
+      semanticsLabel: '${widget.reorderLabel}: ${item.label}',
+      semanticsHint: '${widget.reorderLabel}: ${item.label}',
+      onPointerDown: (kind) => _lastPointerKind = kind,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
+      onPointerMove: _onPointerMove,
+      onMoveBy: (delta) => _moveBy(index, delta),
+      onIncrease: index < _items.length - 1 ? () => _moveBy(index, 1) : null,
+      onDecrease: index > 0 ? () => _moveBy(index, -1) : null,
+    );
+    final row = ConstrainedBox(
+      // Keep every row comfortably tappable while avoiding a tall block that
+      // pushes the following quick actions needlessly far down the page.
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: [
+            dragHandle,
+            const SizedBox(width: 4),
+            Icon(item.icon, color: foreground),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                item.label,
+                style: Theme.of(context).textTheme.bodyLarge
+                    ?.copyWith(color: foreground, fontWeight: FontWeight.w500),
+              ),
+            ),
+            Tooltip(
+              message: widget.visibilityLabel,
+              child: Semantics(
+                label: '${widget.visibilityLabel}: ${item.label}',
+                toggled: item.visible,
+                enabled: enabled,
+                child: Switch(
+                  value: item.visible,
+                  onChanged: enabled
+                      ? (value) => widget.onVisibilityChanged(item.id, value)
+                      : null,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return KeyedSubtree(
+      key: ValueKey(item.id),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (index > 0)
+            Divider(
+              height: 1,
+              indent: 16,
+              endIndent: 16,
+              color: colors.outlineVariant.withValues(alpha: 0.55),
+            ),
+          row,
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _dropSettlementTimer?.cancel();
+    super.dispose();
+  }
 }
 
 class _SettingsSliderTileState extends State<SettingsSliderTile> {

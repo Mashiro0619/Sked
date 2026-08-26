@@ -1,6 +1,12 @@
-import 'dart:ui' show PointerDeviceKind, SemanticsAction;
+import 'dart:ui' show PointerDeviceKind, Rect, SemanticsAction;
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/gestures.dart' show kPrimaryButton;
+import 'package:flutter/services.dart'
+    show LogicalKeyboardKey, MethodCall, SystemChannels;
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/expressive_motion.dart';
@@ -573,5 +579,675 @@ void main() {
     slider = tester.widget<Slider>(find.byType(Slider));
     expect(slider.value, 12);
     expect(find.text('12 units'), findsOneWidget);
+  });
+
+  testWidgets('toolbar editor handles keyboard moves and visibility', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final reordered = <List<String>>[];
+    final visibilityChanges = <(String, bool)>[];
+
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'settings',
+        label: 'Settings',
+        icon: Icons.settings_outlined,
+        visible: true,
+        canHide: false,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            reorderLabel: 'Reorder',
+            visibilityLabel: 'Visibility',
+            onReorder: (order) => reordered.add(order),
+            onVisibilityChanged: (id, visible) =>
+                visibilityChanges.add((id, visible)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    SemanticsNode semanticsFor(String label) =>
+        tester.getSemantics(find.bySemanticsLabel(label));
+
+    // The first item cannot move up; the second item can move down/up through
+    // the same semantics actions exposed to keyboard and assistive technology.
+    final firstSemantics = semanticsFor('Reorder: First');
+    expect(
+      firstSemantics.getSemanticsData().hasAction(SemanticsAction.decrease),
+      isFalse,
+    );
+    final secondNode = semanticsFor('Reorder: Second');
+    secondNode.owner!.performAction(secondNode.id, SemanticsAction.decrease);
+    await tester.pump();
+    expect(reordered.single, <String>['second', 'first', 'settings']);
+
+    // Visibility remains independently actionable, while the required
+    // settings item exposes a disabled switch.
+    await tester.tap(find.byType(Switch).first);
+    await tester.pump();
+    expect(visibilityChanges, contains(('second', false)));
+    expect(tester.widget<Switch>(find.byType(Switch).last).onChanged, isNull);
+
+    expect(reordered, hasLength(1));
+    expect(find.byType(DragTarget), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('toolbar editor moves a focused handle with arrow keys', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: reordered.add,
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    final focusVisual = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('toolbar-navigation-drag-handle-visual-first')),
+    );
+    final focusShape =
+        (focusVisual.decoration! as ShapeDecoration).shape
+            as RoundedRectangleBorder;
+    expect(focusShape.side.width, 2);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+
+    expect(reordered, <List<String>>[
+      <String>['second', 'first'],
+    ]);
+  });
+
+  testWidgets(
+    'toolbar editor restores the provider order after a failed save',
+    (tester) async {
+      final reordered = <List<String>>[];
+      var busy = false;
+      late StateSetter rebuild;
+      const items = [
+        SettingsToolbarNavigationItem(
+          id: 'first',
+          label: 'First',
+          icon: Icons.looks_one_outlined,
+          visible: true,
+        ),
+        SettingsToolbarNavigationItem(
+          id: 'second',
+          label: 'Second',
+          icon: Icons.looks_two_outlined,
+          visible: true,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return Scaffold(
+                body: SettingsToolbarNavigationEditor(
+                  items: items,
+                  busy: busy,
+                  onReorder: (order) {
+                    reordered.add(order);
+                    setState(() => busy = true);
+                  },
+                  onVisibilityChanged: (_, _) {},
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final semantics = tester.ensureSemantics();
+      final second = tester.getSemantics(
+        find.bySemanticsLabel('Reorder: Second'),
+      );
+      second.owner!.performAction(second.id, SemanticsAction.decrease);
+      await tester.pump();
+      expect(reordered, <List<String>>[
+        <String>['second', 'first'],
+      ]);
+      expect(
+        tester.getRect(find.text('Second')).top,
+        lessThan(tester.getRect(find.text('First')).top),
+      );
+
+      // The Provider's snapshot remains in the original order, as it does when
+      // persistence rejects the mutation. Ending the page command must restore
+      // that source of truth rather than leaving an unsaved local reorder.
+      rebuild(() => busy = false);
+      await tester.pump();
+      expect(
+        tester.getRect(find.text('First')).top,
+        lessThan(tester.getRect(find.text('Second')).top),
+      );
+
+      semantics.dispose();
+    },
+  );
+
+  testWidgets('toolbar editor reorders with a primary mouse drag', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: (order) => reordered.add(order),
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final handles = find.descendant(
+      of: find.byKey(const ValueKey('toolbar-navigation-reorderable-list')),
+      matching: find.byIcon(Icons.drag_indicator),
+    );
+    expect(handles, findsNWidgets(2));
+    final gesture = await tester.startGesture(
+      tester.getCenter(handles.at(0)),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, 50));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(reordered, hasLength(1));
+    expect(reordered.single, <String>['second', 'first']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('toolbar editor settles a drop before accepting another drag', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: reordered.add,
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstHandle = find.byKey(
+      const ValueKey('toolbar-navigation-drag-handle-first'),
+    );
+    final firstDrag = await tester.startGesture(
+      tester.getCenter(firstHandle),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    await firstDrag.moveBy(const Offset(0, 50));
+    await firstDrag.up();
+    await tester.pump();
+
+    // The native list is still returning the drag proxy to its destination.
+    // A second pointer must not cancel the first drop before its callback runs.
+    final secondDrag = await tester.startGesture(
+      tester.getCenter(
+        find.byKey(const ValueKey('toolbar-navigation-drag-handle-second')),
+      ),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    await secondDrag.moveBy(const Offset(0, -50));
+    await secondDrag.up();
+    await tester.pumpAndSettle();
+
+    expect(reordered, <List<String>>[
+      <String>['second', 'first'],
+    ]);
+  });
+
+  testWidgets('toolbar editor moves siblings before a mouse drag is released', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'third',
+        label: 'Third',
+        icon: Icons.looks_3_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: (order) => reordered.add(order),
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final handles = find.byIcon(Icons.drag_indicator);
+    final second = find.text('Second');
+    final initialSecondTop = tester.getRect(second).top;
+    final gesture = await tester.startGesture(
+      tester.getCenter(handles.at(0)),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    for (var step = 0; step < 6; step++) {
+      await gesture.moveBy(const Offset(0, 20));
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(tester.getRect(second).top, lessThan(initialSecondTop));
+    expect(reordered, isEmpty);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(reordered, hasLength(1));
+    expect(reordered.single, <String>['second', 'third', 'first']);
+  });
+
+  testWidgets('toolbar editor waits for a touch long press before reordering', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: (order) => reordered.add(order),
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final handles = find.byIcon(Icons.drag_indicator);
+    final gesture = await tester.startGesture(
+      tester.getCenter(handles.at(0)),
+      kind: PointerDeviceKind.touch,
+    );
+    await tester.pump(const Duration(milliseconds: 550));
+    await tester.pump(const Duration(milliseconds: 400));
+    for (var step = 0; step < 4; step++) {
+      await gesture.moveBy(const Offset(0, 16));
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(reordered, isEmpty);
+    await tester.pump(const Duration(milliseconds: 150));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(reordered, hasLength(1));
+    expect(reordered.single, <String>['second', 'first']);
+  });
+
+  testWidgets('toolbar editor cancels a touch before the long press', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: (order) => reordered.add(order),
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.drag_indicator).first),
+      kind: PointerDeviceKind.touch,
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(reordered, isEmpty);
+  });
+
+  testWidgets('toolbar editor cancels an active drag without saving', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: reordered.add,
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byIcon(Icons.drag_indicator).first),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, 50));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+
+    expect(reordered, isEmpty);
+    expect(
+      tester.getRect(find.text('First')).top,
+      lessThan(tester.getRect(find.text('Second')).top),
+    );
+  });
+
+  testWidgets('toolbar editor cancels when a drag leaves its list surface', (
+    tester,
+  ) async {
+    final reordered = <List<String>>[];
+    const items = [
+      SettingsToolbarNavigationItem(
+        id: 'first',
+        label: 'First',
+        icon: Icons.looks_one_outlined,
+        visible: true,
+      ),
+      SettingsToolbarNavigationItem(
+        id: 'second',
+        label: 'Second',
+        icon: Icons.looks_two_outlined,
+        visible: true,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsToolbarNavigationEditor(
+            items: items,
+            onReorder: reordered.add,
+            onVisibilityChanged: (_, _) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final listBounds = tester.getRect(
+      find.byKey(const ValueKey('toolbar-navigation-reorderable-list')),
+    );
+    final reorderable = tester.widget<ReorderableList>(
+      find.byType(ReorderableList),
+    );
+    final boundary = reorderable.dragBoundaryProvider!(
+      tester.element(find.byType(ReorderableList)),
+    );
+    expect(boundary, isNotNull);
+    expect(
+      boundary!.isWithinBoundary(
+        Rect.fromLTWH(listBounds.center.dx, listBounds.center.dy, 1, 1),
+      ),
+      isTrue,
+    );
+    expect(
+      boundary.isWithinBoundary(
+        Rect.fromLTWH(listBounds.center.dx, listBounds.bottom + 32, 1, 1),
+      ),
+      isFalse,
+    );
+    final handle = find.byIcon(Icons.drag_indicator).first;
+    final gesture = await tester.startGesture(
+      tester.getCenter(handle),
+      kind: PointerDeviceKind.mouse,
+      buttons: kPrimaryButton,
+    );
+    await tester.pump();
+    await gesture.moveTo(
+      Offset(tester.getCenter(handle).dx, listBounds.bottom + 32),
+    );
+    await tester.pumpAndSettle();
+
+    expect(reordered, isEmpty);
+    expect(
+      tester.getRect(find.text('First')).top,
+      lessThan(tester.getRect(find.text('Second')).top),
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(reordered, isEmpty);
+    expect(
+      tester.getRect(find.text('First')).top,
+      lessThan(tester.getRect(find.text('Second')).top),
+    );
+  });
+
+  testWidgets('toolbar editor gives feedback only for a touch drag', (
+    tester,
+  ) async {
+    final hapticCalls = <MethodCall>[];
+    final previousTargetPlatform = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') {
+            hapticCalls.add(call);
+          }
+          return null;
+        },
+      );
+
+      const items = [
+        SettingsToolbarNavigationItem(
+          id: 'first',
+          label: 'First',
+          icon: Icons.looks_one_outlined,
+          visible: true,
+        ),
+        SettingsToolbarNavigationItem(
+          id: 'second',
+          label: 'Second',
+          icon: Icons.looks_two_outlined,
+          visible: true,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SettingsToolbarNavigationEditor(
+              items: items,
+              onReorder: (_) {},
+              onVisibilityChanged: (_, _) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final handles = find.byIcon(Icons.drag_indicator);
+      final touchGesture = await tester.startGesture(
+        tester.getCenter(handles.first),
+        kind: PointerDeviceKind.touch,
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump();
+      expect(hapticCalls, hasLength(1));
+      expect(hapticCalls.single.method, 'HapticFeedback.vibrate');
+      await touchGesture.cancel();
+      await tester.pumpAndSettle();
+
+      hapticCalls.clear();
+      final mouseGesture = await tester.startGesture(
+        tester.getCenter(find.byIcon(Icons.drag_indicator).first),
+        kind: PointerDeviceKind.mouse,
+        buttons: kPrimaryButton,
+      );
+      await tester.pump();
+      expect(hapticCalls, isEmpty);
+      await mouseGesture.cancel();
+      await tester.pumpAndSettle();
+    } finally {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+      debugDefaultTargetPlatformOverride = previousTargetPlatform;
+    }
   });
 }

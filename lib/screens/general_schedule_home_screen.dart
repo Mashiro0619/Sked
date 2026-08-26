@@ -20,6 +20,7 @@ import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/ui_command.dart';
+import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'settings_page.dart';
 
@@ -72,6 +73,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   int _dateNavigationDirection = 0;
   bool _pagerDateCommitInProgress = false;
   int _pagerSyncRevision = 0;
+  // The hidden view menu is opened from the More button. Keep a stable anchor
+  // so its follow-up menu remains attached to that button after the first
+  // popup route closes.
+  final GlobalKey _toolbarMoreButtonKey = GlobalKey();
 
   @override
   void didChangeDependencies() {
@@ -84,11 +89,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final snapshot = context.select<TimetableProvider, _GeneralHomeSnapshot>(
       _GeneralHomeSnapshot.from,
     );
     final provider = context.read<TimetableProvider>();
-    final l10n = AppLocalizations.of(context);
     final selectedDate = snapshot.selectedDate;
     final view = normalizeGeneralView(_view ?? snapshot.defaultView);
     final dateNavigationDirection =
@@ -134,6 +139,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               calendarDisabled: _calendarManagerOpen || !widget.interactive,
               onOpenCalendar: () => _openCalendarManager(context, provider),
               view: view,
+              navigationOrder: snapshot.toolbarNavigationOrder,
+              hiddenNavigationIds: snapshot.hiddenToolbarNavigationIds,
+              hiddenItemsBehavior: snapshot.toolbarHiddenItemsBehavior,
+              moreButtonKey: _toolbarMoreButtonKey,
               selectedDate: selectedDate,
               dateNavigationDirection: dateNavigationDirection,
               interactive: widget.interactive,
@@ -784,6 +793,10 @@ class _GeneralToolbarLayout extends StatelessWidget {
     required this.onViewChanged,
     required this.onToday,
     required this.onPickDate,
+    required this.navigationOrder,
+    required this.hiddenNavigationIds,
+    required this.hiddenItemsBehavior,
+    required this.moreButtonKey,
   });
 
   final String categoryLabel;
@@ -803,9 +816,14 @@ class _GeneralToolbarLayout extends StatelessWidget {
   final ValueChanged<String> onViewChanged;
   final VoidCallback onToday;
   final VoidCallback? onPickDate;
+  final List<String> navigationOrder;
+  final List<String> hiddenNavigationIds;
+  final String hiddenItemsBehavior;
+  final GlobalKey moreButtonKey;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SizedBox(
       width: double.infinity,
       child: LayoutBuilder(
@@ -833,8 +851,8 @@ class _GeneralToolbarLayout extends StatelessWidget {
               showIcon: metrics.calendarShowIcon,
             ),
           );
-          final navigation = SizedBox(
-            width: metrics.dateWidth + 48 + 4,
+          final dateNavigation = SizedBox(
+            width: metrics.dateWidth,
             child: _GeneralWorkspaceNavigation(
               view: view,
               selectedDate: selectedDate,
@@ -846,6 +864,26 @@ class _GeneralToolbarLayout extends StatelessWidget {
               onViewChanged: onViewChanged,
               onToday: onToday,
               onPickDate: onPickDate,
+              viewSwitcherKey: null,
+              includeDate: true,
+              includeView: false,
+            ),
+          );
+          final viewNavigation = SizedBox.square(
+            dimension: 48,
+            child: _GeneralWorkspaceNavigation(
+              view: view,
+              selectedDate: selectedDate,
+              dateNavigationDirection: dateNavigationDirection,
+              interactive: interactive,
+              dateWidth: metrics.dateWidth,
+              dateLabelFormat: dateLabelFormat,
+              viewSwitchBehavior: viewSwitchBehavior,
+              onViewChanged: onViewChanged,
+              onToday: onToday,
+              onPickDate: onPickDate,
+              includeDate: false,
+              includeView: true,
             ),
           );
           final settings = showSettingsAction
@@ -860,20 +898,140 @@ class _GeneralToolbarLayout extends StatelessWidget {
                   ),
                 )
               : null;
+          // Keep rendering safe even if a transient/manual snapshot bypasses
+          // model normalization. Settings is always the recovery entry.
+          final hidden = hiddenNavigationIds
+              .where(generalToolbarNavigationKnownIds.contains)
+              .where((id) => id != 'settings')
+              .toSet();
+          final order = normalizeToolbarNavigationOrder(
+            navigationOrder,
+            knownIds: generalToolbarNavigationKnownIds,
+            defaultOrder: generalToolbarNavigationDefaultOrder,
+          );
+          final canShowMore =
+              hiddenItemsBehavior == toolbarHiddenItemsBehaviorMore &&
+              hidden.isNotEmpty &&
+              !hidden.contains('more');
+          final actionById = <String, Widget>{
+            'category': calendar,
+            'date': dateNavigation,
+            'view': viewNavigation,
+            if (canShowMore)
+              'more': KeyedSubtree(
+                key: const ValueKey('general-toolbar-more-button'),
+                child: SkedPopupMenuButton<String>(
+                  key: moreButtonKey,
+                  icon: const Icon(Icons.more_horiz),
+                  tooltip: l10n.more,
+                  enabled: interactive,
+                  onSelected: (id) {
+                    switch (id) {
+                      case 'category':
+                        onOpenCalendar();
+                      case 'date':
+                        onPickDate?.call();
+                      case 'today':
+                        onToday();
+                      case 'view':
+                        if (viewSwitchBehavior ==
+                            generalViewSwitchBehaviorMenu) {
+                          // PopupMenuButton invokes onSelected after its
+                          // route has completed, so the second menu can be
+                          // opened directly without racing the first route's
+                          // reverse animation.
+                          unawaited(
+                            _showGeneralViewSelectionMenu(
+                              context: context,
+                              anchorContext:
+                                  moreButtonKey.currentContext ?? context,
+                              view: view,
+                              interactive: interactive,
+                              onViewChanged: onViewChanged,
+                            ),
+                          );
+                        } else {
+                          onViewChanged(_nextGeneralView(view));
+                        }
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    for (final id in order)
+                      if (hidden.contains(id) && id != 'settings')
+                        SkedPopupMenuItem<String>(
+                          value: id,
+                          child: Text(switch (id) {
+                            'category' => l10n.calendars,
+                            'date' => l10n.pickDate,
+                            'view' => l10n.toolbarNavigationView,
+                            _ => id,
+                          }),
+                        ),
+                    if (hidden.contains('date'))
+                      SkedPopupMenuItem<String>(
+                        value: 'today',
+                        child: Text(l10n.today),
+                      ),
+                  ],
+                ),
+              ),
+          };
+          if (settings != null) actionById['settings'] = settings;
+          final hiddenActions = <String>{...hidden};
+          final orderedIds = <String>[];
+          for (final id in order) {
+            if (!hiddenActions.contains(id) && actionById.containsKey(id)) {
+              orderedIds.add(id);
+            }
+          }
+          if (canShowMore && !orderedIds.contains('more')) {
+            orderedIds.add('more');
+          }
+          if (settings != null && !orderedIds.contains('settings')) {
+            orderedIds.add('settings');
+          }
+          final widths = <String, double>{
+            'category': metrics.calendarWidth,
+            'date': metrics.dateWidth,
+            'view': 48,
+            'settings': 48,
+            'more': 48,
+          };
+          final contentWidth =
+              orderedIds.fold<double>(
+                0,
+                (sum, id) => sum + (widths[id] ?? 48),
+              ) +
+              math.max(0, orderedIds.length - 1) * 4;
+          final children = [
+            for (var i = 0; i < orderedIds.length; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              actionById[orderedIds[i]]!,
+            ],
+          ];
+          final navigation = contentWidth > availableWidth + 0.5
+              ? SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  child: Row(children: children),
+                )
+              : children.isEmpty
+              ? const SizedBox.shrink()
+              : SizedBox(
+                  width: availableWidth,
+                  child: Row(
+                    children: [
+                      children.first,
+                      if (children.length > 1) ...[
+                        const Spacer(),
+                        ...children.skip(1),
+                      ],
+                    ],
+                  ),
+                );
           return Align(
             alignment: AlignmentDirectional.centerStart,
-            child: SizedBox(
-              width: groupWidth,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  calendar,
-                  const SizedBox(width: 4),
-                  navigation,
-                  if (settings != null) ...[const SizedBox(width: 4), settings],
-                ],
-              ),
-            ),
+            child: SizedBox(width: groupWidth, child: navigation),
           );
         },
       ),
@@ -1025,6 +1183,9 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     required this.onViewChanged,
     required this.onToday,
     required this.onPickDate,
+    this.viewSwitcherKey = const ValueKey('general-view-switcher'),
+    this.includeDate = true,
+    this.includeView = true,
   });
 
   final String view;
@@ -1037,6 +1198,9 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
   final ValueChanged<String> onViewChanged;
   final VoidCallback onToday;
   final VoidCallback? onPickDate;
+  final Key? viewSwitcherKey;
+  final bool includeDate;
+  final bool includeView;
 
   @override
   Widget build(BuildContext context) {
@@ -1044,15 +1208,17 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     final currentViewLabel = _generalViewLabel(l10n, view);
     final nextView = _nextGeneralView(view);
     final nextViewLabel = _generalViewLabel(l10n, nextView);
-    final selector = _GeneralViewSwitcher(
-      key: const ValueKey('general-view-switcher'),
-      view: view,
-      behavior: viewSwitchBehavior,
-      currentLabel: currentViewLabel,
-      nextLabel: nextViewLabel,
-      interactive: interactive,
-      onViewChanged: onViewChanged,
-    );
+    final selector = includeView
+        ? _GeneralViewSwitcher(
+            key: viewSwitcherKey,
+            view: view,
+            behavior: viewSwitchBehavior,
+            currentLabel: currentViewLabel,
+            nextLabel: nextViewLabel,
+            interactive: interactive,
+            onViewChanged: onViewChanged,
+          )
+        : null;
     final dateLabel = _dateNavigationLabelForWidth(
       context,
       selectedDate,
@@ -1117,9 +1283,9 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
       mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: dateButton),
-        const SizedBox(width: 4),
-        SizedBox.square(dimension: 48, child: selector),
+        if (includeDate) Expanded(child: dateButton),
+        if (includeDate && includeView) const SizedBox(width: 4),
+        if (selector != null) SizedBox.square(dimension: 48, child: selector),
       ],
     );
   }
@@ -1160,29 +1326,7 @@ class _GeneralViewSwitcher extends StatelessWidget {
         onSelected: (next) {
           if (next != view) onViewChanged(next);
         },
-        itemBuilder: (context) => [
-          for (final item in _generalViewOptions(l10n))
-            SkedPopupMenuItem<String>(
-              value: item.value,
-              child: Semantics(
-                selected: item.value == view,
-                child: Row(
-                  children: [
-                    Icon(item.icon, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(item.label)),
-                    item.value == view
-                        ? Icon(
-                            Icons.check_rounded,
-                            size: 20,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : const SizedBox.square(dimension: 20),
-                  ],
-                ),
-              ),
-            ),
-        ],
+        itemBuilder: (context) => _generalViewMenuItems(context, view),
       );
     }
 
@@ -1207,6 +1351,68 @@ class _GeneralViewSwitcher extends StatelessWidget {
       ),
     );
   }
+}
+
+List<PopupMenuEntry<String>> _generalViewMenuItems(
+  BuildContext context,
+  String view,
+) {
+  final colors = Theme.of(context).colorScheme;
+  return [
+    for (final item in _generalViewOptions(AppLocalizations.of(context)))
+      SkedPopupMenuItem<String>(
+        value: item.value,
+        child: Semantics(
+          selected: item.value == view,
+          child: Row(
+            children: [
+              Icon(item.icon, size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Text(item.label)),
+              item.value == view
+                  ? Icon(Icons.check_rounded, size: 20, color: colors.primary)
+                  : const SizedBox.square(dimension: 20),
+            ],
+          ),
+        ),
+      ),
+  ];
+}
+
+Future<void> _showGeneralViewSelectionMenu({
+  required BuildContext context,
+  required BuildContext anchorContext,
+  required String view,
+  required bool interactive,
+  required ValueChanged<String> onViewChanged,
+}) async {
+  if (!interactive) return;
+  final anchor = anchorContext.findRenderObject();
+  final overlay = Navigator.of(context).overlay?.context.findRenderObject();
+  if (anchor is! RenderBox ||
+      overlay is! RenderBox ||
+      !anchor.attached ||
+      !overlay.attached) {
+    return;
+  }
+
+  final anchorRect = Rect.fromPoints(
+    anchor.localToGlobal(Offset.zero, ancestor: overlay),
+    anchor.localToGlobal(
+      anchor.size.bottomRight(Offset.zero),
+      ancestor: overlay,
+    ),
+  );
+  final selected = await showMenu<String>(
+    context: context,
+    position: RelativeRect.fromRect(anchorRect, Offset.zero & overlay.size),
+    menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+    clipBehavior: Clip.antiAlias,
+    popUpAnimationStyle: SkedMotionPolicy.of(context)
+        .routeStyle(AppMotion.menuAnimationStyle),
+    items: _generalViewMenuItems(context, view),
+  );
+  if (selected != null && selected != view) onViewChanged(selected);
 }
 
 class _GeneralViewOption {
@@ -1274,6 +1480,9 @@ class _GeneralHomeSnapshot {
     required this.dayEndHour,
     required this.timeGridMinutes,
     required this.timeGridHourHeight,
+    required this.toolbarNavigationOrder,
+    required this.hiddenToolbarNavigationIds,
+    required this.toolbarHiddenItemsBehavior,
   });
 
   factory _GeneralHomeSnapshot.from(TimetableProvider provider) {
@@ -1296,6 +1505,9 @@ class _GeneralHomeSnapshot {
       dayEndHour: data.dayEndHour,
       timeGridMinutes: data.timeGridMinutes,
       timeGridHourHeight: data.timeGridHourHeight,
+      toolbarNavigationOrder: data.toolbarNavigationOrder,
+      hiddenToolbarNavigationIds: data.hiddenToolbarNavigationIds,
+      toolbarHiddenItemsBehavior: data.toolbarHiddenItemsBehavior,
     );
   }
 
@@ -1316,6 +1528,9 @@ class _GeneralHomeSnapshot {
   final int dayEndHour;
   final int timeGridMinutes;
   final int timeGridHourHeight;
+  final List<String> toolbarNavigationOrder;
+  final List<String> hiddenToolbarNavigationIds;
+  final String toolbarHiddenItemsBehavior;
 
   @override
   bool operator ==(Object other) {
@@ -1336,11 +1551,20 @@ class _GeneralHomeSnapshot {
         other.dayStartHour == dayStartHour &&
         other.dayEndHour == dayEndHour &&
         other.timeGridMinutes == timeGridMinutes &&
-        other.timeGridHourHeight == timeGridHourHeight;
+        other.timeGridHourHeight == timeGridHourHeight &&
+        _stringListEquals(
+          other.toolbarNavigationOrder,
+          toolbarNavigationOrder,
+        ) &&
+        _stringListEquals(
+          other.hiddenToolbarNavigationIds,
+          hiddenToolbarNavigationIds,
+        ) &&
+        other.toolbarHiddenItemsBehavior == toolbarHiddenItemsBehavior;
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     selectedDate.year,
     selectedDate.month,
     selectedDate.day,
@@ -1360,7 +1584,19 @@ class _GeneralHomeSnapshot {
     dayEndHour,
     timeGridMinutes,
     timeGridHourHeight,
-  );
+    Object.hashAll(toolbarNavigationOrder),
+    Object.hashAll(hiddenToolbarNavigationIds),
+    toolbarHiddenItemsBehavior,
+  ]);
+}
+
+bool _stringListEquals(List<String> a, List<String> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 class _MoreGeneralOccurrencesSheet extends StatelessWidget {

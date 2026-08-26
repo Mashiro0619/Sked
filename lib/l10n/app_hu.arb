@@ -34,6 +34,8 @@
   },
   "editTimetable": "A menetrend szerkesztése",
   "@editTimetable": {},
+  "schoolImportResultEditorTitle": "Edit parsed result",
+  "@schoolImportResultEditorTitle": {},
   "createTimetable": "Új menetrend",
   "@createTimetable": {},
   "jumpToWeek": "Ugrás a hétre",

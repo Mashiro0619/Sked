@@ -30,6 +30,58 @@ class _MemoryTimetableStorage implements TimetableStorage {
 }
 
 void main() {
+  test(
+    'toolbar navigation settings persist independently with one save each',
+    () async {
+      final storage = _MemoryTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+
+      await provider.updateGeneralToolbarNavigationOrder([
+        'view',
+        'settings',
+        'category',
+        'date',
+        'more',
+      ]);
+      expect(storage.saveCount, 1);
+      expect(provider.generalToolbarNavigationOrder, [
+        'view',
+        'settings',
+        'category',
+        'date',
+        'more',
+      ]);
+
+      await provider.updateGeneralToolbarNavigationVisibility(
+        'category',
+        false,
+      );
+      expect(storage.saveCount, 2);
+      expect(provider.generalHiddenToolbarNavigationIds, ['category']);
+
+      await provider.updateGeneralToolbarHiddenItemsBehavior('more');
+      expect(storage.saveCount, 3);
+      expect(provider.generalToolbarHiddenItemsBehavior, 'more');
+      expect(storage.data!.generalMode.toolbarNavigationOrder, [
+        'view',
+        'settings',
+        'category',
+        'date',
+        'more',
+      ]);
+      expect(storage.data!.generalMode.hiddenToolbarNavigationIds, [
+        'category',
+      ]);
+    },
+  );
+
   test('saved general events survive strict storage decoding', () async {
     final storage = _MemoryTimetableStorage(
       buildInitialAppData(buildDefaultPeriodTimes()),

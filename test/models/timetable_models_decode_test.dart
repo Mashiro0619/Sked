@@ -273,6 +273,14 @@ void main() {
       expect(data.enableWeekSwipeNavigation, isTrue);
       expect(data.showAddCourseFab, isTrue);
       expect(data.enableLongPressAddCourse, isTrue);
+      expect(data.toolbarNavigationOrder, [
+        'timetable',
+        'week',
+        'view',
+        'settings',
+      ]);
+      expect(data.hiddenToolbarNavigationIds, isEmpty);
+      expect(data.toolbarHiddenItemsBehavior, 'remove');
     });
 
     test('StudentModeData layout settings round-trip', () {
@@ -298,6 +306,66 @@ void main() {
       expect(decoded.enableLongPressAddCourse, isFalse);
       expect(decoded.copyWith().showAddCourseFab, isFalse);
       expect(decoded.copyWith().enableLongPressAddCourse, isFalse);
+    });
+
+    test('StudentModeData toolbar navigation round-trips and normalizes', () {
+      final data = StudentModeData.fromJson(const {
+        'activeTimetableId': '',
+        'periodTimeSets': [],
+        'timetables': [],
+        'toolbarNavigationOrder': ['view', 'view', 'unknown', 'settings'],
+        'hiddenToolbarNavigationIds': ['settings', 'week', 'week', 'unknown'],
+        'toolbarHiddenItemsBehavior': 'more',
+      }, localeCode: defaultLocaleCode);
+
+      expect(data.toolbarNavigationOrder, [
+        'view',
+        'settings',
+        'timetable',
+        'week',
+        'more',
+      ]);
+      expect(data.hiddenToolbarNavigationIds, ['week']);
+      expect(data.toolbarHiddenItemsBehavior, 'more');
+
+      final decoded = StudentModeData.fromJson(
+        data.toJson(),
+        localeCode: defaultLocaleCode,
+      );
+      expect(decoded.toolbarNavigationOrder, data.toolbarNavigationOrder);
+      expect(decoded.hiddenToolbarNavigationIds, ['week']);
+      expect(decoded.toolbarHiddenItemsBehavior, 'more');
+    });
+
+    test('StudentModeData rejects invalid toolbar navigation storage', () {
+      Map<String, dynamic> payload(String key, Object value) => {
+        'activeTimetableId': '',
+        'periodTimeSets': [],
+        'timetables': [],
+        key: value,
+      };
+
+      expect(
+        () => StudentModeData.fromJson(
+          payload('toolbarNavigationOrder', [1]),
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => StudentModeData.fromJson(
+          payload('hiddenToolbarNavigationIds', [false]),
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => StudentModeData.fromJson(
+          payload('toolbarHiddenItemsBehavior', 'invalid'),
+          localeCode: defaultLocaleCode,
+        ),
+        throwsFormatException,
+      );
     });
   });
 }
