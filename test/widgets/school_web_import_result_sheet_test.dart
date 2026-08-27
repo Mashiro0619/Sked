@@ -220,28 +220,45 @@ void main() {
 
     final l10n = _sheetL10n(tester);
     final nameField = find.byType(TextField);
+    final detailsHeader = find.text(l10n.schoolWebImportParserDetails);
     expect(nameField, findsOneWidget);
-    expect(find.text(l10n.schoolWebImportParserDetails), findsOneWidget);
+    expect(detailsHeader, findsOneWidget);
     expect(find.text(pageTitle), findsNothing);
     expect(find.text(parser), findsNothing);
+    // The title is the accessible name and `expanded` carries the state, so the
+    // expand/collapse wording is exposed as a hint instead of a second label.
     expect(
-      find.bySemanticsLabel(
-        RegExp(RegExp.escape(l10n.schoolWebImportExpandParserDetails)),
+      tester.getSemantics(detailsHeader),
+      matchesSemantics(
+        label: l10n.schoolWebImportParserDetails,
+        hint: l10n.schoolWebImportExpandParserDetails,
+        isButton: true,
+        hasExpandedState: true,
+        isExpanded: false,
+        hasTapAction: true,
+        hasFocusAction: true,
+        isFocusable: true,
       ),
-      findsOneWidget,
     );
 
     await tester.enterText(nameField, 'Edited imported timetable');
-    await tester.tap(find.text(l10n.schoolWebImportParserDetails));
+    await tester.tap(detailsHeader);
     await tester.pumpAndSettle();
 
     expect(find.text(pageTitle), findsOneWidget);
     expect(find.text(parser), findsOneWidget);
     expect(
-      find.bySemanticsLabel(
-        RegExp(RegExp.escape(l10n.schoolWebImportCollapseParserDetails)),
+      tester.getSemantics(detailsHeader),
+      matchesSemantics(
+        label: l10n.schoolWebImportParserDetails,
+        hint: l10n.schoolWebImportCollapseParserDetails,
+        isButton: true,
+        hasExpandedState: true,
+        isExpanded: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+        isFocusable: true,
       ),
-      findsOneWidget,
     );
     expect(
       tester.widget<TextField>(nameField).controller!.text,

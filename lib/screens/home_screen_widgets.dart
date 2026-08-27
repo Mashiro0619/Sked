@@ -307,12 +307,25 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               : screenWidth - (phoneWidth ? 16 : 32);
           const gap = 4.0;
           const selectorMinimum = 48.0;
+          // Fixed-width navigation actions. Both the width budget below and the
+          // final `contentWidth` check read from this one map, so adding an
+          // action of a different width cannot make the two disagree.
+          const fixedActionWidths = <String, double>{
+            'view': 48,
+            'settings': 48,
+            'more': 48,
+          };
+          const defaultActionWidth = 48.0;
           final weekMinimum = phoneWidth ? 80.0 : 96.0;
           final hasTimetable = orderedIds.contains('timetable');
           final hasWeek = orderedIds.contains('week');
           final nonFlexibleWidth = orderedIds
               .where((id) => id != 'timetable' && id != 'week')
-              .fold<double>(0, (sum, _) => sum + 48);
+              .fold<double>(
+                0,
+                (sum, id) =>
+                    sum + (fixedActionWidths[id] ?? defaultActionWidth),
+              );
           final gapWidth = math.max(0, orderedIds.length - 1) * gap;
           final maximumWeekWidth = math.max(
             48.0,
@@ -343,16 +356,14 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               ? math.min(selectorMaximum, flexibleWidth)
               : 0.0;
           final widths = <String, double>{
+            ...fixedActionWidths,
             'timetable': selectorWidth,
             'week': weekWidth,
-            'view': 48,
-            'settings': 48,
-            'more': 48,
           };
           final contentWidth =
               orderedIds.fold<double>(
                 0,
-                (sum, id) => sum + (widths[id] ?? 48),
+                (sum, id) => sum + (widths[id] ?? defaultActionWidth),
               ) +
               math.max(0, orderedIds.length - 1) * gap;
           final children = [

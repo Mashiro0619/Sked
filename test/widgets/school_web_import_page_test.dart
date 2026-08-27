@@ -25,7 +25,7 @@ void main() {
   });
 
   test('WebView leaves navigation entirely to the platform browser', () {
-    final settings = schoolWebImportWebViewSettings();
+    final settings = schoolWebImportWebViewSettings(supportsPopups: true);
 
     expect(settings.javaScriptEnabled, isTrue);
     expect(settings.javaScriptCanOpenWindowsAutomatically, isTrue);
@@ -33,6 +33,18 @@ void main() {
     expect(settings.thirdPartyCookiesEnabled, isTrue);
     expect(settings.useShouldOverrideUrlLoading, isFalse);
     expect(settings.regexToAllowSyncUrlLoading, isNull);
+  });
+
+  test('multi-window support is never enabled without a popup handler', () {
+    // onCreateWindow is only attached when the platform supports windowId.
+    // Leaving supportMultipleWindows on without it makes Android route
+    // target=_blank into a window nobody creates, so the tap does nothing.
+    final settings = schoolWebImportWebViewSettings(supportsPopups: false);
+
+    expect(settings.supportMultipleWindows, isFalse);
+    expect(settings.javaScriptCanOpenWindowsAutomatically, isFalse);
+    expect(settings.thirdPartyCookiesEnabled, isTrue);
+    expect(settings.useShouldOverrideUrlLoading, isFalse);
   });
 
   test('load completion rejects stale and partial callbacks', () {

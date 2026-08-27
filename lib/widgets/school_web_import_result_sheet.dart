@@ -91,11 +91,10 @@ class _SchoolWebImportResultSheetState
     final timetable = widget.response.timetable;
     final warnings = widget.response.meta.warnings;
     final mediaQuery = MediaQuery.of(context);
-    final compactSheet =
-        mediaQuery.size.height < 700 && mediaQuery.viewInsets.bottom == 0;
-    final sheetHeightFactor = mediaQuery.viewInsets.bottom > 0
+    final keyboardVisible = mediaQuery.viewInsets.bottom > 0;
+    final sheetHeightFactor = keyboardVisible
         ? 1.0
-        : compactSheet
+        : mediaQuery.size.height < 700
         ? 0.96
         : 0.84;
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
@@ -390,29 +389,28 @@ class _CourseCountSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return Semantics(
-      label: courseCount,
-      child: Material(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Icon(Icons.menu_book_outlined, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    courseCount,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: colors.onSurface,
-                    ),
+    // No Semantics wrapper: the Text below already carries `courseCount`, and a
+    // container label with the same string makes screen readers say it twice.
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Icon(Icons.menu_book_outlined, color: colors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  courseCount,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colors.onSurface,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -593,7 +591,10 @@ class _ParserDetailsDisclosure extends StatelessWidget {
           Semantics(
             button: active,
             expanded: expanded,
-            label: expanded ? collapseLabel : expandLabel,
+            // The title Text is the accessible name and `expanded` already
+            // announces the state, so the expand/collapse wording belongs in
+            // the hint rather than a label that competes with the title.
+            hint: expanded ? collapseLabel : expandLabel,
             child: ExpressiveTap(
               enabled: active,
               onTap: active ? () => onChanged!(!expanded) : null,
@@ -766,12 +767,15 @@ class _CompactActionRow extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final active = enabled && onTap != null;
-    final iconColor = enabled ? colors.primary : colors.onSurfaceVariant;
+    // Material's disabled emphasis. Keep every element of the row on the same
+    // token so a disabled row reads as disabled at a glance.
+    final disabledColor = colors.onSurface.withValues(alpha: 0.38);
+    final iconColor = enabled ? colors.primary : disabledColor;
     final titleStyle = theme.textTheme.titleSmall?.copyWith(
-      color: enabled ? colors.onSurface : colors.onSurfaceVariant,
+      color: enabled ? colors.onSurface : disabledColor,
     );
     final subtitleStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: enabled ? colors.onSurfaceVariant : colors.onSurfaceVariant,
+      color: enabled ? colors.onSurfaceVariant : disabledColor,
     );
     final content = Material(
       color: colors.surfaceContainerLow,
@@ -812,7 +816,7 @@ class _CompactActionRow extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 5),
                   child: Icon(
                     trailingIcon,
-                    color: enabled ? colors.onSurfaceVariant : iconColor,
+                    color: enabled ? colors.onSurfaceVariant : disabledColor,
                   ),
                 ),
               ],
@@ -884,21 +888,18 @@ class _ImportPreviewActions extends StatelessWidget {
             ],
           );
         }
+        // Compact mode is entered precisely when the three labels cannot share
+        // one row, so stacking the two submit actions full-width is the only
+        // layout that stays correct for long localized labels. A Row with a
+        // Spacer would cap the replace button at half the leftover width and
+        // overflow in languages like German or Russian.
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             addAsNew,
+            if (canReplaceCurrent) ...[const SizedBox(height: 4), replace],
             const SizedBox(height: 4),
-            if (canReplaceCurrent)
-              Row(
-                children: [
-                  cancel,
-                  const Spacer(),
-                  Flexible(child: replace),
-                ],
-              )
-            else
-              Align(alignment: Alignment.centerRight, child: cancel),
+            Align(alignment: Alignment.centerRight, child: cancel),
           ],
         );
       },
@@ -915,9 +916,14 @@ class _ImportPreviewActions extends StatelessWidget {
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
+    // TextPainter owns a native paragraph, and this runs inside a LayoutBuilder
+    // that re-measures on every keyboard animation frame. Release it here
+    // instead of leaving one behind per measurement.
+    final labelWidth = painter.width;
+    painter.dispose();
     // Material buttons include the visible label padding and a slightly wider
     // press target. Keep a margin for localized labels rather than assuming a
     // particular sheet width is enough.
-    return (painter.width + 64).clamp(64, double.infinity).toDouble();
+    return (labelWidth + 64).clamp(64, double.infinity).toDouble();
   }
 }

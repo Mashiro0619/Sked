@@ -2319,44 +2319,43 @@ void main() {
     },
   );
 
-  testWidgets(
-    'compact timetable selector uses the remaining toolbar width',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(581, 776));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final base = _buildPopulatedStudentData();
-      final provider = TimetableProvider(
-        storage: _MemoryTimetableStorage(
-          base.copyWith(
-            studentMode: base.studentMode.copyWith(
-              hiddenToolbarNavigationIds: const ['week'],
-            ),
+  testWidgets('compact timetable selector uses the remaining toolbar width', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(581, 776));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = _buildPopulatedStudentData();
+    final provider = TimetableProvider(
+      storage: _MemoryTimetableStorage(
+        base.copyWith(
+          studentMode: base.studentMode.copyWith(
+            hiddenToolbarNavigationIds: const ['week'],
           ),
         ),
-        systemLocaleCodeResolver: () => defaultLocaleCode,
-        privacyService: const _NoopPrivacyService(),
-        secretStore: const _NoopSecretStore(),
-      );
-      await provider.load();
-      addTearDown(provider.dispose);
-      await _pumpHomeScreenWithProvider(tester, provider);
+      ),
+      systemLocaleCodeResolver: () => defaultLocaleCode,
+      privacyService: const _NoopPrivacyService(),
+      secretStore: const _NoopSecretStore(),
+    );
+    await provider.load();
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
 
-      final selector = tester.getRect(
-        find.byKey(const ValueKey('student-timetable-picker-button')),
-      );
-      final view = tester.getRect(
-        find.byKey(const ValueKey('student-view-toggle-button')),
-      );
-      final settings = tester.getRect(
-        find.byKey(const ValueKey('student-settings-button')),
-      );
+    final selector = tester.getRect(
+      find.byKey(const ValueKey('student-timetable-picker-button')),
+    );
+    final view = tester.getRect(
+      find.byKey(const ValueKey('student-view-toggle-button')),
+    );
+    final settings = tester.getRect(
+      find.byKey(const ValueKey('student-settings-button')),
+    );
 
-      expect(selector.width, greaterThan(400));
-      expect(selector.right, closeTo(view.left - 4, 0.01));
-      expect(view.right, closeTo(settings.left - 4, 0.01));
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(selector.width, greaterThan(400));
+    expect(selector.right, closeTo(view.left - 4, 0.01));
+    expect(view.right, closeTo(settings.left - 4, 0.01));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('large text does not change the initial week view', (
     tester,

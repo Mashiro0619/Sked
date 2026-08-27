@@ -7,7 +7,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:sked/screens/school_web_import_page.dart'
-    show schoolWebImportWebViewSettings;
+    show schoolWebImportSupportsPopupWindows, schoolWebImportWebViewSettings;
 
 const _webViewTimeout = Duration(seconds: 20);
 
@@ -190,7 +190,9 @@ class _SchoolWebViewHarnessState extends State<_SchoolWebViewHarness> {
       children: [
         InAppWebView(
           key: const ValueKey('school-web-import-parent-webview'),
-          initialSettings: schoolWebImportWebViewSettings(),
+          initialSettings: schoolWebImportWebViewSettings(
+            supportsPopups: schoolWebImportSupportsPopupWindows(),
+          ),
           onWebViewCreated: widget.onParentCreated,
           onCreateWindow: _handleCreateWindow,
         ),
@@ -198,7 +200,9 @@ class _SchoolWebViewHarnessState extends State<_SchoolWebViewHarness> {
           InAppWebView(
             key: ValueKey('school-web-import-child-$childWindowId'),
             windowId: childWindowId,
-            initialSettings: schoolWebImportWebViewSettings(),
+            initialSettings: schoolWebImportWebViewSettings(
+              supportsPopups: schoolWebImportSupportsPopupWindows(),
+            ),
             onWebViewCreated: (controller) {
               widget.onChildCreated?.call(controller);
             },

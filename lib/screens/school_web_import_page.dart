@@ -53,9 +53,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
 
   bool get _supportsWebView => supportsInAppWebView;
 
-  bool get _supportsPopupWindows => InAppWebView.isPropertySupported(
-    PlatformWebViewCreationParamsProperty.windowId,
-  );
+  bool get _supportsPopupWindows => schoolWebImportSupportsPopupWindows();
 
   @override
   void initState() {
@@ -173,7 +171,9 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                       ? const Center(child: CircularProgressIndicator())
                       : InAppWebView(
                           windowId: widget.windowId,
-                          initialSettings: schoolWebImportWebViewSettings(),
+                          initialSettings: schoolWebImportWebViewSettings(
+                            supportsPopups: _supportsPopupWindows,
+                          ),
                           onWebViewCreated: (controller) {
                             _controller = controller;
                             if (!widget.isPopupWindow) {
@@ -382,42 +382,38 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     if (!mounted) {
       return false;
     }
-
+    // Only wired up when the platform reports windowId support, so there is no
+    // unsupported case to handle here.
     final windowId = action.windowId;
-    if (_supportsPopupWindows) {
-      if (_openPopupWindowIds.add(windowId)) {
-        unawaited(
-          Navigator.of(context)
-              .push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => SchoolWebImportPage(
-                    site: widget.site,
-                    windowId: windowId,
-                  ),
-                ),
-              )
-              .whenComplete(() {
-                _openPopupWindowIds.remove(windowId);
-              }),
-        );
-        return true;
-      }
+    if (!_openPopupWindowIds.add(windowId)) {
       return false;
     }
-    // A support change during a route transition is handled by the platform's
-    // native callback without a Dart-side URL replay.
-    return false;
+    unawaited(
+      Navigator.of(context)
+          .push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  SchoolWebImportPage(site: widget.site, windowId: windowId),
+            ),
+          )
+          .whenComplete(() {
+            _openPopupWindowIds.remove(windowId);
+          }),
+    );
+    return true;
   }
 
   void _handlePopupWindowClosed() {
     if (!widget.isPopupWindow || !mounted || _isClosingPopupWindow) {
       return;
     }
-    _isClosingPopupWindow = true;
     final route = ModalRoute.of(context);
     if (route == null) {
       return;
     }
+    // Latch only once the pop is actually going through, so a missing route
+    // does not permanently swallow later close requests.
+    _isClosingPopupWindow = true;
     final navigator = Navigator.of(context);
     if (route.isCurrent) {
       navigator.pop();
@@ -739,11 +735,24 @@ String? schoolWebImportOrigin(String source) {
 }
 
 @visibleForTesting
-InAppWebViewSettings schoolWebImportWebViewSettings() {
+bool schoolWebImportSupportsPopupWindows() => InAppWebView.isPropertySupported(
+  PlatformWebViewCreationParamsProperty.windowId,
+);
+
+@visibleForTesting
+InAppWebViewSettings schoolWebImportWebViewSettings({
+  required bool supportsPopups,
+}) {
+  // Routing target=_blank through onCreateWindow only works when a handler is
+  // attached. Both derive from the same flag so a platform without windowId
+  // support keeps opening links in place instead of dropping the tap.
   return InAppWebViewSettings(
     javaScriptEnabled: true,
-    javaScriptCanOpenWindowsAutomatically: true,
-    supportMultipleWindows: true,
+    javaScriptCanOpenWindowsAutomatically: supportsPopups,
+    supportMultipleWindows: supportsPopups,
+    // Campus single sign-on commonly nests the identity provider in an iframe,
+    // which needs third-party cookies to keep its session. Turning this off
+    // breaks those logins.
     thirdPartyCookiesEnabled: true,
     // Let the platform WebView own the whole navigation session, including
     // redirects and form POSTs used by campus authentication systems.
