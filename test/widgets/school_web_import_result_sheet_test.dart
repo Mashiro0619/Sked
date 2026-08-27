@@ -101,29 +101,33 @@ Future<void> _pumpPreviewSheet(
       locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      // Applied through MaterialApp.builder so it sits above the Navigator.
+      // Wrapping `home` instead leaves modal routes — which is what this sheet
+      // is — on the unscaled app-level MediaQuery.
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: textScaler, viewInsets: viewInsets),
+        child: child!,
+      ),
       home: Builder(
-        builder: (context) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: textScaler, viewInsets: viewInsets),
-          child: Scaffold(
-            body: Center(
-              child: TextButton(
-                onPressed: () async {
-                  final result =
-                      await showAppModalSheet<SchoolImportApplyRequest>(
-                        context: context,
-                        builder: (_) => SchoolWebImportResultSheet(
-                          response: response,
-                          canReplaceCurrent: canReplaceCurrent,
-                          periodTimeSets: periodTimeSets,
-                          initialPeriodTimeSetId: initialPeriodTimeSetId,
-                          provider: provider,
-                        ),
-                      );
-                  onResult?.call(result);
-                },
-                child: const Text('Open'),
-              ),
+        builder: (context) => Scaffold(
+          body: Center(
+            child: TextButton(
+              onPressed: () async {
+                final result =
+                    await showAppModalSheet<SchoolImportApplyRequest>(
+                      context: context,
+                      builder: (_) => SchoolWebImportResultSheet(
+                        response: response,
+                        canReplaceCurrent: canReplaceCurrent,
+                        periodTimeSets: periodTimeSets,
+                        initialPeriodTimeSetId: initialPeriodTimeSetId,
+                        provider: provider,
+                      ),
+                    );
+                onResult?.call(result);
+              },
+              child: const Text('Open'),
             ),
           ),
         ),
@@ -195,6 +199,78 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow footer pairs cancel and replace when both still fit', (
+    tester,
+  ) async {
+    // Wide enough that cancel and replace still share a row, but not wide
+    // enough for all three (the test font renders every glyph a full em wide,
+    // so labels measure far wider here than with a real font).
+    await tester.binding.setSurfaceSize(const Size(700, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider();
+    await _pumpPreviewSheet(
+      tester,
+      provider: provider,
+      response: _buildResponse(),
+      canReplaceCurrent: true,
+    );
+    await _openPreviewSheet(tester);
+
+    final l10n = _sheetL10n(tester);
+    final cancel = find.widgetWithText(TextButton, l10n.cancel);
+    final replace = find.widgetWithText(
+      OutlinedButton,
+      l10n.replaceCurrentTimetable,
+    );
+    final addAsNew = find.widgetWithText(
+      FilledButton,
+      l10n.importAsNewTimetable,
+    );
+
+    final cancelRect = tester.getRect(cancel);
+    final replaceRect = tester.getRect(replace);
+
+    // Primary action on its own row, the other two sharing the row below it.
+    expect(tester.getRect(addAsNew).bottom, lessThanOrEqualTo(cancelRect.top));
+    expect(cancelRect.center.dy, closeTo(replaceRect.center.dy, 1));
+    expect(cancelRect.right, lessThanOrEqualTo(replaceRect.left));
+    // Replace takes the whole remainder rather than half of it.
+    expect(replaceRect.right, closeTo(tester.getRect(addAsNew).right, 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow footer stacks every action when the pair cannot fit', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final provider = await _createProvider();
+    await _pumpPreviewSheet(
+      tester,
+      provider: provider,
+      response: _buildResponse(),
+      canReplaceCurrent: true,
+      textScaler: const TextScaler.linear(1.6),
+    );
+    await _openPreviewSheet(tester);
+
+    final l10n = _sheetL10n(tester);
+    final cancelRect = tester.getRect(
+      find.widgetWithText(TextButton, l10n.cancel),
+    );
+    final replaceRect = tester.getRect(
+      find.widgetWithText(OutlinedButton, l10n.replaceCurrentTimetable),
+    );
+
+    // Each on its own row, and nothing spills past the sheet.
+    expect(replaceRect.bottom, lessThanOrEqualTo(cancelRect.top));
+    expect(replaceRect.left, greaterThanOrEqualTo(0));
+    expect(replaceRect.right, lessThanOrEqualTo(320));
     expect(tester.takeException(), isNull);
   });
 

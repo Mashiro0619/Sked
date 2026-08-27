@@ -888,18 +888,38 @@ class _ImportPreviewActions extends StatelessWidget {
             ],
           );
         }
-        // Compact mode is entered precisely when the three labels cannot share
-        // one row, so stacking the two submit actions full-width is the only
-        // layout that stays correct for long localized labels. A Row with a
-        // Spacer would cap the replace button at half the leftover width and
-        // overflow in languages like German or Russian.
+        // All three labels do not share a row, but cancel and replace often
+        // still do. Measure that pair before falling back to a full stack, so
+        // short-label locales keep the tighter two-row layout and only the
+        // genuinely long ones spend a third row.
+        final pairedRowWidth =
+            _minimumButtonWidth(context, l10n.cancel) +
+            8 +
+            _minimumButtonWidth(context, l10n.replaceCurrentTimetable);
+        final canPairSecondRow =
+            canReplaceCurrent && constraints.maxWidth >= pairedRowWidth;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             addAsNew,
-            if (canReplaceCurrent) ...[const SizedBox(height: 4), replace],
             const SizedBox(height: 4),
-            Align(alignment: Alignment.centerRight, child: cancel),
+            if (!canReplaceCurrent)
+              Align(alignment: Alignment.centerRight, child: cancel)
+            else if (canPairSecondRow)
+              Row(
+                children: [
+                  cancel,
+                  const SizedBox(width: 8),
+                  // Expanded, not Flexible beside a Spacer: replace takes the
+                  // whole remainder instead of being capped at half of it.
+                  Expanded(child: replace),
+                ],
+              )
+            else ...[
+              replace,
+              const SizedBox(height: 4),
+              Align(alignment: Alignment.centerRight, child: cancel),
+            ],
           ],
         );
       },
