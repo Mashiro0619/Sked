@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Az oldal betöltése nem sikerült. Kérjük, frissítse meg vagy próbálja meg újra később.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Az oldal betöltése lejárt. Kérjük, frissítse meg és próbálja meg újra.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Az aktuális oldal tartalma üres, és még nem lehet importálni.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web menetrend importált",

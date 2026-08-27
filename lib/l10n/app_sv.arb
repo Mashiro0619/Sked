@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Sidladdning misslyckades. Uppdatera eller försök igen senare.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Laddningen av sidan har tagit slut. Vänligen uppdatera och försök igen.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Aktuellt innehåll på sidan är tomt och kan inte importeras ännu.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Webbtidsplan importerad",

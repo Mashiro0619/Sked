@@ -1209,10 +1209,6 @@ class AppLocalizationsCs extends AppLocalizations {
       'Načítání stránky selhalo. Prosím, obnovte nebo zkuste to znovu později.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Načítání stránky vypršelo. Prosím, osvěžte a zkuste znovu.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Neznámý web';
 
   @override

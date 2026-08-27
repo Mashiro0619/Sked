@@ -1219,10 +1219,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Încărcarea paginii a eșuat. Vă rugăm să vă reîmprospătați sau să încercați din nou mai târziu.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Încărcarea paginii a expirat. Vă rugăm să vă reîmprospătați și să încercați din nou.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Site necunoscut';
 
   @override

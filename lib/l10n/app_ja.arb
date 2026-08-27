@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "ページの読み込みに失敗しました。更新するか、しばらくしてからもう一度お試しください。",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "ページ読み込みがタイムアウトしました。更新して再度お試しください。",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "現在のページ内容が空のため、まだインポートできません。",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web時間割をインポートしました",

@@ -1219,10 +1219,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Falha ao carregar a página. Atualize ou tente novamente mais tarde.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'O carregamento da página expirou. Atualize e tente novamente.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Site desconhecido';
 
   @override

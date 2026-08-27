@@ -1224,10 +1224,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo cargar la página. Actualiza o inténtalo de nuevo más tarde.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Se agotó el tiempo de carga de la página. Actualiza e inténtalo de nuevo.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Sitio desconocido';
 
   @override

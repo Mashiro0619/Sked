@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Page load không thành công. Xin vui lòng làm mới hoặc thử lại sau.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Page loading đã hết thời gian. Xin vui lòng làm mới và thử lại.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Nội dung trang hiện tại trống và chưa thể nhập được.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Lịch trình web nhập khẩu",

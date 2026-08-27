@@ -1220,10 +1220,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Seite konnte nicht geladen werden. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Zeitüberschreitung beim Laden der Seite. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Unbekannte Website';
 
   @override

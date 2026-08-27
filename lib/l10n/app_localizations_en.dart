@@ -1203,10 +1203,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Page load failed. Please refresh or try again later.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Page loading timed out. Please refresh and try again.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Unknown site';
 
   @override

@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Indlæsning af siden mislykkedes. Opdater eller prøv igen senere.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Sideindlæsning er tidsudløbet. Opdater og prøv igen.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Det aktuelle indhold er tomt og kan endnu ikke importeres.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web tidsplan importeret",

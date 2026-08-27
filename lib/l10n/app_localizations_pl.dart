@@ -1214,10 +1214,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się załadować strony. Proszę odświeżyć lub spróbować ponownie później.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Czas ładowania strony się skończył. Proszę odświeżyć i spróbować ponownie.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Nieznana witryna';
 
   @override

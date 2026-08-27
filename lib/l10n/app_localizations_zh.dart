@@ -1144,9 +1144,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportLoadFailed => '页面加载失败，请刷新后重试。';
 
   @override
-  String get schoolWebImportLoadTimedOut => '页面加载超时，请刷新后重试。';
-
-  @override
   String get schoolWebImportUnknownOrigin => '未知站点';
 
   @override
@@ -3319,9 +3316,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebImportLoadFailed => '頁面載入失敗，請重新整理後重試。';
-
-  @override
-  String get schoolWebImportLoadTimedOut => '頁面載入逾時，請重新整理後重試。';
 
   @override
   String get schoolWebImportUnknownOrigin => '未知站點';

@@ -1211,10 +1211,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Page load không thành công. Xin vui lòng làm mới hoặc thử lại sau.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Page loading đã hết thời gian. Xin vui lòng làm mới và thử lại.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Trang web không xác định';
 
   @override

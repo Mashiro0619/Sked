@@ -1221,10 +1221,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Caricamento della pagina non riuscito. Aggiorna o riprova più tardi.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Caricamento della pagina scaduto. Aggiorna e riprova.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Sito sconosciuto';
 
   @override

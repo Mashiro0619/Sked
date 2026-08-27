@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Caricamento della pagina non riuscito. Aggiorna o riprova più tardi.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Caricamento della pagina scaduto. Aggiorna e riprova.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Il contenuto della pagina corrente è vuoto e non può ancora essere importato.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Orario web importato",

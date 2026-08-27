@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "페이지 로드에 실패했습니다. 새로고침하거나 나중에 다시 시도하세요.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "페이지 로드 시간이 초과되었습니다. 새로고침 후 다시 시도하세요.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "현재 페이지 내용이 비어 있어 아직 가져올 수 없습니다.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "웹 시간표를 가져왔습니다",

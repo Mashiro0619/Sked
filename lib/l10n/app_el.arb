@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Αποτυχία φόρτωσης σελίδας. Ανανεώστε ή δοκιμάστε ξανά αργότερα.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Η φόρτωση σελίδας έχει λήξει το χρόνο. Ανανεώστε και δοκιμάστε ξανά.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Το τρέχον περιεχόμενο της σελίδας είναι άδειο και δεν μπορεί ακόμα να εισαχθεί.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Εισαγωγή προγράμματος Web",

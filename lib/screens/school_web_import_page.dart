@@ -28,10 +28,18 @@ class SchoolWebImportPage extends StatefulWidget {
 }
 
 class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
+  /// How long the loading indicator may stay up without a load-stop callback.
+  ///
+  /// Only governs the indicator — importing no longer depends on this state, so
+  /// a value that is too short costs nothing but a prematurely hidden bar.
+  /// Campus sign-on chains several redirects, so this is generous on purpose.
+  static const _loadIndicatorTimeout = Duration(seconds: 30);
+
   final SchoolSiteService _siteService = SchoolSiteService();
   final SchoolWebImportPageService _pageService =
       const SchoolWebImportPageService();
 
+  Timer? _loadIndicatorWatchdog;
   InAppWebViewController? _controller;
   int _pageLoadGeneration = 0;
   bool _awaitingPageLoadStart = false;
@@ -79,11 +87,39 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   @override
   void dispose() {
     _pageLoadGeneration += 1;
+    _cancelLoadIndicatorWatchdog();
     final controller = _controller;
     if (controller != null) {
       unawaited(controller.stopLoading().catchError((_) {}));
     }
     super.dispose();
+  }
+
+  /// Arms the fallback that hides the loading indicator if the platform never
+  /// reports the load finishing.
+  ///
+  /// Android sends no load-start/stop pair for in-page anchor navigation, so
+  /// without this the bar would spin until the page is left.
+  void _startLoadIndicatorWatchdog() {
+    _cancelLoadIndicatorWatchdog();
+    final generation = _pageLoadGeneration;
+    _loadIndicatorWatchdog = Timer(_loadIndicatorTimeout, () {
+      if (!mounted || generation != _pageLoadGeneration) {
+        return;
+      }
+      if (!_isLoadingPage && !_awaitingPageLoadStart) {
+        return;
+      }
+      setState(() {
+        _isLoadingPage = false;
+        _awaitingPageLoadStart = false;
+      });
+    });
+  }
+
+  void _cancelLoadIndicatorWatchdog() {
+    _loadIndicatorWatchdog?.cancel();
+    _loadIndicatorWatchdog = null;
   }
 
   @override
@@ -130,11 +166,16 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                   .refreshIndicatorSemanticLabel,
             ),
             IconButton(
+              // Deliberately not gated on _isLoadingPage. Android fires no
+              // load-start/stop pair for in-page anchor navigation, so that flag
+              // can stay true forever and would permanently disable importing.
+              // A page that changes mid-extraction is caught after the fact by
+              // the generation check in shouldUseSchoolWebImportExtraction,
+              // which cannot latch.
               onPressed:
                   !isConfigured ||
                       _controller == null ||
                       !_hasSuccessfulPageLoad ||
-                      _isLoadingPage ||
                       _isParsing
                   ? null
                   : _importCurrentPage,
@@ -330,6 +371,9 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       _currentTitle = '';
       _currentUrl = nextUrl.isEmpty ? _currentUrl : nextUrl;
     });
+    // Re-armed per load: the generation just changed, so any timer from the
+    // previous navigation is now inert anyway.
+    _startLoadIndicatorWatchdog();
   }
 
   Future<bool?> _handleCreateWindow(
@@ -417,6 +461,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       setState(() {
         _isLoadingPage = true;
       });
+      _startLoadIndicatorWatchdog();
     }
   }
 
@@ -450,6 +495,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         _entryUrl = '';
         _canGoBack = false;
       });
+      _startLoadIndicatorWatchdog();
     }
     try {
       await controller.loadUrl(
@@ -475,6 +521,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         _hasSuccessfulPageLoad = false;
         _isLoadingPage = true;
       });
+      _startLoadIndicatorWatchdog();
     }
     try {
       await controller.reload();
@@ -497,6 +544,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         _hasSuccessfulPageLoad = false;
         _isLoadingPage = true;
       });
+      _startLoadIndicatorWatchdog();
     }
     try {
       await controller.goBack();
@@ -534,6 +582,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     final entryUrl = _entryUrl.isEmpty && nextUrl.isNotEmpty
         ? nextUrl
         : _entryUrl;
+    _cancelLoadIndicatorWatchdog();
     setState(() {
       _hasSuccessfulPageLoad = true;
       _isLoadingPage = false;
@@ -562,6 +611,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         failedUrlText != controllerUrl) {
       return;
     }
+    _cancelLoadIndicatorWatchdog();
     if (_awaitingPageLoadStart || _hasSuccessfulPageLoad || _isLoadingPage) {
       setState(() {
         _awaitingPageLoadStart = false;
@@ -587,7 +637,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     final selectedSite = _selectedSite;
     if (_isParsing ||
         !_hasSuccessfulPageLoad ||
-        _isLoadingPage ||
         controller == null ||
         selectedSite == null) {
       return;
@@ -607,7 +656,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         extractionGeneration: extractionGeneration,
         currentGeneration: _pageLoadGeneration,
         hasSuccessfulPageLoad: _hasSuccessfulPageLoad,
-        isLoadingPage: _isLoadingPage,
       )) {
         _showMessage(l10n.schoolWebImportOpenPageHint);
         return;
@@ -646,16 +694,20 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   }
 }
 
+/// Whether an extraction that already ran still describes the page on screen.
+///
+/// Every navigation bumps the generation counter, so comparing generations
+/// catches a page that changed while the extraction was in flight. There is
+/// deliberately no `isLoadingPage` check: that flag can latch true when the
+/// platform reports no load-stop, and a stale flag must never be able to
+/// permanently reject imports.
 @visibleForTesting
 bool shouldUseSchoolWebImportExtraction({
   required int extractionGeneration,
   required int currentGeneration,
   required bool hasSuccessfulPageLoad,
-  required bool isLoadingPage,
 }) {
-  return extractionGeneration == currentGeneration &&
-      hasSuccessfulPageLoad &&
-      !isLoadingPage;
+  return extractionGeneration == currentGeneration && hasSuccessfulPageLoad;
 }
 
 @visibleForTesting

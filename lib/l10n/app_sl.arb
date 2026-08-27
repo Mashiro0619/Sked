@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Nalaganje strani ni uspelo. Osvežite ali poskusite znova kasneje.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Nalaganje strani je poteklo. Prosim osvežite in poskusite znova.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Trenutna vsebina strani je prazna in je še ni mogoče uvoziti.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Uvožen spletni urnik",

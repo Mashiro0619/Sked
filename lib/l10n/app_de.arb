@@ -802,8 +802,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Seite konnte nicht geladen werden. Bitte aktualisieren Sie die Seite oder versuchen Sie es später erneut.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Zeitüberschreitung beim Laden der Seite. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Der aktuelle Seiteninhalt ist leer und kann noch nicht importiert werden.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web-Stundenplan importiert",

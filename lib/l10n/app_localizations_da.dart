@@ -1204,10 +1204,6 @@ class AppLocalizationsDa extends AppLocalizations {
       'Indlæsning af siden mislykkedes. Opdater eller prøv igen senere.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Sideindlæsning er tidsudløbet. Opdater og prøv igen.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Ukendt websted';
 
   @override

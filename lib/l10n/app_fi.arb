@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Sivun lataus epäonnistui. Virkistä tai yritä uudelleen myöhemmin.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Sivun lataaminen on päättynyt. Virkistä ja yritä uudelleen.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Nykyinen sivun sisältö on tyhjä eikä sitä voi tuoda vielä.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web aikataulu tuotu",

@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Lehekülje laadimine nurjus. Palun värskendage või proovige hiljem uuesti.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Lehekülje laadimise aeg on möödunud. Palun värskendage ja proovige uuesti.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Praeguse lehekülje sisu on tühi ja seda ei saa veel importida.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Veebi ajakava imporditud",

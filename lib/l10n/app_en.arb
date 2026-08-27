@@ -830,8 +830,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Page load failed. Please refresh or try again later.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Page loading timed out. Please refresh and try again.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportUnknownOrigin": "Unknown site",
   "@schoolWebImportUnknownOrigin": {},
   "schoolWebImportExitTitle": "Leave the browser?",

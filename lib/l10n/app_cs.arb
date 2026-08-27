@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Načítání stránky selhalo. Prosím, obnovte nebo zkuste to znovu později.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Načítání stránky vypršelo. Prosím, osvěžte a zkuste znovu.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Aktuální obsah stránky je prázdný a zatím nelze importovat.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Webový rozvrh importován",

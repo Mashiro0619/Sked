@@ -1179,10 +1179,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '페이지 로드에 실패했습니다. 새로고침하거나 나중에 다시 시도하세요.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      '페이지 로드 시간이 초과되었습니다. 새로고침 후 다시 시도하세요.';
-
-  @override
   String get schoolWebImportUnknownOrigin => '알 수 없는 사이트';
 
   @override

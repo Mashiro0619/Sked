@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Не удалось загрузить страницу. Пожалуйста, обновите её или попробуйте позже.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Время загрузки страницы истекло. Обновите страницу и попробуйте снова.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Содержимое текущей страницы пусто и пока не может быть импортировано.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Веб-расписание импортировано",

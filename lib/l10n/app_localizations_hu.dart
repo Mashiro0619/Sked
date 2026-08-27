@@ -1221,10 +1221,6 @@ class AppLocalizationsHu extends AppLocalizations {
       'Az oldal betöltése nem sikerült. Kérjük, frissítse meg vagy próbálja meg újra később.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Az oldal betöltése lejárt. Kérjük, frissítse meg és próbálja meg újra.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Ismeretlen webhely';
 
   @override

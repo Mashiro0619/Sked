@@ -1213,10 +1213,6 @@ class AppLocalizationsFi extends AppLocalizations {
       'Sivun lataus epäonnistui. Virkistä tai yritä uudelleen myöhemmin.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Sivun lataaminen on päättynyt. Virkistä ja yritä uudelleen.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Tuntematon sivusto';
 
   @override

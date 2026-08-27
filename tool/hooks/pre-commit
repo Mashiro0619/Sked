@@ -1,0 +1,24 @@
+#!/bin/sh
+# Mirrors the CI "Check formatting" step so a badly formatted file is caught
+# before it becomes a commit rather than after the pipeline goes red.
+#
+# Enable in a clone with:
+#   git config core.hooksPath tool/hooks
+#
+# This hook only inspects and refuses; it never rewrites or stages your files,
+# so what you reviewed is exactly what gets committed.
+
+files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.dart$')
+[ -z "$files" ] && exit 0
+
+# shellcheck disable=SC2086
+if ! dart format --output=none --set-exit-if-changed $files >/dev/null 2>&1; then
+  echo "Commit refused: some staged Dart files are not formatted."
+  echo
+  echo "  dart format $(echo "$files" | tr '\n' ' ')"
+  echo
+  echo "Run that, restage, and commit again."
+  exit 1
+fi
+
+exit 0

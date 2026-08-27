@@ -2260,12 +2260,6 @@ abstract class AppLocalizations {
   /// **'Page load failed. Please refresh or try again later.'**
   String get schoolWebImportLoadFailed;
 
-  /// No description provided for @schoolWebImportLoadTimedOut.
-  ///
-  /// In en, this message translates to:
-  /// **'Page loading timed out. Please refresh and try again.'**
-  String get schoolWebImportLoadTimedOut;
-
   /// No description provided for @schoolWebImportUnknownOrigin.
   ///
   /// In en, this message translates to:

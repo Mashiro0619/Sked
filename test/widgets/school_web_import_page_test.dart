@@ -108,7 +108,6 @@ void main() {
         extractionGeneration: 3,
         currentGeneration: 3,
         hasSuccessfulPageLoad: true,
-        isLoadingPage: false,
       ),
       isTrue,
     );
@@ -117,7 +116,6 @@ void main() {
         extractionGeneration: 3,
         currentGeneration: 4,
         hasSuccessfulPageLoad: true,
-        isLoadingPage: false,
       ),
       isFalse,
     );
@@ -126,18 +124,23 @@ void main() {
         extractionGeneration: 3,
         currentGeneration: 3,
         hasSuccessfulPageLoad: false,
-        isLoadingPage: false,
       ),
       isFalse,
     );
+  });
+
+  test('a stale loading flag cannot reject an otherwise valid extraction', () {
+    // Android reports no load-stop for in-page anchor navigation, so the
+    // loading flag can stay true indefinitely. Import must not depend on it:
+    // the generation comparison already catches a page that changed underneath
+    // the extraction, and unlike a flag it cannot latch.
     expect(
       shouldUseSchoolWebImportExtraction(
-        extractionGeneration: 3,
-        currentGeneration: 3,
+        extractionGeneration: 7,
+        currentGeneration: 7,
         hasSuccessfulPageLoad: true,
-        isLoadingPage: true,
       ),
-      isFalse,
+      isTrue,
     );
   });
 

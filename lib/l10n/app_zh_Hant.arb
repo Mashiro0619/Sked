@@ -826,8 +826,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "頁面載入失敗，請重新整理後重試。",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "頁面載入逾時，請重新整理後重試。",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportUnknownOrigin": "未知站點",
   "@schoolWebImportUnknownOrigin": {},
   "schoolWebImportExitTitle": "退出內建瀏覽器？",

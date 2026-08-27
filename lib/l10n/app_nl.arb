@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Page load failed. Please refresh or try again later.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Page loading timed out. Please refresh and try again.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "The current page content is empty and cannot be imported yet.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web timetable imported",

@@ -1209,10 +1209,6 @@ class AppLocalizationsSv extends AppLocalizations {
       'Sidladdning misslyckades. Uppdatera eller försök igen senare.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Laddningen av sidan har tagit slut. Vänligen uppdatera och försök igen.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Okänd webbplats';
 
   @override

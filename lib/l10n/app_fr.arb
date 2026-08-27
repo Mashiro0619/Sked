@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Échec du chargement de la page. Veuillez actualiser ou réessayer plus tard.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Le chargement de la page a expiré. Veuillez actualiser puis réessayer.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Le contenu actuel de la page est vide et ne peut pas encore être importé.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Emploi du temps web importé",

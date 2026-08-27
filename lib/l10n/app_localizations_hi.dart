@@ -1207,10 +1207,6 @@ class AppLocalizationsHi extends AppLocalizations {
       'पेज लोड विफल हुआ। कृपया रीफ़्रेश करें या बाद में फिर प्रयास करें।';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'पेज लोड होने में समय समाप्त हो गया। कृपया रीफ़्रेश करें और फिर प्रयास करें।';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'अज्ञात साइट';
 
   @override

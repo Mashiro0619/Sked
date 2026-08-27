@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Încărcarea paginii a eșuat. Vă rugăm să vă reîmprospătați sau să încercați din nou mai târziu.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Încărcarea paginii a expirat. Vă rugăm să vă reîmprospătați și să încercați din nou.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Conținutul paginii curente este gol și nu poate fi încă importat.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Orarul web importat",

@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Страницата се зарежда неуспешно. Моля, освежете или опитайте отново по-късно.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Времето за зареждане на страницата изтече. Моля, освежете и опитайте отново.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Текущото съдържание на страницата е празно и все още не може да бъде импортирано.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Внесен уеб график",

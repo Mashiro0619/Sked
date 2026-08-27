@@ -1223,10 +1223,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Страницата се зарежда неуспешно. Моля, освежете или опитайте отново по-късно.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Времето за зареждане на страницата изтече. Моля, освежете и опитайте отново.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Неизвестен сайт';
 
   @override

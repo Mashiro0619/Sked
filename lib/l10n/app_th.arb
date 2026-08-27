@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "การโหลดหน้าล้มเหลว โปรดปรับปรุงหรือลองอีกครั้งในภายหลัง",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "การโหลดหน้าถูกหมดเวลา กรุณาปรับปรุงและลองอีกครั้ง",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "เนื้อหาหน้าปัจจุบันว่างเปล่าและยังไม่สามารถนำเข้าได้",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "ตารางเวลาเว็บนำเข้า",

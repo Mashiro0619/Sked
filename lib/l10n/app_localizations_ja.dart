@@ -1178,9 +1178,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'ページの読み込みに失敗しました。更新するか、しばらくしてからもう一度お試しください。';
 
   @override
-  String get schoolWebImportLoadTimedOut => 'ページ読み込みがタイムアウトしました。更新して再度お試しください。';
-
-  @override
   String get schoolWebImportUnknownOrigin => '不明なサイト';
 
   @override

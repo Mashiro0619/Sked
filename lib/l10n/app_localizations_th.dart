@@ -1199,10 +1199,6 @@ class AppLocalizationsTh extends AppLocalizations {
       'การโหลดหน้าล้มเหลว โปรดปรับปรุงหรือลองอีกครั้งในภายหลัง';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'การโหลดหน้าถูกหมดเวลา กรุณาปรับปรุงและลองอีกครั้ง';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'ไซต์ที่ไม่รู้จัก';
 
   @override

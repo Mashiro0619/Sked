@@ -1208,10 +1208,6 @@ class AppLocalizationsEt extends AppLocalizations {
       'Lehekülje laadimine nurjus. Palun värskendage või proovige hiljem uuesti.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Lehekülje laadimise aeg on möödunud. Palun värskendage ja proovige uuesti.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Tundmatu sait';
 
   @override

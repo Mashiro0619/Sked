@@ -800,8 +800,6 @@
   "@schoolWebImportParsing": {},
   "schoolWebImportLoadFailed": "Nie udało się załadować strony. Proszę odświeżyć lub spróbować ponownie później.",
   "@schoolWebImportLoadFailed": {},
-  "schoolWebImportLoadTimedOut": "Czas ładowania strony się skończył. Proszę odświeżyć i spróbować ponownie.",
-  "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportEmptyPage": "Aktualna zawartość strony jest pusta i nie może być jeszcze zaimportowana.",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Importowany harmonogram internetowy",

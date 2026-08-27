@@ -1211,10 +1211,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Nalaganje strani ni uspelo. Osvežite ali poskusite znova kasneje.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Nalaganje strani je poteklo. Prosim osvežite in poskusite znova.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Neznano spletno mesto';
 
   @override

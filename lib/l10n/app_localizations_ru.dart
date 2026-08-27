@@ -1220,10 +1220,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось загрузить страницу. Пожалуйста, обновите её или попробуйте позже.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Время загрузки страницы истекло. Обновите страницу и попробуйте снова.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Неизвестный сайт';
 
   @override

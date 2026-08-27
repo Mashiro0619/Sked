@@ -1227,10 +1227,6 @@ class AppLocalizationsEl extends AppLocalizations {
       'Αποτυχία φόρτωσης σελίδας. Ανανεώστε ή δοκιμάστε ξανά αργότερα.';
 
   @override
-  String get schoolWebImportLoadTimedOut =>
-      'Η φόρτωση σελίδας έχει λήξει το χρόνο. Ανανεώστε και δοκιμάστε ξανά.';
-
-  @override
   String get schoolWebImportUnknownOrigin => 'Άγνωστος ιστότοπος';
 
   @override
