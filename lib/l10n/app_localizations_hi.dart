@@ -1214,12 +1214,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'अज्ञात साइट';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'किसी दूसरी साइट पर जाएँ?';
+  String get schoolWebImportExitTitle => 'ब्राउज़र से बाहर निकलें?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'स्कूल में साइन इन करने के लिए दूसरी साइट खोलनी पड़ सकती है। केवल तभी जारी रखें जब आप मौजूदा आयात सत्र के लिए इस गंतव्य पर भरोसा करते हों:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'पेज बंद हो जाएगा। जो कुछ आपने अभी तक आयात नहीं किया है वह खो जाएगा।';
+
+  @override
+  String get schoolWebImportExitConfirm => 'बाहर निकलें';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1234,10 +1236,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'पार्सर स्रोत';
@@ -2263,23 +2261,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => 'स्कूल साइन-इन खोलें?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'स्कूल साइन-इन, फ़ॉर्म या सर्वर रीडायरेक्ट के माध्यम से स्कूल और उसके साइन-इन प्रदाताओं को क्रेडेंशियल भेज सकता है। Android हर ऐसे ट्रांसफ़र को अलग गंतव्य पुष्टि के लिए रोक नहीं सकता। केवल तभी जारी रखें जब आप इस आयात सत्र के लिए उन पर भरोसा करते हों:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'असुरक्षित स्कूल साइन-इन खोलें?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'डेवलपर मोड';

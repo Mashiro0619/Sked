@@ -832,14 +832,12 @@
   "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportUnknownOrigin": "未知站点",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "继续前往其他站点？",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "学校登录可能需要跳转到其他站点。仅在你信任以下目标站点时，才允许本次导入会话继续访问：\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "退出内置浏览器？",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "当前页面将关闭，尚未导入的内容不会保存。",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "退出",
+  "@schoolWebImportExitConfirm": {},
   "schoolWebImportEmptyPage": "当前页面内容为空，暂时无法导入。",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "网页课表已导入",
@@ -848,8 +846,6 @@
   "@schoolImportParserSettingsTitle": {},
   "schoolImportParserSettingsDesc": "配置课表解析及其他 AI 功能使用的 OpenAI 兼容接口。",
   "@schoolImportParserSettingsDesc": {},
-  "schoolImportParserSettingsLocationHint": "请前往“设置 > 数据与安全 > AI API 配置”完成配置。",
-  "@schoolImportParserSettingsLocationHint": {},
   "schoolImportParserSourceTitle": "解析来源",
   "@schoolImportParserSourceTitle": {},
   "schoolImportParserSourceCustomOpenAi": "自定义 OpenAI 兼容接口",
@@ -1605,22 +1601,6 @@
   "@enableLongPressAddEvent": {},
   "enableLongPressAddEventHint": "在日视图或周视图中，长按空白时间网格即可添加日程。",
   "@enableLongPressAddEventHint": {},
-  "schoolWebImportSignInConsentTitle": "打开学校登录页面？",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "学校登录可能会通过表单或服务器重定向，将登录凭据提交给学校及其登录服务提供方。Android 无法在每次此类传输前都暂停并单独确认目标。仅在你信任这些服务用于本次导入会话时继续：\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "打开不安全的学校登录页面？",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "开发者模式",
   "@developerModeTitle": {},
   "developerModeDescription": "用于添加完整示例数据，方便检查界面和交互。",

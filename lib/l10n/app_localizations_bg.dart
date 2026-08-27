@@ -1230,13 +1230,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Неизвестен сайт';
 
   @override
-  String get schoolWebImportCrossOriginTitle =>
-      'Да се продължи ли към друг сайт?';
+  String get schoolWebImportExitTitle => 'Изход от браузъра?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Входът в училищната система може да изисква отваряне на друг сайт. Продължете само ако имате доверие на тази дестинация за текущата сесия за импортиране:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Страницата ще се затвори. Всичко, което още не сте импортирали, ще бъде загубено.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Изход';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1251,10 +1252,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Източник на анализатора';
@@ -2281,24 +2278,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Да се отвори ли входът в училищната система?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Входът в училищната система може да изпрати идентификационни данни чрез формуляри или сървърни пренасочвания към училището и неговите доставчици за вход. Android не може да спре всяко такова предаване за отделно потвърждение на дестинацията. Продължете само ако имате доверие на тези страни за текущата сесия за импортиране:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Отваряне на незащитен вход за училището?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Този вход за училището използва HTTP. Всеки, който може да наблюдава или променя тази връзка, може да прочете или промени вашите идентификационни данни и съдържанието на страницата. Продължете само ако приемате този риск за:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Режим за разработчици';

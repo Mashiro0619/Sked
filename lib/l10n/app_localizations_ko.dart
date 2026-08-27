@@ -1186,12 +1186,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => '알 수 없는 사이트';
 
   @override
-  String get schoolWebImportCrossOriginTitle => '다른 사이트로 이동할까요?';
+  String get schoolWebImportExitTitle => '브라우저를 종료할까요?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return '학교 로그인 과정에서 다른 사이트를 열어야 할 수 있습니다. 현재 가져오기 세션에서 이 대상을 신뢰하는 경우에만 계속하세요:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage => '페이지가 닫힙니다. 아직 가져오지 않은 내용은 사라집니다.';
+
+  @override
+  String get schoolWebImportExitConfirm => '종료';
 
   @override
   String get schoolWebImportEmptyPage => '현재 페이지 내용이 비어 있어 아직 가져올 수 없습니다.';
@@ -1205,10 +1206,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => '파서 소스';
@@ -2221,23 +2218,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => '학교 로그인 페이지를 열까요?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '학교 로그인 과정에서 양식 또는 서버 리디렉션을 통해 학교와 로그인 제공업체에 인증 정보가 전송될 수 있습니다. Android에서는 이러한 전송을 매번 중지하여 대상을 별도로 확인할 수 없습니다. 현재 가져오기 세션에서 해당 서비스를 신뢰하는 경우에만 계속하세요:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      '안전하지 않은 학교 로그인을 여시겠어요?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return '이 학교 로그인은 HTTP를 사용합니다. 이 연결을 감시하거나 변경할 수 있는 사람은 로그인 정보와 페이지 내용을 읽거나 바꿀 수 있습니다. 다음 사이트에 대한 이러한 위험을 감수하는 경우에만 계속하세요:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => '개발자 모드';

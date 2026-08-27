@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Sitio desconocido",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "¿Continuar a otro sitio?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "El inicio de sesión de la escuela puede requerir abrir otro sitio. Continúa solo si confías en este destino para la sesión de importación actual:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "¿Salir del navegador?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "La página se cerrará. Se perderá todo lo que aún no hayas importado.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Salir",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "¿Usar un endpoint HTTP sin cifrar?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "La clave de API y el contenido del horario pueden leerse o modificarse durante el tránsito. Continúa solo si confías en este dispositivo, la red y el endpoint. Esta aprobación dura hasta que cierres Sked.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "¿Abrir el inicio de sesión de la escuela?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "El inicio de sesión de la escuela puede enviar credenciales mediante formularios o redirecciones del servidor a la escuela y a sus proveedores de acceso. Android no puede pausar cada transferencia de este tipo para mostrar una confirmación independiente del destino. Continúa solo si confías en ellos para esta sesión de importación:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "¿Abrir un inicio de sesión escolar no seguro?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "Este inicio de sesión escolar usa HTTP. Cualquiera que pueda observar o alterar esta conexión podría leer o cambiar sus credenciales y el contenido de la página. Continúe solo si acepta este riesgo para:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Modo de desarrollador",
   "@developerModeTitle": {},
   "developerModeDescription": "Herramientas para añadir datos de ejemplo completos y comprobar la interfaz y la interacción.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

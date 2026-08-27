@@ -830,14 +830,12 @@
   "@schoolWebImportLoadTimedOut": {},
   "schoolWebImportUnknownOrigin": "未知站點",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "繼續前往其他站點？",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "學校登入可能需要跳轉到其他站點。僅在你信任以下目標站點時，才允許本次匯入工作階段繼續存取：\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "退出內建瀏覽器？",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "目前頁面將關閉，尚未匯入的內容不會保存。",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "退出",
+  "@schoolWebImportExitConfirm": {},
   "schoolWebImportEmptyPage": "當前頁面內容為空，暫時無法匯入。",
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "網頁課表已匯入",
@@ -846,8 +844,6 @@
   "@schoolImportParserSettingsTitle": {},
   "schoolImportParserSettingsDesc": "設定課表解析及其他 AI 功能使用的 OpenAI 相容介面。",
   "@schoolImportParserSettingsDesc": {},
-  "schoolImportParserSettingsLocationHint": "請前往「設定 > 資料與安全性 > AI API 設定」完成設定。",
-  "@schoolImportParserSettingsLocationHint": {},
   "schoolImportParserSourceTitle": "解析來源",
   "@schoolImportParserSourceTitle": {},
   "schoolImportParserSourceCustomOpenAi": "自訂 OpenAI 相容介面",
@@ -1581,22 +1577,6 @@
   "@enableLongPressAddEvent": {},
   "enableLongPressAddEventHint": "在日視圖或週視圖中，長按空白時間網格即可新增日程。",
   "@enableLongPressAddEventHint": {},
-  "schoolWebImportSignInConsentTitle": "開啟學校登入頁面？",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "開啟不安全的學校登入頁面？",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "開發者模式",
   "@developerModeTitle": {},
   "developerModeDescription": "可加入完整範例資料，用於檢查介面與操作。",

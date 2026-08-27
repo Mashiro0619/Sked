@@ -1210,12 +1210,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Unknown site';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Continue to another site?';
+  String get schoolWebImportExitTitle => 'Leave the browser?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'School sign-in may need to open another site. Continue only if you trust this destination for the current import session:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'The page will close. Anything you have not imported yet will be lost.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Leave';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1230,10 +1232,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser source';
@@ -2258,23 +2256,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => 'Open school sign-in?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Open an insecure school sign-in?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Developer mode';

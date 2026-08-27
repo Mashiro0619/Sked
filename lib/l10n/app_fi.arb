@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Tuntematon sivusto",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Jatketaanko toiselle sivustolle?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "Koulun järjestelmään kirjautuminen saattaa edellyttää toisen sivuston avaamista. Jatka vain, jos luotat tähän kohteeseen nykyisen tuonti-istunnon ajan:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Poistutaanko selaimesta?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "Sivu suljetaan. Kaikki, mitä et ole vielä tuonut, menetetään.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Poistu",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Käytetäänkö salaamatonta HTTP-päätepistettä?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "API-avain ja lukujärjestyksen sisältö voidaan lukea tai niitä voidaan muuttaa siirron aikana. Jatka vain, jos luotat tähän laitteeseen, verkkoon ja päätepisteeseen. Hyväksyntä on voimassa, kunnes suljet Skedin.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Avataanko koulun kirjautuminen?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "Koulun kirjautuminen voi lähettää tunnistetietoja lomakkeiden tai palvelimen uudelleenohjausten kautta koululle ja sen kirjautumispalvelujen tarjoajille. Android ei voi keskeyttää jokaista tällaista siirtoa erillistä kohteen vahvistusta varten. Jatka vain, jos luotat niihin tämän tuonti-istunnon ajan:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Avataanko suojaamaton koulukirjautuminen?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Kehittäjätila",
   "@developerModeTitle": {},
   "developerModeDescription": "Työkalut kattavien esimerkkitietojen lisäämiseen ulkoasun ja käytön tarkistamista varten.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

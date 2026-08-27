@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "不明なサイト",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "別のサイトに移動しますか？",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "学校へのログインには別のサイトを開く必要がある場合があります。現在のインポートセッションでこの移動先を信頼できる場合のみ続行してください：\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "ブラウザーを終了しますか？",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "ページが閉じます。まだインポートしていない内容は失われます。",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "終了",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "暗号化されていない HTTP エンドポイントを使用しますか？",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "API キーと時間割の内容は、通信中に読み取られたり改ざんされたりする可能性があります。このデバイス、ネットワーク、エンドポイントを信頼できる場合のみ続行してください。この許可は Sked を閉じるまで有効です。",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "学校のログインページを開きますか？",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "学校へのログインでは、フォームやサーバーのリダイレクトを通じて、学校やログインサービス提供元に認証情報が送信される場合があります。Android では、このような送信を毎回停止して移動先を個別に確認することはできません。今回のインポートセッションでこれらを信頼できる場合のみ続行してください：\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "安全でない学校ログインを開きますか？",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "開発者モード",
   "@developerModeTitle": {},
   "developerModeDescription": "表示と操作の確認に使う一式のサンプルデータを追加できます。",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

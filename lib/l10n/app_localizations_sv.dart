@@ -1216,13 +1216,14 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Okänd webbplats';
 
   @override
-  String get schoolWebImportCrossOriginTitle =>
-      'Fortsätt till en annan webbplats?';
+  String get schoolWebImportExitTitle => 'Lämna webbläsaren?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Skolans inloggning kan behöva öppna en annan webbplats. Fortsätt bara om du litar på den här destinationen under den aktuella importsessionen:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Sidan stängs. Allt du inte har importerat ännu går förlorat.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Lämna';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1237,10 +1238,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parserkälla';
@@ -2265,23 +2262,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => 'Öppna skolans inloggning?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Skolans inloggning kan skicka inloggningsuppgifter via formulär eller serveromdirigeringar till skolan och dess inloggningsleverantörer. Android kan inte pausa varje sådan överföring för en separat bekräftelse av destinationen. Fortsätt bara om du litar på dem under den här importsessionen:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Öppna en osäker skolinloggning?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Den här skolinloggningen använder HTTP. Den som kan övervaka eller ändra anslutningen kan läsa eller ändra dina inloggningsuppgifter och sidans innehåll. Fortsätt bara om du accepterar den här risken för:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Utvecklarläge';

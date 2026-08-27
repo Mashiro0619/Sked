@@ -1213,13 +1213,14 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Onbekende website';
 
   @override
-  String get schoolWebImportCrossOriginTitle =>
-      'Doorgaan naar een andere website?';
+  String get schoolWebImportExitTitle => 'Browser verlaten?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Voor aanmelden bij de school moet mogelijk een andere website worden geopend. Ga alleen door als u deze bestemming vertrouwt voor de huidige importsessie:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'De pagina wordt gesloten. Alles wat u nog niet hebt geïmporteerd, gaat verloren.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Verlaten';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1234,10 +1235,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser source';
@@ -2263,24 +2260,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Aanmelden bij de school openen?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Bij aanmelden bij de school kunnen aanmeldgegevens via formulieren of serveromleidingen naar de school en haar aanmeldproviders worden verzonden. Android kan niet elke dergelijke overdracht onderbreken voor een afzonderlijke bevestiging van de bestemming. Ga alleen door als u hen voor deze importsessie vertrouwt:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Onveilige schoolaanmelding openen?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Deze schoolaanmelding gebruikt HTTP. Iedereen die deze verbinding kan volgen of wijzigen, kan uw aanmeldgegevens en de pagina-inhoud lezen of veranderen. Ga alleen door als u dit risico accepteert voor:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Ontwikkelaarsmodus';

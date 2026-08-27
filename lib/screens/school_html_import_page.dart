@@ -15,10 +15,10 @@ import '../services/school_import_workflow.dart';
 import '../utils/text_input_limits.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/school_import_config_required_view.dart';
 import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
-import 'school_import_parser_settings_page.dart';
 
 class SchoolHtmlImportPage extends StatefulWidget {
   const SchoolHtmlImportPage({
@@ -63,23 +63,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   bool _truncationUpdateScheduled = false;
   int _submissionGeneration = 0;
 
-  bool _isConfigured(TimetableProvider provider) {
-    return isValidCustomOpenAiBaseUrl(provider.customSchoolImportBaseUrl) &&
-        provider.customSchoolImportApiKey.trim().isNotEmpty &&
-        provider.customSchoolImportModel.trim().isNotEmpty;
-  }
-
-  String _buildConfigMessage(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
-    final baseUrl = provider.customSchoolImportBaseUrl.trim();
-    if (baseUrl.isNotEmpty && !isValidCustomOpenAiBaseUrl(baseUrl)) {
-      return l10n.schoolImportParserBaseUrlInvalid;
-    }
-    return l10n.schoolImportParserCustomConfigIncomplete;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -120,7 +103,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider>();
-    final isConfigured = _isConfigured(provider);
+    final isConfigured = isSchoolImportParserConfigured(provider);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.schoolHtmlImportPageTitle),
@@ -135,7 +118,9 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
       body: SafeArea(
         top: false,
         child: !isConfigured
-            ? _buildConfigMissingState(provider, l10n)
+            ? SchoolImportConfigRequiredView(
+                message: schoolImportConfigMessage(provider, l10n),
+              )
             : LayoutBuilder(
                 builder: (context, constraints) {
                   final mediaQuery = MediaQuery.of(context);
@@ -321,59 +306,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     );
   }
 
-  Widget _buildConfigMissingState(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: math.max(0, constraints.maxHeight - 48),
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(Icons.tune_outlined, size: 28, color: colors.primary),
-                    const SizedBox(height: 12),
-                    Text(
-                      _buildConfigMessage(provider, l10n),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    FilledButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                const SchoolImportParserSettingsPage(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.settings_outlined),
-                      label: Text(l10n.openSettings),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   bool _prepareContent() {
     final l10n = AppLocalizations.of(context);
     final sourceContent = _htmlController.text.trim();
@@ -490,8 +422,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     if (html.isEmpty) {
       return l10n.schoolHtmlImportEmpty;
     }
-    if (!_isConfigured(provider)) {
-      return _buildConfigMessage(provider, l10n);
+    if (!isSchoolImportParserConfigured(provider)) {
+      return schoolImportConfigMessage(provider, l10n);
     }
     return null;
   }

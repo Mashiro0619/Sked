@@ -1218,13 +1218,14 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Neznano spletno mesto';
 
   @override
-  String get schoolWebImportCrossOriginTitle =>
-      'Nadaljujem na drugo spletno mesto?';
+  String get schoolWebImportExitTitle => 'Ali želite zapustiti brskalnik?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Prijava v šolski sistem bo morda zahtevala odprtje drugega spletnega mesta. Nadaljujte le, če temu cilju zaupate za trenutno sejo uvoza:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Stran se bo zaprla. Vse, česar še niste uvozili, bo izgubljeno.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Zapusti';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1239,10 +1240,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Vir razčlenjevanja';
@@ -2268,24 +2265,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Želite odpreti prijavo v šolski sistem?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Prijava v šolski sistem lahko prek obrazcev ali preusmeritev strežnika pošlje poverilnice šoli in njenim ponudnikom prijave. Android ne more ustaviti vsakega takega prenosa za ločeno potrditev cilja. Nadaljujte le, če jim zaupate za to sejo uvoza:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Odprem nezaščiteno prijavo v šolski sistem?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Ta prijava v šolski sistem uporablja HTTP. Kdor lahko spremlja ali spreminja to povezavo, lahko prebere ali spremeni vaše poverilnice in vsebino strani. Nadaljujte le, če sprejemate to tveganje za:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Način za razvijalce';

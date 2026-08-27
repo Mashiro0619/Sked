@@ -1228,13 +1228,14 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Ismeretlen webhely';
 
   @override
-  String get schoolWebImportCrossOriginTitle =>
-      'Folytatja egy másik webhelyen?';
+  String get schoolWebImportExitTitle => 'Kilép a böngészőből?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Az iskolai bejelentkezéshez szükség lehet egy másik webhely megnyitására. Csak akkor folytassa, ha az aktuális importálási munkamenetben megbízik ebben a célban:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Az oldal bezárul. Minden, amit még nem importált, elveszik.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Kilépés';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1249,10 +1250,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser forrás';
@@ -2280,24 +2277,6 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Megnyitja az iskolai bejelentkezést?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Az iskolai bejelentkezés űrlapokon vagy szerverátirányításokon keresztül hitelesítő adatokat küldhet az iskolának és bejelentkezési szolgáltatóinak. Az Android nem tud minden ilyen átvitelt külön célmegerősítéshez megállítani. Csak akkor folytassa, ha megbízik bennük ebben az importálási munkamenetben:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Megnyitja a nem biztonságos iskolai bejelentkezést?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Fejlesztői mód';

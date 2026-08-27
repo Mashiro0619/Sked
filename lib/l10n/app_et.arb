@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Tundmatu sait",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Kas jätkata teisele saidile?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "Kooli sisselogimiseks võib olla vaja avada teine sait. Jätkake ainult siis, kui usaldate seda sihtkohta praeguse impordiseansi jaoks:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Kas väljuda brauserist?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "Leht suletakse. Kõik, mida te pole veel importinud, läheb kaotsi.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Välju",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Kas kasutada krüptimata HTTP-lõpp-punkti?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "API-võtit ja tunniplaani sisu võidakse edastamise ajal lugeda või muuta. Jätkake ainult siis, kui usaldate seda seadet, võrku ja lõpp-punkti. Nõusolek kehtib kuni Skedi sulgemiseni.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Kas avada kooli sisselogimine?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "Kooli sisselogimine võib saata kasutajatunnused vormide või serveri ümbersuunamiste kaudu koolile ja selle sisselogimisteenuse pakkujatele. Android ei saa iga sellist edastust eraldi sihtkoha kinnitamiseks peatada. Jätkake ainult siis, kui usaldate neid selle impordiseansi jaoks:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Kas avada ebaturvaline kooli sisselogimine?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "See kooli sisselogimine kasutab HTTP-d. Igaüks, kes saab seda ühendust jälgida või muuta, võib lugeda või muuta teie sisselogimisandmeid ja lehe sisu. Jätkake ainult siis, kui nõustute selle riskiga saidi puhul:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Arendajarežiim",
   "@developerModeTitle": {},
   "developerModeDescription": "Tööriistad täielike näidisandmete lisamiseks kujunduse ja kasutuse kontrollimiseks.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

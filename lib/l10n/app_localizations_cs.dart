@@ -1216,12 +1216,14 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Neznámý web';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Pokračovat na jiný web?';
+  String get schoolWebImportExitTitle => 'Opustit prohlížeč?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Přihlášení do školního systému může vyžadovat otevření jiného webu. Pokračujte pouze tehdy, pokud tomuto cíli pro aktuální relaci importu důvěřujete:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Stránka se zavře. Vše, co jste dosud neimportovali, bude ztraceno.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Opustit';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1236,10 +1238,6 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Zdroj parseru';
@@ -2265,24 +2263,6 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Otevřít přihlášení do školního systému?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Přihlášení do školního systému může odeslat přihlašovací údaje prostřednictvím formulářů nebo přesměrování serveru škole a jejím poskytovatelům přihlášení. Android nemůže každé takové odeslání pozastavit a zobrazit samostatné potvrzení cíle. Pokračujte pouze tehdy, pokud jim pro tuto relaci importu důvěřujete:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Otevřít nezabezpečené přihlášení ke škole?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Vývojářský režim';

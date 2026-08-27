@@ -197,6 +197,158 @@ void main() {
   });
 
   testWidgets(
+    'app bar shows the site origin instead of a leading back button',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SchoolWebImportPage(
+            site: SchoolSite(
+              name: 'Example University',
+              loginUrl: 'https://portal.example.edu/login?next=/timetable',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // The closed lock already says "https", so only the host is shown.
+      expect(find.text('portal.example.edu'), findsOneWidget);
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(find.text('Example University'), findsNothing);
+      expect(find.byType(BackButton), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('insecure origins keep the visible scheme and an open lock', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SchoolWebImportPage(
+          site: SchoolSite(
+            name: 'Example University',
+            loginUrl: 'http://legacy.example.edu/login',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('http://legacy.example.edu'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_open_outlined), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a popup window never borrows the parent origin', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SchoolWebImportPage(
+          windowId: 7,
+          site: SchoolSite(
+            name: 'Example University',
+            loginUrl: 'https://portal.example.edu/login',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // A popup opens with no URL of its own. Showing the opener's domain next to
+    // a lock icon would label the new page with an origin that is not its own.
+    expect(find.text('Unknown site'), findsOneWidget);
+    expect(find.text('portal.example.edu'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('system back asks before leaving and stays put when cancelled', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SchoolWebImportPage(
+                  site: SchoolSite(
+                    name: 'Example University',
+                    loginUrl: 'https://portal.example.edu/login',
+                  ),
+                ),
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SchoolWebImportPage), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Leave the browser?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Leave the browser?'), findsNothing);
+    expect(find.byType(SchoolWebImportPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('system back leaves the page once confirmed', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SchoolWebImportPage(
+                  site: SchoolSite(
+                    name: 'Example University',
+                    loginUrl: 'https://portal.example.edu/login',
+                  ),
+                ),
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Leave'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SchoolWebImportPage), findsNothing);
+    expect(find.text('open'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
     'missing API configuration uses a compact prompt with a settings shortcut',
     (tester) async {
       tester.view.physicalSize = const Size(640, 1136);
@@ -237,7 +389,7 @@ void main() {
       );
       final settingsButton = find.widgetWithText(
         FilledButton,
-        l10n.schoolImportParserSettingsTitle,
+        l10n.openSettings,
       );
       final importButton = find.ancestor(
         of: find.byIcon(Icons.file_download_outlined),
@@ -305,12 +457,15 @@ void main() {
       final message = find.text(l10n.schoolImportParserCustomConfigIncomplete);
       final settingsButton = find.widgetWithText(
         FilledButton,
-        l10n.schoolImportParserSettingsTitle,
+        l10n.openSettings,
       );
       final messageRect = tester.getRect(message);
       final settingsButtonRect = tester.getRect(settingsButton);
 
-      final screenCenter = tester.view.physicalSize.width / 2;
+      // getRect returns logical pixels, so the comparison point has to be the
+      // logical centre, not the raw physical width.
+      final screenCenter =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio / 2;
 
       expect(messageRect.center.dx, closeTo(screenCenter, 1));
       expect(settingsButtonRect.center.dx, closeTo(screenCenter, 1));

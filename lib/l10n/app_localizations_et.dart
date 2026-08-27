@@ -1215,12 +1215,14 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Tundmatu sait';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Kas jätkata teisele saidile?';
+  String get schoolWebImportExitTitle => 'Kas väljuda brauserist?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Kooli sisselogimiseks võib olla vaja avada teine sait. Jätkake ainult siis, kui usaldate seda sihtkohta praeguse impordiseansi jaoks:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Leht suletakse. Kõik, mida te pole veel importinud, läheb kaotsi.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Välju';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1235,10 +1237,6 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parseri allikas';
@@ -2262,24 +2260,6 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Kas avada kooli sisselogimine?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Kooli sisselogimine võib saata kasutajatunnused vormide või serveri ümbersuunamiste kaudu koolile ja selle sisselogimisteenuse pakkujatele. Android ei saa iga sellist edastust eraldi sihtkoha kinnitamiseks peatada. Jätkake ainult siis, kui usaldate neid selle impordiseansi jaoks:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Kas avada ebaturvaline kooli sisselogimine?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'See kooli sisselogimine kasutab HTTP-d. Igaüks, kes saab seda ühendust jälgida või muuta, võib lugeda või muuta teie sisselogimisandmeid ja lehe sisu. Jätkake ainult siis, kui nõustute selle riskiga saidi puhul:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Arendajarežiim';

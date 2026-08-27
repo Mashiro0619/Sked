@@ -1525,34 +1525,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Unbekannte Website",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Zu einer anderen Website wechseln?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "Für die Anmeldung beim Schulsystem muss möglicherweise eine andere Website geöffnet werden. Fahren Sie nur fort, wenn Sie diesem Ziel für die aktuelle Importsitzung vertrauen:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Browser verlassen?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "Die Seite wird geschlossen. Alles, was Sie noch nicht importiert haben, geht verloren.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Verlassen",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Unverschlüsselten HTTP-Endpunkt verwenden?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "Der API-Schlüssel und die Stundenplandaten können während der Übertragung gelesen oder verändert werden. Fahren Sie nur fort, wenn Sie diesem Gerät, Netzwerk und Endpunkt vertrauen. Diese Zustimmung gilt, bis Sie Sked schließen.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Schulanmeldung öffnen?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "Bei der Schulanmeldung können Anmeldedaten über Formulare oder Serverweiterleitungen an die Schule und deren Anmeldeanbieter gesendet werden. Android kann nicht jede solche Übertragung für eine separate Zielbestätigung anhalten. Fahren Sie nur fort, wenn Sie diesen Stellen für diese Importsitzung vertrauen:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Unsichere Schulanmeldung öffnen?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "Diese Schulanmeldung verwendet HTTP. Jeder, der diese Verbindung beobachten oder verändern kann, kann Ihre Anmeldedaten und Seiteninhalte lesen oder ändern. Fahren Sie nur fort, wenn Sie dieses Risiko akzeptieren für:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Entwicklermodus",
   "@developerModeTitle": {},
   "developerModeDescription": "Werkzeuge zum Hinzufügen vollständiger Beispieldaten für die Prüfung von Darstellung und Interaktion.",
@@ -1583,8 +1565,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

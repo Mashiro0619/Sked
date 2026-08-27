@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "ไซต์ที่ไม่รู้จัก",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "ไปยังไซต์อื่นหรือไม่",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "การลงชื่อเข้าใช้ระบบของโรงเรียนอาจต้องเปิดไซต์อื่น โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือปลายทางนี้สำหรับเซสชันการนำเข้าปัจจุบัน:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "ออกจากเบราว์เซอร์ใช่ไหม",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "หน้านี้จะปิดลง สิ่งที่คุณยังไม่ได้นำเข้าจะสูญหาย",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "ออก",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "ใช้ปลายทาง HTTP ที่ไม่ได้เข้ารหัสหรือไม่",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "คีย์ API และเนื้อหาตารางเรียนอาจถูกอ่านหรือแก้ไขระหว่างการส่ง โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถืออุปกรณ์ เครือข่าย และปลายทางนี้ การอนุญาตนี้มีผลจนกว่าคุณจะปิด Sked",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "การลงชื่อเข้าใช้ของโรงเรียนอาจส่งข้อมูลรับรองผ่านแบบฟอร์มหรือการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ไปยังโรงเรียนและผู้ให้บริการลงชื่อเข้าใช้ Android ไม่สามารถหยุดการส่งแต่ละครั้งเพื่อยืนยันปลายทางแยกกันได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือบริการเหล่านี้สำหรับเซสชันการนำเข้านี้:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "เปิดการลงชื่อเข้าใช้โรงเรียนที่ไม่ปลอดภัยหรือไม่",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "โหมดนักพัฒนา",
   "@developerModeTitle": {},
   "developerModeDescription": "เครื่องมือสำหรับเพิ่มข้อมูลตัวอย่างแบบครบชุดเพื่อตรวจสอบหน้าตาและการโต้ตอบ",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

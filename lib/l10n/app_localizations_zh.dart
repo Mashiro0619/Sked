@@ -1150,12 +1150,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => '未知站点';
 
   @override
-  String get schoolWebImportCrossOriginTitle => '继续前往其他站点？';
+  String get schoolWebImportExitTitle => '退出内置浏览器？';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return '学校登录可能需要跳转到其他站点。仅在你信任以下目标站点时，才允许本次导入会话继续访问：\n\n$origin';
-  }
+  String get schoolWebImportExitMessage => '当前页面将关闭，尚未导入的内容不会保存。';
+
+  @override
+  String get schoolWebImportExitConfirm => '退出';
 
   @override
   String get schoolWebImportEmptyPage => '当前页面内容为空，暂时无法导入。';
@@ -1169,10 +1170,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       '配置课表解析及其他 AI 功能使用的 OpenAI 兼容接口。';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      '请前往“设置 > 数据与安全 > AI API 配置”完成配置。';
 
   @override
   String get schoolImportParserSourceTitle => '解析来源';
@@ -2157,22 +2154,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get enableLongPressAddEventHint => '在日视图或周视图中，长按空白时间网格即可添加日程。';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => '打开学校登录页面？';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '学校登录可能会通过表单或服务器重定向，将登录凭据提交给学校及其登录服务提供方。Android 无法在每次此类传输前都暂停并单独确认目标。仅在你信任这些服务用于本次导入会话时继续：\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle => '打开不安全的学校登录页面？';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return '此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => '开发者模式';
@@ -3346,12 +3327,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportUnknownOrigin => '未知站點';
 
   @override
-  String get schoolWebImportCrossOriginTitle => '繼續前往其他站點？';
+  String get schoolWebImportExitTitle => '退出內建瀏覽器？';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return '學校登入可能需要跳轉到其他站點。僅在你信任以下目標站點時，才允許本次匯入工作階段繼續存取：\n\n$origin';
-  }
+  String get schoolWebImportExitMessage => '目前頁面將關閉，尚未匯入的內容不會保存。';
+
+  @override
+  String get schoolWebImportExitConfirm => '退出';
 
   @override
   String get schoolWebImportEmptyPage => '當前頁面內容為空，暫時無法匯入。';
@@ -3365,10 +3347,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get schoolImportParserSettingsDesc =>
       '設定課表解析及其他 AI 功能使用的 OpenAI 相容介面。';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      '請前往「設定 > 資料與安全性 > AI API 設定」完成設定。';
 
   @override
   String get schoolImportParserSourceTitle => '解析來源';
@@ -4320,22 +4298,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get enableLongPressAddEventHint => '在日視圖或週視圖中，長按空白時間網格即可新增日程。';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => '開啟學校登入頁面？';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle => '開啟不安全的學校登入頁面？';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return '此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => '開發者模式';

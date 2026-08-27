@@ -1184,12 +1184,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => '不明なサイト';
 
   @override
-  String get schoolWebImportCrossOriginTitle => '別のサイトに移動しますか？';
+  String get schoolWebImportExitTitle => 'ブラウザーを終了しますか？';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return '学校へのログインには別のサイトを開く必要がある場合があります。現在のインポートセッションでこの移動先を信頼できる場合のみ続行してください：\n\n$origin';
-  }
+  String get schoolWebImportExitMessage => 'ページが閉じます。まだインポートしていない内容は失われます。';
+
+  @override
+  String get schoolWebImportExitConfirm => '終了';
 
   @override
   String get schoolWebImportEmptyPage => '現在のページ内容が空のため、まだインポートできません。';
@@ -1203,10 +1204,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'パーサーの提供元';
@@ -2219,22 +2216,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => '学校のログインページを開きますか？';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return '学校へのログインでは、フォームやサーバーのリダイレクトを通じて、学校やログインサービス提供元に認証情報が送信される場合があります。Android では、このような送信を毎回停止して移動先を個別に確認することはできません。今回のインポートセッションでこれらを信頼できる場合のみ続行してください：\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle => '安全でない学校ログインを開きますか？';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => '開発者モード';

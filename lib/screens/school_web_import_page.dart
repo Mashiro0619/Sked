@@ -8,12 +8,12 @@ import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/school_html_import_page.dart';
-import '../screens/school_import_parser_settings_page.dart';
-import '../services/school_import_api.dart';
 import '../services/school_site_service.dart';
 import '../services/school_web_import_page_service.dart';
 import '../utils/platform_capabilities.dart';
+import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
+import '../widgets/school_import_config_required_view.dart';
 
 class SchoolWebImportPage extends StatefulWidget {
   const SchoolWebImportPage({super.key, required this.site, this.windowId});
@@ -90,145 +90,130 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider?>();
-    final baseUrl = provider?.customSchoolImportBaseUrl.trim() ?? '';
-    final isConfigured =
-        provider != null &&
-        isValidCustomOpenAiBaseUrl(baseUrl) &&
-        provider.customSchoolImportApiKey.trim().isNotEmpty &&
-        provider.customSchoolImportModel.trim().isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_selectedSite?.name ?? widget.site.name),
-        actions: [
-          IconButton(
-            onPressed: _canGoBack && !_isParsing ? _goBackInWebView : null,
-            icon: const Icon(Icons.arrow_back),
-            tooltip: l10n.schoolWebImportGoBack,
-          ),
-          IconButton(
-            onPressed: _controller == null || _isParsing ? null : _reload,
-            icon: const Icon(Icons.refresh),
-            tooltip: MaterialLocalizations.of(context)
-                .refreshIndicatorSemanticLabel,
-          ),
-          IconButton(
-            onPressed:
-                !isConfigured ||
-                    _controller == null ||
-                    !_hasSuccessfulPageLoad ||
-                    _isLoadingPage ||
-                    _isParsing
-                ? null
-                : _importCurrentPage,
-            icon: _isParsing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.file_download_outlined),
-            tooltip: l10n.schoolWebImportImportCurrentPage,
-          ),
-        ],
-      ),
-      body: !isConfigured
-          ? _buildConfigurationRequired(
-              message: _buildConfigMessage(provider, l10n),
-              settingsLabel: l10n.schoolImportParserSettingsTitle,
-            )
-          : !_supportsWebView
-          ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
-          : _schoolLoadError != null
-          ? _buildMessage(_schoolLoadError!)
-          : !widget.isPopupWindow && (_sites.isEmpty || _selectedSite == null)
-          ? _buildMessage(l10n.schoolWebImportNoSchools)
-          : Column(
-              children: [
-                Material(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _isLoadingSchools
-                              ? l10n.schoolWebImportLoadingPage
-                              : _isParsing
-                              ? l10n.schoolWebImportParsing
-                              : _isLoadingPage
-                              ? l10n.schoolWebImportLoadingPage
-                              : l10n.schoolWebImportOpenPageHint,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildOriginStatus(l10n),
-                      ],
-                    ),
+    final isConfigured = isSchoolImportParserConfigured(provider);
+    // The in-app browser owns the system back gesture: a stray back swipe in the
+    // middle of a sign-in flow would otherwise drop the whole session.
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          unawaited(_confirmExit());
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          // Replaced by the explicit confirm-to-leave flow above.
+          automaticallyImplyLeading: false,
+          title: _buildOriginTitle(l10n),
+          // Tracks the WebView's own page loads. Deliberately not tied to the
+          // school-list load, which has its own spinner in the body and would
+          // otherwise show a loading bar over the configuration prompt.
+          bottom: _isLoadingPage
+              ? PreferredSize(
+                  preferredSize: const Size.fromHeight(2),
+                  child: LinearProgressIndicator(
+                    minHeight: 2,
+                    semanticsLabel: l10n.schoolWebImportLoadingPage,
                   ),
-                ),
-                Expanded(
-                  child: _isLoadingSchools
-                      ? const Center(child: CircularProgressIndicator())
-                      : InAppWebView(
-                          windowId: widget.windowId,
-                          initialSettings: schoolWebImportWebViewSettings(
-                            supportsPopups: _supportsPopupWindows,
-                          ),
-                          onWebViewCreated: (controller) {
-                            _controller = controller;
-                            if (!widget.isPopupWindow) {
-                              _scheduleInitialSchoolOpen();
-                            }
-                          },
-                          onLoadStart: _handlePageLoadStart,
-                          onLoadStop: (controller, url) {
-                            unawaited(_handlePageLoadStop(controller, url));
-                          },
-                          onUpdateVisitedHistory: (_, url, _) {
-                            final nextUrl = url?.toString() ?? _currentUrl;
-                            final entryUrl =
-                                _entryUrl.isEmpty && nextUrl.isNotEmpty
-                                ? nextUrl
-                                : _entryUrl;
-                            if (!mounted) {
-                              return;
-                            }
-                            setState(() {
-                              _currentUrl = nextUrl;
-                              _entryUrl = entryUrl;
-                              _canGoBack =
-                                  entryUrl.isNotEmpty && nextUrl != entryUrl;
-                            });
-                          },
-                          onCreateWindow: _supportsPopupWindows
-                              ? _handleCreateWindow
-                              : null,
-                          onCloseWindow: (_) => _handlePopupWindowClosed(),
-                          onTitleChanged: (_, title) {
-                            if (!mounted ||
-                                title == null ||
-                                title == _currentTitle) {
-                              return;
-                            }
-                            setState(() => _currentTitle = title);
-                          },
-                          onReceivedError: (controller, request, error) {
-                            if (request.isForMainFrame == false) {
-                              return;
-                            }
-                            unawaited(
-                              _handlePageLoadFailure(
-                                controller,
-                                request.url,
-                                AppLocalizations.of(context)
-                                    .schoolWebImportLoadFailed,
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
+                )
+              : null,
+          actions: [
+            IconButton(
+              onPressed: _canGoBack && !_isParsing ? _goBackInWebView : null,
+              icon: const Icon(Icons.arrow_back),
+              tooltip: l10n.schoolWebImportGoBack,
             ),
+            IconButton(
+              onPressed: _controller == null || _isParsing ? null : _reload,
+              icon: const Icon(Icons.refresh),
+              tooltip: MaterialLocalizations.of(context)
+                  .refreshIndicatorSemanticLabel,
+            ),
+            IconButton(
+              onPressed:
+                  !isConfigured ||
+                      _controller == null ||
+                      !_hasSuccessfulPageLoad ||
+                      _isLoadingPage ||
+                      _isParsing
+                  ? null
+                  : _importCurrentPage,
+              icon: _isParsing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.file_download_outlined),
+              tooltip: l10n.schoolWebImportImportCurrentPage,
+            ),
+          ],
+        ),
+        body: !isConfigured
+            ? SchoolImportConfigRequiredView(
+                message: schoolImportConfigMessage(provider, l10n),
+              )
+            : !_supportsWebView
+            ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
+            : _schoolLoadError != null
+            ? _buildMessage(_schoolLoadError!)
+            : !widget.isPopupWindow && (_sites.isEmpty || _selectedSite == null)
+            ? _buildMessage(l10n.schoolWebImportNoSchools)
+            : _isLoadingSchools
+            ? const Center(child: CircularProgressIndicator())
+            : InAppWebView(
+                windowId: widget.windowId,
+                initialSettings: schoolWebImportWebViewSettings(
+                  supportsPopups: _supportsPopupWindows,
+                ),
+                onWebViewCreated: (controller) {
+                  _controller = controller;
+                  if (!widget.isPopupWindow) {
+                    _scheduleInitialSchoolOpen();
+                  }
+                },
+                onLoadStart: _handlePageLoadStart,
+                onLoadStop: (controller, url) {
+                  unawaited(_handlePageLoadStop(controller, url));
+                },
+                onUpdateVisitedHistory: (_, url, _) {
+                  final nextUrl = url?.toString() ?? _currentUrl;
+                  final entryUrl = _entryUrl.isEmpty && nextUrl.isNotEmpty
+                      ? nextUrl
+                      : _entryUrl;
+                  if (!mounted) {
+                    return;
+                  }
+                  setState(() {
+                    _currentUrl = nextUrl;
+                    _entryUrl = entryUrl;
+                    _canGoBack = entryUrl.isNotEmpty && nextUrl != entryUrl;
+                  });
+                },
+                onCreateWindow: _supportsPopupWindows
+                    ? _handleCreateWindow
+                    : null,
+                onCloseWindow: (_) => _handlePopupWindowClosed(),
+                onTitleChanged: (_, title) {
+                  if (!mounted || title == null || title == _currentTitle) {
+                    return;
+                  }
+                  setState(() => _currentTitle = title);
+                },
+                onReceivedError: (controller, request, error) {
+                  if (request.isForMainFrame == false) {
+                    return;
+                  }
+                  unawaited(
+                    _handlePageLoadFailure(
+                      controller,
+                      request.url,
+                      AppLocalizations.of(context).schoolWebImportLoadFailed,
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 
@@ -246,82 +231,36 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
     );
   }
 
-  Widget _buildConfigurationRequired({
-    required String message,
-    required String settingsLabel,
-  }) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return SafeArea(
-      top: false,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compactAction =
-              constraints.maxWidth < 480 ||
-              MediaQuery.textScalerOf(context).scale(1) > 1.3;
-          final settingsAction = ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SchoolImportParserSettingsPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.settings_outlined),
-              label: Text(settingsLabel),
-            ),
-          );
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          message,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        if (compactAction)
-                          SizedBox(
-                            width: double.infinity,
-                            child: settingsAction,
-                          )
-                        else
-                          settingsAction,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+  /// Origin of the page actually on screen, or null when it is not known yet.
+  ///
+  /// A popup window opens with no URL of its own, so falling back to the parent
+  /// site here would label the new page with the wrong domain next to a lock
+  /// icon — worse than admitting the origin is unknown.
+  String? _resolveCurrentOrigin() {
+    if (_currentUrl.isNotEmpty) {
+      return schoolWebImportOrigin(_currentUrl);
+    }
+    if (widget.isPopupWindow) {
+      return null;
+    }
+    return schoolWebImportOrigin(
+      _selectedSite?.loginUrl ?? widget.site.loginUrl,
     );
   }
 
-  Widget _buildOriginStatus(AppLocalizations l10n) {
-    final fallbackUrl = _selectedSite?.loginUrl ?? widget.site.loginUrl;
-    final origin = schoolWebImportOrigin(
-      _currentUrl.isEmpty ? fallbackUrl : _currentUrl,
-    );
+  Widget _buildOriginTitle(AppLocalizations l10n) {
+    final origin = _resolveCurrentOrigin();
     final isSecure = origin?.startsWith('https://') ?? false;
     final colors = Theme.of(context).colorScheme;
+    // A closed lock already states "https", so drop the scheme there to leave
+    // room for the host. Insecure origins keep the visible http:// prefix.
+    final display = origin == null
+        ? l10n.schoolWebImportUnknownOrigin
+        : isSecure
+        ? origin.substring('https://'.length)
+        : origin;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           isSecure ? Icons.lock_outline : Icons.lock_open_outlined,
@@ -329,35 +268,53 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
           color: isSecure ? colors.primary : colors.error,
         ),
         const SizedBox(width: 8),
-        Text(
-          isSecure ? 'HTTPS' : 'HTTP',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: isSecure ? colors.primary : colors.error,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
+        Flexible(
           child: Text(
-            origin ?? l10n.schoolWebImportUnknownOrigin,
-            maxLines: 2,
+            display,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(color: isSecure ? null : colors.error),
           ),
         ),
       ],
     );
   }
 
-  String _buildConfigMessage(
-    TimetableProvider? provider,
-    AppLocalizations l10n,
-  ) {
-    final baseUrl = provider?.customSchoolImportBaseUrl.trim() ?? '';
-    if (baseUrl.isNotEmpty && !isValidCustomOpenAiBaseUrl(baseUrl)) {
-      return l10n.schoolImportParserBaseUrlInvalid;
+  Future<void> _confirmExit() async {
+    final l10n = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final shouldExit = await showExpressiveDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        var popped = false;
+        void popWith(bool value) {
+          if (popped) {
+            return;
+          }
+          popped = true;
+          Navigator.of(dialogContext).pop(value);
+        }
+
+        return AlertDialog(
+          title: Text(l10n.schoolWebImportExitTitle),
+          content: Text(l10n.schoolWebImportExitMessage),
+          actions: [
+            TextButton(
+              onPressed: () => popWith(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => popWith(true),
+              child: Text(l10n.schoolWebImportExitConfirm),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldExit == true && mounted) {
+      navigator.pop();
     }
-    return l10n.schoolImportParserCustomConfigIncomplete;
   }
 
   void _handlePageLoadStart(InAppWebViewController _, WebUri? url) {

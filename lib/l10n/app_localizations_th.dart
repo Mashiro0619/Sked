@@ -1206,12 +1206,14 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'ไซต์ที่ไม่รู้จัก';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'ไปยังไซต์อื่นหรือไม่';
+  String get schoolWebImportExitTitle => 'ออกจากเบราว์เซอร์ใช่ไหม';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'การลงชื่อเข้าใช้ระบบของโรงเรียนอาจต้องเปิดไซต์อื่น โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือปลายทางนี้สำหรับเซสชันการนำเข้าปัจจุบัน:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'หน้านี้จะปิดลง สิ่งที่คุณยังไม่ได้นำเข้าจะสูญหาย';
+
+  @override
+  String get schoolWebImportExitConfirm => 'ออก';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1226,10 +1228,6 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'แหล่ง Parser';
@@ -2252,24 +2250,6 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'การลงชื่อเข้าใช้ของโรงเรียนอาจส่งข้อมูลรับรองผ่านแบบฟอร์มหรือการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ไปยังโรงเรียนและผู้ให้บริการลงชื่อเข้าใช้ Android ไม่สามารถหยุดการส่งแต่ละครั้งเพื่อยืนยันปลายทางแยกกันได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือบริการเหล่านี้สำหรับเซสชันการนำเข้านี้:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'เปิดการลงชื่อเข้าใช้โรงเรียนที่ไม่ปลอดภัยหรือไม่';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'โหมดนักพัฒนา';

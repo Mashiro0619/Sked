@@ -1211,12 +1211,14 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Ukendt websted';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Fortsæt til et andet websted?';
+  String get schoolWebImportExitTitle => 'Forlad browseren?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Login på skolens system kan kræve, at et andet websted åbnes. Fortsæt kun, hvis du har tillid til denne destination i den aktuelle importsession:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Siden lukkes. Alt, du endnu ikke har importeret, går tabt.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Forlad';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1231,10 +1233,6 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser kilde';
@@ -2259,23 +2257,6 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle => 'Åbn skolens login?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Skolens login kan sende legitimationsoplysninger via formularer eller serveromdirigeringer til skolen og dens loginudbydere. Android kan ikke sætte hver sådan overførsel på pause for at vise en særskilt destinationsbekræftelse. Fortsæt kun, hvis du har tillid til dem i denne importsession:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Åbn et usikkert skolelogin?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Dette skolelogin bruger HTTP. Enhver, der kan overvåge eller ændre forbindelsen, kan læse eller ændre dine loginoplysninger og sidens indhold. Fortsæt kun, hvis du accepterer denne risiko for:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Udviklertilstand';

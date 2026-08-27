@@ -2272,17 +2272,23 @@ abstract class AppLocalizations {
   /// **'Unknown site'**
   String get schoolWebImportUnknownOrigin;
 
-  /// No description provided for @schoolWebImportCrossOriginTitle.
+  /// No description provided for @schoolWebImportExitTitle.
   ///
   /// In en, this message translates to:
-  /// **'Continue to another site?'**
-  String get schoolWebImportCrossOriginTitle;
+  /// **'Leave the browser?'**
+  String get schoolWebImportExitTitle;
 
-  /// No description provided for @schoolWebImportCrossOriginMessage.
+  /// No description provided for @schoolWebImportExitMessage.
   ///
   /// In en, this message translates to:
-  /// **'School sign-in may need to open another site. Continue only if you trust this destination for the current import session:\n\n{origin}'**
-  String schoolWebImportCrossOriginMessage(Object origin);
+  /// **'The page will close. Anything you have not imported yet will be lost.'**
+  String get schoolWebImportExitMessage;
+
+  /// No description provided for @schoolWebImportExitConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get schoolWebImportExitConfirm;
 
   /// No description provided for @schoolWebImportEmptyPage.
   ///
@@ -2307,12 +2313,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Configure the OpenAI-compatible API used by timetable parsing and other AI features.'**
   String get schoolImportParserSettingsDesc;
-
-  /// No description provided for @schoolImportParserSettingsLocationHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Configure it in Settings > Data & security > AI API configuration.'**
-  String get schoolImportParserSettingsLocationHint;
 
   /// No description provided for @schoolImportParserSourceTitle.
   ///
@@ -4155,30 +4155,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In day or week view, long-press an empty area of the time grid to add an event.'**
   String get enableLongPressAddEventHint;
-
-  /// No description provided for @schoolWebImportSignInConsentTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open school sign-in?'**
-  String get schoolWebImportSignInConsentTitle;
-
-  /// No description provided for @schoolWebImportSignInConsentMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}'**
-  String schoolWebImportSignInConsentMessage(Object origin);
-
-  /// No description provided for @schoolWebImportInsecureSignInConsentTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open an insecure school sign-in?'**
-  String get schoolWebImportInsecureSignInConsentTitle;
-
-  /// No description provided for @schoolWebImportInsecureSignInConsentMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}'**
-  String schoolWebImportInsecureSignInConsentMessage(Object origin);
 
   /// No description provided for @developerModeTitle.
   ///

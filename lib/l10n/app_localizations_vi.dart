@@ -1218,12 +1218,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Trang web không xác định';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Tiếp tục đến trang web khác?';
+  String get schoolWebImportExitTitle => 'Thoát trình duyệt?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Quá trình đăng nhập vào hệ thống trường có thể cần mở một trang web khác. Chỉ tiếp tục nếu bạn tin cậy đích này trong phiên nhập hiện tại:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Trang sẽ đóng lại. Mọi nội dung bạn chưa nhập sẽ bị mất.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Thoát';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1238,10 +1240,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Nguồn parser';
@@ -2268,24 +2266,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Mở trang đăng nhập của trường?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Quá trình đăng nhập của trường có thể gửi thông tin xác thực qua biểu mẫu hoặc lệnh chuyển hướng của máy chủ đến trường và các nhà cung cấp đăng nhập. Android không thể tạm dừng mọi lần truyền như vậy để xác nhận riêng từng đích. Chỉ tiếp tục nếu bạn tin cậy các bên này trong phiên nhập này:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Mở trang đăng nhập trường học không an toàn?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Trang đăng nhập trường học này sử dụng HTTP. Bất kỳ ai có thể theo dõi hoặc can thiệp vào kết nối này đều có thể đọc hoặc thay đổi thông tin xác thực và nội dung trang của bạn. Chỉ tiếp tục nếu bạn chấp nhận rủi ro này đối với:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Chế độ nhà phát triển';

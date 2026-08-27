@@ -1234,12 +1234,14 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Άγνωστος ιστότοπος';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Συνέχεια σε άλλον ιστότοπο;';
+  String get schoolWebImportExitTitle => 'Έξοδος από το πρόγραμμα περιήγησης;';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Η σύνδεση στο σχολικό σύστημα ενδέχεται να χρειαστεί να ανοίξει άλλον ιστότοπο. Συνεχίστε μόνο αν εμπιστεύεστε αυτόν τον προορισμό για την τρέχουσα περίοδο εισαγωγής:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Η σελίδα θα κλείσει. Ό,τι δεν έχετε εισαγάγει ακόμη θα χαθεί.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Έξοδος';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1254,10 +1256,6 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Πηγή αναλύτη';
@@ -2285,24 +2283,6 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Άνοιγμα σύνδεσης στο σχολικό σύστημα;';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Η σύνδεση στο σχολικό σύστημα μπορεί να υποβάλει διαπιστευτήρια μέσω φορμών ή ανακατευθύνσεων διακομιστή στο σχολείο και στους παρόχους σύνδεσής του. Το Android δεν μπορεί να διακόπτει κάθε τέτοια μεταφορά για ξεχωριστή επιβεβαίωση προορισμού. Συνεχίστε μόνο αν τους εμπιστεύεστε για αυτήν την περίοδο εισαγωγής:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Άνοιγμα μη ασφαλούς σύνδεσης σχολείου;';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Λειτουργία προγραμματιστή';

@@ -1220,13 +1220,14 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Tuntematon sivusto';
 
   @override
-  String get schoolWebImportCrossOriginTitle =>
-      'Jatketaanko toiselle sivustolle?';
+  String get schoolWebImportExitTitle => 'Poistutaanko selaimesta?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'Koulun järjestelmään kirjautuminen saattaa edellyttää toisen sivuston avaamista. Jatka vain, jos luotat tähän kohteeseen nykyisen tuonti-istunnon ajan:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'Sivu suljetaan. Kaikki, mitä et ole vielä tuonut, menetetään.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Poistu';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1241,10 +1242,6 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parserin lähde';
@@ -2268,24 +2265,6 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Avataanko koulun kirjautuminen?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'Koulun kirjautuminen voi lähettää tunnistetietoja lomakkeiden tai palvelimen uudelleenohjausten kautta koululle ja sen kirjautumispalvelujen tarjoajille. Android ei voi keskeyttää jokaista tällaista siirtoa erillistä kohteen vahvistusta varten. Jatka vain, jos luotat niihin tämän tuonti-istunnon ajan:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Avataanko suojaamaton koulukirjautuminen?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Kehittäjätila';

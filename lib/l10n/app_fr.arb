@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Site inconnu",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Continuer vers un autre site ?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "La connexion au service de l’établissement peut nécessiter l’ouverture d’un autre site. Continuez uniquement si vous faites confiance à cette destination pour la session d’importation en cours :\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Quitter le navigateur ?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "La page va se fermer. Tout ce que vous n'avez pas encore importé sera perdu.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Quitter",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Utiliser un point de terminaison HTTP non chiffré ?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "La clé API et le contenu de l’emploi du temps peuvent être lus ou modifiés pendant le transfert. Continuez uniquement si vous faites confiance à cet appareil, à ce réseau et à ce point de terminaison. Cette autorisation reste valable jusqu’à la fermeture de Sked.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Ouvrir la connexion à l’établissement ?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "La connexion à l’établissement peut envoyer des identifiants au moyen de formulaires ou de redirections du serveur vers l’établissement et ses fournisseurs de connexion. Android ne peut pas interrompre chaque transfert de ce type pour demander une confirmation distincte de la destination. Continuez uniquement si vous leur faites confiance pour cette session d’importation :\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Ouvrir une connexion scolaire non sécurisée ?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "Cette connexion scolaire utilise HTTP. Toute personne capable d’observer ou de modifier cette connexion peut lire ou changer vos identifiants et le contenu de la page. Continuez uniquement si vous acceptez ce risque pour :\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Mode développeur",
   "@developerModeTitle": {},
   "developerModeDescription": "Outils permettant d’ajouter des données d’exemple complètes pour vérifier l’interface et les interactions.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

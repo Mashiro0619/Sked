@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Okänd webbplats",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Fortsätt till en annan webbplats?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "Skolans inloggning kan behöva öppna en annan webbplats. Fortsätt bara om du litar på den här destinationen under den aktuella importsessionen:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Lämna webbläsaren?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "Sidan stängs. Allt du inte har importerat ännu går förlorat.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Lämna",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Vill du använda en okrypterad HTTP-slutpunkt?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "API-nyckeln och schemainnehållet kan läsas eller ändras under överföringen. Fortsätt bara om du litar på den här enheten, nätverket och slutpunkten. Godkännandet gäller tills du stänger Sked.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Öppna skolans inloggning?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "Skolans inloggning kan skicka inloggningsuppgifter via formulär eller serveromdirigeringar till skolan och dess inloggningsleverantörer. Android kan inte pausa varje sådan överföring för en separat bekräftelse av destinationen. Fortsätt bara om du litar på dem under den här importsessionen:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Öppna en osäker skolinloggning?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "Den här skolinloggningen använder HTTP. Den som kan övervaka eller ändra anslutningen kan läsa eller ändra dina inloggningsuppgifter och sidans innehåll. Fortsätt bara om du accepterar den här risken för:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Utvecklarläge",
   "@developerModeTitle": {},
   "developerModeDescription": "Verktyg för att lägga till fullständiga exempeldata och kontrollera utseende och interaktion.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

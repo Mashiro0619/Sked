@@ -1226,12 +1226,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get schoolWebImportUnknownOrigin => 'Site desconhecido';
 
   @override
-  String get schoolWebImportCrossOriginTitle => 'Continuar para outro site?';
+  String get schoolWebImportExitTitle => 'Sair do navegador?';
 
   @override
-  String schoolWebImportCrossOriginMessage(Object origin) {
-    return 'O início de sessão na escola pode exigir a abertura de outro site. Continue apenas se confiar neste destino durante a sessão de importação atual:\n\n$origin';
-  }
+  String get schoolWebImportExitMessage =>
+      'A página será fechada. Tudo o que ainda não importou será perdido.';
+
+  @override
+  String get schoolWebImportExitConfirm => 'Sair';
 
   @override
   String get schoolWebImportEmptyPage =>
@@ -1246,10 +1248,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get schoolImportParserSettingsDesc =>
       'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
-
-  @override
-  String get schoolImportParserSettingsLocationHint =>
-      'Configure it in Settings > Data & security > AI API configuration.';
 
   @override
   String get schoolImportParserSourceTitle => 'Origem do analisador';
@@ -2275,24 +2273,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get enableLongPressAddEventHint =>
       'In day or week view, long-press an empty area of the time grid to add an event.';
-
-  @override
-  String get schoolWebImportSignInConsentTitle =>
-      'Abrir o início de sessão da escola?';
-
-  @override
-  String schoolWebImportSignInConsentMessage(Object origin) {
-    return 'O início de sessão da escola pode enviar credenciais através de formulários ou redirecionamentos do servidor para a escola e os respetivos fornecedores de autenticação. O Android não consegue pausar cada transferência deste tipo para confirmar o destino separadamente. Continue apenas se confiar nestas entidades durante esta sessão de importação:\n\n$origin';
-  }
-
-  @override
-  String get schoolWebImportInsecureSignInConsentTitle =>
-      'Abrir um início de sessão escolar não seguro?';
-
-  @override
-  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
-    return 'Este início de sessão escolar utiliza HTTP. Qualquer pessoa que consiga observar ou alterar esta ligação poderá ler ou modificar as suas credenciais e o conteúdo da página. Continue apenas se aceitar este risco para:\n\n$origin';
-  }
 
   @override
   String get developerModeTitle => 'Modo de programador';

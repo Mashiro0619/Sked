@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Ismeretlen webhely",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Folytatja egy másik webhelyen?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "Az iskolai bejelentkezéshez szükség lehet egy másik webhely megnyitására. Csak akkor folytassa, ha az aktuális importálási munkamenetben megbízik ebben a célban:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Kilép a böngészőből?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "Az oldal bezárul. Minden, amit még nem importált, elveszik.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Kilépés",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Titkosítatlan HTTP-végpontot használ?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "Az API-kulcs és az órarend tartalma átvitel közben elolvasható vagy módosítható. Csak akkor folytassa, ha megbízik ebben az eszközben, hálózatban és végpontban. A jóváhagyás a Sked bezárásáig érvényes.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Megnyitja az iskolai bejelentkezést?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "Az iskolai bejelentkezés űrlapokon vagy szerverátirányításokon keresztül hitelesítő adatokat küldhet az iskolának és bejelentkezési szolgáltatóinak. Az Android nem tud minden ilyen átvitelt külön célmegerősítéshez megállítani. Csak akkor folytassa, ha megbízik bennük ebben az importálási munkamenetben:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Megnyitja a nem biztonságos iskolai bejelentkezést?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Fejlesztői mód",
   "@developerModeTitle": {},
   "developerModeDescription": "Eszközök teljes mintaadatok hozzáadásához a megjelenés és a működés ellenőrzésére.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",

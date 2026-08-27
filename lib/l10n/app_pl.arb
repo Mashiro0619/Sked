@@ -1523,34 +1523,16 @@
   "@schoolImportContentTruncated": {},
   "schoolWebImportUnknownOrigin": "Nieznana witryna",
   "@schoolWebImportUnknownOrigin": {},
-  "schoolWebImportCrossOriginTitle": "Przejść do innej witryny?",
-  "@schoolWebImportCrossOriginTitle": {},
-  "schoolWebImportCrossOriginMessage": "Logowanie do systemu szkoły może wymagać otwarcia innej witryny. Kontynuuj tylko wtedy, gdy ufasz temu miejscu docelowemu w bieżącej sesji importu:\n\n{origin}",
-  "@schoolWebImportCrossOriginMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
+  "schoolWebImportExitTitle": "Opuścić przeglądarkę?",
+  "@schoolWebImportExitTitle": {},
+  "schoolWebImportExitMessage": "Strona zostanie zamknięta. Wszystko, czego jeszcze nie zaimportowano, zostanie utracone.",
+  "@schoolWebImportExitMessage": {},
+  "schoolWebImportExitConfirm": "Opuść",
+  "@schoolWebImportExitConfirm": {},
   "schoolImportHttpConfirmationTitle": "Użyć nieszyfrowanego punktu końcowego HTTP?",
   "@schoolImportHttpConfirmationTitle": {},
   "schoolImportHttpConfirmationMessage": "Klucz API i zawartość planu lekcji mogą zostać odczytane lub zmienione podczas przesyłania. Kontynuuj tylko wtedy, gdy ufasz temu urządzeniu, sieci i punktowi końcowemu. Zgoda obowiązuje do zamknięcia aplikacji Sked.",
   "@schoolImportHttpConfirmationMessage": {},
-  "schoolWebImportSignInConsentTitle": "Otworzyć logowanie do systemu szkoły?",
-  "@schoolWebImportSignInConsentTitle": {},
-  "schoolWebImportSignInConsentMessage": "Logowanie do systemu szkoły może przesyłać dane logowania za pomocą formularzy lub przekierowań serwera do szkoły i jej dostawców logowania. Android nie może wstrzymać każdego takiego transferu, aby osobno potwierdzić miejsce docelowe. Kontynuuj tylko wtedy, gdy ufasz im w tej sesji importu:\n\n{origin}",
-  "@schoolWebImportSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
-  "schoolWebImportInsecureSignInConsentTitle": "Otworzyć niezabezpieczone logowanie do szkoły?",
-  "@schoolWebImportInsecureSignInConsentTitle": {},
-  "schoolWebImportInsecureSignInConsentMessage": "To logowanie do szkoły używa protokołu HTTP. Każdy, kto może obserwować lub modyfikować to połączenie, może odczytać albo zmienić Twoje dane logowania i zawartość strony. Kontynuuj tylko, jeśli akceptujesz to ryzyko dla:\n\n{origin}",
-  "@schoolWebImportInsecureSignInConsentMessage": {
-    "placeholders": {
-      "origin": {}
-    }
-  },
   "developerModeTitle": "Tryb deweloperski",
   "@developerModeTitle": {},
   "developerModeDescription": "Narzędzia do dodawania pełnych danych przykładowych w celu sprawdzenia wyglądu i obsługi.",
@@ -1581,8 +1563,6 @@
   "@starSkedOnGithub": {},
   "starSkedOnGithubDesc": "Open the project repository and give Sked a Star",
   "@starSkedOnGithubDesc": {},
-  "schoolImportParserSettingsLocationHint": "Configure it in Settings > Data & security > AI API configuration.",
-  "@schoolImportParserSettingsLocationHint": {},
   "clearAppData": "Clear data",
   "@clearAppData": {},
   "clearAppDataDesc": "Permanently delete all local Sked data and exit the app",
