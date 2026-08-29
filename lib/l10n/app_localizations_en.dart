@@ -43,6 +43,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Parse timetable';
+
+  @override
+  String get schoolImportParsePageParsing => 'Parsing…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Parsing failed';
+
+  @override
+  String get schoolImportParsePageComplete => 'Parsing complete';
+
+  @override
+  String get schoolImportParsePageContinue => 'Continue import';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Raw parsed content';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Expand raw parsed content';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Collapse raw parsed content';
+
+  @override
   String get createTimetable => 'New timetable';
 
   @override

@@ -14,11 +14,10 @@ import '../services/school_import_http_consent.dart';
 import '../services/school_import_workflow.dart';
 import '../utils/text_input_limits.dart';
 import '../widgets/app_modal_sheet.dart';
-import '../widgets/expressive_dialog.dart';
 import '../widgets/school_import_config_required_view.dart';
-import '../widgets/school_import_stream_dialog.dart';
 import '../widgets/school_import_http_consent_dialog.dart';
 import '../widgets/school_web_import_result_sheet.dart';
+import 'school_import_parse_page.dart';
 
 class SchoolHtmlImportPage extends StatefulWidget {
   const SchoolHtmlImportPage({
@@ -467,6 +466,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     }
 
     SchoolImportResponse? response;
+    SchoolImportApplyRequest? directImportRequest;
     Object? streamError;
     try {
       response = await _workflow.parse(
@@ -478,19 +478,44 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
           sourceHint: parserSettings.source,
         ),
         parserSettings: parserSettings,
-        presentStream: (stream) {
+        presentStream: (stream) async {
           if (!mounted || submissionGeneration != _submissionGeneration) {
             return Future<SchoolImportResponse?>.value();
           }
-          return showExpressiveDialog<SchoolImportResponse>(
-            context: context,
-            barrierDismissible: false,
-            // The result flow immediately opens a sheet. Wait for the stream
-            // dialog to leave the route tree so the two modal semantics and
-            // focus scopes never overlap.
-            waitForTransitionComplete: true,
-            builder: (_) => SchoolImportStreamDialog(stream: stream),
+          // The source editor may still own the IME focus when the action is
+          // pressed. Clear it before replacing the page so the full-screen
+          // parser starts with its footer and status content unobscured.
+          FocusManager.instance.primaryFocus?.unfocus();
+          final transitionAnchor = GlobalKey(
+            debugLabel: 'school-import-parse-transition-anchor',
           );
+          final outcome = await Navigator.of(context)
+              .push<SchoolImportParseOutcome>(
+                MaterialPageRoute(
+                  builder: (_) => KeyedSubtree(
+                    key: transitionAnchor,
+                    child: SchoolImportParsePage(
+                      stream: stream,
+                      provider: provider,
+                      canReplaceCurrent: canReplaceCurrent,
+                      initialPeriodTimeSetId:
+                          provider.activePeriodTimeSetOrNull?.id ??
+                          (provider.periodTimeSets.isEmpty
+                              ? ''
+                              : provider.periodTimeSets.first.id),
+                    ),
+                  ),
+                ),
+              );
+          // Navigator completes the route future when the pop starts, before
+          // the page's exit transition disposes its subtree. Wait for the
+          // anchor to disappear so the preview sheet never overlaps the
+          // parser route or its focus scope.
+          while (mounted && transitionAnchor.currentContext != null) {
+            await WidgetsBinding.instance.endOfFrame;
+          }
+          directImportRequest = outcome?.applyRequest;
+          return outcome?.response;
         },
       );
     } catch (error) {
@@ -515,16 +540,18 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
         (provider.periodTimeSets.isEmpty
             ? ''
             : provider.periodTimeSets.first.id);
-    final importResult = await showAppModalSheet<SchoolImportApplyRequest>(
-      context: context,
-      maxWidth: appSheetWidthMedium,
-      builder: (_) => SchoolWebImportResultSheet(
-        response: finalResponse,
-        canReplaceCurrent: canReplaceCurrent,
-        initialPeriodTimeSetId: selectedPeriodTimeSetId,
-        provider: provider,
-      ),
-    );
+    final importResult =
+        directImportRequest ??
+        await showAppModalSheet<SchoolImportApplyRequest>(
+          context: context,
+          maxWidth: appSheetWidthMedium,
+          builder: (_) => SchoolWebImportResultSheet(
+            response: finalResponse,
+            canReplaceCurrent: canReplaceCurrent,
+            initialPeriodTimeSetId: selectedPeriodTimeSetId,
+            provider: provider,
+          ),
+        );
     if (importResult == null ||
         !mounted ||
         submissionGeneration != _submissionGeneration) {

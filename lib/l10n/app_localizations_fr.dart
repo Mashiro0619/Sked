@@ -43,6 +43,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Modifier le résultat analysé';
 
   @override
+  String get schoolImportParsePageTitle => 'Analyser l’emploi du temps';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analyse en cours…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Échec de l’analyse';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analyse terminée';
+
+  @override
+  String get schoolImportParsePageContinue => 'Continuer';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Réponse brute';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Développer la réponse brute';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Réduire la réponse brute';
+
+  @override
   String get createTimetable => 'Nouvel emploi du temps';
 
   @override

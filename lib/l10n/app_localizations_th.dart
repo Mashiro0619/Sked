@@ -43,6 +43,30 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'แก้ไขผลการวิเคราะห์';
 
   @override
+  String get schoolImportParsePageTitle => 'วิเคราะห์ตารางเรียน';
+
+  @override
+  String get schoolImportParsePageParsing => 'กำลังวิเคราะห์…';
+
+  @override
+  String get schoolImportParsePageFailed => 'วิเคราะห์ไม่สำเร็จ';
+
+  @override
+  String get schoolImportParsePageComplete => 'วิเคราะห์เสร็จแล้ว';
+
+  @override
+  String get schoolImportParsePageContinue => 'ดำเนินการต่อ';
+
+  @override
+  String get schoolImportParsePageRawContent => 'การตอบกลับดิบ';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'ขยายการตอบกลับดิบ';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'ย่อการตอบกลับดิบ';
+
+  @override
   String get createTimetable => 'ตารางเวลาใหม่';
 
   @override

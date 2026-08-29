@@ -43,6 +43,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Phân tích thời khóa biểu';
+
+  @override
+  String get schoolImportParsePageParsing => 'Đang phân tích…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Phân tích không thành công';
+
+  @override
+  String get schoolImportParsePageComplete => 'Đã phân tích xong';
+
+  @override
+  String get schoolImportParsePageContinue => 'Tiếp tục';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Phản hồi thô';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Mở rộng phản hồi thô';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Thu gọn phản hồi thô';
+
+  @override
   String get createTimetable => 'Thời gian mới';
 
   @override

@@ -43,6 +43,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Editar resultado analisado';
 
   @override
+  String get schoolImportParsePageTitle => 'Analisar horário';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analisando…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Falha na análise';
+
+  @override
+  String get schoolImportParsePageComplete => 'Análise concluída';
+
+  @override
+  String get schoolImportParsePageContinue => 'Continuar';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Resposta bruta';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Expandir resposta bruta';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Recolher resposta bruta';
+
+  @override
   String get createTimetable => 'Novo horário';
 
   @override

@@ -44,6 +44,30 @@ class AppLocalizationsDe extends AppLocalizations {
       'Analysiertes Ergebnis bearbeiten';
 
   @override
+  String get schoolImportParsePageTitle => 'Stundenplan analysieren';
+
+  @override
+  String get schoolImportParsePageParsing => 'Wird analysiert…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analyse fehlgeschlagen';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analyse abgeschlossen';
+
+  @override
+  String get schoolImportParsePageContinue => 'Weiter';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Rohantwort';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Rohantwort erweitern';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Rohantwort reduzieren';
+
+  @override
   String get createTimetable => 'Neuer Stundenplan';
 
   @override

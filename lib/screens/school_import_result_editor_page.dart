@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/school_import_models.dart';
 import '../services/school_import_api.dart';
 import '../utils/text_input_limits.dart';
 
@@ -22,6 +23,22 @@ Map<String, dynamic>? _decodeSchoolImportObject(String source) {
   } catch (_) {
     return null;
   }
+}
+
+/// The validated value returned by the full-screen parsed-result editor.
+///
+/// [rawText] deliberately keeps the user's exact draft (including whitespace
+/// and unknown fields).  The parsed [response] is used by the import flow,
+/// while the original text can be shown again or retained for diagnostics.
+class SchoolImportResultEditorOutcome extends SchoolImportResponse {
+  SchoolImportResultEditorOutcome({
+    required SchoolImportResponse response,
+    required this.rawText,
+  }) : response = response,
+       super(meta: response.meta, timetable: response.timetable);
+
+  final SchoolImportResponse response;
+  final String rawText;
 }
 
 /// Full-screen editor for the JSON returned by the school import parser.
@@ -100,7 +117,12 @@ class _SchoolImportResultEditorPageState
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop(response);
+      Navigator.of(context).pop(
+        SchoolImportResultEditorOutcome(
+          response: response,
+          rawText: _controller.text,
+        ),
+      );
     } catch (error) {
       _showError('${l10n.importFailedCheckContent}\n\n$error');
     }

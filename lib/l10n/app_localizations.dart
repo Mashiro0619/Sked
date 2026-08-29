@@ -199,6 +199,54 @@ abstract class AppLocalizations {
   /// **'Edit parsed result'**
   String get schoolImportResultEditorTitle;
 
+  /// No description provided for @schoolImportParsePageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Parse timetable'**
+  String get schoolImportParsePageTitle;
+
+  /// No description provided for @schoolImportParsePageParsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing…'**
+  String get schoolImportParsePageParsing;
+
+  /// No description provided for @schoolImportParsePageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing failed'**
+  String get schoolImportParsePageFailed;
+
+  /// No description provided for @schoolImportParsePageComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing complete'**
+  String get schoolImportParsePageComplete;
+
+  /// No description provided for @schoolImportParsePageContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue import'**
+  String get schoolImportParsePageContinue;
+
+  /// No description provided for @schoolImportParsePageRawContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw parsed content'**
+  String get schoolImportParsePageRawContent;
+
+  /// No description provided for @schoolImportParsePageExpandRaw.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand raw parsed content'**
+  String get schoolImportParsePageExpandRaw;
+
+  /// No description provided for @schoolImportParsePageCollapseRaw.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse raw parsed content'**
+  String get schoolImportParsePageCollapseRaw;
+
   /// No description provided for @createTimetable.
   ///
   /// In en, this message translates to:

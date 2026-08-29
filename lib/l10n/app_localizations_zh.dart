@@ -43,6 +43,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolImportResultEditorTitle => '编辑解析结果';
 
   @override
+  String get schoolImportParsePageTitle => '解析课表';
+
+  @override
+  String get schoolImportParsePageParsing => '正在解析…';
+
+  @override
+  String get schoolImportParsePageFailed => '解析失败';
+
+  @override
+  String get schoolImportParsePageComplete => '解析完成';
+
+  @override
+  String get schoolImportParsePageContinue => '继续导入';
+
+  @override
+  String get schoolImportParsePageRawContent => '原始解析内容';
+
+  @override
+  String get schoolImportParsePageExpandRaw => '展开原始解析内容';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => '收起原始解析内容';
+
+  @override
   String get createTimetable => '新建课表';
 
   @override
@@ -2259,6 +2283,30 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportResultEditorTitle => '編輯解析結果';
+
+  @override
+  String get schoolImportParsePageTitle => '解析課表';
+
+  @override
+  String get schoolImportParsePageParsing => '正在解析…';
+
+  @override
+  String get schoolImportParsePageFailed => '解析失敗';
+
+  @override
+  String get schoolImportParsePageComplete => '解析完成';
+
+  @override
+  String get schoolImportParsePageContinue => '繼續匯入';
+
+  @override
+  String get schoolImportParsePageRawContent => '原始解析內容';
+
+  @override
+  String get schoolImportParsePageExpandRaw => '展開原始解析內容';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => '收起原始解析內容';
 
   @override
   String get createTimetable => '新建課表';

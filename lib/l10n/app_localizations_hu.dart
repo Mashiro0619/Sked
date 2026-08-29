@@ -43,6 +43,30 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Órarend elemzése';
+
+  @override
+  String get schoolImportParsePageParsing => 'Elemzés…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Az elemzés sikertelen';
+
+  @override
+  String get schoolImportParsePageComplete => 'Az elemzés kész';
+
+  @override
+  String get schoolImportParsePageContinue => 'Folytatás';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Nyers válasz';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Nyers válasz kibontása';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Nyers válasz összecsukása';
+
+  @override
   String get createTimetable => 'Új menetrend';
 
   @override

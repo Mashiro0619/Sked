@@ -43,6 +43,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolImportResultEditorTitle => '解析結果を編集';
 
   @override
+  String get schoolImportParsePageTitle => '時間割を解析';
+
+  @override
+  String get schoolImportParsePageParsing => '解析中…';
+
+  @override
+  String get schoolImportParsePageFailed => '解析に失敗';
+
+  @override
+  String get schoolImportParsePageComplete => '解析完了';
+
+  @override
+  String get schoolImportParsePageContinue => '続行';
+
+  @override
+  String get schoolImportParsePageRawContent => '生の応答';
+
+  @override
+  String get schoolImportParsePageExpandRaw => '生の応答を展開';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => '生の応答を折りたたむ';
+
+  @override
   String get createTimetable => '新しい時間割';
 
   @override

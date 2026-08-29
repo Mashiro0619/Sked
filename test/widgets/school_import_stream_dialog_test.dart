@@ -6,6 +6,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_import_models.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_result_editor_page.dart';
 import 'package:sked/widgets/school_import_stream_dialog.dart';
 
@@ -92,7 +93,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(SchoolImportParsePage), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     unawaited(controller.close());

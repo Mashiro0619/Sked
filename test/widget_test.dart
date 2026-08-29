@@ -2668,7 +2668,9 @@ void main() {
 
       expect(fakeApi.callCount, 1);
       expect(fakeApi.lastPayload?.html, '星期一 第三、四节 语文');
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      // The streaming parser now owns a full-screen route, so only that route
+      // contributes a progress indicator while the request is pending.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       completer.complete(
         SchoolImportApiResult(
@@ -2680,19 +2682,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      final confirmText = find.text('确定');
-      await tester.ensureVisible(confirmText);
-      await tester.pump();
-      await tester.tap(confirmText);
+      expect(find.text('解析完成'), findsOneWidget);
+      final importAsNewText = find.text('作为新课表导入');
+      await tester.ensureVisible(importAsNewText);
+      await tester.tap(importAsNewText);
       await tester.pumpAndSettle();
 
-      final cancelText = find.text('取消');
       expect(find.byType(AlertDialog), findsNothing);
-      expect(cancelText, findsOneWidget);
-      await tester.ensureVisible(cancelText);
-      await tester.pumpAndSettle();
-      await tester.tap(cancelText);
-      await tester.pumpAndSettle();
+      expect(find.byType(SchoolWebImportResultSheet), findsNothing);
     });
 
     testWidgets('文本 / HTML 解析页成功后会把导入结果写入 provider', (tester) async {
@@ -2769,11 +2766,7 @@ void main() {
       await tester.tap(submitButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      final confirmText = find.text('确定');
-      await tester.ensureVisible(confirmText);
-      await tester.pump();
-      await tester.tap(confirmText);
-      await tester.pumpAndSettle();
+      expect(find.text('解析完成'), findsOneWidget);
       final importAsNewText = find.text('作为新课表导入');
       expect(find.byType(AlertDialog), findsNothing);
       expect(importAsNewText, findsOneWidget);

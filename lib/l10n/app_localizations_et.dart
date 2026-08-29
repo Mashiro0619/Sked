@@ -43,6 +43,30 @@ class AppLocalizationsEt extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Analüüsi tunniplaani';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analüüsimine…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analüüs nurjus';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analüüs lõpetatud';
+
+  @override
+  String get schoolImportParsePageContinue => 'Jätka';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Töötlemata vastus';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Laienda töötlemata vastust';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Ahenda töötlemata vastus';
+
+  @override
   String get createTimetable => 'Uus ajakava';
 
   @override

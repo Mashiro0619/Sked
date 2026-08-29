@@ -43,6 +43,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Analysera schema';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analyserar…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analysen misslyckades';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analysen är klar';
+
+  @override
+  String get schoolImportParsePageContinue => 'Fortsätt';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Rått svar';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Expandera rått svar';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Fäll ihop rått svar';
+
+  @override
   String get createTimetable => 'Ny tidtabell';
 
   @override

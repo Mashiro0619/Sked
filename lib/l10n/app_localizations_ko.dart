@@ -43,6 +43,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolImportResultEditorTitle => '분석 결과 편집';
 
   @override
+  String get schoolImportParsePageTitle => '시간표 분석';
+
+  @override
+  String get schoolImportParsePageParsing => '분석 중…';
+
+  @override
+  String get schoolImportParsePageFailed => '분석 실패';
+
+  @override
+  String get schoolImportParsePageComplete => '분석 완료';
+
+  @override
+  String get schoolImportParsePageContinue => '계속';
+
+  @override
+  String get schoolImportParsePageRawContent => '원시 응답';
+
+  @override
+  String get schoolImportParsePageExpandRaw => '원시 응답 펼치기';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => '원시 응답 접기';
+
+  @override
   String get createTimetable => '새 시간표';
 
   @override

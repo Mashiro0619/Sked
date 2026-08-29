@@ -198,7 +198,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          leading: schoolWebImportShowsDesktopBackButton()
+          leading: schoolWebImportShowsCloseButton()
               ? SizedBox(
                   width: 48,
                   height: 48,
@@ -231,7 +231,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                     pane.controller == null ||
                         (pane.parentId == null && !pane.canGoBack) ||
                         _isParsing ||
-                        _isNavigating(pane) ||
                         _hasBlockingDialog
                     ? null
                     : () => unawaited(_handleDesktopBack()),
@@ -247,8 +246,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
                 ),
               ),
             IconButton(
-              onPressed:
-                  pane.controller == null || _isParsing || _hasBlockingDialog
+              onPressed: pane.controller == null || _hasBlockingDialog
                   ? null
                   : () => _reload(pane),
               icon: const Icon(Icons.refresh),
@@ -1571,6 +1569,17 @@ bool schoolWebImportTreatsTerminalLoadStopAsAuthoritative({
 }) {
   return !(isWeb ?? kIsWeb) &&
       (platform ?? defaultTargetPlatform) == TargetPlatform.windows;
+}
+
+/// Every embedded browser session has an explicit close affordance in the
+/// leading app-bar slot. System Back still follows web history on platforms
+/// that provide it; this action always leaves the browser session.
+@visibleForTesting
+bool schoolWebImportShowsCloseButton({bool? isWeb}) {
+  // The embedded browser is also used by the compatibility Web build. Keeping
+  // the action present there makes the session exit predictable across every
+  // platform instead of relying on a platform-specific app-bar convention.
+  return true;
 }
 
 /// The native browser is currently shipped on Windows as the supported desktop

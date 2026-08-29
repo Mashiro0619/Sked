@@ -44,6 +44,30 @@ class AppLocalizationsIt extends AppLocalizations {
       'Modifica il risultato analizzato';
 
   @override
+  String get schoolImportParsePageTitle => 'Analizza orario';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analisi in corso…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analisi non riuscita';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analisi completata';
+
+  @override
+  String get schoolImportParsePageContinue => 'Continua';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Risposta grezza';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Espandi risposta grezza';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Comprimi risposta grezza';
+
+  @override
   String get createTimetable => 'Nuovo orario';
 
   @override

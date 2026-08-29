@@ -43,6 +43,30 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Jäsennä lukujärjestys';
+
+  @override
+  String get schoolImportParsePageParsing => 'Jäsennetään…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Jäsennys epäonnistui';
+
+  @override
+  String get schoolImportParsePageComplete => 'Jäsennys valmis';
+
+  @override
+  String get schoolImportParsePageContinue => 'Jatka';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Raakavastaus';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Laajenna raakavastaus';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Supista raakavastaus';
+
+  @override
   String get createTimetable => 'Uusi aikataulu';
 
   @override

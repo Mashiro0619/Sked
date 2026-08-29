@@ -43,6 +43,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Razčleni urnik';
+
+  @override
+  String get schoolImportParsePageParsing => 'Razčlenjevanje…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Razčlenjevanje ni uspelo';
+
+  @override
+  String get schoolImportParsePageComplete => 'Razčlenjevanje končano';
+
+  @override
+  String get schoolImportParsePageContinue => 'Nadaljuj';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Surov odgovor';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Razširi surov odgovor';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Strni surov odgovor';
+
+  @override
   String get createTimetable => 'Nov časovni razpored';
 
   @override

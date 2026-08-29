@@ -43,6 +43,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Analizează orarul';
+
+  @override
+  String get schoolImportParsePageParsing => 'Se analizează…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analiza a eșuat';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analiză finalizată';
+
+  @override
+  String get schoolImportParsePageContinue => 'Continuă';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Răspuns brut';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Extinde răspunsul brut';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Restrânge răspunsul brut';
+
+  @override
   String get createTimetable => 'Orar nou';
 
   @override

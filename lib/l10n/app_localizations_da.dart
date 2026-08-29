@@ -43,6 +43,30 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Analyser skema';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analyserer…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analysen mislykkedes';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analyse fuldført';
+
+  @override
+  String get schoolImportParsePageContinue => 'Fortsæt';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Rå svar';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Udvid råt svar';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Fold råt svar sammen';
+
+  @override
   String get createTimetable => 'Ny tidsplan';
 
   @override

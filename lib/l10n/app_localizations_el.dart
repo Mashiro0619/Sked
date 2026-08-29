@@ -43,6 +43,32 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Ανάλυση προγράμματος';
+
+  @override
+  String get schoolImportParsePageParsing => 'Ανάλυση…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Η ανάλυση απέτυχε';
+
+  @override
+  String get schoolImportParsePageComplete => 'Η ανάλυση ολοκληρώθηκε';
+
+  @override
+  String get schoolImportParsePageContinue => 'Συνέχεια';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Ακατέργαστη απόκριση';
+
+  @override
+  String get schoolImportParsePageExpandRaw =>
+      'Ανάπτυξη ακατέργαστης απόκρισης';
+
+  @override
+  String get schoolImportParsePageCollapseRaw =>
+      'Σύμπτυξη ακατέργαστης απόκρισης';
+
+  @override
   String get createTimetable => 'Νέο χρονοδιάγραμμα';
 
   @override

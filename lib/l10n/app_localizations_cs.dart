@@ -43,6 +43,30 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Analyzovat rozvrh';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analyzování…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analýza se nezdařila';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analýza dokončena';
+
+  @override
+  String get schoolImportParsePageContinue => 'Pokračovat';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Nezpracovaná odpověď';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Rozbalit nezpracovanou odpověď';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Sbalit nezpracovanou odpověď';
+
+  @override
   String get createTimetable => 'Nový rozvrh';
 
   @override

@@ -6,7 +6,6 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
-import 'expressive_motion.dart';
 import 'period_time_set_picker_dialog.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
@@ -120,6 +119,79 @@ class _SchoolWebImportResultSheetState
         ? 0.96
         : 0.84;
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
+    final existingPeriodTimeSetSelector = _CompactActionRow(
+      title: Text(l10n.selectPeriodTimeSet),
+      subtitle: Text(
+        selectedPeriodTimeSet == null
+            ? l10n.noPeriodTimeAvailable
+            : l10n.periodTimeSetSummary(
+                selectedPeriodTimeSet.name,
+                selectedPeriodTimeSet.periodTimes.length,
+              ),
+      ),
+      leadingIcon: Icons.schedule_outlined,
+      trailingIcon: Icons.keyboard_arrow_down,
+      enabled: _periodTimeSets.isNotEmpty && !_blocked,
+      onTap: _periodTimeSets.isEmpty || _blocked
+          ? null
+          : () async {
+              final result = await _runPicker(
+                () => showPeriodTimeSetPickerDialog(
+                  context,
+                  provider: widget.provider,
+                  selectedPeriodTimeSetId: _selectedPeriodTimeSetId,
+                ),
+              );
+              if (!mounted || result == null) {
+                return;
+              }
+              setState(
+                () =>
+                    _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(result),
+              );
+            },
+    );
+    final periodTimeSetContent = _hasBundledPeriodTimeSet
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PeriodTimeSetImportChoices(
+                title: l10n.importPeriodTimeSetDialogTitle,
+                importBundled: _importBundledPeriodTimeSet,
+                importBundledTitle: l10n.importBundledPeriodTimeSets,
+                importBundledSubtitle: l10n.periodTimeSetSummary(
+                  _resolvedBundledPeriodTimeSetName(),
+                  timetable.periodTimeSet.periodTimes.length,
+                ),
+                discardTitle: l10n.discardBundledPeriodTimeSets,
+                discardSubtitle: _canDiscardBundledPeriodTimeSet
+                    ? (selectedPeriodTimeSet == null
+                          ? l10n.noPeriodTimeAvailable
+                          : l10n.periodTimeSetSummary(
+                              selectedPeriodTimeSet.name,
+                              selectedPeriodTimeSet.periodTimes.length,
+                            ))
+                    : l10n.importDiscardPeriodTimeSetUnavailable,
+                enabled: !_blocked,
+                canDiscard: _canDiscardBundledPeriodTimeSet,
+                onImportBundled: () {
+                  setState(() => _importBundledPeriodTimeSet = true);
+                },
+                onDiscardBundled: () {
+                  setState(() => _importBundledPeriodTimeSet = false);
+                },
+              ),
+              if (!_importBundledPeriodTimeSet) ...[
+                Divider(
+                  height: 1,
+                  indent: 52,
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+                existingPeriodTimeSetSelector,
+              ],
+            ],
+          )
+        : existingPeriodTimeSetSelector;
 
     return AppSheetScaffold(
       heightFactor: sheetHeightFactor,
@@ -154,7 +226,7 @@ class _SchoolWebImportResultSheetState
                   prefixIcon: const Icon(Icons.table_chart_outlined),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               _ImportFormSummary(
                 date: _CompactActionRow(
                   key: const ValueKey('school-import-start-date-tile'),
@@ -168,75 +240,8 @@ class _SchoolWebImportResultSheetState
                 courseCount: l10n.schoolWebImportCourseCount(
                   timetable.courses.length,
                 ),
+                periodTimeSetContent: periodTimeSetContent,
               ),
-              const SizedBox(height: 20),
-              if (_hasBundledPeriodTimeSet) ...[
-                Text(
-                  l10n.importPeriodTimeSetDialogTitle,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 8),
-                _PeriodTimeSetImportChoices(
-                  importBundled: _importBundledPeriodTimeSet,
-                  importBundledTitle: l10n.importBundledPeriodTimeSets,
-                  importBundledSubtitle: l10n.periodTimeSetSummary(
-                    _resolvedBundledPeriodTimeSetName(),
-                    timetable.periodTimeSet.periodTimes.length,
-                  ),
-                  discardTitle: l10n.discardBundledPeriodTimeSets,
-                  discardSubtitle: _canDiscardBundledPeriodTimeSet
-                      ? (selectedPeriodTimeSet == null
-                            ? l10n.noPeriodTimeAvailable
-                            : l10n.periodTimeSetSummary(
-                                selectedPeriodTimeSet.name,
-                                selectedPeriodTimeSet.periodTimes.length,
-                              ))
-                      : l10n.importDiscardPeriodTimeSetUnavailable,
-                  enabled: !_blocked,
-                  canDiscard: _canDiscardBundledPeriodTimeSet,
-                  onImportBundled: () {
-                    setState(() => _importBundledPeriodTimeSet = true);
-                  },
-                  onDiscardBundled: () {
-                    setState(() => _importBundledPeriodTimeSet = false);
-                  },
-                ),
-              ],
-              if (!_importBundledPeriodTimeSet) ...[
-                const SizedBox(height: 12),
-                _CompactActionRow(
-                  title: Text(l10n.selectPeriodTimeSet),
-                  subtitle: Text(
-                    selectedPeriodTimeSet == null
-                        ? l10n.noPeriodTimeAvailable
-                        : l10n.periodTimeSetSummary(
-                            selectedPeriodTimeSet.name,
-                            selectedPeriodTimeSet.periodTimes.length,
-                          ),
-                  ),
-                  leadingIcon: Icons.schedule_outlined,
-                  trailingIcon: Icons.keyboard_arrow_down,
-                  enabled: _periodTimeSets.isNotEmpty && !_blocked,
-                  onTap: _periodTimeSets.isEmpty || _blocked
-                      ? null
-                      : () async {
-                          final result = await _runPicker(
-                            () => showPeriodTimeSetPickerDialog(
-                              context,
-                              provider: widget.provider,
-                              selectedPeriodTimeSetId: _selectedPeriodTimeSetId,
-                            ),
-                          );
-                          if (!mounted || result == null) {
-                            return;
-                          }
-                          setState(
-                            () => _selectedPeriodTimeSetId =
-                                _resolvedPeriodTimeSetId(result),
-                          );
-                        },
-                ),
-              ],
               if (_hasParserDetails) ...[
                 const SizedBox(height: 20),
                 _ParserDetailsDisclosure(
@@ -399,31 +404,63 @@ class _SchoolWebImportResultSheetState
 }
 
 class _ImportFormSummary extends StatelessWidget {
-  const _ImportFormSummary({required this.date, required this.courseCount});
+  const _ImportFormSummary({
+    required this.date,
+    required this.courseCount,
+    required this.periodTimeSetContent,
+  });
 
   final Widget date;
   final String courseCount;
+  final Widget periodTimeSetContent;
 
   @override
   Widget build(BuildContext context) {
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final courseSummary = _CourseCountSummary(courseCount: courseCount);
+    final colors = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         final useRow = constraints.maxWidth >= 600 && textScale <= 1.3;
-        if (!useRow) {
-          return Column(
+        final summary = useRow
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(flex: 3, child: date),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: colors.outlineVariant,
+                    ),
+                    Expanded(flex: 2, child: courseSummary),
+                  ],
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  date,
+                  Divider(height: 1, color: colors.outlineVariant),
+                  courseSummary,
+                ],
+              );
+
+        return Material(
+          color: colors.surfaceContainerLow,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [date, const SizedBox(height: 8), courseSummary],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 3, child: date),
-            const SizedBox(width: 12),
-            Expanded(flex: 2, child: courseSummary),
-          ],
+            children: [
+              summary,
+              Divider(height: 1, indent: 14, endIndent: 14),
+              periodTimeSetContent,
+            ],
+          ),
         );
       },
     );
@@ -438,30 +475,25 @@ class _CourseCountSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     // No Semantics wrapper: the Text below already carries `courseCount`, and a
     // container label with the same string makes screen readers say it twice.
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              Icon(Icons.menu_book_outlined, color: colors.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  courseCount,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: colors.onSurface,
-                  ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            Icon(Icons.menu_book_outlined, color: theme.colorScheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                courseCount,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -470,6 +502,7 @@ class _CourseCountSummary extends StatelessWidget {
 
 class _PeriodTimeSetImportChoices extends StatelessWidget {
   const _PeriodTimeSetImportChoices({
+    required this.title,
     required this.importBundled,
     required this.importBundledTitle,
     required this.importBundledSubtitle,
@@ -481,6 +514,7 @@ class _PeriodTimeSetImportChoices extends StatelessWidget {
     required this.onDiscardBundled,
   });
 
+  final String title;
   final bool importBundled;
   final String importBundledTitle;
   final String importBundledSubtitle;
@@ -494,29 +528,33 @@ class _PeriodTimeSetImportChoices extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          _PeriodTimeSetChoiceRow(
-            title: importBundledTitle,
-            subtitle: importBundledSubtitle,
-            selected: importBundled,
-            enabled: enabled,
-            onTap: onImportBundled,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.labelLarge
+                ?.copyWith(color: colors.onSurfaceVariant),
           ),
-          Divider(height: 1, indent: 52, color: colors.outlineVariant),
-          _PeriodTimeSetChoiceRow(
-            title: discardTitle,
-            subtitle: discardSubtitle,
-            selected: !importBundled,
-            enabled: enabled && canDiscard,
-            onTap: onDiscardBundled,
-          ),
-        ],
-      ),
+        ),
+        _PeriodTimeSetChoiceRow(
+          title: importBundledTitle,
+          subtitle: importBundledSubtitle,
+          selected: importBundled,
+          enabled: enabled,
+          onTap: onImportBundled,
+        ),
+        Divider(height: 1, indent: 52, color: colors.outlineVariant),
+        _PeriodTimeSetChoiceRow(
+          title: discardTitle,
+          subtitle: discardSubtitle,
+          selected: !importBundled,
+          enabled: enabled && canDiscard,
+          onTap: onDiscardBundled,
+        ),
+      ],
     );
   }
 }
@@ -544,52 +582,65 @@ class _PeriodTimeSetChoiceRow extends StatelessWidget {
     return Semantics(
       button: enabled,
       selected: selected,
-      child: ExpressiveTap(
-        enabled: enabled,
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.zero,
-        child: Container(
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
           color: selected
               ? colors.primary.withValues(alpha: 0.08)
               : Colors.transparent,
-          constraints: const BoxConstraints(minHeight: 56),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Icon(
-                  selected
-                      ? Icons.radio_button_checked_outlined
-                      : Icons.radio_button_unchecked_outlined,
-                  color: enabled ? colors.primary : colors.onSurfaceVariant,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: foreground,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Icon(
+                        selected
+                            ? Icons.radio_button_checked_outlined
+                            : Icons.radio_button_unchecked_outlined,
+                        color: enabled
+                            ? colors.primary
+                            : colors.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: enabled
-                            ? colors.onSurfaceVariant
-                            : colors.onSurfaceVariant.withValues(alpha: 0.72),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: foreground,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: enabled
+                                  ? colors.onSurfaceVariant
+                                  : colors.onSurfaceVariant.withValues(
+                                      alpha: 0.72,
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -632,79 +683,79 @@ class _ParserDetailsDisclosure extends StatelessWidget {
     final parserValue = parser.trim();
     final active = onChanged != null;
 
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Semantics(
-            button: active,
-            expanded: expanded,
-            // The title Text is the accessible name and `expanded` already
-            // announces the state, so the expand/collapse wording belongs in
-            // the hint rather than a label that competes with the title.
-            hint: expanded ? collapseLabel : expandLabel,
-            child: ExpressiveTap(
-              enabled: active,
-              onTap: active ? () => onChanged!(!expanded) : null,
-              borderRadius: BorderRadius.circular(12),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    children: [
-                      Icon(Icons.article_outlined, color: colors.primary),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(title, style: theme.textTheme.titleSmall),
-                      ),
-                      AnimatedRotation(
-                        turns: expanded ? 0.5 : 0,
-                        duration: duration,
-                        curve: motion.scheme.enterCurve,
-                        child: Icon(
-                          Icons.keyboard_arrow_down,
-                          color: colors.onSurfaceVariant,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: active,
+          expanded: expanded,
+          // The title Text is the accessible name and `expanded` already
+          // announces the state, so the expand/collapse wording belongs in
+          // the hint rather than a label that competes with the title.
+          hint: expanded ? collapseLabel : expandLabel,
+          child: Material(
+            color: Colors.transparent,
+            child: Ink(
+              child: InkWell(
+                onTap: active ? () => onChanged!(!expanded) : null,
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.article_outlined, color: colors.primary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(title, style: theme.textTheme.titleSmall),
                         ),
-                      ),
-                    ],
+                        AnimatedRotation(
+                          turns: expanded ? 0.5 : 0,
+                          duration: duration,
+                          curve: motion.scheme.enterCurve,
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          AnimatedSize(
-            duration: duration,
-            curve: motion.scheme.enterCurve,
-            alignment: Alignment.topCenter,
-            child: expanded
-                ? Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                    child: Column(
-                      children: [
-                        Divider(height: 1, color: colors.outlineVariant),
-                        const SizedBox(height: 10),
-                        if (pageTitleValue.isNotEmpty)
-                          _ParserDetailRow(
-                            label: pageTitleLabel,
-                            value: pageTitleValue,
-                          ),
-                        if (pageTitleValue.isNotEmpty && parserValue.isNotEmpty)
-                          const SizedBox(height: 10),
-                        if (parserValue.isNotEmpty)
-                          _ParserDetailRow(
-                            label: parserLabel,
-                            value: parserValue,
-                          ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
+        ),
+        AnimatedSize(
+          duration: duration,
+          curve: motion.scheme.enterCurve,
+          alignment: Alignment.topCenter,
+          child: expanded
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                  child: Column(
+                    children: [
+                      Divider(height: 1, color: colors.outlineVariant),
+                      const SizedBox(height: 8),
+                      if (pageTitleValue.isNotEmpty)
+                        _ParserDetailRow(
+                          label: pageTitleLabel,
+                          value: pageTitleValue,
+                        ),
+                      if (pageTitleValue.isNotEmpty && parserValue.isNotEmpty)
+                        const SizedBox(height: 8),
+                      if (parserValue.isNotEmpty)
+                        _ParserDetailRow(
+                          label: parserLabel,
+                          value: parserValue,
+                        ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }
@@ -745,28 +796,31 @@ class _ImportWarningsGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.info_outline, color: colors.onSurfaceVariant),
-                const SizedBox(width: 10),
-                Expanded(child: Text(title, style: theme.textTheme.titleSmall)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            for (var index = 0; index < warnings.length; index++) ...[
-              if (index > 0) const SizedBox(height: 8),
-              _ImportWarningRow(message: warnings[index]),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: colors.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 6),
+          for (var index = 0; index < warnings.length; index++) ...[
+            if (index > 0) const SizedBox(height: 6),
+            _ImportWarningRow(message: warnings[index]),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -827,59 +881,63 @@ class _CompactActionRow extends StatelessWidget {
     final subtitleStyle = theme.textTheme.bodyMedium?.copyWith(
       color: enabled ? colors.onSurfaceVariant : disabledColor,
     );
-    final content = Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: Icon(leadingIcon, color: iconColor),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: DefaultTextStyle.merge(
-                  style: titleStyle,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      title,
-                      const SizedBox(height: 2),
-                      DefaultTextStyle.merge(
-                        style: subtitleStyle,
-                        child: subtitle,
+    return Semantics(
+      button: active,
+      enabled: enabled,
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          child: InkWell(
+            onTap: active ? onTap : null,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: Icon(leadingIcon, color: iconColor),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: DefaultTextStyle.merge(
+                        style: titleStyle,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            title,
+                            const SizedBox(height: 2),
+                            DefaultTextStyle.merge(
+                              style: subtitleStyle,
+                              child: subtitle,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (trailingIcon != null) ...[
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Icon(
+                          trailingIcon,
+                          color: enabled
+                              ? colors.onSurfaceVariant
+                              : disabledColor,
+                        ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-              if (trailingIcon != null) ...[
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(top: 5),
-                  child: Icon(
-                    trailingIcon,
-                    color: enabled ? colors.onSurfaceVariant : disabledColor,
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
-    );
-    return ExpressiveTap(
-      enabled: active,
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: content,
     );
   }
 }

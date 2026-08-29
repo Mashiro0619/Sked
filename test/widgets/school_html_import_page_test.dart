@@ -322,27 +322,36 @@ void main() {
       await tester.tap(submitButton);
       await _pumpRouteTransition(tester);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
-      await _pumpRouteTransition(tester);
-      // `waitForTransitionComplete` resumes after the dialog subtree is
-      // unmounted, then schedules the preview sheet in the next frame.
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(SchoolWebImportResultSheet)),
-      );
-      final periodTimeSet = provider.periodTimeSets.first;
       expect(
-        find.text(
-          l10n.periodTimeSetSummary(
-            periodTimeSet.name,
-            periodTimeSet.periodTimes.length,
-          ),
-        ),
+        find.byKey(const ValueKey('school-import-parse-timetable-name')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const ValueKey('school-import-parse-start-date')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('school-import-parse-total-weeks')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('school-import-parse-period-time-set')),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Edit parsed result'),
+        findsOneWidget,
+      );
+      expect(find.text('Continue import'), findsNothing);
+
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Import as new timetable'),
+      );
+      await _pumpRouteTransition(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SchoolWebImportResultSheet), findsNothing);
+      expect(provider.hasTimetables, isTrue);
       expect(tester.takeException(), isNull);
     },
   );

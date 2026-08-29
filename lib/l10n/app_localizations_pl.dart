@@ -43,6 +43,30 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edytuj przeanalizowany wynik';
 
   @override
+  String get schoolImportParsePageTitle => 'Analizuj plan lekcji';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analizowanie…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analiza nie powiodła się';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analiza ukończona';
+
+  @override
+  String get schoolImportParsePageContinue => 'Kontynuuj';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Surowa odpowiedź';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Rozwiń surową odpowiedź';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Zwiń surową odpowiedź';
+
+  @override
   String get createTimetable => 'Nowy harmonogram';
 
   @override

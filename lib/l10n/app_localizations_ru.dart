@@ -43,6 +43,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Редактировать результат разбора';
 
   @override
+  String get schoolImportParsePageTitle => 'Разобрать расписание';
+
+  @override
+  String get schoolImportParsePageParsing => 'Идёт разбор…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Ошибка разбора';
+
+  @override
+  String get schoolImportParsePageComplete => 'Разбор завершён';
+
+  @override
+  String get schoolImportParsePageContinue => 'Продолжить';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Исходный ответ';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Развернуть исходный ответ';
+
+  @override
+  String get schoolImportParsePageCollapseRaw => 'Свернуть исходный ответ';
+
+  @override
   String get createTimetable => 'Новое расписание';
 
   @override

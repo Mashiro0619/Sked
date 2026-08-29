@@ -43,6 +43,31 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Rooster analyseren';
+
+  @override
+  String get schoolImportParsePageParsing => 'Analyseren…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Analyse mislukt';
+
+  @override
+  String get schoolImportParsePageComplete => 'Analyse voltooid';
+
+  @override
+  String get schoolImportParsePageContinue => 'Doorgaan';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Onbewerkt antwoord';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'Onbewerkt antwoord uitvouwen';
+
+  @override
+  String get schoolImportParsePageCollapseRaw =>
+      'Onbewerkt antwoord samenvouwen';
+
+  @override
   String get createTimetable => 'New timetable';
 
   @override

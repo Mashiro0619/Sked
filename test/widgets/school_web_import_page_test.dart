@@ -585,8 +585,8 @@ void main() {
 
       final context = tester.element(find.byType(SchoolWebImportPage));
       final l10n = AppLocalizations.of(context);
-      expect(find.byTooltip(l10n.schoolWebImportExitBrowser), findsNothing);
-      expect(find.byIcon(Icons.close), findsNothing);
+      expect(find.byTooltip(l10n.schoolWebImportExitBrowser), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
       expect(find.byIcon(Icons.arrow_back), findsNothing);
       expect(find.byType(BackButton), findsNothing);
       expect(tester.takeException(), isNull);
@@ -1779,8 +1779,8 @@ void main() {
         final l10n = AppLocalizations.of(context);
         expect(controller.loadedAddresses, <String>[_site.loginUrl]);
         expect(find.byType(AlertDialog), findsNothing);
-        expect(find.byTooltip(l10n.schoolWebImportExitBrowser), findsNothing);
-        expect(find.byIcon(Icons.close), findsNothing);
+        expect(find.byTooltip(l10n.schoolWebImportExitBrowser), findsOneWidget);
+        expect(find.byIcon(Icons.close), findsOneWidget);
         expect(tester.takeException(), isNull);
         debugDefaultTargetPlatformOverride = null;
       },

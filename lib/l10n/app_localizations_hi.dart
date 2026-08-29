@@ -43,6 +43,31 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'टाइमटेबल पार्स करें';
+
+  @override
+  String get schoolImportParsePageParsing => 'पार्स किया जा रहा है…';
+
+  @override
+  String get schoolImportParsePageFailed => 'पार्सिंग विफल';
+
+  @override
+  String get schoolImportParsePageComplete => 'पार्सिंग पूरी हुई';
+
+  @override
+  String get schoolImportParsePageContinue => 'जारी रखें';
+
+  @override
+  String get schoolImportParsePageRawContent => 'कच्ची प्रतिक्रिया';
+
+  @override
+  String get schoolImportParsePageExpandRaw => 'कच्ची प्रतिक्रिया विस्तृत करें';
+
+  @override
+  String get schoolImportParsePageCollapseRaw =>
+      'कच्ची प्रतिक्रिया संक्षिप्त करें';
+
+  @override
   String get createTimetable => 'नया टाइमटेबल';
 
   @override

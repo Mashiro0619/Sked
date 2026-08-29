@@ -43,6 +43,32 @@ class AppLocalizationsBg extends AppLocalizations {
   String get schoolImportResultEditorTitle => 'Edit parsed result';
 
   @override
+  String get schoolImportParsePageTitle => 'Анализ на графика';
+
+  @override
+  String get schoolImportParsePageParsing => 'Анализиране…';
+
+  @override
+  String get schoolImportParsePageFailed => 'Анализът е неуспешен';
+
+  @override
+  String get schoolImportParsePageComplete => 'Анализът завърши';
+
+  @override
+  String get schoolImportParsePageContinue => 'Продължи';
+
+  @override
+  String get schoolImportParsePageRawContent => 'Необработен отговор';
+
+  @override
+  String get schoolImportParsePageExpandRaw =>
+      'Разгъване на необработения отговор';
+
+  @override
+  String get schoolImportParsePageCollapseRaw =>
+      'Свиване на необработения отговор';
+
+  @override
   String get createTimetable => 'Нов график';
 
   @override
