@@ -14,14 +14,12 @@ class SchoolWebImportResultSheet extends StatefulWidget {
     super.key,
     required this.response,
     required this.canReplaceCurrent,
-    required this.periodTimeSets,
     required this.initialPeriodTimeSetId,
     required this.provider,
   });
 
   final SchoolImportResponse response;
   final bool canReplaceCurrent;
-  final List<PeriodTimeSet> periodTimeSets;
   final String initialPeriodTimeSetId;
   final TimetableProvider provider;
 
@@ -43,11 +41,16 @@ class _SchoolWebImportResultSheetState
   bool get _hasBundledPeriodTimeSet =>
       widget.response.timetable.periodTimeSet.periodTimes.isNotEmpty;
 
-  bool get _canDiscardBundledPeriodTimeSet => widget.periodTimeSets.isNotEmpty;
+  /// Do not retain a sheet-open-time snapshot here. The picker can create,
+  /// edit, or delete sets while this sheet stays open, and its selection has to
+  /// resolve against the same source that ultimately validates the import.
+  List<PeriodTimeSet> get _periodTimeSets => widget.provider.periodTimeSets;
+
+  bool get _canDiscardBundledPeriodTimeSet => _periodTimeSets.isNotEmpty;
 
   bool get _canSubmitImport =>
       widget.response.timetable.courses.isNotEmpty &&
-      (_importBundledPeriodTimeSet || _selectedPeriodTimeSetId.isNotEmpty);
+      (_importBundledPeriodTimeSet || _selectedExistingPeriodTimeSet() != null);
 
   bool get _hasParserDetails =>
       widget.response.meta.pageTitle.trim().isNotEmpty ||
@@ -62,13 +65,23 @@ class _SchoolWebImportResultSheetState
       text: widget.response.timetable.name,
     )..addListener(_handleNameChanged);
     _startDate = normalizeDateOnly(widget.response.timetable.startDate);
-    _selectedPeriodTimeSetId =
-        widget.periodTimeSets.any(
-          (item) => item.id == widget.initialPeriodTimeSetId,
-        )
-        ? widget.initialPeriodTimeSetId
-        : (widget.periodTimeSets.isEmpty ? '' : widget.periodTimeSets.first.id);
+    _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
+      widget.initialPeriodTimeSetId,
+    );
     _importBundledPeriodTimeSet = _hasBundledPeriodTimeSet;
+    widget.provider.addListener(_handlePeriodTimeSetsChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant SchoolWebImportResultSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.provider, widget.provider)) {
+      oldWidget.provider.removeListener(_handlePeriodTimeSetsChanged);
+      widget.provider.addListener(_handlePeriodTimeSetsChanged);
+      _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
+        _selectedPeriodTimeSetId,
+      );
+    }
   }
 
   void _handleNameChanged() {
@@ -80,9 +93,18 @@ class _SchoolWebImportResultSheetState
 
   @override
   void dispose() {
+    widget.provider.removeListener(_handlePeriodTimeSetsChanged);
     _nameController.removeListener(_handleNameChanged);
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _handlePeriodTimeSetsChanged() {
+    if (!mounted) {
+      return;
+    }
+    final resolved = _resolvedPeriodTimeSetId(_selectedPeriodTimeSetId);
+    setState(() => _selectedPeriodTimeSetId = resolved);
   }
 
   @override
@@ -194,8 +216,8 @@ class _SchoolWebImportResultSheetState
                   ),
                   leadingIcon: Icons.schedule_outlined,
                   trailingIcon: Icons.keyboard_arrow_down,
-                  enabled: widget.periodTimeSets.isNotEmpty && !_blocked,
-                  onTap: widget.periodTimeSets.isEmpty || _blocked
+                  enabled: _periodTimeSets.isNotEmpty && !_blocked,
+                  onTap: _periodTimeSets.isEmpty || _blocked
                       ? null
                       : () async {
                           final result = await _runPicker(
@@ -208,7 +230,10 @@ class _SchoolWebImportResultSheetState
                           if (!mounted || result == null) {
                             return;
                           }
-                          setState(() => _selectedPeriodTimeSetId = result);
+                          setState(
+                            () => _selectedPeriodTimeSetId =
+                                _resolvedPeriodTimeSetId(result),
+                          );
                         },
                 ),
               ],
@@ -245,12 +270,26 @@ class _SchoolWebImportResultSheetState
   }
 
   PeriodTimeSet? _selectedExistingPeriodTimeSet() {
-    for (final item in widget.periodTimeSets) {
+    for (final item in _periodTimeSets) {
       if (item.id == _selectedPeriodTimeSetId) {
         return item;
       }
     }
     return null;
+  }
+
+  String _resolvedPeriodTimeSetId(String preferredId) {
+    final periodTimeSets = _periodTimeSets;
+    if (periodTimeSets.any((item) => item.id == preferredId)) {
+      return preferredId;
+    }
+
+    final activeId = widget.provider.activePeriodTimeSetOrNull?.id;
+    if (activeId != null && periodTimeSets.any((item) => item.id == activeId)) {
+      return activeId;
+    }
+
+    return periodTimeSets.isEmpty ? '' : periodTimeSets.first.id;
   }
 
   String _resolvedBundledPeriodTimeSetName() {
@@ -312,6 +351,17 @@ class _SchoolWebImportResultSheetState
     if (_hasPopped) {
       return;
     }
+    final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
+    if (!_importBundledPeriodTimeSet && selectedPeriodTimeSet == null) {
+      // A period-time-set mutation may arrive between the last build and this
+      // tap. Never hand the workflow an ID that no longer exists; repair the
+      // local selection and leave the preview open so the user can retry.
+      final resolved = _resolvedPeriodTimeSetId(_selectedPeriodTimeSetId);
+      if (resolved != _selectedPeriodTimeSetId) {
+        setState(() => _selectedPeriodTimeSetId = resolved);
+      }
+      return;
+    }
     final editedName = _nameController.text.trim();
     final nextResponse = widget.response.copyWith(
       timetable: widget.response.timetable.copyWith(
@@ -327,7 +377,7 @@ class _SchoolWebImportResultSheetState
         importBundledPeriodTimeSet: _importBundledPeriodTimeSet,
         targetPeriodTimeSetId: _importBundledPeriodTimeSet
             ? null
-            : _selectedPeriodTimeSetId,
+            : selectedPeriodTimeSet!.id,
       ),
     );
   }

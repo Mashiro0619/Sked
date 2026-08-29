@@ -2534,7 +2534,6 @@ void main() {
                           builder: (_) => SchoolWebImportResultSheet(
                             response: response,
                             canReplaceCurrent: true,
-                            periodTimeSets: provider.periodTimeSets,
                             initialPeriodTimeSetId:
                                 provider.activePeriodTimeSet.id,
                             provider: provider,
@@ -2578,8 +2577,16 @@ void main() {
     });
 
     testWidgets('网页解析导入结果页在没有现有节次时间集时禁用丢弃内含节次', (tester) async {
+      final emptyStudentMode = _buildTestAppData().studentMode.copyWith(
+        timetables: const [],
+        periodTimeSets: const [],
+      );
       final provider = TimetableProvider(
-        storage: MemoryTimetableStorage(initialData: _buildTestAppData()),
+        storage: MemoryTimetableStorage(
+          initialData: _buildTestAppData().copyWith(
+            studentMode: emptyStudentMode,
+          ),
+        ),
       );
       await provider.load();
       final response = _buildSchoolImportResponse();
@@ -2598,7 +2605,6 @@ void main() {
             body: SchoolWebImportResultSheet(
               response: response,
               canReplaceCurrent: true,
-              periodTimeSets: const [],
               initialPeriodTimeSetId: '',
               provider: provider,
             ),

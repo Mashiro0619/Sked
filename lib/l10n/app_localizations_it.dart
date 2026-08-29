@@ -1208,9 +1208,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importa pagina corrente';
 
   @override
-  String get schoolWebImportGoBack => 'Pagina precedente';
-
-  @override
   String get schoolWebImportLoadingPage => 'Caricamento pagina…';
 
   @override
@@ -2310,4 +2307,48 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Espandi navigazione area di lavoro';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Esci dal browser integrato';
+
+  @override
+  String get schoolWebImportEditAddress => 'Modifica indirizzo';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Indirizzo web';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Apri';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Inserisci un indirizzo HTTP o HTTPS con un host.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Questa pagina web ha richiesto una nuova finestra che non può essere aperta su questo dispositivo.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Connessione sicura';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Connessione non sicura';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Aprire l’accesso al sistema scolastico?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'L’accesso al sistema scolastico può inviare credenziali tramite moduli o reindirizzamenti del server alla scuola e ai relativi provider di accesso. Android non può sospendere ogni trasferimento di questo tipo per mostrare una conferma separata della destinazione. Continua solo se li ritieni attendibili per questa sessione di importazione:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Aprire un accesso scolastico non sicuro?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Questo accesso scolastico usa HTTP. Chiunque possa osservare o alterare la connessione potrebbe leggere o modificare le credenziali e il contenuto della pagina. Continua solo se accetti questo rischio per:\n\n$origin';
+  }
 }

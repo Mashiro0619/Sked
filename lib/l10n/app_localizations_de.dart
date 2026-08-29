@@ -1207,9 +1207,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Aktuelle Seite importieren';
 
   @override
-  String get schoolWebImportGoBack => 'Vorherige Seite';
-
-  @override
   String get schoolWebImportLoadingPage => 'Seite wird geladen…';
 
   @override
@@ -2313,4 +2310,47 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Arbeitsbereichsnavigation ausklappen';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Integrierten Browser schließen';
+
+  @override
+  String get schoolWebImportEditAddress => 'Adresse bearbeiten';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Webadresse';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Öffnen';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Gib eine HTTP- oder HTTPS-Adresse mit Host ein.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Diese Webseite hat ein neues Fenster angefordert, das auf diesem Gerät nicht geöffnet werden kann.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Sichere Verbindung';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Unsichere Verbindung';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Schulanmeldung öffnen?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Bei der Schulanmeldung können Anmeldedaten über Formulare oder Serverweiterleitungen an die Schule und deren Anmeldeanbieter gesendet werden. Android kann nicht jede solche Übertragung für eine separate Zielbestätigung anhalten. Fahren Sie nur fort, wenn Sie diesen Stellen für diese Importsitzung vertrauen:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Unsichere Schulanmeldung öffnen?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Diese Schulanmeldung verwendet HTTP. Jeder, der diese Verbindung beobachten oder verändern kann, kann Ihre Anmeldedaten und Seiteninhalte lesen oder ändern. Fahren Sie nur fort, wenn Sie dieses Risiko akzeptieren für:\n\n$origin';
+  }
 }

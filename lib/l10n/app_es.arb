@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importar la página actual",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Página anterior",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Cargando página…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Analizando la página actual…",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Salir del navegador integrado",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Editar dirección",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Dirección web",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Abrir",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Introduce una dirección HTTP o HTTPS con un host.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Esta página web solicitó una nueva ventana que no se puede abrir en este dispositivo.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Conexión segura",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Conexión no segura",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "¿Abrir el inicio de sesión de la escuela?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "El inicio de sesión de la escuela puede enviar credenciales mediante formularios o redirecciones del servidor a la escuela y a sus proveedores de acceso. Android no puede pausar cada transferencia de este tipo para mostrar una confirmación independiente del destino. Continúa solo si confías en ellos para esta sesión de importación:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "¿Abrir un inicio de sesión escolar no seguro?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Este inicio de sesión escolar usa HTTP. Cualquiera que pueda observar o alterar esta conexión podría leer o cambiar sus credenciales y el contenido de la página. Continúe solo si acepta este riesgo para:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

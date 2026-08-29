@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Aktuális oldal importálása",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Előző oldal",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Oldal betöltése…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Az aktuális oldal elemzése...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Beépített böngésző bezárása",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Cím szerkesztése",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Webcím",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Megnyitás",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Adjon meg egy gazdagéppel rendelkező HTTP- vagy HTTPS-címet.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Ez a weboldal új ablakot kért, amely nem nyitható meg ezen az eszközön.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Biztonságos kapcsolat",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Nem biztonságos kapcsolat",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Megnyitja az iskolai bejelentkezést?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Az iskolai bejelentkezés űrlapokon vagy szerverátirányításokon keresztül hitelesítő adatokat küldhet az iskolának és bejelentkezési szolgáltatóinak. Az Android nem tud minden ilyen átvitelt külön célmegerősítéshez megállítani. Csak akkor folytassa, ha megbízik bennük ebben az importálási munkamenetben:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Megnyitja a nem biztonságos iskolai bejelentkezést?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

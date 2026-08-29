@@ -1193,9 +1193,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Import current page';
 
   @override
-  String get schoolWebImportGoBack => 'Previous page';
-
-  @override
   String get schoolWebImportLoadingPage => 'Loading page…';
 
   @override
@@ -2293,4 +2290,48 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Werkruimtenavigatie uitklappen';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Ingebouwde browser sluiten';
+
+  @override
+  String get schoolWebImportEditAddress => 'Adres bewerken';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Webadres';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Openen';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Voer een HTTP- of HTTPS-adres met een host in.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Deze webpagina heeft een nieuw venster aangevraagd dat niet op dit apparaat kan worden geopend.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Beveiligde verbinding';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Onveilige verbinding';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Aanmelden bij de school openen?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Bij aanmelden bij de school kunnen aanmeldgegevens via formulieren of serveromleidingen naar de school en haar aanmeldproviders worden verzonden. Android kan niet elke dergelijke overdracht onderbreken voor een afzonderlijke bevestiging van de bestemming. Ga alleen door als u hen voor deze importsessie vertrouwt:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Onveilige schoolaanmelding openen?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Deze schoolaanmelding gebruikt HTTP. Iedereen die deze verbinding kan volgen of wijzigen, kan uw aanmeldgegevens en de pagina-inhoud lezen of veranderen. Ga alleen door als u dit risico accepteert voor:\n\n$origin';
+  }
 }

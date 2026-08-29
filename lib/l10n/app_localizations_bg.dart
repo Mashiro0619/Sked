@@ -1210,9 +1210,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Импортиране на текуща страница';
 
   @override
-  String get schoolWebImportGoBack => 'Предишна страница';
-
-  @override
   String get schoolWebImportLoadingPage => 'Страница се зарежда…';
 
   @override
@@ -2313,4 +2310,48 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Разгъване на навигацията на работното пространство';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Изход от вградения браузър';
+
+  @override
+  String get schoolWebImportEditAddress => 'Редактиране на адреса';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Уеб адрес';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Отваряне';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Въведете HTTP или HTTPS адрес с хост.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Тази уебстраница поиска нов прозорец, който не може да бъде отворен на това устройство.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Защитена връзка';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Незащитена връзка';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Да се отвори ли входът в училищната система?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Входът в училищната система може да изпрати идентификационни данни чрез формуляри или сървърни пренасочвания към училището и неговите доставчици за вход. Android не може да спре всяко такова предаване за отделно потвърждение на дестинацията. Продължете само ако имате доверие на тези страни за текущата сесия за импортиране:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Отваряне на незащитен вход за училището?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Този вход за училището използва HTTP. Всеки, който може да наблюдава или променя тази връзка, може да прочете или промени вашите идентификационни данни и съдържанието на страницата. Продължете само ако приемате този риск за:\n\n$origin';
+  }
 }

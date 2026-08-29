@@ -18,6 +18,7 @@ import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'package:sked/services/school_import_http_consent.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/widgets/school_web_import_result_sheet.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -56,6 +57,32 @@ class _RecordingSchoolImportApi extends SchoolImportApi {
     callCount += 1;
     return Stream.value(const ParseError('synthetic stop'));
   }
+}
+
+class _CompletedSchoolImportApi extends SchoolImportApi {
+  _CompletedSchoolImportApi(this.response);
+
+  final SchoolImportResponse response;
+
+  @override
+  Stream<SchoolImportStreamEvent> importCurrentPageStream(
+    SchoolImportPagePayload payload, {
+    SchoolImportParserSettings? parserSettings,
+    http.Client? client,
+  }) {
+    return Stream.value(ParseDone(response: response));
+  }
+}
+
+class _NoActivePeriodTimeSetProvider extends TimetableProvider {
+  _NoActivePeriodTimeSetProvider({
+    required super.storage,
+    required super.systemLocaleCodeResolver,
+    required super.privacyService,
+  });
+
+  @override
+  PeriodTimeSet? get activePeriodTimeSetOrNull => null;
 }
 
 class _CloseTrackingClient extends http.BaseClient {
@@ -107,6 +134,51 @@ Future<TimetableProvider> _createProvider({
   );
   await provider.load();
   return provider;
+}
+
+Future<TimetableProvider> _createProviderWithoutActivePeriodTimeSet() async {
+  final provider = _NoActivePeriodTimeSetProvider(
+    storage: _MemoryTimetableStorage(_buildConfiguredCustomParserData()),
+    systemLocaleCodeResolver: () => defaultLocaleCode,
+    privacyService: const _NoopPrivacyService(),
+  );
+  await provider.load();
+  return provider;
+}
+
+SchoolImportResponse _buildCompletedResponse() {
+  return SchoolImportResponse(
+    meta: const SchoolImportMeta(
+      sourceUrl: '',
+      pageTitle: '',
+      parser: '',
+      warnings: [],
+    ),
+    timetable: SchoolImportTimetableDraft(
+      name: 'Imported timetable',
+      startDate: DateTime(2026, 5, 25),
+      totalWeeks: 18,
+      periodTimeSet: const ImportedPeriodTimeSetDraft(
+        name: '',
+        periodTimes: [],
+      ),
+      courses: const [
+        ImportedCourseDraft(
+          name: 'Imported course',
+          teacher: '',
+          location: '',
+          dayOfWeek: 1,
+          semesterWeeks: [],
+          periods: [1],
+          startMinutes: 480,
+          endMinutes: 540,
+          credit: 0,
+          remarks: '',
+          customFields: <String, dynamic>{},
+        ),
+      ],
+    ),
+  );
 }
 
 Future<AppLocalizations> _pumpAndCaptureL10n(WidgetTester tester) async {
@@ -232,6 +304,48 @@ void main() {
     expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
   });
+
+  testWidgets(
+    'uses the first live period-time set when no active set is available',
+    (tester) async {
+      final provider = await _createProviderWithoutActivePeriodTimeSet();
+      addTearDown(provider.dispose);
+      await _pumpSchoolHtmlImportPage(
+        tester,
+        provider,
+        api: _CompletedSchoolImportApi(_buildCompletedResponse()),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Monday period 1 Math');
+      final submitButton = find.text('Parse and import');
+      await tester.ensureVisible(submitButton);
+      await tester.tap(submitButton);
+      await _pumpRouteTransition(tester);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+      await _pumpRouteTransition(tester);
+      // `waitForTransitionComplete` resumes after the dialog subtree is
+      // unmounted, then schedules the preview sheet in the next frame.
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SchoolWebImportResultSheet)),
+      );
+      final periodTimeSet = provider.periodTimeSets.first;
+      expect(
+        find.text(
+          l10n.periodTimeSetSummary(
+            periodTimeSet.name,
+            periodTimeSet.periodTimes.length,
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('unconfigured parser offers a direct settings shortcut', (
     tester,

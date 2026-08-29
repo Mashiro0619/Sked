@@ -1201,9 +1201,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importuj bieżącą stronę';
 
   @override
-  String get schoolWebImportGoBack => 'Poprzednia strona';
-
-  @override
   String get schoolWebImportLoadingPage => 'Ładowanie strony…';
 
   @override
@@ -2301,4 +2298,48 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Rozwiń nawigację obszaru roboczego';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Zamknij wbudowaną przeglądarkę';
+
+  @override
+  String get schoolWebImportEditAddress => 'Edytuj adres';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Adres internetowy';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Otwórz';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Wpisz adres HTTP lub HTTPS z hostem.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Ta strona poprosiła o nowe okno, którego nie można otworzyć na tym urządzeniu.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Bezpieczne połączenie';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Niezabezpieczone połączenie';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Otworzyć logowanie do systemu szkoły?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Logowanie do systemu szkoły może przesyłać dane logowania za pomocą formularzy lub przekierowań serwera do szkoły i jej dostawców logowania. Android nie może wstrzymać każdego takiego transferu, aby osobno potwierdzić miejsce docelowe. Kontynuuj tylko wtedy, gdy ufasz im w tej sesji importu:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Otworzyć niezabezpieczone logowanie do szkoły?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'To logowanie do szkoły używa protokołu HTTP. Każdy, kto może obserwować lub modyfikować to połączenie, może odczytać albo zmienić Twoje dane logowania i zawartość strony. Kontynuuj tylko, jeśli akceptujesz to ryzyko dla:\n\n$origin';
+  }
 }

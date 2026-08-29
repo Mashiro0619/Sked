@@ -1186,9 +1186,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'นำเข้าหน้าปัจจุบัน';
 
   @override
-  String get schoolWebImportGoBack => 'หน้าก่อนหน้า';
-
-  @override
   String get schoolWebImportLoadingPage => 'กำลังโหลดหน้า…';
 
   @override
@@ -2283,4 +2280,48 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'ขยายการนำทางพื้นที่ทำงาน';
+
+  @override
+  String get schoolWebImportExitBrowser => 'ออกจากเบราว์เซอร์ในแอป';
+
+  @override
+  String get schoolWebImportEditAddress => 'แก้ไขที่อยู่';
+
+  @override
+  String get schoolWebImportAddressLabel => 'ที่อยู่เว็บ';
+
+  @override
+  String get schoolWebImportOpenAddress => 'เปิด';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'ป้อนที่อยู่ HTTP หรือ HTTPS ที่มีโฮสต์';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'หน้าเว็บนี้ขอเปิดหน้าต่างใหม่ที่ไม่สามารถเปิดบนอุปกรณ์นี้ได้';
+
+  @override
+  String get schoolWebImportSecureConnection => 'การเชื่อมต่อที่ปลอดภัย';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'การเชื่อมต่อที่ไม่ปลอดภัย';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'การลงชื่อเข้าใช้ของโรงเรียนอาจส่งข้อมูลรับรองผ่านแบบฟอร์มหรือการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ไปยังโรงเรียนและผู้ให้บริการลงชื่อเข้าใช้ Android ไม่สามารถหยุดการส่งแต่ละครั้งเพื่อยืนยันปลายทางแยกกันได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือบริการเหล่านี้สำหรับเซสชันการนำเข้านี้:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'เปิดการลงชื่อเข้าใช้โรงเรียนที่ไม่ปลอดภัยหรือไม่';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n$origin';
+  }
 }

@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Tuo nykyinen sivu",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Edellinen sivu",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Sivu ladataan…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Nykyisen sivun analysointi...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Poistu sisäisestä selaimesta",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Muokkaa osoitetta",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Verkko-osoite",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Avaa",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Anna HTTP- tai HTTPS-osoite isäntänimellä.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Tämä verkkosivu pyysi uutta ikkunaa, jota ei voi avata tällä laitteella.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Suojattu yhteys",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Suojaamaton yhteys",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Avataanko koulun kirjautuminen?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Koulun kirjautuminen voi lähettää tunnistetietoja lomakkeiden tai palvelimen uudelleenohjausten kautta koululle ja sen kirjautumispalvelujen tarjoajille. Android ei voi keskeyttää jokaista tällaista siirtoa erillistä kohteen vahvistusta varten. Jatka vain, jos luotat niihin tämän tuonti-istunnon ajan:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Avataanko suojaamaton koulukirjautuminen?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

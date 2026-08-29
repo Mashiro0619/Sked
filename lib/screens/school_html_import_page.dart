@@ -510,17 +510,17 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
     }
     final finalResponse = response;
 
-    final periodTimeSets = provider.periodTimeSets;
     final selectedPeriodTimeSetId =
         provider.activePeriodTimeSetOrNull?.id ??
-        (periodTimeSets.isEmpty ? '' : periodTimeSets.first.id);
+        (provider.periodTimeSets.isEmpty
+            ? ''
+            : provider.periodTimeSets.first.id);
     final importResult = await showAppModalSheet<SchoolImportApplyRequest>(
       context: context,
       maxWidth: appSheetWidthMedium,
       builder: (_) => SchoolWebImportResultSheet(
         response: finalResponse,
         canReplaceCurrent: canReplaceCurrent,
-        periodTimeSets: periodTimeSets,
         initialPeriodTimeSetId: selectedPeriodTimeSetId,
         provider: provider,
       ),

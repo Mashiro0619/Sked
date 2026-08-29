@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importer nuværende side",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Forrige side",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Indlæser side…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Parser den aktuelle side...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Afslut indbygget browser",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Rediger adresse",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Webadresse",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Åbn",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Indtast en HTTP- eller HTTPS-adresse med en vært.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Denne webside anmodede om et nyt vindue, som ikke kan åbnes på denne enhed.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Sikker forbindelse",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Usikker forbindelse",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Åbn skolens login?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Skolens login kan sende legitimationsoplysninger via formularer eller serveromdirigeringer til skolen og dens loginudbydere. Android kan ikke sætte hver sådan overførsel på pause for at vise en særskilt destinationsbekræftelse. Fortsæt kun, hvis du har tillid til dem i denne importsession:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Åbn et usikkert skolelogin?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Dette skolelogin bruger HTTP. Enhver, der kan overvåge eller ændre forbindelsen, kan læse eller ændre dine loginoplysninger og sidens indhold. Fortsæt kun, hvis du accepterer denne risiko for:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

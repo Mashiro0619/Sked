@@ -1206,9 +1206,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importează pagina curentă';
 
   @override
-  String get schoolWebImportGoBack => 'Pagina anterioară';
-
-  @override
   String get schoolWebImportLoadingPage => 'Se încărcă pagina…';
 
   @override
@@ -2310,4 +2307,48 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Extinde navigarea spațiului de lucru';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Ieși din browserul integrat';
+
+  @override
+  String get schoolWebImportEditAddress => 'Editează adresa';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Adresă web';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Deschide';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Introduceți o adresă HTTP sau HTTPS cu o gazdă.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Această pagină web a solicitat o fereastră nouă care nu poate fi deschisă pe acest dispozitiv.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Conexiune securizată';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Conexiune nesecurizată';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Deschideți autentificarea în sistemul școlii?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Autentificarea în sistemul școlii poate trimite date de conectare prin formulare sau redirecționări ale serverului către școală și furnizorii săi de autentificare. Android nu poate întrerupe fiecare astfel de transfer pentru o confirmare separată a destinației. Continuați numai dacă aveți încredere în aceștia pentru această sesiune de import:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Deschideți o autentificare școlară nesecurizată?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Această autentificare școlară folosește HTTP. Oricine poate monitoriza sau modifica această conexiune vă poate citi ori schimba datele de conectare și conținutul paginii. Continuați numai dacă acceptați acest risc pentru:\n\n$origin';
+  }
 }

@@ -820,8 +820,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "导入当前页",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "上一页",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "页面加载中…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "正在解析当前页面…",
@@ -1620,5 +1618,37 @@
   "collapseWorkspaceNavigation": "折叠工作区导航",
   "@collapseWorkspaceNavigation": {},
   "expandWorkspaceNavigation": "展开工作区导航",
-  "@expandWorkspaceNavigation": {}
+  "@expandWorkspaceNavigation": {},
+  "schoolWebImportExitBrowser": "退出内置浏览器",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "编辑地址",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "网页地址",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "打开",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "请输入包含主机名的 HTTP 或 HTTPS 地址。",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "当前网页请求了无法在此设备上打开的新窗口。",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "安全连接",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "不安全连接",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "打开学校登录页面？",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "学校登录可能会通过表单或服务器重定向，将登录凭据提交给学校及其登录服务提供方。Android 无法在每次此类传输前都暂停并单独确认目标。仅在你信任这些服务用于本次导入会话时继续：\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "打开不安全的学校登录页面？",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

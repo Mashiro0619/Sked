@@ -1200,9 +1200,6 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Tuo nykyinen sivu';
 
   @override
-  String get schoolWebImportGoBack => 'Edellinen sivu';
-
-  @override
   String get schoolWebImportLoadingPage => 'Sivu ladataan…';
 
   @override
@@ -2298,4 +2295,48 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Laajenna työtilan navigointi';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Poistu sisäisestä selaimesta';
+
+  @override
+  String get schoolWebImportEditAddress => 'Muokkaa osoitetta';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Verkko-osoite';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Avaa';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Anna HTTP- tai HTTPS-osoite isäntänimellä.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Tämä verkkosivu pyysi uutta ikkunaa, jota ei voi avata tällä laitteella.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Suojattu yhteys';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Suojaamaton yhteys';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Avataanko koulun kirjautuminen?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Koulun kirjautuminen voi lähettää tunnistetietoja lomakkeiden tai palvelimen uudelleenohjausten kautta koululle ja sen kirjautumispalvelujen tarjoajille. Android ei voi keskeyttää jokaista tällaista siirtoa erillistä kohteen vahvistusta varten. Jatka vain, jos luotat niihin tämän tuonti-istunnon ajan:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Avataanko suojaamaton koulukirjautuminen?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Tämä koulukirjautuminen käyttää HTTP-yhteyttä. Kuka tahansa yhteyttä tarkkaileva tai muuttava voi lukea tai muuttaa kirjautumistietojasi ja sivun sisältöä. Jatka vain, jos hyväksyt tämän riskin kohteelle:\n\n$origin';
+  }
 }

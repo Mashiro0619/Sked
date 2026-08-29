@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "นำเข้าหน้าปัจจุบัน",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "หน้าก่อนหน้า",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "กำลังโหลดหน้า…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "การวิเคราะห์หน้าปัจจุบัน...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "ออกจากเบราว์เซอร์ในแอป",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "แก้ไขที่อยู่",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "ที่อยู่เว็บ",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "เปิด",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "ป้อนที่อยู่ HTTP หรือ HTTPS ที่มีโฮสต์",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "หน้าเว็บนี้ขอเปิดหน้าต่างใหม่ที่ไม่สามารถเปิดบนอุปกรณ์นี้ได้",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "การเชื่อมต่อที่ปลอดภัย",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "การเชื่อมต่อที่ไม่ปลอดภัย",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "เปิดหน้าลงชื่อเข้าใช้ของโรงเรียนหรือไม่",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "การลงชื่อเข้าใช้ของโรงเรียนอาจส่งข้อมูลรับรองผ่านแบบฟอร์มหรือการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ไปยังโรงเรียนและผู้ให้บริการลงชื่อเข้าใช้ Android ไม่สามารถหยุดการส่งแต่ละครั้งเพื่อยืนยันปลายทางแยกกันได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณเชื่อถือบริการเหล่านี้สำหรับเซสชันการนำเข้านี้:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "เปิดการลงชื่อเข้าใช้โรงเรียนที่ไม่ปลอดภัยหรือไม่",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "การลงชื่อเข้าใช้โรงเรียนนี้ใช้ HTTP ผู้ที่สามารถเฝ้าดูหรือแก้ไขการเชื่อมต่อนี้อาจอ่านหรือเปลี่ยนข้อมูลรับรองและเนื้อหาหน้าเว็บของคุณได้ โปรดดำเนินการต่อเฉพาะเมื่อคุณยอมรับความเสี่ยงนี้สำหรับ:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

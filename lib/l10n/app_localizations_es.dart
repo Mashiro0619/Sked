@@ -1211,9 +1211,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importar la página actual';
 
   @override
-  String get schoolWebImportGoBack => 'Página anterior';
-
-  @override
   String get schoolWebImportLoadingPage => 'Cargando página…';
 
   @override
@@ -2314,4 +2311,48 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Expandir navegación del espacio de trabajo';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Salir del navegador integrado';
+
+  @override
+  String get schoolWebImportEditAddress => 'Editar dirección';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Dirección web';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Abrir';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Introduce una dirección HTTP o HTTPS con un host.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Esta página web solicitó una nueva ventana que no se puede abrir en este dispositivo.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Conexión segura';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Conexión no segura';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      '¿Abrir el inicio de sesión de la escuela?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'El inicio de sesión de la escuela puede enviar credenciales mediante formularios o redirecciones del servidor a la escuela y a sus proveedores de acceso. Android no puede pausar cada transferencia de este tipo para mostrar una confirmación independiente del destino. Continúa solo si confías en ellos para esta sesión de importación:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      '¿Abrir un inicio de sesión escolar no seguro?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Este inicio de sesión escolar usa HTTP. Cualquiera que pueda observar o alterar esta conexión podría leer o cambiar sus credenciales y el contenido de la página. Continúe solo si acepta este riesgo para:\n\n$origin';
+  }
 }

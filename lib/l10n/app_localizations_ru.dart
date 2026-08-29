@@ -1207,9 +1207,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Импортировать текущую страницу';
 
   @override
-  String get schoolWebImportGoBack => 'Предыдущая страница';
-
-  @override
   String get schoolWebImportLoadingPage => 'Загрузка страницы…';
 
   @override
@@ -2312,4 +2309,48 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Развернуть навигацию рабочего пространства';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Выйти из встроенного браузера';
+
+  @override
+  String get schoolWebImportEditAddress => 'Изменить адрес';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Веб-адрес';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Открыть';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Введите адрес HTTP или HTTPS с именем хоста.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Эта веб-страница запросила новое окно, которое нельзя открыть на этом устройстве.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Защищённое соединение';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Незащищённое соединение';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Открыть вход в школьную систему?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'При входе в школьную систему учётные данные могут отправляться через формы или серверные перенаправления школе и её поставщикам входа. Android не может приостанавливать каждую такую передачу для отдельного подтверждения адреса. Продолжайте, только если доверяете им в рамках этого сеанса импорта:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Открыть небезопасный вход в школьную систему?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Этот вход в школьную систему использует HTTP. Любой, кто может просматривать или изменять это соединение, может прочитать либо изменить ваши учётные данные и содержимое страницы. Продолжайте, только если принимаете этот риск для:\n\n$origin';
+  }
 }

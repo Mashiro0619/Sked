@@ -1214,9 +1214,6 @@ class AppLocalizationsEl extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Εισαγωγή τρέχουσας σελίδας';
 
   @override
-  String get schoolWebImportGoBack => 'Προηγούμενη σελίδα';
-
-  @override
   String get schoolWebImportLoadingPage => 'Φόρτωση σελίδας…';
 
   @override
@@ -2316,4 +2313,49 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Ανάπτυξη πλοήγησης χώρου εργασίας';
+
+  @override
+  String get schoolWebImportExitBrowser =>
+      'Έξοδος από το ενσωματωμένο πρόγραμμα περιήγησης';
+
+  @override
+  String get schoolWebImportEditAddress => 'Επεξεργασία διεύθυνσης';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Διεύθυνση ιστού';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Άνοιγμα';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Εισαγάγετε μια διεύθυνση HTTP ή HTTPS με κεντρικό υπολογιστή.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Αυτή η ιστοσελίδα ζήτησε νέο παράθυρο, το οποίο δεν μπορεί να ανοίξει σε αυτήν τη συσκευή.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Ασφαλής σύνδεση';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Μη ασφαλής σύνδεση';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Άνοιγμα σύνδεσης στο σχολικό σύστημα;';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Η σύνδεση στο σχολικό σύστημα μπορεί να υποβάλει διαπιστευτήρια μέσω φορμών ή ανακατευθύνσεων διακομιστή στο σχολείο και στους παρόχους σύνδεσής του. Το Android δεν μπορεί να διακόπτει κάθε τέτοια μεταφορά για ξεχωριστή επιβεβαίωση προορισμού. Συνεχίστε μόνο αν τους εμπιστεύεστε για αυτήν την περίοδο εισαγωγής:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Άνοιγμα μη ασφαλούς σύνδεσης σχολείου;';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n$origin';
+  }
 }

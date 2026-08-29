@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Импортировать текущую страницу",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Предыдущая страница",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Загрузка страницы…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Разбор текущей страницы…",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Выйти из встроенного браузера",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Изменить адрес",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Веб-адрес",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Открыть",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Введите адрес HTTP или HTTPS с именем хоста.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Эта веб-страница запросила новое окно, которое нельзя открыть на этом устройстве.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Защищённое соединение",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Незащищённое соединение",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Открыть вход в школьную систему?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "При входе в школьную систему учётные данные могут отправляться через формы или серверные перенаправления школе и её поставщикам входа. Android не может приостанавливать каждую такую передачу для отдельного подтверждения адреса. Продолжайте, только если доверяете им в рамках этого сеанса импорта:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Открыть небезопасный вход в школьную систему?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Этот вход в школьную систему использует HTTP. Любой, кто может просматривать или изменять это соединение, может прочитать либо изменить ваши учётные данные и содержимое страницы. Продолжайте, только если принимаете этот риск для:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

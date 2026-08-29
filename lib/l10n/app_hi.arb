@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "वर्तमान पेज आयात करें",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "पिछला पेज",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "पेज लोड हो रहा है…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "वर्तमान पेज पार्स हो रहा है…",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "इन-ऐप ब्राउज़र से बाहर निकलें",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "पता संपादित करें",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "वेब पता",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "खोलें",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "होस्ट के साथ कोई HTTP या HTTPS पता दर्ज करें।",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "इस वेबपेज ने एक नई विंडो मांगी है जिसे इस डिवाइस पर नहीं खोला जा सकता।",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "सुरक्षित कनेक्शन",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "असुरक्षित कनेक्शन",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "स्कूल साइन-इन खोलें?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "स्कूल साइन-इन, फ़ॉर्म या सर्वर रीडायरेक्ट के माध्यम से स्कूल और उसके साइन-इन प्रदाताओं को क्रेडेंशियल भेज सकता है। Android हर ऐसे ट्रांसफ़र को अलग गंतव्य पुष्टि के लिए रोक नहीं सकता। केवल तभी जारी रखें जब आप इस आयात सत्र के लिए उन पर भरोसा करते हों:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "असुरक्षित स्कूल साइन-इन खोलें?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

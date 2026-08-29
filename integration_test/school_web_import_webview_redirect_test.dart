@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -26,8 +26,8 @@ void main() {
       final controllerReady = Completer<InAppWebViewController>();
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: _SchoolWebViewHarness(
+          home: _SingleRouteHarness(
+            child: _SchoolWebViewHarness(
               onParentCreated: controllerReady.complete,
             ),
           ),
@@ -82,10 +82,12 @@ void main() {
       final popupRequested = Completer<CreateWindowAction>();
       final childCreated = Completer<InAppWebViewController>();
       final childClosed = Completer<void>();
+      final routeObserver = _RouteCountObserver();
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: _SchoolWebViewHarness(
+          navigatorObservers: [routeObserver],
+          home: _SingleRouteHarness(
+            child: _SchoolWebViewHarness(
               onParentCreated: controllerReady.complete,
               onPopupRequested: popupRequested.complete,
               onChildCreated: childCreated.complete,
@@ -125,6 +127,13 @@ void main() {
       expect(callback['opener'], 'preserved');
       expect(fixture.popupTargetWasRequested, isTrue);
       await _waitFor(childClosed.future, 'the child window to close');
+      expect(
+        routeObserver.routePushes,
+        1,
+        reason:
+            'A native windowId child must stay in the one Flutter browser '
+            'route rather than pushing a second SchoolWebImportPage.',
+      );
     },
     skip: !io.Platform.isAndroid,
     timeout: const Timeout(Duration(seconds: 45)),
@@ -197,24 +206,55 @@ class _SchoolWebViewHarnessState extends State<_SchoolWebViewHarness> {
           onCreateWindow: _handleCreateWindow,
         ),
         if (_childWindowId case final childWindowId?)
-          InAppWebView(
-            key: ValueKey('school-web-import-child-$childWindowId'),
-            windowId: childWindowId,
-            initialSettings: schoolWebImportWebViewSettings(
-              supportsPopups: schoolWebImportSupportsPopupWindows(),
+          Offstage(
+            // The child is rendered on top while keeping the parent mounted:
+            // this is the same one-route pane strategy as the production
+            // browser, and preserves the native opener relationship.
+            offstage: false,
+            child: InAppWebView(
+              key: ValueKey('school-web-import-child-$childWindowId'),
+              windowId: childWindowId,
+              initialSettings: schoolWebImportWebViewSettings(
+                supportsPopups: schoolWebImportSupportsPopupWindows(),
+              ),
+              onWebViewCreated: (controller) {
+                widget.onChildCreated?.call(controller);
+              },
+              onCloseWindow: (_) {
+                widget.onChildClosed?.call();
+                if (mounted) {
+                  setState(() => _childWindowId = null);
+                }
+              },
             ),
-            onWebViewCreated: (controller) {
-              widget.onChildCreated?.call(controller);
-            },
-            onCloseWindow: (_) {
-              widget.onChildClosed?.call();
-              if (mounted) {
-                setState(() => _childWindowId = null);
-              }
-            },
           ),
       ],
     );
+  }
+}
+
+/// Counts Flutter routes without turning a native popup into another route.
+class _SingleRouteHarness extends StatefulWidget {
+  const _SingleRouteHarness({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SingleRouteHarness> createState() => _SingleRouteHarnessState();
+}
+
+class _SingleRouteHarnessState extends State<_SingleRouteHarness> {
+  @override
+  Widget build(BuildContext context) => Scaffold(body: widget.child);
+}
+
+class _RouteCountObserver extends NavigatorObserver {
+  int routePushes = 0;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    routePushes += 1;
+    super.didPush(route, previousRoute);
   }
 }
 

@@ -1196,9 +1196,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importera aktuell sida';
 
   @override
-  String get schoolWebImportGoBack => 'Föregående sida';
-
-  @override
   String get schoolWebImportLoadingPage => 'Laddar sidan…';
 
   @override
@@ -2295,4 +2292,47 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Expandera arbetsytenavigering';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Stäng den inbyggda webbläsaren';
+
+  @override
+  String get schoolWebImportEditAddress => 'Redigera adress';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Webbadress';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Öppna';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Ange en HTTP- eller HTTPS-adress med en värd.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Den här webbsidan begärde ett nytt fönster som inte kan öppnas på den här enheten.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Säker anslutning';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Osäker anslutning';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Öppna skolans inloggning?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Skolans inloggning kan skicka inloggningsuppgifter via formulär eller serveromdirigeringar till skolan och dess inloggningsleverantörer. Android kan inte pausa varje sådan överföring för en separat bekräftelse av destinationen. Fortsätt bara om du litar på dem under den här importsessionen:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Öppna en osäker skolinloggning?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Den här skolinloggningen använder HTTP. Den som kan övervaka eller ändra anslutningen kan läsa eller ändra dina inloggningsuppgifter och sidans innehåll. Fortsätt bara om du accepterar den här risken för:\n\n$origin';
+  }
 }

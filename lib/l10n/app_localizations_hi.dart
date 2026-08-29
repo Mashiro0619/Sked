@@ -1194,9 +1194,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'वर्तमान पेज आयात करें';
 
   @override
-  String get schoolWebImportGoBack => 'पिछला पेज';
-
-  @override
   String get schoolWebImportLoadingPage => 'पेज लोड हो रहा है…';
 
   @override
@@ -2295,4 +2292,47 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'कार्यस्थान नेविगेशन विस्तृत करें';
+
+  @override
+  String get schoolWebImportExitBrowser => 'इन-ऐप ब्राउज़र से बाहर निकलें';
+
+  @override
+  String get schoolWebImportEditAddress => 'पता संपादित करें';
+
+  @override
+  String get schoolWebImportAddressLabel => 'वेब पता';
+
+  @override
+  String get schoolWebImportOpenAddress => 'खोलें';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'होस्ट के साथ कोई HTTP या HTTPS पता दर्ज करें।';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'इस वेबपेज ने एक नई विंडो मांगी है जिसे इस डिवाइस पर नहीं खोला जा सकता।';
+
+  @override
+  String get schoolWebImportSecureConnection => 'सुरक्षित कनेक्शन';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'असुरक्षित कनेक्शन';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'स्कूल साइन-इन खोलें?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'स्कूल साइन-इन, फ़ॉर्म या सर्वर रीडायरेक्ट के माध्यम से स्कूल और उसके साइन-इन प्रदाताओं को क्रेडेंशियल भेज सकता है। Android हर ऐसे ट्रांसफ़र को अलग गंतव्य पुष्टि के लिए रोक नहीं सकता। केवल तभी जारी रखें जब आप इस आयात सत्र के लिए उन पर भरोसा करते हों:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'असुरक्षित स्कूल साइन-इन खोलें?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'यह स्कूल साइन-इन HTTP का उपयोग करता है। इस कनेक्शन को देख या बदल सकने वाला कोई भी व्यक्ति आपके क्रेडेंशियल और पेज की सामग्री पढ़ या बदल सकता है। केवल तभी जारी रखें जब आप इसके लिए यह जोखिम स्वीकार करते हों:\n\n$origin';
+  }
 }

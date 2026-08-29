@@ -1195,9 +1195,6 @@ class AppLocalizationsEt extends AppLocalizations {
       'Praeguse lehekülje importimine';
 
   @override
-  String get schoolWebImportGoBack => 'Eelmine lehekülg';
-
-  @override
   String get schoolWebImportLoadingPage => 'Lehekülje laadimine…';
 
   @override
@@ -2293,4 +2290,48 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Laienda tööruumi navigeerimist';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Sule sisseehitatud brauser';
+
+  @override
+  String get schoolWebImportEditAddress => 'Muuda aadressi';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Veebiaadress';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Ava';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Sisestage hostiga HTTP- või HTTPS-aadress.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'See veebileht taotles uut akent, mida ei saa selles seadmes avada.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Turvaline ühendus';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Ebaturvaline ühendus';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Kas avada kooli sisselogimine?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Kooli sisselogimine võib saata kasutajatunnused vormide või serveri ümbersuunamiste kaudu koolile ja selle sisselogimisteenuse pakkujatele. Android ei saa iga sellist edastust eraldi sihtkoha kinnitamiseks peatada. Jätkake ainult siis, kui usaldate neid selle impordiseansi jaoks:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Kas avada ebaturvaline kooli sisselogimine?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'See kooli sisselogimine kasutab HTTP-d. Igaüks, kes saab seda ühendust jälgida või muuta, võib lugeda või muuta teie sisselogimisandmeid ja lehe sisu. Jätkake ainult siis, kui nõustute selle riskiga saidi puhul:\n\n$origin';
+  }
 }

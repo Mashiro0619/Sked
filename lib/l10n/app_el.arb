@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Εισαγωγή τρέχουσας σελίδας",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Προηγούμενη σελίδα",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Φόρτωση σελίδας…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Ανάλυση τρέχουσας σελίδας...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Έξοδος από το ενσωματωμένο πρόγραμμα περιήγησης",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Επεξεργασία διεύθυνσης",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Διεύθυνση ιστού",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Άνοιγμα",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Εισαγάγετε μια διεύθυνση HTTP ή HTTPS με κεντρικό υπολογιστή.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Αυτή η ιστοσελίδα ζήτησε νέο παράθυρο, το οποίο δεν μπορεί να ανοίξει σε αυτήν τη συσκευή.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Ασφαλής σύνδεση",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Μη ασφαλής σύνδεση",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Άνοιγμα σύνδεσης στο σχολικό σύστημα;",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Η σύνδεση στο σχολικό σύστημα μπορεί να υποβάλει διαπιστευτήρια μέσω φορμών ή ανακατευθύνσεων διακομιστή στο σχολείο και στους παρόχους σύνδεσής του. Το Android δεν μπορεί να διακόπτει κάθε τέτοια μεταφορά για ξεχωριστή επιβεβαίωση προορισμού. Συνεχίστε μόνο αν τους εμπιστεύεστε για αυτήν την περίοδο εισαγωγής:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Άνοιγμα μη ασφαλούς σύνδεσης σχολείου;",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Αυτή η σύνδεση σχολείου χρησιμοποιεί HTTP. Όποιος μπορεί να παρακολουθήσει ή να αλλοιώσει αυτή τη σύνδεση μπορεί να διαβάσει ή να αλλάξει τα διαπιστευτήρια και το περιεχόμενο της σελίδας σας. Συνεχίστε μόνο αν αποδέχεστε αυτόν τον κίνδυνο για:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

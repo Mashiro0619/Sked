@@ -822,8 +822,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Import current page",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Previous page",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Loading page…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Parsing current page…",
@@ -1622,5 +1620,37 @@
   "collapseWorkspaceNavigation": "Collapse workspace navigation",
   "@collapseWorkspaceNavigation": {},
   "expandWorkspaceNavigation": "Expand workspace navigation",
-  "@expandWorkspaceNavigation": {}
+  "@expandWorkspaceNavigation": {},
+  "schoolWebImportExitBrowser": "Exit in-app browser",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Edit address",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Web address",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Open",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Enter an HTTP or HTTPS address with a host.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "This webpage requested a new window that cannot open on this device.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Secure connection",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Insecure connection",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Open school sign-in?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Open an insecure school sign-in?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

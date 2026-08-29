@@ -818,8 +818,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "匯入目前頁面",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "上一頁",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "頁面載入中…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "正在解析目前頁面…",
@@ -1596,5 +1594,37 @@
   "collapseWorkspaceNavigation": "摺疊工作區導覽",
   "@collapseWorkspaceNavigation": {},
   "expandWorkspaceNavigation": "展開工作區導覽",
-  "@expandWorkspaceNavigation": {}
+  "@expandWorkspaceNavigation": {},
+  "schoolWebImportExitBrowser": "退出內建瀏覽器",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "編輯網址",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "網頁網址",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "開啟",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "請輸入包含主機名稱的 HTTP 或 HTTPS 網址。",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "目前網頁要求開啟此裝置無法處理的新視窗。",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "安全連線",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "不安全連線",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "開啟學校登入頁面？",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "學校登入可能會透過表單或伺服器重新導向，將登入憑證提交給學校及其登入服務提供者。Android 無法在每次此類傳輸前都暫停並單獨確認目標。僅在你信任這些服務用於本次匯入工作階段時繼續：\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "開啟不安全的學校登入頁面？",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

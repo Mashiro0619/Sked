@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importează pagina curentă",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Pagina anterioară",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Se încărcă pagina…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Se analizează pagina curentă...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Ieși din browserul integrat",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Editează adresa",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Adresă web",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Deschide",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Introduceți o adresă HTTP sau HTTPS cu o gazdă.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Această pagină web a solicitat o fereastră nouă care nu poate fi deschisă pe acest dispozitiv.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Conexiune securizată",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Conexiune nesecurizată",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Deschideți autentificarea în sistemul școlii?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Autentificarea în sistemul școlii poate trimite date de conectare prin formulare sau redirecționări ale serverului către școală și furnizorii săi de autentificare. Android nu poate întrerupe fiecare astfel de transfer pentru o confirmare separată a destinației. Continuați numai dacă aveți încredere în aceștia pentru această sesiune de import:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Deschideți o autentificare școlară nesecurizată?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Această autentificare școlară folosește HTTP. Oricine poate monitoriza sau modifica această conexiune vă poate citi ori schimba datele de conectare și conținutul paginii. Continuați numai dacă acceptați acest risc pentru:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

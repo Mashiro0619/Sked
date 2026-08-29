@@ -794,8 +794,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Aktuelle Seite importieren",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Vorherige Seite",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Seite wird geladen…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Aktuelle Seite wird analysiert…",
@@ -1576,5 +1574,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Integrierten Browser schließen",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Adresse bearbeiten",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Webadresse",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Öffnen",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Gib eine HTTP- oder HTTPS-Adresse mit Host ein.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Diese Webseite hat ein neues Fenster angefordert, das auf diesem Gerät nicht geöffnet werden kann.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Sichere Verbindung",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Unsichere Verbindung",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Schulanmeldung öffnen?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Bei der Schulanmeldung können Anmeldedaten über Formulare oder Serverweiterleitungen an die Schule und deren Anmeldeanbieter gesendet werden. Android kann nicht jede solche Übertragung für eine separate Zielbestätigung anhalten. Fahren Sie nur fort, wenn Sie diesen Stellen für diese Importsitzung vertrauen:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Unsichere Schulanmeldung öffnen?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Diese Schulanmeldung verwendet HTTP. Jeder, der diese Verbindung beobachten oder verändern kann, kann Ihre Anmeldedaten und Seiteninhalte lesen oder ändern. Fahren Sie nur fort, wenn Sie dieses Risiko akzeptieren für:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

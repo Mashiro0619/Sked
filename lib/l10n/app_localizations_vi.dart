@@ -1198,9 +1198,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Nhập trang hiện tại';
 
   @override
-  String get schoolWebImportGoBack => 'Trang trước';
-
-  @override
   String get schoolWebImportLoadingPage => 'Đang tải trang…';
 
   @override
@@ -2301,4 +2298,48 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Mở rộng điều hướng không gian làm việc';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Thoát trình duyệt trong ứng dụng';
+
+  @override
+  String get schoolWebImportEditAddress => 'Chỉnh sửa địa chỉ';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Địa chỉ web';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Mở';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Nhập địa chỉ HTTP hoặc HTTPS có máy chủ.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Trang web này yêu cầu một cửa sổ mới không thể mở trên thiết bị này.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Kết nối bảo mật';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Kết nối không bảo mật';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Mở trang đăng nhập của trường?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Quá trình đăng nhập của trường có thể gửi thông tin xác thực qua biểu mẫu hoặc lệnh chuyển hướng của máy chủ đến trường và các nhà cung cấp đăng nhập. Android không thể tạm dừng mọi lần truyền như vậy để xác nhận riêng từng đích. Chỉ tiếp tục nếu bạn tin cậy các bên này trong phiên nhập này:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Mở trang đăng nhập trường học không an toàn?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Trang đăng nhập trường học này sử dụng HTTP. Bất kỳ ai có thể theo dõi hoặc can thiệp vào kết nối này đều có thể đọc hoặc thay đổi thông tin xác thực và nội dung trang của bạn. Chỉ tiếp tục nếu bạn chấp nhận rủi ro này đối với:\n\n$origin';
+  }
 }

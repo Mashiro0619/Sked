@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Uvozi trenutno stran",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Prejšnja stran",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Nalaganje strani...",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Razčlenitev trenutne strani...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Zapri vgrajeni brskalnik",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Uredi naslov",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Spletni naslov",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Odpri",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Vnesite naslov HTTP ali HTTPS z gostiteljem.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Ta spletna stran je zahtevala novo okno, ki ga v tej napravi ni mogoče odpreti.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Varna povezava",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Nevarna povezava",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Želite odpreti prijavo v šolski sistem?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Prijava v šolski sistem lahko prek obrazcev ali preusmeritev strežnika pošlje poverilnice šoli in njenim ponudnikom prijave. Android ne more ustaviti vsakega takega prenosa za ločeno potrditev cilja. Nadaljujte le, če jim zaupate za to sejo uvoza:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Odprem nezaščiteno prijavo v šolski sistem?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Ta prijava v šolski sistem uporablja HTTP. Kdor lahko spremlja ali spreminja to povezavo, lahko prebere ali spremeni vaše poverilnice in vsebino strani. Nadaljujte le, če sprejemate to tveganje za:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importovat aktuální stránku",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Předchozí stránka",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Načítání stránky…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Analyzuje aktuální stránku...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Ukončit vestavěný prohlížeč",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Upravit adresu",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Webová adresa",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Otevřít",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Zadejte adresu HTTP nebo HTTPS s hostitelem.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Tato webová stránka požádala o nové okno, které na tomto zařízení nelze otevřít.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Zabezpečené připojení",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Nezabezpečené připojení",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Otevřít přihlášení do školního systému?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Přihlášení do školního systému může odeslat přihlašovací údaje prostřednictvím formulářů nebo přesměrování serveru škole a jejím poskytovatelům přihlášení. Android nemůže každé takové odeslání pozastavit a zobrazit samostatné potvrzení cíle. Pokračujte pouze tehdy, pokud jim pro tuto relaci importu důvěřujete:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Otevřít nezabezpečené přihlášení ke škole?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

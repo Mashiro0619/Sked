@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Importera aktuell sida",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Föregående sida",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Laddar sidan…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Tolkar nuvarande sida...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Stäng den inbyggda webbläsaren",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Redigera adress",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Webbadress",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Öppna",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Ange en HTTP- eller HTTPS-adress med en värd.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Den här webbsidan begärde ett nytt fönster som inte kan öppnas på den här enheten.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Säker anslutning",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Osäker anslutning",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Öppna skolans inloggning?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Skolans inloggning kan skicka inloggningsuppgifter via formulär eller serveromdirigeringar till skolan och dess inloggningsleverantörer. Android kan inte pausa varje sådan överföring för en separat bekräftelse av destinationen. Fortsätt bara om du litar på dem under den här importsessionen:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Öppna en osäker skolinloggning?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Den här skolinloggningen använder HTTP. Den som kan övervaka eller ändra anslutningen kan läsa eller ändra dina inloggningsuppgifter och sidans innehåll. Fortsätt bara om du accepterar den här risken för:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

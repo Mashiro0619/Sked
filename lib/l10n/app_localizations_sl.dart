@@ -1198,9 +1198,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Uvozi trenutno stran';
 
   @override
-  String get schoolWebImportGoBack => 'Prejšnja stran';
-
-  @override
   String get schoolWebImportLoadingPage => 'Nalaganje strani...';
 
   @override
@@ -2299,4 +2296,48 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Razširi krmarjenje po delovnem prostoru';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Zapri vgrajeni brskalnik';
+
+  @override
+  String get schoolWebImportEditAddress => 'Uredi naslov';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Spletni naslov';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Odpri';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Vnesite naslov HTTP ali HTTPS z gostiteljem.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Ta spletna stran je zahtevala novo okno, ki ga v tej napravi ni mogoče odpreti.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Varna povezava';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Nevarna povezava';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Želite odpreti prijavo v šolski sistem?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Prijava v šolski sistem lahko prek obrazcev ali preusmeritev strežnika pošlje poverilnice šoli in njenim ponudnikom prijave. Android ne more ustaviti vsakega takega prenosa za ločeno potrditev cilja. Nadaljujte le, če jim zaupate za to sejo uvoza:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Odprem nezaščiteno prijavo v šolski sistem?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Ta prijava v šolski sistem uporablja HTTP. Kdor lahko spremlja ali spreminja to povezavo, lahko prebere ali spremeni vaše poverilnice in vsebino strani. Nadaljujte le, če sprejemate to tveganje za:\n\n$origin';
+  }
 }

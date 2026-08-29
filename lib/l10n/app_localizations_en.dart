@@ -1190,9 +1190,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Import current page';
 
   @override
-  String get schoolWebImportGoBack => 'Previous page';
-
-  @override
   String get schoolWebImportLoadingPage => 'Loading page…';
 
   @override
@@ -2289,4 +2286,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Expand workspace navigation';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Exit in-app browser';
+
+  @override
+  String get schoolWebImportEditAddress => 'Edit address';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Web address';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Open';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Enter an HTTP or HTTPS address with a host.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'This webpage requested a new window that cannot open on this device.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Secure connection';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Insecure connection';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Open school sign-in?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Open an insecure school sign-in?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n$origin';
+  }
 }

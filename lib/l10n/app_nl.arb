@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Import current page",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Previous page",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Loading page…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Parsing current page…",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Ingebouwde browser sluiten",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Adres bewerken",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Webadres",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Openen",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Voer een HTTP- of HTTPS-adres met een host in.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Deze webpagina heeft een nieuw venster aangevraagd dat niet op dit apparaat kan worden geopend.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Beveiligde verbinding",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Onveilige verbinding",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Aanmelden bij de school openen?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Bij aanmelden bij de school kunnen aanmeldgegevens via formulieren of serveromleidingen naar de school en haar aanmeldproviders worden verzonden. Android kan niet elke dergelijke overdracht onderbreken voor een afzonderlijke bevestiging van de bestemming. Ga alleen door als u hen voor deze importsessie vertrouwt:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Onveilige schoolaanmelding openen?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Deze schoolaanmelding gebruikt HTTP. Iedereen die deze verbinding kan volgen of wijzigen, kan uw aanmeldgegevens en de pagina-inhoud lezen of veranderen. Ga alleen door als u dit risico accepteert voor:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

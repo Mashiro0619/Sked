@@ -1,24 +1,65 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Mirrors the CI "Check formatting" step so a badly formatted file is caught
 # before it becomes a commit rather than after the pipeline goes red.
 #
 # Enable in a clone with:
 #   git config core.hooksPath tool/hooks
 #
-# This hook only inspects and refuses; it never rewrites or stages your files,
-# so what you reviewed is exactly what gets committed.
+# This hook only inspects and refuses; it never rewrites or stages your files.
+# Each Dart source is copied from the index to a temporary file before it is
+# checked, so the result always describes the exact content being committed.
+# Bash is intentional: its NUL-delimited read support keeps unusual filenames
+# (including names containing spaces or newlines) unambiguous.
 
-files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.dart$')
-[ -z "$files" ] && exit 0
+set -u
 
-# shellcheck disable=SC2086
-if ! dart format --output=none --set-exit-if-changed $files >/dev/null 2>&1; then
-  echo "Commit refused: some staged Dart files are not formatted."
-  echo
-  echo "  dart format $(echo "$files" | tr '\n' ' ')"
-  echo
-  echo "Run that, restage, and commit again."
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+cd "$repo_root" || exit 1
+
+temporary_directory=$(mktemp -d "${TMPDIR:-/tmp}/sked-pre-commit.XXXXXX") || {
+  echo "Commit refused: unable to create a temporary directory for format checks."
+  exit 1
+}
+
+cleanup() {
+  rm -rf "$temporary_directory"
+}
+trap cleanup EXIT HUP INT TERM
+
+staged_paths="$temporary_directory/staged-paths"
+if ! git diff --cached --name-only -z --diff-filter=ACMR -M -C > "$staged_paths"; then
+  echo "Commit refused: unable to read the staged file list."
   exit 1
 fi
 
-exit 0
+declare -a unformatted_paths=()
+temporary_file_index=0
+
+while IFS= read -r -d '' staged_path; do
+  case "$staged_path" in
+    *.dart)
+      temporary_file="$temporary_directory/$temporary_file_index.dart"
+      temporary_file_index=$((temporary_file_index + 1))
+
+      if ! git show ":$staged_path" > "$temporary_file"; then
+        echo "Commit refused: unable to read the staged Dart file: $(printf '%q' "$staged_path")"
+        exit 1
+      fi
+
+      if ! dart format --output=none --set-exit-if-changed "$temporary_file" >/dev/null 2>&1; then
+        unformatted_paths+=("$staged_path")
+      fi
+      ;;
+  esac
+done < "$staged_paths"
+
+if ((${#unformatted_paths[@]} > 0)); then
+  echo "Commit refused: some staged Dart files are not formatted."
+  echo
+  for unformatted_path in "${unformatted_paths[@]}"; do
+    printf '  %q\n' "$unformatted_path"
+  done
+  echo
+  echo "Format the working-tree files, restage them, and commit again."
+  exit 1
+fi

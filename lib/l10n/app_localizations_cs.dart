@@ -1196,9 +1196,6 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importovat aktuální stránku';
 
   @override
-  String get schoolWebImportGoBack => 'Předchozí stránka';
-
-  @override
   String get schoolWebImportLoadingPage => 'Načítání stránky…';
 
   @override
@@ -2298,4 +2295,48 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Rozbalit navigaci pracovního prostoru';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Ukončit vestavěný prohlížeč';
+
+  @override
+  String get schoolWebImportEditAddress => 'Upravit adresu';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Webová adresa';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Otevřít';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Zadejte adresu HTTP nebo HTTPS s hostitelem.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Tato webová stránka požádala o nové okno, které na tomto zařízení nelze otevřít.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Zabezpečené připojení';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Nezabezpečené připojení';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Otevřít přihlášení do školního systému?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Přihlášení do školního systému může odeslat přihlašovací údaje prostřednictvím formulářů nebo přesměrování serveru škole a jejím poskytovatelům přihlášení. Android nemůže každé takové odeslání pozastavit a zobrazit samostatné potvrzení cíle. Pokračujte pouze tehdy, pokud jim pro tuto relaci importu důvěřujete:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Otevřít nezabezpečené přihlášení ke škole?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Toto přihlášení ke škole používá HTTP. Kdokoli, kdo může toto připojení sledovat nebo měnit, může přečíst či změnit vaše přihlašovací údaje a obsah stránky. Pokračujte pouze tehdy, pokud toto riziko přijímáte pro:\n\n$origin';
+  }
 }

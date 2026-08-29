@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "現在のページをインポート",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "前のページ",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "ページを読み込み中…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "現在のページを解析中…",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "アプリ内ブラウザを終了",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "アドレスを編集",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "ウェブアドレス",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "開く",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "ホストを含む HTTP または HTTPS アドレスを入力してください。",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "このウェブページは、このデバイスで開けない新しいウィンドウを要求しました。",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "安全な接続",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "安全でない接続",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "学校のログインページを開きますか？",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "学校へのログインでは、フォームやサーバーのリダイレクトを通じて、学校やログインサービス提供元に認証情報が送信される場合があります。Android では、このような送信を毎回停止して移動先を個別に確認することはできません。今回のインポートセッションでこれらを信頼できる場合のみ続行してください：\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "安全でない学校ログインを開きますか？",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

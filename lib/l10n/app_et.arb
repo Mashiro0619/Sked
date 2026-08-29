@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Praeguse lehekülje importimine",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Eelmine lehekülg",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Lehekülje laadimine…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Aktiivse lehekülje analüüsimine...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Sule sisseehitatud brauser",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Muuda aadressi",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Veebiaadress",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Ava",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Sisestage hostiga HTTP- või HTTPS-aadress.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "See veebileht taotles uut akent, mida ei saa selles seadmes avada.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Turvaline ühendus",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Ebaturvaline ühendus",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Kas avada kooli sisselogimine?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Kooli sisselogimine võib saata kasutajatunnused vormide või serveri ümbersuunamiste kaudu koolile ja selle sisselogimisteenuse pakkujatele. Android ei saa iga sellist edastust eraldi sihtkoha kinnitamiseks peatada. Jätkake ainult siis, kui usaldate neid selle impordiseansi jaoks:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Kas avada ebaturvaline kooli sisselogimine?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "See kooli sisselogimine kasutab HTTP-d. Igaüks, kes saab seda ühendust jälgida või muuta, võib lugeda või muuta teie sisselogimisandmeid ja lehe sisu. Jätkake ainult siis, kui nõustute selle riskiga saidi puhul:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

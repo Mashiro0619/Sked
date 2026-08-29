@@ -1165,9 +1165,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => '現在のページをインポート';
 
   @override
-  String get schoolWebImportGoBack => '前のページ';
-
-  @override
   String get schoolWebImportLoadingPage => 'ページを読み込み中…';
 
   @override
@@ -2247,4 +2244,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'ワークスペースナビゲーションを展開する';
+
+  @override
+  String get schoolWebImportExitBrowser => 'アプリ内ブラウザを終了';
+
+  @override
+  String get schoolWebImportEditAddress => 'アドレスを編集';
+
+  @override
+  String get schoolWebImportAddressLabel => 'ウェブアドレス';
+
+  @override
+  String get schoolWebImportOpenAddress => '開く';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'ホストを含む HTTP または HTTPS アドレスを入力してください。';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'このウェブページは、このデバイスで開けない新しいウィンドウを要求しました。';
+
+  @override
+  String get schoolWebImportSecureConnection => '安全な接続';
+
+  @override
+  String get schoolWebImportInsecureConnection => '安全でない接続';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => '学校のログインページを開きますか？';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return '学校へのログインでは、フォームやサーバーのリダイレクトを通じて、学校やログインサービス提供元に認証情報が送信される場合があります。Android では、このような送信を毎回停止して移動先を個別に確認することはできません。今回のインポートセッションでこれらを信頼できる場合のみ続行してください：\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle => '安全でない学校ログインを開きますか？';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'この学校ログインは HTTP を使用しています。この接続を監視または改ざんできる第三者に、認証情報やページ内容を読み取られたり変更されたりする可能性があります。次のサイトについてこのリスクを受け入れる場合のみ続行してください：\n\n$origin';
+  }
 }

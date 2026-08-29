@@ -1208,9 +1208,6 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Aktuális oldal importálása';
 
   @override
-  String get schoolWebImportGoBack => 'Előző oldal';
-
-  @override
   String get schoolWebImportLoadingPage => 'Oldal betöltése…';
 
   @override
@@ -2311,4 +2308,48 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Munkaterület-navigáció kibontása';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Beépített böngésző bezárása';
+
+  @override
+  String get schoolWebImportEditAddress => 'Cím szerkesztése';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Webcím';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Megnyitás';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Adjon meg egy gazdagéppel rendelkező HTTP- vagy HTTPS-címet.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Ez a weboldal új ablakot kért, amely nem nyitható meg ezen az eszközön.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Biztonságos kapcsolat';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Nem biztonságos kapcsolat';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Megnyitja az iskolai bejelentkezést?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Az iskolai bejelentkezés űrlapokon vagy szerverátirányításokon keresztül hitelesítő adatokat küldhet az iskolának és bejelentkezési szolgáltatóinak. Az Android nem tud minden ilyen átvitelt külön célmegerősítéshez megállítani. Csak akkor folytassa, ha megbízik bennük ebben az importálási munkamenetben:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Megnyitja a nem biztonságos iskolai bejelentkezést?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Ez az iskolai bejelentkezés HTTP-t használ. Bárki, aki megfigyelheti vagy módosíthatja ezt a kapcsolatot, elolvashatja vagy megváltoztathatja a hitelesítő adatait és az oldal tartalmát. Csak akkor folytassa, ha elfogadja ezt a kockázatot ennél a helynél:\n\n$origin';
+  }
 }

@@ -28,6 +28,22 @@ class _MemoryTimetableStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://sheet-test';
 }
 
+class _SilentNotificationTimetableProvider extends TimetableProvider {
+  _SilentNotificationTimetableProvider({
+    required super.storage,
+    required super.systemLocaleCodeResolver,
+  });
+
+  var suppressNotifications = false;
+
+  @override
+  void notifyListeners() {
+    if (!suppressNotifications) {
+      super.notifyListeners();
+    }
+  }
+}
+
 SchoolImportResponse _buildResponse({
   bool withCourses = true,
   String name = 'Sample',
@@ -81,6 +97,26 @@ Future<TimetableProvider> _createProvider() async {
   return provider;
 }
 
+Future<_SilentNotificationTimetableProvider>
+_createSilentNotificationProvider() async {
+  final provider = _SilentNotificationTimetableProvider(
+    storage: _MemoryTimetableStorage(
+      buildInitialAppData(buildDefaultPeriodTimes()),
+    ),
+    systemLocaleCodeResolver: () => defaultLocaleCode,
+  );
+  await provider.load();
+  return provider;
+}
+
+PeriodTimeSet _extraPeriodTimeSet({required String name}) {
+  return PeriodTimeSet(
+    id: 'fixture-period-set',
+    name: name,
+    periodTimes: buildDefaultPeriodTimes().take(2).toList(),
+  );
+}
+
 Future<void> _pumpPreviewSheet(
   WidgetTester tester, {
   required TimetableProvider provider,
@@ -120,7 +156,6 @@ Future<void> _pumpPreviewSheet(
                       builder: (_) => SchoolWebImportResultSheet(
                         response: response,
                         canReplaceCurrent: canReplaceCurrent,
-                        periodTimeSets: periodTimeSets,
                         initialPeriodTimeSetId: initialPeriodTimeSetId,
                         provider: provider,
                       ),
@@ -518,4 +553,258 @@ void main() {
     expect(find.byType(DatePickerDialog), findsNothing);
     expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
   });
+
+  testWidgets(
+    'existing period-time-set selection stays synchronized with provider mutations',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final initial = provider.periodTimeSets.single;
+      final added = _extraPeriodTimeSet(name: 'Added set');
+      final response = _buildResponse();
+
+      await _pumpPreviewSheet(tester, provider: provider, response: response);
+      await _openPreviewSheet(tester);
+
+      // This response has no bundled set, so the existing-set choice is shown
+      // immediately. Adding a set after the sheet opens must refresh it rather
+      // than keep the old constructor snapshot.
+      final initialSummary = AppLocalizations.of(
+        tester.element(find.byType(SchoolWebImportResultSheet)),
+      ).periodTimeSetSummary(initial.name, initial.periodTimes.length);
+      expect(find.text(initialSummary), findsOneWidget);
+      final created = await provider.addPeriodTimeSet(
+        name: added.name,
+        periodTimes: added.periodTimes,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Added set'), findsNothing);
+      await tester.tap(find.text(initialSummary));
+      await tester.pumpAndSettle();
+      final addedSummary = AppLocalizations.of(
+        tester.element(find.byType(AlertDialog)),
+      ).schoolWebImportPeriodCount(added.periodTimes.length);
+      expect(find.text('Added set'), findsOneWidget);
+      expect(find.text(addedSummary), findsOneWidget);
+
+      await tester.tap(find.text('Added set'));
+      await tester.pumpAndSettle();
+      final addedSheetSummary = AppLocalizations.of(
+        tester.element(find.byType(SchoolWebImportResultSheet)),
+      ).periodTimeSetSummary(added.name, added.periodTimes.length);
+      expect(find.text(addedSheetSummary), findsOneWidget);
+
+      await provider.updatePeriodTimeSet(created.copyWith(name: 'Renamed set'));
+      await tester.pumpAndSettle();
+      final renamedSheetSummary = AppLocalizations.of(
+        tester.element(find.byType(SchoolWebImportResultSheet)),
+      ).periodTimeSetSummary('Renamed set', created.periodTimes.length);
+      expect(find.text(renamedSheetSummary), findsOneWidget);
+
+      // The picker now selected the new set. Deleting it while the preview is
+      // still open repairs the preview selection to a live remaining set.
+      await provider.deletePeriodTimeSet(created.id);
+      await tester.pumpAndSettle();
+      expect(find.text('Added set'), findsNothing);
+      expect(find.text(renamedSheetSummary), findsNothing);
+      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+      expect(provider.periodTimeSetForId(initial.id), isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'rebinds its period-time-set listener when the provider changes',
+    (tester) async {
+      final firstProvider = await _createProvider();
+      final replacementProvider = await _createProvider();
+      addTearDown(firstProvider.dispose);
+      addTearDown(replacementProvider.dispose);
+      final selectedFromFirst = await firstProvider.addPeriodTimeSet(
+        name: 'First provider selection',
+        periodTimes: buildDefaultPeriodTimes().take(2).toList(),
+      );
+      TimetableProvider currentProvider = firstProvider;
+      StateSetter? setHostState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setHostState = setState;
+              return Scaffold(
+                body: SchoolWebImportResultSheet(
+                  response: _buildResponse(),
+                  canReplaceCurrent: false,
+                  initialPeriodTimeSetId: selectedFromFirst.id,
+                  provider: currentProvider,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final firstL10n = _sheetL10n(tester);
+      expect(
+        find.text(
+          firstL10n.periodTimeSetSummary(
+            selectedFromFirst.name,
+            selectedFromFirst.periodTimes.length,
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      setHostState!(() => currentProvider = replacementProvider);
+      await tester.pumpAndSettle();
+
+      final replacementSet = replacementProvider.periodTimeSets.single;
+      final replacementL10n = _sheetL10n(tester);
+      expect(
+        find.text(
+          replacementL10n.periodTimeSetSummary(
+            replacementSet.name,
+            replacementSet.periodTimes.length,
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'discard strategy cannot submit an ID removed after the preview opened',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final initial = provider.periodTimeSets.single;
+      final response = _buildResponse(
+        periodTimeSet: const ImportedPeriodTimeSetDraft(
+          name: 'Bundled periods',
+          periodTimes: [
+            ImportedPeriodTimeDraft(
+              index: 1,
+              startMinutes: 480,
+              endMinutes: 540,
+            ),
+          ],
+        ),
+      );
+      final results = <SchoolImportApplyRequest?>[];
+
+      await _pumpPreviewSheet(
+        tester,
+        provider: provider,
+        response: response,
+        onResult: results.add,
+      );
+      await _openPreviewSheet(tester);
+
+      final l10n = _sheetL10n(tester);
+      await tester.tap(find.text(l10n.discardBundledPeriodTimeSets));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, l10n.importAsNewTimetable),
+            )
+            .onPressed,
+        isNotNull,
+      );
+
+      await provider.deletePeriodTimeSet(initial.id);
+      await tester.pumpAndSettle();
+
+      final importButton = find.widgetWithText(
+        FilledButton,
+        l10n.importAsNewTimetable,
+      );
+      expect(
+        tester.widget<FilledButton>(importButton).onPressed,
+        isNull,
+        reason: 'A deleted target must disable submission instead of leaking its ID.',
+      );
+      await tester.tap(importButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(results, isEmpty);
+      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'repairs a just-removed discard target without closing the preview',
+    (tester) async {
+      final provider = await _createSilentNotificationProvider();
+      addTearDown(provider.dispose);
+      final initial = provider.periodTimeSets.single;
+      final replacement = await provider.addPeriodTimeSet(
+        name: 'Replacement set',
+        periodTimes: buildDefaultPeriodTimes().take(2).toList(),
+      );
+      final results = <SchoolImportApplyRequest?>[];
+      final response = _buildResponse(
+        periodTimeSet: const ImportedPeriodTimeSetDraft(
+          name: 'Bundled periods',
+          periodTimes: [
+            ImportedPeriodTimeDraft(
+              index: 1,
+              startMinutes: 480,
+              endMinutes: 540,
+            ),
+          ],
+        ),
+      );
+
+      await _pumpPreviewSheet(
+        tester,
+        provider: provider,
+        response: response,
+        onResult: results.add,
+      );
+      await _openPreviewSheet(tester);
+
+      final l10n = _sheetL10n(tester);
+      await tester.tap(find.text(l10n.discardBundledPeriodTimeSets));
+      await tester.pumpAndSettle();
+
+      provider.suppressNotifications = true;
+      await provider.deletePeriodTimeSet(initial.id);
+      provider.suppressNotifications = false;
+
+      // Do not rebuild before the tap: this intentionally reproduces the
+      // narrow gap where an already-enabled button sees a deleted target.
+      final importButton = find.widgetWithText(
+        FilledButton,
+        l10n.importAsNewTimetable,
+      );
+      await tester.tap(importButton);
+      await tester.pumpAndSettle();
+
+      expect(results, isEmpty);
+      expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+      expect(
+        find.text(
+          _sheetL10n(tester).periodTimeSetSummary(
+            replacement.name,
+            replacement.periodTimes.length,
+          ),
+        ),
+        findsWidgets,
+      );
+      expect(
+        tester.widget<FilledButton>(importButton).onPressed,
+        isNotNull,
+        reason: 'The repaired selection should leave the preview retryable.',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

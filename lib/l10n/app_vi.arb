@@ -792,8 +792,6 @@
   "@schoolWebImportSchoolLoadFailed": {},
   "schoolWebImportImportCurrentPage": "Nhập trang hiện tại",
   "@schoolWebImportImportCurrentPage": {},
-  "schoolWebImportGoBack": "Trang trước",
-  "@schoolWebImportGoBack": {},
   "schoolWebImportLoadingPage": "Đang tải trang…",
   "@schoolWebImportLoadingPage": {},
   "schoolWebImportParsing": "Phân tích trang hiện tại...",
@@ -1574,5 +1572,37 @@
   "clearAppDataFailed": "Unable to clear all local data. Sked will remain open so you can retry.",
   "@clearAppDataFailed": {},
   "clearAppDataExitFailed": "Your local data was cleared, but Sked could not exit. Close the app manually before using it again.",
-  "@clearAppDataExitFailed": {}
+  "@clearAppDataExitFailed": {},
+  "schoolWebImportExitBrowser": "Thoát trình duyệt trong ứng dụng",
+  "@schoolWebImportExitBrowser": {},
+  "schoolWebImportEditAddress": "Chỉnh sửa địa chỉ",
+  "@schoolWebImportEditAddress": {},
+  "schoolWebImportAddressLabel": "Địa chỉ web",
+  "@schoolWebImportAddressLabel": {},
+  "schoolWebImportOpenAddress": "Mở",
+  "@schoolWebImportOpenAddress": {},
+  "schoolWebImportAddressInvalid": "Nhập địa chỉ HTTP hoặc HTTPS có máy chủ.",
+  "@schoolWebImportAddressInvalid": {},
+  "schoolWebImportNewWindowUnsupported": "Trang web này yêu cầu một cửa sổ mới không thể mở trên thiết bị này.",
+  "@schoolWebImportNewWindowUnsupported": {},
+  "schoolWebImportSecureConnection": "Kết nối bảo mật",
+  "@schoolWebImportSecureConnection": {},
+  "schoolWebImportInsecureConnection": "Kết nối không bảo mật",
+  "@schoolWebImportInsecureConnection": {},
+  "schoolWebImportSignInConsentTitle": "Mở trang đăng nhập của trường?",
+  "@schoolWebImportSignInConsentTitle": {},
+  "schoolWebImportSignInConsentMessage": "Quá trình đăng nhập của trường có thể gửi thông tin xác thực qua biểu mẫu hoặc lệnh chuyển hướng của máy chủ đến trường và các nhà cung cấp đăng nhập. Android không thể tạm dừng mọi lần truyền như vậy để xác nhận riêng từng đích. Chỉ tiếp tục nếu bạn tin cậy các bên này trong phiên nhập này:\n\n{origin}",
+  "@schoolWebImportSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "schoolWebImportInsecureSignInConsentTitle": "Mở trang đăng nhập trường học không an toàn?",
+  "@schoolWebImportInsecureSignInConsentTitle": {},
+  "schoolWebImportInsecureSignInConsentMessage": "Trang đăng nhập trường học này sử dụng HTTP. Bất kỳ ai có thể theo dõi hoặc can thiệp vào kết nối này đều có thể đọc hoặc thay đổi thông tin xác thực và nội dung trang của bạn. Chỉ tiếp tục nếu bạn chấp nhận rủi ro này đối với:\n\n{origin}",
+  "@schoolWebImportInsecureSignInConsentMessage": {
+    "placeholders": {
+      "origin": {}
+    }
+  }
 }

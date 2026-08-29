@@ -2236,12 +2236,6 @@ abstract class AppLocalizations {
   /// **'Import current page'**
   String get schoolWebImportImportCurrentPage;
 
-  /// No description provided for @schoolWebImportGoBack.
-  ///
-  /// In en, this message translates to:
-  /// **'Previous page'**
-  String get schoolWebImportGoBack;
-
   /// No description provided for @schoolWebImportLoadingPage.
   ///
   /// In en, this message translates to:
@@ -4215,6 +4209,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expand workspace navigation'**
   String get expandWorkspaceNavigation;
+
+  /// No description provided for @schoolWebImportExitBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit in-app browser'**
+  String get schoolWebImportExitBrowser;
+
+  /// No description provided for @schoolWebImportEditAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit address'**
+  String get schoolWebImportEditAddress;
+
+  /// No description provided for @schoolWebImportAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Web address'**
+  String get schoolWebImportAddressLabel;
+
+  /// No description provided for @schoolWebImportOpenAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get schoolWebImportOpenAddress;
+
+  /// No description provided for @schoolWebImportAddressInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an HTTP or HTTPS address with a host.'**
+  String get schoolWebImportAddressInvalid;
+
+  /// No description provided for @schoolWebImportNewWindowUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This webpage requested a new window that cannot open on this device.'**
+  String get schoolWebImportNewWindowUnsupported;
+
+  /// No description provided for @schoolWebImportSecureConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure connection'**
+  String get schoolWebImportSecureConnection;
+
+  /// No description provided for @schoolWebImportInsecureConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Insecure connection'**
+  String get schoolWebImportInsecureConnection;
+
+  /// No description provided for @schoolWebImportSignInConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open school sign-in?'**
+  String get schoolWebImportSignInConsentTitle;
+
+  /// No description provided for @schoolWebImportSignInConsentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'School sign-in may submit credentials through forms or server redirects to the school and its sign-in providers. Android cannot pause every such transfer for a separate destination prompt. Continue only if you trust them for this import session:\n\n{origin}'**
+  String schoolWebImportSignInConsentMessage(Object origin);
+
+  /// No description provided for @schoolWebImportInsecureSignInConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open an insecure school sign-in?'**
+  String get schoolWebImportInsecureSignInConsentTitle;
+
+  /// No description provided for @schoolWebImportInsecureSignInConsentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}'**
+  String schoolWebImportInsecureSignInConsentMessage(Object origin);
 }
 
 class _AppLocalizationsDelegate

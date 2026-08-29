@@ -1219,9 +1219,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importer la page actuelle';
 
   @override
-  String get schoolWebImportGoBack => 'Page précédente';
-
-  @override
   String get schoolWebImportLoadingPage => 'Chargement de la page…';
 
   @override
@@ -2323,4 +2320,48 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get expandWorkspaceNavigation =>
       'Développer la navigation de l’espace de travail';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Quitter le navigateur intégré';
+
+  @override
+  String get schoolWebImportEditAddress => 'Modifier l’adresse';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Adresse web';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Ouvrir';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Saisissez une adresse HTTP ou HTTPS avec un hôte.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Cette page web a demandé une nouvelle fenêtre qui ne peut pas s’ouvrir sur cet appareil.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Connexion sécurisée';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Connexion non sécurisée';
+
+  @override
+  String get schoolWebImportSignInConsentTitle =>
+      'Ouvrir la connexion à l’établissement ?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'La connexion à l’établissement peut envoyer des identifiants au moyen de formulaires ou de redirections du serveur vers l’établissement et ses fournisseurs de connexion. Android ne peut pas interrompre chaque transfert de ce type pour demander une confirmation distincte de la destination. Continuez uniquement si vous leur faites confiance pour cette session d’importation :\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Ouvrir une connexion scolaire non sécurisée ?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Cette connexion scolaire utilise HTTP. Toute personne capable d’observer ou de modifier cette connexion peut lire ou changer vos identifiants et le contenu de la page. Continuez uniquement si vous acceptez ce risque pour :\n\n$origin';
+  }
 }

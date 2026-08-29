@@ -1191,9 +1191,6 @@ class AppLocalizationsDa extends AppLocalizations {
   String get schoolWebImportImportCurrentPage => 'Importer nuværende side';
 
   @override
-  String get schoolWebImportGoBack => 'Forrige side';
-
-  @override
   String get schoolWebImportLoadingPage => 'Indlæser side…';
 
   @override
@@ -2291,4 +2288,47 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get expandWorkspaceNavigation => 'Udvid arbejdsområdenavigation';
+
+  @override
+  String get schoolWebImportExitBrowser => 'Afslut indbygget browser';
+
+  @override
+  String get schoolWebImportEditAddress => 'Rediger adresse';
+
+  @override
+  String get schoolWebImportAddressLabel => 'Webadresse';
+
+  @override
+  String get schoolWebImportOpenAddress => 'Åbn';
+
+  @override
+  String get schoolWebImportAddressInvalid =>
+      'Indtast en HTTP- eller HTTPS-adresse med en vært.';
+
+  @override
+  String get schoolWebImportNewWindowUnsupported =>
+      'Denne webside anmodede om et nyt vindue, som ikke kan åbnes på denne enhed.';
+
+  @override
+  String get schoolWebImportSecureConnection => 'Sikker forbindelse';
+
+  @override
+  String get schoolWebImportInsecureConnection => 'Usikker forbindelse';
+
+  @override
+  String get schoolWebImportSignInConsentTitle => 'Åbn skolens login?';
+
+  @override
+  String schoolWebImportSignInConsentMessage(Object origin) {
+    return 'Skolens login kan sende legitimationsoplysninger via formularer eller serveromdirigeringer til skolen og dens loginudbydere. Android kan ikke sætte hver sådan overførsel på pause for at vise en særskilt destinationsbekræftelse. Fortsæt kun, hvis du har tillid til dem i denne importsession:\n\n$origin';
+  }
+
+  @override
+  String get schoolWebImportInsecureSignInConsentTitle =>
+      'Åbn et usikkert skolelogin?';
+
+  @override
+  String schoolWebImportInsecureSignInConsentMessage(Object origin) {
+    return 'Dette skolelogin bruger HTTP. Enhver, der kan overvåge eller ændre forbindelsen, kan læse eller ændre dine loginoplysninger og sidens indhold. Fortsæt kun, hvis du accepterer denne risiko for:\n\n$origin';
+  }
 }
