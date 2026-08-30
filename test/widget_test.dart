@@ -15,6 +15,7 @@ import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/school_html_import_page.dart';
+import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
@@ -1824,7 +1825,14 @@ void main() {
       final messages = capturedBody['messages'] as List<dynamic>;
       final userPrompt =
           (messages.last as Map<String, dynamic>)['content'] as String;
-      expect(jsonDecode(userPrompt)['sourceHint'], 'legacy');
+      final userPromptJson = jsonDecode(userPrompt) as Map<String, dynamic>;
+      expect(userPromptJson['sourceHint'], 'legacy');
+      expect(userPromptJson['outputLanguageCode'], 'zh');
+      expect(userPromptJson['outputLanguage'], 'Chinese (Simplified)');
+      expect(
+        userPromptJson['outputLanguageInstruction'],
+        contains('meta.warnings'),
+      );
       expect(result.response.meta.parser, 'custom-openai:gpt-4.1-mini');
       expect(
         result.response.timetable.courses.first.customFields['qqGroup'],
@@ -2682,7 +2690,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('解析完成'), findsOneWidget);
+      expect(find.byType(SchoolImportParsePage), findsOneWidget);
+      expect(find.text('解析完成'), findsNothing);
       final importAsNewText = find.text('作为新课表导入');
       await tester.ensureVisible(importAsNewText);
       await tester.tap(importAsNewText);
@@ -2766,7 +2775,8 @@ void main() {
       await tester.tap(submitButton);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('解析完成'), findsOneWidget);
+      expect(find.byType(SchoolImportParsePage), findsOneWidget);
+      expect(find.text('解析完成'), findsNothing);
       final importAsNewText = find.text('作为新课表导入');
       expect(find.byType(AlertDialog), findsNothing);
       expect(importAsNewText, findsOneWidget);

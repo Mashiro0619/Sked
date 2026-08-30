@@ -52,6 +52,22 @@
   "@schoolImportParsePageExpandRaw": {},
   "schoolImportParsePageCollapseRaw": "收起原始解析内容",
   "@schoolImportParsePageCollapseRaw": {},
+  "schoolImportExpandWarnings": "展开导入提示",
+  "@schoolImportExpandWarnings": {},
+  "schoolImportCollapseWarnings": "收起导入提示",
+  "@schoolImportCollapseWarnings": {},
+  "schoolImportTotalWeeksTooShort": "解析结果包含第 {week} 周的课程",
+  "@schoolImportTotalWeeksTooShort": {
+    "placeholders": {
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "replaceCurrentTimetableConfirmTitle": "确认覆盖当前课表？",
+  "@replaceCurrentTimetableConfirmTitle": {},
+  "replaceCurrentTimetableConfirmMessage": "导入的课表将覆盖当前课表。",
+  "@replaceCurrentTimetableConfirmMessage": {},
   "createTimetable": "新建课表",
   "@createTimetable": {},
   "jumpToWeek": "快捷跳转周数",

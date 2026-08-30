@@ -228,6 +228,10 @@ void main() {
     expect(tester.getRect(primaryAction).bottom, lessThanOrEqualTo(568));
     expect(tester.getRect(primaryAction).height, greaterThanOrEqualTo(48));
     expect(tester.getRect(cancelAction).height, greaterThanOrEqualTo(48));
+    final warningsTitle = find.text(l10n.schoolWebImportWarnings);
+    await tester.ensureVisible(warningsTitle);
+    await tester.tap(warningsTitle);
+    await tester.pumpAndSettle();
     expect(
       find.text(
         'Another warning intentionally contains enough content to exercise line wrapping at two times text scale.',
@@ -306,6 +310,58 @@ void main() {
     expect(replaceRect.bottom, lessThanOrEqualTo(cancelRect.top));
     expect(replaceRect.left, greaterThanOrEqualTo(0));
     expect(replaceRect.right, lessThanOrEqualTo(320));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('replace action confirms before closing the preview', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    final results = <SchoolImportApplyRequest?>[];
+    await _pumpPreviewSheet(
+      tester,
+      provider: provider,
+      response: _buildResponse(),
+      canReplaceCurrent: true,
+      onResult: results.add,
+    );
+    await _openPreviewSheet(tester);
+
+    final l10n = _sheetL10n(tester);
+    final replace = find.widgetWithText(
+      OutlinedButton,
+      l10n.replaceCurrentTimetable,
+    );
+    await tester.tap(replace);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.text(l10n.replaceCurrentTimetableConfirmMessage),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(TextButton, l10n.cancel),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+    expect(results, isEmpty);
+
+    await tester.tap(replace);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, l10n.confirm),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(results, hasLength(1));
+    expect(results.single?.mode, TimetableImportMode.replaceActive);
     expect(tester.takeException(), isNull);
   });
 

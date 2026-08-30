@@ -6,6 +6,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
+import 'expressive_dialog.dart';
 import 'period_time_set_picker_dialog.dart';
 
 class SchoolWebImportResultSheet extends StatefulWidget {
@@ -34,6 +35,7 @@ class _SchoolWebImportResultSheetState
   late String _selectedPeriodTimeSetId;
   late bool _importBundledPeriodTimeSet;
   bool _detailsExpanded = false;
+  bool _replaceConfirmationOpen = false;
   bool _hasPopped = false;
   bool _pickerOpen = false;
 
@@ -55,7 +57,7 @@ class _SchoolWebImportResultSheetState
       widget.response.meta.pageTitle.trim().isNotEmpty ||
       widget.response.meta.parser.trim().isNotEmpty;
 
-  bool get _blocked => _hasPopped || _pickerOpen;
+  bool get _blocked => _hasPopped || _pickerOpen || _replaceConfirmationOpen;
 
   @override
   void initState() {
@@ -205,7 +207,7 @@ class _SchoolWebImportResultSheetState
             ? () => _submit(TimetableImportMode.addAsNew)
             : null,
         onReplace: _canSubmitImport && !_hasPopped
-            ? () => _submit(TimetableImportMode.replaceActive)
+            ? _confirmAndSubmitReplacement
             : null,
       ),
       child: FocusScope(
@@ -353,7 +355,7 @@ class _SchoolWebImportResultSheetState
   }
 
   void _submit(TimetableImportMode mode) {
-    if (_hasPopped) {
+    if (_hasPopped || _blocked) {
       return;
     }
     final selectedPeriodTimeSet = _selectedExistingPeriodTimeSet();
@@ -385,6 +387,48 @@ class _SchoolWebImportResultSheetState
             : selectedPeriodTimeSet!.id,
       ),
     );
+  }
+
+  Future<void> _confirmAndSubmitReplacement() async {
+    if (_hasPopped ||
+        _blocked ||
+        !_canSubmitImport ||
+        !widget.canReplaceCurrent) {
+      return;
+    }
+    setState(() => _replaceConfirmationOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showExpressiveDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        waitForTransitionComplete: true,
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return AlertDialog(
+            title: Text(l10n.replaceCurrentTimetableConfirmTitle),
+            content: Text(l10n.replaceCurrentTimetableConfirmMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _replaceConfirmationOpen = false);
+      }
+    }
+    if (confirmed == true && mounted && !_hasPopped) {
+      _submit(TimetableImportMode.replaceActive);
+    }
   }
 
   void _cancel() {
@@ -786,40 +830,104 @@ class _ParserDetailRow extends StatelessWidget {
   }
 }
 
-class _ImportWarningsGroup extends StatelessWidget {
+class _ImportWarningsGroup extends StatefulWidget {
   const _ImportWarningsGroup({required this.title, required this.warnings});
 
   final String title;
   final List<String> warnings;
 
   @override
+  State<_ImportWarningsGroup> createState() => _ImportWarningsGroupState();
+}
+
+class _ImportWarningsGroupState extends State<_ImportWarningsGroup> {
+  var _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final motion = SkedMotionPolicy.of(context);
+    final duration = motion.spatialAnimationsEnabled
+        ? motion.effects(SkedMotionSpeed.fast)
+        : Duration.zero;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, color: colors.onSurfaceVariant),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: colors.onSurface,
+          Semantics(
+            button: true,
+            expanded: _expanded,
+            hint: _expanded
+                ? l10n.schoolImportCollapseWarnings
+                : l10n.schoolImportExpandWarnings,
+            child: Material(
+              color: Colors.transparent,
+              child: Ink(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _expanded = !_expanded),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: colors.error,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: colors.onSurface,
+                              ),
+                            ),
+                          ),
+                          AnimatedRotation(
+                            turns: _expanded ? 0.5 : 0,
+                            duration: duration,
+                            curve: motion.scheme.enterCurve,
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 6),
-          for (var index = 0; index < warnings.length; index++) ...[
-            if (index > 0) const SizedBox(height: 6),
-            _ImportWarningRow(message: warnings[index]),
-          ],
+          AnimatedSize(
+            duration: duration,
+            curve: motion.scheme.enterCurve,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (
+                          var index = 0;
+                          index < widget.warnings.length;
+                          index++
+                        ) ...[
+                          if (index > 0) const SizedBox(height: 6),
+                          _ImportWarningRow(message: widget.warnings[index]),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

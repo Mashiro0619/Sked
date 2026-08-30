@@ -67,6 +67,25 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => 'Nyers válasz összecsukása';
 
   @override
+  String get schoolImportExpandWarnings => 'Expand import warnings';
+
+  @override
+  String get schoolImportCollapseWarnings => 'Collapse import warnings';
+
+  @override
+  String schoolImportTotalWeeksTooShort(int week) {
+    return 'Some courses continue through week $week.';
+  }
+
+  @override
+  String get replaceCurrentTimetableConfirmTitle =>
+      'Replace current timetable?';
+
+  @override
+  String get replaceCurrentTimetableConfirmMessage =>
+      'The imported timetable will replace the current timetable.';
+
+  @override
   String get createTimetable => 'Új menetrend';
 
   @override

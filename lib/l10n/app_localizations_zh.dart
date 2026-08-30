@@ -67,6 +67,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolImportParsePageCollapseRaw => '收起原始解析内容';
 
   @override
+  String get schoolImportExpandWarnings => '展开导入提示';
+
+  @override
+  String get schoolImportCollapseWarnings => '收起导入提示';
+
+  @override
+  String schoolImportTotalWeeksTooShort(int week) {
+    return '解析结果包含第 $week 周的课程';
+  }
+
+  @override
+  String get replaceCurrentTimetableConfirmTitle => '确认覆盖当前课表？';
+
+  @override
+  String get replaceCurrentTimetableConfirmMessage => '导入的课表将覆盖当前课表。';
+
+  @override
   String get createTimetable => '新建课表';
 
   @override
@@ -2307,6 +2324,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolImportParsePageCollapseRaw => '收起原始解析內容';
+
+  @override
+  String get schoolImportExpandWarnings => '展開匯入提示';
+
+  @override
+  String get schoolImportCollapseWarnings => '收起匯入提示';
+
+  @override
+  String schoolImportTotalWeeksTooShort(int week) {
+    return '解析結果包含第 $week 週的課程';
+  }
+
+  @override
+  String get replaceCurrentTimetableConfirmTitle => '確認覆蓋目前課表？';
+
+  @override
+  String get replaceCurrentTimetableConfirmMessage => '匯入的課表將覆蓋目前課表。';
 
   @override
   String get createTimetable => '新建課表';

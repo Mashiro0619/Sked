@@ -247,6 +247,36 @@ abstract class AppLocalizations {
   /// **'Collapse raw parsed content'**
   String get schoolImportParsePageCollapseRaw;
 
+  /// No description provided for @schoolImportExpandWarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand import warnings'**
+  String get schoolImportExpandWarnings;
+
+  /// No description provided for @schoolImportCollapseWarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse import warnings'**
+  String get schoolImportCollapseWarnings;
+
+  /// No description provided for @schoolImportTotalWeeksTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Some courses continue through week {week}.'**
+  String schoolImportTotalWeeksTooShort(int week);
+
+  /// No description provided for @replaceCurrentTimetableConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace current timetable?'**
+  String get replaceCurrentTimetableConfirmTitle;
+
+  /// No description provided for @replaceCurrentTimetableConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The imported timetable will replace the current timetable.'**
+  String get replaceCurrentTimetableConfirmMessage;
+
   /// No description provided for @createTimetable.
   ///
   /// In en, this message translates to:

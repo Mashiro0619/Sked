@@ -52,6 +52,22 @@
   "@schoolImportParsePageExpandRaw": {},
   "schoolImportParsePageCollapseRaw": "Recolher resposta bruta",
   "@schoolImportParsePageCollapseRaw": {},
+  "schoolImportExpandWarnings": "Expand import warnings",
+  "@schoolImportExpandWarnings": {},
+  "schoolImportCollapseWarnings": "Collapse import warnings",
+  "@schoolImportCollapseWarnings": {},
+  "schoolImportTotalWeeksTooShort": "Some courses continue through week {week}.",
+  "@schoolImportTotalWeeksTooShort": {
+    "placeholders": {
+      "week": {
+        "type": "int"
+      }
+    }
+  },
+  "replaceCurrentTimetableConfirmTitle": "Replace current timetable?",
+  "@replaceCurrentTimetableConfirmTitle": {},
+  "replaceCurrentTimetableConfirmMessage": "The imported timetable will replace the current timetable.",
+  "@replaceCurrentTimetableConfirmMessage": {},
   "createTimetable": "Novo horário",
   "@createTimetable": {},
   "jumpToWeek": "Ir para a semana",

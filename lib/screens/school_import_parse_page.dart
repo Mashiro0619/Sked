@@ -10,6 +10,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/school_import_api.dart';
 import '../theme/sked_expressive_theme.dart';
+import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import 'school_import_result_editor_page.dart';
@@ -96,10 +97,12 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
   String? _error;
   bool _isDone = false;
   bool _isOpeningEditor = false;
+  bool _replaceConfirmationOpen = false;
   bool _hasPopped = false;
-  bool _rawExpanded = false;
+  bool _warningsExpanded = false;
   bool _hasFailed = false;
   bool _followOutput = true;
+  bool _scrollAnimationActive = false;
   double _lastUserScrollPixels = 0;
   bool _hasUserScrollBaseline = false;
   DateTime? _startDate;
@@ -113,7 +116,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
       _rawText.trim().isNotEmpty &&
       _rawText.length <= widget.maxEditableCodeUnits;
 
-  bool get _isBusy => _isOpeningEditor;
+  bool get _isBusy => _isOpeningEditor || _replaceConfirmationOpen;
 
   bool get _hasDirectImportConfiguration => widget.provider != null;
 
@@ -134,6 +137,27 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
       _response?.timetable.courses.isNotEmpty == true &&
       (_importBundledPeriodTimeSet || _selectedExistingPeriodTimeSet != null);
 
+  int get _maxParsedCourseWeek {
+    var maximum = 0;
+    for (final course in _response?.timetable.courses ?? const []) {
+      for (final week in course.semesterWeeks) {
+        if (week > maximum) maximum = week;
+      }
+    }
+    return maximum;
+  }
+
+  int? get _enteredTotalWeeks {
+    final text = _totalWeeksController?.text.trim() ?? '';
+    return int.tryParse(text);
+  }
+
+  bool get _totalWeeksTooShort {
+    final entered = _enteredTotalWeeks;
+    final maximum = _maxParsedCourseWeek;
+    return entered != null && maximum > 0 && entered < maximum;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -153,6 +177,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
   void _handleEvent(SchoolImportStreamEvent event) {
     if (!mounted || _hasPopped || _hasFailed || _isDone) return;
     final wasAtBottom = _isAtBottom();
+    final shouldAlignDone =
+        _followOutput && (wasAtBottom || !_hasUserScrollBaseline);
     switch (event) {
       case ParseDelta(:final text):
         _textBuffer.write(text);
@@ -180,7 +206,11 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
       _followOutput = true;
     }
     setState(() {});
-    _scrollToBottom();
+    if (_isDone && shouldAlignDone) {
+      _alignDoneContentToBottom();
+    } else {
+      _scrollToBottom();
+    }
   }
 
   @override
@@ -188,6 +218,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     unawaited(_cancelSubscription());
     widget.provider?.removeListener(_handlePeriodTimeSetsChanged);
     _nameController?.removeListener(_handleImportNameChanged);
+    _totalWeeksController?.removeListener(_handleTotalWeeksChanged);
     _nameController?.dispose();
     _totalWeeksController?.dispose();
     _scrollController.dispose();
@@ -202,12 +233,13 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     final previousBundledChoice = _importBundledPeriodTimeSet;
     _nameController?.removeListener(_handleImportNameChanged);
     _nameController?.dispose();
+    _totalWeeksController?.removeListener(_handleTotalWeeksChanged);
     _totalWeeksController?.dispose();
     _nameController = TextEditingController(text: response.timetable.name)
       ..addListener(_handleImportNameChanged);
     _totalWeeksController = TextEditingController(
       text: response.timetable.totalWeeks.toString(),
-    );
+    )..addListener(_handleTotalWeeksChanged);
     _startDate = normalizeDateOnly(response.timetable.startDate);
     _selectedPeriodTimeSetId = _resolvedPeriodTimeSetId(
       preservePeriodChoice
@@ -220,6 +252,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
   }
 
   void _handleImportNameChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleTotalWeeksChanged() {
     if (mounted) setState(() {});
   }
 
@@ -308,18 +344,64 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted ||
-          !_scrollController.hasClients ||
-          _isDone ||
-          !_followOutput) {
+    var retriesRemaining = 8;
+
+    void settle(Duration _) {
+      if (!mounted || !_scrollController.hasClients || !_followOutput) {
         return;
       }
-      unawaited(_animateScrollToBottom());
-    });
+      final position = _scrollController.position;
+      // A stream event can arrive before the new preview text has laid out.
+      // Retry a few frames so the first chunk is followed as reliably as
+      // later chunks, without making the user wait for a manual scroll.
+      if (position.maxScrollExtent > position.pixels + _followResumeTolerance &&
+          !_scrollAnimationActive) {
+        unawaited(_animateScrollToBottom());
+      }
+      if (retriesRemaining-- > 0) {
+        WidgetsBinding.instance.addPostFrameCallback(settle);
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback(settle);
+  }
+
+  /// The completed result replaces a streamed preview with a different
+  /// amount of content and also adds the result actions. If the user was
+  /// following the stream, settle the new layout at its actual bottom after
+  /// the switcher and footer have laid out. A few frames are enough for both
+  /// the normal route and reduced-motion transitions without disturbing users
+  /// who intentionally scrolled away from the end.
+  void _alignDoneContentToBottom() {
+    var framesRemaining = 24;
+
+    void align(_) {
+      if (!mounted ||
+          !_isDone ||
+          !_followOutput ||
+          !_scrollController.hasClients) {
+        return;
+      }
+      final position = _scrollController.position;
+      final target = position.maxScrollExtent;
+      if ((position.pixels - target).abs() > _followResumeTolerance) {
+        try {
+          position.jumpTo(target);
+        } catch (_) {
+          return;
+        }
+      }
+      if (framesRemaining-- > 0) {
+        WidgetsBinding.instance.addPostFrameCallback(align);
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback(align);
   }
 
   Future<void> _animateScrollToBottom() async {
+    if (_scrollAnimationActive) return;
+    _scrollAnimationActive = true;
     try {
       await _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -328,6 +410,8 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
       );
     } catch (_) {
       // The controller can be detached while a route is being dismissed.
+    } finally {
+      _scrollAnimationActive = false;
     }
   }
 
@@ -513,11 +597,54 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     );
   }
 
+  Future<void> _confirmAndSubmitReplacement() async {
+    if (_hasPopped ||
+        _isBusy ||
+        !_isDone ||
+        !_canSubmitConfiguredImport ||
+        !widget.canReplaceCurrent) {
+      return;
+    }
+    setState(() => _replaceConfirmationOpen = true);
+    bool? confirmed;
+    try {
+      confirmed = await showExpressiveDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        waitForTransitionComplete: true,
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return AlertDialog(
+            title: Text(l10n.replaceCurrentTimetableConfirmTitle),
+            content: Text(l10n.replaceCurrentTimetableConfirmMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _replaceConfirmationOpen = false);
+      }
+    }
+    if (!mounted) return;
+    if (confirmed == true && !_hasPopped) {
+      _submitConfiguredImport(TimetableImportMode.replaceActive);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final motion = SkedMotionPolicy.of(context);
 
     return PopScope<void>(
       canPop: false,
@@ -569,15 +696,12 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
                         const SizedBox(height: 16),
                         _buildRawPreview(context, l10n),
                       ],
-                      if (_isDone) ...[
-                        const SizedBox(height: 16),
-                        _buildRawDisclosure(context, l10n, motion),
-                      ],
                     ],
                   ),
                 ),
               ),
-              _buildActions(context, l10n, theme),
+              if (_isDone && _response != null && !_hasPopped)
+                _buildActions(context, l10n, theme),
             ],
           ),
         ),
@@ -672,19 +796,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: colors.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                l10n.schoolImportParsePageComplete,
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
         Material(
           color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
@@ -749,19 +860,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: colors.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                l10n.schoolImportParsePageComplete,
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
         FocusScope(
           canRequestFocus: !_pickerOpen && !_hasPopped,
           child: IgnorePointer(
@@ -796,18 +894,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
                     );
                     final weeks = weeksController == null
                         ? const SizedBox.shrink()
-                        : TextField(
-                            key: const ValueKey(
-                              'school-import-parse-total-weeks',
-                            ),
-                            controller: weeksController,
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.done,
-                            decoration: InputDecoration(
-                              labelText: l10n.totalWeeks,
-                              prefixIcon: const Icon(Icons.date_range_outlined),
-                            ),
-                          );
+                        : _buildTotalWeeksField(context, l10n, weeksController);
                     if (!inline) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -926,6 +1013,38 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     );
   }
 
+  Widget _buildTotalWeeksField(
+    BuildContext context,
+    AppLocalizations l10n,
+    TextEditingController controller,
+  ) {
+    final warning = _totalWeeksTooShort;
+    final warningText = warning
+        ? l10n.schoolImportTotalWeeksTooShort(_maxParsedCourseWeek)
+        : null;
+    final colors = Theme.of(context).colorScheme;
+    return TextField(
+      key: const ValueKey('school-import-parse-total-weeks'),
+      controller: controller,
+      keyboardType: TextInputType.number,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        labelText: l10n.totalWeeks,
+        prefixIcon: const Icon(Icons.date_range_outlined),
+        suffixIcon: warning
+            ? Tooltip(
+                message: warningText ?? '',
+                child: Semantics(
+                  label: warningText ?? '',
+                  liveRegion: true,
+                  child: Icon(Icons.warning_amber_rounded, color: colors.error),
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+
   String _bundledPeriodTimeSetName() {
     final bundledName = _response?.timetable.periodTimeSet.name.trim() ?? '';
     if (bundledName.isNotEmpty) return bundledName;
@@ -944,49 +1063,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
   ) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.schoolWebImportWarnings,
-              style: theme.textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
-            for (var index = 0; index < warnings.length; index++) ...[
-              if (index > 0) const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 7),
-                    child: Icon(
-                      Icons.circle,
-                      size: 6,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(warnings[index])),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRawDisclosure(
-    BuildContext context,
-    AppLocalizations l10n,
-    SkedMotionPolicy motion,
-  ) {
-    final colors = Theme.of(context).colorScheme;
+    final motion = SkedMotionPolicy.of(context);
     final duration = motion.spatialAnimationsEnabled
         ? motion.effects(SkedMotionSpeed.fast)
         : Duration.zero;
@@ -998,26 +1075,29 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
         children: [
           Semantics(
             button: true,
-            expanded: _rawExpanded,
-            hint: _rawExpanded
-                ? l10n.schoolImportParsePageCollapseRaw
-                : l10n.schoolImportParsePageExpandRaw,
+            expanded: _warningsExpanded,
+            hint: _warningsExpanded
+                ? l10n.schoolImportCollapseWarnings
+                : l10n.schoolImportExpandWarnings,
             child: InkWell(
-              onTap: () => setState(() => _rawExpanded = !_rawExpanded),
-              borderRadius: BorderRadius.circular(16),
+              onTap: () =>
+                  setState(() => _warningsExpanded = !_warningsExpanded),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 52),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Row(
                     children: [
-                      Icon(Icons.data_object_outlined, color: colors.primary),
+                      Icon(Icons.warning_amber_rounded, color: colors.error),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(l10n.schoolImportParsePageRawContent),
+                        child: Text(
+                          l10n.schoolWebImportWarnings,
+                          style: theme.textTheme.titleSmall,
+                        ),
                       ),
                       AnimatedRotation(
-                        turns: _rawExpanded ? 0.5 : 0,
+                        turns: _warningsExpanded ? 0.5 : 0,
                         duration: duration,
                         child: const Icon(Icons.keyboard_arrow_down),
                       ),
@@ -1031,10 +1111,36 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
             duration: duration,
             curve: motion.scheme.enterCurve,
             alignment: Alignment.topCenter,
-            child: _rawExpanded
+            child: _warningsExpanded
                 ? Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                    child: _buildRawPreview(context, l10n, embedded: true),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (
+                          var index = 0;
+                          index < warnings.length;
+                          index++
+                        ) ...[
+                          if (index > 0) const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 7),
+                                child: Icon(
+                                  Icons.circle,
+                                  size: 6,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text(warnings[index])),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -1043,25 +1149,17 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     );
   }
 
-  Widget _buildRawPreview(
-    BuildContext context,
-    AppLocalizations l10n, {
-    bool embedded = false,
-  }) {
+  Widget _buildRawPreview(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final text = embedded && _rawText.isNotEmpty
-        ? _rawText
-        : _previewText.isNotEmpty
+    final text = _previewText.isNotEmpty
         ? _previewText
         : l10n.schoolImportParsePageParsing;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: embedded
-            ? colors.surfaceContainerHighest
-            : colors.surfaceContainerLow,
+        color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: SelectableText(
@@ -1079,115 +1177,101 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    final compact =
-        MediaQuery.sizeOf(context).width < 600 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.3;
-    final canContinue = _isDone && _response != null && !_hasPopped && !_isBusy;
-    final canEdit = _canEdit && !_hasPopped && !_isBusy;
-    final cancel = TextButton(
-      onPressed: _hasPopped ? null : () => unawaited(_cancelAndPop()),
-      style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-      child: Text(l10n.cancel),
-    );
-    final edit = OutlinedButton(
-      onPressed: canEdit ? _openEditor : null,
-      style: OutlinedButton.styleFrom(minimumSize: const Size(64, 48)),
-      child: Text(l10n.schoolImportResultEditorTitle),
-    );
-    final continueButton = FilledButton(
-      onPressed: canContinue ? _continueImport : null,
-      style: FilledButton.styleFrom(minimumSize: const Size(64, 48)),
-      child: Text(l10n.schoolImportParsePageContinue),
-    );
-    if (_hasDirectImportConfiguration) {
-      final canSubmit = _canSubmitConfiguredImport && !_hasPopped && !_isBusy;
-      final addAsNew = FilledButton(
-        onPressed: canSubmit
-            ? () => _submitConfiguredImport(TimetableImportMode.addAsNew)
-            : null,
-        style: FilledButton.styleFrom(minimumSize: const Size(64, 48)),
-        child: Text(l10n.importAsNewTimetable),
-      );
-      final replace = OutlinedButton(
-        onPressed: canSubmit && widget.canReplaceCurrent
-            ? () => _submitConfiguredImport(TimetableImportMode.replaceActive)
-            : null,
-        style: OutlinedButton.styleFrom(minimumSize: const Size(64, 48)),
-        child: Text(l10n.replaceCurrentTimetable),
-      );
-      return Material(
-        color: theme.colorScheme.surface,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: compact
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(width: double.infinity, child: addAsNew),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Wrap(
-                          alignment: WrapAlignment.end,
-                          spacing: 4,
-                          runSpacing: 0,
-                          children: [
-                            edit,
-                            if (widget.canReplaceCurrent) replace,
-                            cancel,
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : Align(
-                    alignment: Alignment.centerRight,
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 8,
-                      runSpacing: 0,
-                      children: [
-                        cancel,
-                        edit,
-                        if (widget.canReplaceCurrent) replace,
-                        addAsNew,
-                      ],
-                    ),
-                  ),
-          ),
-        ),
-      );
-    }
-    return Material(
-      color: theme.colorScheme.surface,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: compact
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use the actual footer constraint so IME and route animations cannot
+        // select a layout from a stale window-size snapshot.
+        final availableWidth = constraints.maxWidth;
+        final compact =
+            availableWidth < 600 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.3;
+        final canEdit = _canEdit && !_hasPopped && !_isBusy;
+        final edit = OutlinedButton(
+          onPressed: canEdit ? _openEditor : null,
+          style: OutlinedButton.styleFrom(minimumSize: const Size(64, 48)),
+          child: Text(l10n.schoolImportResultEditorTitle),
+        );
+
+        final Widget content;
+        if (_hasDirectImportConfiguration) {
+          final canSubmit =
+              _canSubmitConfiguredImport && !_hasPopped && !_isBusy;
+          final addAsNew = FilledButton(
+            onPressed: canSubmit
+                ? () => _submitConfiguredImport(TimetableImportMode.addAsNew)
+                : null,
+            style: FilledButton.styleFrom(minimumSize: const Size(64, 48)),
+            child: Text(l10n.importAsNewTimetable),
+          );
+          final replace = OutlinedButton(
+            onPressed: canSubmit && widget.canReplaceCurrent
+                ? _confirmAndSubmitReplacement
+                : null,
+            style: OutlinedButton.styleFrom(minimumSize: const Size(64, 48)),
+            child: Text(l10n.replaceCurrentTimetable),
+          );
+          content = compact
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (_isDone) ...[
+                    SizedBox(width: double.infinity, child: addAsNew),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 4,
+                        runSpacing: 0,
+                        children: [edit, if (widget.canReplaceCurrent) replace],
+                      ),
+                    ),
+                  ],
+                )
+              : Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 0,
+                    children: [
                       edit,
-                      const SizedBox(height: 4),
-                      SizedBox(width: double.infinity, child: continueButton),
+                      if (widget.canReplaceCurrent) replace,
+                      addAsNew,
                     ],
-                    Align(alignment: Alignment.centerRight, child: cancel),
+                  ),
+                );
+        } else {
+          final continueButton = FilledButton(
+            onPressed: _hasPopped || _isBusy ? null : _continueImport,
+            style: FilledButton.styleFrom(minimumSize: const Size(64, 48)),
+            child: Text(l10n.schoolImportParsePageContinue),
+          );
+          content = compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    edit,
+                    const SizedBox(height: 4),
+                    SizedBox(width: double.infinity, child: continueButton),
                   ],
                 )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    cancel,
-                    if (_isDone) ...[const SizedBox(width: 8), edit],
-                    if (_isDone) ...[const SizedBox(width: 8), continueButton],
-                  ],
-                ),
-        ),
-      ),
+                  children: [edit, const SizedBox(width: 8), continueButton],
+                );
+        }
+
+        return Material(
+          color: theme.colorScheme.surface,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: content,
+            ),
+          ),
+        );
+      },
     );
   }
 
