@@ -16,8 +16,10 @@ import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../services/agenda_coordinator.dart';
 import '../services/app_update_coordinator.dart';
 import '../services/app_data_clear_coordinator.dart';
+import '../services/agenda_notification_service.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/import_export_service.dart';
@@ -33,6 +35,7 @@ import '../widgets/ui_command.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
+import 'notification_settings_page.dart';
 import 'school_html_import_page.dart';
 import 'school_import_parser_settings_page.dart';
 import 'settings_data_transfer_controller.dart';
@@ -64,6 +67,7 @@ enum _SettingsFlow {
   themeSettingsPage,
   timetableDisplaySettingsPage,
   generalDisplaySettingsPage,
+  notificationSettingsPage,
   languageSettingsPage,
   studentDataActions,
   generalDataActions,
@@ -85,11 +89,13 @@ class SettingsPage extends StatefulWidget {
     this.packageInfoLoader,
     this.dataClearCoordinator,
     this.urlLauncher,
+    this.notificationService,
   });
 
   final Future<PackageInfo> Function()? packageInfoLoader;
   final AppDataClearCoordinator? dataClearCoordinator;
   final SettingsUrlLauncher? urlLauncher;
+  final AgendaNotificationService? notificationService;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -105,8 +111,21 @@ class _SettingsPageState extends State<SettingsPage> {
   final Set<_SettingsFlow> _openFlows = <_SettingsFlow>{};
   bool _clearingAppData = false;
 
-  AppDataClearCoordinator get _dataClearCoordinator =>
-      widget.dataClearCoordinator ?? AppDataClearCoordinator();
+  AppDataClearCoordinator get _dataClearCoordinator {
+    final coordinator = widget.dataClearCoordinator;
+    if (coordinator != null) return coordinator;
+    return AppDataClearCoordinator(agendaCoordinator: _agendaCoordinator);
+  }
+
+  AgendaCoordinator? get _agendaCoordinator {
+    try {
+      return context.read<AgendaCoordinator>();
+    } on ProviderNotFoundException {
+      // Standalone settings pages and focused tests do not install the app
+      // coordinator. They can still clear durable app data safely.
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -261,6 +280,18 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
                 ? null
                 : () => _showGeneralDataActions(provider),
+          ),
+        ];
+        final notificationChildren = <Widget>[
+          SettingsConnectedTile(
+            key: const ValueKey('settings-notification-settings'),
+            leading: const Icon(Icons.notifications_active_outlined),
+            title: l10n.notificationSettingsSection,
+            subtitle: _notificationSettingsSummary(provider, l10n),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _isFlowOpen(_SettingsFlow.notificationSettingsPage)
+                ? null
+                : () => _openNotificationSettingsPage(provider),
           ),
         ];
         final appearanceChildren = [
@@ -429,6 +460,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: l10n.settingsSectionGeneralSchedule,
                         children: generalScheduleChildren,
                       );
+                      final notificationGroup = SettingsConnectedGroup(
+                        key: const ValueKey('settings-group-notifications'),
+                        title: l10n.notificationSettingsSection,
+                        children: notificationChildren,
+                      );
                       final appearanceGroup = SettingsConnectedGroup(
                         key: const ValueKey(
                           'settings-group-appearance-language',
@@ -450,6 +486,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         workspaceGroup,
                         timetableGroup,
                         generalScheduleGroup,
+                        notificationGroup,
                       ];
                       final right = [appearanceGroup, dataGroup, aboutGroup];
                       final groups = useTwoColumns
@@ -642,6 +679,31 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     });
+  }
+
+  Future<void> _openNotificationSettingsPage(TimetableProvider provider) async {
+    await _guardFlow(_SettingsFlow.notificationSettingsPage, () async {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: NotificationSettingsPage(
+              notificationService: widget.notificationService,
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  String _notificationSettingsSummary(
+    TimetableProvider provider,
+    AppLocalizations l10n,
+  ) {
+    if (!provider.notificationsEnabled) {
+      return l10n.notificationSettingsDisabledSummary;
+    }
+    return l10n.notificationSettingsEnabledSummary;
   }
 
   Future<void> _openLanguageSettingsPage(TimetableProvider provider) async {

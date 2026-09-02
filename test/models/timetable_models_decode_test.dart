@@ -4,6 +4,108 @@ import 'package:sked/models/timetable_models.dart';
 
 void main() {
   group('student timetable model decoding', () {
+    test('round-trips date exceptions and keeps legacy JSON compatible', () {
+      final legacy = CourseItem.fromJson(const {
+        'id': 'legacy',
+        'name': 'Course',
+        'teacher': '',
+        'location': '',
+        'dayOfWeek': 1,
+        'semesterWeeks': [1],
+        'periods': [1],
+        'startMinutes': 480,
+        'endMinutes': 525,
+        'timeRange': '08:00 - 08:45',
+        'credit': 0,
+        'remarks': '',
+        'customFields': {},
+      });
+      expect(legacy.dateExceptions, isEmpty);
+      expect(legacy.toJson(), isNot(contains('reminderSettings')));
+      expect(legacy.toJson(), isNot(contains('dateExceptions')));
+      final course = legacy.copyWith(
+        dateExceptions: const [
+          CourseDateException(
+            dateIso: '2026-08-03',
+            startMinutes: 540,
+            endMinutes: 600,
+          ),
+        ],
+      );
+      expect(
+        CourseItem.fromJson(course.toJson()).dateExceptions.single,
+        course.dateExceptions.single,
+      );
+    });
+
+    test(
+      'course date exceptions canonicalize dates and omit absent fields',
+      () {
+        final override = CourseDateException.fromJson({
+          'date': '2026-08-03T14:30:00',
+          'startMinutes': 540.0,
+          'endMinutes': 600,
+        });
+        expect(override.dateIso, '2026-08-03');
+        expect(override.cancelled, isFalse);
+        expect(override.startMinutes, 540);
+        expect(override.endMinutes, 600);
+        expect(override.toJson(), {
+          'date': '2026-08-03',
+          'startMinutes': 540,
+          'endMinutes': 600,
+        });
+
+        const cancelled = CourseDateException(
+          dateIso: '2026-08-10',
+          cancelled: true,
+        );
+        expect(cancelled.toJson(), {'date': '2026-08-10', 'cancelled': true});
+        expect(cancelled, CourseDateException.fromJson(cancelled.toJson()));
+        expect(
+          cancelled.hashCode,
+          CourseDateException.fromJson(cancelled.toJson()).hashCode,
+        );
+      },
+    );
+
+    test('CourseItem drops malformed date exception and reminder payloads', () {
+      final course = CourseItem.fromJson({
+        'id': 'course1',
+        'name': 'Course',
+        'dateExceptions': [
+          {
+            'date': '2026-08-03',
+            'cancelled': true,
+            'startMinutes': 540,
+            'endMinutes': 600,
+          },
+          {'date': 'not-a-date'},
+          'not-an-object',
+        ],
+        'reminderSettings': 'not-an-object',
+      });
+
+      expect(course.dateExceptions, hasLength(1));
+      expect(course.dateExceptions.single.cancelled, isTrue);
+      expect(course.reminderSettings, const CourseReminderSettings());
+
+      final customReminder = course.copyWith(
+        reminderSettings: const CourseReminderSettings(
+          behavior: CourseReminderBehavior.custom,
+          minutesBefore: 5,
+        ),
+      );
+      expect(customReminder.toJson()['reminderSettings'], {
+        'behavior': 'custom',
+        'minutesBefore': 5,
+      });
+      expect(customReminder.toJson()['dateExceptions'], isA<List<dynamic>>());
+      expect(
+        customReminder.copyWith().reminderSettings,
+        customReminder.reminderSettings,
+      );
+    });
     test('CourseItem filters invalid numeric list entries', () {
       final course = CourseItem.fromJson({
         'id': 'course1',

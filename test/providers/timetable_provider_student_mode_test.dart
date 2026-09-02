@@ -78,6 +78,7 @@ void main() {
     List<int> periods = const [1],
     int startMinutes = 8 * 60,
     int endMinutes = (8 * 60) + 45,
+    List<CourseDateException> dateExceptions = const [],
   }) {
     return CourseItem(
       id: id,
@@ -93,6 +94,7 @@ void main() {
       credit: 0,
       remarks: '',
       customFields: const {},
+      dateExceptions: dateExceptions,
     );
   }
 
@@ -458,6 +460,45 @@ void main() {
       expect(provider.displayedCourseIdForConflict('unused'), isNull);
       expect(provider.studentMode.conflictDisplayCourseIds, isEmpty);
       expect(provider.courseNameColorValues.containsKey('Physics'), isFalse);
+    });
+
+    test('persists course date changes through saveCourse', () async {
+      final storage = _MemoryTimetableStorage(appData());
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+
+      const exceptions = [
+        CourseDateException(dateIso: '2026-08-03', cancelled: true),
+        CourseDateException(
+          dateIso: '2026-08-10',
+          startMinutes: 9 * 60,
+          endMinutes: 10 * 60,
+        ),
+      ];
+      await provider.saveCourse(
+        course(id: 'course1', name: 'Algebra', dateExceptions: exceptions),
+      );
+
+      expect(
+        provider.activeTimetable.courses.single.dateExceptions,
+        exceptions,
+      );
+      expect(
+        storage
+            .data!
+            .studentMode
+            .timetables
+            .single
+            .courses
+            .single
+            .dateExceptions,
+        exceptions,
+      );
+      expect(storage.saveCount, greaterThanOrEqualTo(1));
     });
 
     test('switches timetables and clamps selected week', () async {

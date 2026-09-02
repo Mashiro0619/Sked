@@ -205,6 +205,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editCourseTooltip => '编辑课程';
 
   @override
+  String get courseDateExceptions => '日期变更';
+
+  @override
+  String get courseDateExceptionsEmpty => '暂无日期变更';
+
+  @override
+  String courseDateExceptionsCount(int count) {
+    return '$count 项日期变更';
+  }
+
+  @override
+  String get courseDateExceptionAdd => '添加日期变更';
+
+  @override
+  String get courseDateExceptionEdit => '编辑日期变更';
+
+  @override
+  String get courseDateExceptionCancelled => '本次停课';
+
+  @override
+  String get courseDateExceptionCancelClass => '取消本次课程';
+
+  @override
+  String get courseDateExceptionTimeOverride => '调整时间';
+
+  @override
   String get place => '地点';
 
   @override
@@ -2262,6 +2288,99 @@ class AppLocalizationsZh extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return '此学校登录使用 HTTP。任何能够监听或篡改此连接的人都可能读取或修改你的登录凭据及页面内容。仅在你接受以下站点的这一风险时继续：\n\n$origin';
   }
+
+  @override
+  String get notificationSettingsSection => '提醒与通知';
+
+  @override
+  String get notificationSettingsEnabled => '启用提醒与通知';
+
+  @override
+  String get notificationSettingsEnabledHint => '为即将开始的课程和日程安排提醒。';
+
+  @override
+  String get notificationSettingsEnabledSummary => '已启用';
+
+  @override
+  String get notificationSettingsDisabledSummary => '已关闭';
+
+  @override
+  String get notificationDefaultsSection => '默认提醒';
+
+  @override
+  String get notificationCourseDefaultReminder => '课程默认提醒';
+
+  @override
+  String get notificationGeneralDefaultReminder => '日程默认提醒';
+
+  @override
+  String get notificationReminderOff => '不提醒';
+
+  @override
+  String notificationReminderCustom(int minutes) {
+    return '提前 $minutes 分钟';
+  }
+
+  @override
+  String get notificationPermission => '通知权限';
+
+  @override
+  String get notificationPermissionGranted => '系统已允许';
+
+  @override
+  String get notificationPermissionDenied => '系统已阻止';
+
+  @override
+  String get notificationPermissionChecking => '正在检查权限…';
+
+  @override
+  String get notificationPermissionRequest => '请求权限';
+
+  @override
+  String get notificationPermissionOpenSettings => '打开系统设置';
+
+  @override
+  String get notificationPermissionRequestFailed => '无法读取通知权限，请重试。';
+
+  @override
+  String get notificationExactAlarm => '精确闹钟权限';
+
+  @override
+  String get notificationExactAlarmAllowed => '系统已允许';
+
+  @override
+  String get notificationExactAlarmRequired => '精确提醒时间需要此权限';
+
+  @override
+  String get notificationExactAlarmRequest => '允许精确闹钟';
+
+  @override
+  String get notificationLockScreenTitles => '在锁屏上显示标题';
+
+  @override
+  String get notificationLockScreenTitlesHint => '关闭后，锁屏通知不会显示详细内容。';
+
+  @override
+  String get notificationWidgets => '桌面小组件';
+
+  @override
+  String get notificationWidgetsDesc => '刷新 Sked 小组件，并查看如何从启动器添加小组件。';
+
+  @override
+  String get notificationWidgetsDialogTitle => '添加 Sked 小组件';
+
+  @override
+  String get notificationWidgetsDialogMessage =>
+      '在设备启动器中长按空白区域，选择“小组件”，然后添加 Sked 小组件。小组件会显示接下来的课程或日程。';
+
+  @override
+  String get notificationWidgetsRefresh => '刷新小组件';
+
+  @override
+  String get notificationWidgetsRefreshed => '小组件已刷新';
+
+  @override
+  String get notificationPlatformUnsupported => '当前平台不提供原生通知。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2277,7 +2396,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get addCourse => '添加課程';
+  String get addCourse => '新增課程';
 
   @override
   String get settings => '設定';
@@ -2343,7 +2462,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get replaceCurrentTimetableConfirmMessage => '匯入的課表將覆蓋目前課表。';
 
   @override
-  String get createTimetable => '新建課表';
+  String get createTimetable => '新增課表';
 
   @override
   String get jumpToWeek => '快捷跳轉週數';
@@ -2455,13 +2574,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get selectLinkedPeriods => '選擇關聯節次';
 
   @override
-  String get addCourseTitle => '添加課程';
+  String get addCourseTitle => '新增課程';
 
   @override
   String get editCourseTitle => '編輯課程';
 
   @override
   String get editCourseTooltip => '編輯課程';
+
+  @override
+  String get courseDateExceptions => '日期變更';
+
+  @override
+  String get courseDateExceptionsEmpty => '暫無日期變更';
+
+  @override
+  String courseDateExceptionsCount(int count) {
+    return '$count 項日期變更';
+  }
+
+  @override
+  String get courseDateExceptionAdd => '新增日期變更';
+
+  @override
+  String get courseDateExceptionEdit => '編輯日期變更';
+
+  @override
+  String get courseDateExceptionCancelled => '本次停課';
+
+  @override
+  String get courseDateExceptionCancelClass => '取消本次課程';
+
+  @override
+  String get courseDateExceptionTimeOverride => '調整時間';
 
   @override
   String get place => '地點';
@@ -2506,7 +2651,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsSectionWorkspace => '工作區';
 
   @override
+  String get settingsSectionAppearanceLanguage => '外觀與語言';
+
+  @override
   String get settingsSectionDataSecurity => '資料與安全性';
+
+  @override
+  String get settingsSectionAbout => '關於 Sked';
 
   @override
   String get noTimetableSettings => '當前沒有可設定的課表';
@@ -4344,6 +4495,39 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get generalToolbarSection => '工具列版面';
 
   @override
+  String get toolbarNavigationSection => '工具列導覽';
+
+  @override
+  String get toolbarNavigationHiddenBehavior => '隱藏項目處理方式';
+
+  @override
+  String get toolbarNavigationRemove => '完全隱藏';
+
+  @override
+  String get toolbarNavigationMore => '移至「更多」';
+
+  @override
+  String get toolbarNavigationReorder => '調整工具列項目順序';
+
+  @override
+  String get toolbarNavigationVisibility => '顯示工具列項目';
+
+  @override
+  String get toolbarNavigationTimetable => '課表選擇器';
+
+  @override
+  String get toolbarNavigationWeek => '週次選擇器';
+
+  @override
+  String get toolbarNavigationView => '視圖切換器';
+
+  @override
+  String get toolbarNavigationCategory => '分類選擇器';
+
+  @override
+  String get toolbarNavigationDate => '日期選擇器';
+
+  @override
   String get generalToolbarWidthPolicy => '工具列空間分配';
 
   @override
@@ -4481,4 +4665,97 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return '此學校登入使用 HTTP。任何能夠監聽或竄改此連線的人都可能讀取或修改你的登入憑證及頁面內容。僅在你接受以下網站的這項風險時繼續：\n\n$origin';
   }
+
+  @override
+  String get notificationSettingsSection => '提醒與通知';
+
+  @override
+  String get notificationSettingsEnabled => '啟用提醒與通知';
+
+  @override
+  String get notificationSettingsEnabledHint => '為即將開始的課程和日程安排提醒。';
+
+  @override
+  String get notificationSettingsEnabledSummary => '已啟用';
+
+  @override
+  String get notificationSettingsDisabledSummary => '已關閉';
+
+  @override
+  String get notificationDefaultsSection => '預設提醒';
+
+  @override
+  String get notificationCourseDefaultReminder => '課程預設提醒';
+
+  @override
+  String get notificationGeneralDefaultReminder => '日程預設提醒';
+
+  @override
+  String get notificationReminderOff => '不提醒';
+
+  @override
+  String notificationReminderCustom(int minutes) {
+    return '提前 $minutes 分鐘';
+  }
+
+  @override
+  String get notificationPermission => '通知權限';
+
+  @override
+  String get notificationPermissionGranted => '系統已允許';
+
+  @override
+  String get notificationPermissionDenied => '系統已封鎖';
+
+  @override
+  String get notificationPermissionChecking => '正在檢查權限…';
+
+  @override
+  String get notificationPermissionRequest => '要求權限';
+
+  @override
+  String get notificationPermissionOpenSettings => '開啟系統設定';
+
+  @override
+  String get notificationPermissionRequestFailed => '無法讀取通知權限，請重試。';
+
+  @override
+  String get notificationExactAlarm => '精確鬧鐘權限';
+
+  @override
+  String get notificationExactAlarmAllowed => '系統已允許';
+
+  @override
+  String get notificationExactAlarmRequired => '精確提醒時間需要此權限';
+
+  @override
+  String get notificationExactAlarmRequest => '允許精確鬧鐘';
+
+  @override
+  String get notificationLockScreenTitles => '在鎖定畫面顯示標題';
+
+  @override
+  String get notificationLockScreenTitlesHint => '關閉後，鎖定畫面通知不會顯示詳細內容。';
+
+  @override
+  String get notificationWidgets => '主畫面小工具';
+
+  @override
+  String get notificationWidgetsDesc => '重新整理 Sked 小工具，並查看如何從啟動器新增小工具。';
+
+  @override
+  String get notificationWidgetsDialogTitle => '新增 Sked 小工具';
+
+  @override
+  String get notificationWidgetsDialogMessage =>
+      '在裝置啟動器中長按空白區域，選擇「小工具」，然後新增 Sked 小工具。小工具會顯示接下來的課程或日程。';
+
+  @override
+  String get notificationWidgetsRefresh => '重新整理小工具';
+
+  @override
+  String get notificationWidgetsRefreshed => '小工具已重新整理';
+
+  @override
+  String get notificationPlatformUnsupported => '目前平台不提供原生通知。';
 }

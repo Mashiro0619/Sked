@@ -1,6 +1,75 @@
 part of 'timetable_provider.dart';
 
 mixin _TimetableProviderSettings on _TimetableProviderBase {
+  NotificationSettings get notificationSettings =>
+      _appData.notificationSettings;
+
+  bool get notificationsEnabled => _appData.notificationSettings.enabled;
+
+  int? get courseDefaultReminderMinutesBefore =>
+      _appData.notificationSettings.courseDefaultMinutesBefore;
+
+  int? get generalDefaultReminderMinutesBefore =>
+      _appData.notificationSettings.generalDefaultMinutesBefore;
+
+  int? get courseDefaultMinutesBefore =>
+      _appData.notificationSettings.courseDefaultMinutesBefore;
+
+  int? get generalDefaultMinutesBefore =>
+      _appData.notificationSettings.generalDefaultMinutesBefore;
+
+  bool get lockScreenShowTitles =>
+      _appData.notificationSettings.lockScreenShowTitles;
+
+  Future<void> updateNotificationSettings({
+    bool? enabled,
+    Object? courseDefaultMinutesBefore = NotificationSettings.keep,
+    Object? generalDefaultMinutesBefore = NotificationSettings.keep,
+    bool? lockScreenShowTitles,
+  }) async {
+    final next = _settings.updateNotificationSettings(
+      _appData,
+      enabled: enabled,
+      courseDefaultMinutesBefore: courseDefaultMinutesBefore,
+      generalDefaultMinutesBefore: generalDefaultMinutesBefore,
+      lockScreenShowTitles: lockScreenShowTitles,
+    );
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateNotificationsEnabled(bool value) async {
+    final next = _settings.updateNotificationEnabled(_appData, value);
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateCourseDefaultReminder(int? minutesBefore) async {
+    final next = _settings.updateCourseDefaultReminder(_appData, minutesBefore);
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateGeneralDefaultReminder(int? minutesBefore) async {
+    final next = _settings.updateGeneralDefaultReminder(
+      _appData,
+      minutesBefore,
+    );
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
+  Future<void> updateLockScreenShowTitles(bool value) async {
+    final next = _settings.updateLockScreenShowTitles(_appData, value);
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
   bool get hideHomeWorkspaceNavigation => _appData.hideHomeWorkspaceNavigation;
 
   bool get homeWorkspaceNavigationCollapsed =>

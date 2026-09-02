@@ -207,6 +207,32 @@ class AppLocalizationsKo extends AppLocalizations {
   String get editCourseTooltip => '수업 수정';
 
   @override
+  String get courseDateExceptions => 'Date changes';
+
+  @override
+  String get courseDateExceptionsEmpty => 'No date changes';
+
+  @override
+  String courseDateExceptionsCount(int count) {
+    return '$count date changes';
+  }
+
+  @override
+  String get courseDateExceptionAdd => 'Add date change';
+
+  @override
+  String get courseDateExceptionEdit => 'Edit date change';
+
+  @override
+  String get courseDateExceptionCancelled => 'Class cancelled';
+
+  @override
+  String get courseDateExceptionCancelClass => 'Cancel class';
+
+  @override
+  String get courseDateExceptionTimeOverride => 'Change time';
+
+  @override
   String get place => '장소';
 
   @override
@@ -2332,4 +2358,104 @@ class AppLocalizationsKo extends AppLocalizations {
   String schoolWebImportInsecureSignInConsentMessage(Object origin) {
     return '이 학교 로그인은 HTTP를 사용합니다. 이 연결을 감시하거나 변경할 수 있는 사람은 로그인 정보와 페이지 내용을 읽거나 바꿀 수 있습니다. 다음 사이트에 대한 이러한 위험을 감수하는 경우에만 계속하세요:\n\n$origin';
   }
+
+  @override
+  String get notificationSettingsSection => 'Reminders & notifications';
+
+  @override
+  String get notificationSettingsEnabled =>
+      'Enable reminders and notifications';
+
+  @override
+  String get notificationSettingsEnabledHint =>
+      'Schedule reminders for upcoming courses and events.';
+
+  @override
+  String get notificationSettingsEnabledSummary => 'Enabled';
+
+  @override
+  String get notificationSettingsDisabledSummary => 'Disabled';
+
+  @override
+  String get notificationDefaultsSection => 'Default reminders';
+
+  @override
+  String get notificationCourseDefaultReminder => 'Course default reminder';
+
+  @override
+  String get notificationGeneralDefaultReminder => 'Schedule default reminder';
+
+  @override
+  String get notificationReminderOff => 'No reminder';
+
+  @override
+  String notificationReminderCustom(int minutes) {
+    return '$minutes minutes before';
+  }
+
+  @override
+  String get notificationPermission => 'Notification permission';
+
+  @override
+  String get notificationPermissionGranted => 'Allowed by the system';
+
+  @override
+  String get notificationPermissionDenied => 'Blocked by the system';
+
+  @override
+  String get notificationPermissionChecking => 'Checking permission…';
+
+  @override
+  String get notificationPermissionRequest => 'Request permission';
+
+  @override
+  String get notificationPermissionOpenSettings => 'Open system settings';
+
+  @override
+  String get notificationPermissionRequestFailed =>
+      'Could not read notification permission. Try again.';
+
+  @override
+  String get notificationExactAlarm => 'Exact alarm permission';
+
+  @override
+  String get notificationExactAlarmAllowed => 'Allowed by the system';
+
+  @override
+  String get notificationExactAlarmRequired =>
+      'Required for precise reminder times';
+
+  @override
+  String get notificationExactAlarmRequest => 'Allow exact alarms';
+
+  @override
+  String get notificationLockScreenTitles => 'Show titles on the lock screen';
+
+  @override
+  String get notificationLockScreenTitlesHint =>
+      'When off, notification details stay private on the lock screen.';
+
+  @override
+  String get notificationWidgets => 'Home screen widgets';
+
+  @override
+  String get notificationWidgetsDesc =>
+      'Refresh Sked widgets and learn how to add one from the launcher.';
+
+  @override
+  String get notificationWidgetsDialogTitle => 'Add a Sked widget';
+
+  @override
+  String get notificationWidgetsDialogMessage =>
+      'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.';
+
+  @override
+  String get notificationWidgetsRefresh => 'Refresh widgets';
+
+  @override
+  String get notificationWidgetsRefreshed => 'Widgets refreshed';
+
+  @override
+  String get notificationPlatformUnsupported =>
+      'This platform does not provide native notifications.';
 }

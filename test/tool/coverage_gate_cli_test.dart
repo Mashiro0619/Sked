@@ -253,6 +253,7 @@ const _coverageUnavailableSourcePaths = <String>[
   'lib/services/app_instance_lease_stub.dart',
   'lib/services/app_instance_web_lock.dart',
   'lib/services/app_instance_web_lock_browser.dart',
+  'lib/services/agenda_service.dart',
   'lib/services/app_storage_layout.dart',
   'lib/services/app_storage_layout_stub.dart',
   'lib/theme/app_motion.dart',

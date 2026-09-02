@@ -19,6 +19,48 @@ void main() {
     );
   });
 
+  test('requires private notification receivers when the notification surface is present', () {
+    final notificationPermission = '''
+      <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+      <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+      <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />''';
+    final manifest = _androidManifest(
+      extraPermission: notificationPermission,
+      notificationComponents: _notificationComponents(),
+    );
+    expect(
+      androidMergedManifestIssues(
+        manifest,
+        applicationId: _applicationId,
+        expectedTargetSdk: _expectedTargetSdk,
+      ),
+      isEmpty,
+    );
+
+    final missingActionReceiver = androidMergedManifestIssues(
+      _androidManifest(
+        extraPermission: notificationPermission,
+        notificationComponents: _notificationComponents(includeAction: false),
+      ),
+      applicationId: _applicationId,
+      expectedTargetSdk: _expectedTargetSdk,
+    );
+    expect(
+      missingActionReceiver,
+      contains(contains('ActionBroadcastReceiver')),
+    );
+
+    final exportedActionReceiver = androidMergedManifestIssues(
+      _androidManifest(
+        extraPermission: notificationPermission,
+        notificationComponents: _notificationComponents(actionExported: true),
+      ),
+      applicationId: _applicationId,
+      expectedTargetSdk: _expectedTargetSdk,
+    );
+    expect(exportedActionReceiver, contains(contains('exported')));
+  });
+
   test('rejects Android permission, backup, and exported-component drift', () {
     final manifest = _androidManifest(
       extraPermission:
@@ -422,6 +464,7 @@ String _androidManifest({
   String applicationAttributes = '',
   String mainActivityAttributes = '',
   String extraComponent = '',
+  String notificationComponents = '',
   String providerAuthority = '$_applicationId.files',
 }) {
   final permission =
@@ -466,9 +509,36 @@ String _androidManifest({
         android:exported="true"
         android:permission="android.permission.DUMP" />
     $extraComponent
+    $notificationComponents
   </application>
 </manifest>
 ''';
+}
+
+String _notificationComponents({
+  bool includeAction = true,
+  bool actionExported = false,
+}) {
+  final action = includeAction
+      ? '''
+    <receiver
+        android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+        android:exported="$actionExported" />
+'''
+      : '';
+  return '''
+    <receiver
+        android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+        android:exported="false" />
+    <receiver
+        android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+        android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
+$action''';
 }
 
 Map<String, String> _androidResources({

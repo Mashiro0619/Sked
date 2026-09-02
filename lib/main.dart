@@ -14,15 +14,27 @@ import 'models/timetable_models.dart';
 import 'providers/timetable_provider.dart';
 import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
+import 'services/agenda_background_reconciler.dart';
+import 'services/agenda_coordinator.dart';
+import 'widgets/app_modal_sheet.dart';
+import 'widgets/course_details_sheet.dart';
+import 'widgets/course_editor_sheet.dart';
+import 'widgets/general_event_details_sheet.dart';
+import 'widgets/general_event_editor_sheet.dart';
 import 'widgets/sked_expressive_loading_indicator.dart';
 import 'widgets/material_ui_compatibility.dart';
 
 Future<void> main() async {
+  // Keep the Android WorkManager entry point in the AOT snapshot. The worker
+  // invokes it by library URI after the foreground application is gone.
+  assert(_backgroundEntrypoints.isNotEmpty);
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   _registerLicenses();
   runApp(AppBootstrap());
 }
+
+final _backgroundEntrypoints = <void Function()>[agendaBackgroundReconcile];
 
 void _registerLicenses() {
   LicenseRegistry.addLicense(() async* {
@@ -188,7 +200,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
   Widget build(BuildContext context) {
     final provider = _provider;
     if (_status == _AppBootstrapStatus.ready && provider != null) {
-      return MyApp(provider: provider);
+      return MyApp(provider: provider, providerReady: _providerLoad);
     }
     return _AppBootstrapGate(
       status: _status,
@@ -294,19 +306,28 @@ class _AppBootstrapGate extends StatelessWidget {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, required this.provider});
+  const MyApp({super.key, required this.provider, this.providerReady});
 
   final TimetableProvider provider;
+  final Future<void>? providerReady;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  late AgendaCoordinator _agendaCoordinator;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _agendaCoordinator = AgendaCoordinator(
+      provider: widget.provider,
+      onTarget: _openAgendaTarget,
+    );
+    unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
   }
 
   @override
@@ -314,6 +335,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.provider != widget.provider) {
       _flushPendingUiStateSaves(oldWidget.provider);
+      _agendaCoordinator.dispose();
+      _agendaCoordinator = AgendaCoordinator(
+        provider: widget.provider,
+        onTarget: _openAgendaTarget,
+      );
+      unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
     }
   }
 
@@ -325,6 +352,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.detached) {
       _flushPendingUiStateSaves(widget.provider);
     }
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_agendaCoordinator.onResume());
+    }
   }
 
   @override
@@ -335,6 +365,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _agendaCoordinator.dispose();
     _flushPendingUiStateSaves(widget.provider);
     super.dispose();
   }
@@ -351,32 +382,225 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         child: Selector<TimetableProvider, _AppShellSnapshot>(
           selector: (_, provider) => _AppShellSnapshot.from(provider),
           builder: (context, snapshot, child) {
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              onGenerateTitle: (context) =>
-                  AppLocalizations.of(context).appTitle,
-              locale: appLocaleFromCode(snapshot.localeCode),
-              supportedLocales: AppLocalizations.supportedLocales,
-              localizationsDelegates: appLocalizationsDelegates,
-              builder: bridgeLegacyMaterialUi,
-              themeMode: themeModeFromValue(snapshot.themeMode),
-              themeAnimationStyle: appThemeAnimationStyle,
-              theme: buildAppTheme(
-                seedColor: Color(snapshot.themeSeedColorValue),
-                brightness: Brightness.light,
-                themeColorMode: snapshot.themeColorMode,
-                colorfulUiColorValues: snapshot.colorfulUiColorValues,
+            return Provider<AgendaCoordinator>.value(
+              value: _agendaCoordinator,
+              child: MaterialApp(
+                debugShowCheckedModeBanner: false,
+                navigatorKey: _navigatorKey,
+                onGenerateTitle: (context) =>
+                    AppLocalizations.of(context).appTitle,
+                locale: appLocaleFromCode(snapshot.localeCode),
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: appLocalizationsDelegates,
+                builder: bridgeLegacyMaterialUi,
+                themeMode: themeModeFromValue(snapshot.themeMode),
+                themeAnimationStyle: appThemeAnimationStyle,
+                theme: buildAppTheme(
+                  seedColor: Color(snapshot.themeSeedColorValue),
+                  brightness: Brightness.light,
+                  themeColorMode: snapshot.themeColorMode,
+                  colorfulUiColorValues: snapshot.colorfulUiColorValues,
+                ),
+                darkTheme: buildAppTheme(
+                  seedColor: Color(snapshot.themeSeedColorValue),
+                  brightness: Brightness.dark,
+                  themeColorMode: snapshot.themeColorMode,
+                  colorfulUiColorValues: snapshot.colorfulUiColorValues,
+                ),
+                home: const AppHomeScreen(),
               ),
-              darkTheme: buildAppTheme(
-                seedColor: Color(snapshot.themeSeedColorValue),
-                brightness: Brightness.dark,
-                themeColorMode: snapshot.themeColorMode,
-                colorfulUiColorValues: snapshot.colorfulUiColorValues,
-              ),
-              home: const AppHomeScreen(),
             );
           },
         ),
+      ),
+    );
+  }
+
+  /// Opens the concrete item after [AgendaActionRouter] has selected its
+  /// workspace and date. Keeping this in the composition root means platform
+  /// taps do not need to reach into either workspace's private State object.
+  Future<void> _openAgendaTarget(AgendaTarget target) async {
+    final context = _navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    switch (target.sourceType) {
+      case AgendaSourceType.course:
+        return _openAgendaCourseDetails(context, target);
+      case AgendaSourceType.generalEvent:
+        return _openAgendaGeneralDetails(context, target);
+    }
+  }
+
+  Future<void> _openAgendaCourseDetails(
+    BuildContext context,
+    AgendaTarget target,
+  ) async {
+    final courseId = target.courseId;
+    final timetable = widget.provider.activeTimetableOrNull;
+    if (courseId == null || timetable == null) return;
+    CourseItem? course;
+    for (final candidate in timetable.courses) {
+      if (candidate.id == courseId) {
+        course = candidate;
+        break;
+      }
+    }
+    final selectedCourse = course;
+    if (selectedCourse == null || !context.mounted) return;
+    await showAppModalSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
+      enableDrag: false,
+      maxWidth: 860,
+      builder: (sheetContext) => CourseDetailsSheet(
+        courseId: selectedCourse.id,
+        weekday: selectedCourse.dayOfWeek,
+        conflictKey: null,
+        isFullConflict: false,
+        onEdit: () async {
+          if (sheetContext.mounted) {
+            await Navigator.of(sheetContext).maybePop();
+          }
+          if (context.mounted) {
+            await _openAgendaCourseEditor(context, selectedCourse);
+          }
+        },
+        onMissing: () {
+          if (sheetContext.mounted) {
+            unawaited(Navigator.of(sheetContext).maybePop());
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _openAgendaCourseEditor(
+    BuildContext context,
+    CourseItem course,
+  ) async {
+    final timetable = widget.provider.activeTimetableOrNull;
+    if (timetable == null || !context.mounted) return;
+    await showAppModalSheet<CourseEditorResult>(
+      context: context,
+      useRootNavigator: true,
+      isDismissible: widget.provider.closeCoursePopupOnOutsideTap,
+      enableDrag: false,
+      maxWidth: appSheetWidthExpanded,
+      builder: (_) => CourseEditorSheet(
+        periodTimes: widget.provider.periodTimesForTimetable(timetable),
+        totalWeeks: timetable.config.totalWeeks,
+        initialCourse: course,
+        dayOfWeek: course.dayOfWeek,
+        onSave: widget.provider.saveCourse,
+        onDelete: () => widget.provider.deleteCourse(course.id),
+      ),
+    );
+  }
+
+  Future<void> _openAgendaGeneralDetails(
+    BuildContext context,
+    AgendaTarget target,
+  ) async {
+    final calendarId = target.calendarId;
+    final eventId = target.eventId;
+    final occurrenceKey = target.occurrenceKey;
+    final rawDate = target.dateIso;
+    if (calendarId == null ||
+        eventId == null ||
+        occurrenceKey == null ||
+        rawDate == null) {
+      return;
+    }
+    final parsedDate = tryParseStrictIsoDateTime(rawDate);
+    if (parsedDate == null) return;
+    final start = normalizeDateOnly(parsedDate.toLocal());
+    final end = addCalendarDays(start, 1);
+    GeneralEventOccurrence? occurrence;
+    for (final candidate in widget.provider.generalOccurrencesForRange(
+      startInclusive: start,
+      endExclusive: end,
+      onlyVisibleCalendars: true,
+    )) {
+      if (candidate.calendar.id == calendarId &&
+          candidate.event.id == eventId &&
+          candidate.occurrenceKey == occurrenceKey) {
+        occurrence = candidate;
+        break;
+      }
+    }
+    final selectedOccurrence = occurrence;
+    if (selectedOccurrence == null || !context.mounted) return;
+    await showAppModalSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
+      enableDrag: false,
+      maxWidth: appSheetWidthCompact,
+      builder: (sheetContext) => GeneralEventDetailsSheet(
+        occurrence: selectedOccurrence,
+        isReminderHandled: widget.provider.isGeneralReminderHandled(
+          selectedOccurrence,
+        ),
+        onEdit: () async {
+          if (sheetContext.mounted) {
+            await Navigator.of(sheetContext).maybePop();
+          }
+          if (context.mounted) {
+            await _openAgendaGeneralEditor(context, selectedOccurrence);
+          }
+        },
+        onDismissReminder: () async {
+          await widget.provider.dismissGeneralReminder(selectedOccurrence);
+          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
+        },
+        onRestoreReminder: () async {
+          await widget.provider.restoreGeneralReminder(selectedOccurrence);
+          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
+        },
+        onDuplicate: () async {
+          await widget.provider.duplicateGeneralOccurrence(selectedOccurrence);
+          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
+        },
+        onDeleteThis: () async {
+          await widget.provider.deleteGeneralOccurrence(selectedOccurrence);
+          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
+        },
+        onDeleteFuture: selectedOccurrence.event.recurrenceRule.isRepeating
+            ? () async {
+                await widget.provider.deleteFutureGeneralOccurrences(
+                  selectedOccurrence,
+                );
+                if (sheetContext.mounted) {
+                  await Navigator.of(sheetContext).maybePop();
+                }
+              }
+            : null,
+        onDeleteAll: () async {
+          await widget.provider.deleteGeneralEvent(selectedOccurrence.event.id);
+          if (sheetContext.mounted) await Navigator.of(sheetContext).maybePop();
+        },
+      ),
+    );
+  }
+
+  Future<void> _openAgendaGeneralEditor(
+    BuildContext context,
+    GeneralEventOccurrence occurrence,
+  ) async {
+    if (!context.mounted) return;
+    await showAppModalSheet<GeneralEventEditorResult>(
+      context: context,
+      useRootNavigator: true,
+      isDismissible: widget.provider.closeGeneralEventPopupOnOutsideTap,
+      enableDrag: false,
+      maxWidth: appSheetWidthExpanded,
+      builder: (_) => GeneralEventEditorSheet(
+        initialEvent: occurrence.event,
+        initialDate: occurrence.calendarDisplayStart,
+        calendars: widget.provider.generalSchedules,
+        activeCalendarId: widget.provider.activeGeneralSchedule.id,
+        onSave: widget.provider.saveGeneralEvent,
+        onDelete: () => widget.provider.deleteGeneralEvent(occurrence.event.id),
       ),
     );
   }

@@ -11,6 +11,23 @@ const _androidSecurityResourceNames = {
   'data_extraction_rules.xml',
 };
 
+// flutter_local_notifications delivers notification actions through these
+// receivers. Keep the names centralized so a dependency upgrade cannot
+// silently remove or export the action entry point.
+const _notificationReceiverNames = {
+  'com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver',
+  'com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver',
+  'com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver',
+};
+
+const _approvedSystemExportedComponents = {
+  'androidx.work.impl.background.systemjob.SystemJobService':
+      'android.permission.BIND_JOB_SERVICE',
+  'androidx.work.impl.diagnostics.DiagnosticsReceiver':
+      'android.permission.DUMP',
+  'androidx.profileinstaller.ProfileInstallReceiver': 'android.permission.DUMP',
+};
+
 List<String> androidMergedManifestIssues(
   String contents, {
   required String applicationId,
@@ -92,6 +109,17 @@ List<String> androidMergedManifestIssues(
   }
   final allowedPermissions = <String>{
     'android.permission.INTERNET',
+    // Required by the Android notification surface. These are
+    // platform capabilities, not app-defined exported permissions.
+    'android.permission.POST_NOTIFICATIONS',
+    'android.permission.RECEIVE_BOOT_COMPLETED',
+    'android.permission.SCHEDULE_EXACT_ALARM',
+    // These are brought in by flutter_local_notifications/WorkManager and
+    // are required by their Android implementation.
+    'android.permission.ACCESS_NETWORK_STATE',
+    'android.permission.FOREGROUND_SERVICE',
+    'android.permission.VIBRATE',
+    'android.permission.WAKE_LOCK',
     ...signaturePermissions,
   };
   for (final permission in requestedPermissions.difference(
@@ -106,6 +134,12 @@ List<String> androidMergedManifestIssues(
     return List<String>.unmodifiable(issues);
   }
   final application = applications.single;
+  _validateNotificationManifest(
+    application,
+    applicationId,
+    requestedPermissions,
+    issues,
+  );
   for (final attribute in ['debuggable', 'testOnly']) {
     final value = _androidAttribute(application, attribute);
     if (value != null && value != 'false') {
@@ -231,8 +265,21 @@ List<String> androidMergedManifestIssues(
         component.localName == 'receiver' &&
         resolvedName == 'androidx.profileinstaller.ProfileInstallReceiver' &&
         permission == 'android.permission.DUMP';
+    final approvedSystemComponentPermission = resolvedName == null
+        ? null
+        : _approvedSystemExportedComponents[resolvedName];
+    final isApprovedSystemComponent =
+        approvedSystemComponentPermission != null &&
+        ((resolvedName ==
+                    'androidx.work.impl.background.systemjob.SystemJobService' &&
+                component.localName == 'service') ||
+            (resolvedName !=
+                    'androidx.work.impl.background.systemjob.SystemJobService' &&
+                component.localName == 'receiver')) &&
+        permission == approvedSystemComponentPermission;
     if (!signaturePermissions.contains(permission) &&
-        !isApprovedProfileInstaller) {
+        !isApprovedProfileInstaller &&
+        !isApprovedSystemComponent) {
       issues.add(
         'Exported Android component ${resolvedName ?? '<unnamed>'} must be '
         'protected by an approved signature permission.',
@@ -266,6 +313,81 @@ List<String> androidMergedManifestIssues(
   }
 
   return List<String>.unmodifiable(issues);
+}
+
+void _validateNotificationManifest(
+  XmlElement application,
+  String applicationId,
+  Set<String> requestedPermissions,
+  List<String> issues,
+) {
+  final receivers = _childrenNamed(application, 'receiver').toList();
+  final byName = <String, List<XmlElement>>{};
+  for (final receiver in receivers) {
+    final name = _resolveAndroidComponentName(
+      _androidAttribute(receiver, 'name'),
+      applicationId,
+    );
+    if (name != null) {
+      byName.putIfAbsent(name, () => <XmlElement>[]).add(receiver);
+    }
+  }
+  final hasNotificationSurface = _notificationReceiverNames.any(
+    byName.containsKey,
+  );
+  if (!hasNotificationSurface) return;
+
+  if (!requestedPermissions.contains('android.permission.POST_NOTIFICATIONS')) {
+    issues.add(
+      'Notification receivers require android.permission.POST_NOTIFICATIONS.',
+    );
+  }
+  if (!requestedPermissions.contains(
+    'android.permission.SCHEDULE_EXACT_ALARM',
+  )) {
+    issues.add(
+      'Notification receivers require android.permission.SCHEDULE_EXACT_ALARM.',
+    );
+  }
+
+  void requireReceiver(String name, {Set<String> actions = const <String>{}}) {
+    final matches = byName[name] ?? const <XmlElement>[];
+    if (matches.length != 1) {
+      issues.add(
+        'Release manifest must contain exactly one notification receiver $name.',
+      );
+      return;
+    }
+    final receiver = matches.single;
+    _expectAndroidAttribute(issues, receiver, 'exported', 'false', name);
+    for (final action in actions) {
+      if (!_hasIntentAction(receiver, action)) {
+        issues.add('$name must declare intent action $action.');
+      }
+    }
+  }
+
+  requireReceiver(
+    'com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver',
+  );
+  requireReceiver(
+    'com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver',
+    actions: const {
+      'android.intent.action.BOOT_COMPLETED',
+      'android.intent.action.MY_PACKAGE_REPLACED',
+    },
+  );
+  if (!requestedPermissions.contains(
+    'android.permission.RECEIVE_BOOT_COMPLETED',
+  )) {
+    issues.add(
+      'Scheduled notification boot receiver requires '
+      'android.permission.RECEIVE_BOOT_COMPLETED.',
+    );
+  }
+  requireReceiver(
+    'com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver',
+  );
 }
 
 List<String> androidReleaseResourceIssues(Map<String, String> resources) {
@@ -567,6 +689,15 @@ bool _hasLauncherIntent(XmlElement activity) {
     }
   }
   return false;
+}
+
+bool _hasIntentAction(XmlElement component, String actionName) {
+  return _childrenNamed(component, 'intent-filter').any(
+    (filter) => _childrenNamed(
+      filter,
+      'action',
+    ).any((action) => _androidAttribute(action, 'name') == actionName),
+  );
 }
 
 Object? _plistPath(Map<String, Object?> root, List<String> path) {

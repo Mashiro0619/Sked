@@ -221,6 +221,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
     if (shouldWriteBack) {
       try {
         await _repository.save(normalized);
+        emitAppDataCommit(normalized);
         sanitizedMainSnapshotIsDurable = true;
       } catch (e, st) {
         debugPrint(

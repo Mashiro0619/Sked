@@ -17,6 +17,8 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/services/app_instance_web_lock.dart': 'contains interfaces only',
   'lib/services/app_instance_web_lock_browser.dart':
       'is browser-only and is exercised by the separate Chrome CI test',
+  'lib/services/agenda_service.dart':
+      'is an export-only public agenda convenience library',
   'lib/services/app_storage_layout.dart': 'is an export-only library',
   'lib/services/app_storage_layout_stub.dart':
       'is selected only when dart:io is unavailable',

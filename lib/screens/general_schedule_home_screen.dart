@@ -538,6 +538,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           initialDate: initialDate ?? provider.selectedGeneralDate,
           calendars: provider.generalSchedules,
           activeCalendarId: provider.activeGeneralSchedule.id,
+          defaultReminderMinutesBefore: event == null
+              ? provider.generalDefaultMinutesBefore
+              : null,
           onSave: provider.saveGeneralEvent,
           onDelete: event == null
               ? null

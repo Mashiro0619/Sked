@@ -25,6 +25,7 @@ class GeneralEventEditorSheet extends StatefulWidget {
     this.initialDate,
     this.calendars = const [],
     this.activeCalendarId,
+    this.defaultReminderMinutesBefore,
     this.onSave,
     this.onDelete,
   });
@@ -33,6 +34,10 @@ class GeneralEventEditorSheet extends StatefulWidget {
   final DateTime? initialDate;
   final List<GeneralSchedule> calendars;
   final String? activeCalendarId;
+
+  /// Applied only when creating a new event. Existing events keep their
+  /// explicit reminder list, including an intentionally empty list.
+  final int? defaultReminderMinutesBefore;
   final Future<void> Function(GeneralEvent)? onSave;
   final Future<void> Function()? onDelete;
 
@@ -123,7 +128,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
     }
     _colorValue = event?.colorValue;
     _reminders =
-        event?.reminders.map((item) => item.minutesBefore).toList() ?? const [];
+        event?.reminders.map((item) => item.minutesBefore).toList() ??
+        (widget.defaultReminderMinutesBefore == null
+            ? const []
+            : [widget.defaultReminderMinutesBefore!]);
   }
 
   @override

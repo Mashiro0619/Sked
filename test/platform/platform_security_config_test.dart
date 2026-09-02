@@ -87,7 +87,15 @@ void main() {
         .toSet();
     final application = _singleElement(manifest, 'application');
 
-    expect(permissions, {'android.permission.INTERNET'});
+    // Notifications and their resilient Android rescheduling need these
+    // platform capabilities. Keep this set exact so future manifest changes
+    // still receive the same least-privilege review.
+    expect(permissions, {
+      'android.permission.INTERNET',
+      'android.permission.POST_NOTIFICATIONS',
+      'android.permission.RECEIVE_BOOT_COMPLETED',
+      'android.permission.SCHEDULE_EXACT_ALARM',
+    });
     expect(
       permissions,
       isNot(contains('android.permission.READ_EXTERNAL_STORAGE')),

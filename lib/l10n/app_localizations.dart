@@ -511,6 +511,54 @@ abstract class AppLocalizations {
   /// **'Edit course'**
   String get editCourseTooltip;
 
+  /// No description provided for @courseDateExceptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Date changes'**
+  String get courseDateExceptions;
+
+  /// No description provided for @courseDateExceptionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No date changes'**
+  String get courseDateExceptionsEmpty;
+
+  /// No description provided for @courseDateExceptionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} date changes'**
+  String courseDateExceptionsCount(int count);
+
+  /// No description provided for @courseDateExceptionAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add date change'**
+  String get courseDateExceptionAdd;
+
+  /// No description provided for @courseDateExceptionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit date change'**
+  String get courseDateExceptionEdit;
+
+  /// No description provided for @courseDateExceptionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Class cancelled'**
+  String get courseDateExceptionCancelled;
+
+  /// No description provided for @courseDateExceptionCancelClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel class'**
+  String get courseDateExceptionCancelClass;
+
+  /// No description provided for @courseDateExceptionTimeOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Change time'**
+  String get courseDateExceptionTimeOverride;
+
   /// No description provided for @place.
   ///
   /// In en, this message translates to:
@@ -4359,6 +4407,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This school sign-in uses HTTP. Your credentials and page content can be read or changed by anyone who can observe or alter this connection. Continue only if you accept this risk for:\n\n{origin}'**
   String schoolWebImportInsecureSignInConsentMessage(Object origin);
+
+  /// No description provided for @notificationSettingsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders & notifications'**
+  String get notificationSettingsSection;
+
+  /// No description provided for @notificationSettingsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable reminders and notifications'**
+  String get notificationSettingsEnabled;
+
+  /// No description provided for @notificationSettingsEnabledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule reminders for upcoming courses and events.'**
+  String get notificationSettingsEnabledHint;
+
+  /// No description provided for @notificationSettingsEnabledSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get notificationSettingsEnabledSummary;
+
+  /// No description provided for @notificationSettingsDisabledSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get notificationSettingsDisabledSummary;
+
+  /// No description provided for @notificationDefaultsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Default reminders'**
+  String get notificationDefaultsSection;
+
+  /// No description provided for @notificationCourseDefaultReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Course default reminder'**
+  String get notificationCourseDefaultReminder;
+
+  /// No description provided for @notificationGeneralDefaultReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule default reminder'**
+  String get notificationGeneralDefaultReminder;
+
+  /// No description provided for @notificationReminderOff.
+  ///
+  /// In en, this message translates to:
+  /// **'No reminder'**
+  String get notificationReminderOff;
+
+  /// No description provided for @notificationReminderCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes before'**
+  String notificationReminderCustom(int minutes);
+
+  /// No description provided for @notificationPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission'**
+  String get notificationPermission;
+
+  /// No description provided for @notificationPermissionGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed by the system'**
+  String get notificationPermissionGranted;
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked by the system'**
+  String get notificationPermissionDenied;
+
+  /// No description provided for @notificationPermissionChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking permission…'**
+  String get notificationPermissionChecking;
+
+  /// No description provided for @notificationPermissionRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request permission'**
+  String get notificationPermissionRequest;
+
+  /// No description provided for @notificationPermissionOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open system settings'**
+  String get notificationPermissionOpenSettings;
+
+  /// No description provided for @notificationPermissionRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read notification permission. Try again.'**
+  String get notificationPermissionRequestFailed;
+
+  /// No description provided for @notificationExactAlarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact alarm permission'**
+  String get notificationExactAlarm;
+
+  /// No description provided for @notificationExactAlarmAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed by the system'**
+  String get notificationExactAlarmAllowed;
+
+  /// No description provided for @notificationExactAlarmRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required for precise reminder times'**
+  String get notificationExactAlarmRequired;
+
+  /// No description provided for @notificationExactAlarmRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow exact alarms'**
+  String get notificationExactAlarmRequest;
+
+  /// No description provided for @notificationLockScreenTitles.
+  ///
+  /// In en, this message translates to:
+  /// **'Show titles on the lock screen'**
+  String get notificationLockScreenTitles;
+
+  /// No description provided for @notificationLockScreenTitlesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When off, notification details stay private on the lock screen.'**
+  String get notificationLockScreenTitlesHint;
+
+  /// No description provided for @notificationWidgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Home screen widgets'**
+  String get notificationWidgets;
+
+  /// No description provided for @notificationWidgetsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh Sked widgets and learn how to add one from the launcher.'**
+  String get notificationWidgetsDesc;
+
+  /// No description provided for @notificationWidgetsDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Sked widget'**
+  String get notificationWidgetsDialogTitle;
+
+  /// No description provided for @notificationWidgetsDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.'**
+  String get notificationWidgetsDialogMessage;
+
+  /// No description provided for @notificationWidgetsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh widgets'**
+  String get notificationWidgetsRefresh;
+
+  /// No description provided for @notificationWidgetsRefreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Widgets refreshed'**
+  String get notificationWidgetsRefreshed;
+
+  /// No description provided for @notificationPlatformUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This platform does not provide native notifications.'**
+  String get notificationPlatformUnsupported;
 }
 
 class _AppLocalizationsDelegate

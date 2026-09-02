@@ -159,6 +159,28 @@
   "@editCourseTitle": {},
   "editCourseTooltip": "编辑课程",
   "@editCourseTooltip": {},
+  "courseDateExceptions": "日期变更",
+  "@courseDateExceptions": {},
+  "courseDateExceptionsEmpty": "暂无日期变更",
+  "@courseDateExceptionsEmpty": {},
+  "courseDateExceptionsCount": "{count} 项日期变更",
+  "@courseDateExceptionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "courseDateExceptionAdd": "添加日期变更",
+  "@courseDateExceptionAdd": {},
+  "courseDateExceptionEdit": "编辑日期变更",
+  "@courseDateExceptionEdit": {},
+  "courseDateExceptionCancelled": "本次停课",
+  "@courseDateExceptionCancelled": {},
+  "courseDateExceptionCancelClass": "取消本次课程",
+  "@courseDateExceptionCancelClass": {},
+  "courseDateExceptionTimeOverride": "调整时间",
+  "@courseDateExceptionTimeOverride": {},
   "place": "地点",
   "@place": {},
   "time": "时间",
@@ -1682,5 +1704,70 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "notificationSettingsSection": "提醒与通知",
+  "@notificationSettingsSection": {},
+  "notificationSettingsEnabled": "启用提醒与通知",
+  "@notificationSettingsEnabled": {},
+  "notificationSettingsEnabledHint": "为即将开始的课程和日程安排提醒。",
+  "@notificationSettingsEnabledHint": {},
+  "notificationSettingsEnabledSummary": "已启用",
+  "@notificationSettingsEnabledSummary": {},
+  "notificationSettingsDisabledSummary": "已关闭",
+  "@notificationSettingsDisabledSummary": {},
+  "notificationDefaultsSection": "默认提醒",
+  "@notificationDefaultsSection": {},
+  "notificationCourseDefaultReminder": "课程默认提醒",
+  "@notificationCourseDefaultReminder": {},
+  "notificationGeneralDefaultReminder": "日程默认提醒",
+  "@notificationGeneralDefaultReminder": {},
+  "notificationReminderOff": "不提醒",
+  "@notificationReminderOff": {},
+  "notificationReminderCustom": "提前 {minutes} 分钟",
+  "@notificationReminderCustom": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationPermission": "通知权限",
+  "@notificationPermission": {},
+  "notificationPermissionGranted": "系统已允许",
+  "@notificationPermissionGranted": {},
+  "notificationPermissionDenied": "系统已阻止",
+  "@notificationPermissionDenied": {},
+  "notificationPermissionChecking": "正在检查权限…",
+  "@notificationPermissionChecking": {},
+  "notificationPermissionRequest": "请求权限",
+  "@notificationPermissionRequest": {},
+  "notificationPermissionOpenSettings": "打开系统设置",
+  "@notificationPermissionOpenSettings": {},
+  "notificationPermissionRequestFailed": "无法读取通知权限，请重试。",
+  "@notificationPermissionRequestFailed": {},
+  "notificationExactAlarm": "精确闹钟权限",
+  "@notificationExactAlarm": {},
+  "notificationExactAlarmAllowed": "系统已允许",
+  "@notificationExactAlarmAllowed": {},
+  "notificationExactAlarmRequired": "精确提醒时间需要此权限",
+  "@notificationExactAlarmRequired": {},
+  "notificationExactAlarmRequest": "允许精确闹钟",
+  "@notificationExactAlarmRequest": {},
+  "notificationLockScreenTitles": "在锁屏上显示标题",
+  "@notificationLockScreenTitles": {},
+  "notificationLockScreenTitlesHint": "关闭后，锁屏通知不会显示详细内容。",
+  "@notificationLockScreenTitlesHint": {},
+  "notificationWidgets": "桌面小组件",
+  "@notificationWidgets": {},
+  "notificationWidgetsDesc": "刷新 Sked 小组件，并查看如何从启动器添加小组件。",
+  "@notificationWidgetsDesc": {},
+  "notificationWidgetsDialogTitle": "添加 Sked 小组件",
+  "@notificationWidgetsDialogTitle": {},
+  "notificationWidgetsDialogMessage": "在设备启动器中长按空白区域，选择“小组件”，然后添加 Sked 小组件。小组件会显示接下来的课程或日程。",
+  "@notificationWidgetsDialogMessage": {},
+  "notificationWidgetsRefresh": "刷新小组件",
+  "@notificationWidgetsRefresh": {},
+  "notificationWidgetsRefreshed": "小组件已刷新",
+  "@notificationWidgetsRefreshed": {},
+  "notificationPlatformUnsupported": "当前平台不提供原生通知。"
 }

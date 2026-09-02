@@ -13,6 +13,7 @@ import 'general_event.dart';
 import 'general_event_occurrence.dart';
 import 'general_schedule.dart';
 import 'general_schedule_data.dart';
+import 'notification_settings.dart';
 import 'student_mode_data.dart';
 import 'timetable_data.dart';
 
@@ -341,6 +342,22 @@ void _validateStorageIntegerField(
   }
 }
 
+void _validateNullableStorageIntegerField(
+  Map<String, dynamic> json,
+  String key, {
+  required String errorMessage,
+  bool requireNonNegative = false,
+}) {
+  if (!json.containsKey(key) || json[key] == null) return;
+  final value = json[key];
+  if (value is! num || !value.isFinite || value % 1 != 0) {
+    throw FormatException(errorMessage);
+  }
+  if (requireNonNegative && value < 0) {
+    throw FormatException(errorMessage);
+  }
+}
+
 void _validateStorageIntegerListField(
   Map<String, dynamic> json,
   String key, {
@@ -478,6 +495,46 @@ void _validateStorageTimetable(
       errorMessage: 'Stored timetable course values are invalid.',
       required: true,
     );
+    final dateExceptions = _storageObjectListField(
+      course,
+      'dateExceptions',
+      errorMessage: 'Stored timetable course date exceptions are invalid.',
+    );
+    final dateExceptionDates = <String>{};
+    for (final exception in dateExceptions) {
+      _validateStorageStringField(
+        exception,
+        'date',
+        errorMessage: 'Stored timetable course date exceptions are invalid.',
+        required: true,
+      );
+      final date = tryParseStrictIsoDate(exception['date'] as String);
+      final canonicalDate = date == null
+          ? null
+          : normalizeDateOnly(date).toIso8601String().split('T').first;
+      if (canonicalDate == null ||
+          exception['date'] != canonicalDate ||
+          !dateExceptionDates.add(canonicalDate)) {
+        throw const FormatException(
+          'Stored timetable course date exceptions are invalid.',
+        );
+      }
+      _validateStorageBooleanField(
+        exception,
+        'cancelled',
+        errorMessage: 'Stored timetable course date exceptions are invalid.',
+      );
+      _validateNullableStorageIntegerField(
+        exception,
+        'startMinutes',
+        errorMessage: 'Stored timetable course date exceptions are invalid.',
+      );
+      _validateNullableStorageIntegerField(
+        exception,
+        'endMinutes',
+        errorMessage: 'Stored timetable course date exceptions are invalid.',
+      );
+    }
     _validateStorageIntegerListField(
       course,
       'weekdays',
@@ -560,6 +617,23 @@ void _validateStorageTimetable(
           'Stored timetable course time range is invalid.',
         );
       }
+      for (final exception in dateExceptions) {
+        final startOverride = exception['startMinutes'] as num?;
+        final endOverride = exception['endMinutes'] as num?;
+        final exceptionStart = startOverride?.toInt() ?? startMinutes;
+        final exceptionEnd = endOverride?.toInt() ?? endMinutes;
+        final isUnknownExceptionRange =
+            exceptionStart == 0 && exceptionEnd == 0;
+        if (exceptionStart < 0 ||
+            exceptionStart >= 24 * 60 ||
+            exceptionEnd < 0 ||
+            exceptionEnd >= 24 * 60 ||
+            (!isUnknownExceptionRange && exceptionEnd <= exceptionStart)) {
+          throw const FormatException(
+            'Stored timetable course date exceptions are invalid.',
+          );
+        }
+      }
     }
     _validateStorageNumberField(
       course,
@@ -573,6 +647,34 @@ void _validateStorageTimetable(
       errorMessage: 'Stored timetable course custom fields are invalid.',
       required: true,
     );
+    final reminderSettings = _storageMapField(
+      course,
+      'reminderSettings',
+      errorMessage: 'Stored course reminder settings are invalid.',
+    );
+    if (reminderSettings != null) {
+      final behavior = reminderSettings['behavior'];
+      if (behavior is! String ||
+          !const {'inherit', 'disabled', 'custom'}.contains(behavior)) {
+        throw const FormatException(
+          'Stored course reminder settings are invalid.',
+        );
+      }
+      _validateNullableStorageIntegerField(
+        reminderSettings,
+        'minutesBefore',
+        errorMessage: 'Stored course reminder settings are invalid.',
+        requireNonNegative: true,
+      );
+      if (validateCurrentSemantics &&
+          behavior == 'custom' &&
+          (!reminderSettings.containsKey('minutesBefore') ||
+              reminderSettings['minutesBefore'] == null)) {
+        throw const FormatException(
+          'Stored course reminder settings are invalid.',
+        );
+      }
+    }
   }
 }
 
@@ -1094,6 +1196,33 @@ Map<String, dynamic>? _validateStorageAiApiSettings(
   return settings;
 }
 
+void _validateStorageNotificationSettings(Map<String, dynamic> json) {
+  final settings = _storageMapField(
+    json,
+    'notificationSettings',
+    errorMessage: 'Stored notification settings are invalid.',
+  );
+  if (settings == null) return;
+  for (final key in const ['enabled', 'lockScreenShowTitles']) {
+    _validateStorageBooleanField(
+      settings,
+      key,
+      errorMessage: 'Stored notification settings are invalid.',
+    );
+  }
+  for (final key in const [
+    'courseDefaultMinutesBefore',
+    'generalDefaultMinutesBefore',
+  ]) {
+    _validateNullableStorageIntegerField(
+      settings,
+      key,
+      errorMessage: 'Stored notification settings are invalid.',
+      requireNonNegative: true,
+    );
+  }
+}
+
 void _validateStorageGeneralSettings(
   Map<String, dynamic> generalMode, {
   bool validateCurrentSemantics = false,
@@ -1602,6 +1731,7 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
   }
   _validateStorageThemeSettings(json, validateCurrentSemantics: true);
   _validateStorageAiApiSettings(json);
+  _validateStorageNotificationSettings(json);
   final hasStudentMode = json.containsKey('studentMode');
   final hasGeneralMode = json.containsKey('generalMode');
   if (hasStudentMode || hasGeneralMode) {
@@ -1672,6 +1802,7 @@ class AppData {
     bool hideHomeWorkspaceNavigation = false,
     bool homeWorkspaceNavigationCollapsed = false,
     AiApiSettings aiApiSettings = const AiApiSettings(),
+    NotificationSettings notificationSettings = const NotificationSettings(),
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1721,6 +1852,7 @@ class AppData {
       hideHomeWorkspaceNavigation: hideHomeWorkspaceNavigation,
       homeWorkspaceNavigationCollapsed: homeWorkspaceNavigationCollapsed,
       aiApiSettings: aiApiSettings,
+      notificationSettings: notificationSettings,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
       ignoredUpdateVersion: ignoredUpdateVersion,
@@ -1736,6 +1868,7 @@ class AppData {
     this.hideHomeWorkspaceNavigation = false,
     this.homeWorkspaceNavigationCollapsed = false,
     this.aiApiSettings = const AiApiSettings(),
+    this.notificationSettings = const NotificationSettings(),
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
     this.ignoredUpdateVersion,
@@ -1749,6 +1882,7 @@ class AppData {
   final bool hideHomeWorkspaceNavigation;
   final bool homeWorkspaceNavigationCollapsed;
   final AiApiSettings aiApiSettings;
+  final NotificationSettings notificationSettings;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
   final String? ignoredUpdateVersion;
@@ -1774,6 +1908,11 @@ class AppData {
     'hideHomeBottomNavigationBar': hideHomeWorkspaceNavigation,
     'homeWorkspaceNavigationCollapsed': homeWorkspaceNavigationCollapsed,
     'aiApiSettings': aiApiSettings.toJson(),
+    // Keep the default snapshot byte-for-byte compatible with pre-notification
+    // data.  The optional object is written as soon as the user changes one
+    // of its values, and older readers can safely ignore it.
+    if (notificationSettings != const NotificationSettings())
+      'notificationSettings': notificationSettings.normalized().toJson(),
     if (privacyPolicyAcceptedVersion != null)
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
@@ -1857,6 +1996,9 @@ class AppData {
       aiApiSettings: AiApiSettings.fromJson(
         _decodeAiApiSettingsJson(migrated, studentModeJson),
       ),
+      notificationSettings: NotificationSettings.fromJson(
+        _decodeNotificationSettingsJson(migrated),
+      ),
       privacyPolicyAcceptedVersion: _nullableStringValue(
         migrated['privacyPolicyAcceptedVersion'],
       ),
@@ -1880,6 +2022,7 @@ class AppData {
     bool? hideHomeWorkspaceNavigation,
     bool? homeWorkspaceNavigationCollapsed,
     AiApiSettings? aiApiSettings,
+    NotificationSettings? notificationSettings,
     String? themeMode,
     String? themeColorMode,
     int? themeSeedColorValue,
@@ -1934,6 +2077,7 @@ class AppData {
           homeWorkspaceNavigationCollapsed ??
           this.homeWorkspaceNavigationCollapsed,
       aiApiSettings: nextAiApiSettings,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
       privacyPolicyAcceptedVersion:
           identical(privacyPolicyAcceptedVersion, _keepNullable)
           ? this.privacyPolicyAcceptedVersion
@@ -1988,6 +2132,19 @@ Map<String, dynamic> _decodeAiApiSettingsJson(
     return value;
   }
   return const {};
+}
+
+Map<String, dynamic> _decodeNotificationSettingsJson(
+  Map<String, dynamic> json,
+) {
+  if (!json.containsKey('notificationSettings')) {
+    return const {};
+  }
+  final value = _asStringKeyedMap(json['notificationSettings']);
+  if (value == null) {
+    throw const FormatException('Notification settings must be an object.');
+  }
+  return value;
 }
 
 bool _decodeHideHomeWorkspaceNavigation(Map<String, dynamic> json) {

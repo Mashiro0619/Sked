@@ -1310,6 +1310,69 @@ void main() {
     expect(savedEvent?.reminders, isEmpty);
   });
 
+  testWidgets('new events inherit the configured default reminder', (
+    tester,
+  ) async {
+    GeneralEvent? savedEvent;
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+          defaultReminderMinutesBefore: 15,
+          onSave: (event) async => savedEvent = event,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(GeneralEventEditorSheet)),
+    );
+    await tester.enterText(find.byType(TextFormField).first, 'Planning');
+    await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+    await tester.pumpAndSettle();
+
+    expect(savedEvent?.reminders, hasLength(1));
+    expect(savedEvent?.reminders.single.minutesBefore, 15);
+  });
+
+  testWidgets('editing an event keeps an explicitly empty reminder list', (
+    tester,
+  ) async {
+    GeneralEvent? savedEvent;
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          calendars: const [
+            GeneralSchedule(id: 'work', name: 'Work', events: []),
+          ],
+          activeCalendarId: 'work',
+          defaultReminderMinutesBefore: 15,
+          initialEvent: GeneralEvent(
+            id: 'event',
+            calendarId: 'work',
+            title: 'Planning',
+            startDateTimeIso: '2026-05-25T09:00:00.000',
+            endDateTimeIso: '2026-05-25T10:00:00.000',
+          ),
+          onSave: (event) async => savedEvent = event,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(GeneralEventEditorSheet)),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+    await tester.pumpAndSettle();
+
+    expect(savedEvent?.reminders, isEmpty);
+  });
+
   testWidgets('rapid taps open only one selection dialog', (tester) async {
     await tester.pumpWidget(
       _localizedApp(

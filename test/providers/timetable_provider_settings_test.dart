@@ -170,4 +170,86 @@ void main() {
     expect(provider.customSchoolImportModel, 'model-a');
     expect(provider.customSchoolImportPrompt, 'prompt-a');
   });
+
+  test(
+    'notification settings persist atomically and skip unchanged updates',
+    () async {
+      final storage = _ControllableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _providerFor(storage);
+      addTearDown(provider.dispose);
+      final commits = <AppDataCommit>[];
+      final subscription = provider.committedData.listen(commits.add);
+      addTearDown(subscription.cancel);
+
+      await provider.updateNotificationSettings(
+        enabled: true,
+        courseDefaultMinutesBefore: 10,
+        generalDefaultMinutesBefore: 30,
+        lockScreenShowTitles: true,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(storage.saveCount, 1);
+      expect(provider.notificationsEnabled, isTrue);
+      expect(provider.courseDefaultReminderMinutesBefore, 10);
+      expect(provider.courseDefaultMinutesBefore, 10);
+      expect(provider.generalDefaultReminderMinutesBefore, 30);
+      expect(provider.generalDefaultMinutesBefore, 30);
+      expect(provider.lockScreenShowTitles, isTrue);
+      expect(storage.data!.notificationSettings, provider.notificationSettings);
+      expect(commits, hasLength(1));
+      expect(commits.single.snapshot.notificationSettings.enabled, isTrue);
+
+      await provider.updateNotificationSettings();
+      await Future<void>.delayed(Duration.zero);
+      expect(storage.saveCount, 1);
+      expect(commits, hasLength(1));
+
+      await provider.updateCourseDefaultReminder(null);
+      await provider.updateGeneralDefaultReminder(5);
+      await provider.updateLockScreenShowTitles(false);
+      await provider.updateNotificationsEnabled(false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(storage.saveCount, 5);
+      expect(provider.notificationsEnabled, isFalse);
+      expect(provider.courseDefaultMinutesBefore, isNull);
+      expect(provider.generalDefaultMinutesBefore, 5);
+      expect(provider.lockScreenShowTitles, isFalse);
+      expect(commits.map((item) => item.revision), [1, 2, 3, 4, 5]);
+    },
+  );
+
+  test(
+    'failed notification settings writes restore durable state without commit',
+    () async {
+      final storage = _ControllableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _providerFor(storage);
+      addTearDown(provider.dispose);
+      final commits = <AppDataCommit>[];
+      final subscription = provider.committedData.listen(commits.add);
+      addTearDown(subscription.cancel);
+      storage.nextSaveError = StateError('save failed');
+
+      await expectLater(
+        provider.updateNotificationSettings(
+          enabled: true,
+          courseDefaultMinutesBefore: 10,
+          generalDefaultMinutesBefore: 30,
+          lockScreenShowTitles: true,
+        ),
+        throwsStateError,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(storage.saveCount, 1);
+      expect(provider.notificationSettings, const NotificationSettings());
+      expect(storage.data!.notificationSettings, const NotificationSettings());
+      expect(commits, isEmpty);
+    },
+  );
 }

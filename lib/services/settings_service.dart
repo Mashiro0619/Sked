@@ -4,6 +4,46 @@ import '../models/timetable_models.dart';
 class SettingsService {
   const SettingsService();
 
+  AppData updateNotificationSettings(
+    AppData data, {
+    bool? enabled,
+    Object? courseDefaultMinutesBefore = NotificationSettings.keep,
+    Object? generalDefaultMinutesBefore = NotificationSettings.keep,
+    bool? lockScreenShowTitles,
+  }) {
+    final current = data.notificationSettings;
+    final next = current.copyWith(
+      enabled: enabled,
+      courseDefaultMinutesBefore: courseDefaultMinutesBefore,
+      generalDefaultMinutesBefore: generalDefaultMinutesBefore,
+      lockScreenShowTitles: lockScreenShowTitles,
+    );
+    if (next == current) return data;
+    return data.copyWith(notificationSettings: next);
+  }
+
+  AppData updateNotificationEnabled(AppData data, bool value) {
+    return updateNotificationSettings(data, enabled: value);
+  }
+
+  AppData updateCourseDefaultReminder(AppData data, int? minutesBefore) {
+    return updateNotificationSettings(
+      data,
+      courseDefaultMinutesBefore: minutesBefore,
+    );
+  }
+
+  AppData updateGeneralDefaultReminder(AppData data, int? minutesBefore) {
+    return updateNotificationSettings(
+      data,
+      generalDefaultMinutesBefore: minutesBefore,
+    );
+  }
+
+  AppData updateLockScreenShowTitles(AppData data, bool value) {
+    return updateNotificationSettings(data, lockScreenShowTitles: value);
+  }
+
   AppData updateHideHomeWorkspaceNavigation(AppData data, bool value) {
     if (data.hideHomeWorkspaceNavigation == value) return data;
     return data.copyWith(hideHomeWorkspaceNavigation: value);

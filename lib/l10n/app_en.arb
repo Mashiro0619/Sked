@@ -161,6 +161,28 @@
   "@editCourseTitle": {},
   "editCourseTooltip": "Edit course",
   "@editCourseTooltip": {},
+  "courseDateExceptions": "Date changes",
+  "@courseDateExceptions": {},
+  "courseDateExceptionsEmpty": "No date changes",
+  "@courseDateExceptionsEmpty": {},
+  "courseDateExceptionsCount": "{count} date changes",
+  "@courseDateExceptionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "courseDateExceptionAdd": "Add date change",
+  "@courseDateExceptionAdd": {},
+  "courseDateExceptionEdit": "Edit date change",
+  "@courseDateExceptionEdit": {},
+  "courseDateExceptionCancelled": "Class cancelled",
+  "@courseDateExceptionCancelled": {},
+  "courseDateExceptionCancelClass": "Cancel class",
+  "@courseDateExceptionCancelClass": {},
+  "courseDateExceptionTimeOverride": "Change time",
+  "@courseDateExceptionTimeOverride": {},
   "place": "Location",
   "@place": {},
   "time": "Time",
@@ -1684,5 +1706,70 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "notificationSettingsSection": "Reminders & notifications",
+  "@notificationSettingsSection": {},
+  "notificationSettingsEnabled": "Enable reminders and notifications",
+  "@notificationSettingsEnabled": {},
+  "notificationSettingsEnabledHint": "Schedule reminders for upcoming courses and events.",
+  "@notificationSettingsEnabledHint": {},
+  "notificationSettingsEnabledSummary": "Enabled",
+  "@notificationSettingsEnabledSummary": {},
+  "notificationSettingsDisabledSummary": "Disabled",
+  "@notificationSettingsDisabledSummary": {},
+  "notificationDefaultsSection": "Default reminders",
+  "@notificationDefaultsSection": {},
+  "notificationCourseDefaultReminder": "Course default reminder",
+  "@notificationCourseDefaultReminder": {},
+  "notificationGeneralDefaultReminder": "Schedule default reminder",
+  "@notificationGeneralDefaultReminder": {},
+  "notificationReminderOff": "No reminder",
+  "@notificationReminderOff": {},
+  "notificationReminderCustom": "{minutes} minutes before",
+  "@notificationReminderCustom": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationPermission": "Notification permission",
+  "@notificationPermission": {},
+  "notificationPermissionGranted": "Allowed by the system",
+  "@notificationPermissionGranted": {},
+  "notificationPermissionDenied": "Blocked by the system",
+  "@notificationPermissionDenied": {},
+  "notificationPermissionChecking": "Checking permission…",
+  "@notificationPermissionChecking": {},
+  "notificationPermissionRequest": "Request permission",
+  "@notificationPermissionRequest": {},
+  "notificationPermissionOpenSettings": "Open system settings",
+  "@notificationPermissionOpenSettings": {},
+  "notificationPermissionRequestFailed": "Could not read notification permission. Try again.",
+  "@notificationPermissionRequestFailed": {},
+  "notificationExactAlarm": "Exact alarm permission",
+  "@notificationExactAlarm": {},
+  "notificationExactAlarmAllowed": "Allowed by the system",
+  "@notificationExactAlarmAllowed": {},
+  "notificationExactAlarmRequired": "Required for precise reminder times",
+  "@notificationExactAlarmRequired": {},
+  "notificationExactAlarmRequest": "Allow exact alarms",
+  "@notificationExactAlarmRequest": {},
+  "notificationLockScreenTitles": "Show titles on the lock screen",
+  "@notificationLockScreenTitles": {},
+  "notificationLockScreenTitlesHint": "When off, notification details stay private on the lock screen.",
+  "@notificationLockScreenTitlesHint": {},
+  "notificationWidgets": "Home screen widgets",
+  "@notificationWidgets": {},
+  "notificationWidgetsDesc": "Refresh Sked widgets and learn how to add one from the launcher.",
+  "@notificationWidgetsDesc": {},
+  "notificationWidgetsDialogTitle": "Add a Sked widget",
+  "@notificationWidgetsDialogTitle": {},
+  "notificationWidgetsDialogMessage": "From your device launcher, touch and hold an empty area, choose Widgets, and add a Sked widget. The widget shows your next courses or events.",
+  "@notificationWidgetsDialogMessage": {},
+  "notificationWidgetsRefresh": "Refresh widgets",
+  "@notificationWidgetsRefresh": {},
+  "notificationWidgetsRefreshed": "Widgets refreshed",
+  "@notificationWidgetsRefreshed": {},
+  "notificationPlatformUnsupported": "This platform does not provide native notifications."
 }

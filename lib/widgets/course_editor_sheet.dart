@@ -59,6 +59,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   late final TextEditingController _creditController;
   late final TextEditingController _remarksController;
   late final TextEditingController _customFieldsController;
+  late final TextEditingController _reminderMinutesController;
 
   late int _selectedDayOfWeek;
   late List<int> _selectedSemesterWeeks;
@@ -69,7 +70,11 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   bool _pickerOpen = false;
   bool _actionInProgress = false;
   late bool _scheduleSectionExpanded;
+  late bool _dateExceptionsSectionExpanded;
   late bool _detailsSectionExpanded;
+  late bool _reminderSectionExpanded;
+  late CourseReminderBehavior _reminderBehavior;
+  late List<CourseDateException> _dateExceptions;
 
   bool get _blocked => _hasPopped || _pickerOpen || _actionInProgress;
 
@@ -106,6 +111,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                 .map((entry) => '${entry.key}:${entry.value}')
                 .join('\n'),
     );
+    final reminder =
+        initial?.reminderSettings ?? const CourseReminderSettings();
+    _reminderBehavior = reminder.behavior;
+    _reminderMinutesController = TextEditingController(
+      text: reminder.minutesBefore?.toString() ?? '10',
+    );
     _selectedDayOfWeek = initial?.dayOfWeek ?? widget.dayOfWeek;
     _selectedSemesterWeeks = normalizeSemesterWeeks(
       initial?.semesterWeeks ?? buildAllSemesterWeeks(widget.totalWeeks),
@@ -126,11 +137,15 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
             ),
     );
     _scheduleSectionExpanded = true;
+    _dateExceptions = _sortDateExceptions(initial?.dateExceptions ?? const []);
+    _dateExceptionsSectionExpanded = _dateExceptions.isNotEmpty;
     _detailsSectionExpanded =
         _teacherController.text.trim().isNotEmpty ||
         _creditController.text.trim().isNotEmpty ||
         _remarksController.text.trim().isNotEmpty ||
         _customFieldsController.text.trim().isNotEmpty;
+    _reminderSectionExpanded =
+        reminder.behavior != CourseReminderBehavior.inherit;
   }
 
   @override
@@ -141,6 +156,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     _creditController.dispose();
     _remarksController.dispose();
     _customFieldsController.dispose();
+    _reminderMinutesController.dispose();
     super.dispose();
   }
 
@@ -233,6 +249,20 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
             ),
             const SizedBox(height: 8),
             _EditorSection(
+              key: const ValueKey('course-date-exceptions-section'),
+              icon: Icons.event_repeat_outlined,
+              title: l10n.courseDateExceptions,
+              subtitle: _dateExceptions.isEmpty
+                  ? l10n.courseDateExceptionsEmpty
+                  : l10n.courseDateExceptionsCount(_dateExceptions.length),
+              initiallyExpanded: _dateExceptionsSectionExpanded,
+              onExpansionChanged: (expanded) =>
+                  setState(() => _dateExceptionsSectionExpanded = expanded),
+              enabled: !_blocked,
+              child: _buildDateExceptionFields(l10n),
+            ),
+            const SizedBox(height: 8),
+            _EditorSection(
               icon: Icons.notes_outlined,
               title: l10n.more,
               initiallyExpanded: _detailsSectionExpanded,
@@ -240,6 +270,17 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
                   setState(() => _detailsSectionExpanded = expanded),
               enabled: !_blocked,
               child: _buildDetailsFields(l10n),
+            ),
+            const SizedBox(height: 8),
+            _EditorSection(
+              key: const ValueKey('course-reminder-section'),
+              icon: Icons.notifications_outlined,
+              title: l10n.reminder,
+              initiallyExpanded: _reminderSectionExpanded,
+              onExpansionChanged: (expanded) =>
+                  setState(() => _reminderSectionExpanded = expanded),
+              enabled: !_blocked,
+              child: _buildReminderFields(l10n),
             ),
           ],
         ),
@@ -354,6 +395,169 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
         ),
       ],
     );
+  }
+
+  Widget _buildReminderFields(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.reminder, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        _VerticalChoiceList<CourseReminderBehavior>(
+          key: const ValueKey('course-reminder-behavior'),
+          selected: {_reminderBehavior},
+          onChanged: _blocked
+              ? null
+              : (value) => setState(() => _reminderBehavior = value),
+          options: [
+            _VerticalChoiceOption(
+              value: CourseReminderBehavior.inherit,
+              label: Text(l10n.notificationCourseDefaultReminder),
+              icon: const Icon(Icons.settings_backup_restore_outlined),
+            ),
+            _VerticalChoiceOption(
+              value: CourseReminderBehavior.disabled,
+              label: Text(l10n.notificationReminderOff),
+              icon: const Icon(Icons.notifications_off_outlined),
+            ),
+            _VerticalChoiceOption(
+              value: CourseReminderBehavior.custom,
+              label: Text(l10n.recurrenceCustom),
+              icon: const Icon(Icons.tune_outlined),
+            ),
+          ],
+        ),
+        if (_reminderBehavior == CourseReminderBehavior.custom) ...[
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey('course-reminder-custom-minutes'),
+            controller: _reminderMinutesController,
+            enabled: !_blocked,
+            keyboardType: const TextInputType.numberWithOptions(),
+            decoration: InputDecoration(
+              labelText: l10n.notificationReminderCustom(5),
+              prefixIcon: const Icon(Icons.schedule_outlined),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDateExceptionFields(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_dateExceptions.isEmpty)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
+            child: Text(
+              l10n.courseDateExceptionsEmpty,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          )
+        else
+          for (var index = 0; index < _dateExceptions.length; index++)
+            _CourseDateExceptionRow(
+              key: ValueKey(
+                'course-date-exception-${_dateExceptions[index].dateIso}',
+              ),
+              dateLabel: _formatDateExceptionDate(_dateExceptions[index]),
+              summary: _formatDateExceptionSummary(
+                _dateExceptions[index],
+                l10n,
+              ),
+              cancelled: _dateExceptions[index].cancelled,
+              enabled: !_blocked,
+              isLast: index == _dateExceptions.length - 1,
+              deleteLabel: l10n.delete,
+              onEdit: _blocked
+                  ? null
+                  : () => unawaited(_editDateException(_dateExceptions[index])),
+              onDelete: _blocked
+                  ? null
+                  : () => _removeDateException(_dateExceptions[index]),
+            ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const ValueKey('course-date-exception-add'),
+          onPressed: _blocked ? null : () => unawaited(_editDateException()),
+          icon: const Icon(Icons.add),
+          label: Text(l10n.courseDateExceptionAdd),
+        ),
+      ],
+    );
+  }
+
+  String _formatDateExceptionDate(CourseDateException exception) {
+    final date = tryParseStrictIsoDate(exception.dateIso);
+    if (date == null) return exception.dateIso;
+    return MaterialLocalizations.of(context).formatMediumDate(date);
+  }
+
+  String _formatDateExceptionSummary(
+    CourseDateException exception,
+    AppLocalizations l10n,
+  ) {
+    if (exception.cancelled) return l10n.courseDateExceptionCancelled;
+    final start = exception.startMinutes;
+    final end = exception.endMinutes;
+    if (start == null || end == null) {
+      return l10n.courseDateExceptionTimeOverride;
+    }
+    return '${l10n.courseDateExceptionTimeOverride} \u00b7 '
+        '${formatMinutes(start)} - ${formatMinutes(end)}';
+  }
+
+  Future<void> _editDateException([CourseDateException? current]) async {
+    if (_blocked) return;
+    _setPickerOpen(true);
+    _dismissActiveInputFocus();
+    try {
+      final result = await showExpressiveDialog<CourseDateException>(
+        context: context,
+        builder: (_) => _CourseDateExceptionEditorDialog(
+          initialException: current,
+          dayOfWeek: _selectedDayOfWeek,
+          fallbackStartMinutes: _minutesFromTimeOfDay(_startTime),
+          fallbackEndMinutes: _minutesFromTimeOfDay(_endTime),
+        ),
+      );
+      if (!mounted || result == null) return;
+      setState(() {
+        final next =
+            _dateExceptions
+                .where(
+                  (item) =>
+                      !identical(item, current) &&
+                      item.dateIso != result.dateIso,
+                )
+                .toList()
+              ..add(result);
+        _dateExceptions = _sortDateExceptions(next);
+      });
+    } finally {
+      _setPickerOpen(false);
+    }
+  }
+
+  void _removeDateException(CourseDateException exception) {
+    if (_blocked) return;
+    setState(() {
+      _dateExceptions = _dateExceptions
+          .where((item) => item.dateIso != exception.dateIso)
+          .toList();
+    });
+  }
+
+  List<CourseDateException> _sortDateExceptions(
+    Iterable<CourseDateException> exceptions,
+  ) {
+    final sorted = List<CourseDateException>.from(exceptions);
+    sorted.sort((left, right) => left.dateIso.compareTo(right.dateIso));
+    return sorted;
   }
 
   List<int> get _matchedPeriods => matchPeriodsForTimeRange(
@@ -712,6 +916,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
       credit: _parseCredit(_creditController.text),
       remarks: _remarksController.text.trim(),
       customFields: _parseCustomFields(_customFieldsController.text),
+      reminderSettings: _courseReminderSettings,
+      dateExceptions: List.unmodifiable(_dateExceptions),
     );
     final result = CourseEditorResult.save(course);
     final save = widget.onSave;
@@ -731,6 +937,20 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     } else {
       setState(() => _actionInProgress = false);
     }
+  }
+
+  CourseReminderSettings get _courseReminderSettings {
+    if (_reminderBehavior != CourseReminderBehavior.custom) {
+      return CourseReminderSettings(behavior: _reminderBehavior);
+    }
+    final minutes = int.tryParse(_reminderMinutesController.text.trim());
+    if (minutes == null || minutes < 0) {
+      return const CourseReminderSettings();
+    }
+    return CourseReminderSettings(
+      behavior: CourseReminderBehavior.custom,
+      minutesBefore: minutes,
+    );
   }
 
   Future<void> _confirmDelete() async {
@@ -844,6 +1064,570 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
     return result;
   }
 }
+
+class _CourseDateExceptionRow extends StatelessWidget {
+  const _CourseDateExceptionRow({
+    super.key,
+    required this.dateLabel,
+    required this.summary,
+    required this.cancelled,
+    required this.enabled,
+    required this.isLast,
+    required this.deleteLabel,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final String dateLabel;
+  final String summary;
+  final bool cancelled;
+  final bool enabled;
+  final bool isLast;
+  final String deleteLabel;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final foreground = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondary = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    final icon = cancelled
+        ? Icons.event_busy_outlined
+        : Icons.schedule_outlined;
+
+    return Material(
+      color: colors.surfaceContainerHighest,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  enabled: enabled,
+                  label: dateLabel,
+                  value: summary,
+                  onTap: enabled ? onEdit : null,
+                  child: ExcludeSemantics(
+                    child: InkWell(
+                      onTap: enabled ? onEdit : null,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 64),
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                            12,
+                            8,
+                            4,
+                            8,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(icon, color: secondary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      dateLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                            color: foreground,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      summary,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(color: secondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Tooltip(
+                message: deleteLabel,
+                child: IconButton(
+                  onPressed: enabled ? onDelete : null,
+                  icon: const Icon(Icons.delete_outline),
+                  color: enabled ? colors.onSurfaceVariant : secondary,
+                  tooltip: deleteLabel,
+                ),
+              ),
+            ],
+          ),
+          if (!isLast) Divider(height: 1, color: colors.outlineVariant),
+        ],
+      ),
+    );
+  }
+}
+
+enum _CourseDateExceptionMode { cancelled, timeOverride }
+
+class _CourseDateExceptionEditorDialog extends StatefulWidget {
+  const _CourseDateExceptionEditorDialog({
+    required this.initialException,
+    required this.dayOfWeek,
+    required this.fallbackStartMinutes,
+    required this.fallbackEndMinutes,
+  });
+
+  final CourseDateException? initialException;
+  final int dayOfWeek;
+  final int fallbackStartMinutes;
+  final int fallbackEndMinutes;
+
+  @override
+  State<_CourseDateExceptionEditorDialog> createState() =>
+      _CourseDateExceptionEditorDialogState();
+}
+
+class _CourseDateExceptionEditorDialogState
+    extends State<_CourseDateExceptionEditorDialog> {
+  late DateTime _date;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+  late _CourseDateExceptionMode _mode;
+  var _timePickerOpen = false;
+  var _hasPopped = false;
+  String? _timeError;
+
+  @override
+  void initState() {
+    super.initState();
+    final current = widget.initialException;
+    final initialDate = tryParseStrictIsoDate(current?.dateIso);
+    _date = _dateOnWeekday(
+      initialDate ?? normalizeDateOnly(DateTime.now()),
+      widget.dayOfWeek,
+    );
+    _mode = current == null || current.cancelled
+        ? _CourseDateExceptionMode.cancelled
+        : _CourseDateExceptionMode.timeOverride;
+    _startTime = _timeFromMinutes(
+      current?.startMinutes ?? widget.fallbackStartMinutes,
+    );
+    _endTime = _timeFromMinutes(
+      current?.endMinutes ?? widget.fallbackEndMinutes,
+    );
+  }
+
+  Future<void> _pickDate() async {
+    if (_timePickerOpen || _hasPopped) return;
+    _timePickerOpen = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    try {
+      final result = await showDatePicker(
+        context: context,
+        initialDate: _date,
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100),
+        selectableDayPredicate: (date) => date.weekday == widget.dayOfWeek,
+      );
+      if (!mounted || result == null) return;
+      setState(() => _date = normalizeDateOnly(result));
+    } finally {
+      _timePickerOpen = false;
+    }
+  }
+
+  Future<void> _pickTime({required bool isStart}) async {
+    if (_timePickerOpen || _hasPopped) return;
+    _timePickerOpen = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    try {
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: isStart ? _startTime : _endTime,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
+      );
+      if (!mounted || picked == null) return;
+      setState(() {
+        if (isStart) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
+        _timeError = null;
+      });
+    } finally {
+      _timePickerOpen = false;
+    }
+  }
+
+  void _save() {
+    if (_timePickerOpen || _hasPopped) return;
+    final startMinutes = _minutesFromTime(_startTime);
+    final endMinutes = _minutesFromTime(_endTime);
+    if (_mode == _CourseDateExceptionMode.timeOverride &&
+        endMinutes <= startMinutes) {
+      setState(
+        () => _timeError = AppLocalizations.of(context).endTimeMustBeLater,
+      );
+      return;
+    }
+
+    _hasPopped = true;
+    Navigator.of(context).pop(
+      CourseDateException(
+        dateIso: _dateIso(_date),
+        cancelled: _mode == _CourseDateExceptionMode.cancelled,
+        startMinutes: _mode == _CourseDateExceptionMode.timeOverride
+            ? startMinutes
+            : null,
+        endMinutes: _mode == _CourseDateExceptionMode.timeOverride
+            ? endMinutes
+            : null,
+      ),
+    );
+  }
+
+  void _cancel() {
+    if (_timePickerOpen || _hasPopped) return;
+    _hasPopped = true;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final dateLabel = MaterialLocalizations.of(context).formatMediumDate(_date);
+    final timeOverride = _mode == _CourseDateExceptionMode.timeOverride;
+
+    return PopScope(
+      canPop: !_timePickerOpen && !_hasPopped,
+      child: AlertDialog(
+        key: const ValueKey('course-date-exception-editor-dialog'),
+        insetPadding: _editorDialogInsetPadding(context),
+        title: Text(
+          widget.initialException == null
+              ? l10n.courseDateExceptionAdd
+              : l10n.courseDateExceptionEdit,
+        ),
+        content: ExpressiveDialogContent(
+          maxWidth: 360,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _CourseDateExceptionAction(
+                  key: const ValueKey('course-date-exception-date'),
+                  label: l10n.eventDate,
+                  value: dateLabel,
+                  icon: Icons.calendar_today_outlined,
+                  onTap: _pickDate,
+                ),
+                const SizedBox(height: 12),
+                _VerticalChoiceList<_CourseDateExceptionMode>(
+                  key: const ValueKey('course-date-exception-mode'),
+                  selected: {_mode},
+                  onChanged: (value) {
+                    setState(() {
+                      _mode = value;
+                      _timeError = null;
+                    });
+                  },
+                  options: [
+                    _VerticalChoiceOption(
+                      value: _CourseDateExceptionMode.cancelled,
+                      icon: const Icon(Icons.event_busy_outlined),
+                      label: Text(l10n.courseDateExceptionCancelClass),
+                    ),
+                    _VerticalChoiceOption(
+                      value: _CourseDateExceptionMode.timeOverride,
+                      icon: const Icon(Icons.schedule_outlined),
+                      label: Text(l10n.courseDateExceptionTimeOverride),
+                    ),
+                  ],
+                ),
+                if (timeOverride) ...[
+                  const SizedBox(height: 12),
+                  _CourseDateExceptionTimeRange(
+                    startLabel: l10n.startTime,
+                    startValue: _formatTime(_startTime),
+                    endLabel: l10n.endTime,
+                    endValue: _formatTime(_endTime),
+                    onPickStart: () => unawaited(_pickTime(isStart: true)),
+                    onPickEnd: () => unawaited(_pickTime(isStart: false)),
+                  ),
+                  if (_timeError != null) ...[
+                    const SizedBox(height: 8),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _timeError!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: _cancel, child: Text(l10n.cancel)),
+          FilledButton(
+            key: const ValueKey('course-date-exception-save'),
+            onPressed: _save,
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CourseDateExceptionAction extends StatelessWidget {
+  const _CourseDateExceptionAction({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
+    return Semantics(
+      button: true,
+      label: label,
+      value: value,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: Material(
+          color: colors.surfaceContainerLow,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: shape,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 12, 8),
+                child: Row(
+                  children: [
+                    Icon(icon, color: colors.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            value,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseDateExceptionTimeRange extends StatelessWidget {
+  const _CourseDateExceptionTimeRange({
+    required this.startLabel,
+    required this.startValue,
+    required this.endLabel,
+    required this.endValue,
+    required this.onPickStart,
+    required this.onPickEnd,
+  });
+
+  final String startLabel;
+  final String startValue;
+  final String endLabel;
+  final String endValue;
+  final VoidCallback onPickStart;
+  final VoidCallback onPickEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
+    return Material(
+      color: colors.surfaceContainerLow,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final vertical =
+              constraints.maxWidth < 280 ||
+              MediaQuery.textScalerOf(context).scale(1) > 1.3;
+          final start = _CourseDateExceptionTimeAction(
+            key: const ValueKey('course-date-exception-start-time'),
+            label: startLabel,
+            value: startValue,
+            onTap: onPickStart,
+          );
+          final end = _CourseDateExceptionTimeAction(
+            key: const ValueKey('course-date-exception-end-time'),
+            label: endLabel,
+            value: endValue,
+            onTap: onPickEnd,
+          );
+          if (vertical) {
+            return Column(
+              children: [
+                start,
+                Divider(height: 1, color: colors.outlineVariant),
+                end,
+              ],
+            );
+          }
+          return IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(child: start),
+                VerticalDivider(width: 1, color: colors.outlineVariant),
+                Expanded(child: end),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CourseDateExceptionTimeAction extends StatelessWidget {
+  const _CourseDateExceptionTimeAction({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      value: value,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 64),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 10, 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+DateTime _dateOnWeekday(DateTime date, int weekday) {
+  final normalized = normalizeDateOnly(date);
+  final targetWeekday = normalizeDayOfWeek(weekday);
+  final offset = (targetWeekday - normalized.weekday + 7) % 7;
+  return addCalendarDays(normalized, offset);
+}
+
+TimeOfDay _timeFromMinutes(int minutes) {
+  final normalized = normalizeMinuteOfDay(minutes);
+  return TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60);
+}
+
+int _minutesFromTime(TimeOfDay time) => (time.hour * 60) + time.minute;
+
+String _formatTime(TimeOfDay time) => formatMinutes(_minutesFromTime(time));
+
+String _dateIso(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 class _DeleteCourseConfirmationDialog extends StatefulWidget {
   const _DeleteCourseConfirmationDialog({this.onDelete});
@@ -1112,6 +1896,7 @@ class _ResponsiveFormRow extends StatelessWidget {
 /// a text controller or a pending picker selection.
 class _EditorSection extends StatelessWidget {
   const _EditorSection({
+    super.key,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -1258,6 +2043,139 @@ class _SelectionIcon extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: Icon(icon, color: enabled ? colors.primary : disabledColor),
+    );
+  }
+}
+
+/// A finite-height alternative to a vertical [SegmentedButton].  The
+/// material_ui implementation currently asks for an infinite height when it
+/// is placed inside a scrolling bottom sheet.  These connected rows preserve
+/// the same single-choice semantics while allowing translated labels to wrap
+/// naturally at large text scales.
+class _VerticalChoiceList<T> extends StatelessWidget {
+  const _VerticalChoiceList({
+    super.key,
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<_VerticalChoiceOption<T>> options;
+  final Set<T> selected;
+  final ValueChanged<T>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final selectedValue = selected.isEmpty ? null : selected.first;
+    return Material(
+      color: colors.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < options.length; index++) ...[
+            if (index > 0)
+              Divider(height: 1, thickness: 1, color: colors.outlineVariant),
+            _VerticalChoiceRow<T>(
+              option: options[index],
+              selected: options[index].value == selectedValue,
+              enabled: onChanged != null,
+              onTap: onChanged == null
+                  ? null
+                  : () => onChanged!(options[index].value),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VerticalChoiceOption<T> {
+  const _VerticalChoiceOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  final T value;
+  final Widget label;
+  final Widget icon;
+}
+
+class _VerticalChoiceRow<T> extends StatelessWidget {
+  const _VerticalChoiceRow({
+    required this.option,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final _VerticalChoiceOption<T> option;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final foreground = enabled
+        ? (selected ? colors.onPrimaryContainer : colors.onSurface)
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondary = enabled
+        ? (selected ? colors.onPrimaryContainer : colors.onSurfaceVariant)
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: enabled,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: Material(
+          color: selected
+              ? colors.primaryContainer
+              : colors.surfaceContainerLow,
+          child: InkWell(
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 14, 10),
+                child: Row(
+                  children: [
+                    IconTheme(
+                      data: IconThemeData(color: secondary, size: 22),
+                      child: option.icon,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: DefaultTextStyle.merge(
+                        style: theme.textTheme.bodyLarge!.copyWith(
+                          color: foreground,
+                          fontWeight: selected ? FontWeight.w600 : null,
+                        ),
+                        child: option.label,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      selected
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      color: selected ? colors.primary : secondary,
+                      size: 22,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -46,6 +46,19 @@ class AppBackupRestoreInProgressException implements Exception {
       'a complete backup restore is queued or running.';
 }
 
+/// A notification emitted after an AppData snapshot has been accepted by the
+/// repository. Consumers such as agenda notifications and widgets can observe
+/// this stream without reacting to transient provider rebuilds.
+class AppDataCommit {
+  const AppDataCommit({required this.snapshot, required this.revision});
+
+  final AppData snapshot;
+  final int revision;
+
+  /// Alias used by consumers that refer to the committed value as `data`.
+  AppData get data => snapshot;
+}
+
 String resolveFirstLaunchLocaleCode(Locale? locale) {
   return app_locale.resolveFirstLaunchLocaleCode(locale);
 }
@@ -59,6 +72,12 @@ String _defaultSystemLocaleCodeResolver() {
 
 abstract class _TimetableProviderBase extends ChangeNotifier {
   static final Object _appBackupRestoreZoneKey = Object();
+
+  final StreamController<AppDataCommit> _committedDataController =
+      StreamController<AppDataCommit>.broadcast();
+  var _committedDataRevision = 0;
+
+  Stream<AppDataCommit> get committedData => _committedDataController.stream;
 
   Future<void> _pendingSecretWrite = Future<void>.value();
   String _lastPersistedCustomSchoolImportApiKey = '';
@@ -108,8 +127,13 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<AppData> _buildDefaultAppData();
   Future<void> _resumePendingAppBackupRestore();
   Future<void> _startFreshAfterCorruptAppBackupRestoreJournal();
-  Future<void> _saveAndNotify();
-  Future<void> _save();
+  // These declarations are part of the mixin contract; the concrete methods
+  // below carry additional internal options used by the save transaction.
+  // ignore: unused_element_parameter
+  Future<void> _saveAndNotify({bool emitCommit = true});
+  // ignore: unused_element_parameter
+  Future<void> _save({bool emitCommit = true});
+  void emitAppDataCommit(AppData snapshot);
   void _scheduleUiStateSave();
   bool _cancelScheduledUiStateSave();
   void _startDeferredUiStateSave();
@@ -442,6 +466,11 @@ class TimetableProvider extends _TimetableProviderBase
   static const _defaultUiStateSaveDelay = Duration(milliseconds: 450);
 
   bool get isLoaded => _isLoaded;
+
+  /// The latest in-memory application snapshot. Consumers that need a
+  /// platform projection should prefer [committedData] so failed writes are
+  /// never exposed as durable state.
+  AppData get appData => _appData;
   bool get hasTimetables => _appData.studentMode.timetables.isNotEmpty;
   bool get hasPeriodTimeSets => _appData.studentMode.periodTimeSets.isNotEmpty;
   List<TimetableData> get timetables => _appData.studentMode.timetables;
@@ -597,6 +626,7 @@ class TimetableProvider extends _TimetableProviderBase
     bool notify = true,
     bool allowDuringModeSwitch = false,
     bool rollbackOnFailure = true,
+    bool emitCommit = true,
   }) async {
     _ensureAppBackupRestoreMutationAllowed();
     final hadScheduledUiStateSave = _cancelScheduledUiStateSave();
@@ -604,6 +634,7 @@ class TimetableProvider extends _TimetableProviderBase
       await _save(
         allowDuringModeSwitch: allowDuringModeSwitch,
         rollbackOnFailure: rollbackOnFailure,
+        emitCommit: emitCommit,
       );
     } catch (_) {
       _selectedWeek = _currentWeekForActiveTimetable();
@@ -620,6 +651,7 @@ class TimetableProvider extends _TimetableProviderBase
   Future<void> _save({
     bool allowDuringModeSwitch = false,
     bool rollbackOnFailure = true,
+    bool emitCommit = true,
   }) async {
     if (!allowDuringModeSwitch) {
       while (true) {
@@ -637,6 +669,9 @@ class TimetableProvider extends _TimetableProviderBase
     final attemptEpoch = _appDataMutationEpoch;
     try {
       await _repository.save(normalized);
+      if (emitCommit) {
+        emitAppDataCommit(normalized);
+      }
     } catch (error) {
       // A write rejected before enqueue keeps the unsaved mutation visible
       // behind the recovery gate. A previously accepted write must converge
@@ -848,7 +883,16 @@ class TimetableProvider extends _TimetableProviderBase
     );
   }
 
-  Future<void> _runDeferredUiStateSave() => _save();
+  Future<void> _runDeferredUiStateSave() => _save(emitCommit: false);
+
+  @override
+  void emitAppDataCommit(AppData snapshot) {
+    if (_committedDataController.isClosed || _isDisposed) return;
+    _committedDataRevision += 1;
+    _committedDataController.add(
+      AppDataCommit(snapshot: snapshot, revision: _committedDataRevision),
+    );
+  }
 
   @override
   void dispose() {
@@ -857,6 +901,7 @@ class TimetableProvider extends _TimetableProviderBase
     if (hadScheduledSave) {
       _startDeferredUiStateSave();
     }
+    unawaited(_committedDataController.close());
     super.dispose();
   }
 }

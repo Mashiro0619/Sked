@@ -1829,6 +1829,146 @@ void main() {
       }
     });
 
+    test(
+      'round-trips notification settings and keeps legacy snapshots silent',
+      () {
+        final snapshot = validSnapshot()
+          ..['notificationSettings'] = {
+            'enabled': true,
+            'courseDefaultMinutesBefore': 10,
+            'generalDefaultMinutesBefore': 30,
+            'lockScreenShowTitles': true,
+          };
+
+        final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+        expect(decoded.notificationSettings.enabled, isTrue);
+        expect(decoded.notificationSettings.courseDefaultMinutesBefore, 10);
+        expect(decoded.notificationSettings.generalDefaultMinutesBefore, 30);
+        expect(decoded.notificationSettings.lockScreenShowTitles, isTrue);
+        expect(decoded.toJson()['notificationSettings'], {
+          'enabled': true,
+          'courseDefaultMinutesBefore': 10,
+          'generalDefaultMinutesBefore': 30,
+          'lockScreenShowTitles': true,
+        });
+        expect(
+          decoded.copyWith().notificationSettings,
+          decoded.notificationSettings,
+        );
+
+        final legacy = validSnapshot()..remove('notificationSettings');
+        final legacyDecoded = AppData.decodeStorageSnapshot(jsonEncode(legacy));
+        expect(legacyDecoded.notificationSettings.enabled, isFalse);
+        expect(legacyDecoded.toJson(), isNot(contains('notificationSettings')));
+      },
+    );
+
+    test('strictly rejects malformed notification settings storage values', () {
+      for (final value in <Object?>[
+        'not-an-object',
+        <Object?>[],
+        <String, dynamic>{'enabled': 'true'},
+        <String, dynamic>{'lockScreenShowTitles': 1},
+        <String, dynamic>{'courseDefaultMinutesBefore': -1},
+        <String, dynamic>{'courseDefaultMinutesBefore': 10.5},
+        <String, dynamic>{'generalDefaultMinutesBefore': '30'},
+      ]) {
+        final snapshot = validSnapshot()..['notificationSettings'] = value;
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: 'notificationSettings=$value',
+        );
+      }
+    });
+
+    test(
+      'strictly validates stored course exceptions and reminder settings',
+      () {
+        final validCourseWithSettings = validCourse()
+          ..['dateExceptions'] = [
+            {'date': '2026-08-03', 'cancelled': true},
+            {'date': '2026-08-10', 'startMinutes': 540, 'endMinutes': 600},
+          ]
+          ..['reminderSettings'] = {'behavior': 'custom', 'minutesBefore': 15};
+        final validSnapshotWithCourse = snapshotWithTimetables([
+          validTimetable()..['courses'] = [validCourseWithSettings],
+        ]);
+        final decoded = AppData.decodeStorageSnapshot(
+          jsonEncode(validSnapshotWithCourse),
+        );
+        final course = decoded.studentMode.timetables.single.courses.single;
+        expect(course.dateExceptions, hasLength(2));
+        expect(course.dateExceptions.first.cancelled, isTrue);
+        expect(course.dateExceptions.last.startMinutes, 540);
+        expect(course.reminderSettings.behavior.value, 'custom');
+        expect(course.reminderSettings.minutesBefore, 15);
+
+        final invalidCourses = <Map<String, dynamic>>[
+          validCourse()..['dateExceptions'] = 'not-a-list',
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-02-30'},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03T14:30:00'},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03'},
+              {'date': '2026-08-03', 'cancelled': true},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03', 'cancelled': 'false'},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03', 'startMinutes': '540'},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03', 'endMinutes': 600.5},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03', 'startMinutes': -1},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03', 'endMinutes': 24 * 60},
+            ],
+          validCourse()
+            ..['dateExceptions'] = [
+              {'date': '2026-08-03', 'startMinutes': 600, 'endMinutes': 525},
+            ],
+          validCourse()..['reminderSettings'] = 'not-an-object',
+          validCourse()..['reminderSettings'] = {'behavior': 'custom'},
+          validCourse()
+            ..['reminderSettings'] = {
+              'behavior': 'disabled',
+              'minutesBefore': -1,
+            },
+          validCourse()
+            ..['reminderSettings'] = {
+              'behavior': 'unknown',
+              'minutesBefore': 10,
+            },
+        ];
+        for (final malformedCourse in invalidCourses) {
+          final snapshot = snapshotWithTimetables([
+            validTimetable()..['courses'] = [malformedCourse],
+          ]);
+          expect(
+            () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+            throwsFormatException,
+            reason: 'course=$malformedCourse',
+          );
+        }
+      },
+    );
+
     test('rejects malformed top-level settings and metadata', () {
       final snapshot = validSnapshot()..['localeCode'] = 42;
 
