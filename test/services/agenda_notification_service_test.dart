@@ -57,6 +57,7 @@ class _FakeAndroidNotificationsPlatform
   NotificationAppLaunchDetails? launchDetails =
       const NotificationAppLaunchDetails(false);
   List<PendingNotificationRequest> pendingRequests = const [];
+  List<ActiveNotification> activeNotifications = const [];
   final List<_RecordedAndroidSchedule> schedules = [];
   final List<int> cancelledIds = [];
 
@@ -86,6 +87,10 @@ class _FakeAndroidNotificationsPlatform
   @override
   Future<List<PendingNotificationRequest>>
   pendingNotificationRequests() async => List.unmodifiable(pendingRequests);
+
+  @override
+  Future<List<ActiveNotification>> getActiveNotifications() async =>
+      List.unmodifiable(activeNotifications);
 
   @override
   Future<void> zonedSchedule({
@@ -234,6 +239,48 @@ class _RecordingGateway extends MemoryAgendaNotificationGateway {
   Future<void> cancel(String key) async {
     cancelledKeys.add(key);
     await super.cancel(key);
+  }
+}
+
+class _AlternateNotificationIdGateway extends MemoryAgendaNotificationGateway {
+  int? _actualNotificationId;
+
+  @override
+  int? get lastScheduledNotificationId => _actualNotificationId;
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    _actualNotificationId = request.id + 1;
+    await super.schedule(request, exact: exact);
+  }
+}
+
+class _DelayedDeveloperTestGateway extends MemoryAgendaNotificationGateway {
+  final initializationStarted = Completer<void>();
+  final releaseInitialization = Completer<void>();
+  final clearStarted = Completer<void>();
+  final releaseClear = Completer<void>();
+
+  @override
+  Future<void> initialize({
+    required void Function(String? payload) onTap,
+    void Function(String? payload, String? actionId)? onAction,
+  }) async {
+    await super.initialize(onTap: onTap, onAction: onAction);
+    if (!initializationStarted.isCompleted) {
+      initializationStarted.complete();
+    }
+    await releaseInitialization.future;
+  }
+
+  @override
+  Future<void> clearTestNotifications() async {
+    if (!clearStarted.isCompleted) clearStarted.complete();
+    await releaseClear.future;
+    await super.clearTestNotifications();
   }
 }
 
@@ -533,6 +580,118 @@ void main() {
     );
 
     test(
+      'allocates a fresh id when a foreign pending notification uses the hash',
+      () async {
+        final key = 'fresh-id-pending';
+        final fireAt = DateTime.utc(2030, 1, 2, 8);
+        final request = _platformRequest(key: key, fireAt: fireAt);
+        platform.pendingRequests = [
+          PendingNotificationRequest(
+            request.id,
+            'Other app message',
+            'Keep me',
+            'foreign-payload',
+          ),
+        ];
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+        await gateway.schedule(request, exact: true);
+
+        expect(platform.schedules, hasLength(1));
+        expect(platform.schedules.single.id, isNot(request.id));
+        expect(platform.schedules.single.id, greaterThan(0));
+      },
+    );
+
+    test(
+      'allocates a fresh id when a visible notification uses the hash',
+      () async {
+        final key = 'fresh-id-active';
+        final request = _platformRequest(
+          key: key,
+          fireAt: DateTime.utc(2030, 1, 2, 8),
+        );
+        platform.activeNotifications = [
+          ActiveNotification(
+            id: request.id,
+            title: 'Already shown',
+            body: 'Do not replace',
+          ),
+        ];
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+        await gateway.schedule(request, exact: true);
+
+        expect(platform.schedules.single.id, isNot(request.id));
+      },
+    );
+
+    test(
+      'keeps different managed keys separate after a hash collision',
+      () async {
+        const firstKey = 'v1|course|14339|0';
+        const secondKey = 'v1|course|113017|0';
+        expect(notificationIdForKey(firstKey), notificationIdForKey(secondKey));
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+        await gateway.schedule(
+          _platformRequest(key: firstKey, fireAt: DateTime.utc(2030, 1, 2, 8)),
+          exact: true,
+        );
+        await gateway.schedule(
+          _platformRequest(key: secondKey, fireAt: DateTime.utc(2030, 1, 2, 9)),
+          exact: true,
+        );
+
+        expect(platform.schedules, hasLength(2));
+        expect(platform.schedules[0].id, isNot(platform.schedules[1].id));
+      },
+    );
+
+    test('reuses the actual pending id for the same logical key', () async {
+      final key = 'same-logical-key';
+      final fireAt = DateTime.utc(2030, 1, 2, 8);
+      final request = _platformRequest(key: key, fireAt: fireAt);
+      platform.pendingRequests = [
+        PendingNotificationRequest(987654, 'Course', '08:00', request.payload),
+      ];
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+      await gateway.schedule(request, exact: true);
+
+      expect(platform.schedules.single.id, 987654);
+      expect(gateway.lastScheduledNotificationId, 987654);
+    });
+
+    test(
+      'cancels a same-key notification that was assigned a probe id',
+      () async {
+        final key = 'cancel-probed-id';
+        final request = _platformRequest(
+          key: key,
+          fireAt: DateTime.utc(2030, 1, 2, 8),
+        );
+        platform.pendingRequests = [
+          PendingNotificationRequest(
+            request.id,
+            'Other app message',
+            'Keep me',
+            'foreign-payload',
+          ),
+        ];
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+        await gateway.schedule(request, exact: true);
+        final allocatedId = gateway.lastScheduledNotificationId!;
+
+        await gateway.cancel(key);
+
+        expect(allocatedId, isNot(request.id));
+        expect(platform.cancelledIds, contains(allocatedId));
+        expect(platform.cancelledIds, isNot(contains(request.id)));
+      },
+    );
+
+    test(
       'schedules localized Android details and preserves managed ownership',
       () async {
         final gateway = FlutterAgendaNotificationGateway(enabled: true);
@@ -599,7 +758,17 @@ void main() {
         ];
         await gateway.cancelAll();
 
-        expect(platform.cancelledIds, [custom.id, 91]);
+        // The fallback request was scheduled successfully but is not present
+        // in this fake platform's pending list yet.  The gateway must still
+        // cancel its session-owned ID during a full agenda clear, while
+        // leaving the foreign ID untouched.
+        expect(platform.cancelledIds, containsAll(<int>[custom.id, 91]));
+        expect(
+          platform.cancelledIds,
+          contains(gateway.lastScheduledNotificationId),
+        );
+        expect(platform.cancelledIds, hasLength(3));
+        expect(platform.cancelledIds, isNot(contains(92)));
       },
     );
 
@@ -629,6 +798,55 @@ void main() {
         AgendaNotificationPayload.tryDecode(platform.schedules.single.payload)
             ?.scheduleExact,
         isFalse,
+      );
+    });
+
+    test('uses alarm-clock mode for the delayed developer test when exact alarms are allowed', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      final fireAt = DateTime.now().add(const Duration(minutes: 1));
+
+      await gateway.scheduleTestNotification(
+        AgendaNotificationTestRequest(
+          id: 2000000001,
+          channel: AgendaNotificationTestChannel.course,
+          title: 'Test',
+          body: 'Test body',
+          localeCode: 'en',
+          channelId: 'sked_course_reminders',
+          channelName: 'Course reminders',
+          channelDescription: 'Course reminder tests',
+          fireAt: fireAt,
+        ),
+      );
+
+      expect(platform.schedules, hasLength(1));
+      expect(
+        platform.schedules.single.scheduleMode,
+        AndroidScheduleMode.alarmClock,
+      );
+    });
+
+    test('uses inexact idle mode for the delayed developer test without exact alarm access', () async {
+      platform.exactAlarmsAllowedResult = false;
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+      await gateway.scheduleTestNotification(
+        AgendaNotificationTestRequest(
+          id: 2000000001,
+          channel: AgendaNotificationTestChannel.course,
+          title: 'Test',
+          body: 'Test body',
+          localeCode: 'en',
+          channelId: 'sked_course_reminders',
+          channelName: 'Course reminders',
+          channelDescription: 'Course reminder tests',
+          fireAt: DateTime.now().add(const Duration(minutes: 1)),
+        ),
+      );
+
+      expect(
+        platform.schedules.single.scheduleMode,
+        AndroidScheduleMode.inexactAllowWhileIdle,
       );
     });
 
@@ -982,6 +1200,26 @@ void main() {
       );
     },
   );
+
+  test('reconcile persists the platform-resolved notification id for background snooze', () async {
+    final runtime = MemoryAgendaNotificationRuntimeStore();
+    final gateway = _AlternateNotificationIdGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtime,
+      now: () => DateTime(2026, 8, 3, 7, 40),
+    );
+
+    await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+
+    final scheduled = gateway.scheduled.entries.single;
+    final backgroundRequest = await runtime.readBackgroundRequest(
+      scheduled.key,
+    );
+    expect(backgroundRequest, isNotNull);
+    expect(backgroundRequest!.notificationId, scheduled.value.id + 1);
+  });
 
   test('background callback ignores malformed and unknown actions', () async {
     SharedPreferences.setMockInitialValues({});
@@ -1765,6 +2003,33 @@ void main() {
       expect(request.fireAt, anchor.add(const Duration(seconds: 30)));
     },
   );
+
+  test('developer background test keeps the entry-time deadline through platform waits', () async {
+    var current = DateTime(2026, 8, 3, 7);
+    final gateway = _DelayedDeveloperTestGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      now: () => current,
+    );
+
+    final scheduling = service.scheduleDeveloperNotificationTest(
+      AgendaNotificationTestChannel.course,
+    );
+    await gateway.initializationStarted.future;
+    current = current.add(const Duration(minutes: 2));
+    gateway.releaseInitialization.complete();
+    await gateway.clearStarted.future;
+    current = current.add(const Duration(minutes: 3));
+    gateway.releaseClear.complete();
+    await scheduling;
+
+    expect(gateway.testNotifications, hasLength(1));
+    expect(
+      gateway.testNotifications.values.single.fireAt,
+      DateTime(2026, 8, 3, 7, 0, 30),
+    );
+  });
 
   test(
     'taps route through the latest payload callback without an action',

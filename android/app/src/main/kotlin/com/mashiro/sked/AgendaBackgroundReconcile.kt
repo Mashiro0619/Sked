@@ -5,7 +5,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.work.BackoffPolicy
@@ -61,14 +60,11 @@ object AgendaBackgroundReconcileScheduler {
             enqueue(context, AndroidProductivityContract.ACTION_AGENDA_RECONCILE)
             return
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Exact-alarm access is optional for the application. Agenda
-            // projection does not need to wake at an exact millisecond, so
-            // setAndAllowWhileIdle is the safe cross-device fallback.
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-        } else {
-            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-        }
+        // This is only rolling-window maintenance, never user-facing reminder
+        // delivery. Do not use allow-while-idle here: Android quotas those
+        // wakeups per UID and a maintenance alarm can otherwise delay the
+        // actual course/event reminder that uses exactAllowWhileIdle.
+        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
     }
 
     fun cancel(context: Context) {

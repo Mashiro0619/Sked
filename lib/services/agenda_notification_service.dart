@@ -253,6 +253,19 @@ abstract interface class AgendaNotificationScheduleModeGateway {
   bool? get lastScheduledExact;
 }
 
+/// Optional outcome exposed by gateways that need to resolve a platform
+/// notification id at scheduling time.
+///
+/// Android's AlarmManager identifies a scheduled alarm by its integer id. A
+/// stable hash is a useful preferred id, but it is not a proof of uniqueness:
+/// an unrelated notification (or a rare hash collision) may already occupy
+/// that slot. Production gateways can probe a free id while preserving the
+/// preferred id for normal updates. Consumers that persist a background
+/// snooze request should use this value after [schedule] completes.
+abstract interface class AgendaNotificationScheduleIdGateway {
+  int? get lastScheduledNotificationId;
+}
+
 class AgendaNotificationMetadata {
   const AgendaNotificationMetadata({
     required this.fireAt,
@@ -382,6 +395,7 @@ class MemoryAgendaNotificationGateway
         AgendaNotificationGateway,
         AgendaNotificationMetadataGateway,
         AgendaNotificationScheduleModeGateway,
+        AgendaNotificationScheduleIdGateway,
         AgendaNotificationTestGateway {
   final Map<String, AgendaNotificationRequest> scheduled = {};
   final Map<int, AgendaNotificationTestRequest> testNotifications = {};
@@ -390,9 +404,13 @@ class MemoryAgendaNotificationGateway
   bool permissionGranted = true;
   bool exactAlarmGranted = true;
   bool? _lastScheduledExact;
+  int? _lastScheduledNotificationId;
 
   @override
   bool? get lastScheduledExact => _lastScheduledExact;
+
+  @override
+  int? get lastScheduledNotificationId => _lastScheduledNotificationId;
 
   @override
   Future<void> initialize({
@@ -427,7 +445,11 @@ class MemoryAgendaNotificationGateway
     AgendaNotificationRequest request, {
     required bool exact,
   }) async {
+    // Keep optional platform scheduling outcomes coherent for every request.
+    // The in-memory gateway never probes, so its actual ID is the stable
+    // preferred ID carried by the request.
     _lastScheduledExact = exact;
+    _lastScheduledNotificationId = request.id;
     scheduled[request.key] = request;
   }
 
@@ -487,6 +509,7 @@ class FlutterAgendaNotificationGateway
         AgendaNotificationGateway,
         AgendaNotificationMetadataGateway,
         AgendaNotificationScheduleModeGateway,
+        AgendaNotificationScheduleIdGateway,
         AgendaNotificationTestGateway {
   FlutterAgendaNotificationGateway({
     FlutterLocalNotificationsPlugin? plugin,
@@ -502,9 +525,22 @@ class FlutterAgendaNotificationGateway
   void Function(String? payload)? _onTap;
   void Function(String? payload, String? actionId)? _onAction;
   bool? _lastScheduledExact;
+  int? _lastScheduledNotificationId;
+  bool _notificationIdCacheLoaded = false;
+  final Map<String, int> _managedNotificationIds = <String, int>{};
+  final Set<int> _occupiedNotificationIds = <int>{};
+  // `pendingNotificationRequests()` is backed by Android preferences. Its
+  // asynchronous write can briefly lag a successful `zonedSchedule` call.
+  // Retain IDs allocated by this process separately so a refresh in that gap
+  // cannot make a second agenda key reuse and overwrite the first message.
+  final Set<int> _sessionAllocatedNotificationIds = <int>{};
+  final Map<String, int> _sessionManagedNotificationIds = <String, int>{};
 
   @override
   bool? get lastScheduledExact => _lastScheduledExact;
+
+  @override
+  int? get lastScheduledNotificationId => _lastScheduledNotificationId;
 
   @override
   Future<void> initialize({
@@ -607,7 +643,7 @@ class FlutterAgendaNotificationGateway
   @override
   Future<Map<String, DateTime>> pendingPlan() async {
     if (!_enabled) return const {};
-    final requests = await _plugin.pendingNotificationRequests();
+    final requests = await _refreshNotificationIdCache();
     final result = <String, DateTime>{};
     for (final request in requests) {
       final decoded = _decodeNotificationPayload(request.payload);
@@ -619,7 +655,7 @@ class FlutterAgendaNotificationGateway
   @override
   Future<Map<String, AgendaNotificationMetadata>> pendingMetadata() async {
     if (!_enabled) return const {};
-    final requests = await _plugin.pendingNotificationRequests();
+    final requests = await _refreshNotificationIdCache();
     final result = <String, AgendaNotificationMetadata>{};
     for (final request in requests) {
       final decoded = _decodeNotificationPayload(request.payload);
@@ -640,6 +676,12 @@ class FlutterAgendaNotificationGateway
     required bool exact,
   }) async {
     if (!_enabled) return;
+    await _ensureNotificationIdCache();
+    // Reuse the platform id of an existing managed request with the same
+    // logical key.  A changed fire time therefore updates that alarm, while
+    // a different occurrence gets a distinct id even when its preferred hash
+    // is already occupied by another notification.
+    final notificationId = _notificationIdForRequest(request);
     final sourceLabel = request.sourceLabel ?? request.occurrence.sourceType;
     final channelId =
         request.channelId ?? 'sked_${request.occurrence.sourceType}_reminders';
@@ -681,7 +723,7 @@ class FlutterAgendaNotificationGateway
       exactRequested: exact,
       canScheduleExact: () => exactAlarmsAllowed,
       schedule: (mode) => _plugin.zonedSchedule(
-        id: request.id,
+        id: notificationId,
         title: request.title,
         body: request.body,
         notificationDetails: details,
@@ -690,24 +732,59 @@ class FlutterAgendaNotificationGateway
         payload: _payloadForScheduleMode(request.payload, mode),
       ),
     );
+    _lastScheduledNotificationId = notificationId;
+    _managedNotificationIds[request.key] = notificationId;
+    _sessionManagedNotificationIds[request.key] = notificationId;
+    _occupiedNotificationIds.add(notificationId);
+    _sessionAllocatedNotificationIds.add(notificationId);
   }
 
   @override
   Future<void> cancel(String key) async {
     if (!_enabled) return;
-    await _plugin.cancel(id: notificationIdForKey(key));
+    final cachedId = _managedNotificationIds[key];
+    final requests = await _refreshNotificationIdCache();
+    final ids = <int>{
+      for (final request in requests)
+        if (_decodeNotificationPayload(request.payload)?.key == key) request.id,
+    };
+    if (cachedId != null) ids.add(cachedId);
+    // Keep compatibility with notifications created by older builds, but do
+    // not blindly cancel a foreign notification that happens to occupy the
+    // preferred hash slot.
+    final preferredId = notificationIdForKey(key);
+    if (ids.isEmpty && !_occupiedNotificationIds.contains(preferredId)) {
+      ids.add(preferredId);
+    }
+    for (final id in ids) {
+      await _plugin.cancel(id: id);
+      _occupiedNotificationIds.remove(id);
+      _sessionAllocatedNotificationIds.remove(id);
+    }
+    _managedNotificationIds.remove(key);
+    _sessionManagedNotificationIds.remove(key);
   }
 
   @override
   Future<void> cancelAll() async {
     if (!_enabled) return;
     // Do not remove notifications owned by another plugin in the same app.
-    final pending = await _plugin.pendingNotificationRequests();
-    for (final request in pending) {
-      if (_decodeNotificationPayload(request.payload) != null) {
-        await _plugin.cancel(id: request.id);
-      }
+    final pending = await _refreshNotificationIdCache();
+    final managedIds = <int>{
+      for (final request in pending)
+        if (_decodeNotificationPayload(request.payload) != null) request.id,
+      // A just-scheduled alarm is not always observable through
+      // pendingNotificationRequests immediately. We allocated these IDs in
+      // this process, so they are safe to cancel during a full agenda clear.
+      ..._sessionManagedNotificationIds.values,
+    };
+    for (final id in managedIds) {
+      await _plugin.cancel(id: id);
+      _occupiedNotificationIds.remove(id);
+      _sessionAllocatedNotificationIds.remove(id);
     }
+    _managedNotificationIds.clear();
+    _sessionManagedNotificationIds.clear();
   }
 
   @override
@@ -741,7 +818,13 @@ class FlutterAgendaNotificationGateway
     // the same source channel. Real agenda keys/IDs are never touched.
     await _plugin.cancel(id: request.id);
     final exact = await exactAlarmsAllowed;
-    await _scheduleWithExactAlarmFallback(
+    // Android throttles `setExactAndAllowWhileIdle` alarms from the same UID
+    // (normally to roughly one delivery per minute, and more aggressively in
+    // Doze). This developer-only check intentionally uses the alarm-clock
+    // path when the user has granted exact-alarm access, so it can distinguish
+    // a broken notification channel from that OS delivery quota. User agenda
+    // reminders continue to use the less intrusive normal reminder mode.
+    await _scheduleDeveloperTestWithFallback(
       exactRequested: exact,
       canScheduleExact: () => exactAlarmsAllowed,
       schedule: (mode) => _plugin.zonedSchedule(
@@ -761,7 +844,75 @@ class FlutterAgendaNotificationGateway
     if (!_enabled) return;
     for (final id in _developerTestNotificationIds) {
       await _plugin.cancel(id: id);
+      _occupiedNotificationIds.remove(id);
     }
+  }
+
+  Future<void> _ensureNotificationIdCache() async {
+    if (_notificationIdCacheLoaded) return;
+    await _refreshNotificationIdCache();
+  }
+
+  /// Reads all platform-owned pending and currently visible IDs once per
+  /// reconciliation.  Pending requests include payloads, so they let us
+  /// recover the actual ID for a managed key after a process restart. Active
+  /// notifications do not reliably expose payloads on Android, but their IDs
+  /// still need reserving so a new agenda item cannot replace a message the
+  /// user has not dismissed.
+  Future<List<PendingNotificationRequest>> _refreshNotificationIdCache() async {
+    final requests = await _plugin.pendingNotificationRequests();
+    _managedNotificationIds.clear();
+    // Keep mappings allocated during this process even when Android's
+    // scheduled-notification preference has not caught up yet. This closes a
+    // small async gap in which a same-key update could otherwise allocate a
+    // second ID (while a different key remains protected from collision).
+    _managedNotificationIds.addAll(_sessionManagedNotificationIds);
+    for (final request in requests) {
+      final decoded = _decodeNotificationPayload(request.payload);
+      if (decoded != null) {
+        _managedNotificationIds[decoded.key] = request.id;
+        _sessionManagedNotificationIds[decoded.key] = request.id;
+      }
+    }
+    final platformIds = requests.map((request) => request.id).toSet();
+    _occupiedNotificationIds
+      ..clear()
+      ..addAll(platformIds)
+      ..addAll(_sessionAllocatedNotificationIds);
+    try {
+      final active = await _plugin.getActiveNotifications();
+      _occupiedNotificationIds.addAll(
+        active.map((notification) => notification.id).whereType<int>(),
+      );
+    } on UnimplementedError {
+      // Some platform implementations do not expose active notifications.
+      // Pending IDs still provide deterministic protection for scheduled
+      // alarms, and the stable key remains the preferred ID in that case.
+    } on MissingPluginException {
+      // Test/desktop embedders may not register the optional active-list API.
+    } on PlatformException {
+      // A transient platform query failure must not make all reminders fail;
+      // continue with the pending set and let scheduling proceed.
+    }
+    _occupiedNotificationIds.addAll(_developerTestNotificationIds);
+    _notificationIdCacheLoaded = true;
+    return requests;
+  }
+
+  int _notificationIdForRequest(AgendaNotificationRequest request) {
+    final existing = _managedNotificationIds[request.key];
+    if (existing != null) return existing;
+    final preferred = request.id;
+    if (!_occupiedNotificationIds.contains(preferred)) return preferred;
+
+    var candidate = preferred;
+    for (var offset = 1; offset <= _notificationIdProbeLimit; offset++) {
+      candidate = candidate >= _agendaNotificationIdLimit ? 1 : candidate + 1;
+      if (!_occupiedNotificationIds.contains(candidate)) return candidate;
+    }
+    throw StateError(
+      'Unable to allocate a unique Android notification id for ${request.key}.',
+    );
   }
 
   NotificationDetails _testNotificationDetails(
@@ -862,6 +1013,31 @@ Future<bool> _scheduleWithExactAlarmFallback({
     if (!permissionDenied) rethrow;
     await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
     return false;
+  }
+}
+
+/// The diagnostic delayed test deliberately uses Android's alarm-clock mode
+/// when exact alarms are available. Unlike ordinary reminder delivery, this
+/// is an explicit developer action and is intended to reveal whether the
+/// platform can wake and post a notification at all. It must still degrade to
+/// an idle-tolerant inexact alarm when exact access is absent or revoked.
+Future<void> _scheduleDeveloperTestWithFallback({
+  required bool exactRequested,
+  required Future<bool> Function() canScheduleExact,
+  required Future<void> Function(AndroidScheduleMode mode) schedule,
+}) async {
+  if (!exactRequested) {
+    await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
+    return;
+  }
+  try {
+    await schedule(AndroidScheduleMode.alarmClock);
+  } on PlatformException catch (error) {
+    final permissionDenied =
+        error.code == _exactAlarmPermissionErrorCode ||
+        !(await canScheduleExact());
+    if (!permissionDenied) rethrow;
+    await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
   }
 }
 
@@ -1091,6 +1267,12 @@ class AgendaNotificationService {
         'The test delay must be positive.',
       );
     }
+    // Capture the delivery instant before any platform work. Initializing the
+    // plugin, checking permission, and replacing a prior diagnostic alarm can
+    // each await Android, but a "30 second" test must still mean 30 seconds
+    // from the user's tap rather than 30 seconds after those steps finish.
+    final requestedAt = now().toLocal();
+    final fireAt = requestedAt.add(delay);
     final testGateway = _testGatewayOrThrow();
     await initialize();
     if (!await gateway.notificationsEnabled) {
@@ -1098,11 +1280,7 @@ class AgendaNotificationService {
     }
     await testGateway.clearTestNotifications();
     await testGateway.scheduleTestNotification(
-      _developerTestRequest(
-        channel,
-        localeCode: localeCode,
-        fireAt: now().add(delay),
-      ),
+      _developerTestRequest(channel, localeCode: localeCode, fireAt: fireAt),
     );
   }
 
@@ -1428,6 +1606,12 @@ class AgendaNotificationService {
           acceptedExact = modeGateway.lastScheduledExact ?? requestedExact;
           exactAllowed = acceptedExact;
         }
+        final scheduledNotificationId =
+            gateway is AgendaNotificationScheduleIdGateway
+            ? (gateway as AgendaNotificationScheduleIdGateway)
+                      .lastScheduledNotificationId ??
+                  request.id
+            : request.id;
         if (!(await _allowsProjectionFence(projectionFence))) {
           // The foreground clear has not yet reopened a fresh AppData
           // generation while its fence is blocked, so removing this just-made
@@ -1441,7 +1625,11 @@ class AgendaNotificationService {
           return;
         }
         await _backgroundRequestStore?.saveBackgroundRequest(
-          _backgroundRequestFor(request, exact: acceptedExact),
+          _backgroundRequestFor(
+            request,
+            exact: acceptedExact,
+            notificationId: scheduledNotificationId,
+          ),
         );
       }
       if (!(await _allowsProjectionFence(projectionFence))) return;
@@ -1989,9 +2177,10 @@ class AgendaNotificationService {
   AgendaNotificationBackgroundRequest _backgroundRequestFor(
     AgendaNotificationRequest request, {
     required bool exact,
+    int? notificationId,
   }) => AgendaNotificationBackgroundRequest(
     key: request.key,
-    notificationId: request.id,
+    notificationId: notificationId ?? request.id,
     title: request.title,
     body: request.body,
     payload: _payloadForScheduleMode(
@@ -2100,6 +2289,8 @@ const _developerTestNotificationIds = <int>[
   _developerCourseTestNotificationId,
   _developerScheduleTestNotificationId,
 ];
+const _agendaNotificationIdLimit = _developerCourseTestNotificationId - 1;
+const _notificationIdProbeLimit = 100000;
 
 class _SelectedNotificationPlan {
   const _SelectedNotificationPlan({
