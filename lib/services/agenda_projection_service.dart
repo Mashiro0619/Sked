@@ -367,15 +367,12 @@ class StudentAgendaSource implements AgendaSource {
       if (!date.isBefore(semesterStart) && !date.isAfter(semesterEnd)) {
         final week = currentWeekFor(config, now: date);
         for (final course in timetable.courses) {
-          final dateException = _courseDateExceptionFor(course, date);
           if (!matchesSemesterWeek(course, week) ||
-              course.dayOfWeek != date.weekday ||
-              dateException?.cancelled == true) {
+              course.dayOfWeek != date.weekday) {
             continue;
           }
-          final startMinutes =
-              dateException?.startMinutes ?? course.startMinutes;
-          final endMinutes = dateException?.endMinutes ?? course.endMinutes;
+          final startMinutes = course.startMinutes;
+          final endMinutes = course.endMinutes;
           if (endMinutes <= startMinutes ||
               (startMinutes == 0 && endMinutes == 0)) {
             continue;
@@ -436,14 +433,6 @@ class StudentAgendaSource implements AgendaSource {
       date = addCalendarDays(date, 1);
     }
   }
-}
-
-CourseDateException? _courseDateExceptionFor(CourseItem course, DateTime date) {
-  final iso = _dateIso(date);
-  for (final exception in course.dateExceptions) {
-    if (exception.dateIso == iso) return exception;
-  }
-  return null;
 }
 
 class GeneralAgendaSource implements AgendaSource {

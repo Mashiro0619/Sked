@@ -15,6 +15,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/app_exit_controller.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
 
 class _FakeSecretStore implements SecretStore {
   String value = 'secret';
@@ -188,6 +189,33 @@ void main() {
     expect(clearService.calls, 1);
     expect(exitController.calls, 1);
   });
+
+  test(
+    'coordinator fences headless projection without a foreground agenda owner',
+    () async {
+      final storage = _MemoryStorage()
+        ..data = buildInitialAppData(buildDefaultPeriodTimes());
+      final provider = TimetableProvider(
+        storage: storage,
+        secretStore: secrets,
+        schoolSiteService: SchoolSiteService(
+          store: _MemorySchoolSiteStore(),
+          coordinator: SchoolSiteStorageCoordinator(),
+        ),
+      );
+      await provider.load();
+      addTearDown(provider.dispose);
+      final fenceStore = MemoryAgendaNotificationRuntimeStore();
+
+      await AppDataClearCoordinator(
+        clearService: _FakeClearService(),
+        exitController: _FakeExitController(),
+        projectionFenceStore: fenceStore,
+      ).clearAndExit(provider);
+
+      expect((await fenceStore.readProjectionFence()).blocked, isTrue);
+    },
+  );
 
   for (final exitThrows in [false, true]) {
     test('successful clear permanently blocks old provider writes when exit '

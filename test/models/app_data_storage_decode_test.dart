@@ -1882,92 +1882,47 @@ void main() {
       }
     });
 
-    test(
-      'strictly validates stored course exceptions and reminder settings',
-      () {
-        final validCourseWithSettings = validCourse()
-          ..['dateExceptions'] = [
-            {'date': '2026-08-03', 'cancelled': true},
-            {'date': '2026-08-10', 'startMinutes': 540, 'endMinutes': 600},
-          ]
-          ..['reminderSettings'] = {'behavior': 'custom', 'minutesBefore': 15};
-        final validSnapshotWithCourse = snapshotWithTimetables([
-          validTimetable()..['courses'] = [validCourseWithSettings],
-        ]);
-        final decoded = AppData.decodeStorageSnapshot(
-          jsonEncode(validSnapshotWithCourse),
-        );
-        final course = decoded.studentMode.timetables.single.courses.single;
-        expect(course.dateExceptions, hasLength(2));
-        expect(course.dateExceptions.first.cancelled, isTrue);
-        expect(course.dateExceptions.last.startMinutes, 540);
-        expect(course.reminderSettings.behavior.value, 'custom');
-        expect(course.reminderSettings.minutesBefore, 15);
+    test('ignores legacy course date exceptions and validates reminders', () {
+      final courseWithLegacyDateExceptions = validCourse()
+        ..['dateExceptions'] = [
+          {'date': '2026-02-30', 'cancelled': 'false'},
+          'ignored legacy value',
+        ]
+        ..['reminderSettings'] = {'behavior': 'custom', 'minutesBefore': 15};
+      final decoded = AppData.decodeStorageSnapshot(
+        jsonEncode(
+          snapshotWithTimetables([
+            validTimetable()..['courses'] = [courseWithLegacyDateExceptions],
+          ]),
+        ),
+      );
+      final course = decoded.studentMode.timetables.single.courses.single;
+      expect(course.toJson(), isNot(contains('dateExceptions')));
+      expect(course.reminderSettings.behavior.value, 'custom');
+      expect(course.reminderSettings.minutesBefore, 15);
 
-        final invalidCourses = <Map<String, dynamic>>[
-          validCourse()..['dateExceptions'] = 'not-a-list',
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-02-30'},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03T14:30:00'},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03'},
-              {'date': '2026-08-03', 'cancelled': true},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03', 'cancelled': 'false'},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03', 'startMinutes': '540'},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03', 'endMinutes': 600.5},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03', 'startMinutes': -1},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03', 'endMinutes': 24 * 60},
-            ],
-          validCourse()
-            ..['dateExceptions'] = [
-              {'date': '2026-08-03', 'startMinutes': 600, 'endMinutes': 525},
-            ],
-          validCourse()..['reminderSettings'] = 'not-an-object',
-          validCourse()..['reminderSettings'] = {'behavior': 'custom'},
-          validCourse()
-            ..['reminderSettings'] = {
-              'behavior': 'disabled',
-              'minutesBefore': -1,
-            },
-          validCourse()
-            ..['reminderSettings'] = {
-              'behavior': 'unknown',
-              'minutesBefore': 10,
-            },
-        ];
-        for (final malformedCourse in invalidCourses) {
-          final snapshot = snapshotWithTimetables([
-            validTimetable()..['courses'] = [malformedCourse],
-          ]);
-          expect(
-            () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
-            throwsFormatException,
-            reason: 'course=$malformedCourse',
-          );
-        }
-      },
-    );
+      final invalidCourses = <Map<String, dynamic>>[
+        validCourse()..['reminderSettings'] = 'not-an-object',
+        validCourse()..['reminderSettings'] = {'behavior': 'custom'},
+        validCourse()
+          ..['reminderSettings'] = {
+            'behavior': 'disabled',
+            'minutesBefore': -1,
+          },
+        validCourse()
+          ..['reminderSettings'] = {'behavior': 'unknown', 'minutesBefore': 10},
+      ];
+      for (final malformedCourse in invalidCourses) {
+        final snapshot = snapshotWithTimetables([
+          validTimetable()..['courses'] = [malformedCourse],
+        ]);
+        expect(
+          () => AppData.decodeStorageSnapshot(jsonEncode(snapshot)),
+          throwsFormatException,
+          reason: 'course=$malformedCourse',
+        );
+      }
+    });
 
     test('rejects malformed top-level settings and metadata', () {
       final snapshot = validSnapshot()..['localeCode'] = 42;

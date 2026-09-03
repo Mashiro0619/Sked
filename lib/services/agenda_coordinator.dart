@@ -4,6 +4,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import 'agenda_action_router.dart';
 import 'agenda_notification_service.dart';
+import 'agenda_notification_runtime_store.dart';
 import 'agenda_projection_service.dart';
 import 'android_productivity_bridge.dart';
 
@@ -68,6 +69,13 @@ class AgendaCoordinator {
   bool get isStarted => _started && !_disposed;
   int? get lastPublishedRevision => _lastPublishedRevision;
 
+  /// The single notification service owned by this application coordinator.
+  ///
+  /// Settings and diagnostics surfaces must use this instance instead of
+  /// constructing another plugin-backed service. That keeps callbacks,
+  /// pending-plan ownership, and runtime diagnostics in one place.
+  AgendaNotificationService get notificationService => _notificationService;
+
   /// Starts listeners and performs one initial projection after the provider
   /// has loaded. Calling this method more than once is harmless.
   Future<void> start({Future<void>? providerReady}) {
@@ -102,7 +110,17 @@ class AgendaCoordinator {
         // the method channel is being installed is not lost.
         await _productivityBridge.initialize();
       }
-      await reconcileNow();
+      // The provider only reaches this point after its AppData load (and any
+      // first-launch default write) settles. It is therefore safe to reopen a
+      // fence left by a previous data clear; a headless file read never gets
+      // that authority.
+      if (_canProjectProviderData) {
+        await _notificationService.activateProjectionAfterDurableData();
+      }
+      // Starting or resuming the app must not invalidate a notification that
+      // has just become due while Android is delivering it. Only a durable
+      // data commit gets an authoritative replacement pass.
+      await reconcileMaintenance();
     } catch (error, stackTrace) {
       _started = false;
       final commitSubscription = _commitSubscription;
@@ -200,18 +218,34 @@ class AgendaCoordinator {
   /// Rebuilds the notification projection from the latest provider state. This is useful
   /// on app resume, after a permission change, or when an external broadcast
   /// reports a time-zone/date change.
-  Future<void> reconcileNow({AppData? data, int? revision}) {
+  Future<void> reconcileNow({
+    AppData? data,
+    int? revision,
+    AgendaNotificationReconcileMode mode =
+        AgendaNotificationReconcileMode.authoritative,
+  }) {
     if (_disposed) return Future<void>.value();
     Future<void> operation() async {
+      // Data clear reserves the provider before its file operation begins and
+      // keeps that reservation after a successful clear. Do not let an old
+      // commit snapshot recreate reminders while that shutdown boundary is in
+      // effect. clearRuntime is serialized through this same queue, so an
+      // already-running reconciliation is cancelled after it finishes.
+      if (!_canProjectProviderData) return;
+      final fence = await _notificationService.readProjectionFence();
+      if (fence.blocked) return;
       final snapshot = data ?? _provider.appData;
       final effectiveRevision = revision ?? _lastPublishedRevision;
+      AgendaNotificationStatus? notificationStatus;
       // A read-only/recovery-gated provider must never schedule notifications
       // from a snapshot that cannot be persisted.
-      if (_provider.isLoaded && _provider.canWrite) {
+      if (_canProjectProviderData) {
         try {
-          await _notificationService.reconcile(
+          notificationStatus = await _notificationService.reconcile(
             snapshot,
             anchor: _clock(),
+            mode: mode,
+            projectionFence: fence,
             onPayload: _onNotificationTap,
             onAction: _onNotificationAction,
           );
@@ -219,11 +253,19 @@ class AgendaCoordinator {
           onError?.call(error, stackTrace);
         }
       }
+      // A clear can begin while the platform call above is in flight. The
+      // queued clearRuntime pass will remove any already-written requests; do
+      // not add a new background wakeup after the provider becomes unsafe.
+      if (!_canProjectProviderData ||
+          !(await _notificationService.isProjectionFenceCurrent(fence))) {
+        return;
+      }
       try {
-        final nextReconcileAt = await _notificationService.nextReconcileAt(
-          snapshot,
-          anchor: _clock(),
-        );
+        // A background pass is a daily/catch-up maintenance operation. It is
+        // deliberately not scheduled at a reminder's exact fire time.
+        final nextReconcileAt =
+            notificationStatus?.nextMaintenanceAt ??
+            _notificationService.status.nextMaintenanceAt;
         if (_productivityBridge.isSupported) {
           await _productivityBridge.scheduleAgendaReconciliation(
             nextReconcileAt,
@@ -239,20 +281,78 @@ class AgendaCoordinator {
   }
 
   /// Requests a fresh platform projection after returning to the foreground.
-  Future<void> onResume() => reconcileNow();
+  Future<void> onResume() => reconcileMaintenance();
+
+  /// Rebuilds only future notifications and protects managed notifications
+  /// that have become due within the maintenance grace window.
+  Future<void> reconcileMaintenance() =>
+      reconcileNow(mode: AgendaNotificationReconcileMode.maintenance);
+
+  /// Read-only runtime diagnostics for the notification settings/developer
+  /// surface. The coordinator owns the single service instance so callers
+  /// never create a second plugin instance.
+  Future<AgendaNotificationDiagnostics?> readNotificationDiagnostics() =>
+      _notificationService.readNotificationDiagnostics();
+
+  /// Developer-facing alias with a concise, UI-neutral name.
+  Future<AgendaNotificationDiagnostics?> notificationDiagnostics() =>
+      readNotificationDiagnostics();
+
+  /// Runs a non-destructive maintenance pass from developer diagnostics.
+  Future<void> runNotificationMaintenance() => reconcileMaintenance();
+
+  /// Sends an immediate, non-agenda diagnostic notification through the
+  /// selected production channel using this coordinator's owned service.
+  Future<void> showImmediateNotificationTest(
+    AgendaNotificationTestChannel channel,
+  ) => _notificationService.showImmediateNotificationTest(
+    channel,
+    localeCode: _provider.appData.localeCode,
+  );
+
+  /// Schedules one developer test thirty seconds in the future. The service
+  /// clears only earlier developer-test IDs before replacing it.
+  Future<void> scheduleThirtySecondNotificationTest(
+    AgendaNotificationTestChannel channel,
+  ) => _notificationService.scheduleDeveloperNotificationTest(
+    channel,
+    localeCode: _provider.appData.localeCode,
+    delay: const Duration(seconds: 30),
+  );
 
   /// Clears platform-owned runtime state before the app data directory is
   /// deleted. User data and backup files are owned by the provider/clear
   /// coordinator and are intentionally not touched here.
+  ///
+  /// Use [beginDataClear] for a destructive app-data reset. This lower-level
+  /// method stays available for non-destructive runtime cleanup in tests and
+  /// platform recovery paths.
   Future<void> clearRuntime() async {
     if (_disposed) return;
-    try {
-      await _notificationService.clearRuntime();
-      await _productivityBridge.cancelAgendaReconciliation();
-    } catch (error, stackTrace) {
-      onError?.call(error, stackTrace);
-      rethrow;
-    }
+    // Drop unconsumed commits immediately. A commit already being drained is
+    // still harmless because reconcileNow checks the provider's clear gate.
+    _pendingCommit = null;
+    await _enqueueReconcile(() async {
+      if (_disposed) return;
+      try {
+        await _notificationService.clearRuntime();
+        await _productivityBridge.cancelAgendaReconciliation();
+      } catch (error, stackTrace) {
+        onError?.call(error, stackTrace);
+        rethrow;
+      }
+    });
+  }
+
+  /// Fences cross-engine projections before clearing platform/runtime state.
+  ///
+  /// This deliberately writes outside [_enqueueReconcile]: a headless worker
+  /// must see the tombstone immediately, even if a foreground projection is
+  /// already draining the local queue.
+  Future<void> beginDataClear() async {
+    if (_disposed) return;
+    await _notificationService.blockProjectionForDataClear();
+    await clearRuntime();
   }
 
   void _onCommit(AppDataCommit commit) {
@@ -269,6 +369,12 @@ class AgendaCoordinator {
         final commit = _pendingCommit;
         _pendingCommit = null;
         if (commit == null) break;
+        // The commit stream is emitted only after AppRepository.save succeeds.
+        // It is the sole path that may reactivate a projection fence after a
+        // clear; failed saves never reach here.
+        if (_canProjectProviderData) {
+          await _notificationService.activateProjectionAfterDurableData();
+        }
         await reconcileNow(data: commit.snapshot, revision: commit.revision);
       }
     } finally {
@@ -367,6 +473,9 @@ class AgendaCoordinator {
     _reconcileOperation = operation.then<void>((_) {}, onError: (_, _) {});
     return operation;
   }
+
+  bool get _canProjectProviderData =>
+      _provider.isLoaded && _provider.canWrite && !_provider.isDataClearActive;
 
   void dispose() {
     if (_disposed) return;

@@ -205,32 +205,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editCourseTooltip => '编辑课程';
 
   @override
-  String get courseDateExceptions => '日期变更';
-
-  @override
-  String get courseDateExceptionsEmpty => '暂无日期变更';
-
-  @override
-  String courseDateExceptionsCount(int count) {
-    return '$count 项日期变更';
-  }
-
-  @override
-  String get courseDateExceptionAdd => '添加日期变更';
-
-  @override
-  String get courseDateExceptionEdit => '编辑日期变更';
-
-  @override
-  String get courseDateExceptionCancelled => '本次停课';
-
-  @override
-  String get courseDateExceptionCancelClass => '取消本次课程';
-
-  @override
-  String get courseDateExceptionTimeOverride => '调整时间';
-
-  @override
   String get place => '地点';
 
   @override
@@ -2244,6 +2218,185 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerModeLongPressHint => '长按 3 秒打开开发者模式';
 
   @override
+  String get developerNotificationDiagnostics => '通知诊断';
+
+  @override
+  String get developerNotificationDiagnosticsDescription =>
+      '检查 Android 通知投递状态，重建现有提醒计划，并通过 Sked 的正常通知服务发送安全的测试通知。';
+
+  @override
+  String get developerNotificationUnsupported => '通知诊断仅在 Android 上可用。';
+
+  @override
+  String get developerNotificationCoordinatorUnavailable => '通知诊断将在日程协调器启动后可用。';
+
+  @override
+  String get developerNotificationRefresh => '刷新诊断';
+
+  @override
+  String get developerNotificationSystemStatus => '系统通知权限';
+
+  @override
+  String get developerNotificationPermissionAllowed => '已允许';
+
+  @override
+  String get developerNotificationPermissionBlocked => '已阻止';
+
+  @override
+  String get developerNotificationExactAlarm => '精确闹钟';
+
+  @override
+  String get developerNotificationExactAlarmAllowed => '已允许';
+
+  @override
+  String get developerNotificationExactAlarmInexact => '使用不精确降级';
+
+  @override
+  String get developerNotificationPlan => '日程通知计划';
+
+  @override
+  String developerNotificationPlanSummary(int scheduled, int planned) {
+    return '已排程 $scheduled 条，计划 $planned 条';
+  }
+
+  @override
+  String developerNotificationPlanError(Object message) {
+    return '最近错误：$message';
+  }
+
+  @override
+  String get developerNotificationRunMaintenance => '重建通知计划';
+
+  @override
+  String get developerNotificationMaintenanceComplete => '通知计划已重建。';
+
+  @override
+  String get developerNotificationTestChannel => '测试通道';
+
+  @override
+  String get developerNotificationTestCourse => '课程提醒';
+
+  @override
+  String get developerNotificationTestSchedule => '日程提醒';
+
+  @override
+  String get developerNotificationImmediateTest => '立即发送测试通知';
+
+  @override
+  String get developerNotificationThirtySecondTest => '安排 30 秒后台测试';
+
+  @override
+  String get developerNotificationImmediateQueued => '已发送立即测试通知。';
+
+  @override
+  String get developerNotificationThirtySecondQueued => '已安排 30 秒后的后台测试。';
+
+  @override
+  String get developerNotificationAppSwitch => '应用提醒开关';
+
+  @override
+  String get developerNotificationAppSwitchEnabled => '正常提醒已启用';
+
+  @override
+  String get developerNotificationAppSwitchDisabled => '正常提醒已关闭；开发者测试仍可运行';
+
+  @override
+  String get developerNotificationTimeZone => '本地时区';
+
+  @override
+  String developerNotificationTimeZoneValue(Object zone, Object offset) {
+    return '$zone（UTC$offset）';
+  }
+
+  @override
+  String get developerNotificationChannelNotCreated => '尚未创建；运行开发者测试后会创建。';
+
+  @override
+  String get developerNotificationChannelEnabledState => '已启用';
+
+  @override
+  String get developerNotificationChannelBlockedState => '已阻止';
+
+  @override
+  String developerNotificationChannelImportance(int importance) {
+    return '重要性：$importance';
+  }
+
+  @override
+  String get developerNotificationChannelImportanceUnavailable => '重要性不可用';
+
+  @override
+  String developerNotificationChannelSummary(Object state, Object importance) {
+    return '$state；$importance';
+  }
+
+  @override
+  String get developerNotificationNoDiagnostic => '尚无重算记录。';
+
+  @override
+  String get developerNotificationNextReminder => '下一条真实提醒';
+
+  @override
+  String get developerNotificationNoPendingReminder => '当前计划中没有未来提醒';
+
+  @override
+  String get developerNotificationNextMaintenance => '下一次维护';
+
+  @override
+  String get developerNotificationNoMaintenance => '尚未安排';
+
+  @override
+  String get developerNotificationTruncation => '计划截断';
+
+  @override
+  String developerNotificationTruncationCount(int count) {
+    return '因计划上限省略 $count 条';
+  }
+
+  @override
+  String get developerNotificationLastReconciliation => '最近一次重算';
+
+  @override
+  String developerNotificationReconciliationSummary(
+    Object origin,
+    Object mode,
+    Object result,
+    Object time,
+  ) {
+    return '$origin · $mode · $result · $time';
+  }
+
+  @override
+  String get developerNotificationReconcileOriginForeground => '前台';
+
+  @override
+  String get developerNotificationReconcileOriginBackground => '后台';
+
+  @override
+  String get developerNotificationReconcileModeAuthoritative => '权威重算';
+
+  @override
+  String get developerNotificationReconcileModeMaintenance => '维护重算';
+
+  @override
+  String get developerNotificationReconcileResultSuccess => '成功';
+
+  @override
+  String get developerNotificationReconcileResultSkipped => '已跳过';
+
+  @override
+  String get developerNotificationReconcileResultFailed => '失败';
+
+  @override
+  String get developerNotificationTestChecking => '正在检查通知状态，暂时无法测试。';
+
+  @override
+  String get developerNotificationTestBlockedSystem => '系统通知已被阻止，无法测试。';
+
+  @override
+  String get developerNotificationTestBlockedChannel => '所选通知通道已被阻止，无法测试。';
+
+  @override
   String get collapseWorkspaceNavigation => '折叠工作区导航';
 
   @override
@@ -2296,7 +2449,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationSettingsEnabled => '启用提醒与通知';
 
   @override
-  String get notificationSettingsEnabledHint => '为即将开始的课程和日程安排提醒。';
+  String get notificationSettingsEnabledHint =>
+      '仅为已设置提醒的项目安排通知。继承课程需在下方设置课程默认提醒。';
 
   @override
   String get notificationSettingsEnabledSummary => '已启用';
@@ -2581,32 +2735,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get editCourseTooltip => '編輯課程';
-
-  @override
-  String get courseDateExceptions => '日期變更';
-
-  @override
-  String get courseDateExceptionsEmpty => '暫無日期變更';
-
-  @override
-  String courseDateExceptionsCount(int count) {
-    return '$count 項日期變更';
-  }
-
-  @override
-  String get courseDateExceptionAdd => '新增日期變更';
-
-  @override
-  String get courseDateExceptionEdit => '編輯日期變更';
-
-  @override
-  String get courseDateExceptionCancelled => '本次停課';
-
-  @override
-  String get courseDateExceptionCancelClass => '取消本次課程';
-
-  @override
-  String get courseDateExceptionTimeOverride => '調整時間';
 
   @override
   String get place => '地點';
@@ -4621,6 +4749,185 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerModeLongPressHint => '長按 3 秒以開啟開發者模式';
 
   @override
+  String get developerNotificationDiagnostics => '通知診斷';
+
+  @override
+  String get developerNotificationDiagnosticsDescription =>
+      '檢查 Android 通知投遞狀態、重建現有提醒計畫，並透過 Sked 的正常通知服務傳送安全的測試通知。';
+
+  @override
+  String get developerNotificationUnsupported => '通知診斷僅適用於 Android。';
+
+  @override
+  String get developerNotificationCoordinatorUnavailable => '通知診斷會在日程協調器啟動後可用。';
+
+  @override
+  String get developerNotificationRefresh => '重新整理診斷';
+
+  @override
+  String get developerNotificationSystemStatus => '系統通知權限';
+
+  @override
+  String get developerNotificationPermissionAllowed => '已允許';
+
+  @override
+  String get developerNotificationPermissionBlocked => '已封鎖';
+
+  @override
+  String get developerNotificationExactAlarm => '精確鬧鐘';
+
+  @override
+  String get developerNotificationExactAlarmAllowed => '已允許';
+
+  @override
+  String get developerNotificationExactAlarmInexact => '使用非精確降級';
+
+  @override
+  String get developerNotificationPlan => '日程通知計畫';
+
+  @override
+  String developerNotificationPlanSummary(int scheduled, int planned) {
+    return '已排程 $scheduled 則，計畫 $planned 則';
+  }
+
+  @override
+  String developerNotificationPlanError(Object message) {
+    return '最近錯誤：$message';
+  }
+
+  @override
+  String get developerNotificationRunMaintenance => '重建通知計畫';
+
+  @override
+  String get developerNotificationMaintenanceComplete => '通知計畫已重建。';
+
+  @override
+  String get developerNotificationTestChannel => '測試通道';
+
+  @override
+  String get developerNotificationTestCourse => '課程提醒';
+
+  @override
+  String get developerNotificationTestSchedule => '日程提醒';
+
+  @override
+  String get developerNotificationImmediateTest => '立即傳送測試通知';
+
+  @override
+  String get developerNotificationThirtySecondTest => '安排 30 秒背景測試';
+
+  @override
+  String get developerNotificationImmediateQueued => '已傳送立即測試通知。';
+
+  @override
+  String get developerNotificationThirtySecondQueued => '已安排 30 秒後的背景測試。';
+
+  @override
+  String get developerNotificationAppSwitch => '應用程式提醒開關';
+
+  @override
+  String get developerNotificationAppSwitchEnabled => '一般提醒已啟用';
+
+  @override
+  String get developerNotificationAppSwitchDisabled => '一般提醒已關閉；開發者測試仍可執行';
+
+  @override
+  String get developerNotificationTimeZone => '本地時區';
+
+  @override
+  String developerNotificationTimeZoneValue(Object zone, Object offset) {
+    return '$zone（UTC$offset）';
+  }
+
+  @override
+  String get developerNotificationChannelNotCreated => '尚未建立；執行開發者測試後會建立。';
+
+  @override
+  String get developerNotificationChannelEnabledState => '已啟用';
+
+  @override
+  String get developerNotificationChannelBlockedState => '已封鎖';
+
+  @override
+  String developerNotificationChannelImportance(int importance) {
+    return '重要性：$importance';
+  }
+
+  @override
+  String get developerNotificationChannelImportanceUnavailable => '無法取得重要性';
+
+  @override
+  String developerNotificationChannelSummary(Object state, Object importance) {
+    return '$state；$importance';
+  }
+
+  @override
+  String get developerNotificationNoDiagnostic => '尚無重算記錄。';
+
+  @override
+  String get developerNotificationNextReminder => '下一則實際提醒';
+
+  @override
+  String get developerNotificationNoPendingReminder => '目前計畫中沒有未來提醒';
+
+  @override
+  String get developerNotificationNextMaintenance => '下一次維護';
+
+  @override
+  String get developerNotificationNoMaintenance => '尚未安排';
+
+  @override
+  String get developerNotificationTruncation => '計畫截斷';
+
+  @override
+  String developerNotificationTruncationCount(int count) {
+    return '因計畫上限省略 $count 則';
+  }
+
+  @override
+  String get developerNotificationLastReconciliation => '最近一次重算';
+
+  @override
+  String developerNotificationReconciliationSummary(
+    Object origin,
+    Object mode,
+    Object result,
+    Object time,
+  ) {
+    return '$origin · $mode · $result · $time';
+  }
+
+  @override
+  String get developerNotificationReconcileOriginForeground => '前景';
+
+  @override
+  String get developerNotificationReconcileOriginBackground => '背景';
+
+  @override
+  String get developerNotificationReconcileModeAuthoritative => '權威重算';
+
+  @override
+  String get developerNotificationReconcileModeMaintenance => '維護重算';
+
+  @override
+  String get developerNotificationReconcileResultSuccess => '成功';
+
+  @override
+  String get developerNotificationReconcileResultSkipped => '已略過';
+
+  @override
+  String get developerNotificationReconcileResultFailed => '失敗';
+
+  @override
+  String get developerNotificationTestChecking => '正在檢查通知狀態，暫時無法測試。';
+
+  @override
+  String get developerNotificationTestBlockedSystem => '系統通知已被封鎖，無法測試。';
+
+  @override
+  String get developerNotificationTestBlockedChannel => '所選通知通道已被封鎖，無法測試。';
+
+  @override
   String get collapseWorkspaceNavigation => '摺疊工作區導覽';
 
   @override
@@ -4673,7 +4980,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get notificationSettingsEnabled => '啟用提醒與通知';
 
   @override
-  String get notificationSettingsEnabledHint => '為即將開始的課程和日程安排提醒。';
+  String get notificationSettingsEnabledHint =>
+      '僅為已設定提醒的項目安排通知。繼承課程需在下方設定課程預設提醒。';
 
   @override
   String get notificationSettingsEnabledSummary => '已啟用';

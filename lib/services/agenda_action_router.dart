@@ -289,15 +289,6 @@ class AgendaActionRouter {
       }
     }
     if (course == null) return false;
-    // A notification can outlive an edit made on another device or while the
-    // app was not running. Do not navigate to a lesson that has explicitly
-    // been cancelled for this calendar date.
-    final dateIso = _calendarDateIso(date);
-    if (course.dateExceptions.any(
-      (exception) => exception.cancelled && exception.dateIso == dateIso,
-    )) {
-      return false;
-    }
     if (provider.activeMode != AppMode.student) {
       await provider.switchMode(AppMode.student);
     }
@@ -454,13 +445,6 @@ DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;
   final parsed = tryParseStrictIsoDateTime(value);
   return parsed == null ? null : normalizeDateOnly(parsed.toLocal());
-}
-
-String _calendarDateIso(DateTime date) {
-  final normalized = normalizeDateOnly(date);
-  return '${normalized.year.toString().padLeft(4, '0')}-'
-      '${normalized.month.toString().padLeft(2, '0')}-'
-      '${normalized.day.toString().padLeft(2, '0')}';
 }
 
 void _validateOptionalActionString(

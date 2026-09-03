@@ -3,6 +3,7 @@ package com.mashiro.sked
 import android.app.Activity
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -13,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodCall
@@ -184,6 +186,8 @@ class MainActivity : FlutterActivity() {
                         result.success(canScheduleExactAlarms())
                     "requestExactAlarmPermission" ->
                         requestExactAlarmPermission(result)
+                    AndroidProductivityContract.METHOD_GET_NOTIFICATION_DIAGNOSTICS ->
+                        result.success(notificationDiagnostics())
                     "scheduleAgendaReconciliation" -> {
                         AgendaBackgroundReconcileScheduler.schedule(
                             this,
@@ -281,6 +285,42 @@ class MainActivity : FlutterActivity() {
         } catch (_: SecurityException) {
             false
         }
+    }
+
+    /**
+     * Reports the Android-owned part of notification delivery. Scheduling and
+     * test notifications remain in the existing Flutter agenda service; this
+     * method deliberately never creates a channel or posts a notification.
+     */
+    private fun notificationDiagnostics(): Map<String, Any?> {
+        val manager = getSystemService(NotificationManager::class.java)
+        val channels: List<Map<String, Any?>> = if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null
+        ) {
+            manager.notificationChannels
+                .asSequence()
+                .filter { channel -> channel.id.startsWith("sked_") }
+                .sortedBy { channel -> channel.id }
+                .map { channel ->
+                    mapOf(
+                        "id" to channel.id,
+                        "name" to channel.name.toString(),
+                        "exists" to true,
+                        "enabled" to (channel.importance != NotificationManager.IMPORTANCE_NONE),
+                        "importance" to channel.importance,
+                    )
+                }
+                .toList()
+        } else {
+            emptyList()
+        }
+        return mapOf(
+            "supported" to true,
+            "appNotificationsEnabled" to NotificationManagerCompat.from(this).areNotificationsEnabled(),
+            "postNotificationsGranted" to isNotificationPermissionGranted(),
+            "exactAlarmsAllowed" to canScheduleExactAlarms(),
+            "channels" to channels,
+        )
     }
 
     private fun requestExactAlarmPermission(result: MethodChannel.Result) {

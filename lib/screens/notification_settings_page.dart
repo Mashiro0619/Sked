@@ -34,6 +34,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     with WidgetsBindingObserver, UiCommandRunner<NotificationSettingsPage> {
   late final AgendaNotificationService _notificationService;
   AgendaCoordinator? _agendaCoordinator;
+  var _notificationServiceResolved = false;
 
   bool _permissionLoading = false;
   bool? _notificationsPermissionGranted;
@@ -44,16 +45,23 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   @override
   void initState() {
     super.initState();
-    _notificationService =
-        widget.notificationService ?? AgendaNotificationService();
     WidgetsBinding.instance.addObserver(this);
-    unawaited(_refreshPermissionState());
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _agendaCoordinator ??= widget.agendaCoordinator ?? _readAgendaCoordinator();
+    if (_notificationServiceResolved) return;
+    // The application coordinator owns the only plugin-backed notification
+    // service. Standalone previews/tests may provide a service directly, and
+    // only a page with neither dependency creates its local fallback.
+    _notificationService =
+        _agendaCoordinator?.notificationService ??
+        widget.notificationService ??
+        AgendaNotificationService();
+    _notificationServiceResolved = true;
+    unawaited(_refreshPermissionState());
   }
 
   AgendaCoordinator? _readAgendaCoordinator() {

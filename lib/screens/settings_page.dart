@@ -689,6 +689,7 @@ class _SettingsPageState extends State<SettingsPage> {
             value: provider,
             child: NotificationSettingsPage(
               notificationService: widget.notificationService,
+              agendaCoordinator: _agendaCoordinator,
             ),
           ),
         ),

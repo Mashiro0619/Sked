@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/gestures.dart' show kSecondaryButton;
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -13,6 +14,10 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/developer_mode_page.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/services/agenda_coordinator.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
+import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 
 class _DeveloperPageStorage implements TimetableStorage {
@@ -63,6 +68,8 @@ Future<void> _pumpDeveloperPage(
   TimetableProvider provider, {
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
+  AgendaCoordinator? agendaCoordinator,
+  AndroidProductivityBridge? productivityBridge,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -74,7 +81,10 @@ Future<void> _pumpDeveloperPage(
         home: Builder(
           builder: (context) => MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-            child: const DeveloperModePage(),
+            child: DeveloperModePage(
+              agendaCoordinator: agendaCoordinator,
+              productivityBridge: productivityBridge,
+            ),
           ),
         ),
       ),
@@ -120,7 +130,79 @@ Set<DeveloperSampleLanguage> _selectedLanguage(WidgetTester tester) {
       .selected;
 }
 
+const _productivityChannel = MethodChannel(AndroidProductivityChannel.name);
+
+void _mockAndroidNotificationDiagnostics({
+  required bool notificationsEnabled,
+  required bool exactAlarmsAllowed,
+  bool? postNotificationsGranted,
+  List<Map<String, Object?>> channels = const [],
+}) {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(_productivityChannel, (call) async {
+        if (call.method ==
+            AndroidProductivityChannel.getNotificationDiagnostics) {
+          return <String, Object?>{
+            'supported': true,
+            'appNotificationsEnabled': notificationsEnabled,
+            'postNotificationsGranted':
+                postNotificationsGranted ?? notificationsEnabled,
+            'exactAlarmsAllowed': exactAlarmsAllowed,
+            'channels': channels,
+          };
+        }
+        return null;
+      });
+}
+
+AgendaCoordinator _developerNotificationCoordinator(
+  TimetableProvider provider,
+  MemoryAgendaNotificationGateway gateway, {
+  MemoryAgendaNotificationRuntimeStore? runtimeStore,
+}) {
+  return AgendaCoordinator(
+    provider: provider,
+    notificationService: AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtimeStore ?? MemoryAgendaNotificationRuntimeStore(),
+    ),
+    productivityBridge: AndroidProductivityBridge(enabled: false),
+  );
+}
+
+AgendaNotificationDiagnostics _developerNotificationDiagnostics({
+  DateTime? now,
+}) {
+  final current = now ?? DateTime.now();
+  return AgendaNotificationDiagnostics(
+    recordedAt: current,
+    mode: AgendaNotificationReconcileMode.maintenance,
+    origin: AgendaNotificationReconcileOrigin.background,
+    result: AgendaNotificationDiagnosticResult.success,
+    notificationsEnabled: false,
+    exactAlarmsAllowed: false,
+    plannedCount: 205,
+    scheduledCount: 200,
+    truncatedCount: 5,
+    retainedPendingCount: 1,
+    plan: [
+      AgendaNotificationDiagnosticPlanItem(
+        key: 'course:next',
+        fireAt: current.add(const Duration(minutes: 5)),
+        sourceType: 'course',
+      ),
+    ],
+    nextMaintenanceAt: current.add(const Duration(days: 1)),
+  );
+}
+
 void main() {
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_productivityChannel, null);
+  });
+
   testWidgets('developer page follows the Chinese app locale at large text', (
     tester,
   ) async {
@@ -236,6 +318,388 @@ void main() {
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(1));
   });
+
+  testWidgets('notification diagnostics safely degrade outside Android', (
+    tester,
+  ) async {
+    final (provider, _) = await _createProvider();
+    addTearDown(provider.dispose);
+    final bridge = AndroidProductivityBridge(enabled: false);
+    addTearDown(bridge.dispose);
+
+    await _pumpDeveloperPage(tester, provider, productivityBridge: bridge);
+
+    expect(
+      find.byKey(const ValueKey('developer-notification-unsupported')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('developer-notification-immediate-test')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('developer-notification-thirty-second-test')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('developer-notification-immediate-test')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(
+              const ValueKey('developer-notification-thirty-second-test'),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets(
+    'notification diagnostics show Android channel state through the bridge',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final coordinator = _developerNotificationCoordinator(provider, gateway);
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: false,
+        exactAlarmsAllowed: false,
+        channels: const [
+          <String, Object?>{
+            'id': 'sked_course_reminders',
+            'name': 'Course reminders',
+            'exists': true,
+            'enabled': true,
+            'importance': 4,
+          },
+          <String, Object?>{
+            'id': 'sked_schedule_reminders',
+            'name': 'Schedule reminders',
+            'exists': true,
+            'enabled': false,
+            'importance': 0,
+          },
+        ],
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      expect(find.text('Blocked'), findsOneWidget);
+      expect(find.text('Inexact fallback'), findsOneWidget);
+      expect(find.text('Course reminders'), findsWidgets);
+      expect(find.text('Schedule reminders'), findsWidgets);
+      expect(find.textContaining('Importance: 4'), findsOneWidget);
+      expect(find.textContaining('Importance: 0'), findsOneWidget);
+      expect(
+        find.text(
+          'Tests are unavailable because system notifications are blocked.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey(
+            'developer-notification-channel-sked_schedule_reminders',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'notification diagnostics show the runtime plan and latest background result',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final runtimeStore = MemoryAgendaNotificationRuntimeStore()
+        ..diagnostics = _developerNotificationDiagnostics();
+      final coordinator = _developerNotificationCoordinator(
+        provider,
+        gateway,
+        runtimeStore: runtimeStore,
+      );
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: true,
+        exactAlarmsAllowed: false,
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      expect(
+        find.byKey(const ValueKey('developer-notification-app-switch-status')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Disabled for normal reminders; developer tests can still run',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('developer-notification-time-zone')),
+        findsOneWidget,
+      );
+      expect(find.text('200 scheduled, 205 planned'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('developer-notification-next-reminder')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('developer-notification-next-maintenance')),
+        findsOneWidget,
+      );
+      expect(find.text('5 omitted by the plan limit'), findsOneWidget);
+      expect(
+        find.textContaining('Background · Maintenance · Succeeded'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey(
+            'developer-notification-channel-sked_course_reminders',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          const ValueKey(
+            'developer-notification-channel-sked_schedule_reminders',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Not created yet. A developer test will create it.'),
+        findsNWidgets(2),
+      );
+    },
+  );
+
+  testWidgets(
+    'notification diagnostics localize Simplified and Traditional Chinese',
+    (tester) async {
+      final (provider, _) = await _createProvider(localeCode: 'zh');
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final coordinator = _developerNotificationCoordinator(provider, gateway);
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: true,
+        exactAlarmsAllowed: true,
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        locale: const Locale('zh'),
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+      expect(find.text('应用提醒开关'), findsOneWidget);
+      expect(find.text('本地时区'), findsOneWidget);
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        locale: const Locale.fromSubtags(
+          languageCode: 'zh',
+          scriptCode: 'Hant',
+        ),
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+      expect(find.text('應用程式提醒開關'), findsOneWidget);
+      expect(find.text('本地時區'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'notification diagnostic tests block a disabled selected channel',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final coordinator = _developerNotificationCoordinator(provider, gateway);
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: true,
+        exactAlarmsAllowed: true,
+        channels: const [
+          <String, Object?>{
+            'id': 'sked_course_reminders',
+            'name': 'Course reminders',
+            'exists': true,
+            'enabled': true,
+            'importance': 4,
+          },
+          <String, Object?>{
+            'id': 'sked_schedule_reminders',
+            'name': 'Schedule reminders',
+            'exists': true,
+            'enabled': false,
+            'importance': 0,
+          },
+        ],
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      final channelSelector = find.byKey(
+        const ValueKey('developer-notification-test-channel'),
+      );
+      await tester.ensureVisible(channelSelector);
+      await tester.pumpAndSettle();
+      final scheduleSegment = find.descendant(
+        of: channelSelector,
+        matching: find.text('Schedule reminders'),
+      );
+      await tester.tap(scheduleSegment);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Tests are unavailable because the selected notification channel is blocked.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(
+                const ValueKey('developer-notification-immediate-test'),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(
+                const ValueKey('developer-notification-thirty-second-test'),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(gateway.testNotifications, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'notification diagnostic tests use the coordinator-owned service',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final coordinator = _developerNotificationCoordinator(provider, gateway);
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: true,
+        exactAlarmsAllowed: true,
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      final immediateButton = find.byKey(
+        const ValueKey('developer-notification-immediate-test'),
+      );
+      await tester.ensureVisible(immediateButton);
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(immediateButton).onPressed, isNotNull);
+      await tester.tap(immediateButton);
+      await tester.pumpAndSettle();
+      expect(gateway.testNotifications, hasLength(1));
+      final immediate = gateway.testNotifications.values.single;
+      expect(immediate.channel, AgendaNotificationTestChannel.course);
+      expect(immediate.fireAt, isNull);
+
+      final scheduleChannel = find.descendant(
+        of: find.byKey(const ValueKey('developer-notification-test-channel')),
+        matching: find.text('Schedule reminders'),
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('developer-notification-test-channel')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(scheduleChannel);
+      await tester.pumpAndSettle();
+      final delayedButton = find.byKey(
+        const ValueKey('developer-notification-thirty-second-test'),
+      );
+      await tester.ensureVisible(delayedButton);
+      await tester.pumpAndSettle();
+      await tester.tap(delayedButton);
+      await tester.pumpAndSettle();
+      expect(gateway.testNotifications, hasLength(1));
+      final delayed = gateway.testNotifications.values.single;
+      expect(delayed.channel, AgendaNotificationTestChannel.schedule);
+      expect(delayed.fireAt, isNotNull);
+      expect(
+        delayed.fireAt!.difference(DateTime.now()).inSeconds,
+        inInclusiveRange(25, 30),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('developer entry unlocks at three seconds but not at 2999ms', (
     tester,

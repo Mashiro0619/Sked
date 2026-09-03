@@ -209,32 +209,6 @@ class AppLocalizationsFi extends AppLocalizations {
   String get editCourseTooltip => 'Muokkaa kurssia';
 
   @override
-  String get courseDateExceptions => 'Date changes';
-
-  @override
-  String get courseDateExceptionsEmpty => 'No date changes';
-
-  @override
-  String courseDateExceptionsCount(int count) {
-    return '$count date changes';
-  }
-
-  @override
-  String get courseDateExceptionAdd => 'Add date change';
-
-  @override
-  String get courseDateExceptionEdit => 'Edit date change';
-
-  @override
-  String get courseDateExceptionCancelled => 'Class cancelled';
-
-  @override
-  String get courseDateExceptionCancelClass => 'Cancel class';
-
-  @override
-  String get courseDateExceptionTimeOverride => 'Change time';
-
-  @override
   String get place => 'Sijainti';
 
   @override
@@ -2360,6 +2334,201 @@ class AppLocalizationsFi extends AppLocalizations {
       'Avaa kehittäjätila painamalla 3 sekunnin ajan';
 
   @override
+  String get developerNotificationDiagnostics => 'Notification diagnostics';
+
+  @override
+  String get developerNotificationDiagnosticsDescription =>
+      'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.';
+
+  @override
+  String get developerNotificationUnsupported =>
+      'Notification diagnostics are available on Android only.';
+
+  @override
+  String get developerNotificationCoordinatorUnavailable =>
+      'Notification diagnostics are unavailable until the agenda coordinator starts.';
+
+  @override
+  String get developerNotificationRefresh => 'Refresh diagnostics';
+
+  @override
+  String get developerNotificationSystemStatus =>
+      'System notification permission';
+
+  @override
+  String get developerNotificationPermissionAllowed => 'Allowed';
+
+  @override
+  String get developerNotificationPermissionBlocked => 'Blocked';
+
+  @override
+  String get developerNotificationExactAlarm => 'Exact alarms';
+
+  @override
+  String get developerNotificationExactAlarmAllowed => 'Allowed';
+
+  @override
+  String get developerNotificationExactAlarmInexact => 'Inexact fallback';
+
+  @override
+  String get developerNotificationPlan => 'Agenda notification plan';
+
+  @override
+  String developerNotificationPlanSummary(int scheduled, int planned) {
+    return '$scheduled scheduled, $planned planned';
+  }
+
+  @override
+  String developerNotificationPlanError(Object message) {
+    return 'Last error: $message';
+  }
+
+  @override
+  String get developerNotificationRunMaintenance => 'Rebuild notification plan';
+
+  @override
+  String get developerNotificationMaintenanceComplete =>
+      'Notification plan rebuilt.';
+
+  @override
+  String get developerNotificationTestChannel => 'Test channel';
+
+  @override
+  String get developerNotificationTestCourse => 'Course reminders';
+
+  @override
+  String get developerNotificationTestSchedule => 'Schedule reminders';
+
+  @override
+  String get developerNotificationImmediateTest => 'Send immediate test';
+
+  @override
+  String get developerNotificationThirtySecondTest =>
+      'Schedule 30-second background test';
+
+  @override
+  String get developerNotificationImmediateQueued =>
+      'Immediate test notification sent.';
+
+  @override
+  String get developerNotificationThirtySecondQueued =>
+      'Background test scheduled for 30 seconds.';
+
+  @override
+  String get developerNotificationAppSwitch => 'App reminder switch';
+
+  @override
+  String get developerNotificationAppSwitchEnabled =>
+      'Enabled for normal reminders';
+
+  @override
+  String get developerNotificationAppSwitchDisabled =>
+      'Disabled for normal reminders; developer tests can still run';
+
+  @override
+  String get developerNotificationTimeZone => 'Local time zone';
+
+  @override
+  String developerNotificationTimeZoneValue(Object zone, Object offset) {
+    return '$zone (UTC$offset)';
+  }
+
+  @override
+  String get developerNotificationChannelNotCreated =>
+      'Not created yet. A developer test will create it.';
+
+  @override
+  String get developerNotificationChannelEnabledState => 'Enabled';
+
+  @override
+  String get developerNotificationChannelBlockedState => 'Blocked';
+
+  @override
+  String developerNotificationChannelImportance(int importance) {
+    return 'Importance: $importance';
+  }
+
+  @override
+  String get developerNotificationChannelImportanceUnavailable =>
+      'Importance unavailable';
+
+  @override
+  String developerNotificationChannelSummary(Object state, Object importance) {
+    return '$state · $importance';
+  }
+
+  @override
+  String get developerNotificationNoDiagnostic =>
+      'No reconciliation recorded yet.';
+
+  @override
+  String get developerNotificationNextReminder => 'Next real reminder';
+
+  @override
+  String get developerNotificationNoPendingReminder =>
+      'No future reminder in the current plan';
+
+  @override
+  String get developerNotificationNextMaintenance => 'Next maintenance';
+
+  @override
+  String get developerNotificationNoMaintenance => 'Not scheduled';
+
+  @override
+  String get developerNotificationTruncation => 'Plan truncation';
+
+  @override
+  String developerNotificationTruncationCount(int count) {
+    return '$count omitted by the plan limit';
+  }
+
+  @override
+  String get developerNotificationLastReconciliation => 'Latest reconciliation';
+
+  @override
+  String developerNotificationReconciliationSummary(
+    Object origin,
+    Object mode,
+    Object result,
+    Object time,
+  ) {
+    return '$origin · $mode · $result · $time';
+  }
+
+  @override
+  String get developerNotificationReconcileOriginForeground => 'Foreground';
+
+  @override
+  String get developerNotificationReconcileOriginBackground => 'Background';
+
+  @override
+  String get developerNotificationReconcileModeAuthoritative => 'Authoritative';
+
+  @override
+  String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+
+  @override
+  String get developerNotificationReconcileResultSuccess => 'Succeeded';
+
+  @override
+  String get developerNotificationReconcileResultSkipped => 'Skipped';
+
+  @override
+  String get developerNotificationReconcileResultFailed => 'Failed';
+
+  @override
+  String get developerNotificationTestChecking =>
+      'Tests are unavailable while notification status is being checked.';
+
+  @override
+  String get developerNotificationTestBlockedSystem =>
+      'Tests are unavailable because system notifications are blocked.';
+
+  @override
+  String get developerNotificationTestBlockedChannel =>
+      'Tests are unavailable because the selected notification channel is blocked.';
+
+  @override
   String get collapseWorkspaceNavigation => 'Tiivistä työtilan navigointi';
 
   @override
@@ -2418,7 +2587,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get notificationSettingsEnabledHint =>
-      'Schedule reminders for upcoming courses and events.';
+      'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';

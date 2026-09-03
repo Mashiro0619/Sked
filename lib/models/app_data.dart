@@ -495,46 +495,6 @@ void _validateStorageTimetable(
       errorMessage: 'Stored timetable course values are invalid.',
       required: true,
     );
-    final dateExceptions = _storageObjectListField(
-      course,
-      'dateExceptions',
-      errorMessage: 'Stored timetable course date exceptions are invalid.',
-    );
-    final dateExceptionDates = <String>{};
-    for (final exception in dateExceptions) {
-      _validateStorageStringField(
-        exception,
-        'date',
-        errorMessage: 'Stored timetable course date exceptions are invalid.',
-        required: true,
-      );
-      final date = tryParseStrictIsoDate(exception['date'] as String);
-      final canonicalDate = date == null
-          ? null
-          : normalizeDateOnly(date).toIso8601String().split('T').first;
-      if (canonicalDate == null ||
-          exception['date'] != canonicalDate ||
-          !dateExceptionDates.add(canonicalDate)) {
-        throw const FormatException(
-          'Stored timetable course date exceptions are invalid.',
-        );
-      }
-      _validateStorageBooleanField(
-        exception,
-        'cancelled',
-        errorMessage: 'Stored timetable course date exceptions are invalid.',
-      );
-      _validateNullableStorageIntegerField(
-        exception,
-        'startMinutes',
-        errorMessage: 'Stored timetable course date exceptions are invalid.',
-      );
-      _validateNullableStorageIntegerField(
-        exception,
-        'endMinutes',
-        errorMessage: 'Stored timetable course date exceptions are invalid.',
-      );
-    }
     _validateStorageIntegerListField(
       course,
       'weekdays',
@@ -616,23 +576,6 @@ void _validateStorageTimetable(
         throw const FormatException(
           'Stored timetable course time range is invalid.',
         );
-      }
-      for (final exception in dateExceptions) {
-        final startOverride = exception['startMinutes'] as num?;
-        final endOverride = exception['endMinutes'] as num?;
-        final exceptionStart = startOverride?.toInt() ?? startMinutes;
-        final exceptionEnd = endOverride?.toInt() ?? endMinutes;
-        final isUnknownExceptionRange =
-            exceptionStart == 0 && exceptionEnd == 0;
-        if (exceptionStart < 0 ||
-            exceptionStart >= 24 * 60 ||
-            exceptionEnd < 0 ||
-            exceptionEnd >= 24 * 60 ||
-            (!isUnknownExceptionRange && exceptionEnd <= exceptionStart)) {
-          throw const FormatException(
-            'Stored timetable course date exceptions are invalid.',
-          );
-        }
       }
     }
     _validateStorageNumberField(

@@ -161,28 +161,6 @@
   "@editCourseTitle": {},
   "editCourseTooltip": "Edit course",
   "@editCourseTooltip": {},
-  "courseDateExceptions": "Date changes",
-  "@courseDateExceptions": {},
-  "courseDateExceptionsEmpty": "No date changes",
-  "@courseDateExceptionsEmpty": {},
-  "courseDateExceptionsCount": "{count} date changes",
-  "@courseDateExceptionsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "courseDateExceptionAdd": "Add date change",
-  "@courseDateExceptionAdd": {},
-  "courseDateExceptionEdit": "Edit date change",
-  "@courseDateExceptionEdit": {},
-  "courseDateExceptionCancelled": "Class cancelled",
-  "@courseDateExceptionCancelled": {},
-  "courseDateExceptionCancelClass": "Cancel class",
-  "@courseDateExceptionCancelClass": {},
-  "courseDateExceptionTimeOverride": "Change time",
-  "@courseDateExceptionTimeOverride": {},
   "place": "Location",
   "@place": {},
   "time": "Time",
@@ -1671,6 +1649,154 @@
   "@developerSampleDataAdded": {},
   "developerModeLongPressHint": "Long-press for 3 seconds to open developer mode",
   "@developerModeLongPressHint": {},
+  "developerNotificationDiagnostics": "Notification diagnostics",
+  "@developerNotificationDiagnostics": {},
+  "developerNotificationDiagnosticsDescription": "Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked's normal notification service.",
+  "@developerNotificationDiagnosticsDescription": {},
+  "developerNotificationUnsupported": "Notification diagnostics are available on Android only.",
+  "@developerNotificationUnsupported": {},
+  "developerNotificationCoordinatorUnavailable": "Notification diagnostics are unavailable until the agenda coordinator starts.",
+  "@developerNotificationCoordinatorUnavailable": {},
+  "developerNotificationRefresh": "Refresh diagnostics",
+  "@developerNotificationRefresh": {},
+  "developerNotificationSystemStatus": "System notification permission",
+  "@developerNotificationSystemStatus": {},
+  "developerNotificationPermissionAllowed": "Allowed",
+  "@developerNotificationPermissionAllowed": {},
+  "developerNotificationPermissionBlocked": "Blocked",
+  "@developerNotificationPermissionBlocked": {},
+  "developerNotificationExactAlarm": "Exact alarms",
+  "@developerNotificationExactAlarm": {},
+  "developerNotificationExactAlarmAllowed": "Allowed",
+  "@developerNotificationExactAlarmAllowed": {},
+  "developerNotificationExactAlarmInexact": "Inexact fallback",
+  "@developerNotificationExactAlarmInexact": {},
+  "developerNotificationPlan": "Agenda notification plan",
+  "@developerNotificationPlan": {},
+  "developerNotificationPlanSummary": "{scheduled} scheduled, {planned} planned",
+  "@developerNotificationPlanSummary": {
+    "placeholders": {
+      "scheduled": {
+        "type": "int"
+      },
+      "planned": {
+        "type": "int"
+      }
+    }
+  },
+  "developerNotificationPlanError": "Last error: {message}",
+  "@developerNotificationPlanError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "developerNotificationRunMaintenance": "Rebuild notification plan",
+  "@developerNotificationRunMaintenance": {},
+  "developerNotificationMaintenanceComplete": "Notification plan rebuilt.",
+  "@developerNotificationMaintenanceComplete": {},
+  "developerNotificationTestChannel": "Test channel",
+  "@developerNotificationTestChannel": {},
+  "developerNotificationTestCourse": "Course reminders",
+  "@developerNotificationTestCourse": {},
+  "developerNotificationTestSchedule": "Schedule reminders",
+  "@developerNotificationTestSchedule": {},
+  "developerNotificationImmediateTest": "Send immediate test",
+  "@developerNotificationImmediateTest": {},
+  "developerNotificationThirtySecondTest": "Schedule 30-second background test",
+  "@developerNotificationThirtySecondTest": {},
+  "developerNotificationImmediateQueued": "Immediate test notification sent.",
+  "@developerNotificationImmediateQueued": {},
+  "developerNotificationThirtySecondQueued": "Background test scheduled for 30 seconds.",
+  "@developerNotificationThirtySecondQueued": {},
+  "developerNotificationAppSwitch": "App reminder switch",
+  "@developerNotificationAppSwitch": {},
+  "developerNotificationAppSwitchEnabled": "Enabled for normal reminders",
+  "@developerNotificationAppSwitchEnabled": {},
+  "developerNotificationAppSwitchDisabled": "Disabled for normal reminders; developer tests can still run",
+  "@developerNotificationAppSwitchDisabled": {},
+  "developerNotificationTimeZone": "Local time zone",
+  "@developerNotificationTimeZone": {},
+  "developerNotificationTimeZoneValue": "{zone} (UTC{offset})",
+  "@developerNotificationTimeZoneValue": {
+    "placeholders": {
+      "zone": {},
+      "offset": {}
+    }
+  },
+  "developerNotificationChannelNotCreated": "Not created yet. A developer test will create it.",
+  "@developerNotificationChannelNotCreated": {},
+  "developerNotificationChannelEnabledState": "Enabled",
+  "@developerNotificationChannelEnabledState": {},
+  "developerNotificationChannelBlockedState": "Blocked",
+  "@developerNotificationChannelBlockedState": {},
+  "developerNotificationChannelImportance": "Importance: {importance}",
+  "@developerNotificationChannelImportance": {
+    "placeholders": {
+      "importance": {
+        "type": "int"
+      }
+    }
+  },
+  "developerNotificationChannelImportanceUnavailable": "Importance unavailable",
+  "@developerNotificationChannelImportanceUnavailable": {},
+  "developerNotificationChannelSummary": "{state} · {importance}",
+  "@developerNotificationChannelSummary": {
+    "placeholders": {
+      "state": {},
+      "importance": {}
+    }
+  },
+  "developerNotificationNoDiagnostic": "No reconciliation recorded yet.",
+  "@developerNotificationNoDiagnostic": {},
+  "developerNotificationNextReminder": "Next real reminder",
+  "@developerNotificationNextReminder": {},
+  "developerNotificationNoPendingReminder": "No future reminder in the current plan",
+  "@developerNotificationNoPendingReminder": {},
+  "developerNotificationNextMaintenance": "Next maintenance",
+  "@developerNotificationNextMaintenance": {},
+  "developerNotificationNoMaintenance": "Not scheduled",
+  "@developerNotificationNoMaintenance": {},
+  "developerNotificationTruncation": "Plan truncation",
+  "@developerNotificationTruncation": {},
+  "developerNotificationTruncationCount": "{count} omitted by the plan limit",
+  "@developerNotificationTruncationCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "developerNotificationLastReconciliation": "Latest reconciliation",
+  "@developerNotificationLastReconciliation": {},
+  "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
+  "@developerNotificationReconciliationSummary": {
+    "placeholders": {
+      "origin": {},
+      "mode": {},
+      "result": {},
+      "time": {}
+    }
+  },
+  "developerNotificationReconcileOriginForeground": "Foreground",
+  "@developerNotificationReconcileOriginForeground": {},
+  "developerNotificationReconcileOriginBackground": "Background",
+  "@developerNotificationReconcileOriginBackground": {},
+  "developerNotificationReconcileModeAuthoritative": "Authoritative",
+  "@developerNotificationReconcileModeAuthoritative": {},
+  "developerNotificationReconcileModeMaintenance": "Maintenance",
+  "@developerNotificationReconcileModeMaintenance": {},
+  "developerNotificationReconcileResultSuccess": "Succeeded",
+  "@developerNotificationReconcileResultSuccess": {},
+  "developerNotificationReconcileResultSkipped": "Skipped",
+  "@developerNotificationReconcileResultSkipped": {},
+  "developerNotificationReconcileResultFailed": "Failed",
+  "@developerNotificationReconcileResultFailed": {},
+  "developerNotificationTestChecking": "Tests are unavailable while notification status is being checked.",
+  "@developerNotificationTestChecking": {},
+  "developerNotificationTestBlockedSystem": "Tests are unavailable because system notifications are blocked.",
+  "@developerNotificationTestBlockedSystem": {},
+  "developerNotificationTestBlockedChannel": "Tests are unavailable because the selected notification channel is blocked.",
+  "@developerNotificationTestBlockedChannel": {},
   "collapseWorkspaceNavigation": "Collapse workspace navigation",
   "@collapseWorkspaceNavigation": {},
   "expandWorkspaceNavigation": "Expand workspace navigation",
@@ -1711,7 +1837,7 @@
   "@notificationSettingsSection": {},
   "notificationSettingsEnabled": "Enable reminders and notifications",
   "@notificationSettingsEnabled": {},
-  "notificationSettingsEnabledHint": "Schedule reminders for upcoming courses and events.",
+  "notificationSettingsEnabledHint": "Schedules only items with a reminder. Set a course default below for courses that inherit it.",
   "@notificationSettingsEnabledHint": {},
   "notificationSettingsEnabledSummary": "Enabled",
   "@notificationSettingsEnabledSummary": {},

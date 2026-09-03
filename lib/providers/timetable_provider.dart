@@ -493,6 +493,16 @@ class TimetableProvider extends _TimetableProviderBase
   StorageLoadStatus get storageLoadStatus =>
       _journalRecoveryLoadStatus ?? _repository.lastLoadStatus;
   bool get canWrite => _repository.canWrite;
+
+  /// Whether local app data is being cleared or has been cleared for this
+  /// process lifetime.
+  ///
+  /// The reservation is acquired before storage deletion begins and remains
+  /// held after a successful clear, because the in-memory [appData] snapshot
+  /// is then permanently stale. External consumers such as platform planners
+  /// must use this gate before projecting that snapshot.
+  bool get isDataClearActive => _dataClearReserved;
+
   bool get isDataClearCommitted =>
       _dataClearReserved && _permanentDataClearSchoolSiteLease != null;
   List<String> get recoveryArtifacts => List.unmodifiable({

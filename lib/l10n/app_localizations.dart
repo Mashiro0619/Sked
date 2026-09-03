@@ -511,54 +511,6 @@ abstract class AppLocalizations {
   /// **'Edit course'**
   String get editCourseTooltip;
 
-  /// No description provided for @courseDateExceptions.
-  ///
-  /// In en, this message translates to:
-  /// **'Date changes'**
-  String get courseDateExceptions;
-
-  /// No description provided for @courseDateExceptionsEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No date changes'**
-  String get courseDateExceptionsEmpty;
-
-  /// No description provided for @courseDateExceptionsCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} date changes'**
-  String courseDateExceptionsCount(int count);
-
-  /// No description provided for @courseDateExceptionAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Add date change'**
-  String get courseDateExceptionAdd;
-
-  /// No description provided for @courseDateExceptionEdit.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit date change'**
-  String get courseDateExceptionEdit;
-
-  /// No description provided for @courseDateExceptionCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Class cancelled'**
-  String get courseDateExceptionCancelled;
-
-  /// No description provided for @courseDateExceptionCancelClass.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel class'**
-  String get courseDateExceptionCancelClass;
-
-  /// No description provided for @courseDateExceptionTimeOverride.
-  ///
-  /// In en, this message translates to:
-  /// **'Change time'**
-  String get courseDateExceptionTimeOverride;
-
   /// No description provided for @place.
   ///
   /// In en, this message translates to:
@@ -4324,6 +4276,329 @@ abstract class AppLocalizations {
   /// **'Long-press for 3 seconds to open developer mode'**
   String get developerModeLongPressHint;
 
+  /// No description provided for @developerNotificationDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification diagnostics'**
+  String get developerNotificationDiagnostics;
+
+  /// No description provided for @developerNotificationDiagnosticsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect Android delivery state, rebuild the existing reminder plan, and send safe test notifications through Sked\'s normal notification service.'**
+  String get developerNotificationDiagnosticsDescription;
+
+  /// No description provided for @developerNotificationUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification diagnostics are available on Android only.'**
+  String get developerNotificationUnsupported;
+
+  /// No description provided for @developerNotificationCoordinatorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification diagnostics are unavailable until the agenda coordinator starts.'**
+  String get developerNotificationCoordinatorUnavailable;
+
+  /// No description provided for @developerNotificationRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh diagnostics'**
+  String get developerNotificationRefresh;
+
+  /// No description provided for @developerNotificationSystemStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'System notification permission'**
+  String get developerNotificationSystemStatus;
+
+  /// No description provided for @developerNotificationPermissionAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get developerNotificationPermissionAllowed;
+
+  /// No description provided for @developerNotificationPermissionBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get developerNotificationPermissionBlocked;
+
+  /// No description provided for @developerNotificationExactAlarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact alarms'**
+  String get developerNotificationExactAlarm;
+
+  /// No description provided for @developerNotificationExactAlarmAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get developerNotificationExactAlarmAllowed;
+
+  /// No description provided for @developerNotificationExactAlarmInexact.
+  ///
+  /// In en, this message translates to:
+  /// **'Inexact fallback'**
+  String get developerNotificationExactAlarmInexact;
+
+  /// No description provided for @developerNotificationPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Agenda notification plan'**
+  String get developerNotificationPlan;
+
+  /// No description provided for @developerNotificationPlanSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{scheduled} scheduled, {planned} planned'**
+  String developerNotificationPlanSummary(int scheduled, int planned);
+
+  /// No description provided for @developerNotificationPlanError.
+  ///
+  /// In en, this message translates to:
+  /// **'Last error: {message}'**
+  String developerNotificationPlanError(Object message);
+
+  /// No description provided for @developerNotificationRunMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Rebuild notification plan'**
+  String get developerNotificationRunMaintenance;
+
+  /// No description provided for @developerNotificationMaintenanceComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification plan rebuilt.'**
+  String get developerNotificationMaintenanceComplete;
+
+  /// No description provided for @developerNotificationTestChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Test channel'**
+  String get developerNotificationTestChannel;
+
+  /// No description provided for @developerNotificationTestCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Course reminders'**
+  String get developerNotificationTestCourse;
+
+  /// No description provided for @developerNotificationTestSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule reminders'**
+  String get developerNotificationTestSchedule;
+
+  /// No description provided for @developerNotificationImmediateTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send immediate test'**
+  String get developerNotificationImmediateTest;
+
+  /// No description provided for @developerNotificationThirtySecondTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule 30-second background test'**
+  String get developerNotificationThirtySecondTest;
+
+  /// No description provided for @developerNotificationImmediateQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Immediate test notification sent.'**
+  String get developerNotificationImmediateQueued;
+
+  /// No description provided for @developerNotificationThirtySecondQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Background test scheduled for 30 seconds.'**
+  String get developerNotificationThirtySecondQueued;
+
+  /// No description provided for @developerNotificationAppSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'App reminder switch'**
+  String get developerNotificationAppSwitch;
+
+  /// No description provided for @developerNotificationAppSwitchEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled for normal reminders'**
+  String get developerNotificationAppSwitchEnabled;
+
+  /// No description provided for @developerNotificationAppSwitchDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled for normal reminders; developer tests can still run'**
+  String get developerNotificationAppSwitchDisabled;
+
+  /// No description provided for @developerNotificationTimeZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Local time zone'**
+  String get developerNotificationTimeZone;
+
+  /// No description provided for @developerNotificationTimeZoneValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{zone} (UTC{offset})'**
+  String developerNotificationTimeZoneValue(Object zone, Object offset);
+
+  /// No description provided for @developerNotificationChannelNotCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not created yet. A developer test will create it.'**
+  String get developerNotificationChannelNotCreated;
+
+  /// No description provided for @developerNotificationChannelEnabledState.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get developerNotificationChannelEnabledState;
+
+  /// No description provided for @developerNotificationChannelBlockedState.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get developerNotificationChannelBlockedState;
+
+  /// No description provided for @developerNotificationChannelImportance.
+  ///
+  /// In en, this message translates to:
+  /// **'Importance: {importance}'**
+  String developerNotificationChannelImportance(int importance);
+
+  /// No description provided for @developerNotificationChannelImportanceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Importance unavailable'**
+  String get developerNotificationChannelImportanceUnavailable;
+
+  /// No description provided for @developerNotificationChannelSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{state} · {importance}'**
+  String developerNotificationChannelSummary(Object state, Object importance);
+
+  /// No description provided for @developerNotificationNoDiagnostic.
+  ///
+  /// In en, this message translates to:
+  /// **'No reconciliation recorded yet.'**
+  String get developerNotificationNoDiagnostic;
+
+  /// No description provided for @developerNotificationNextReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Next real reminder'**
+  String get developerNotificationNextReminder;
+
+  /// No description provided for @developerNotificationNoPendingReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'No future reminder in the current plan'**
+  String get developerNotificationNoPendingReminder;
+
+  /// No description provided for @developerNotificationNextMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Next maintenance'**
+  String get developerNotificationNextMaintenance;
+
+  /// No description provided for @developerNotificationNoMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Not scheduled'**
+  String get developerNotificationNoMaintenance;
+
+  /// No description provided for @developerNotificationTruncation.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan truncation'**
+  String get developerNotificationTruncation;
+
+  /// No description provided for @developerNotificationTruncationCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} omitted by the plan limit'**
+  String developerNotificationTruncationCount(int count);
+
+  /// No description provided for @developerNotificationLastReconciliation.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest reconciliation'**
+  String get developerNotificationLastReconciliation;
+
+  /// No description provided for @developerNotificationReconciliationSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{origin} · {mode} · {result} · {time}'**
+  String developerNotificationReconciliationSummary(
+    Object origin,
+    Object mode,
+    Object result,
+    Object time,
+  );
+
+  /// No description provided for @developerNotificationReconcileOriginForeground.
+  ///
+  /// In en, this message translates to:
+  /// **'Foreground'**
+  String get developerNotificationReconcileOriginForeground;
+
+  /// No description provided for @developerNotificationReconcileOriginBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get developerNotificationReconcileOriginBackground;
+
+  /// No description provided for @developerNotificationReconcileModeAuthoritative.
+  ///
+  /// In en, this message translates to:
+  /// **'Authoritative'**
+  String get developerNotificationReconcileModeAuthoritative;
+
+  /// No description provided for @developerNotificationReconcileModeMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get developerNotificationReconcileModeMaintenance;
+
+  /// No description provided for @developerNotificationReconcileResultSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeeded'**
+  String get developerNotificationReconcileResultSuccess;
+
+  /// No description provided for @developerNotificationReconcileResultSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get developerNotificationReconcileResultSkipped;
+
+  /// No description provided for @developerNotificationReconcileResultFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get developerNotificationReconcileResultFailed;
+
+  /// No description provided for @developerNotificationTestChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests are unavailable while notification status is being checked.'**
+  String get developerNotificationTestChecking;
+
+  /// No description provided for @developerNotificationTestBlockedSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests are unavailable because system notifications are blocked.'**
+  String get developerNotificationTestBlockedSystem;
+
+  /// No description provided for @developerNotificationTestBlockedChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests are unavailable because the selected notification channel is blocked.'**
+  String get developerNotificationTestBlockedChannel;
+
   /// No description provided for @collapseWorkspaceNavigation.
   ///
   /// In en, this message translates to:
@@ -4423,7 +4698,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationSettingsEnabledHint.
   ///
   /// In en, this message translates to:
-  /// **'Schedule reminders for upcoming courses and events.'**
+  /// **'Schedules only items with a reminder. Set a course default below for courses that inherit it.'**
   String get notificationSettingsEnabledHint;
 
   /// No description provided for @notificationSettingsEnabledSummary.

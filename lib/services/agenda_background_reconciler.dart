@@ -8,6 +8,7 @@ import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../models/timetable_models.dart';
 import 'agenda_notification_service.dart';
+import 'agenda_notification_runtime_store.dart';
 import 'agenda_projection_service.dart';
 import 'android_productivity_bridge.dart';
 
@@ -37,11 +38,19 @@ class AgendaBackgroundReconcileResult {
     this.nextReconcileAt,
     this.notificationError,
     this.skipped = false,
+    this.projectionFence,
   });
 
   final DateTime? nextReconcileAt;
   final Object? notificationError;
   final bool skipped;
+
+  /// The fence captured by the successful projection that produced
+  /// [nextReconcileAt].  The headless runner must validate this token again
+  /// immediately before asking Android to persist the next wake-up.  A clear
+  /// can begin after [reconcile] returns, and scheduling against an old token
+  /// would otherwise leave a stale maintenance alarm behind.
+  final AgendaNotificationProjectionFence? projectionFence;
 
   bool get succeeded => !skipped && notificationError == null;
 
@@ -75,11 +84,42 @@ class AgendaBackgroundReconciler {
   AgendaProjectionService get projection => _projection;
 
   Future<AgendaBackgroundReconcileResult> reconcile() async {
-    final loaded = await _loadData();
+    late final AgendaNotificationProjectionFence fence;
+    try {
+      fence = await _notificationService.readProjectionFence();
+    } catch (error) {
+      return AgendaBackgroundReconcileResult(notificationError: error);
+    }
+    // A foreground data-clear writes this tombstone before it cancels platform
+    // alarms. Do not even read AppData while it is blocked: a file observed by
+    // an already-running worker may be the pre-clear snapshot.
+    if (fence.blocked) {
+      return const AgendaBackgroundReconcileResult(skipped: true);
+    }
+    late final AgendaBackgroundDataSnapshot loaded;
+    try {
+      loaded = await _loadData();
+    } catch (error) {
+      try {
+        await _notificationService.recordExternalReconcileFailure(
+          error: error,
+          mode: AgendaNotificationReconcileMode.maintenance,
+          origin: AgendaNotificationReconcileOrigin.background,
+          recordedAt: _clock(),
+          projectionFence: fence,
+        );
+      } catch (_) {
+        // The worker's completion result still owns retry when its diagnostics
+        // store is unavailable or has the same I/O failure as AppData.
+      }
+      return AgendaBackgroundReconcileResult(notificationError: error);
+    }
     final data = loaded.data;
     // A recovery-blocked or unavailable file must never erase an already
     // valid alarm plan/snapshot. Foreground recovery owns that decision.
-    if (data == null || !loaded.canWrite) {
+    if (data == null ||
+        !loaded.canWrite ||
+        !(await _notificationService.isProjectionFenceCurrent(fence))) {
       return const AgendaBackgroundReconcileResult(skipped: true);
     }
 
@@ -88,11 +128,20 @@ class AgendaBackgroundReconciler {
     DateTime? nextReconcileAt;
 
     try {
-      await _notificationService.reconcile(data, anchor: anchor);
-      nextReconcileAt = await _notificationService.nextReconcileAt(
+      final status = await _notificationService.reconcile(
         data,
         anchor: anchor,
+        mode: AgendaNotificationReconcileMode.maintenance,
+        origin: AgendaNotificationReconcileOrigin.background,
+        projectionFence: fence,
       );
+      // A clear may begin while a headless engine is initializing its
+      // notification plugin. Never schedule the next WorkManager boundary for
+      // an invalidated projection.
+      if (!(await _notificationService.isProjectionFenceCurrent(fence))) {
+        return const AgendaBackgroundReconcileResult(skipped: true);
+      }
+      nextReconcileAt = status.nextMaintenanceAt;
     } catch (error) {
       notificationError = error;
     }
@@ -100,7 +149,50 @@ class AgendaBackgroundReconciler {
     return AgendaBackgroundReconcileResult(
       nextReconcileAt: nextReconcileAt,
       notificationError: notificationError,
+      projectionFence: nextReconcileAt == null ? null : fence,
     );
+  }
+
+  /// Performs the final cross-engine fence check before a caller schedules a
+  /// native maintenance wake-up.  Keeping this seam on the reconciler makes
+  /// the ordering explicit and lets tests exercise the same guard used by the
+  /// headless entry point.
+  Future<bool> isResultCurrent(AgendaBackgroundReconcileResult result) async {
+    final fence = result.projectionFence;
+    if (fence == null) return false;
+    return _notificationService.isProjectionFenceCurrent(fence);
+  }
+
+  /// Publishes a native maintenance wake-up with a fence check on both sides
+  /// of the platform hand-off.
+  ///
+  /// The foreground clear path blocks the fence before cancelling Android's
+  /// existing wake-up. A worker may have passed its first check just before
+  /// that happens. If it then writes a wake-up after the foreground cancel,
+  /// the second check detects the invalidated projection and cancels the
+  /// newly-written wake-up itself.
+  Future<bool> publishNextMaintenanceWakeup(
+    AgendaBackgroundReconcileResult result, {
+    required Future<void> Function(DateTime at) schedule,
+    required Future<void> Function() cancel,
+  }) async {
+    final nextReconcileAt = result.nextReconcileAt;
+    if (nextReconcileAt == null) {
+      // A successful pass with no future boundary means notifications are
+      // disabled or there are no eligible occurrences.  Remove the previous
+      // native wake-up instead of leaving it to trigger a needless worker.
+      if (result.succeeded) await cancel();
+      return false;
+    }
+    if (!await isResultCurrent(result)) {
+      return false;
+    }
+
+    await schedule(nextReconcileAt);
+    if (await isResultCurrent(result)) return true;
+
+    await cancel();
+    return false;
   }
 }
 
@@ -130,14 +222,19 @@ Future<void> _runAgendaBackgroundReconcile() async {
   try {
     final reconciler = AgendaBackgroundReconciler();
     final result = await reconciler.reconcile();
-    if (result.nextReconcileAt != null) {
-      await channel.invokeMethod<void>(
+    // The projection and the native alarm live in different execution
+    // contexts. Re-read the durable fence immediately before scheduling so a
+    // foreground clear that won the race cannot be followed by a stale wake.
+    await reconciler.publishNextMaintenanceWakeup(
+      result,
+      schedule: (at) => channel.invokeMethod<void>(
         AndroidProductivityChannel.scheduleAgendaReconciliation,
-        <String, Object?>{
-          'atEpochMillis': result.nextReconcileAt!.millisecondsSinceEpoch,
-        },
-      );
-    }
+        <String, Object?>{'atEpochMillis': at.millisecondsSinceEpoch},
+      ),
+      cancel: () => channel.invokeMethod<void>(
+        AndroidProductivityChannel.cancelAgendaReconciliation,
+      ),
+    );
     await channel.invokeMethod<void>(
       AndroidProductivityChannel.completeBackgroundAgendaReconciliation,
       <String, Object?>{

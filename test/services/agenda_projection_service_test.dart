@@ -151,39 +151,6 @@ void main() {
     expect(customOccurrence.reminders.single.minutesBefore, 5);
   });
 
-  test('course date exceptions cancel and override individual occurrences', () {
-    final exceptionCourse = course().copyWith(
-      dateExceptions: const [
-        CourseDateException(dateIso: '2026-08-03', cancelled: true),
-      ],
-    );
-    final cancelled = const AgendaProjectionService().upcoming(
-      appData(courses: [exceptionCourse]),
-      now: DateTime(2026, 8, 3, 7),
-      horizon: const Duration(hours: 2),
-    );
-    expect(cancelled, isEmpty);
-
-    final overridden = course().copyWith(
-      dateExceptions: const [
-        CourseDateException(
-          dateIso: '2026-08-03',
-          startMinutes: 9 * 60,
-          endMinutes: 10 * 60,
-        ),
-      ],
-    );
-    final occurrence = const AgendaProjectionService()
-        .upcoming(
-          appData(courses: [overridden]),
-          now: DateTime(2026, 8, 3, 8),
-          horizon: const Duration(hours: 3),
-        )
-        .single;
-    expect(occurrence.start, DateTime(2026, 8, 3, 9));
-    expect(occurrence.end, DateTime(2026, 8, 3, 10));
-  });
-
   test('planner keys are stable and reconciler emits only changes', () {
     final occurrence = AgendaOccurrence(
       stableId: 'course|table|course|2026-08-03',

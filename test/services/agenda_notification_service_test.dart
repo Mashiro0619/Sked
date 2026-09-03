@@ -45,6 +45,8 @@ class _FakeAndroidNotificationsPlatform
   bool notificationsEnabledResult = true;
   bool exactAlarmsAllowedResult = true;
   bool openSettingsResult = true;
+  Object? exactScheduleError;
+  bool revokeExactAlarmAfterScheduleError = false;
   int initializeCount = 0;
   int launchDetailsCount = 0;
   int exactAlarmRequestCount = 0;
@@ -96,6 +98,15 @@ class _FakeAndroidNotificationsPlatform
     AndroidNotificationDetails? notificationDetails,
     AndroidScheduleMode scheduleMode = AndroidScheduleMode.exact,
   }) async {
+    if (scheduleMode == AndroidScheduleMode.exactAllowWhileIdle) {
+      final error = exactScheduleError;
+      if (error != null) {
+        if (revokeExactAlarmAfterScheduleError) {
+          exactAlarmsAllowedResult = false;
+        }
+        throw error;
+      }
+    }
     schedules.add(
       _RecordedAndroidSchedule(
         id: id,
@@ -592,6 +603,35 @@ void main() {
       },
     );
 
+    test('retries the plugin exact-permission error as inexact', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      platform.exactScheduleError = PlatformException(
+        code: 'exact_alarms_not_permitted',
+      );
+      // The system query may still report the old value while Settings is
+      // changing. The plugin's specific error must be sufficient to recover.
+      platform.exactAlarmsAllowedResult = true;
+
+      await gateway.schedule(
+        _platformRequest(
+          key: 'exact-fallback',
+          fireAt: DateTime.now().add(const Duration(days: 1)),
+        ),
+        exact: true,
+      );
+
+      expect(platform.schedules, hasLength(1));
+      expect(
+        platform.schedules.single.scheduleMode,
+        AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+      expect(
+        AgendaNotificationPayload.tryDecode(platform.schedules.single.payload)
+            ?.scheduleExact,
+        isFalse,
+      );
+    });
+
     test(
       'uses localized action labels for every supported notification locale',
       () async {
@@ -666,6 +706,17 @@ void main() {
     expect(await gateway.notificationsEnabled, isFalse);
     expect(await gateway.exactAlarmsAllowed, isFalse);
     expect(await gateway.openNotificationSettings(), isTrue);
+  });
+
+  test('agenda notification IDs never enter the developer-test range', () {
+    final ids = [
+      notificationIdForKey('v1|course|first|0'),
+      notificationIdForKey('v1|course|second|5'),
+      notificationIdForKey('v1|general|third|10'),
+    ];
+
+    expect(notificationIdForKey('v1|course|first|0'), ids.first);
+    expect(ids, everyElement(inInclusiveRange(1, 2000000000)));
   });
 
   test(
@@ -1107,6 +1158,55 @@ void main() {
     },
   );
 
+  test('maintenance preserves a just-due notification while the app setting is off', () async {
+    final gateway = _RecordingGateway();
+    final service = AgendaNotificationService(enabled: true, gateway: gateway);
+    await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+    final key = gateway.scheduled.keys.single;
+    final disabled = _data().copyWith(
+      notificationSettings: const NotificationSettings(
+        enabled: false,
+        courseDefaultMinutesBefore: 10,
+      ),
+    );
+
+    final status = await service.reconcile(
+      disabled,
+      anchor: DateTime(2026, 8, 3, 7, 59),
+      mode: AgendaNotificationReconcileMode.maintenance,
+    );
+
+    expect(gateway.scheduled, contains(key));
+    expect(gateway.cancelledKeys, isEmpty);
+    expect(status.scheduledCount, 1);
+    expect(status.retainedPendingCount, 1);
+  });
+
+  test(
+    'maintenance preserves a just-due notification while permission is denied',
+    () async {
+      final gateway = _RecordingGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
+      await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+      final key = gateway.scheduled.keys.single;
+      gateway.permissionGranted = false;
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7, 59),
+        mode: AgendaNotificationReconcileMode.maintenance,
+      );
+
+      expect(gateway.scheduled, contains(key));
+      expect(gateway.cancelledKeys, isEmpty);
+      expect(status.scheduledCount, 1);
+      expect(status.retainedPendingCount, 1);
+    },
+  );
+
   test(
     'reconcile replaces same-time notifications when localized copy changes',
     () async {
@@ -1237,6 +1337,432 @@ void main() {
       expect(status.scheduledCount, 2);
       expect(status.truncatedCount, 2);
       expect(status.isTruncated, isTrue);
+      expect(status.overflowCatchUpAt, DateTime(2026, 8, 3, 11, 10));
+      expect(status.nextMaintenanceAt, DateTime(2026, 8, 3, 11, 10));
+    },
+  );
+
+  test(
+    'authoritative reconciliation cancels a notification that is already due',
+    () async {
+      final gateway = _RecordingGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
+      final initial = DateTime(2026, 8, 3, 7);
+      await service.reconcile(_data(), anchor: initial);
+      final key = gateway.scheduled.keys.single;
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7, 59),
+      );
+
+      expect(gateway.scheduled, isEmpty);
+      expect(gateway.cancelledKeys, contains(key));
+      expect(status.retainedPendingCount, 0);
+      expect(status.mode, AgendaNotificationReconcileMode.authoritative);
+    },
+  );
+
+  test('maintenance reconciliation retains a managed notification due within ten minutes', () async {
+    final gateway = _RecordingGateway();
+    final service = AgendaNotificationService(enabled: true, gateway: gateway);
+    await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+    final key = gateway.scheduled.keys.single;
+
+    final status = await service.reconcile(
+      _data(),
+      anchor: DateTime(2026, 8, 3, 7, 59),
+      mode: AgendaNotificationReconcileMode.maintenance,
+    );
+
+    expect(gateway.scheduled, contains(key));
+    expect(status.scheduledCount, 1);
+    expect(status.retainedPendingCount, 1);
+    expect(status.mode, AgendaNotificationReconcileMode.maintenance);
+  });
+
+  test(
+    'maintenance at a reminder fire time never cancels that pending reminder',
+    () async {
+      final gateway = _RecordingGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
+      await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+      final key = gateway.scheduled.keys.single;
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7, 50),
+        mode: AgendaNotificationReconcileMode.maintenance,
+      );
+
+      expect(gateway.scheduled, contains(key));
+      expect(gateway.cancelledKeys, isEmpty);
+      expect(status.retainedPendingCount, 1);
+    },
+  );
+
+  test(
+    'maintenance keeps a protected notification even when its copy changes',
+    () async {
+      final gateway = _RecordingGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
+      await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+      final key = gateway.scheduled.keys.single;
+      final originalPayload = gateway.scheduled[key]!.payload;
+      gateway.cancelledKeys.clear();
+
+      final status = await service.reconcile(
+        _data().copyWith(localeCode: 'zh-Hant'),
+        anchor: DateTime(2026, 8, 3, 7, 59),
+        mode: AgendaNotificationReconcileMode.maintenance,
+      );
+
+      expect(gateway.cancelledKeys, isEmpty);
+      expect(gateway.scheduled[key]!.payload, originalPayload);
+      expect(status.retainedPendingCount, 1);
+    },
+  );
+
+  test('maintenance cancels a managed notification once the ten-minute grace expires', () async {
+    final gateway = _RecordingGateway();
+    final service = AgendaNotificationService(enabled: true, gateway: gateway);
+    await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+    final key = gateway.scheduled.keys.single;
+
+    await service.reconcile(
+      _data(),
+      anchor: DateTime(2026, 8, 3, 8, 0, 1),
+      mode: AgendaNotificationReconcileMode.maintenance,
+    );
+
+    expect(gateway.scheduled, isEmpty);
+    expect(gateway.cancelledKeys, contains(key));
+  });
+
+  test(
+    'maintenance reserves cap capacity for just-due pending notifications',
+    () async {
+      final initial = DateTime(2026, 8, 3, 7);
+      final occurrences = [
+        for (final entry in const [
+          ('due', 50),
+          ('future-a', 120),
+          ('future-b', 180),
+        ])
+          AgendaOccurrence(
+            stableId: entry.$1,
+            sourceType: 'test',
+            start: initial.add(Duration(minutes: entry.$2)),
+            end: initial.add(Duration(minutes: entry.$2 + 30)),
+            title: entry.$1,
+            target: const AgendaTarget(sourceType: 'test'),
+            reminders: const [AgendaReminder(minutesBefore: 0)],
+          ),
+      ];
+      final projection = AgendaProjectionService(
+        registry: AgendaSourceRegistry(
+          sources: [
+            CallbackAgendaSource(id: 'test', builder: (_, _) => occurrences),
+          ],
+        ),
+      );
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        projection: projection,
+        planner: const NotificationPlanner(maxScheduledNotifications: 2),
+        gateway: gateway,
+      );
+
+      await service.reconcile(_data(), anchor: initial);
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7, 59),
+        mode: AgendaNotificationReconcileMode.maintenance,
+      );
+
+      expect(gateway.scheduled, hasLength(2));
+      expect(
+        gateway.scheduled.values.map((item) => item.occurrence.stableId),
+        containsAll(['due', 'future-a']),
+      );
+      expect(status.scheduledCount, 2);
+      expect(status.truncatedCount, 1);
+    },
+  );
+
+  test('empty plans use the daily local maintenance boundary', () async {
+    final base = buildInitialAppData(buildDefaultPeriodTimes());
+    final data = base.copyWith(
+      notificationSettings: const NotificationSettings(enabled: true),
+    );
+    final gateway = MemoryAgendaNotificationGateway();
+    final service = AgendaNotificationService(enabled: true, gateway: gateway);
+
+    final status = await service.reconcile(
+      data,
+      anchor: DateTime(2026, 8, 3, 8),
+    );
+
+    expect(status.nextMaintenanceAt, DateTime(2026, 8, 4, 3, 17));
+    expect(status.overflowCatchUpAt, isNull);
+  });
+
+  test(
+    'a normal reminder does not become the background maintenance trigger',
+    () async {
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7),
+      );
+
+      expect(
+        gateway.scheduled.values.single.fireAt,
+        DateTime(2026, 8, 3, 7, 50),
+      );
+      expect(status.nextMaintenanceAt, DateTime(2026, 8, 4, 3, 17));
+      expect(
+        status.nextMaintenanceAt,
+        isNot(gateway.scheduled.values.single.fireAt),
+      );
+    },
+  );
+
+  test('compensates a reminder missed by seconds while its occurrence is still upcoming', () async {
+    final anchor = DateTime(2026, 8, 3, 20, 43, 1);
+    final occurrence = AgendaOccurrence(
+      stableId: 'late-course',
+      sourceType: 'test',
+      start: DateTime(2026, 8, 3, 20, 48),
+      end: DateTime(2026, 8, 3, 21, 30),
+      title: 'Late boundary',
+      target: const AgendaTarget(sourceType: 'test'),
+      reminders: const [AgendaReminder(minutesBefore: 5)],
+    );
+    final projection = AgendaProjectionService(
+      registry: AgendaSourceRegistry(
+        sources: [
+          CallbackAgendaSource(id: 'test', builder: (_, _) => [occurrence]),
+        ],
+      ),
+    );
+    final gateway = MemoryAgendaNotificationGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      projection: projection,
+      gateway: gateway,
+      now: () => anchor,
+    );
+
+    await service.reconcile(_data(), anchor: anchor);
+
+    expect(gateway.scheduled, hasLength(1));
+    expect(
+      gateway.scheduled.values.single.fireAt,
+      anchor.add(const Duration(seconds: 5)),
+    );
+  });
+
+  test(
+    'does not replay a reminder once the short late-delivery grace expires',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 20, 44, 1);
+      final occurrence = AgendaOccurrence(
+        stableId: 'stale-course',
+        sourceType: 'test',
+        start: DateTime(2026, 8, 3, 20, 48),
+        end: DateTime(2026, 8, 3, 21, 30),
+        title: 'Stale boundary',
+        target: const AgendaTarget(sourceType: 'test'),
+        reminders: const [AgendaReminder(minutesBefore: 5)],
+      );
+      final projection = AgendaProjectionService(
+        registry: AgendaSourceRegistry(
+          sources: [
+            CallbackAgendaSource(id: 'test', builder: (_, _) => [occurrence]),
+          ],
+        ),
+      );
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        projection: projection,
+        gateway: gateway,
+        now: () => anchor,
+      );
+
+      await service.reconcile(_data(), anchor: anchor);
+
+      expect(gateway.scheduled, isEmpty);
+    },
+  );
+
+  test(
+    'daily maintenance moves away from a reminder at the daily boundary',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 2);
+      final occurrence = AgendaOccurrence(
+        stableId: 'daily-boundary',
+        sourceType: 'test',
+        start: DateTime(2026, 8, 3, 3, 17),
+        end: DateTime(2026, 8, 3, 4, 17),
+        title: 'Boundary',
+        target: const AgendaTarget(sourceType: 'test'),
+        reminders: const [AgendaReminder(minutesBefore: 0)],
+      );
+      final projection = AgendaProjectionService(
+        registry: AgendaSourceRegistry(
+          sources: [
+            CallbackAgendaSource(id: 'test', builder: (_, _) => [occurrence]),
+          ],
+        ),
+      );
+      final service = AgendaNotificationService(
+        enabled: true,
+        projection: projection,
+        gateway: MemoryAgendaNotificationGateway(),
+      );
+
+      final status = await service.reconcile(_data(), anchor: anchor);
+
+      expect(status.nextMaintenanceAt, DateTime(2026, 8, 3, 3, 18));
+      expect(status.nextMaintenanceAt, isNot(occurrence.start));
+    },
+  );
+
+  test(
+    'overflow maintenance moves away from another candidate reminder',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final occurrences = [
+        AgendaOccurrence(
+          stableId: 'selected',
+          sourceType: 'test',
+          start: DateTime(2026, 8, 3, 9),
+          end: DateTime(2026, 8, 3, 10),
+          title: 'Selected',
+          target: const AgendaTarget(sourceType: 'test'),
+          reminders: const [AgendaReminder(minutesBefore: 0)],
+        ),
+        AgendaOccurrence(
+          stableId: 'omitted',
+          sourceType: 'test',
+          start: DateTime(2026, 8, 3, 10),
+          end: DateTime(2026, 8, 3, 11),
+          title: 'Omitted',
+          target: const AgendaTarget(sourceType: 'test'),
+          reminders: const [AgendaReminder(minutesBefore: 0)],
+        ),
+        AgendaOccurrence(
+          stableId: 'collision',
+          sourceType: 'test',
+          start: DateTime(2026, 8, 3, 10, 10),
+          end: DateTime(2026, 8, 3, 11, 10),
+          title: 'Collision',
+          target: const AgendaTarget(sourceType: 'test'),
+          reminders: const [AgendaReminder(minutesBefore: 0)],
+        ),
+      ];
+      final projection = AgendaProjectionService(
+        registry: AgendaSourceRegistry(
+          sources: [
+            CallbackAgendaSource(id: 'test', builder: (_, _) => occurrences),
+          ],
+        ),
+      );
+      final service = AgendaNotificationService(
+        enabled: true,
+        projection: projection,
+        planner: const NotificationPlanner(maxScheduledNotifications: 1),
+        gateway: MemoryAgendaNotificationGateway(),
+      );
+
+      final status = await service.reconcile(_data(), anchor: anchor);
+
+      expect(status.overflowCatchUpAt, DateTime(2026, 8, 3, 10, 11));
+      expect(status.nextMaintenanceAt, DateTime(2026, 8, 3, 10, 11));
+    },
+  );
+
+  test(
+    'reconcile diagnostics persist failures and clear with runtime state',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 7);
+      final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: MemoryAgendaNotificationGateway(),
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+
+      await service.reconcile(_data(), anchor: anchor);
+      final success = await service.readNotificationDiagnostics();
+      expect(success?.result, AgendaNotificationDiagnosticResult.success);
+      expect(success?.mode, AgendaNotificationReconcileMode.authoritative);
+      expect(success?.origin, AgendaNotificationReconcileOrigin.foreground);
+      expect(success?.plan, isNotEmpty);
+
+      await service.clearRuntime();
+      expect(await service.readNotificationDiagnostics(), isNull);
+
+      final failingGateway = _RecordingGateway()..failPendingPlan = true;
+      final failing = AgendaNotificationService(
+        enabled: true,
+        gateway: failingGateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      await expectLater(
+        failing.reconcile(_data(), anchor: anchor),
+        throwsA(isA<StateError>()),
+      );
+      final failure = await failing.readNotificationDiagnostics();
+      expect(failure?.result, AgendaNotificationDiagnosticResult.failed);
+      expect(failure?.error, contains('StateError'));
+    },
+  );
+
+  test(
+    'developer notification tests use only dedicated test records',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 7);
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => anchor,
+      );
+
+      await service.showImmediateNotificationTest(
+        AgendaNotificationTestChannel.course,
+        localeCode: 'en',
+      );
+      await service.scheduleDeveloperNotificationTest(
+        AgendaNotificationTestChannel.schedule,
+        localeCode: 'en',
+      );
+
+      expect(gateway.scheduled, isEmpty);
+      expect(gateway.testNotifications, hasLength(1));
+      final request = gateway.testNotifications.values.single;
+      expect(request.channel, AgendaNotificationTestChannel.schedule);
+      expect(request.fireAt, anchor.add(const Duration(seconds: 30)));
     },
   );
 
@@ -1335,6 +1861,9 @@ void main() {
       await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
       final request = gateway.scheduled.values.single;
       await service.handleAction(request.payload, 'snooze_10m');
+      await service.scheduleDeveloperNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
       await runtime.enqueueAction(
         payload: request.payload,
         actionId: 'handled',
@@ -1343,6 +1872,7 @@ void main() {
       await service.clearRuntime();
 
       expect(gateway.scheduled, isEmpty);
+      expect(gateway.testNotifications, isEmpty);
       expect(await runtime.readSnoozes(), isEmpty);
       expect(await runtime.readHandledOccurrenceIds(), isEmpty);
       expect(await runtime.readPendingActions(), isEmpty);

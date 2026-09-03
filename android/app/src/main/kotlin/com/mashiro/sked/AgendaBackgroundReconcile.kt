@@ -19,7 +19,6 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugins.GeneratedPluginRegistrant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -138,7 +137,10 @@ class AgendaBackgroundReconcileWorker(
 
                 val engine = FlutterEngine(applicationContext)
                 engineRef.set(engine)
-                GeneratedPluginRegistrant.registerWith(engine)
+                // FlutterEngine registers generated plugins by default. A
+                // second manual registration produces duplicate-plugin
+                // warnings and can leave background plugin state device
+                // dependent.
                 MethodChannel(
                     engine.dartExecutor.binaryMessenger,
                     AndroidProductivityContract.CHANNEL,

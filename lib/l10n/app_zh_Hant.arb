@@ -159,28 +159,6 @@
   "@editCourseTitle": {},
   "editCourseTooltip": "編輯課程",
   "@editCourseTooltip": {},
-  "courseDateExceptions": "日期變更",
-  "@courseDateExceptions": {},
-  "courseDateExceptionsEmpty": "暫無日期變更",
-  "@courseDateExceptionsEmpty": {},
-  "courseDateExceptionsCount": "{count} 項日期變更",
-  "@courseDateExceptionsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "courseDateExceptionAdd": "新增日期變更",
-  "@courseDateExceptionAdd": {},
-  "courseDateExceptionEdit": "編輯日期變更",
-  "@courseDateExceptionEdit": {},
-  "courseDateExceptionCancelled": "本次停課",
-  "@courseDateExceptionCancelled": {},
-  "courseDateExceptionCancelClass": "取消本次課程",
-  "@courseDateExceptionCancelClass": {},
-  "courseDateExceptionTimeOverride": "調整時間",
-  "@courseDateExceptionTimeOverride": {},
   "place": "地點",
   "@place": {},
   "time": "時間",
@@ -1671,6 +1649,154 @@
   "@developerSampleDataAdded": {},
   "developerModeLongPressHint": "長按 3 秒以開啟開發者模式",
   "@developerModeLongPressHint": {},
+  "developerNotificationDiagnostics": "通知診斷",
+  "@developerNotificationDiagnostics": {},
+  "developerNotificationDiagnosticsDescription": "檢查 Android 通知投遞狀態、重建現有提醒計畫，並透過 Sked 的正常通知服務傳送安全的測試通知。",
+  "@developerNotificationDiagnosticsDescription": {},
+  "developerNotificationUnsupported": "通知診斷僅適用於 Android。",
+  "@developerNotificationUnsupported": {},
+  "developerNotificationCoordinatorUnavailable": "通知診斷會在日程協調器啟動後可用。",
+  "@developerNotificationCoordinatorUnavailable": {},
+  "developerNotificationRefresh": "重新整理診斷",
+  "@developerNotificationRefresh": {},
+  "developerNotificationSystemStatus": "系統通知權限",
+  "@developerNotificationSystemStatus": {},
+  "developerNotificationPermissionAllowed": "已允許",
+  "@developerNotificationPermissionAllowed": {},
+  "developerNotificationPermissionBlocked": "已封鎖",
+  "@developerNotificationPermissionBlocked": {},
+  "developerNotificationExactAlarm": "精確鬧鐘",
+  "@developerNotificationExactAlarm": {},
+  "developerNotificationExactAlarmAllowed": "已允許",
+  "@developerNotificationExactAlarmAllowed": {},
+  "developerNotificationExactAlarmInexact": "使用非精確降級",
+  "@developerNotificationExactAlarmInexact": {},
+  "developerNotificationPlan": "日程通知計畫",
+  "@developerNotificationPlan": {},
+  "developerNotificationPlanSummary": "已排程 {scheduled} 則，計畫 {planned} 則",
+  "@developerNotificationPlanSummary": {
+    "placeholders": {
+      "scheduled": {
+        "type": "int"
+      },
+      "planned": {
+        "type": "int"
+      }
+    }
+  },
+  "developerNotificationPlanError": "最近錯誤：{message}",
+  "@developerNotificationPlanError": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "developerNotificationRunMaintenance": "重建通知計畫",
+  "@developerNotificationRunMaintenance": {},
+  "developerNotificationMaintenanceComplete": "通知計畫已重建。",
+  "@developerNotificationMaintenanceComplete": {},
+  "developerNotificationTestChannel": "測試通道",
+  "@developerNotificationTestChannel": {},
+  "developerNotificationTestCourse": "課程提醒",
+  "@developerNotificationTestCourse": {},
+  "developerNotificationTestSchedule": "日程提醒",
+  "@developerNotificationTestSchedule": {},
+  "developerNotificationImmediateTest": "立即傳送測試通知",
+  "@developerNotificationImmediateTest": {},
+  "developerNotificationThirtySecondTest": "安排 30 秒背景測試",
+  "@developerNotificationThirtySecondTest": {},
+  "developerNotificationImmediateQueued": "已傳送立即測試通知。",
+  "@developerNotificationImmediateQueued": {},
+  "developerNotificationThirtySecondQueued": "已安排 30 秒後的背景測試。",
+  "@developerNotificationThirtySecondQueued": {},
+  "developerNotificationAppSwitch": "應用程式提醒開關",
+  "@developerNotificationAppSwitch": {},
+  "developerNotificationAppSwitchEnabled": "一般提醒已啟用",
+  "@developerNotificationAppSwitchEnabled": {},
+  "developerNotificationAppSwitchDisabled": "一般提醒已關閉；開發者測試仍可執行",
+  "@developerNotificationAppSwitchDisabled": {},
+  "developerNotificationTimeZone": "本地時區",
+  "@developerNotificationTimeZone": {},
+  "developerNotificationTimeZoneValue": "{zone}（UTC{offset}）",
+  "@developerNotificationTimeZoneValue": {
+    "placeholders": {
+      "zone": {},
+      "offset": {}
+    }
+  },
+  "developerNotificationChannelNotCreated": "尚未建立；執行開發者測試後會建立。",
+  "@developerNotificationChannelNotCreated": {},
+  "developerNotificationChannelEnabledState": "已啟用",
+  "@developerNotificationChannelEnabledState": {},
+  "developerNotificationChannelBlockedState": "已封鎖",
+  "@developerNotificationChannelBlockedState": {},
+  "developerNotificationChannelImportance": "重要性：{importance}",
+  "@developerNotificationChannelImportance": {
+    "placeholders": {
+      "importance": {
+        "type": "int"
+      }
+    }
+  },
+  "developerNotificationChannelImportanceUnavailable": "無法取得重要性",
+  "@developerNotificationChannelImportanceUnavailable": {},
+  "developerNotificationChannelSummary": "{state}；{importance}",
+  "@developerNotificationChannelSummary": {
+    "placeholders": {
+      "state": {},
+      "importance": {}
+    }
+  },
+  "developerNotificationNoDiagnostic": "尚無重算記錄。",
+  "@developerNotificationNoDiagnostic": {},
+  "developerNotificationNextReminder": "下一則實際提醒",
+  "@developerNotificationNextReminder": {},
+  "developerNotificationNoPendingReminder": "目前計畫中沒有未來提醒",
+  "@developerNotificationNoPendingReminder": {},
+  "developerNotificationNextMaintenance": "下一次維護",
+  "@developerNotificationNextMaintenance": {},
+  "developerNotificationNoMaintenance": "尚未安排",
+  "@developerNotificationNoMaintenance": {},
+  "developerNotificationTruncation": "計畫截斷",
+  "@developerNotificationTruncation": {},
+  "developerNotificationTruncationCount": "因計畫上限省略 {count} 則",
+  "@developerNotificationTruncationCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "developerNotificationLastReconciliation": "最近一次重算",
+  "@developerNotificationLastReconciliation": {},
+  "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
+  "@developerNotificationReconciliationSummary": {
+    "placeholders": {
+      "origin": {},
+      "mode": {},
+      "result": {},
+      "time": {}
+    }
+  },
+  "developerNotificationReconcileOriginForeground": "前景",
+  "@developerNotificationReconcileOriginForeground": {},
+  "developerNotificationReconcileOriginBackground": "背景",
+  "@developerNotificationReconcileOriginBackground": {},
+  "developerNotificationReconcileModeAuthoritative": "權威重算",
+  "@developerNotificationReconcileModeAuthoritative": {},
+  "developerNotificationReconcileModeMaintenance": "維護重算",
+  "@developerNotificationReconcileModeMaintenance": {},
+  "developerNotificationReconcileResultSuccess": "成功",
+  "@developerNotificationReconcileResultSuccess": {},
+  "developerNotificationReconcileResultSkipped": "已略過",
+  "@developerNotificationReconcileResultSkipped": {},
+  "developerNotificationReconcileResultFailed": "失敗",
+  "@developerNotificationReconcileResultFailed": {},
+  "developerNotificationTestChecking": "正在檢查通知狀態，暫時無法測試。",
+  "@developerNotificationTestChecking": {},
+  "developerNotificationTestBlockedSystem": "系統通知已被封鎖，無法測試。",
+  "@developerNotificationTestBlockedSystem": {},
+  "developerNotificationTestBlockedChannel": "所選通知通道已被封鎖，無法測試。",
+  "@developerNotificationTestBlockedChannel": {},
   "collapseWorkspaceNavigation": "摺疊工作區導覽",
   "@collapseWorkspaceNavigation": {},
   "expandWorkspaceNavigation": "展開工作區導覽",
@@ -1711,7 +1837,7 @@
   "@notificationSettingsSection": {},
   "notificationSettingsEnabled": "啟用提醒與通知",
   "@notificationSettingsEnabled": {},
-  "notificationSettingsEnabledHint": "為即將開始的課程和日程安排提醒。",
+  "notificationSettingsEnabledHint": "僅為已設定提醒的項目安排通知。繼承課程需在下方設定課程預設提醒。",
   "@notificationSettingsEnabledHint": {},
   "notificationSettingsEnabledSummary": "已啟用",
   "@notificationSettingsEnabledSummary": {},

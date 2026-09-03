@@ -33,46 +33,6 @@ Future<TimetableProvider> _loadProvider(AppData data) async {
   return provider;
 }
 
-AppData _dataWithCancelledCourse() {
-  final base = buildInitialAppData(buildDefaultPeriodTimes());
-  final timetable = TimetableData(
-    id: 'table',
-    config: TimetableConfig(
-      name: 'Term',
-      startDate: DateTime(2026, 8, 3),
-      totalWeeks: 18,
-      periodTimeSetId: 'default',
-    ),
-    courses: const [
-      CourseItem(
-        id: 'course',
-        name: 'Mathematics',
-        teacher: '',
-        location: 'Room 1',
-        dayOfWeek: DateTime.monday,
-        semesterWeeks: [1],
-        periods: [1],
-        startMinutes: 8 * 60,
-        endMinutes: 9 * 60,
-        timeRange: '08:00 - 09:00',
-        credit: 0,
-        remarks: '',
-        customFields: {},
-        dateExceptions: [
-          CourseDateException(dateIso: '2026-08-03', cancelled: true),
-        ],
-      ),
-    ],
-  );
-  return base.copyWith(
-    activeMode: AppMode.general,
-    studentMode: base.studentMode.copyWith(
-      activeTimetableId: timetable.id,
-      timetables: [timetable],
-    ),
-  );
-}
-
 AppData _dataWithCourse() {
   final base = buildInitialAppData(buildDefaultPeriodTimes());
   final timetable = TimetableData(
@@ -501,29 +461,6 @@ void main() {
         await router.routePayload(jsonEncode({'target': target.toJson()})),
         isFalse,
       );
-      expect(provider.activeMode, AppMode.general);
-    },
-  );
-
-  test(
-    'does not route a course occurrence cancelled for its target date',
-    () async {
-      final provider = await _loadProvider(_dataWithCancelledCourse());
-      addTearDown(provider.dispose);
-      final router = AgendaActionRouter(provider: provider);
-
-      final routed = await router.route(
-        const AgendaAction(
-          target: AgendaTarget(
-            sourceType: AgendaSourceType.course,
-            timetableId: 'table',
-            courseId: 'course',
-            dateIso: '2026-08-03',
-          ),
-        ),
-      );
-
-      expect(routed, isFalse);
       expect(provider.activeMode, AppMode.general);
     },
   );

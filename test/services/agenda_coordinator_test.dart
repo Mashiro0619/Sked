@@ -7,8 +7,10 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_coordinator.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
+import 'package:sked/services/school_site_service.dart';
 
 class _MemoryStorage implements TimetableStorage {
   _MemoryStorage(this.data);
@@ -72,6 +74,25 @@ class _RecordingBridge extends AndroidProductivityBridge {
   }
 }
 
+class _BlockingScheduleGateway extends MemoryAgendaNotificationGateway {
+  var blockNextSchedule = false;
+  final scheduleStarted = Completer<void>();
+  final allowSchedule = Completer<void>();
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    if (blockNextSchedule) {
+      blockNextSchedule = false;
+      if (!scheduleStarted.isCompleted) scheduleStarted.complete();
+      await allowSchedule.future;
+    }
+    await super.schedule(request, exact: exact);
+  }
+}
+
 Future<TimetableProvider> _provider() async =>
     _providerWithData(buildInitialAppData(buildDefaultPeriodTimes()));
 
@@ -80,6 +101,9 @@ Future<TimetableProvider> _providerWithData(AppData data) async {
     storage: _MemoryStorage(data),
     systemLocaleCodeResolver: () => 'en',
     uiStateSaveDelay: Duration.zero,
+    schoolSiteService: SchoolSiteService(
+      coordinator: SchoolSiteStorageCoordinator(),
+    ),
   );
   await provider.load();
   return provider;
@@ -140,12 +164,13 @@ void main() {
       final provider = await _provider();
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
       final coordinator = AgendaCoordinator(
         provider: provider,
-        notificationService: AgendaNotificationService(
-          enabled: true,
-          gateway: gateway,
-        ),
+        notificationService: service,
         productivityBridge: AndroidProductivityBridge(enabled: false),
       );
       addTearDown(coordinator.dispose);
@@ -155,6 +180,52 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(coordinator.isStarted, isTrue);
+      expect(
+        (await service.readNotificationDiagnostics())?.mode,
+        AgendaNotificationReconcileMode.authoritative,
+      );
+    },
+  );
+
+  test(
+    'uses its owned service for notification diagnostics and developer tests',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _provider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          now: () => anchor,
+        ),
+        productivityBridge: AndroidProductivityBridge(enabled: false),
+        clock: () => anchor,
+      );
+      addTearDown(coordinator.dispose);
+
+      await coordinator.start();
+      final initialDiagnostics = await coordinator.notificationDiagnostics();
+      expect(
+        initialDiagnostics?.mode,
+        AgendaNotificationReconcileMode.maintenance,
+      );
+
+      await coordinator.showImmediateNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+      await coordinator.scheduleThirtySecondNotificationTest(
+        AgendaNotificationTestChannel.schedule,
+      );
+      await coordinator.runNotificationMaintenance();
+
+      expect(gateway.testNotifications, hasLength(1));
+      expect(
+        gateway.testNotifications.values.single.channel,
+        AgendaNotificationTestChannel.schedule,
+      );
     },
   );
 
@@ -178,6 +249,143 @@ void main() {
 
     expect(gateway.scheduled, isEmpty);
     expect(bridge.cancelCount, 1);
+  });
+
+  test(
+    'does not requeue a stale snapshot while data clear is active or committed',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _providerWithData(_dataWithEvent());
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final bridge = _RecordingBridge();
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          now: () => anchor,
+        ),
+        productivityBridge: bridge,
+        clock: () => anchor,
+      );
+      addTearDown(coordinator.dispose);
+
+      await coordinator.start();
+      final staleSnapshot = provider.appData;
+      final clearReady = Completer<void>();
+      final finishClear = Completer<void>();
+      final clearOperation = provider.runExclusiveDataClear(
+        clear: () async {
+          await coordinator.clearRuntime();
+          clearReady.complete();
+          await finishClear.future;
+        },
+        exit: () async {},
+      );
+
+      await clearReady.future;
+      expect(provider.isDataClearActive, isTrue);
+      expect(gateway.scheduled, isEmpty);
+      final scheduledWakeups = bridge.scheduleCount;
+
+      await coordinator.reconcileNow(data: staleSnapshot);
+      expect(gateway.scheduled, isEmpty);
+      expect(bridge.scheduleCount, scheduledWakeups);
+
+      finishClear.complete();
+      await clearOperation;
+      expect(provider.isDataClearCommitted, isTrue);
+
+      await coordinator.reconcileNow(data: staleSnapshot);
+      expect(gateway.scheduled, isEmpty);
+      expect(bridge.scheduleCount, scheduledWakeups);
+    },
+  );
+
+  test(
+    'a durable commit reactivates the clear fence after a failed data reset',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _providerWithData(_dataWithEvent());
+      addTearDown(provider.dispose);
+      final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: MemoryAgendaNotificationGateway(),
+          runtimeStore: runtime,
+          now: () => anchor,
+        ),
+        productivityBridge: AndroidProductivityBridge(enabled: false),
+        clock: () => anchor,
+      );
+      addTearDown(coordinator.dispose);
+      await coordinator.start();
+
+      await expectLater(
+        provider.runExclusiveDataClear(
+          clear: () async {
+            await coordinator.beginDataClear();
+            throw StateError('synthetic clear failure');
+          },
+          exit: () async {},
+        ),
+        throwsStateError,
+      );
+      expect((await runtime.readProjectionFence()).blocked, isTrue);
+
+      await provider.updateLocaleCode('zh');
+      await Future<void>.delayed(Duration.zero);
+
+      expect((await runtime.readProjectionFence()).blocked, isFalse);
+    },
+  );
+
+  test('data clear wins over a reconciliation already in flight', () async {
+    final anchor = DateTime(2026, 8, 3, 8);
+    final provider = await _providerWithData(_dataWithEvent());
+    addTearDown(provider.dispose);
+    final gateway = _BlockingScheduleGateway();
+    final coordinator = AgendaCoordinator(
+      provider: provider,
+      notificationService: AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        now: () => anchor,
+      ),
+      productivityBridge: AndroidProductivityBridge(enabled: false),
+      clock: () => anchor,
+    );
+    addTearDown(coordinator.dispose);
+
+    await coordinator.start();
+    await coordinator.clearRuntime();
+    gateway.blockNextSchedule = true;
+    final stalePass = coordinator.reconcileNow(data: provider.appData);
+    await gateway.scheduleStarted.future;
+
+    final clearReady = Completer<void>();
+    final finishClear = Completer<void>();
+    final clearOperation = provider.runExclusiveDataClear(
+      clear: () async {
+        await coordinator.clearRuntime();
+        clearReady.complete();
+        await finishClear.future;
+      },
+      exit: () async {},
+    );
+    expect(provider.isDataClearActive, isTrue);
+
+    gateway.allowSchedule.complete();
+    await stalePass;
+    await clearReady.future;
+    expect(gateway.scheduled, isEmpty);
+
+    finishClear.complete();
+    await clearOperation;
   });
 
   test(

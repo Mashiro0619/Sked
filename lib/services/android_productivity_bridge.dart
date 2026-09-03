@@ -16,7 +16,110 @@ abstract final class AndroidProductivityChannel {
   static const cancelAgendaReconciliation = 'cancelAgendaReconciliation';
   static const completeBackgroundAgendaReconciliation =
       'completeBackgroundAgendaReconciliation';
+  static const getNotificationDiagnostics = 'getNotificationDiagnostics';
   static const agendaIntentEvent = 'agendaIntent';
+}
+
+/// A channel owned by Sked as reported by Android's [NotificationManager].
+///
+/// Android creates notification channels lazily. [exists] is therefore false
+/// until the corresponding reminder or developer test has been scheduled at
+/// least once; it does not mean that the application lacks notification
+/// support.
+class AndroidNotificationChannelState {
+  const AndroidNotificationChannelState({
+    required this.id,
+    required this.name,
+    required this.exists,
+    required this.enabled,
+    this.importance,
+  });
+
+  final String id;
+  final String name;
+  final bool exists;
+  final bool enabled;
+  final int? importance;
+
+  static AndroidNotificationChannelState? tryDecode(Object? value) {
+    if (value is! Map) return null;
+    final id = value['id'];
+    final name = value['name'];
+    final exists = value['exists'];
+    final enabled = value['enabled'];
+    final importance = value['importance'];
+    if (id is! String ||
+        id.trim().isEmpty ||
+        name is! String ||
+        exists is! bool ||
+        enabled is! bool ||
+        (importance != null && importance is! num)) {
+      return null;
+    }
+    return AndroidNotificationChannelState(
+      id: id,
+      name: name,
+      exists: exists,
+      enabled: enabled,
+      importance: importance is num ? importance.toInt() : null,
+    );
+  }
+}
+
+/// Snapshot of Android-owned notification state for the developer diagnostic
+/// surface. The agenda service remains the owner of scheduling; this bridge
+/// only reports system settings and channel-level blocks.
+class AndroidNotificationDiagnostics {
+  const AndroidNotificationDiagnostics({
+    required this.isSupported,
+    required this.appNotificationsEnabled,
+    required this.postNotificationsGranted,
+    required this.exactAlarmsAllowed,
+    required this.channels,
+  });
+
+  const AndroidNotificationDiagnostics.unsupported()
+    : isSupported = false,
+      appNotificationsEnabled = false,
+      postNotificationsGranted = false,
+      exactAlarmsAllowed = false,
+      channels = const [];
+
+  final bool isSupported;
+  final bool appNotificationsEnabled;
+  final bool postNotificationsGranted;
+  final bool exactAlarmsAllowed;
+  final List<AndroidNotificationChannelState> channels;
+
+  static AndroidNotificationDiagnostics? tryDecode(Object? value) {
+    if (value is! Map) return null;
+    final supported = value['supported'];
+    final appNotificationsEnabled = value['appNotificationsEnabled'];
+    final postNotificationsGranted = value['postNotificationsGranted'];
+    final exactAlarmsAllowed = value['exactAlarmsAllowed'];
+    final rawChannels = value['channels'];
+    if (supported is! bool ||
+        appNotificationsEnabled is! bool ||
+        postNotificationsGranted is! bool ||
+        exactAlarmsAllowed is! bool ||
+        rawChannels is! List) {
+      return null;
+    }
+    final channels = <AndroidNotificationChannelState>[];
+    for (final rawChannel in rawChannels) {
+      final channel = AndroidNotificationChannelState.tryDecode(rawChannel);
+      if (channel == null) return null;
+      channels.add(channel);
+    }
+    channels.sort((left, right) => left.id.compareTo(right.id));
+    return AndroidNotificationDiagnostics(
+      isSupported: supported,
+      appNotificationsEnabled: appNotificationsEnabled,
+      postNotificationsGranted: postNotificationsGranted,
+      exactAlarmsAllowed: exactAlarmsAllowed,
+      channels: List.unmodifiable(channels),
+    );
+  }
 }
 
 /// Flutter-side facade for Android permissions, background reconciliation and deep links.
@@ -36,6 +139,11 @@ class AndroidProductivityBridge {
       StreamController<String>.broadcast(sync: true);
   Future<void>? _initialization;
   bool _initialized = false;
+  // A diagnostics-only facade shares this method-channel name with the
+  // coordinator's bridge, but it never installs an incoming handler.  Track
+  // ownership so disposing that facade cannot remove the coordinator's
+  // deep-link handler.
+  bool _methodCallHandlerInstalled = false;
   bool _disposed = false;
 
   bool get isSupported => _enabled && !_disposed;
@@ -59,6 +167,7 @@ class AndroidProductivityBridge {
 
   Future<void> _initialize() async {
     _channel.setMethodCallHandler(_handleMethodCall);
+    _methodCallHandlerInstalled = true;
     final initial = await _channel.invokeMethod<String>(
       AndroidProductivityChannel.getInitialAgendaIntent,
     );
@@ -121,6 +230,22 @@ class AndroidProductivityBridge {
         false;
   }
 
+  /// Reads system-level notification state and all current `sked_` channels.
+  ///
+  /// This intentionally does not initialize the agenda intent bridge or the
+  /// local-notifications plugin. It is safe to use from the developer page and
+  /// becomes a no-op on non-Android platforms.
+  Future<AndroidNotificationDiagnostics> notificationDiagnostics() async {
+    if (!_enabled || _disposed) {
+      return const AndroidNotificationDiagnostics.unsupported();
+    }
+    final raw = await _channel.invokeMethod<Object?>(
+      AndroidProductivityChannel.getNotificationDiagnostics,
+    );
+    return AndroidNotificationDiagnostics.tryDecode(raw) ??
+        const AndroidNotificationDiagnostics.unsupported();
+  }
+
   /// Schedules the next headless projection boundary on Android. The native
   /// scheduler coalesces this with boot/time-zone broadcasts and executes the
   /// same Dart Agenda path that foreground commits use.
@@ -142,8 +267,9 @@ class AndroidProductivityBridge {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    if (_enabled) {
+    if (_enabled && _methodCallHandlerInstalled) {
       _channel.setMethodCallHandler(null);
+      _methodCallHandlerInstalled = false;
     }
     unawaited(_agendaIntentController.close());
   }

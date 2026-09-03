@@ -195,6 +195,272 @@ class AgendaNotificationBackgroundRequest {
   static const maxLocaleLength = 64;
 }
 
+/// Identifies whether a projection is allowed to fully replace the platform
+/// notification plan or is only maintaining an already published plan.
+///
+/// A maintenance pass is deliberately weaker than an authoritative foreground
+/// pass: it must not race a notification that has just become due.
+enum AgendaNotificationReconcileMode { authoritative, maintenance }
+
+/// Identifies whether a notification projection was performed by a foreground
+/// Flutter host or the Android headless maintenance worker.
+///
+/// The distinction is runtime diagnostic information only. It deliberately
+/// does not change reconciliation semantics, which remain governed by
+/// [AgendaNotificationReconcileMode].
+enum AgendaNotificationReconcileOrigin { foreground, background }
+
+/// Terminal result recorded for the most recent notification projection.
+enum AgendaNotificationDiagnosticResult { success, skipped, failed }
+
+/// A durable fence around notification projection work.
+///
+/// The foreground application and Android's headless WorkManager engine do
+/// not share an isolate. A background worker can therefore load an AppData
+/// file immediately before the foreground clears it. Incrementing this fence
+/// makes that previously loaded snapshot unusable without putting runtime
+/// state into AppData or a user backup.
+class AgendaNotificationProjectionFence {
+  const AgendaNotificationProjectionFence({
+    required this.generation,
+    required this.blocked,
+  });
+
+  /// Monotonic enough for stale-worker detection. The value is intentionally
+  /// runtime-only and has no relationship with the AppData schema version.
+  final int generation;
+
+  /// A clear is in progress or has completed. Only a later foreground path
+  /// that knows it has a durable AppData snapshot may unblock the fence.
+  final bool blocked;
+
+  bool matches(AgendaNotificationProjectionFence other) =>
+      generation == other.generation && blocked == other.blocked;
+
+  static const initial = AgendaNotificationProjectionFence(
+    generation: 0,
+    blocked: false,
+  );
+}
+
+/// A privacy-minimised entry from the computed notification plan.
+///
+/// The runtime diagnostic intentionally records stable keys and fire times,
+/// but never titles, locations, notes, or other user-visible agenda content.
+class AgendaNotificationDiagnosticPlanItem {
+  const AgendaNotificationDiagnosticPlanItem({
+    required this.key,
+    required this.fireAt,
+    required this.sourceType,
+  });
+
+  final String key;
+  final DateTime fireAt;
+  final String sourceType;
+
+  Map<String, Object?> toJson() => {
+    'key': key,
+    'fireAt': fireAt.toIso8601String(),
+    'sourceType': sourceType,
+  };
+
+  static AgendaNotificationDiagnosticPlanItem? tryDecode(Object? value) {
+    if (value is! Map) return null;
+    final key = value['key'];
+    final sourceType = value['sourceType'];
+    final rawFireAt = value['fireAt'];
+    final fireAt = rawFireAt is String ? DateTime.tryParse(rawFireAt) : null;
+    if (key is! String ||
+        key.isEmpty ||
+        key.length > maxKeyLength ||
+        sourceType is! String ||
+        sourceType.isEmpty ||
+        sourceType.length > maxSourceTypeLength ||
+        fireAt == null) {
+      return null;
+    }
+    return AgendaNotificationDiagnosticPlanItem(
+      key: key,
+      fireAt: fireAt,
+      sourceType: sourceType,
+    );
+  }
+
+  static const maxKeyLength = 1024;
+  static const maxSourceTypeLength = 128;
+}
+
+/// Runtime-only observability for notification reconciliation.
+///
+/// This is intentionally stored outside AppData and exports. It lets a
+/// developer-facing diagnostic surface explain the last plan without putting
+/// private schedule content into user backups.
+class AgendaNotificationDiagnostics {
+  const AgendaNotificationDiagnostics({
+    required this.recordedAt,
+    required this.mode,
+    required this.result,
+    required this.notificationsEnabled,
+    required this.exactAlarmsAllowed,
+    required this.plannedCount,
+    required this.scheduledCount,
+    required this.truncatedCount,
+    required this.retainedPendingCount,
+    required this.plan,
+    this.origin = AgendaNotificationReconcileOrigin.foreground,
+    this.nextMaintenanceAt,
+    this.overflowCatchUpAt,
+    this.error,
+  });
+
+  final DateTime recordedAt;
+  final AgendaNotificationReconcileMode mode;
+  final AgendaNotificationReconcileOrigin origin;
+  final AgendaNotificationDiagnosticResult result;
+  final bool notificationsEnabled;
+  final bool exactAlarmsAllowed;
+  final int plannedCount;
+  final int scheduledCount;
+  final int truncatedCount;
+  final int retainedPendingCount;
+  final List<AgendaNotificationDiagnosticPlanItem> plan;
+  final DateTime? nextMaintenanceAt;
+  final DateTime? overflowCatchUpAt;
+  final String? error;
+
+  Map<String, Object?> toJson() => {
+    'v': schemaVersion,
+    'recordedAt': recordedAt.toIso8601String(),
+    'mode': mode.name,
+    'origin': origin.name,
+    'result': result.name,
+    'notificationsEnabled': notificationsEnabled,
+    'exactAlarmsAllowed': exactAlarmsAllowed,
+    'plannedCount': plannedCount,
+    'scheduledCount': scheduledCount,
+    'truncatedCount': truncatedCount,
+    'retainedPendingCount': retainedPendingCount,
+    'plan': plan.map((item) => item.toJson()).toList(growable: false),
+    if (nextMaintenanceAt != null)
+      'nextMaintenanceAt': nextMaintenanceAt!.toIso8601String(),
+    if (overflowCatchUpAt != null)
+      'overflowCatchUpAt': overflowCatchUpAt!.toIso8601String(),
+    if (error != null && error!.isNotEmpty) 'error': error,
+  };
+
+  static AgendaNotificationDiagnostics? tryDecode(Object? value) {
+    if (value is! Map || value['v'] != schemaVersion) return null;
+    final rawRecordedAt = value['recordedAt'];
+    final recordedAt = rawRecordedAt is String
+        ? DateTime.tryParse(rawRecordedAt)
+        : null;
+    final mode = _parseReconcileMode(value['mode']);
+    final origin = value['origin'] == null
+        ? AgendaNotificationReconcileOrigin.foreground
+        : _parseReconcileOrigin(value['origin']);
+    final result = _parseDiagnosticResult(value['result']);
+    final plannedCount = _decodeNonNegativeInt(value['plannedCount']);
+    final scheduledCount = _decodeNonNegativeInt(value['scheduledCount']);
+    final truncatedCount = _decodeNonNegativeInt(value['truncatedCount']);
+    final retainedPendingCount = _decodeNonNegativeInt(
+      value['retainedPendingCount'],
+    );
+    if (recordedAt == null ||
+        mode == null ||
+        origin == null ||
+        result == null ||
+        value['notificationsEnabled'] is! bool ||
+        value['exactAlarmsAllowed'] is! bool ||
+        plannedCount == null ||
+        scheduledCount == null ||
+        truncatedCount == null ||
+        retainedPendingCount == null) {
+      return null;
+    }
+
+    DateTime? decodeOptionalDate(String field) {
+      final raw = value[field];
+      if (raw == null) return null;
+      return raw is String ? DateTime.tryParse(raw) : null;
+    }
+
+    final nextMaintenanceAt = decodeOptionalDate('nextMaintenanceAt');
+    final overflowCatchUpAt = decodeOptionalDate('overflowCatchUpAt');
+    if ((value['nextMaintenanceAt'] != null && nextMaintenanceAt == null) ||
+        (value['overflowCatchUpAt'] != null && overflowCatchUpAt == null)) {
+      return null;
+    }
+
+    final rawPlan = value['plan'];
+    if (rawPlan is! List) return null;
+    final plan = <AgendaNotificationDiagnosticPlanItem>[];
+    for (final rawItem in rawPlan.take(maxPlanItems)) {
+      final item = AgendaNotificationDiagnosticPlanItem.tryDecode(rawItem);
+      if (item == null) return null;
+      plan.add(item);
+    }
+    if (rawPlan.length > maxPlanItems) return null;
+
+    final rawError = value['error'];
+    if (rawError != null &&
+        (rawError is! String || rawError.length > maxErrorLength)) {
+      return null;
+    }
+    return AgendaNotificationDiagnostics(
+      recordedAt: recordedAt,
+      mode: mode,
+      origin: origin,
+      result: result,
+      notificationsEnabled: value['notificationsEnabled'] as bool,
+      exactAlarmsAllowed: value['exactAlarmsAllowed'] as bool,
+      plannedCount: plannedCount,
+      scheduledCount: scheduledCount,
+      truncatedCount: truncatedCount,
+      retainedPendingCount: retainedPendingCount,
+      plan: List.unmodifiable(plan),
+      nextMaintenanceAt: nextMaintenanceAt,
+      overflowCatchUpAt: overflowCatchUpAt,
+      error: rawError as String?,
+    );
+  }
+
+  static const schemaVersion = 1;
+  static const maxPlanItems = 32;
+  static const maxErrorLength = 2048;
+}
+
+AgendaNotificationReconcileMode? _parseReconcileMode(Object? value) {
+  if (value is! String) return null;
+  for (final mode in AgendaNotificationReconcileMode.values) {
+    if (mode.name == value) return mode;
+  }
+  return null;
+}
+
+AgendaNotificationReconcileOrigin? _parseReconcileOrigin(Object? value) {
+  if (value is! String) return null;
+  for (final origin in AgendaNotificationReconcileOrigin.values) {
+    if (origin.name == value) return origin;
+  }
+  return null;
+}
+
+AgendaNotificationDiagnosticResult? _parseDiagnosticResult(Object? value) {
+  if (value is! String) return null;
+  for (final result in AgendaNotificationDiagnosticResult.values) {
+    if (result.name == value) return result;
+  }
+  return null;
+}
+
+int? _decodeNonNegativeInt(Object? value) {
+  if (value is int && value >= 0) return value;
+  if (value is num && value.isFinite && value >= 0 && value % 1 == 0) {
+    return value.toInt();
+  }
+  return null;
+}
+
 /// Runtime-only notification state.
 ///
 /// This state is deliberately separate from [AppData]: snoozes and handled
@@ -214,6 +480,35 @@ abstract interface class AgendaNotificationRuntimeStore {
   Future<void> removeHandledOccurrence(String occurrenceId);
 
   Future<void> clear();
+}
+
+/// Optional cross-engine coordination for agenda projection.
+///
+/// This stays separate from [AgendaNotificationRuntimeStore] so small custom
+/// stores used by integrations retain source compatibility. Production stores
+/// implement it and persist the fence outside AppData and user backups.
+abstract interface class AgendaNotificationProjectionFenceStore {
+  /// Reads the currently active fence. A malformed persisted value must fail
+  /// closed by returning a blocked fence.
+  Future<AgendaNotificationProjectionFence> readProjectionFence();
+
+  /// Durably invalidates any projection that captured an earlier generation.
+  /// This must happen before runtime state or platform alarms are cleared.
+  Future<AgendaNotificationProjectionFence> blockProjectionForDataClear();
+
+  /// Reopens projections after a foreground caller has confirmed a fresh
+  /// AppData snapshot was committed to storage.
+  Future<AgendaNotificationProjectionFence>
+  activateProjectionAfterDurableData();
+}
+
+/// Optional runtime store extension for persisted diagnostic snapshots.
+abstract interface class AgendaNotificationDiagnosticsStore {
+  Future<AgendaNotificationDiagnostics?> readNotificationDiagnostics();
+
+  Future<void> writeNotificationDiagnostics(
+    AgendaNotificationDiagnostics diagnostics,
+  );
 }
 
 /// Optional extension implemented by stores that can receive actions from a
@@ -246,6 +541,56 @@ abstract interface class AgendaNotificationBackgroundRequestStore {
   Future<void> pruneBackgroundRequests({required DateTime now});
 }
 
+/// Optional transactional view used by the Android background notification
+/// callback.
+///
+/// The callback can outlive a foreground data clear because it runs in a
+/// separate, short-lived Flutter isolate. It captures one fence before making
+/// any runtime mutation, then uses that same fence for every write. A clear
+/// that advances the generation makes those late writes invisible to the next
+/// foreground projection instead of allowing them to repopulate runtime
+/// state.
+///
+/// This is intentionally optional so small injected runtime stores retain the
+/// original [AgendaNotificationRuntimeStore] contract. Production stores
+/// implement it.
+abstract interface class AgendaNotificationFencedRuntimeStore {
+  /// Captures a writable runtime generation, or returns null while a data
+  /// clear is in progress or has not yet been followed by a durable commit.
+  Future<AgendaNotificationProjectionFence?> captureWritableRuntimeFence();
+
+  /// Returns whether [fence] is still the active writable generation.
+  Future<bool> isRuntimeFenceCurrent(AgendaNotificationProjectionFence fence);
+
+  Future<void> setSnoozeForRuntimeFence(
+    String key,
+    DateTime fireAt,
+    AgendaNotificationProjectionFence fence,
+  );
+
+  Future<void> addHandledOccurrenceForRuntimeFence(
+    String occurrenceId,
+    AgendaNotificationProjectionFence fence,
+  );
+
+  Future<void> enqueueActionForRuntimeFence({
+    required String payload,
+    required String actionId,
+    required AgendaNotificationProjectionFence fence,
+  });
+
+  Future<AgendaNotificationBackgroundRequest?>
+  readBackgroundRequestForRuntimeFence(
+    String key,
+    AgendaNotificationProjectionFence fence,
+  );
+
+  Future<void> saveBackgroundRequestForRuntimeFence(
+    AgendaNotificationBackgroundRequest request,
+    AgendaNotificationProjectionFence fence,
+  );
+}
+
 /// Raised when the platform reports that a runtime-only preference write did
 /// not reach durable storage. Runtime actions must not be treated as accepted
 /// when this happens, otherwise a notification can disappear without its
@@ -266,17 +611,24 @@ class MemoryAgendaNotificationRuntimeStore
     implements
         AgendaNotificationRuntimeStore,
         AgendaNotificationActionStore,
-        AgendaNotificationBackgroundRequestStore {
+        AgendaNotificationBackgroundRequestStore,
+        AgendaNotificationDiagnosticsStore,
+        AgendaNotificationProjectionFenceStore,
+        AgendaNotificationFencedRuntimeStore {
   MemoryAgendaNotificationRuntimeStore({DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 
   final DateTime Function() _clock;
-  final Map<String, DateTime> snoozes = {};
-  final Set<String> handledOccurrenceIds = {};
-  final Map<String, DateTime> _handledAt = {};
-  final List<AgendaNotificationAction> pendingActions = [];
-  final Map<String, AgendaNotificationBackgroundRequest> backgroundRequests =
+  final Map<int, Map<String, DateTime>> _snoozesByGeneration = {};
+  final Map<int, Set<String>> _handledOccurrenceIdsByGeneration = {};
+  final Map<int, Map<String, DateTime>> _handledAtByGeneration = {};
+  final Map<int, List<AgendaNotificationAction>> _pendingActionsByGeneration =
       {};
+  final Map<int, Map<String, AgendaNotificationBackgroundRequest>>
+  _backgroundRequestsByGeneration = {};
+  AgendaNotificationDiagnostics? diagnostics;
+  AgendaNotificationProjectionFence projectionFence =
+      AgendaNotificationProjectionFence.initial;
 
   static const maxHandledOccurrences = 256;
   static const handledTtl = Duration(days: 30);
@@ -284,64 +636,91 @@ class MemoryAgendaNotificationRuntimeStore
   static const pendingActionTtl = Duration(hours: 24);
   static const backgroundRequestTtl = Duration(days: 2);
 
+  /// Exposed test state for the active generation. Production callers should
+  /// use the runtime-store methods so a blocked clear fence is respected.
+  Map<String, DateTime> get snoozes => _snoozesFor(projectionFence.generation);
+  Set<String> get handledOccurrenceIds =>
+      _handledOccurrenceIdsFor(projectionFence.generation);
+  List<AgendaNotificationAction> get pendingActions =>
+      _pendingActionsFor(projectionFence.generation);
+  Map<String, AgendaNotificationBackgroundRequest> get backgroundRequests =>
+      _backgroundRequestsFor(projectionFence.generation);
+
+  int? get _activeGeneration =>
+      projectionFence.blocked ? null : projectionFence.generation;
+
   @override
   Future<Map<String, DateTime>> readSnoozes() async {
-    return Map.unmodifiable(snoozes);
+    final generation = _activeGeneration;
+    if (generation == null) return const {};
+    return Map.unmodifiable(_snoozesFor(generation));
   }
 
   @override
   Future<Set<String>> readHandledOccurrenceIds() async {
+    final generation = _activeGeneration;
+    if (generation == null) return const {};
+    final handled = _handledOccurrenceIdsFor(generation);
+    final handledAt = _handledAtFor(generation);
     final now = _clock();
-    final expired = _handledAt.entries
+    final expired = handledAt.entries
         .where((entry) => now.difference(entry.value) > handledTtl)
         .map((entry) => entry.key)
         .toList();
     for (final id in expired) {
-      _handledAt.remove(id);
-      handledOccurrenceIds.remove(id);
+      handledAt.remove(id);
+      handled.remove(id);
     }
-    _trimHandled();
-    return Set.unmodifiable(handledOccurrenceIds);
+    _trimHandled(generation);
+    return Set.unmodifiable(handled);
   }
 
   @override
   Future<List<AgendaNotificationAction>> readPendingActions() async {
+    final generation = _activeGeneration;
+    if (generation == null) return const [];
+    final actions = _pendingActionsFor(generation);
     final now = _clock();
-    pendingActions.removeWhere(
+    actions.removeWhere(
       (action) =>
           now.difference(action.enqueuedAt) > pendingActionTtl ||
           action.enqueuedAt.isAfter(now.add(const Duration(minutes: 5))),
     );
-    pendingActions.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
-    if (pendingActions.length > maxPendingActions) {
-      pendingActions.removeRange(0, pendingActions.length - maxPendingActions);
+    actions.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
+    if (actions.length > maxPendingActions) {
+      actions.removeRange(0, actions.length - maxPendingActions);
     }
-    return List.unmodifiable(pendingActions);
+    return List.unmodifiable(actions);
   }
 
   @override
   Future<void> setSnooze(String key, DateTime fireAt) async {
-    snoozes[key] = fireAt;
+    final fence = await captureWritableRuntimeFence();
+    if (fence == null) return;
+    await setSnoozeForRuntimeFence(key, fireAt, fence);
   }
 
   @override
   Future<void> removeSnooze(String key) async {
-    snoozes.remove(key);
+    final generation = _activeGeneration;
+    if (generation == null) return;
+    _snoozesFor(generation).remove(key);
   }
 
   @override
   Future<void> addHandledOccurrence(String occurrenceId) async {
     if (occurrenceId.trim().isEmpty) return;
-    await readHandledOccurrenceIds();
-    handledOccurrenceIds.add(occurrenceId);
-    _handledAt[occurrenceId] = _clock();
-    _trimHandled();
+    final fence = await captureWritableRuntimeFence();
+    if (fence == null) return;
+    await addHandledOccurrenceForRuntimeFence(occurrenceId, fence);
   }
 
   @override
   Future<void> removeHandledOccurrence(String occurrenceId) async {
-    handledOccurrenceIds.remove(occurrenceId);
-    _handledAt.remove(occurrenceId);
+    final generation = _activeGeneration;
+    if (generation == null) return;
+    _handledOccurrenceIdsFor(generation).remove(occurrenceId);
+    _handledAtFor(generation).remove(occurrenceId);
   }
 
   @override
@@ -355,36 +734,30 @@ class MemoryAgendaNotificationRuntimeStore
         actionId.length > AgendaNotificationAction.maxActionIdLength) {
       return;
     }
-    final id = _actionId(payload, actionId);
-    final existing = pendingActions.indexWhere(
-      (item) =>
-          item.id == id ||
-          (item.payload == payload && item.actionId == actionId),
+    final fence = await captureWritableRuntimeFence();
+    if (fence == null) return;
+    await enqueueActionForRuntimeFence(
+      payload: payload,
+      actionId: actionId,
+      fence: fence,
     );
-    if (existing != -1) return;
-    pendingActions.add(
-      AgendaNotificationAction(
-        id: id,
-        payload: payload,
-        actionId: actionId,
-        enqueuedAt: _clock(),
-      ),
-    );
-    pendingActions.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
-    if (pendingActions.length > maxPendingActions) {
-      pendingActions.removeRange(0, pendingActions.length - maxPendingActions);
-    }
   }
 
   @override
   Future<void> removePendingAction(String id) async {
-    pendingActions.removeWhere((item) => item.id == id);
+    final generation = _activeGeneration;
+    if (generation == null) return;
+    _pendingActionsFor(generation).removeWhere((item) => item.id == id);
   }
 
   @override
   Future<AgendaNotificationBackgroundRequest?> readBackgroundRequest(
     String key,
-  ) async => backgroundRequests[key];
+  ) async {
+    final fence = await captureWritableRuntimeFence();
+    if (fence == null) return null;
+    return readBackgroundRequestForRuntimeFence(key, fence);
+  }
 
   @override
   Future<void> saveBackgroundRequest(
@@ -394,43 +767,215 @@ class MemoryAgendaNotificationRuntimeStore
         null) {
       return;
     }
-    backgroundRequests[request.key] = request;
+    final fence = await captureWritableRuntimeFence();
+    if (fence == null) return;
+    await saveBackgroundRequestForRuntimeFence(request, fence);
   }
 
   @override
   Future<void> removeBackgroundRequest(String key) async {
-    backgroundRequests.remove(key);
+    final generation = _activeGeneration;
+    if (generation == null) return;
+    _backgroundRequestsFor(generation).remove(key);
   }
 
   @override
   Future<void> pruneBackgroundRequests({required DateTime now}) async {
-    backgroundRequests.removeWhere(
+    final generation = _activeGeneration;
+    if (generation == null) return;
+    _backgroundRequestsFor(generation).removeWhere(
       (_, request) => now.difference(request.fireAt) > backgroundRequestTtl,
     );
   }
 
   @override
-  Future<void> clear() async {
-    snoozes.clear();
-    handledOccurrenceIds.clear();
-    _handledAt.clear();
-    pendingActions.clear();
-    backgroundRequests.clear();
+  Future<AgendaNotificationDiagnostics?> readNotificationDiagnostics() async =>
+      diagnostics;
+
+  @override
+  Future<void> writeNotificationDiagnostics(
+    AgendaNotificationDiagnostics value,
+  ) async {
+    diagnostics = value;
   }
 
-  void _trimHandled() {
-    if (handledOccurrenceIds.length <= maxHandledOccurrences) return;
-    final timestamped = _handledAt.keys.toList()
-      ..sort((a, b) => _handledAt[b]!.compareTo(_handledAt[a]!));
-    final legacy =
-        handledOccurrenceIds.where((id) => !_handledAt.containsKey(id)).toList()
-          ..sort();
+  @override
+  Future<AgendaNotificationProjectionFence> readProjectionFence() async =>
+      projectionFence;
+
+  @override
+  Future<AgendaNotificationProjectionFence>
+  blockProjectionForDataClear() async {
+    projectionFence = AgendaNotificationProjectionFence(
+      generation: _nextProjectionGeneration(projectionFence.generation),
+      blocked: true,
+    );
+    return projectionFence;
+  }
+
+  @override
+  Future<AgendaNotificationProjectionFence>
+  activateProjectionAfterDurableData() async {
+    if (!projectionFence.blocked) return projectionFence;
+    projectionFence = AgendaNotificationProjectionFence(
+      generation: _nextProjectionGeneration(projectionFence.generation),
+      blocked: false,
+    );
+    return projectionFence;
+  }
+
+  @override
+  Future<void> clear() async {
+    _snoozesByGeneration.clear();
+    _handledOccurrenceIdsByGeneration.clear();
+    _handledAtByGeneration.clear();
+    _pendingActionsByGeneration.clear();
+    _backgroundRequestsByGeneration.clear();
+    diagnostics = null;
+  }
+
+  @override
+  Future<AgendaNotificationProjectionFence?>
+  captureWritableRuntimeFence() async {
+    return projectionFence.blocked ? null : projectionFence;
+  }
+
+  @override
+  Future<bool> isRuntimeFenceCurrent(
+    AgendaNotificationProjectionFence fence,
+  ) async => !projectionFence.blocked && projectionFence.matches(fence);
+
+  @override
+  Future<void> setSnoozeForRuntimeFence(
+    String key,
+    DateTime fireAt,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    // A background isolate may hold a token captured immediately before a
+    // foreground clear advances the generation.  Checking only `blocked`
+    // would let that late write recreate an old generation record after the
+    // clear cleanup has completed.
+    if (fence.blocked || !projectionFence.matches(fence)) return;
+    _snoozesFor(fence.generation)[key] = fireAt;
+  }
+
+  @override
+  Future<void> addHandledOccurrenceForRuntimeFence(
+    String occurrenceId,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked ||
+        !projectionFence.matches(fence) ||
+        occurrenceId.trim().isEmpty) {
+      return;
+    }
+    final handled = _handledOccurrenceIdsFor(fence.generation);
+    final handledAt = _handledAtFor(fence.generation);
+    final now = _clock();
+    final expired = handledAt.entries
+        .where((entry) => now.difference(entry.value) > handledTtl)
+        .map((entry) => entry.key)
+        .toList();
+    for (final id in expired) {
+      handledAt.remove(id);
+      handled.remove(id);
+    }
+    handled.add(occurrenceId);
+    handledAt[occurrenceId] = now;
+    _trimHandled(fence.generation);
+  }
+
+  @override
+  Future<void> enqueueActionForRuntimeFence({
+    required String payload,
+    required String actionId,
+    required AgendaNotificationProjectionFence fence,
+  }) async {
+    if (fence.blocked ||
+        !projectionFence.matches(fence) ||
+        payload.isEmpty ||
+        payload.length > AgendaNotificationAction.maxPayloadLength ||
+        actionId.isEmpty ||
+        actionId.length > AgendaNotificationAction.maxActionIdLength) {
+      return;
+    }
+    final actions = _pendingActionsFor(fence.generation);
+    final id = _actionId(payload, actionId);
+    if (actions.any(
+      (item) =>
+          item.id == id ||
+          (item.payload == payload && item.actionId == actionId),
+    )) {
+      return;
+    }
+    actions.add(
+      AgendaNotificationAction(
+        id: id,
+        payload: payload,
+        actionId: actionId,
+        enqueuedAt: _clock(),
+      ),
+    );
+    actions.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
+    if (actions.length > maxPendingActions) {
+      actions.removeRange(0, actions.length - maxPendingActions);
+    }
+  }
+
+  @override
+  Future<AgendaNotificationBackgroundRequest?>
+  readBackgroundRequestForRuntimeFence(
+    String key,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked || !projectionFence.matches(fence)) return null;
+    return _backgroundRequestsFor(fence.generation)[key];
+  }
+
+  @override
+  Future<void> saveBackgroundRequestForRuntimeFence(
+    AgendaNotificationBackgroundRequest request,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked ||
+        !projectionFence.matches(fence) ||
+        AgendaNotificationBackgroundRequest.tryDecode(request.toJson()) ==
+            null) {
+      return;
+    }
+    _backgroundRequestsFor(fence.generation)[request.key] = request;
+  }
+
+  Map<String, DateTime> _snoozesFor(int generation) =>
+      _snoozesByGeneration.putIfAbsent(generation, () => {});
+
+  Set<String> _handledOccurrenceIdsFor(int generation) =>
+      _handledOccurrenceIdsByGeneration.putIfAbsent(generation, () => {});
+
+  Map<String, DateTime> _handledAtFor(int generation) =>
+      _handledAtByGeneration.putIfAbsent(generation, () => {});
+
+  List<AgendaNotificationAction> _pendingActionsFor(int generation) =>
+      _pendingActionsByGeneration.putIfAbsent(generation, () => []);
+
+  Map<String, AgendaNotificationBackgroundRequest> _backgroundRequestsFor(
+    int generation,
+  ) => _backgroundRequestsByGeneration.putIfAbsent(generation, () => {});
+
+  void _trimHandled(int generation) {
+    final handled = _handledOccurrenceIdsFor(generation);
+    if (handled.length <= maxHandledOccurrences) return;
+    final handledAt = _handledAtFor(generation);
+    final timestamped = handledAt.keys.toList()
+      ..sort((a, b) => handledAt[b]!.compareTo(handledAt[a]!));
+    final legacy = handled.where((id) => !handledAt.containsKey(id)).toList()
+      ..sort();
     final keep = {
       ...timestamped,
       ...legacy,
     }.take(maxHandledOccurrences).toSet();
-    handledOccurrenceIds.retainAll(keep);
-    _handledAt.removeWhere((id, _) => !keep.contains(id));
+    handled.retainAll(keep);
+    handledAt.removeWhere((id, _) => !keep.contains(id));
   }
 }
 
@@ -441,7 +986,10 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     implements
         AgendaNotificationRuntimeStore,
         AgendaNotificationActionStore,
-        AgendaNotificationBackgroundRequestStore {
+        AgendaNotificationBackgroundRequestStore,
+        AgendaNotificationDiagnosticsStore,
+        AgendaNotificationProjectionFenceStore,
+        AgendaNotificationFencedRuntimeStore {
   SharedPreferencesAgendaNotificationRuntimeStore({
     Future<SharedPreferences> Function()? preferencesProvider,
     DateTime Function()? clock,
@@ -462,6 +1010,11 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   static const handledRecordsKey = 'sked.notification.runtime.handledAt';
   static const backgroundRequestKeyPrefix =
       'sked.notification.runtime.background_request.';
+  static const runtimeGenerationKeyPrefix =
+      'sked.notification.runtime.generation.';
+  static const diagnosticsKey = 'sked.notification.runtime.diagnostics.v1';
+  static const projectionFenceKey =
+      'sked.notification.runtime.projection_fence.v1';
   static const maxPendingActions = 32;
   static const maxHandledOccurrences = 256;
   static const pendingActionTtl = Duration(hours: 24);
@@ -504,7 +1057,14 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   Future<Map<String, DateTime>> readSnoozes() async {
     final preferences = await _preferences;
     await _reload(preferences);
-    final raw = preferences.getString(snoozeKey);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return const {};
+    final storageKey = _snoozeStorageKey(fence);
+    final raw =
+        preferences.getString(storageKey) ??
+        (_usesLegacyRuntimeState(fence)
+            ? preferences.getString(snoozeKey)
+            : null);
     if (raw == null || raw.trim().isEmpty) return const {};
     try {
       final decoded = jsonDecode(raw);
@@ -526,7 +1086,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         }
       }
       if (dirty) {
-        await _writeSnoozes(result);
+        await _writeSnoozes(result, fence);
       }
       return Map.unmodifiable(result);
     } on FormatException {
@@ -538,16 +1098,38 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   Future<Set<String>> readHandledOccurrenceIds() async {
     final preferences = await _preferences;
     await _reload(preferences);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return const {};
+    return _readHandledOccurrenceIdsForFence(preferences, fence);
+  }
+
+  Future<Set<String>> _readHandledOccurrenceIdsForFence(
+    SharedPreferences preferences,
+    AgendaNotificationProjectionFence fence,
+  ) async {
     try {
       final now = _clock();
+      final handledStorageKey = _handledStorageKey(fence);
+      final recordsStorageKey = _handledRecordsStorageKey(fence);
       final legacy =
           preferences
-              .getStringList(handledKey)
+              .getStringList(handledStorageKey)
               ?.map((item) => item.trim())
               .where((item) => item.isNotEmpty)
               .toSet() ??
-          <String>{};
-      final rawRecords = preferences.getString(handledRecordsKey);
+          (_usesLegacyRuntimeState(fence)
+              ? preferences
+                        .getStringList(handledKey)
+                        ?.map((item) => item.trim())
+                        .where((item) => item.isNotEmpty)
+                        .toSet() ??
+                    <String>{}
+              : <String>{});
+      final rawRecords =
+          preferences.getString(recordsStorageKey) ??
+          (_usesLegacyRuntimeState(fence)
+              ? preferences.getString(handledRecordsKey)
+              : null);
       final records = <String, DateTime>{};
       final recordKeys = <String>{};
       var dirty = false;
@@ -601,8 +1183,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
           !existingIds.containsAll(bounded.ids) ||
           !bounded.ids.containsAll(existingIds);
       if (dirty || records.length != bounded.timestamped.length || idsChanged) {
-        await _setStringList(handledKey, bounded.ids.toList()..sort());
-        await _writeHandledRecords(bounded.timestamped);
+        await _writeHandledState(bounded, fence);
       }
       return Set.unmodifiable(bounded.ids);
     } on AgendaNotificationRuntimeStorageException {
@@ -619,7 +1200,13 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   Future<List<AgendaNotificationAction>> readPendingActions() async {
     final preferences = await _preferences;
     await _reload(preferences);
-    final raw = preferences.getString(actionsKey);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return const [];
+    final raw =
+        preferences.getString(_actionsStorageKey(fence)) ??
+        (_usesLegacyRuntimeState(fence)
+            ? preferences.getString(actionsKey)
+            : null);
     if (raw == null || raw.trim().isEmpty) return const [];
     try {
       final decoded = jsonDecode(raw);
@@ -657,7 +1244,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         result.removeRange(0, result.length - maxPendingActions);
         dirty = true;
       }
-      if (dirty) await _writePendingActions(result);
+      if (dirty) await _writePendingActions(result, fence);
       return List.unmodifiable(result);
     } on FormatException {
       return const [];
@@ -666,47 +1253,89 @@ class SharedPreferencesAgendaNotificationRuntimeStore
 
   @override
   Future<void> setSnooze(String key, DateTime fireAt) async {
-    await _enqueueMutation(() async {
-      final values = Map<String, DateTime>.from(await readSnoozes());
-      values[key] = fireAt;
-      await _writeSnoozes(values);
-    });
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
+    await setSnoozeForRuntimeFence(key, fireAt, fence);
   }
 
   @override
   Future<void> removeSnooze(String key) async {
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
     await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
       final values = Map<String, DateTime>.from(await readSnoozes())
         ..remove(key);
-      await _writeSnoozes(values);
+      await _writeSnoozes(values, fence);
+    });
+  }
+
+  @override
+  Future<void> setSnoozeForRuntimeFence(
+    String key,
+    DateTime fireAt,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked || key.trim().isEmpty) return;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final values = Map<String, DateTime>.from(
+        await _readSnoozesForFence(preferences, fence),
+      );
+      values[key] = fireAt;
+      await _writeSnoozes(values, fence);
     });
   }
 
   @override
   Future<void> addHandledOccurrence(String occurrenceId) async {
+    if (occurrenceId.trim().isEmpty) return;
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
+    await addHandledOccurrenceForRuntimeFence(occurrenceId, fence);
+  }
+
+  @override
+  Future<void> removeHandledOccurrence(String occurrenceId) async {
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
     await _enqueueMutation(() async {
-      final values = {...await readHandledOccurrenceIds(), occurrenceId};
-      final records = await _readHandledRecords();
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final values = {...await readHandledOccurrenceIds()}
+        ..remove(occurrenceId);
+      final records = await _readHandledRecords(fence)
+        ..remove(occurrenceId);
+      await _writeHandledState(_limitHandledIds(values, records), fence);
+    });
+  }
+
+  @override
+  Future<void> addHandledOccurrenceForRuntimeFence(
+    String occurrenceId,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked || occurrenceId.trim().isEmpty) return;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final values = {
+        ...await _readHandledOccurrenceIdsForFence(preferences, fence),
+        occurrenceId,
+      };
+      final records = await _readHandledRecords(fence);
       final now = _clock();
       for (final id in values) {
         records[id] ??= now;
       }
       records[occurrenceId] = now;
-      final bounded = _limitHandledIds(values, records);
-      await _setStringList(handledKey, bounded.ids.toList()..sort());
-      await _writeHandledRecords(bounded.timestamped);
-    });
-  }
-
-  @override
-  Future<void> removeHandledOccurrence(String occurrenceId) async {
-    await _enqueueMutation(() async {
-      final values = {...await readHandledOccurrenceIds()}
-        ..remove(occurrenceId);
-      final records = await _readHandledRecords()
-        ..remove(occurrenceId);
-      await _setStringList(handledKey, values.toList()..sort());
-      await _writeHandledRecords(records);
+      await _writeHandledState(_limitHandledIds(values, records), fence);
     });
   }
 
@@ -721,8 +1350,52 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         actionId.length > AgendaNotificationAction.maxActionIdLength) {
       return;
     }
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
+    await enqueueActionForRuntimeFence(
+      payload: payload,
+      actionId: actionId,
+      fence: fence,
+    );
+  }
+
+  @override
+  Future<void> removePendingAction(String id) async {
+    if (id.isEmpty) return;
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
     await _enqueueMutation(() async {
-      final values = (await readPendingActions()).toList();
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final values = (await readPendingActions())
+          .where((item) => item.id != id)
+          .toList();
+      await _writePendingActions(values, fence);
+    });
+  }
+
+  @override
+  Future<void> enqueueActionForRuntimeFence({
+    required String payload,
+    required String actionId,
+    required AgendaNotificationProjectionFence fence,
+  }) async {
+    if (fence.blocked ||
+        payload.isEmpty ||
+        payload.length > AgendaNotificationAction.maxPayloadLength ||
+        actionId.isEmpty ||
+        actionId.length > AgendaNotificationAction.maxActionIdLength) {
+      return;
+    }
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final values = (await _readPendingActionsForFence(
+        preferences,
+        fence,
+      )).toList();
       final id = _actionId(payload, actionId);
       if (values.any(
         (item) =>
@@ -743,18 +1416,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       final bounded = values.length > maxPendingActions
           ? values.sublist(values.length - maxPendingActions)
           : values;
-      await _writePendingActions(bounded);
-    });
-  }
-
-  @override
-  Future<void> removePendingAction(String id) async {
-    if (id.isEmpty) return;
-    await _enqueueMutation(() async {
-      final values = (await readPendingActions())
-          .where((item) => item.id != id)
-          .toList();
-      await _writePendingActions(values);
+      await _writePendingActions(bounded, fence);
     });
   }
 
@@ -765,7 +1427,22 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     if (key.trim().isEmpty) return null;
     final preferences = await _preferences;
     await _reload(preferences);
-    final storageKey = _backgroundRequestStorageKey(key);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return null;
+    return readBackgroundRequestForRuntimeFence(key, fence);
+  }
+
+  @override
+  Future<AgendaNotificationBackgroundRequest?>
+  readBackgroundRequestForRuntimeFence(
+    String key,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (key.trim().isEmpty || fence.blocked) return null;
+    final preferences = await _preferences;
+    await _reload(preferences);
+    if (!_isCurrentWritableFence(preferences, fence)) return null;
+    final storageKey = _backgroundRequestStorageKey(key, fence);
     final raw = preferences.getString(storageKey);
     if (raw == null || raw.trim().isEmpty) return null;
     try {
@@ -795,8 +1472,25 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       request.toJson(),
     );
     if (decoded == null) return;
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
+    await saveBackgroundRequestForRuntimeFence(decoded, fence);
+  }
+
+  @override
+  Future<void> saveBackgroundRequestForRuntimeFence(
+    AgendaNotificationBackgroundRequest request,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final decoded = AgendaNotificationBackgroundRequest.tryDecode(
+      request.toJson(),
+    );
+    if (decoded == null || fence.blocked) return;
+    final preferences = await _preferences;
+    await _reload(preferences);
+    if (!_isCurrentWritableFence(preferences, fence)) return;
     await _set(
-      _backgroundRequestStorageKey(decoded.key),
+      _backgroundRequestStorageKey(decoded.key, fence),
       jsonEncode(decoded.toJson()),
     );
   }
@@ -804,16 +1498,25 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   @override
   Future<void> removeBackgroundRequest(String key) async {
     if (key.trim().isEmpty) return;
-    await _remove(_backgroundRequestStorageKey(key));
+    final fence = await _captureWritableFence();
+    if (fence == null) return;
+    final preferences = await _preferences;
+    await _reload(preferences);
+    if (!_isCurrentWritableFence(preferences, fence)) return;
+    await _remove(_backgroundRequestStorageKey(key, fence));
   }
 
   @override
   Future<void> pruneBackgroundRequests({required DateTime now}) async {
     final preferences = await _preferences;
     await _reload(preferences);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return;
     final keys = preferences
         .getKeys()
-        .where((key) => key.startsWith(backgroundRequestKeyPrefix))
+        .where(
+          (key) => key.startsWith(_backgroundRequestStorageKeyPrefix(fence)),
+        )
         .toList(growable: false);
     for (final storageKey in keys) {
       final raw = preferences.getString(storageKey);
@@ -833,6 +1536,79 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   }
 
   @override
+  Future<AgendaNotificationDiagnostics?> readNotificationDiagnostics() async {
+    final preferences = await _preferences;
+    await _reload(preferences);
+    final raw = preferences.getString(diagnosticsKey);
+    if (raw == null || raw.trim().isEmpty) return null;
+    try {
+      final decoded = AgendaNotificationDiagnostics.tryDecode(jsonDecode(raw));
+      if (decoded != null) return decoded;
+    } on FormatException {
+      // Treat a partial or pre-release diagnostic snapshot as absent. It must
+      // never prevent notification initialization or scheduling.
+    }
+    await _remove(diagnosticsKey);
+    return null;
+  }
+
+  @override
+  Future<void> writeNotificationDiagnostics(
+    AgendaNotificationDiagnostics diagnostics,
+  ) async {
+    final decoded = AgendaNotificationDiagnostics.tryDecode(
+      diagnostics.toJson(),
+    );
+    if (decoded == null) return;
+    await _set(diagnosticsKey, jsonEncode(decoded.toJson()));
+  }
+
+  @override
+  Future<AgendaNotificationProjectionFence> readProjectionFence() async {
+    final preferences = await _preferences;
+    await _reload(preferences);
+    return _readProjectionFence(preferences);
+  }
+
+  @override
+  Future<AgendaNotificationProjectionFence>
+  blockProjectionForDataClear() async {
+    late AgendaNotificationProjectionFence result;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      final current = _readProjectionFence(preferences);
+      result = AgendaNotificationProjectionFence(
+        generation: _nextProjectionGeneration(current.generation),
+        blocked: true,
+      );
+      await _set(projectionFenceKey, _encodeProjectionFence(result));
+    });
+    return result;
+  }
+
+  @override
+  Future<AgendaNotificationProjectionFence>
+  activateProjectionAfterDurableData() async {
+    late AgendaNotificationProjectionFence result;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      final current = _readProjectionFence(preferences);
+      if (!current.blocked) {
+        result = current;
+        return;
+      }
+      result = AgendaNotificationProjectionFence(
+        generation: _nextProjectionGeneration(current.generation),
+        blocked: false,
+      );
+      await _set(projectionFenceKey, _encodeProjectionFence(result));
+    });
+    return result;
+  }
+
+  @override
   Future<void> clear() async {
     await _enqueueMutation(() async {
       final preferences = await _preferences;
@@ -840,8 +1616,13 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       await _remove(handledKey);
       await _remove(handledRecordsKey);
       await _remove(actionsKey);
+      await _remove(diagnosticsKey);
+      // Keep [projectionFenceKey]. A clear must leave behind the durable
+      // tombstone that stops a headless worker from projecting an AppData
+      // snapshot it read before this operation began.
       for (final key in preferences.getKeys()) {
-        if (key.startsWith(backgroundRequestKeyPrefix)) {
+        if (key.startsWith(backgroundRequestKeyPrefix) ||
+            key.startsWith(runtimeGenerationKeyPrefix)) {
           await _remove(key);
         }
       }
@@ -857,17 +1638,27 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     return operation;
   }
 
-  Future<void> _writeSnoozes(Map<String, DateTime> values) async {
+  Future<void> _writeSnoozes(
+    Map<String, DateTime> values,
+    AgendaNotificationProjectionFence fence,
+  ) async {
     final encoded = <String, String>{
       for (final entry in values.entries)
         entry.key: entry.value.toIso8601String(),
     };
-    await _set(snoozeKey, jsonEncode(encoded));
+    await _set(_snoozeStorageKey(fence), jsonEncode(encoded));
+    await _removeLegacyRuntimeKey(snoozeKey, fence);
   }
 
-  Future<Map<String, DateTime>> _readHandledRecords() async {
+  Future<Map<String, DateTime>> _readHandledRecords(
+    AgendaNotificationProjectionFence fence,
+  ) async {
     final preferences = await _preferences;
-    final raw = preferences.getString(handledRecordsKey);
+    final raw =
+        preferences.getString(_handledRecordsStorageKey(fence)) ??
+        (_usesLegacyRuntimeState(fence)
+            ? preferences.getString(handledRecordsKey)
+            : null);
     if (raw == null || raw.trim().isEmpty) return {};
     try {
       final decoded = jsonDecode(raw);
@@ -894,13 +1685,30 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     }
   }
 
-  Future<void> _writeHandledRecords(Map<String, DateTime> values) async {
+  Future<void> _writeHandledState(
+    _HandledLimit values,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    await _setStringList(
+      _handledStorageKey(fence),
+      values.ids.toList()..sort(),
+    );
+    await _writeHandledRecords(values.timestamped, fence);
+    await _removeLegacyRuntimeKey(handledKey, fence);
+    await _removeLegacyRuntimeKey(handledRecordsKey, fence);
+  }
+
+  Future<void> _writeHandledRecords(
+    Map<String, DateTime> values,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final storageKey = _handledRecordsStorageKey(fence);
     if (values.isEmpty) {
-      await _remove(handledRecordsKey);
+      await _remove(storageKey);
       return;
     }
     await _set(
-      handledRecordsKey,
+      storageKey,
       jsonEncode({
         for (final entry in values.entries)
           entry.key: entry.value.toIso8601String(),
@@ -910,15 +1718,19 @@ class SharedPreferencesAgendaNotificationRuntimeStore
 
   Future<void> _writePendingActions(
     List<AgendaNotificationAction> values,
+    AgendaNotificationProjectionFence fence,
   ) async {
+    final storageKey = _actionsStorageKey(fence);
     if (values.isEmpty) {
-      await _remove(actionsKey);
+      await _remove(storageKey);
+      await _removeLegacyRuntimeKey(actionsKey, fence);
       return;
     }
     await _set(
-      actionsKey,
+      storageKey,
       jsonEncode(values.map((item) => item.toJson()).toList(growable: false)),
     );
+    await _removeLegacyRuntimeKey(actionsKey, fence);
   }
 
   Future<void> _reload(SharedPreferences preferences) async {
@@ -928,6 +1740,150 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       // Test doubles and older hosts may not implement reload. Their cached
       // values are still safe to read.
     }
+  }
+
+  Future<AgendaNotificationProjectionFence?> _captureWritableFence() async {
+    final preferences = await _preferences;
+    await _reload(preferences);
+    final fence = _readProjectionFence(preferences);
+    return fence.blocked ? null : fence;
+  }
+
+  /// Checks a previously captured token against the freshly reloaded
+  /// preferences snapshot. This closes the window between capturing a fence
+  /// and entering a serialized read-modify-write operation: a data clear may
+  /// advance the generation while that operation is queued.
+  bool _isCurrentWritableFence(
+    SharedPreferences preferences,
+    AgendaNotificationProjectionFence fence,
+  ) {
+    final current = _readProjectionFence(preferences);
+    return !current.blocked && current.matches(fence);
+  }
+
+  @override
+  Future<AgendaNotificationProjectionFence?> captureWritableRuntimeFence() =>
+      _captureWritableFence();
+
+  @override
+  Future<bool> isRuntimeFenceCurrent(
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final preferences = await _preferences;
+    await _reload(preferences);
+    final current = _readProjectionFence(preferences);
+    return !current.blocked && current.matches(fence);
+  }
+
+  Future<Map<String, DateTime>> _readSnoozesForFence(
+    SharedPreferences preferences,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final raw =
+        preferences.getString(_snoozeStorageKey(fence)) ??
+        (_usesLegacyRuntimeState(fence)
+            ? preferences.getString(snoozeKey)
+            : null);
+    if (raw == null || raw.trim().isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const {};
+      final now = _clock();
+      final result = <String, DateTime>{};
+      for (final entry in decoded.entries) {
+        if (entry.key is! String || entry.key.isEmpty) continue;
+        final parsed = entry.value is String
+            ? DateTime.tryParse(entry.value as String)
+            : null;
+        if (parsed != null && parsed.isAfter(now)) {
+          result[entry.key as String] = parsed;
+        }
+      }
+      return result;
+    } on FormatException {
+      return const {};
+    }
+  }
+
+  Future<List<AgendaNotificationAction>> _readPendingActionsForFence(
+    SharedPreferences preferences,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final raw =
+        preferences.getString(_actionsStorageKey(fence)) ??
+        (_usesLegacyRuntimeState(fence)
+            ? preferences.getString(actionsKey)
+            : null);
+    if (raw == null || raw.trim().isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      final now = _clock();
+      final seen = <String>{};
+      final result = <AgendaNotificationAction>[];
+      for (final value in decoded) {
+        final action = AgendaNotificationAction.tryDecode(value);
+        if (action == null ||
+            now.difference(action.enqueuedAt) > pendingActionTtl ||
+            action.enqueuedAt.isAfter(now.add(const Duration(minutes: 5)))) {
+          continue;
+        }
+        final id = _actionId(action.payload, action.actionId);
+        if (!seen.add(id)) continue;
+        result.add(
+          id == action.id
+              ? action
+              : AgendaNotificationAction(
+                  id: id,
+                  payload: action.payload,
+                  actionId: action.actionId,
+                  enqueuedAt: action.enqueuedAt,
+                ),
+        );
+      }
+      result.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
+      if (result.length > maxPendingActions) {
+        result.removeRange(0, result.length - maxPendingActions);
+      }
+      return result;
+    } on FormatException {
+      return const [];
+    }
+  }
+
+  bool _usesLegacyRuntimeState(AgendaNotificationProjectionFence fence) =>
+      fence.generation == 0 && !fence.blocked;
+
+  String _generationScopedRuntimeKey(
+    AgendaNotificationProjectionFence fence,
+    String suffix,
+  ) => '$runtimeGenerationKeyPrefix${fence.generation}.$suffix';
+
+  String _snoozeStorageKey(AgendaNotificationProjectionFence fence) =>
+      _usesLegacyRuntimeState(fence)
+      ? snoozeKey
+      : _generationScopedRuntimeKey(fence, 'snoozes');
+
+  String _handledStorageKey(AgendaNotificationProjectionFence fence) =>
+      _usesLegacyRuntimeState(fence)
+      ? handledKey
+      : _generationScopedRuntimeKey(fence, 'handled');
+
+  String _handledRecordsStorageKey(AgendaNotificationProjectionFence fence) =>
+      _usesLegacyRuntimeState(fence)
+      ? handledRecordsKey
+      : _generationScopedRuntimeKey(fence, 'handledAt');
+
+  String _actionsStorageKey(AgendaNotificationProjectionFence fence) =>
+      _usesLegacyRuntimeState(fence)
+      ? actionsKey
+      : _generationScopedRuntimeKey(fence, 'actions');
+
+  Future<void> _removeLegacyRuntimeKey(
+    String key,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (!_usesLegacyRuntimeState(fence)) await _remove(key);
   }
 
   Future<void> _set(String key, String value) async {
@@ -954,10 +1910,56 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     }
   }
 
-  String _backgroundRequestStorageKey(String key) {
-    final digest = sha256.convert(utf8.encode(key)).toString();
-    return '$backgroundRequestKeyPrefix$digest';
+  AgendaNotificationProjectionFence _readProjectionFence(
+    SharedPreferences preferences,
+  ) {
+    final raw = preferences.getString(projectionFenceKey);
+    if (raw == null || raw.trim().isEmpty) {
+      return AgendaNotificationProjectionFence.initial;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return _blockedProjectionFence();
+      if (decoded['v'] != 1) return _blockedProjectionFence();
+      final generation = decoded['generation'];
+      final blocked = decoded['blocked'];
+      if (generation is! num ||
+          !generation.isFinite ||
+          generation % 1 != 0 ||
+          generation < 0 ||
+          generation > 0x7fffffff ||
+          blocked is! bool) {
+        return _blockedProjectionFence();
+      }
+      return AgendaNotificationProjectionFence(
+        generation: generation.toInt(),
+        blocked: blocked,
+      );
+    } on Object {
+      return _blockedProjectionFence();
+    }
   }
+
+  String _encodeProjectionFence(AgendaNotificationProjectionFence fence) =>
+      jsonEncode({
+        'v': 1,
+        'generation': fence.generation,
+        'blocked': fence.blocked,
+      });
+
+  String _backgroundRequestStorageKey(
+    String key,
+    AgendaNotificationProjectionFence fence,
+  ) {
+    final digest = sha256.convert(utf8.encode(key)).toString();
+    return '${_backgroundRequestStorageKeyPrefix(fence)}$digest';
+  }
+
+  String _backgroundRequestStorageKeyPrefix(
+    AgendaNotificationProjectionFence fence,
+  ) => _usesLegacyRuntimeState(fence)
+      ? backgroundRequestKeyPrefix
+      : _generationScopedRuntimeKey(fence, 'background_request.');
 
   _HandledLimit _limitHandledIds(
     Set<String> ids,
@@ -979,6 +1981,17 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     );
   }
 }
+
+int _nextProjectionGeneration(int current) {
+  // Avoid wrapping to zero: a process that observes an old generation must
+  // never mistake a wrapped value for a fresh one. In practice this branch is
+  // unreachable, but failing closed is safer than reusing a token.
+  if (current >= 0x7fffffff) return 0x7fffffff;
+  return current + 1;
+}
+
+AgendaNotificationProjectionFence _blockedProjectionFence() =>
+    const AgendaNotificationProjectionFence(generation: 0, blocked: true);
 
 String _actionId(String payload, String actionId) {
   // A queue item can be created in the Android background isolate and then

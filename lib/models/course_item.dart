@@ -43,52 +43,6 @@ class CoursePeriodTime {
   }
 }
 
-class CourseDateException {
-  const CourseDateException({
-    required this.dateIso,
-    this.cancelled = false,
-    this.startMinutes,
-    this.endMinutes,
-  });
-
-  final String dateIso;
-  final bool cancelled;
-  final int? startMinutes;
-  final int? endMinutes;
-
-  Map<String, dynamic> toJson() => {
-    'date': dateIso,
-    if (cancelled) 'cancelled': true,
-    if (startMinutes != null) 'startMinutes': startMinutes,
-    if (endMinutes != null) 'endMinutes': endMinutes,
-  };
-
-  factory CourseDateException.fromJson(Map<String, dynamic> json) {
-    final date = _stringValue(json['date']);
-    final parsed = tryParseStrictIsoDate(date);
-    return CourseDateException(
-      dateIso: parsed == null ? date : _dateOnlyIso(parsed),
-      cancelled: json['cancelled'] == true,
-      startMinutes: _intValue(json['startMinutes']),
-      endMinutes: _intValue(json['endMinutes']),
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is CourseDateException &&
-      other.dateIso == dateIso &&
-      other.cancelled == cancelled &&
-      other.startMinutes == startMinutes &&
-      other.endMinutes == endMinutes;
-
-  @override
-  int get hashCode => Object.hash(dateIso, cancelled, startMinutes, endMinutes);
-}
-
-String _dateOnlyIso(DateTime date) =>
-    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
   if (value is! Map) {
     return null;
@@ -235,7 +189,6 @@ class CourseItem {
     required this.remarks,
     required this.customFields,
     this.reminderSettings = const CourseReminderSettings(),
-    this.dateExceptions = const [],
   });
 
   final String id;
@@ -252,7 +205,6 @@ class CourseItem {
   final String remarks;
   final Map<String, dynamic> customFields;
   final CourseReminderSettings reminderSettings;
-  final List<CourseDateException> dateExceptions;
 
   Map<String, dynamic> toJson() {
     final normalizedReminderSettings = reminderSettings.normalized();
@@ -274,8 +226,6 @@ class CourseItem {
       // omitted so existing snapshots and backups remain byte-compatible.
       if (normalizedReminderSettings != const CourseReminderSettings())
         'reminderSettings': normalizedReminderSettings.toJson(),
-      if (dateExceptions.isNotEmpty)
-        'dateExceptions': dateExceptions.map((item) => item.toJson()).toList(),
     };
   }
 
@@ -307,7 +257,6 @@ class CourseItem {
         _asStringKeyedMap(json['customFields']) ?? const {},
       ),
       reminderSettings: _decodeCourseReminderSettings(json['reminderSettings']),
-      dateExceptions: _decodeCourseDateExceptions(json['dateExceptions']),
     );
   }
 
@@ -326,7 +275,6 @@ class CourseItem {
     String? remarks,
     Map<String, dynamic>? customFields,
     CourseReminderSettings? reminderSettings,
-    List<CourseDateException>? dateExceptions,
   }) {
     return CourseItem(
       id: id ?? this.id,
@@ -345,18 +293,8 @@ class CourseItem {
       remarks: remarks ?? this.remarks,
       customFields: customFields ?? this.customFields,
       reminderSettings: reminderSettings ?? this.reminderSettings,
-      dateExceptions: dateExceptions ?? this.dateExceptions,
     );
   }
-}
-
-List<CourseDateException> _decodeCourseDateExceptions(Object? value) {
-  return _listValue(value)
-      .map(_asStringKeyedMap)
-      .whereType<Map<String, dynamic>>()
-      .map(CourseDateException.fromJson)
-      .where((item) => tryParseStrictIsoDate(item.dateIso) != null)
-      .toList();
 }
 
 CourseReminderSettings _decodeCourseReminderSettings(Object? value) {

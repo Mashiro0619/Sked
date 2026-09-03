@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -198,6 +199,204 @@ void main() {
       expect(await store.readSnoozes(), isEmpty);
       expect(await store.readHandledOccurrenceIds(), isEmpty);
       expect(await store.readPendingActions(), isEmpty);
+    },
+  );
+
+  test('projection clear fence survives runtime cleanup and reopens only explicitly', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = SharedPreferencesAgendaNotificationRuntimeStore();
+
+    final initial = await store.readProjectionFence();
+    expect(initial.generation, 0);
+    expect(initial.blocked, isFalse);
+
+    final blocked = await store.blockProjectionForDataClear();
+    expect(blocked.blocked, isTrue);
+    expect(blocked.generation, greaterThan(initial.generation));
+    await store.setSnooze('stale', DateTime(2026, 8, 3, 13));
+    await store.clear();
+
+    final restored = SharedPreferencesAgendaNotificationRuntimeStore();
+    final afterClear = await restored.readProjectionFence();
+    expect(afterClear.generation, blocked.generation);
+    expect(afterClear.blocked, isTrue);
+    expect(await restored.readSnoozes(), isEmpty);
+
+    final active = await restored.activateProjectionAfterDurableData();
+    expect(active.blocked, isFalse);
+    expect(active.generation, greaterThan(blocked.generation));
+    final persistedActive = await restored.readProjectionFence();
+    expect(persistedActive.generation, active.generation);
+    expect(persistedActive.blocked, isFalse);
+  });
+
+  test('late pre-clear action state stays invisible after a new projection generation activates', () async {
+    final now = DateTime(2026, 8, 3, 12);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final store = SharedPreferencesAgendaNotificationRuntimeStore(
+      preferencesProvider: () async => preferences,
+      clock: () => now,
+    );
+
+    final snoozeWriteStarted = Completer<void>();
+    final finishSnoozeWrite = Completer<void>();
+    final lateSnoozeWriter = SharedPreferencesAgendaNotificationRuntimeStore(
+      preferencesProvider: () async => preferences,
+      clock: () => now,
+      stringWriter: (value, key, contents) async {
+        if (!snoozeWriteStarted.isCompleted) {
+          snoozeWriteStarted.complete();
+          await finishSnoozeWrite.future;
+        }
+        return value.setString(key, contents);
+      },
+    );
+    final handledWriteStarted = Completer<void>();
+    final finishHandledWrite = Completer<void>();
+    final lateHandledWriter = SharedPreferencesAgendaNotificationRuntimeStore(
+      preferencesProvider: () async => preferences,
+      clock: () => now,
+      stringListWriter: (value, key, contents) async {
+        if (!handledWriteStarted.isCompleted) {
+          handledWriteStarted.complete();
+          await finishHandledWrite.future;
+        }
+        return value.setStringList(key, contents);
+      },
+    );
+    final actionWriteStarted = Completer<void>();
+    final finishActionWrite = Completer<void>();
+    final lateActionWriter = SharedPreferencesAgendaNotificationRuntimeStore(
+      preferencesProvider: () async => preferences,
+      clock: () => now,
+      stringWriter: (value, key, contents) async {
+        if (!actionWriteStarted.isCompleted) {
+          actionWriteStarted.complete();
+          await finishActionWrite.future;
+        }
+        return value.setString(key, contents);
+      },
+    );
+
+    final lateSnooze = lateSnoozeWriter.setSnooze(
+      'late-snooze',
+      now.add(const Duration(minutes: 10)),
+    );
+    final lateHandled = lateHandledWriter.addHandledOccurrence('late-handled');
+    final lateAction = lateActionWriter.enqueueAction(
+      payload: 'late-payload',
+      actionId: 'handled',
+    );
+    await Future.wait([
+      snoozeWriteStarted.future,
+      handledWriteStarted.future,
+      actionWriteStarted.future,
+    ]);
+
+    final blocked = await store.blockProjectionForDataClear();
+    await store.clear();
+    final active = await store.activateProjectionAfterDurableData();
+    expect(blocked.blocked, isTrue);
+    expect(active.generation, greaterThan(blocked.generation));
+
+    // These are writes that began in a background notification isolate
+    // before the clear fence changed, then reached SharedPreferences after
+    // foreground cleanup completed.
+    finishSnoozeWrite.complete();
+    finishHandledWrite.complete();
+    finishActionWrite.complete();
+    await Future.wait([lateSnooze, lateHandled, lateAction]);
+
+    final restored = SharedPreferencesAgendaNotificationRuntimeStore(
+      preferencesProvider: () async => preferences,
+      clock: () => now,
+    );
+    expect(await restored.readSnoozes(), isEmpty);
+    expect(await restored.readHandledOccurrenceIds(), isEmpty);
+    expect(await restored.readPendingActions(), isEmpty);
+  });
+
+  test('malformed projection fence fails closed', () async {
+    SharedPreferences.setMockInitialValues({
+      SharedPreferencesAgendaNotificationRuntimeStore.projectionFenceKey:
+          '{"v":1,"generation":"bad","blocked":false}',
+    });
+    final store = SharedPreferencesAgendaNotificationRuntimeStore();
+
+    final fence = await store.readProjectionFence();
+
+    expect(fence.blocked, isTrue);
+  });
+
+  test(
+    'notification diagnostics are runtime-only, validated, and cleared',
+    () async {
+      final now = DateTime(2026, 8, 3, 12);
+      SharedPreferences.setMockInitialValues({});
+      final store = SharedPreferencesAgendaNotificationRuntimeStore(
+        clock: () => now,
+      );
+      final diagnostics = AgendaNotificationDiagnostics(
+        recordedAt: now,
+        mode: AgendaNotificationReconcileMode.maintenance,
+        origin: AgendaNotificationReconcileOrigin.background,
+        result: AgendaNotificationDiagnosticResult.success,
+        notificationsEnabled: true,
+        exactAlarmsAllowed: false,
+        plannedCount: 3,
+        scheduledCount: 2,
+        truncatedCount: 1,
+        retainedPendingCount: 1,
+        plan: [
+          AgendaNotificationDiagnosticPlanItem(
+            key: 'v1|course|occurrence|10',
+            fireAt: now.add(const Duration(minutes: 10)),
+            sourceType: 'course',
+          ),
+        ],
+        nextMaintenanceAt: DateTime(2026, 8, 4, 3, 17),
+        overflowCatchUpAt: now.add(const Duration(minutes: 20)),
+      );
+
+      await store.writeNotificationDiagnostics(diagnostics);
+      final restored = await store.readNotificationDiagnostics();
+      expect(restored?.mode, AgendaNotificationReconcileMode.maintenance);
+      expect(restored?.origin, AgendaNotificationReconcileOrigin.background);
+      expect(restored?.truncatedCount, 1);
+      expect(restored?.plan.single.sourceType, 'course');
+
+      final preferences = await SharedPreferences.getInstance();
+      expect(
+        preferences.getString(
+          SharedPreferencesAgendaNotificationRuntimeStore.diagnosticsKey,
+        ),
+        isNot(contains('Mathematics')),
+      );
+
+      await store.clear();
+      expect(await store.readNotificationDiagnostics(), isNull);
+    },
+  );
+
+  test(
+    'legacy diagnostic records default their reconcile origin to foreground',
+    () {
+      final decoded = AgendaNotificationDiagnostics.tryDecode({
+        'v': AgendaNotificationDiagnostics.schemaVersion,
+        'recordedAt': '2026-08-03T12:00:00.000',
+        'mode': 'maintenance',
+        'result': 'success',
+        'notificationsEnabled': true,
+        'exactAlarmsAllowed': true,
+        'plannedCount': 0,
+        'scheduledCount': 0,
+        'truncatedCount': 0,
+        'retainedPendingCount': 0,
+        'plan': const [],
+      });
+
+      expect(decoded?.origin, AgendaNotificationReconcileOrigin.foreground);
     },
   );
 
