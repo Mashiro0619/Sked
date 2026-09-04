@@ -153,6 +153,46 @@ void main() {
     },
   );
 
+  test('tagged notification payloads require a canonical planner identity', () {
+    const target = AgendaTarget(
+      sourceType: AgendaSourceType.course,
+      timetableId: 'table',
+      courseId: 'course',
+      dateIso: '2026-08-03',
+    );
+    const key = 'v1|course|course%7Ctable%7Ccourse%7C2026-08-03|10';
+    final valid = AgendaNotificationPayload(
+      key: key,
+      fireAt: DateTime.utc(2026, 8, 3, 7, 50),
+      target: target,
+      occurrenceId: 'course|course%7Ctable%7Ccourse%7C2026-08-03',
+      hasStableTag: true,
+    );
+    expect(AgendaNotificationPayload.tryDecode(valid.encode()), isNotNull);
+
+    Map<String, dynamic> decodeEnvelope(String payload) =>
+        Map<String, dynamic>.from(
+          jsonDecode(payload.substring(agendaNotificationPayloadPrefix.length))
+              as Map,
+        );
+
+    final malformedKey = decodeEnvelope(valid.encode())..['key'] = 'fake';
+    expect(
+      AgendaNotificationPayload.tryDecode(
+        agendaNotificationPayloadPrefix + jsonEncode(malformedKey),
+      ),
+      isNull,
+    );
+    final mismatchedOccurrence = decodeEnvelope(valid.encode())
+      ..['occurrenceId'] = 'course|different';
+    expect(
+      AgendaNotificationPayload.tryDecode(
+        agendaNotificationPayloadPrefix + jsonEncode(mismatchedOccurrence),
+      ),
+      isNull,
+    );
+  });
+
   test(
     'target decoding accepts one source alias and rejects ambiguous fields',
     () {
@@ -339,6 +379,53 @@ void main() {
       expect(hiddenProvider.activeMode, AppMode.student);
     },
   );
+
+  test('routes timed UTC occurrences by their local calendar date', () async {
+    final base = _dataWithCourse();
+    final eventStart = DateTime.utc(2026, 8, 3, 23);
+    final eventEnd = eventStart.add(const Duration(hours: 1));
+    final data = base.copyWith(
+      activeMode: AppMode.student,
+      generalMode: base.generalMode.copyWith(
+        schedules: [
+          GeneralSchedule(
+            id: 'calendar',
+            name: 'Personal',
+            events: [
+              GeneralEvent(
+                id: 'utc-event',
+                calendarId: 'calendar',
+                title: 'UTC appointment',
+                startDateTimeIso: eventStart.toIso8601String(),
+                endDateTimeIso: eventEnd.toIso8601String(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final occurrence = const AgendaProjectionService()
+        .occurrencesForRange(
+          data,
+          startInclusive: eventStart.subtract(const Duration(hours: 1)),
+          endExclusive: eventEnd.add(const Duration(hours: 1)),
+        )
+        .singleWhere(
+          (item) => item.sourceType == AgendaSourceType.generalEvent,
+        );
+    final provider = await _loadProvider(data);
+    addTearDown(provider.dispose);
+
+    expect(
+      await AgendaActionRouter(provider: provider)
+          .route(AgendaAction(target: occurrence.target)),
+      isTrue,
+    );
+    expect(
+      provider.selectedGeneralDate,
+      normalizeDateOnly(eventStart.toLocal()),
+    );
+  });
 
   test(
     'rejects malformed general occurrence targets and unknown sources',

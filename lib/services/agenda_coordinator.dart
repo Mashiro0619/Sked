@@ -65,6 +65,10 @@ class AgendaCoordinator {
   bool _started = false;
   bool _disposed = false;
   int? _lastPublishedRevision;
+  Timer? _notificationRetryTimer;
+  AppData? _notificationRetryData;
+  int? _notificationRetryRevision;
+  bool _notificationRetryAttempted = false;
 
   bool get isStarted => _started && !_disposed;
   int? get lastPublishedRevision => _lastPublishedRevision;
@@ -237,6 +241,7 @@ class AgendaCoordinator {
       final snapshot = data ?? _provider.appData;
       final effectiveRevision = revision ?? _lastPublishedRevision;
       AgendaNotificationStatus? notificationStatus;
+      var notificationProjectionSucceeded = false;
       // A read-only/recovery-gated provider must never schedule notifications
       // from a snapshot that cannot be persisted.
       if (_canProjectProviderData) {
@@ -249,10 +254,22 @@ class AgendaCoordinator {
             onPayload: _onNotificationTap,
             onAction: _onNotificationAction,
           );
+          notificationProjectionSucceeded = true;
         } catch (error, stackTrace) {
           onError?.call(error, stackTrace);
+          _scheduleNotificationRetry(
+            data: snapshot,
+            revision: effectiveRevision,
+          );
         }
       }
+      // Do not mark a committed snapshot as published, and do not replace a
+      // previously valid maintenance wake-up, when the notification platform
+      // failed. The next resume/manual diagnostic pass must be able to retry
+      // the same durable snapshot instead of silently treating this commit as
+      // complete.
+      if (!notificationProjectionSucceeded) return;
+      _clearNotificationRetry();
       // A clear can begin while the platform call above is in flight. The
       // queued clearRuntime pass will remove any already-written requests; do
       // not add a new background wakeup after the provider becomes unsafe.
@@ -330,6 +347,7 @@ class AgendaCoordinator {
   /// platform recovery paths.
   Future<void> clearRuntime() async {
     if (_disposed) return;
+    _clearNotificationRetry();
     // Drop unconsumed commits immediately. A commit already being drained is
     // still harmless because reconcileNow checks the provider's clear gate.
     _pendingCommit = null;
@@ -358,6 +376,11 @@ class AgendaCoordinator {
 
   void _onCommit(AppDataCommit commit) {
     if (_disposed) return;
+    _notificationRetryTimer?.cancel();
+    _notificationRetryTimer = null;
+    _notificationRetryData = null;
+    _notificationRetryRevision = null;
+    _notificationRetryAttempted = false;
     _pendingCommit = commit;
     if (_reconcileQueued) return;
     _reconcileQueued = true;
@@ -440,8 +463,19 @@ class AgendaCoordinator {
       }
       final parsedDate = tryParseStrictIsoDateTime(rawDate);
       if (parsedDate == null) return;
-      final start = normalizeDateOnly(parsedDate.toLocal());
-      final end = addCalendarDays(start, 1);
+      final keyParts = parseGeneralOccurrenceKey(occurrenceKey);
+      final keyStart = keyParts == null
+          ? null
+          : tryParseStrictIsoDateTime(keyParts.startDateTimeIso);
+      final targetDate = normalizeDateOnly(parsedDate.toLocal());
+      final searchDate = keyStart == null
+          ? targetDate
+          : normalizeDateOnly(keyStart.toLocal());
+      // Imported timed events can carry a UTC occurrence date that differs
+      // from the user's local civil date. Search around the exact occurrence
+      // instant so a handled action is not lost at a timezone boundary.
+      final start = addCalendarDays(searchDate, -2);
+      final end = addCalendarDays(searchDate, 3);
       GeneralEventOccurrence? occurrence;
       for (final candidate in _provider.generalOccurrencesForRange(
         startInclusive: start,
@@ -483,6 +517,10 @@ class AgendaCoordinator {
     _disposed = true;
     _providerReadyTimeout?.cancel();
     _providerReadyTimeout = null;
+    _notificationRetryTimer?.cancel();
+    _notificationRetryTimer = null;
+    _notificationRetryData = null;
+    _notificationRetryRevision = null;
     _removeProviderReadyListener?.call();
     if (!_disposeSignal.isCompleted) _disposeSignal.complete();
     final commitSubscription = _commitSubscription;
@@ -492,5 +530,36 @@ class AgendaCoordinator {
     _commitSubscription = null;
     _intentSubscription = null;
     _productivityBridge.dispose();
+  }
+
+  void _scheduleNotificationRetry({
+    required AppData data,
+    required int? revision,
+  }) {
+    if (_disposed || _notificationRetryAttempted) return;
+    _notificationRetryAttempted = true;
+    _notificationRetryData = data;
+    _notificationRetryRevision = revision;
+    _notificationRetryTimer = Timer(const Duration(seconds: 5), () {
+      _notificationRetryTimer = null;
+      final retryData = _notificationRetryData;
+      final retryRevision = _notificationRetryRevision;
+      if (retryData == null || _disposed || !_canProjectProviderData) return;
+      unawaited(
+        reconcileNow(
+          data: retryData,
+          revision: retryRevision,
+          mode: AgendaNotificationReconcileMode.authoritative,
+        ),
+      );
+    });
+  }
+
+  void _clearNotificationRetry() {
+    _notificationRetryTimer?.cancel();
+    _notificationRetryTimer = null;
+    _notificationRetryData = null;
+    _notificationRetryRevision = null;
+    _notificationRetryAttempted = false;
   }
 }

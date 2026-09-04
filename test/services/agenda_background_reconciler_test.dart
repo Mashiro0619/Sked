@@ -85,6 +85,42 @@ void main() {
     },
   );
 
+  test(
+    'reprojects the latest snapshot when durable data changes mid-pass',
+    () async {
+      final anchor = DateTime(2026, 9, 2, 8);
+      final first = _data();
+      final changed = first.copyWith(
+        notificationSettings: const NotificationSettings(enabled: false),
+      );
+      var loadCount = 0;
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => anchor,
+      );
+      final reconciler = AgendaBackgroundReconciler(
+        notificationService: service,
+        loadData: () async {
+          loadCount += 1;
+          return AgendaBackgroundDataSnapshot(
+            data: loadCount == 1 ? first : changed,
+            canWrite: true,
+          );
+        },
+        clock: () => anchor,
+      );
+
+      final result = await reconciler.reconcile();
+
+      expect(result.succeeded, isTrue);
+      expect(result.nextReconcileAt, isNull);
+      expect(gateway.scheduled, isEmpty);
+      expect(loadCount, 2);
+    },
+  );
+
   test('does not destroy prior platform state from an unsafe load', () async {
     final gateway = MemoryAgendaNotificationGateway();
     final reconciler = AgendaBackgroundReconciler(

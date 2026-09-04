@@ -155,6 +155,42 @@ String buildNotificationPlanKey(
   ].join('|');
 }
 
+/// Parses the canonical key emitted by [buildNotificationPlanKey].
+///
+/// This is intentionally kept beside the builder so platform payload
+/// consumers can distinguish a managed reminder from an arbitrary string.
+({String sourceType, String stableOccurrenceId, int minutesBefore})?
+parseNotificationPlanKey(String value) {
+  final parts = value.split('|');
+  if (parts.length != 4 || parts.first != 'v1') return null;
+  try {
+    final sourceType = Uri.decodeComponent(parts[1]);
+    final stableOccurrenceId = Uri.decodeComponent(parts[2]);
+    final minutesBefore = int.tryParse(parts[3]);
+    if (sourceType.trim().isEmpty ||
+        stableOccurrenceId.trim().isEmpty ||
+        minutesBefore == null ||
+        minutesBefore < 0 ||
+        buildNotificationPlanKey(
+              sourceType,
+              stableOccurrenceId,
+              minutesBefore,
+            ) !=
+            value) {
+      return null;
+    }
+    return (
+      sourceType: sourceType,
+      stableOccurrenceId: stableOccurrenceId,
+      minutesBefore: minutesBefore,
+    );
+  } on FormatException {
+    return null;
+  } on ArgumentError {
+    return null;
+  }
+}
+
 class NotificationPlanDiff {
   const NotificationPlanDiff({
     required this.toSchedule,

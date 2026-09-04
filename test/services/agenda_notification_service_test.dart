@@ -260,6 +260,21 @@ class _RecordingGateway extends MemoryAgendaNotificationGateway {
   }
 }
 
+class _FailingScheduleGateway extends _RecordingGateway {
+  var failScheduling = false;
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    if (failScheduling) {
+      throw StateError('synthetic schedule failure');
+    }
+    await super.schedule(request, exact: exact);
+  }
+}
+
 class _AlternateNotificationIdGateway extends MemoryAgendaNotificationGateway {
   int? _actualNotificationId;
 
@@ -657,6 +672,54 @@ void main() {
     );
 
     test(
+      'recovers and cancels a tagged active agenda card after restart',
+      () async {
+        const key = 'v1|course|table%7Ccourse%7C2026-08-03|10';
+        const tag = 'sked_agenda:v1|course|table%7Ccourse%7C2026-08-03|10';
+        platform.activeNotifications = [
+          const ActiveNotification(id: 7001, tag: tag, title: 'Course'),
+          const ActiveNotification(id: 7002, tag: 'foreign-tag'),
+        ];
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+        await gateway.cancel(key);
+
+        expect(platform.cancelledIds, contains(7001));
+        expect(platform.cancelledTags, contains(tag));
+        expect(platform.cancelledIds, isNot(contains(7002)));
+      },
+    );
+
+    test('cancelAll removes tagged active agenda cards without touching foreign cards', () async {
+      const firstKey = 'v1|course|first|10';
+      const secondKey = 'v1|general_event|second|0';
+      platform.activeNotifications = [
+        const ActiveNotification(
+          id: 7101,
+          tag: 'sked_agenda:v1|course|first|10',
+        ),
+        const ActiveNotification(
+          id: 7102,
+          tag: 'sked_agenda:v1|general_event|second|0',
+        ),
+        const ActiveNotification(id: 7103, tag: 'foreign-tag'),
+      ];
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+      await gateway.cancelAll();
+
+      expect(platform.cancelledIds, containsAll(<int>[7101, 7102]));
+      expect(
+        platform.cancelledTags,
+        containsAll(<String?>[
+          'sked_agenda:$firstKey',
+          'sked_agenda:$secondKey',
+        ]),
+      );
+      expect(platform.cancelledIds, isNot(contains(7103)));
+    });
+
+    test(
       'keeps different managed keys separate after a hash collision',
       () async {
         const firstKey = 'v1|course|14339|0';
@@ -758,6 +821,7 @@ void main() {
         expect(customDetails.channelName, 'Exam reminders');
         expect(customDetails.channelDescription, 'Reminders from exams.');
         expect(customDetails.visibility, NotificationVisibility.public);
+        expect(customDetails.tag, 'sked_agenda:custom-channel');
         expect(customDetails.actions?.map((action) => action.id), [
           'snooze_10m',
           'handled',
@@ -1081,11 +1145,9 @@ void main() {
       final key = gateway.scheduled.keys.single;
       expect(gateway.scheduled[key]!.fireAt, DateTime(2026, 8, 3, 7, 50));
 
-      gateway.act(key, 'snooze_10m');
-      await Future<void>.delayed(Duration.zero);
+      await service.handleAction(gateway.scheduled[key]!.payload, 'snooze_10m');
       expect(gateway.scheduled[key]!.fireAt, DateTime(2026, 8, 3, 8, 5));
-      gateway.act(key, 'snooze_10m');
-      await Future<void>.delayed(Duration.zero);
+      await service.handleAction(gateway.scheduled[key]!.payload, 'snooze_10m');
       expect(gateway.scheduled[key]!.fireAt, DateTime(2026, 8, 3, 8, 5));
 
       final restartedGateway = MemoryAgendaNotificationGateway();
@@ -1114,8 +1176,7 @@ void main() {
     );
     await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
     final key = gateway.scheduled.keys.single;
-    gateway.act(key, 'handled');
-    await Future<void>.delayed(Duration.zero);
+    await service.handleAction(gateway.scheduled[key]!.payload, 'handled');
     expect(gateway.scheduled, isEmpty);
 
     final restartedGateway = MemoryAgendaNotificationGateway();
@@ -1258,8 +1319,7 @@ void main() {
       // normal upcoming projection when the user taps it at 08:05.
       await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
       final key = gateway.scheduled.keys.single;
-      gateway.act(key, 'snooze_10m');
-      await Future<void>.delayed(Duration.zero);
+      await service.handleAction(gateway.scheduled[key]!.payload, 'snooze_10m');
 
       expect(gateway.scheduled[key]!.fireAt, DateTime(2026, 8, 3, 8, 15));
     },
@@ -1595,7 +1655,7 @@ void main() {
         anchor: anchor,
       );
 
-      expect(gateway.cancelledKeys, [key]);
+      expect(gateway.cancelledKeys, isEmpty);
       expect(gateway.exactScheduleModes, [isTrue]);
       expect(gateway.scheduled[key]!.payload, isNot(firstPayload));
     },
@@ -1646,7 +1706,7 @@ void main() {
       gateway.exactAlarmGranted = true;
       final status = await service.reconcile(_data(), anchor: anchor);
 
-      expect(gateway.cancelledKeys, [key]);
+      expect(gateway.cancelledKeys, isEmpty);
       expect(gateway.exactScheduleModes, [isTrue]);
       expect(
         AgendaNotificationPayload.tryDecode(gateway.scheduled[key]!.payload)
@@ -2393,6 +2453,44 @@ void main() {
       expect(service.status.scheduledCount, 0);
     },
   );
+
+  test('keeps the previous plan when a replacement schedule fails', () async {
+    final gateway = _FailingScheduleGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      now: () => DateTime(2026, 8, 3, 7, 40),
+    );
+    final original = _data();
+    await service.reconcile(original, anchor: DateTime(2026, 8, 3, 7));
+    final oldKey = gateway.scheduled.keys.single;
+    final oldCourse = original.studentMode.timetables.single.courses.single;
+    final replacement = oldCourse.copyWith(
+      id: 'replacement-course',
+      name: 'Replacement',
+      startMinutes: 9 * 60,
+      endMinutes: 10 * 60,
+      timeRange: '09:00 - 10:00',
+    );
+    final changed = original.copyWith(
+      studentMode: original.studentMode.copyWith(
+        timetables: [
+          original.studentMode.timetables.single.copyWith(
+            courses: [replacement],
+          ),
+        ],
+      ),
+    );
+    gateway.failScheduling = true;
+
+    await expectLater(
+      service.reconcile(changed, anchor: DateTime(2026, 8, 3, 7)),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(gateway.scheduled.keys, contains(oldKey));
+    expect(gateway.cancelledKeys, isEmpty);
+  });
 
   test(
     'background callback persists valid actions for a later foreground run',

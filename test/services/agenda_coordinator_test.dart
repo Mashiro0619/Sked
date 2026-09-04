@@ -93,6 +93,21 @@ class _BlockingScheduleGateway extends MemoryAgendaNotificationGateway {
   }
 }
 
+class _ToggleFailingScheduleGateway extends MemoryAgendaNotificationGateway {
+  var failScheduling = true;
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    if (failScheduling) {
+      throw StateError('synthetic notification schedule failure');
+    }
+    await super.schedule(request, exact: exact);
+  }
+}
+
 Future<TimetableProvider> _provider() async =>
     _providerWithData(buildInitialAppData(buildDefaultPeriodTimes()));
 
@@ -177,7 +192,7 @@ void main() {
 
       await coordinator.start();
       await provider.updateNotificationSettings(enabled: true);
-      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
       expect(coordinator.isStarted, isTrue);
       expect(
@@ -525,6 +540,42 @@ void main() {
     expect(coordinator.isStarted, isTrue);
     expect(errors, contains(isA<StateError>()));
   });
+
+  test(
+    'does not mark a commit published when notification scheduling fails',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _providerWithData(_dataWithEvent());
+      addTearDown(provider.dispose);
+      final gateway = _ToggleFailingScheduleGateway();
+      final bridge = _RecordingBridge();
+      final errors = <Object>[];
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          now: () => anchor,
+        ),
+        productivityBridge: bridge,
+        clock: () => anchor,
+        onError: (error, _) => errors.add(error),
+      );
+      addTearDown(coordinator.dispose);
+
+      await coordinator.start();
+
+      expect(coordinator.lastPublishedRevision, isNull);
+      expect(bridge.scheduleCount, 0);
+      expect(errors, contains(isA<StateError>()));
+
+      gateway.failScheduling = false;
+      await coordinator.reconcileNow();
+
+      expect(gateway.scheduled, isNotEmpty);
+      expect(bridge.scheduleCount, 1);
+    },
+  );
 
   test('does not persist handled actions when provider saving fails', () async {
     final anchor = DateTime(2026, 8, 3, 8);

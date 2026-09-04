@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'agenda_runtime_mutation_lock.dart';
+
 /// A notification action captured by the platform while the Flutter UI was
 /// not running. The queue is runtime-only and is never included in AppData or
 /// user backups.
@@ -1482,17 +1484,19 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     AgendaNotificationBackgroundRequest request,
     AgendaNotificationProjectionFence fence,
   ) async {
-    final decoded = AgendaNotificationBackgroundRequest.tryDecode(
-      request.toJson(),
-    );
-    if (decoded == null || fence.blocked) return;
-    final preferences = await _preferences;
-    await _reload(preferences);
-    if (!_isCurrentWritableFence(preferences, fence)) return;
-    await _set(
-      _backgroundRequestStorageKey(decoded.key, fence),
-      jsonEncode(decoded.toJson()),
-    );
+    await _enqueueMutation(() async {
+      final decoded = AgendaNotificationBackgroundRequest.tryDecode(
+        request.toJson(),
+      );
+      if (decoded == null || fence.blocked) return;
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      await _set(
+        _backgroundRequestStorageKey(decoded.key, fence),
+        jsonEncode(decoded.toJson()),
+      );
+    });
   }
 
   @override
@@ -1500,39 +1504,43 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     if (key.trim().isEmpty) return;
     final fence = await _captureWritableFence();
     if (fence == null) return;
-    final preferences = await _preferences;
-    await _reload(preferences);
-    if (!_isCurrentWritableFence(preferences, fence)) return;
-    await _remove(_backgroundRequestStorageKey(key, fence));
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      await _remove(_backgroundRequestStorageKey(key, fence));
+    });
   }
 
   @override
   Future<void> pruneBackgroundRequests({required DateTime now}) async {
-    final preferences = await _preferences;
-    await _reload(preferences);
-    final fence = _readProjectionFence(preferences);
-    if (fence.blocked) return;
-    final keys = preferences
-        .getKeys()
-        .where(
-          (key) => key.startsWith(_backgroundRequestStorageKeyPrefix(fence)),
-        )
-        .toList(growable: false);
-    for (final storageKey in keys) {
-      final raw = preferences.getString(storageKey);
-      AgendaNotificationBackgroundRequest? decoded;
-      try {
-        decoded = raw == null
-            ? null
-            : AgendaNotificationBackgroundRequest.tryDecode(jsonDecode(raw));
-      } on FormatException {
-        decoded = null;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      final fence = _readProjectionFence(preferences);
+      if (fence.blocked) return;
+      final keys = preferences
+          .getKeys()
+          .where(
+            (key) => key.startsWith(_backgroundRequestStorageKeyPrefix(fence)),
+          )
+          .toList(growable: false);
+      for (final storageKey in keys) {
+        final raw = preferences.getString(storageKey);
+        AgendaNotificationBackgroundRequest? decoded;
+        try {
+          decoded = raw == null
+              ? null
+              : AgendaNotificationBackgroundRequest.tryDecode(jsonDecode(raw));
+        } on FormatException {
+          decoded = null;
+        }
+        if (decoded == null ||
+            now.difference(decoded.fireAt) > backgroundRequestTtl) {
+          await _remove(storageKey);
+        }
       }
-      if (decoded == null ||
-          now.difference(decoded.fireAt) > backgroundRequestTtl) {
-        await _remove(storageKey);
-      }
-    }
+    });
   }
 
   @override
@@ -1556,11 +1564,13 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   Future<void> writeNotificationDiagnostics(
     AgendaNotificationDiagnostics diagnostics,
   ) async {
-    final decoded = AgendaNotificationDiagnostics.tryDecode(
-      diagnostics.toJson(),
-    );
-    if (decoded == null) return;
-    await _set(diagnosticsKey, jsonEncode(decoded.toJson()));
+    await _enqueueMutation(() async {
+      final decoded = AgendaNotificationDiagnostics.tryDecode(
+        diagnostics.toJson(),
+      );
+      if (decoded == null) return;
+      await _set(diagnosticsKey, jsonEncode(decoded.toJson()));
+    });
   }
 
   @override
@@ -1631,11 +1641,28 @@ class SharedPreferencesAgendaNotificationRuntimeStore
 
   Future<void> _enqueueMutation(Future<void> Function() mutation) {
     final operation = _mutationTail.then<void>(
-      (_) => mutation(),
-      onError: (_, _) => mutation(),
+      (_) => _runMutationWithLock(mutation),
+      onError: (_, _) => _runMutationWithLock(mutation),
     );
     _mutationTail = operation.then<void>((_) {}, onError: (_, _) {});
     return operation;
+  }
+
+  var _mutationLockHeld = false;
+
+  Future<void> _runMutationWithLock(Future<void> Function() mutation) async {
+    if (_mutationLockHeld) {
+      await mutation();
+      return;
+    }
+    await withAgendaRuntimeMutationLock(() async {
+      _mutationLockHeld = true;
+      try {
+        await mutation();
+      } finally {
+        _mutationLockHeld = false;
+      }
+    });
   }
 
   Future<void> _writeSnoozes(

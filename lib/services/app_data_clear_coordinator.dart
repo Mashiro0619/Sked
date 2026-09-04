@@ -1,6 +1,7 @@
 import '../providers/timetable_provider.dart';
 import 'agenda_coordinator.dart';
 import 'agenda_notification_runtime_store.dart';
+import 'agenda_notification_service.dart';
 import 'app_data_clear_service.dart';
 import 'app_exit_controller.dart';
 
@@ -9,6 +10,7 @@ class AppDataClearCoordinator {
     AppDataClearService? clearService,
     AppExitController? exitController,
     AgendaNotificationProjectionFenceStore? projectionFenceStore,
+    this.notificationService,
     this.agendaCoordinator,
   }) : _clearService = clearService ?? AppDataClearService(),
        _exitController = exitController ?? AppExitController(),
@@ -19,6 +21,7 @@ class AppDataClearCoordinator {
   final AppDataClearService _clearService;
   final AppExitController _exitController;
   final AgendaNotificationProjectionFenceStore _projectionFenceStore;
+  final AgendaNotificationService? notificationService;
   final AgendaCoordinator? agendaCoordinator;
 
   Future<void> clearAndExit(TimetableProvider provider) {
@@ -39,6 +42,11 @@ class AppDataClearCoordinator {
           // constructed its plugin service. The persistent runtime store is
           // sufficient to invalidate headless projection in that case.
           await _projectionFenceStore.blockProjectionForDataClear();
+          // A standalone/recovery caller can still provide the application's
+          // already-owned service without constructing a second plugin
+          // instance. This closes the platform cleanup gap when no coordinator
+          // is mounted yet.
+          await notificationService?.clearRuntime();
         }
         try {
           await _clearService.clear();

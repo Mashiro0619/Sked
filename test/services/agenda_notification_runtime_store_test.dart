@@ -202,6 +202,39 @@ void main() {
     },
   );
 
+  test(
+    'shared runtime mutations from separate store instances preserve records',
+    () async {
+      final now = DateTime(2026, 8, 3, 12);
+      SharedPreferences.setMockInitialValues({});
+      final first = SharedPreferencesAgendaNotificationRuntimeStore(
+        clock: () => now,
+      );
+      final second = SharedPreferencesAgendaNotificationRuntimeStore(
+        clock: () => now,
+      );
+
+      await Future.wait([
+        first.setSnooze('first', now.add(const Duration(minutes: 10))),
+        second.setSnooze('second', now.add(const Duration(minutes: 20))),
+        first.addHandledOccurrence('first-occurrence'),
+        second.addHandledOccurrence('second-occurrence'),
+      ]);
+
+      final restored = SharedPreferencesAgendaNotificationRuntimeStore(
+        clock: () => now,
+      );
+      expect(
+        (await restored.readSnoozes()).keys,
+        containsAll(['first', 'second']),
+      );
+      expect(
+        await restored.readHandledOccurrenceIds(),
+        containsAll(['first-occurrence', 'second-occurrence']),
+      );
+    },
+  );
+
   test('projection clear fence survives runtime cleanup and reopens only explicitly', () async {
     SharedPreferences.setMockInitialValues({});
     final store = SharedPreferencesAgendaNotificationRuntimeStore();
@@ -230,7 +263,7 @@ void main() {
     expect(persistedActive.blocked, isFalse);
   });
 
-  test('late pre-clear action state stays invisible after a new projection generation activates', () async {
+  test('data clear waits for an in-flight runtime write before advancing its fence', () async {
     final now = DateTime(2026, 8, 3, 12);
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
@@ -238,83 +271,44 @@ void main() {
       preferencesProvider: () async => preferences,
       clock: () => now,
     );
-
-    final snoozeWriteStarted = Completer<void>();
-    final finishSnoozeWrite = Completer<void>();
-    final lateSnoozeWriter = SharedPreferencesAgendaNotificationRuntimeStore(
+    final writeStarted = Completer<void>();
+    final finishWrite = Completer<void>();
+    final writer = SharedPreferencesAgendaNotificationRuntimeStore(
       preferencesProvider: () async => preferences,
       clock: () => now,
       stringWriter: (value, key, contents) async {
-        if (!snoozeWriteStarted.isCompleted) {
-          snoozeWriteStarted.complete();
-          await finishSnoozeWrite.future;
-        }
-        return value.setString(key, contents);
-      },
-    );
-    final handledWriteStarted = Completer<void>();
-    final finishHandledWrite = Completer<void>();
-    final lateHandledWriter = SharedPreferencesAgendaNotificationRuntimeStore(
-      preferencesProvider: () async => preferences,
-      clock: () => now,
-      stringListWriter: (value, key, contents) async {
-        if (!handledWriteStarted.isCompleted) {
-          handledWriteStarted.complete();
-          await finishHandledWrite.future;
-        }
-        return value.setStringList(key, contents);
-      },
-    );
-    final actionWriteStarted = Completer<void>();
-    final finishActionWrite = Completer<void>();
-    final lateActionWriter = SharedPreferencesAgendaNotificationRuntimeStore(
-      preferencesProvider: () async => preferences,
-      clock: () => now,
-      stringWriter: (value, key, contents) async {
-        if (!actionWriteStarted.isCompleted) {
-          actionWriteStarted.complete();
-          await finishActionWrite.future;
-        }
+        writeStarted.complete();
+        await finishWrite.future;
         return value.setString(key, contents);
       },
     );
 
-    final lateSnooze = lateSnoozeWriter.setSnooze(
+    final pendingWrite = writer.setSnooze(
       'late-snooze',
       now.add(const Duration(minutes: 10)),
     );
-    final lateHandled = lateHandledWriter.addHandledOccurrence('late-handled');
-    final lateAction = lateActionWriter.enqueueAction(
-      payload: 'late-payload',
-      actionId: 'handled',
-    );
-    await Future.wait([
-      snoozeWriteStarted.future,
-      handledWriteStarted.future,
-      actionWriteStarted.future,
-    ]);
+    await writeStarted.future;
+    var fenceCompleted = false;
+    final pendingFence = store.blockProjectionForDataClear().then((value) {
+      fenceCompleted = true;
+      return value;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 25));
+    expect(fenceCompleted, isFalse);
 
-    final blocked = await store.blockProjectionForDataClear();
+    finishWrite.complete();
+    await pendingWrite;
+    final blocked = await pendingFence;
     await store.clear();
     final active = await store.activateProjectionAfterDurableData();
+
     expect(blocked.blocked, isTrue);
     expect(active.generation, greaterThan(blocked.generation));
-
-    // These are writes that began in a background notification isolate
-    // before the clear fence changed, then reached SharedPreferences after
-    // foreground cleanup completed.
-    finishSnoozeWrite.complete();
-    finishHandledWrite.complete();
-    finishActionWrite.complete();
-    await Future.wait([lateSnooze, lateHandled, lateAction]);
-
     final restored = SharedPreferencesAgendaNotificationRuntimeStore(
       preferencesProvider: () async => preferences,
       clock: () => now,
     );
     expect(await restored.readSnoozes(), isEmpty);
-    expect(await restored.readHandledOccurrenceIds(), isEmpty);
-    expect(await restored.readPendingActions(), isEmpty);
   });
 
   test('malformed projection fence fails closed', () async {

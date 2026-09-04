@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import 'notification_planner.dart';
 
 /// Prefix used by notification payloads. Widget intents may omit it and send
 /// a target object directly, but notification payloads always carry it so a
@@ -53,6 +54,7 @@ class AgendaNotificationPayload {
     this.fingerprint,
     this.actionId,
     this.scheduleExact = false,
+    this.hasStableTag = false,
     this.version = 1,
   });
 
@@ -63,6 +65,11 @@ class AgendaNotificationPayload {
   final String? fingerprint;
   final String? actionId;
   final bool scheduleExact;
+
+  /// Whether the originating scheduler attached the logical Android tag.
+  /// Older v1 payloads omit this optional marker and are canceled with the
+  /// legacy untagged fallback.
+  final bool hasStableTag;
   final int version;
 
   Map<String, dynamic> toJson() => {
@@ -75,6 +82,7 @@ class AgendaNotificationPayload {
     if (fingerprint != null) 'fingerprint': fingerprint,
     if (actionId != null) 'actionId': actionId,
     if (scheduleExact) 'scheduleExact': true,
+    if (hasStableTag) 'tagged': true,
   };
 
   String encode() => agendaNotificationPayloadPrefix + jsonEncode(toJson());
@@ -133,6 +141,19 @@ class AgendaNotificationPayload {
     final fingerprint = _optionalString(map, 'fingerprint');
     final scheduleExact = map['scheduleExact'];
     if (scheduleExact != null && scheduleExact is! bool) return null;
+    final tagged = map['tagged'];
+    if (tagged != null && tagged is! bool) return null;
+    if (tagged == true) {
+      final parsedKey = parseNotificationPlanKey(key.trim());
+      if (parsedKey == null ||
+          parsedKey.sourceType != target.sourceType ||
+          (occurrenceId != null &&
+              occurrenceId !=
+                  '${Uri.encodeComponent(parsedKey.sourceType)}|'
+                      '${Uri.encodeComponent(parsedKey.stableOccurrenceId)}')) {
+        return null;
+      }
+    }
     return AgendaNotificationPayload(
       key: key.trim(),
       fireAt: fireAt,
@@ -141,6 +162,7 @@ class AgendaNotificationPayload {
       fingerprint: fingerprint,
       actionId: _optionalString(map, 'actionId'),
       scheduleExact: scheduleExact == true,
+      hasStableTag: tagged == true,
       version: version,
     );
   }
@@ -149,6 +171,7 @@ class AgendaNotificationPayload {
     DateTime? fireAt,
     String? fingerprint,
     bool? scheduleExact,
+    bool? hasStableTag,
   }) => AgendaNotificationPayload(
     key: key,
     fireAt: fireAt ?? this.fireAt,
@@ -157,6 +180,7 @@ class AgendaNotificationPayload {
     fingerprint: fingerprint ?? this.fingerprint,
     actionId: actionId,
     scheduleExact: scheduleExact ?? this.scheduleExact,
+    hasStableTag: hasStableTag ?? this.hasStableTag,
     version: version,
   );
 }
@@ -322,12 +346,24 @@ class AgendaActionRouter {
     if (event == null) return false;
     final date = target.dateIso == null ? null : _parseDate(target.dateIso);
     if (target.dateIso != null && date == null) return false;
+    final occurrenceStart = _occurrenceStartFromKey(target.occurrenceKey);
+    if (target.occurrenceKey != null && occurrenceStart == null) return false;
+    final searchDate =
+        date ??
+        (occurrenceStart == null
+            ? null
+            : normalizeDateOnly(occurrenceStart.toLocal()));
+    GeneralEventOccurrence? matchedOccurrence;
     if (target.occurrenceKey != null) {
-      if (date == null) return false;
-      final end = addCalendarDays(date, 1);
+      if (searchDate == null) return false;
+      // dateIso is a source/calendar date and may remain UTC for imported
+      // timed events. Search a small civil-date window around the occurrence
+      // key instead of assuming that one local day contains the event.
+      final start = addCalendarDays(searchDate, -2);
+      final end = addCalendarDays(searchDate, 3);
       var found = false;
       for (final occurrence in provider.generalOccurrencesForRange(
-        startInclusive: date,
+        startInclusive: start,
         endExclusive: end,
         onlyVisibleCalendars: true,
       )) {
@@ -335,6 +371,7 @@ class AgendaActionRouter {
             occurrence.event.id == eventId &&
             occurrence.occurrenceKey == target.occurrenceKey) {
           found = true;
+          matchedOccurrence = occurrence;
           break;
         }
       }
@@ -343,7 +380,15 @@ class AgendaActionRouter {
     if (provider.activeMode != AppMode.general) {
       await provider.switchMode(AppMode.general);
     }
-    if (date != null) await provider.setSelectedGeneralDate(date);
+    var navigationDate = searchDate;
+    if (matchedOccurrence != null && !matchedOccurrence.isAllDay) {
+      navigationDate = normalizeDateOnly(
+        matchedOccurrence.calendarDisplayStart.toLocal(),
+      );
+    }
+    if (navigationDate != null) {
+      await provider.setSelectedGeneralDate(navigationDate);
+    }
     await onTarget?.call(target);
     return true;
   }
@@ -445,6 +490,13 @@ DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;
   final parsed = tryParseStrictIsoDateTime(value);
   return parsed == null ? null : normalizeDateOnly(parsed.toLocal());
+}
+
+DateTime? _occurrenceStartFromKey(String? key) {
+  if (key == null || key.trim().isEmpty) return null;
+  final parts = parseGeneralOccurrenceKey(key.trim());
+  if (parts == null) return null;
+  return tryParseStrictIsoDateTime(parts.startDateTimeIso);
 }
 
 void _validateOptionalActionString(

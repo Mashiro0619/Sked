@@ -20,6 +20,16 @@ AgendaOccurrence _occurrence({
 }
 
 void main() {
+  test('parses only canonical planner keys', () {
+    const key = 'v1|course|course%7Ctable%7Ccourse%7C2026-08-03|10';
+    final parsed = parseNotificationPlanKey(key);
+    expect(parsed?.sourceType, 'course');
+    expect(parsed?.stableOccurrenceId, 'course|table|course|2026-08-03');
+    expect(parsed?.minutesBefore, 10);
+    expect(parseNotificationPlanKey('course|table|course|10'), isNull);
+    expect(parseNotificationPlanKey('v1|course|bad%zz|10'), isNull);
+  });
+
   test('planner filters invalid ranges and deterministically orders deduplicated reminders', () {
     final now = DateTime(2026, 8, 3, 8);
     final planner = const NotificationPlanner();

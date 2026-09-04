@@ -16,6 +16,7 @@ import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/app_exit_controller.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
+import 'package:sked/services/agenda_notification_service.dart';
 
 class _FakeSecretStore implements SecretStore {
   String value = 'secret';
@@ -214,6 +215,65 @@ void main() {
       ).clearAndExit(provider);
 
       expect((await fenceStore.readProjectionFence()).blocked, isTrue);
+    },
+  );
+
+  test(
+    'standalone clear also cancels platform-owned agenda notifications',
+    () async {
+      final storage = _MemoryStorage()
+        ..data = buildInitialAppData(buildDefaultPeriodTimes());
+      final provider = TimetableProvider(
+        storage: storage,
+        secretStore: secrets,
+        schoolSiteService: SchoolSiteService(
+          store: _MemorySchoolSiteStore(),
+          coordinator: SchoolSiteStorageCoordinator(),
+        ),
+      );
+      await provider.load();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+      );
+      final agendaData = buildInitialAppData(buildDefaultPeriodTimes())
+          .copyWith(
+            notificationSettings: const NotificationSettings(enabled: true),
+            generalMode: buildInitialAppData(buildDefaultPeriodTimes())
+                .generalMode
+                .copyWith(
+                  schedules: [
+                    GeneralSchedule(
+                      id: 'clear-calendar',
+                      name: 'Clear test',
+                      events: [
+                        GeneralEvent(
+                          id: 'clear-event',
+                          calendarId: 'clear-calendar',
+                          title: 'Clear test event',
+                          startDateTimeIso: '2026-08-03T10:00:00.000',
+                          endDateTimeIso: '2026-08-03T11:00:00.000',
+                          reminders: const [
+                            GeneralEventReminder(minutesBefore: 10),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+          );
+      await service.reconcile(agendaData, anchor: DateTime(2026, 8, 3, 7));
+      expect(gateway.scheduled, isNotEmpty);
+
+      await AppDataClearCoordinator(
+        clearService: _FakeClearService(),
+        exitController: _FakeExitController(),
+        notificationService: service,
+      ).clearAndExit(provider);
+
+      expect(gateway.scheduled, isEmpty);
     },
   );
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui' show DartPluginRegistrant;
 
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import '../models/timetable_models.dart';
 import 'agenda_notification_service.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_projection_service.dart';
+import 'agenda_runtime_mutation_lock.dart';
 import 'android_productivity_bridge.dart';
 
 /// A persisted snapshot that can safely be consumed outside the foreground
@@ -83,7 +85,10 @@ class AgendaBackgroundReconciler {
 
   AgendaProjectionService get projection => _projection;
 
-  Future<AgendaBackgroundReconcileResult> reconcile() async {
+  Future<AgendaBackgroundReconcileResult> reconcile() =>
+      withAgendaRuntimeMutationLock(_reconcileLocked);
+
+  Future<AgendaBackgroundReconcileResult> _reconcileLocked() async {
     late final AgendaNotificationProjectionFence fence;
     try {
       fence = await _notificationService.readProjectionFence();
@@ -141,7 +146,29 @@ class AgendaBackgroundReconciler {
       if (!(await _notificationService.isProjectionFenceCurrent(fence))) {
         return const AgendaBackgroundReconcileResult(skipped: true);
       }
-      nextReconcileAt = status.nextMaintenanceAt;
+      // The foreground writer and this headless engine do not share a Provider
+      // instance. Re-read the durable snapshot before publishing the next
+      // maintenance boundary so a commit that landed during this pass cannot
+      // be treated as authoritative by the background scheduler.
+      final latest = await _loadData();
+      if (latest.data == null || !latest.canWrite) {
+        return const AgendaBackgroundReconcileResult(skipped: true);
+      }
+      if (!_samePersistedSnapshot(data, latest.data!)) {
+        final latestStatus = await _notificationService.reconcile(
+          latest.data!,
+          anchor: _clock().toLocal(),
+          mode: AgendaNotificationReconcileMode.maintenance,
+          origin: AgendaNotificationReconcileOrigin.background,
+          projectionFence: fence,
+        );
+        if (!(await _notificationService.isProjectionFenceCurrent(fence))) {
+          return const AgendaBackgroundReconcileResult(skipped: true);
+        }
+        nextReconcileAt = latestStatus.nextMaintenanceAt;
+      } else {
+        nextReconcileAt = status.nextMaintenanceAt;
+      }
     } catch (error) {
       notificationError = error;
     }
@@ -195,6 +222,9 @@ class AgendaBackgroundReconciler {
     return false;
   }
 }
+
+bool _samePersistedSnapshot(AppData left, AppData right) =>
+    jsonEncode(left.toJson()) == jsonEncode(right.toJson());
 
 /// Loads only the last committed AppData snapshot for a headless Android
 /// worker.  [AppRepository.load] never writes a replacement default here.
