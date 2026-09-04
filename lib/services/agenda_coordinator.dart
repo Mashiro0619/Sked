@@ -310,8 +310,9 @@ class AgendaCoordinator {
     localeCode: _provider.appData.localeCode,
   );
 
-  /// Schedules one developer test thirty seconds in the future. The service
-  /// clears only earlier developer-test IDs before replacing it.
+  /// Schedules one developer test thirty seconds in the future. Each test is
+  /// assigned an independent diagnostic ID, so earlier test cards remain
+  /// visible until the user dismisses them or clears runtime state.
   Future<void> scheduleThirtySecondNotificationTest(
     AgendaNotificationTestChannel channel,
   ) => _notificationService.scheduleDeveloperNotificationTest(

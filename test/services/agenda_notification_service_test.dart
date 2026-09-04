@@ -59,6 +59,10 @@ class _FakeAndroidNotificationsPlatform
   List<PendingNotificationRequest> pendingRequests = const [];
   List<ActiveNotification> activeNotifications = const [];
   final List<_RecordedAndroidSchedule> schedules = [];
+  final List<int> shownIds = [];
+  final List<AndroidNotificationDetails?> shownDetails = [];
+  final List<String?> shownPayloads = [];
+  final List<String?> cancelledTags = [];
   final List<int> cancelledIds = [];
 
   @override
@@ -126,8 +130,22 @@ class _FakeAndroidNotificationsPlatform
   }
 
   @override
+  Future<void> show({
+    required int id,
+    String? title,
+    String? body,
+    AndroidNotificationDetails? notificationDetails,
+    String? payload,
+  }) async {
+    shownIds.add(id);
+    shownDetails.add(notificationDetails);
+    shownPayloads.add(payload);
+  }
+
+  @override
   Future<void> cancel({required int id, String? tag}) async {
     cancelledIds.add(id);
+    cancelledTags.add(tag);
   }
 
   @override
@@ -261,8 +279,8 @@ class _AlternateNotificationIdGateway extends MemoryAgendaNotificationGateway {
 class _DelayedDeveloperTestGateway extends MemoryAgendaNotificationGateway {
   final initializationStarted = Completer<void>();
   final releaseInitialization = Completer<void>();
-  final clearStarted = Completer<void>();
-  final releaseClear = Completer<void>();
+  final schedulingStarted = Completer<void>();
+  final releaseScheduling = Completer<void>();
 
   @override
   Future<void> initialize({
@@ -277,9 +295,21 @@ class _DelayedDeveloperTestGateway extends MemoryAgendaNotificationGateway {
   }
 
   @override
+  Future<void> scheduleTestNotification(
+    AgendaNotificationTestRequest request,
+  ) async {
+    if (!schedulingStarted.isCompleted) schedulingStarted.complete();
+    await releaseScheduling.future;
+    await super.scheduleTestNotification(request);
+  }
+}
+
+class _CountingDeveloperTestGateway extends MemoryAgendaNotificationGateway {
+  var clearTestNotificationsCount = 0;
+
+  @override
   Future<void> clearTestNotifications() async {
-    if (!clearStarted.isCompleted) clearStarted.complete();
-    await releaseClear.future;
+    clearTestNotificationsCount += 1;
     await super.clearTestNotifications();
   }
 }
@@ -847,6 +877,105 @@ void main() {
       expect(
         platform.schedules.single.scheduleMode,
         AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    });
+
+    test(
+      'keeps repeated developer tests as separate Android notifications',
+      () async {
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+        final immediate = AgendaNotificationTestRequest(
+          id: 2000000001,
+          channel: AgendaNotificationTestChannel.course,
+          title: 'Test',
+          body: 'Test body',
+          localeCode: 'en',
+          channelId: 'sked_course_reminders',
+          channelName: 'Course reminders',
+          channelDescription: 'Course reminder tests',
+        );
+        final delayed = immediate.copyWith();
+        final fireAt = DateTime.now().add(const Duration(minutes: 1));
+
+        await gateway.showTestNotification(immediate);
+        await gateway.showTestNotification(immediate);
+        await gateway.scheduleTestNotification(
+          AgendaNotificationTestRequest(
+            id: delayed.id,
+            channel: delayed.channel,
+            title: delayed.title,
+            body: delayed.body,
+            localeCode: delayed.localeCode,
+            channelId: delayed.channelId,
+            channelName: delayed.channelName,
+            channelDescription: delayed.channelDescription,
+            fireAt: fireAt,
+          ),
+        );
+        await gateway.scheduleTestNotification(
+          AgendaNotificationTestRequest(
+            id: delayed.id,
+            channel: delayed.channel,
+            title: delayed.title,
+            body: delayed.body,
+            localeCode: delayed.localeCode,
+            channelId: delayed.channelId,
+            channelName: delayed.channelName,
+            channelDescription: delayed.channelDescription,
+            fireAt: fireAt.add(const Duration(minutes: 1)),
+          ),
+        );
+
+        final ids = <int>[
+          ...platform.shownIds,
+          ...platform.schedules.map((item) => item.id),
+        ];
+        expect(ids, hasLength(4));
+        expect(ids.toSet(), hasLength(4));
+        expect(ids, everyElement(inInclusiveRange(2000000001, 2147483647)));
+        expect(platform.cancelledIds, isEmpty);
+      },
+    );
+
+    test('keeps developer test IDs unique after gateway recreation and tags each card', () async {
+      final request = AgendaNotificationTestRequest(
+        id: 2000000001,
+        channel: AgendaNotificationTestChannel.course,
+        title: 'Test',
+        body: 'Test body',
+        localeCode: 'en',
+        channelId: 'sked_course_reminders',
+        channelName: 'Course reminders',
+        channelDescription: 'Course reminder tests',
+      );
+
+      final firstGateway = FlutterAgendaNotificationGateway(enabled: true);
+      await firstGateway.showTestNotification(request);
+
+      // Simulate a process/engine recreation.  The platform test double does
+      // not expose an active notification list, so this assertion specifically
+      // verifies the persisted cursor rather than relying on an in-memory
+      // session set.
+      final secondGateway = FlutterAgendaNotificationGateway(enabled: true);
+      await secondGateway.showTestNotification(request);
+
+      expect(platform.shownIds, hasLength(2));
+      expect(platform.shownIds.toSet(), hasLength(2));
+      expect(
+        platform.shownIds,
+        everyElement(inInclusiveRange(2000000001, 2147483647)),
+      );
+      expect(
+        platform.shownDetails.map((details) => details?.tag),
+        everyElement(startsWith('sked_developer_test_')),
+      );
+      expect(
+        platform.shownPayloads,
+        everyElement(contains('sked.developer.notification-test.v1:course:')),
+      );
+      expect(
+        platform.shownPayloads.map((payload) => payload?.split(':').last),
+        orderedEquals(platform.shownIds.map((id) => '$id')),
       );
     });
 
@@ -1997,10 +2126,82 @@ void main() {
       );
 
       expect(gateway.scheduled, isEmpty);
-      expect(gateway.testNotifications, hasLength(1));
-      final request = gateway.testNotifications.values.single;
-      expect(request.channel, AgendaNotificationTestChannel.schedule);
-      expect(request.fireAt, anchor.add(const Duration(seconds: 30)));
+      expect(gateway.testNotifications, hasLength(2));
+      final requests = gateway.testNotifications.values.toList();
+      expect(
+        requests.map((request) => request.channel),
+        containsAll(<AgendaNotificationTestChannel>[
+          AgendaNotificationTestChannel.course,
+          AgendaNotificationTestChannel.schedule,
+        ]),
+      );
+      final delayed = requests.singleWhere(
+        (request) => request.channel == AgendaNotificationTestChannel.schedule,
+      );
+      expect(delayed.fireAt, anchor.add(const Duration(seconds: 30)));
+    },
+  );
+
+  test(
+    'repeated developer tests retain separate immediate and delayed messages',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 7);
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => anchor,
+      );
+
+      await service.showImmediateNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+      await service.showImmediateNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+      await service.scheduleDeveloperNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+      await service.scheduleDeveloperNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+
+      expect(gateway.testNotifications, hasLength(4));
+      expect(gateway.testNotifications.keys.toSet(), hasLength(4));
+      expect(
+        gateway.testNotifications.values.where(
+          (request) => request.fireAt == null,
+        ),
+        hasLength(2),
+      );
+      expect(
+        gateway.testNotifications.values.where(
+          (request) => request.fireAt != null,
+        ),
+        hasLength(2),
+      );
+    },
+  );
+
+  test(
+    'scheduling a developer test does not clear earlier test messages',
+    () async {
+      final gateway = _CountingDeveloperTestGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => DateTime(2026, 8, 3, 7),
+      );
+
+      await service.scheduleDeveloperNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+      await service.scheduleDeveloperNotificationTest(
+        AgendaNotificationTestChannel.course,
+      );
+
+      expect(gateway.clearTestNotificationsCount, 0);
+      expect(gateway.testNotifications, hasLength(2));
     },
   );
 
@@ -2019,9 +2220,9 @@ void main() {
     await gateway.initializationStarted.future;
     current = current.add(const Duration(minutes: 2));
     gateway.releaseInitialization.complete();
-    await gateway.clearStarted.future;
+    await gateway.schedulingStarted.future;
     current = current.add(const Duration(minutes: 3));
-    gateway.releaseClear.complete();
+    gateway.releaseScheduling.complete();
     await scheduling;
 
     expect(gateway.testNotifications, hasLength(1));

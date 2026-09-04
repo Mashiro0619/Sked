@@ -1,5 +1,7 @@
 # Miscellaneous
 /.scratch/
+# Local Android/device inspection captures (UI dumps and screenshots)
+/.tmp_*
 *.class
 *.log
 *.pyc

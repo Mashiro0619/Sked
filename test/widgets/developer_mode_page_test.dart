@@ -689,9 +689,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(delayedButton);
       await tester.pumpAndSettle();
-      expect(gateway.testNotifications, hasLength(1));
-      final delayed = gateway.testNotifications.values.single;
-      expect(delayed.channel, AgendaNotificationTestChannel.schedule);
+      expect(gateway.testNotifications, hasLength(2));
+      final delayed = gateway.testNotifications.values.singleWhere(
+        (request) => request.channel == AgendaNotificationTestChannel.schedule,
+      );
       expect(delayed.fireAt, isNotNull);
       expect(
         delayed.fireAt!.difference(DateTime.now()).inSeconds,

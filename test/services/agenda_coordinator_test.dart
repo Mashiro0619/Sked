@@ -221,10 +221,13 @@ void main() {
       );
       await coordinator.runNotificationMaintenance();
 
-      expect(gateway.testNotifications, hasLength(1));
+      expect(gateway.testNotifications, hasLength(2));
       expect(
-        gateway.testNotifications.values.single.channel,
-        AgendaNotificationTestChannel.schedule,
+        gateway.testNotifications.values.map((request) => request.channel),
+        containsAll(<AgendaNotificationTestChannel>[
+          AgendaNotificationTestChannel.course,
+          AgendaNotificationTestChannel.schedule,
+        ]),
       );
     },
   );
