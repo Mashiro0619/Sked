@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/services/agenda_runtime_mutation_lock.dart';
+
+const _runtimeMutationBrokerName =
+    'com.mashiro.sked.agenda-runtime-mutation-lock.v1';
 
 void main() {
   test('serializes overlapping notification mutations', () async {
@@ -97,6 +101,68 @@ void main() {
       events.close();
       exited.close();
     }
+  });
+
+  test('recovers from a stale process broker registration', () async {
+    IsolateNameServer.removePortNameMapping(_runtimeMutationBrokerName);
+    final stalePort = RawReceivePort();
+    addTearDown(stalePort.close);
+    expect(
+      IsolateNameServer.registerPortWithName(
+        stalePort.sendPort,
+        _runtimeMutationBrokerName,
+      ),
+      isTrue,
+    );
+
+    var entered = false;
+    await withAgendaRuntimeMutationLock(() async {
+      entered = true;
+    });
+
+    expect(entered, isTrue);
+  });
+
+  test('cancels active and queued broker requests safely', () async {
+    final broker = IsolateNameServer.lookupPortByName(
+      _runtimeMutationBrokerName,
+    );
+    expect(broker, isNotNull);
+
+    final activeId = 'test-active-${DateTime.now().microsecondsSinceEpoch}';
+    final activeReply = ReceivePort();
+    final activeMessages = StreamIterator<dynamic>(activeReply);
+    addTearDown(activeReply.close);
+    addTearDown(activeMessages.cancel);
+    broker!.send(<Object?>['acquire', activeId, activeReply.sendPort]);
+    expect(await activeMessages.moveNext(), isTrue);
+    expect((activeMessages.current as List<Object?>).first, 'acknowledged');
+    expect(await activeMessages.moveNext(), isTrue);
+    expect((activeMessages.current as List<Object?>).first, 'granted');
+    broker.send(<Object?>['cancel', activeId]);
+
+    final heldId = 'test-held-${DateTime.now().microsecondsSinceEpoch}';
+    final queuedId = 'test-queued-${DateTime.now().microsecondsSinceEpoch}';
+    final heldReply = ReceivePort();
+    final queuedReply = ReceivePort();
+    final heldMessages = StreamIterator<dynamic>(heldReply);
+    final queuedMessages = StreamIterator<dynamic>(queuedReply);
+    addTearDown(heldReply.close);
+    addTearDown(queuedReply.close);
+    addTearDown(heldMessages.cancel);
+    addTearDown(queuedMessages.cancel);
+    broker.send(<Object?>['acquire', heldId, heldReply.sendPort]);
+    expect(await heldMessages.moveNext(), isTrue);
+    expect((heldMessages.current as List<Object?>).first, 'acknowledged');
+    expect(await heldMessages.moveNext(), isTrue);
+    expect((heldMessages.current as List<Object?>).first, 'granted');
+    broker.send(<Object?>['acquire', queuedId, queuedReply.sendPort]);
+    expect(await queuedMessages.moveNext(), isTrue);
+    expect((queuedMessages.current as List<Object?>).first, 'acknowledged');
+    broker.send(<Object?>['cancel', queuedId]);
+    broker.send(<Object?>['release', heldId]);
+
+    await withAgendaRuntimeMutationLock(() async {});
   });
 }
 

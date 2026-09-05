@@ -10,6 +10,8 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
   'lib/models/timetable_models.dart': 'is an export-only library',
   'lib/services/app_backup_restore_journal_factory_stub.dart':
       'is selected only when dart:io is unavailable',
+  'lib/services/agenda_runtime_mutation_lock_stub.dart':
+      'is selected only when dart:io is unavailable',
   'lib/services/app_instance_lease.dart':
       'contains a conditional factory interface only',
   'lib/services/app_instance_lease_stub.dart':

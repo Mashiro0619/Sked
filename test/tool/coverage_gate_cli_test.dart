@@ -249,6 +249,7 @@ const _coverageUnavailableSourcePaths = <String>[
   'lib/l10n/app_localization_delegates.dart',
   'lib/models/timetable_models.dart',
   'lib/services/app_backup_restore_journal_factory_stub.dart',
+  'lib/services/agenda_runtime_mutation_lock_stub.dart',
   'lib/services/app_instance_lease.dart',
   'lib/services/app_instance_lease_stub.dart',
   'lib/services/app_instance_web_lock.dart',
