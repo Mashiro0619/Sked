@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import 'agenda_notification_fingerprint.dart';
+import 'agenda_projection_service.dart';
 import 'notification_planner.dart';
 
 /// Prefix used by notification payloads. Widget intents may omit it and send
@@ -195,9 +197,11 @@ class AgendaActionRouter {
     required this.provider,
     this.onTarget,
     this.sourceHandlers = const {},
+    AgendaProjectionService? projection,
     DateTime Function()? clock,
     this.duplicateWindow = const Duration(seconds: 2),
-  }) : _clock = clock ?? DateTime.now;
+  }) : _projection = projection ?? const AgendaProjectionService(),
+       _clock = clock ?? DateTime.now;
 
   final TimetableProvider provider;
   final AgendaTargetCallback? onTarget;
@@ -206,6 +210,7 @@ class AgendaActionRouter {
   /// or general schedule domains.  Registering a handler keeps future source
   /// navigation out of this router's source switch.
   final Map<String, AgendaTargetCallback> sourceHandlers;
+  final AgendaProjectionService _projection;
   final DateTime Function() _clock;
   final Duration duplicateWindow;
   Future<bool>? _routeTail;
@@ -236,6 +241,7 @@ class AgendaActionRouter {
     final encoded = AgendaNotificationPayload.tryDecode(payload);
     if (payload.startsWith(agendaNotificationPayloadPrefix)) {
       if (encoded == null) return false;
+      if (!_matchesCurrentProjection(encoded)) return false;
       action = AgendaAction(
         target: encoded.target,
         key: encoded.key,
@@ -263,6 +269,70 @@ class AgendaActionRouter {
       // crash the application or trigger a second navigation attempt.
       return false;
     }
+  }
+
+  bool _matchesCurrentProjection(AgendaNotificationPayload payload) {
+    // Payloads from pre-tag releases used opaque logical keys. They remain
+    // routable for upgrade compatibility; current tagged payloads use the
+    // canonical identity checks below.
+    if (!payload.hasStableTag) return true;
+    final parsedKey = parseNotificationPlanKey(payload.key);
+    if (parsedKey == null ||
+        parsedKey.sourceType != payload.target.sourceType) {
+      return false;
+    }
+    if (!_projection.registry.sources.any(
+      (source) => source.id == parsedKey.sourceType,
+    )) {
+      // A registered future source may have a source-owned target handler
+      // whose occurrence lookup is intentionally outside the built-in
+      // projection. Its handler still performs the final target validation.
+      return sourceHandlers.containsKey(parsedKey.sourceType);
+    }
+    if (payload.fingerprint == null ||
+        payload.fingerprint!.length != 40 ||
+        !RegExp(r'^[0-9a-f]{40}$').hasMatch(payload.fingerprint!)) {
+      return false;
+    }
+    final targetDate = _parseDate(payload.target.dateIso);
+    final anchor = targetDate ?? normalizeDateOnly(payload.fireAt.toLocal());
+    final fireDate = normalizeDateOnly(payload.fireAt.toLocal());
+    final start = addCalendarDays(
+      anchor.isBefore(fireDate) ? anchor : fireDate,
+      -2,
+    );
+    final end = addCalendarDays(
+      anchor.isAfter(fireDate) ? anchor : fireDate,
+      4,
+    );
+    final occurrences = _projection.occurrencesForRange(
+      provider.appData,
+      startInclusive: start,
+      endExclusive: end,
+      timetableId: payload.target.timetableId,
+    );
+    for (final occurrence in occurrences) {
+      if (occurrence.sourceType != parsedKey.sourceType ||
+          occurrence.stableId != parsedKey.stableOccurrenceId ||
+          occurrence.target != payload.target ||
+          occurrence.scopedStableId != payload.occurrenceId ||
+          !occurrence.reminders.any(
+            (reminder) =>
+                reminder.normalized().minutesBefore == parsedKey.minutesBefore,
+          )) {
+        continue;
+      }
+      final descriptor = _projection.registry.descriptorFor(
+        occurrence.sourceType,
+      );
+      return agendaNotificationFingerprint(
+            occurrence: occurrence,
+            data: provider.appData,
+            descriptor: descriptor,
+          ) ==
+          payload.fingerprint;
+    }
+    return false;
   }
 
   Future<bool> route(AgendaAction action) async {

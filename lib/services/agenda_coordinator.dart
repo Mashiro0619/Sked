@@ -37,7 +37,11 @@ class AgendaCoordinator {
            ),
        _actionRouter =
            actionRouter ??
-           AgendaActionRouter(provider: provider, onTarget: onTarget),
+           AgendaActionRouter(
+             provider: provider,
+             onTarget: onTarget,
+             projection: projection ?? _defaultProjection,
+           ),
        _productivityBridge = productivityBridge ?? AndroidProductivityBridge(),
        _clock = clock ?? DateTime.now;
 

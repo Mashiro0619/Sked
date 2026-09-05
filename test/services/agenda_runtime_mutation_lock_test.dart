@@ -164,6 +164,38 @@ void main() {
 
     await withAgendaRuntimeMutationLock(() async {});
   });
+
+  test('reclaims a lease after its owner isolate is terminated', () async {
+    final events = ReceivePort();
+    final exited = ReceivePort();
+    final isolate = await Isolate.spawn(
+      _holdAgendaRuntimeMutationLock,
+      events.sendPort,
+      onExit: exited.sendPort,
+    );
+    final eventIterator = StreamIterator<dynamic>(events);
+    try {
+      expect(await eventIterator.moveNext(), isTrue);
+      expect(eventIterator.current, isA<SendPort>());
+      expect(await eventIterator.moveNext(), isTrue);
+      expect(eventIterator.current, 'entered');
+
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      isolate.kill(priority: Isolate.immediate);
+      await exited.first.timeout(const Duration(seconds: 5));
+
+      var recovered = false;
+      await withAgendaRuntimeMutationLock(() async {
+        recovered = true;
+      }).timeout(const Duration(seconds: 7));
+      expect(recovered, isTrue);
+    } finally {
+      isolate.kill(priority: Isolate.immediate);
+      await eventIterator.cancel();
+      events.close();
+      exited.close();
+    }
+  });
 }
 
 Future<void> _holdAgendaRuntimeMutationLock(SendPort events) async {

@@ -66,9 +66,43 @@ class AndroidNotificationChannelState {
   }
 }
 
+class AndroidActiveNotificationState {
+  const AndroidActiveNotificationState({
+    required this.id,
+    required this.postTimeMillis,
+    this.tag,
+  });
+
+  final int id;
+  final int postTimeMillis;
+  final String? tag;
+
+  static AndroidActiveNotificationState? tryDecode(Object? value) {
+    if (value is! Map) return null;
+    final id = value['id'];
+    final postTime = value['postTimeMillis'];
+    final tag = value['tag'];
+    if (id is! num ||
+        !id.isFinite ||
+        id % 1 != 0 ||
+        postTime is! num ||
+        !postTime.isFinite ||
+        postTime % 1 != 0 ||
+        (tag != null && tag is! String)) {
+      return null;
+    }
+    return AndroidActiveNotificationState(
+      id: id.toInt(),
+      postTimeMillis: postTime.toInt(),
+      tag: tag as String?,
+    );
+  }
+}
+
 /// Snapshot of Android-owned notification state for the developer diagnostic
 /// surface. The agenda service remains the owner of scheduling; this bridge
-/// only reports system settings and channel-level blocks.
+/// only reports system settings, channel-level blocks, and active-card post
+/// timestamps exposed by Android.
 class AndroidNotificationDiagnostics {
   const AndroidNotificationDiagnostics({
     required this.isSupported,
@@ -76,6 +110,7 @@ class AndroidNotificationDiagnostics {
     required this.postNotificationsGranted,
     required this.exactAlarmsAllowed,
     required this.channels,
+    this.activeNotifications = const [],
   });
 
   const AndroidNotificationDiagnostics.unsupported()
@@ -83,13 +118,15 @@ class AndroidNotificationDiagnostics {
       appNotificationsEnabled = false,
       postNotificationsGranted = false,
       exactAlarmsAllowed = false,
-      channels = const [];
+      channels = const [],
+      activeNotifications = const [];
 
   final bool isSupported;
   final bool appNotificationsEnabled;
   final bool postNotificationsGranted;
   final bool exactAlarmsAllowed;
   final List<AndroidNotificationChannelState> channels;
+  final List<AndroidActiveNotificationState> activeNotifications;
 
   static AndroidNotificationDiagnostics? tryDecode(Object? value) {
     if (value is! Map) return null;
@@ -98,11 +135,13 @@ class AndroidNotificationDiagnostics {
     final postNotificationsGranted = value['postNotificationsGranted'];
     final exactAlarmsAllowed = value['exactAlarmsAllowed'];
     final rawChannels = value['channels'];
+    final rawActive = value['activeNotifications'] ?? const [];
     if (supported is! bool ||
         appNotificationsEnabled is! bool ||
         postNotificationsGranted is! bool ||
         exactAlarmsAllowed is! bool ||
-        rawChannels is! List) {
+        rawChannels is! List ||
+        rawActive is! List) {
       return null;
     }
     final channels = <AndroidNotificationChannelState>[];
@@ -112,12 +151,20 @@ class AndroidNotificationDiagnostics {
       channels.add(channel);
     }
     channels.sort((left, right) => left.id.compareTo(right.id));
+    final activeNotifications = <AndroidActiveNotificationState>[];
+    for (final raw in rawActive) {
+      final active = AndroidActiveNotificationState.tryDecode(raw);
+      if (active == null) return null;
+      activeNotifications.add(active);
+    }
+    activeNotifications.sort((left, right) => left.id.compareTo(right.id));
     return AndroidNotificationDiagnostics(
       isSupported: supported,
       appNotificationsEnabled: appNotificationsEnabled,
       postNotificationsGranted: postNotificationsGranted,
       exactAlarmsAllowed: exactAlarmsAllowed,
       channels: List.unmodifiable(channels),
+      activeNotifications: List.unmodifiable(activeNotifications),
     );
   }
 }

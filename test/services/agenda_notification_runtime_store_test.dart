@@ -351,6 +351,9 @@ void main() {
         ],
         nextMaintenanceAt: DateTime(2026, 8, 4, 3, 17),
         overflowCatchUpAt: now.add(const Duration(minutes: 20)),
+        platformPendingCount: 2,
+        platformActiveCount: 1,
+        platformSampledAt: now,
       );
 
       await store.writeNotificationDiagnostics(diagnostics);
@@ -359,6 +362,9 @@ void main() {
       expect(restored?.origin, AgendaNotificationReconcileOrigin.background);
       expect(restored?.truncatedCount, 1);
       expect(restored?.plan.single.sourceType, 'course');
+      expect(restored?.platformPendingCount, 2);
+      expect(restored?.platformActiveCount, 1);
+      expect(restored?.platformSampledAt, now);
 
       final preferences = await SharedPreferences.getInstance();
       expect(

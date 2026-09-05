@@ -548,6 +548,21 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                     ? null
                     : () => unawaited(_refreshNotificationDiagnostics()),
               ),
+              if (agenda != null &&
+                  agenda.platformPendingCount != null &&
+                  agenda.platformActiveCount != null)
+                SettingsConnectedTile(
+                  key: const ValueKey('developer-notification-platform-state'),
+                  leading: const Icon(Icons.devices_outlined),
+                  title: l10n.developerNotificationPlan,
+                  subtitle:
+                      'platform ${agenda.platformPendingCount} pending / '
+                      '${agenda.platformActiveCount} active'
+                      '${_nativeActiveNotificationSuffix(android)}',
+                  onTap: _diagnosticRefreshEnabled
+                      ? () => unawaited(_refreshNotificationDiagnostics())
+                      : null,
+                ),
               SettingsConnectedTile(
                 key: const ValueKey('developer-notification-next-reminder'),
                 leading: const Icon(Icons.notifications_active_outlined),
@@ -660,6 +675,20 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         ),
       ],
     );
+  }
+
+  String _nativeActiveNotificationSuffix(
+    AndroidNotificationDiagnostics? diagnostics,
+  ) {
+    final active = diagnostics?.activeNotifications ?? const [];
+    if (active.isEmpty) return '';
+    final latest = active.reduce(
+      (left, right) =>
+          left.postTimeMillis >= right.postTimeMillis ? left : right,
+    );
+    final time = DateTime.fromMillisecondsSinceEpoch(latest.postTimeMillis)
+        .toLocal();
+    return ' · native last posted $time';
   }
 
   List<_NotificationChannelPresentation> _notificationChannels(

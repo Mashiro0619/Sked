@@ -7,6 +7,8 @@ import 'dart:ui';
 const _agendaRuntimeMutationBrokerName =
     'com.mashiro.sked.agenda-runtime-mutation-lock.v1';
 const _brokerHandshakeTimeout = Duration(seconds: 2);
+const _brokerLeaseHeartbeat = Duration(seconds: 1);
+const _brokerLeaseTimeout = Duration(seconds: 4);
 
 var _nextRequestId = 0;
 
@@ -14,33 +16,9 @@ Future<T> withPlatformAgendaRuntimeMutationLock<T>(
   Future<T> Function() action,
 ) async {
   final processLease = await _acquireProcessLease();
-  RandomAccessFile? lockFile;
-  var locked = false;
   try {
-    try {
-      final path =
-          '${Directory.systemTemp.path}${Platform.pathSeparator}'
-          'sked_notification_runtime.lock';
-      lockFile = await File(path).open(mode: FileMode.append);
-      await lockFile.lock(FileLock.blockingExclusive);
-      locked = true;
-    } catch (_) {
-      // A read-only or restricted host must not make the notification feature
-      // unusable. The store still retains its per-isolate queue as a fallback.
-      return await action();
-    }
     return await action();
   } finally {
-    if (lockFile != null) {
-      if (locked) {
-        try {
-          await lockFile.unlock();
-        } catch (_) {}
-      }
-      try {
-        await lockFile.close();
-      } catch (_) {}
-    }
     processLease.release();
   }
 }
@@ -103,7 +81,9 @@ Future<_AgendaRuntimeMutationProcessLease> _acquireProcessLease() async {
     await granted.future;
     await subscription.cancel();
     reply.close();
-    return _AgendaRuntimeMutationProcessLease(broker, requestId);
+    final lease = _AgendaRuntimeMutationProcessLease(broker, requestId);
+    lease.startHeartbeat();
+    return lease;
   }
 }
 
@@ -148,10 +128,23 @@ class _AgendaRuntimeMutationProcessLease {
   final SendPort _broker;
   final String _requestId;
   var _released = false;
+  Timer? _heartbeatTimer;
+
+  void startHeartbeat() {
+    _heartbeatTimer = Timer.periodic(_brokerLeaseHeartbeat, (_) {
+      if (!_released) {
+        _broker.send(<Object?>[
+          _AgendaRuntimeMutationBroker.heartbeat,
+          _requestId,
+        ]);
+      }
+    });
+  }
 
   void release() {
     if (_released) return;
     _released = true;
+    _heartbeatTimer?.cancel();
     _broker.send(<Object?>[_AgendaRuntimeMutationBroker.release, _requestId]);
   }
 }
@@ -170,6 +163,7 @@ class _AgendaRuntimeMutationBroker {
   static const acquire = 'acquire';
   static const cancel = 'cancel';
   static const release = 'release';
+  static const heartbeat = 'heartbeat';
   static const acknowledged = 'acknowledged';
   static const granted = 'granted';
 
@@ -177,11 +171,29 @@ class _AgendaRuntimeMutationBroker {
   final Queue<_AgendaRuntimeMutationRequest> _waiting =
       Queue<_AgendaRuntimeMutationRequest>();
   String? _activeRequestId;
+  Timer? _leaseTimer;
+  bool _granting = false;
+
+  void _startLeaseTimer() {
+    _leaseTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      final active = _activeRequestId;
+      if (active == null) return;
+      final request = _activeRequest;
+      if (request == null ||
+          DateTime.now().difference(request.lastHeartbeat) >
+              _brokerLeaseTimeout) {
+        _releaseActive(active);
+      }
+    });
+  }
+
+  _AgendaRuntimeMutationRequest? _activeRequest;
 
   SendPort get sendPort => _commands.sendPort;
 
   void _handle(dynamic message) {
     if (message is! List<Object?> || message.isEmpty) return;
+    _startLeaseTimer();
     switch (message[0]) {
       case acquire:
         if (message.length != 3 ||
@@ -200,23 +212,75 @@ class _AgendaRuntimeMutationBroker {
         if (message.length != 2 || message[1] is! String) return;
         final requestId = message[1]! as String;
         if (_activeRequestId == requestId) {
-          _activeRequestId = null;
-          _grantNext();
+          _releaseActive(requestId);
           return;
         }
         _waiting.removeWhere((request) => request.id == requestId);
       case release:
         if (message.length != 2 || message[1] != _activeRequestId) return;
-        _activeRequestId = null;
-        _grantNext();
+        _releaseActive(message[1]! as String);
+      case heartbeat:
+        if (message.length != 2 || message[1] != _activeRequestId) return;
+        _activeRequest?.lastHeartbeat = DateTime.now();
     }
   }
 
   void _grantNext() {
-    if (_activeRequestId != null || _waiting.isEmpty) return;
+    if (_activeRequestId != null || _granting || _waiting.isEmpty) return;
     final request = _waiting.removeFirst();
-    _activeRequestId = request.id;
-    request.reply.send(<Object?>[granted, request.id]);
+    _granting = true;
+    unawaited(_openAndGrant(request));
+  }
+
+  Future<void> _openAndGrant(_AgendaRuntimeMutationRequest request) async {
+    RandomAccessFile? lockFile;
+    var locked = false;
+    try {
+      try {
+        final path =
+            '${Directory.systemTemp.path}${Platform.pathSeparator}'
+            'sked_notification_runtime.lock';
+        lockFile = await File(path).open(mode: FileMode.append);
+        await lockFile.lock(FileLock.blockingExclusive);
+        locked = true;
+      } catch (_) {
+        // A read-only host still gets the process-local queue semantics.
+      }
+      request.lockFile = lockFile;
+      request.locked = locked;
+      _activeRequestId = request.id;
+      _activeRequest = request;
+      request.reply.send(<Object?>[granted, request.id]);
+    } catch (_) {
+      if (lockFile != null) {
+        try {
+          if (locked) await lockFile.unlock();
+          await lockFile.close();
+        } catch (_) {}
+      }
+      _waiting.addFirst(request);
+    } finally {
+      _granting = false;
+      _grantNext();
+    }
+  }
+
+  void _releaseActive(String requestId) {
+    final active = _activeRequest;
+    if (active == null || active.id != requestId) return;
+    _activeRequestId = null;
+    _activeRequest = null;
+    unawaited(_closeLock(active));
+    _grantNext();
+  }
+
+  Future<void> _closeLock(_AgendaRuntimeMutationRequest request) async {
+    final file = request.lockFile;
+    if (file == null) return;
+    try {
+      if (request.locked) await file.unlock();
+      await file.close();
+    } catch (_) {}
   }
 
   void close() {
@@ -225,8 +289,12 @@ class _AgendaRuntimeMutationBroker {
 }
 
 class _AgendaRuntimeMutationRequest {
-  const _AgendaRuntimeMutationRequest(this.id, this.reply);
+  _AgendaRuntimeMutationRequest(this.id, this.reply)
+    : lastHeartbeat = DateTime.now();
 
   final String id;
   final SendPort reply;
+  DateTime lastHeartbeat;
+  RandomAccessFile? lockFile;
+  bool locked = false;
 }

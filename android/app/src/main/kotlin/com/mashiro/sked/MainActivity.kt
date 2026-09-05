@@ -314,12 +314,24 @@ class MainActivity : FlutterActivity() {
         } else {
             emptyList()
         }
+        val activeNotifications = if (manager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            manager.activeNotifications.map { status ->
+                mapOf(
+                    "id" to status.id,
+                    "tag" to status.tag,
+                    "postTimeMillis" to status.postTime,
+                )
+            }
+        } else {
+            emptyList()
+        }
         return mapOf(
             "supported" to true,
             "appNotificationsEnabled" to NotificationManagerCompat.from(this).areNotificationsEnabled(),
             "postNotificationsGranted" to isNotificationPermissionGranted(),
             "exactAlarmsAllowed" to canScheduleExactAlarms(),
             "channels" to channels,
+            "activeNotifications" to activeNotifications,
         )
     }
 

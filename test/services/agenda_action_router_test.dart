@@ -5,7 +5,9 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/agenda_action_router.dart';
+import 'package:sked/services/agenda_notification_fingerprint.dart';
 import 'package:sked/services/agenda_projection_service.dart';
+import 'package:sked/services/notification_planner.dart';
 
 class _MemoryStorage implements TimetableStorage {
   _MemoryStorage(this.data);
@@ -525,6 +527,55 @@ void main() {
       current = current.add(const Duration(seconds: 3));
       expect(await router.routePayload(payload), isTrue);
       expect(opened, [target, target]);
+    },
+  );
+
+  test(
+    'tagged payloads must match the current occurrence fingerprint',
+    () async {
+      final provider = await _loadProvider(
+        _dataWithCourse().copyWith(
+          notificationSettings: const NotificationSettings(
+            enabled: true,
+            courseDefaultMinutesBefore: 10,
+          ),
+        ),
+      );
+      addTearDown(provider.dispose);
+      final occurrence = const AgendaProjectionService()
+          .occurrencesForRange(
+            provider.appData,
+            startInclusive: DateTime(2026, 8, 3),
+            endExclusive: DateTime(2026, 8, 4),
+          )
+          .single;
+      final reminder = occurrence.reminders.single;
+      final key = buildNotificationPlanKey(
+        occurrence.sourceType,
+        occurrence.stableId,
+        reminder.minutesBefore,
+      );
+      final payload = AgendaNotificationPayload(
+        key: key,
+        fireAt: reminder.fireAt(occurrence.start),
+        target: occurrence.target,
+        occurrenceId: occurrence.scopedStableId,
+        fingerprint: '0' * 40,
+        hasStableTag: true,
+      ).encode();
+      final router = AgendaActionRouter(provider: provider);
+
+      expect(await router.routePayload(payload), isFalse);
+      expect(
+        agendaNotificationFingerprint(
+          occurrence: occurrence,
+          data: provider.appData,
+          descriptor: const AgendaProjectionService().registry.descriptorFor(
+            occurrence.sourceType,
+          ),
+        ),
+        isNot('0' * 40),
+      );
     },
   );
 

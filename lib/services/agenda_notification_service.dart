@@ -18,6 +18,7 @@ import '../models/timetable_models.dart';
 import 'agenda_action_router.dart';
 import 'agenda_projection_service.dart';
 import 'agenda_notification_runtime_store.dart';
+import 'agenda_notification_fingerprint.dart';
 import 'agenda_runtime_mutation_lock.dart';
 import 'notification_planner.dart';
 
@@ -275,6 +276,28 @@ abstract interface class AgendaNotificationScheduleModeGateway {
 /// snooze request should use this value after [schedule] completes.
 abstract interface class AgendaNotificationScheduleIdGateway {
   int? get lastScheduledNotificationId;
+}
+
+/// Best-effort live platform view used by diagnostics. Android exposes the
+/// plugin's pending alarm requests and active notification cards; it does not
+/// expose a universal delivered-at timestamp to ordinary applications.
+abstract interface class AgendaNotificationPlatformDiagnosticsGateway {
+  Future<AgendaNotificationPlatformSnapshot> platformSnapshot();
+}
+
+class AgendaNotificationPlatformSnapshot {
+  const AgendaNotificationPlatformSnapshot({
+    required this.sampledAt,
+    required this.pendingIds,
+    required this.activeIds,
+  });
+
+  final DateTime sampledAt;
+  final List<int> pendingIds;
+  final List<int> activeIds;
+
+  int get pendingCount => pendingIds.length;
+  int get activeCount => activeIds.length;
 }
 
 class AgendaNotificationMetadata {
@@ -553,6 +576,7 @@ class MemoryAgendaNotificationGateway
         AgendaNotificationMetadataGateway,
         AgendaNotificationScheduleModeGateway,
         AgendaNotificationScheduleIdGateway,
+        AgendaNotificationPlatformDiagnosticsGateway,
         AgendaNotificationTestGateway {
   MemoryAgendaNotificationGateway({
     AgendaNotificationTestIdAllocator? developerTestIdAllocator,
@@ -592,6 +616,17 @@ class MemoryAgendaNotificationGateway
 
   @override
   int? get lastScheduledNotificationId => _lastScheduledNotificationId;
+
+  @override
+  Future<AgendaNotificationPlatformSnapshot> platformSnapshot() async {
+    return AgendaNotificationPlatformSnapshot(
+      sampledAt: DateTime.now(),
+      pendingIds: scheduled.values
+          .map((item) => item.id)
+          .toList(growable: false),
+      activeIds: const [],
+    );
+  }
 
   @override
   Future<void> initialize({
@@ -700,6 +735,7 @@ class FlutterAgendaNotificationGateway
         AgendaNotificationMetadataGateway,
         AgendaNotificationScheduleModeGateway,
         AgendaNotificationScheduleIdGateway,
+        AgendaNotificationPlatformDiagnosticsGateway,
         AgendaNotificationTestGateway {
   FlutterAgendaNotificationGateway({
     FlutterLocalNotificationsPlugin? plugin,
@@ -768,6 +804,39 @@ class FlutterAgendaNotificationGateway
 
   @override
   int? get lastScheduledNotificationId => _lastScheduledNotificationId;
+
+  @override
+  Future<AgendaNotificationPlatformSnapshot> platformSnapshot() async {
+    if (!_enabled) {
+      return AgendaNotificationPlatformSnapshot(
+        sampledAt: DateTime.now(),
+        pendingIds: const [],
+        activeIds: const [],
+      );
+    }
+    return withAgendaRuntimeMutationLock(() async {
+      final pending = await _refreshNotificationIdCache();
+      var activeIds = const <int>[];
+      try {
+        activeIds = (await _plugin.getActiveNotifications())
+            .map((item) => item.id)
+            .whereType<int>()
+            .toList(growable: false);
+      } on UnimplementedError {
+        // The platform may not expose active history; pending IDs remain
+        // useful and are still reported to the developer surface.
+      } on MissingPluginException {
+        // Test/desktop embedders may omit the optional active-list API.
+      } on PlatformException {
+        // A transient platform query failure must not break reconciliation.
+      }
+      return AgendaNotificationPlatformSnapshot(
+        sampledAt: DateTime.now(),
+        pendingIds: pending.map((item) => item.id).toList(growable: false),
+        activeIds: activeIds,
+      );
+    });
+  }
 
   @override
   Future<void> initialize({
@@ -2213,6 +2282,21 @@ class AgendaNotificationService {
     // recreate them after a foreground data clear.  Check the same fence used
     // for the platform plan immediately before and after persistence.
     if (!(await _allowsProjectionFence(projectionFence))) return;
+    if (gateway is AgendaNotificationPlatformDiagnosticsGateway) {
+      try {
+        final platform =
+            gateway as AgendaNotificationPlatformDiagnosticsGateway;
+        final snapshot = await platform.platformSnapshot();
+        diagnostics = diagnostics.copyWithPlatformSnapshot(
+          snapshot.pendingCount,
+          snapshot.activeCount,
+          snapshot.sampledAt,
+        );
+      } catch (_) {
+        // Platform diagnostics are best effort and must not hide a successful
+        // notification reconciliation.
+      }
+    }
     _latestDiagnostics = diagnostics;
     final store = _runtimeStore is AgendaNotificationDiagnosticsStore
         ? _runtimeStore as AgendaNotificationDiagnosticsStore
@@ -2929,31 +3013,11 @@ String _notificationFingerprintForItem(
   AppData data, {
   required AgendaSourceDescriptor descriptor,
 }) {
-  final occurrence = item.occurrence;
-  final localeCode = data.localeCode;
-  final copy = _notificationCopy(localeCode);
-  final value = jsonEncode({
-    // Notification title/body are localized at scheduling time. Include the
-    // locale in the fingerprint so changing the app language replaces
-    // already-pending notifications instead of leaving stale text visible.
-    'localeCode': localeCode,
-    'title': occurrence.title,
-    'location': occurrence.location,
-    'target': occurrence.target.toJson(),
-    'lockScreenShowTitles': data.notificationSettings.lockScreenShowTitles,
-    'bodyStart': occurrence.start.toIso8601String(),
-    'bodyAllDay': occurrence.isAllDay,
-    // Descriptor metadata is source-owned and can change independently of
-    // the occurrence. Include it so a renamed channel or localized action
-    // text replaces an already pending notification.
-    'sourceLabel': descriptor.labelFor(localeCode),
-    'channelId': descriptor.channelId,
-    'channelName': descriptor.channelNameFor(localeCode),
-    'channelDescription': descriptor.channelDescriptionFor(localeCode),
-    'snoozeAction': copy.snoozeAction,
-    'handledAction': copy.handledAction,
-  });
-  return sha1.convert(utf8.encode(value)).toString();
+  return agendaNotificationFingerprint(
+    occurrence: item.occurrence,
+    data: data,
+    descriptor: descriptor,
+  );
 }
 
 String _notificationFingerprint(AgendaNotificationRequest request) {

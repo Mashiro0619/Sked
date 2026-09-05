@@ -194,6 +194,9 @@ AgendaNotificationDiagnostics _developerNotificationDiagnostics({
       ),
     ],
     nextMaintenanceAt: current.add(const Duration(days: 1)),
+    platformPendingCount: 200,
+    platformActiveCount: 3,
+    platformSampledAt: current,
   );
 }
 

@@ -58,6 +58,7 @@ class _FakeAndroidNotificationsPlatform
       const NotificationAppLaunchDetails(false);
   List<PendingNotificationRequest> pendingRequests = const [];
   List<ActiveNotification> activeNotifications = const [];
+  Object? activeNotificationsError;
   final List<_RecordedAndroidSchedule> schedules = [];
   final List<int> shownIds = [];
   final List<AndroidNotificationDetails?> shownDetails = [];
@@ -93,8 +94,11 @@ class _FakeAndroidNotificationsPlatform
   pendingNotificationRequests() async => List.unmodifiable(pendingRequests);
 
   @override
-  Future<List<ActiveNotification>> getActiveNotifications() async =>
-      List.unmodifiable(activeNotifications);
+  Future<List<ActiveNotification>> getActiveNotifications() async {
+    final error = activeNotificationsError;
+    if (error != null) throw error;
+    return List.unmodifiable(activeNotifications);
+  }
 
   @override
   Future<void> zonedSchedule({
@@ -1103,6 +1107,42 @@ void main() {
         expect(await gateway.notificationsEnabled, isFalse);
         expect(await gateway.exactAlarmsAllowed, isFalse);
         expect(await gateway.openNotificationSettings(), isTrue);
+      },
+    );
+
+    test('reports live pending and active platform notification IDs', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      platform.pendingRequests = [
+        const PendingNotificationRequest(301, 'Sked', '08:00', 'foreign'),
+      ];
+      platform.activeNotifications = [
+        const ActiveNotification(
+          id: 302,
+          title: 'Sked',
+          body: '08:00',
+          tag: 'sked_agenda:key',
+        ),
+      ];
+
+      final snapshot = await gateway.platformSnapshot();
+
+      expect(snapshot.pendingIds, [301]);
+      expect(snapshot.activeIds, [302]);
+    });
+
+    test(
+      'keeps pending diagnostics when active history is unavailable',
+      () async {
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+        platform.pendingRequests = [
+          const PendingNotificationRequest(303, 'Sked', '08:00', 'foreign'),
+        ];
+        platform.activeNotificationsError = UnimplementedError();
+
+        final snapshot = await gateway.platformSnapshot();
+
+        expect(snapshot.pendingIds, [303]);
+        expect(snapshot.activeIds, isEmpty);
       },
     );
   });
@@ -2144,6 +2184,9 @@ void main() {
       expect(success?.mode, AgendaNotificationReconcileMode.authoritative);
       expect(success?.origin, AgendaNotificationReconcileOrigin.foreground);
       expect(success?.plan, isNotEmpty);
+      expect(success?.platformPendingCount, greaterThanOrEqualTo(0));
+      expect(success?.platformActiveCount, 0);
+      expect(success?.platformSampledAt, isNotNull);
 
       await service.clearRuntime();
       expect(await service.readNotificationDiagnostics(), isNull);

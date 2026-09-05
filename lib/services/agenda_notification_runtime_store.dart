@@ -312,6 +312,9 @@ class AgendaNotificationDiagnostics {
     this.origin = AgendaNotificationReconcileOrigin.foreground,
     this.nextMaintenanceAt,
     this.overflowCatchUpAt,
+    this.platformPendingCount,
+    this.platformActiveCount,
+    this.platformSampledAt,
     this.error,
   });
 
@@ -328,7 +331,34 @@ class AgendaNotificationDiagnostics {
   final List<AgendaNotificationDiagnosticPlanItem> plan;
   final DateTime? nextMaintenanceAt;
   final DateTime? overflowCatchUpAt;
+  final int? platformPendingCount;
+  final int? platformActiveCount;
+  final DateTime? platformSampledAt;
   final String? error;
+
+  AgendaNotificationDiagnostics copyWithPlatformSnapshot(
+    int pendingCount,
+    int activeCount,
+    DateTime sampledAt,
+  ) => AgendaNotificationDiagnostics(
+    recordedAt: recordedAt,
+    mode: mode,
+    origin: origin,
+    result: result,
+    notificationsEnabled: notificationsEnabled,
+    exactAlarmsAllowed: exactAlarmsAllowed,
+    plannedCount: plannedCount,
+    scheduledCount: scheduledCount,
+    truncatedCount: truncatedCount,
+    retainedPendingCount: retainedPendingCount,
+    plan: plan,
+    nextMaintenanceAt: nextMaintenanceAt,
+    overflowCatchUpAt: overflowCatchUpAt,
+    platformPendingCount: pendingCount,
+    platformActiveCount: activeCount,
+    platformSampledAt: sampledAt,
+    error: error,
+  );
 
   Map<String, Object?> toJson() => {
     'v': schemaVersion,
@@ -347,6 +377,11 @@ class AgendaNotificationDiagnostics {
       'nextMaintenanceAt': nextMaintenanceAt!.toIso8601String(),
     if (overflowCatchUpAt != null)
       'overflowCatchUpAt': overflowCatchUpAt!.toIso8601String(),
+    if (platformPendingCount != null)
+      'platformPendingCount': platformPendingCount,
+    if (platformActiveCount != null) 'platformActiveCount': platformActiveCount,
+    if (platformSampledAt != null)
+      'platformSampledAt': platformSampledAt!.toIso8601String(),
     if (error != null && error!.isNotEmpty) 'error': error,
   };
 
@@ -388,8 +423,20 @@ class AgendaNotificationDiagnostics {
 
     final nextMaintenanceAt = decodeOptionalDate('nextMaintenanceAt');
     final overflowCatchUpAt = decodeOptionalDate('overflowCatchUpAt');
+    final platformSampledAt = decodeOptionalDate('platformSampledAt');
+    final platformPendingCount = _decodeNullableNonNegativeInt(
+      value['platformPendingCount'],
+    );
+    final platformActiveCount = _decodeNullableNonNegativeInt(
+      value['platformActiveCount'],
+    );
     if ((value['nextMaintenanceAt'] != null && nextMaintenanceAt == null) ||
-        (value['overflowCatchUpAt'] != null && overflowCatchUpAt == null)) {
+        (value['overflowCatchUpAt'] != null && overflowCatchUpAt == null) ||
+        (value['platformSampledAt'] != null && platformSampledAt == null) ||
+        (value.containsKey('platformPendingCount') &&
+            platformPendingCount == null) ||
+        (value.containsKey('platformActiveCount') &&
+            platformActiveCount == null)) {
       return null;
     }
 
@@ -422,6 +469,9 @@ class AgendaNotificationDiagnostics {
       plan: List.unmodifiable(plan),
       nextMaintenanceAt: nextMaintenanceAt,
       overflowCatchUpAt: overflowCatchUpAt,
+      platformPendingCount: platformPendingCount,
+      platformActiveCount: platformActiveCount,
+      platformSampledAt: platformSampledAt,
       error: rawError as String?,
     );
   }
@@ -461,6 +511,11 @@ int? _decodeNonNegativeInt(Object? value) {
     return value.toInt();
   }
   return null;
+}
+
+int? _decodeNullableNonNegativeInt(Object? value) {
+  if (value == null) return null;
+  return _decodeNonNegativeInt(value);
 }
 
 /// Runtime-only notification state.

@@ -40,6 +40,13 @@ void main() {
                 'importance': 4,
               },
             ],
+            'activeNotifications': <Object?>[
+              <String, Object?>{
+                'id': 123,
+                'tag': 'sked_agenda:v1|course|x|5',
+                'postTimeMillis': 1720000000000,
+              },
+            ],
           };
         });
     final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
@@ -57,6 +64,11 @@ void main() {
     ]);
     expect(diagnostics.channels.first.enabled, isTrue);
     expect(diagnostics.channels.last.importance, 0);
+    expect(diagnostics.activeNotifications.single.id, 123);
+    expect(
+      diagnostics.activeNotifications.single.postTimeMillis,
+      1720000000000,
+    );
   });
 
   test(
