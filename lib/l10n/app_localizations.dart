@@ -4480,6 +4480,18 @@ abstract class AppLocalizations {
   /// **'{state} · {importance}'**
   String developerNotificationChannelSummary(Object state, Object importance);
 
+  /// No description provided for @developerNotificationPlatformState.
+  ///
+  /// In en, this message translates to:
+  /// **'{pending} pending / {active} active'**
+  String developerNotificationPlatformState(int pending, int active);
+
+  /// No description provided for @developerNotificationNativeLastPosted.
+  ///
+  /// In en, this message translates to:
+  /// **'native last posted {time}'**
+  String developerNotificationNativeLastPosted(String time);
+
   /// No description provided for @developerNotificationNoDiagnostic.
   ///
   /// In en, this message translates to:

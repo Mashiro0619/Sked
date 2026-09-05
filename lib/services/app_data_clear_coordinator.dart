@@ -44,9 +44,19 @@ class AppDataClearCoordinator {
           await _projectionFenceStore.blockProjectionForDataClear();
           // A standalone/recovery caller can still provide the application's
           // already-owned service without constructing a second plugin
-          // instance. This closes the platform cleanup gap when no coordinator
-          // is mounted yet.
-          await notificationService?.clearRuntime();
+          // instance. The mounted Settings path always injects this service;
+          // callers without one use a short-lived cleanup owner so platform
+          // notifications do not outlive deleted AppData. Platform teardown
+          // is best effort here because recovery can run before plugin
+          // registration; the durable fence still blocks headless projection.
+          final service = notificationService ?? AgendaNotificationService();
+          try {
+            await service.initialize();
+            await service.clearRuntime();
+          } catch (_) {
+            // Preserve the clear path's durable/fence semantics when Android
+            // notification initialization is unavailable during recovery.
+          }
         }
         try {
           await _clearService.clear();

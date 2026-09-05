@@ -224,7 +224,12 @@ Future<bool> _scheduleBackgroundSnooze({
     );
     if (!await isRuntimeFenceCurrent()) {
       await withAgendaRuntimeMutationLock(
-        () => plugin.cancel(id: request.notificationId),
+        () => plugin.cancel(
+          id: request.notificationId,
+          tag: payload.hasStableTag
+              ? _agendaNotificationTag(request.key)
+              : null,
+        ),
       );
       return false;
     }
@@ -233,7 +238,12 @@ Future<bool> _scheduleBackgroundSnooze({
     );
     if (!await isRuntimeFenceCurrent()) {
       await withAgendaRuntimeMutationLock(
-        () => plugin.cancel(id: request.notificationId),
+        () => plugin.cancel(
+          id: request.notificationId,
+          tag: payload.hasStableTag
+              ? _agendaNotificationTag(request.key)
+              : null,
+        ),
       );
       return false;
     }
@@ -283,6 +293,20 @@ abstract interface class AgendaNotificationScheduleIdGateway {
 /// expose a universal delivered-at timestamp to ordinary applications.
 abstract interface class AgendaNotificationPlatformDiagnosticsGateway {
   Future<AgendaNotificationPlatformSnapshot> platformSnapshot();
+}
+
+/// Optional gateway capability exposing logical keys for both pending and
+/// currently displayed Sked notifications. The platform cache drops a request
+/// as soon as it fires, so reconciliation needs this view to cancel a stale
+/// active card after the underlying occurrence is deleted.
+abstract interface class AgendaNotificationOwnershipGateway {
+  Future<Set<String>> ownedNotificationKeys();
+}
+
+/// Optional low-level cancellation used when migrating a legacy untagged
+/// notification whose logical key is known from the runtime ownership record.
+abstract interface class AgendaNotificationIdCancellationGateway {
+  Future<void> cancelNotificationId(int id, {String? tag});
 }
 
 class AgendaNotificationPlatformSnapshot {
@@ -506,7 +530,12 @@ class SharedPreferencesAgendaNotificationTestIdAllocator
           // A false result is unusual; the current process still has a unique
           // ID, while the next launch will use a fresh random cursor if this
           // runtime-only write was rejected by the platform.
-          await preferences.setInt(storageKey, next);
+          if (!await preferences.setInt(storageKey, next)) {
+            // Do not treat an unpersisted cursor as durable. Fall through to
+            // the random in-process fallback so a later process cannot reuse
+            // this ID after a failed SharedPreferences write.
+            throw StateError('Developer notification ID cursor was not saved.');
+          }
           return candidate;
         }
         candidate = _nextDeveloperTestNotificationId(candidate);
@@ -577,6 +606,8 @@ class MemoryAgendaNotificationGateway
         AgendaNotificationScheduleModeGateway,
         AgendaNotificationScheduleIdGateway,
         AgendaNotificationPlatformDiagnosticsGateway,
+        AgendaNotificationOwnershipGateway,
+        AgendaNotificationIdCancellationGateway,
         AgendaNotificationTestGateway {
   MemoryAgendaNotificationGateway({
     AgendaNotificationTestIdAllocator? developerTestIdAllocator,
@@ -626,6 +657,15 @@ class MemoryAgendaNotificationGateway
           .toList(growable: false),
       activeIds: const [],
     );
+  }
+
+  @override
+  Future<Set<String>> ownedNotificationKeys() async =>
+      Set.unmodifiable(scheduled.keys);
+
+  @override
+  Future<void> cancelNotificationId(int id, {String? tag}) async {
+    scheduled.removeWhere((_, request) => request.id == id);
   }
 
   @override
@@ -736,6 +776,8 @@ class FlutterAgendaNotificationGateway
         AgendaNotificationScheduleModeGateway,
         AgendaNotificationScheduleIdGateway,
         AgendaNotificationPlatformDiagnosticsGateway,
+        AgendaNotificationOwnershipGateway,
+        AgendaNotificationIdCancellationGateway,
         AgendaNotificationTestGateway {
   FlutterAgendaNotificationGateway({
     FlutterLocalNotificationsPlugin? plugin,
@@ -836,6 +878,24 @@ class FlutterAgendaNotificationGateway
         activeIds: activeIds,
       );
     });
+  }
+
+  @override
+  Future<Set<String>> ownedNotificationKeys() async {
+    if (!_enabled) return const {};
+    return withAgendaRuntimeMutationLock(() async {
+      await _refreshNotificationIdCache();
+      return Set.unmodifiable({
+        ..._managedNotificationIds.keys,
+        ..._activeManagedNotificationIds.keys,
+      });
+    });
+  }
+
+  @override
+  Future<void> cancelNotificationId(int id, {String? tag}) async {
+    if (!_enabled) return;
+    await withAgendaRuntimeMutationLock(() => _plugin.cancel(id: id, tag: tag));
   }
 
   @override
@@ -1605,6 +1665,34 @@ class AgendaNotificationService {
     return _latestDiagnostics;
   }
 
+  /// Whether a background notification action is waiting for a foreground
+  /// projection. This is intentionally a cheap runtime-only check used by the
+  /// coordinator's foreground poll; it never reads AppData or touches the
+  /// platform plugin.
+  Future<bool> hasPendingActions() async {
+    if (_runtimeClearing) return false;
+    final store = _runtimeStore is AgendaNotificationActionStore
+        ? _runtimeStore as AgendaNotificationActionStore
+        : null;
+    if (store == null) return false;
+    return (await store.readPendingActions()).isNotEmpty;
+  }
+
+  /// Drains background actions against the latest durable projection. The
+  /// normal reconcile path remains the single place that applies the action
+  /// and rebuilds the platform plan.
+  Future<void> reconcilePendingActions() async {
+    final data = _lastData;
+    if (data == null || _runtimeClearing) return;
+    await reconcile(
+      data,
+      anchor: now(),
+      mode: AgendaNotificationReconcileMode.maintenance,
+      onPayload: _onPayload,
+      onAction: _onAction,
+    );
+  }
+
   /// Records a projection failure that occurred before [reconcile] could build
   /// a plan, such as a headless AppData load failure. Keeping this on the
   /// owned service preserves the same privacy-minimised runtime diagnostics
@@ -1910,12 +1998,22 @@ class AgendaNotificationService {
       var exactAllowed = await gateway.exactAlarmsAllowed;
       if (!data.notificationSettings.enabled || !notificationsEnabled) {
         final existing = await gateway.pendingPlan();
+        final ownedKeys = <String>{
+          ...existing.keys,
+          if (gateway is AgendaNotificationOwnershipGateway)
+            ...(await (gateway as AgendaNotificationOwnershipGateway)
+                .ownedNotificationKeys()),
+          if (_runtimeStore is AgendaNotificationBackgroundRequestIndex)
+            ...(await (_runtimeStore
+                    as AgendaNotificationBackgroundRequestIndex)
+                .backgroundRequestKeys()),
+        };
         final retainedPendingKeys = _retainedPendingKeys(
           existing,
           now: current,
           mode: mode,
         );
-        for (final key in existing.keys) {
+        for (final key in ownedKeys) {
           if (!(await _allowsProjectionFence(projectionFence))) return;
           if (retainedPendingKeys.contains(key)) continue;
           await _cancelManagedNotification(key);
@@ -1973,6 +2071,15 @@ class AgendaNotificationService {
         ..._lateReminderCompensations(occurrences, now: current),
       ], now: current);
       final existing = await gateway.pendingPlan();
+      final ownedKeys = <String>{
+        ...existing.keys,
+        if (gateway is AgendaNotificationOwnershipGateway)
+          ...(await (gateway as AgendaNotificationOwnershipGateway)
+              .ownedNotificationKeys()),
+        if (_runtimeStore is AgendaNotificationBackgroundRequestIndex)
+          ...(await (_runtimeStore as AgendaNotificationBackgroundRequestIndex)
+              .backgroundRequestKeys()),
+      };
       final retainedPendingKeys = _retainedPendingKeys(
         existing,
         now: current,
@@ -1993,6 +2100,15 @@ class AgendaNotificationService {
         desired: desired,
         existingFireTimes: existingForDiff,
       );
+      final keysToCancel = <String>{...diff.toCancel};
+      if (mode == AgendaNotificationReconcileMode.authoritative) {
+        // A fired card is no longer present in [pendingPlan], but it remains
+        // owned by Sked through its stable Android tag. Include those active
+        // keys when an authoritative data commit removes the occurrence.
+        keysToCancel.addAll(
+          ownedKeys.where((key) => !desired.any((item) => item.key == key)),
+        );
+      }
       // A changed title, location, target, or lock-screen policy must replace
       // the notification even when its stable key and fire time are unchanged.
       final changedKeys = <String>{};
@@ -2029,6 +2145,15 @@ class AgendaNotificationService {
             !changedKeys.contains(item.key)) {
           continue;
         }
+        final prior = metadata[item.key];
+        if (prior != null &&
+            !prior.hasStableTag &&
+            existing.containsKey(item.key)) {
+          // Migrate an older untagged pending alarm before writing the tagged
+          // replacement. Otherwise the same logical reminder can leave two
+          // cards on Android because notification identity includes the tag.
+          await _cancelManagedNotification(item.key);
+        }
         final requestedExact = exactAllowed;
         final request = _requestFor(item, data, exact: requestedExact);
         await gateway.schedule(request, exact: exactAllowed);
@@ -2064,7 +2189,7 @@ class AgendaNotificationService {
           ),
         );
       }
-      for (final key in diff.toCancel) {
+      for (final key in keysToCancel) {
         if (!(await _allowsProjectionFence(projectionFence))) return;
         if (retainedPendingKeys.contains(key)) continue;
         await _cancelManagedNotification(key);
@@ -2473,13 +2598,23 @@ class AgendaNotificationService {
     if (_runtimeClearing || actionId == null || actionId.isEmpty) return false;
     final decoded = _decodeNotificationPayload(payload);
     if (decoded == null) return false;
+    final currentData = _lastData;
+    if (currentData != null &&
+        !agendaNotificationPayloadMatchesProjection(
+          payload: decoded,
+          data: currentData,
+          projection: projection,
+        )) {
+      // The notification may have survived a data edit or a process restart.
+      // Do not let its old key/fingerprint mutate a newly projected item.
+      return false;
+    }
     var accepted = true;
     switch (actionId) {
       case 'snooze_10m':
         final existing = _snoozedUntil[decoded.key];
         if (existing != null && existing.isAfter(now())) {
-          final callback = _onAction;
-          if (callback != null) await callback(payload, actionId);
+          await _notifyActionCallback(payload, actionId);
           return true;
         }
         final fireAt = now().add(const Duration(minutes: 10));
@@ -2497,18 +2632,59 @@ class AgendaNotificationService {
         accepted = false;
     }
     if (!accepted) return false;
-    final data = _lastData;
+    final data = currentData;
     if (reconcileAfter && data != null) {
-      await reconcile(
-        data,
-        anchor: now(),
-        onPayload: _onPayload,
-        onAction: _onAction,
-      );
+      try {
+        await reconcile(
+          data,
+          anchor: now(),
+          onPayload: _onPayload,
+          onAction: _onAction,
+        );
+      } catch (error, stackTrace) {
+        // Runtime action state is already durable. A transient platform
+        // replan failure must not prevent a general-event acknowledgement
+        // callback from running or make the action disappear.
+        debugPrint(
+          'Notification action reconciliation failed: '
+          '$error\n$stackTrace',
+        );
+      }
     }
+    return _notifyActionCallback(payload, actionId);
+  }
+
+  Future<bool> _notifyActionCallback(String? payload, String actionId) async {
     final callback = _onAction;
-    if (callback != null) await callback(payload, actionId);
-    return true;
+    if (callback == null) return true;
+    try {
+      await callback(payload, actionId);
+      return true;
+    } catch (error, stackTrace) {
+      // A provider acknowledgement is a separate durable operation from the
+      // device-local suppression above. Preserve the action for a later
+      // projection when that callback fails instead of dropping it as handled.
+      debugPrint('Notification action callback failed: $error\n$stackTrace');
+      if (_backgroundNotificationActionIds.contains(actionId)) {
+        final actionStore = _runtimeStore is AgendaNotificationActionStore
+            ? _runtimeStore as AgendaNotificationActionStore
+            : null;
+        if (actionStore != null && payload != null && payload.isNotEmpty) {
+          try {
+            await actionStore.enqueueAction(
+              payload: payload,
+              actionId: actionId,
+            );
+          } catch (queueError, queueStackTrace) {
+            debugPrint(
+              'Queueing failed notification action failed: '
+              '$queueError\n$queueStackTrace',
+            );
+          }
+        }
+      }
+      return false;
+    }
   }
 
   /// Applies actions persisted by the notification background isolate. The
@@ -2538,8 +2714,17 @@ class AgendaNotificationService {
         debugPrint('Draining notification action failed: $error\n$stackTrace');
       }
       final decoded = _decodeNotificationPayload(action.payload);
+      final payloadMatchesCurrent =
+          decoded != null &&
+          (_lastData == null ||
+              agendaNotificationPayloadMatchesProjection(
+                payload: decoded,
+                data: _lastData!,
+                projection: projection,
+              ));
       final permanentlyInvalid =
           decoded == null ||
+          !payloadMatchesCurrent ||
           !_backgroundNotificationActionIds.contains(action.actionId) ||
           (action.actionId == 'handled' &&
               (decoded.occurrenceId == null ||
@@ -2660,7 +2845,35 @@ class AgendaNotificationService {
       : null;
 
   Future<void> _cancelManagedNotification(String key) async {
+    AgendaNotificationBackgroundRequest? persisted;
+    try {
+      persisted = await _backgroundRequestStore?.readBackgroundRequest(key);
+      if (persisted == null &&
+          _runtimeStore is AgendaNotificationBackgroundRequestIndex) {
+        persisted =
+            await (_runtimeStore as AgendaNotificationBackgroundRequestIndex)
+                .readBackgroundRequestForOwnership(key);
+      }
+    } catch (error, stackTrace) {
+      // A runtime-store read failure must not prevent the platform cancellation
+      // itself. The later cleanup call remains observable to reconciliation.
+      debugPrint(
+        'Reading notification ownership before cancellation failed: '
+        '$error\n$stackTrace',
+      );
+    }
     await gateway.cancel(key);
+    if (persisted != null &&
+        gateway is AgendaNotificationIdCancellationGateway) {
+      final payload = AgendaNotificationPayload.tryDecode(persisted.payload);
+      await (gateway as AgendaNotificationIdCancellationGateway)
+          .cancelNotificationId(
+            persisted.notificationId,
+            tag: payload?.hasStableTag == true
+                ? _agendaNotificationTag(key)
+                : null,
+          );
+    }
     await _backgroundRequestStore?.removeBackgroundRequest(key);
   }
 
@@ -2892,15 +3105,29 @@ _NotificationCopy _notificationCopy(String localeCode) {
           locale.countryCode?.toLowerCase() == 'tw' ||
           locale.countryCode?.toLowerCase() == 'hk');
   final snoozeAction = switch (language) {
+    'bg' => 'Отложи с 10 минути',
+    'cs' => 'Odložit o 10 minut',
+    'da' => 'Udsæt 10 minutter',
     'zh' => traditional ? '延後 10 分鐘' : '延后 10 分钟',
     'de' => '10 Minuten verschieben',
+    'et' => 'Lükka 10 minutit edasi',
     'es' => 'Posponer 10 minutos',
+    'fi' => 'Siirrä 10 minuuttia',
     'fr' => 'Reporter de 10 minutes',
+    'hi' => '10 मिनट बाद याद दिलाएं',
+    'hu' => 'Elhalasztás 10 perccel',
     'it' => 'Posticipa di 10 minuti',
     'ja' => '10 分後に再通知',
     'ko' => '10분 후 다시 알림',
+    'nl' => '10 minuten uitstellen',
+    'pl' => 'Odłóż o 10 minut',
     'pt' => 'Adiar 10 minutos',
+    'ro' => 'Amână 10 minute',
     'ru' => 'Отложить на 10 минут',
+    'sl' => 'Preloži za 10 minut',
+    'sv' => 'Skjut upp 10 minuter',
+    'th' => 'เลื่อน 10 นาที',
+    'vi' => 'Hoãn 10 phút',
     _ => 'Snooze 10 minutes',
   };
   final handledAction = switch (language) {

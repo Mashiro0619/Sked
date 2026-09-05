@@ -327,6 +327,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       provider: widget.provider,
       onTarget: _openAgendaTarget,
     );
+    _agendaCoordinator.setForegroundActive(true);
     unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
   }
 
@@ -340,6 +341,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         provider: widget.provider,
         onTarget: _openAgendaTarget,
       );
+      _agendaCoordinator.setForegroundActive(true);
       unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
     }
   }
@@ -350,9 +352,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _agendaCoordinator.setForegroundActive(false);
       _flushPendingUiStateSaves(widget.provider);
     }
     if (state == AppLifecycleState.resumed) {
+      _agendaCoordinator.setForegroundActive(true);
       unawaited(_agendaCoordinator.onResume());
     }
   }
@@ -365,6 +369,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _agendaCoordinator.setForegroundActive(false);
     _agendaCoordinator.dispose();
     _flushPendingUiStateSaves(widget.provider);
     super.dispose();
@@ -513,8 +518,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
     final parsedDate = tryParseStrictIsoDateTime(rawDate);
     if (parsedDate == null) return;
-    final start = normalizeDateOnly(parsedDate.toLocal());
-    final end = addCalendarDays(start, 1);
+    final keyParts = parseGeneralOccurrenceKey(occurrenceKey);
+    final keyStart = keyParts == null
+        ? null
+        : tryParseStrictIsoDateTime(keyParts.startDateTimeIso);
+    // The target date is retained for compatibility, but a timed UTC event
+    // can cross the local midnight boundary. Search from the occurrence key's
+    // instant so details lookup uses the same civil-date window as routing.
+    final searchDate = normalizeDateOnly((keyStart ?? parsedDate).toLocal());
+    final start = addCalendarDays(searchDate, -2);
+    final end = addCalendarDays(searchDate, 3);
     GeneralEventOccurrence? occurrence;
     for (final candidate in widget.provider.generalOccurrencesForRange(
       startInclusive: start,

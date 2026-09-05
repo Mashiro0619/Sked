@@ -598,6 +598,19 @@ abstract interface class AgendaNotificationBackgroundRequestStore {
   Future<void> pruneBackgroundRequests({required DateTime now});
 }
 
+/// Optional index of logical keys with persisted rendered notification
+/// ownership. It allows a restarted service to find legacy active cards even
+/// when Android no longer exposes their old untagged notification metadata.
+abstract interface class AgendaNotificationBackgroundRequestIndex {
+  Future<Set<String>> backgroundRequestKeys();
+
+  /// Reads ownership metadata without applying the short snooze-recovery TTL.
+  /// Active notification cards can outlive the scheduled fire time and still
+  /// need to be canceled after a later authoritative data edit.
+  Future<AgendaNotificationBackgroundRequest?>
+  readBackgroundRequestForOwnership(String key);
+}
+
 /// Optional transactional view used by the Android background notification
 /// callback.
 ///
@@ -669,6 +682,7 @@ class MemoryAgendaNotificationRuntimeStore
         AgendaNotificationRuntimeStore,
         AgendaNotificationActionStore,
         AgendaNotificationBackgroundRequestStore,
+        AgendaNotificationBackgroundRequestIndex,
         AgendaNotificationDiagnosticsStore,
         AgendaNotificationProjectionFenceStore,
         AgendaNotificationFencedRuntimeStore {
@@ -843,6 +857,21 @@ class MemoryAgendaNotificationRuntimeStore
     _backgroundRequestsFor(generation).removeWhere(
       (_, request) => now.difference(request.fireAt) > backgroundRequestTtl,
     );
+  }
+
+  @override
+  Future<Set<String>> backgroundRequestKeys() async {
+    final generation = _activeGeneration;
+    if (generation == null) return const {};
+    return Set.unmodifiable(_backgroundRequestsFor(generation).keys);
+  }
+
+  @override
+  Future<AgendaNotificationBackgroundRequest?>
+  readBackgroundRequestForOwnership(String key) async {
+    final generation = _activeGeneration;
+    if (generation == null || key.trim().isEmpty) return null;
+    return _backgroundRequestsFor(generation)[key];
   }
 
   @override
@@ -1044,6 +1073,7 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         AgendaNotificationRuntimeStore,
         AgendaNotificationActionStore,
         AgendaNotificationBackgroundRequestStore,
+        AgendaNotificationBackgroundRequestIndex,
         AgendaNotificationDiagnosticsStore,
         AgendaNotificationProjectionFenceStore,
         AgendaNotificationFencedRuntimeStore {
@@ -1143,7 +1173,15 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         }
       }
       if (dirty) {
-        await _writeSnoozes(result, fence);
+        // Cleanup is itself a read-modify-write. Queue it with the other
+        // mutations and reread the latest value so an action from another
+        // Flutter isolate cannot be overwritten by this stale snapshot.
+        await _enqueueMutation(() async {
+          await _reload(preferences);
+          if (!_isCurrentWritableFence(preferences, fence)) return;
+          final latest = await _readSnoozesForFence(preferences, fence);
+          await _writeSnoozes(latest, fence);
+        });
       }
       return Map.unmodifiable(result);
     } on FormatException {
@@ -1162,8 +1200,9 @@ class SharedPreferencesAgendaNotificationRuntimeStore
 
   Future<Set<String>> _readHandledOccurrenceIdsForFence(
     SharedPreferences preferences,
-    AgendaNotificationProjectionFence fence,
-  ) async {
+    AgendaNotificationProjectionFence fence, {
+    bool persistCleanup = true,
+  }) async {
     try {
       final now = _clock();
       final handledStorageKey = _handledStorageKey(fence);
@@ -1240,7 +1279,29 @@ class SharedPreferencesAgendaNotificationRuntimeStore
           !existingIds.containsAll(bounded.ids) ||
           !bounded.ids.containsAll(existingIds);
       if (dirty || records.length != bounded.timestamped.length || idsChanged) {
-        await _writeHandledState(bounded, fence);
+        if (!persistCleanup) {
+          return Set.unmodifiable(bounded.ids);
+        }
+        // Cleanup is a read-modify-write. Serialize it and reread before
+        // persisting so a concurrent action from another isolate is retained.
+        await _enqueueMutation(() async {
+          await _reload(preferences);
+          if (!_isCurrentWritableFence(preferences, fence)) return;
+          final latestIds = await _readHandledOccurrenceIdsForFence(
+            preferences,
+            fence,
+            persistCleanup: false,
+          );
+          final latestRecords = await _readHandledRecords(fence);
+          final now = _clock();
+          for (final id in latestIds) {
+            latestRecords[id] ??= now;
+          }
+          await _writeHandledState(
+            _limitHandledIds(latestIds, latestRecords),
+            fence,
+          );
+        });
       }
       return Set.unmodifiable(bounded.ids);
     } on AgendaNotificationRuntimeStorageException {
@@ -1301,7 +1362,17 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         result.removeRange(0, result.length - maxPendingActions);
         dirty = true;
       }
-      if (dirty) await _writePendingActions(result, fence);
+      if (dirty) {
+        // Queue stale-entry cleanup and reread the current queue first. A
+        // background action may have been appended while this snapshot was
+        // being decoded.
+        await _enqueueMutation(() async {
+          await _reload(preferences);
+          if (!_isCurrentWritableFence(preferences, fence)) return;
+          final latest = await _readPendingActionsForFence(preferences, fence);
+          await _writePendingActions(latest, fence);
+        });
+      }
       return List.unmodifiable(result);
     } on FormatException {
       return const [];
@@ -1383,7 +1454,11 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       await _reload(preferences);
       if (!_isCurrentWritableFence(preferences, fence)) return;
       final values = {
-        ...await _readHandledOccurrenceIdsForFence(preferences, fence),
+        ...await _readHandledOccurrenceIdsForFence(
+          preferences,
+          fence,
+          persistCleanup: false,
+        ),
         occurrenceId,
       };
       final records = await _readHandledRecords(fence);
@@ -1599,6 +1674,52 @@ class SharedPreferencesAgendaNotificationRuntimeStore
   }
 
   @override
+  Future<Set<String>> backgroundRequestKeys() async {
+    final preferences = await _preferences;
+    await _reload(preferences);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return const {};
+    final prefix = _backgroundRequestStorageKeyPrefix(fence);
+    final keys = <String>{};
+    for (final storageKey in preferences.getKeys().where(
+      (key) => key.startsWith(prefix),
+    )) {
+      final raw = preferences.getString(storageKey);
+      if (raw == null) continue;
+      try {
+        final request = AgendaNotificationBackgroundRequest.tryDecode(
+          jsonDecode(raw),
+        );
+        if (request != null) keys.add(request.key);
+      } on FormatException {
+        // The normal prune path removes malformed records; do not expose one
+        // as a valid ownership key during this read.
+      }
+    }
+    return Set.unmodifiable(keys);
+  }
+
+  @override
+  Future<AgendaNotificationBackgroundRequest?>
+  readBackgroundRequestForOwnership(String key) async {
+    if (key.trim().isEmpty) return null;
+    final preferences = await _preferences;
+    await _reload(preferences);
+    final fence = _readProjectionFence(preferences);
+    if (fence.blocked) return null;
+    final raw = preferences.getString(_backgroundRequestStorageKey(key, fence));
+    if (raw == null || raw.trim().isEmpty) return null;
+    try {
+      final request = AgendaNotificationBackgroundRequest.tryDecode(
+        jsonDecode(raw),
+      );
+      return request?.key == key ? request : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  @override
   Future<AgendaNotificationDiagnostics?> readNotificationDiagnostics() async {
     final preferences = await _preferences;
     await _reload(preferences);
@@ -1611,7 +1732,14 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       // Treat a partial or pre-release diagnostic snapshot as absent. It must
       // never prevent notification initialization or scheduling.
     }
-    await _remove(diagnosticsKey);
+    // Do not delete a fresh diagnostic record written by another isolate
+    // while this malformed snapshot was being decoded.
+    await _enqueueMutation(() async {
+      await _reload(preferences);
+      if (preferences.getString(diagnosticsKey) == raw) {
+        await _remove(diagnosticsKey);
+      }
+    });
     return null;
   }
 

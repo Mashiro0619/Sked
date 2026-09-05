@@ -723,6 +723,45 @@ void main() {
       expect(platform.cancelledIds, isNot(contains(7103)));
     });
 
+    test('authoritative reconcile cancels an active card after its pending entry is gone', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => DateTime(2026, 8, 3, 7),
+      );
+      await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+      final scheduled = platform.schedules.single;
+      final payload = AgendaNotificationPayload.tryDecode(scheduled.payload)!;
+
+      platform.schedules.clear();
+      platform.pendingRequests = const [];
+      platform.activeNotifications = [
+        ActiveNotification(
+          id: scheduled.id,
+          title: scheduled.title,
+          body: scheduled.body,
+          tag: scheduled.notificationDetails?.tag,
+        ),
+      ];
+      final removed = _data().copyWith(
+        studentMode: _data().studentMode.copyWith(
+          timetables: [
+            _data().studentMode.timetables.single.copyWith(courses: const []),
+          ],
+        ),
+      );
+
+      await service.reconcile(removed, anchor: DateTime(2026, 8, 3, 7));
+
+      expect(platform.cancelledIds, contains(scheduled.id));
+      expect(
+        platform.cancelledTags,
+        contains(scheduled.notificationDetails?.tag),
+      );
+      expect(payload.key, isNotEmpty);
+    });
+
     test(
       'keeps different managed keys separate after a hash collision',
       () async {
@@ -1204,6 +1243,37 @@ void main() {
       );
     },
   );
+
+  test('stale actions cannot suppress an edited occurrence', () async {
+    final runtime = MemoryAgendaNotificationRuntimeStore();
+    final gateway = MemoryAgendaNotificationGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtime,
+      now: () => DateTime(2026, 8, 3, 7, 40),
+    );
+    await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7, 40));
+    final oldPayload = gateway.scheduled.values.single.payload;
+    final editedData = _data().copyWith(
+      studentMode: _data().studentMode.copyWith(
+        timetables: [
+          _data().studentMode.timetables.single.copyWith(
+            courses: [
+              _data().studentMode.timetables.single.courses.single.copyWith(
+                name: 'Physics',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    await service.reconcile(editedData, anchor: DateTime(2026, 8, 3, 7, 40));
+
+    await service.handleAction(oldPayload, 'handled');
+    expect(runtime.handledOccurrenceIds, isEmpty);
+    expect(gateway.scheduled, isNotEmpty);
+  });
 
   test('handled suppresses all reminders for the occurrence', () async {
     final runtime = MemoryAgendaNotificationRuntimeStore();

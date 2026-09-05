@@ -1746,6 +1746,17 @@
       "importance": {}
     }
   },
+  "developerNotificationPlatformState": "{pending} pending / {active} active",
+  "@developerNotificationPlatformState": {
+    "placeholders": {
+      "pending": {"type": "int"},
+      "active": {"type": "int"}
+    }
+  },
+  "developerNotificationNativeLastPosted": "native last posted {time}",
+  "@developerNotificationNativeLastPosted": {
+    "placeholders": {"time": {"type": "String"}}
+  },
   "developerNotificationNoDiagnostic": "No reconciliation recorded yet.",
   "@developerNotificationNoDiagnostic": {},
   "developerNotificationNextReminder": "Next real reminder",

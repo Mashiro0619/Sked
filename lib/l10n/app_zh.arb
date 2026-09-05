@@ -1744,6 +1744,17 @@
       "importance": {}
     }
   },
+  "developerNotificationPlatformState": "{pending} 条待处理 / {active} 条显示中",
+  "@developerNotificationPlatformState": {
+    "placeholders": {
+      "pending": {"type": "int"},
+      "active": {"type": "int"}
+    }
+  },
+  "developerNotificationNativeLastPosted": "原生最近显示于 {time}",
+  "@developerNotificationNativeLastPosted": {
+    "placeholders": {"time": {"type": "String"}}
+  },
   "developerNotificationNoDiagnostic": "尚无重算记录。",
   "@developerNotificationNoDiagnostic": {},
   "developerNotificationNextReminder": "下一条真实提醒",

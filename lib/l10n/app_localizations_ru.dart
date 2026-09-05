@@ -2470,6 +2470,16 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String developerNotificationPlatformState(int pending, int active) {
+    return '$pending pending / $active active';
+  }
+
+  @override
+  String developerNotificationNativeLastPosted(String time) {
+    return 'native last posted $time';
+  }
+
+  @override
   String get developerNotificationNoDiagnostic =>
       'No reconciliation recorded yet.';
 

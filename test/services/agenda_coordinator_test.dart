@@ -361,6 +361,32 @@ void main() {
     },
   );
 
+  test('startup does not reactivate a fence left by a failed clear', () async {
+    final anchor = DateTime(2026, 8, 3, 8);
+    final provider = await _providerWithData(_dataWithEvent());
+    addTearDown(provider.dispose);
+    final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+    await runtime.blockProjectionForDataClear();
+    final gateway = MemoryAgendaNotificationGateway();
+    final coordinator = AgendaCoordinator(
+      provider: provider,
+      notificationService: AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      ),
+      productivityBridge: AndroidProductivityBridge(enabled: false),
+      clock: () => anchor,
+    );
+    addTearDown(coordinator.dispose);
+
+    await coordinator.start();
+
+    expect(gateway.scheduled, isEmpty);
+    expect((await runtime.readProjectionFence()).blocked, isTrue);
+  });
+
   test('data clear wins over a reconciliation already in flight', () async {
     final anchor = DateTime(2026, 8, 3, 8);
     final provider = await _providerWithData(_dataWithEvent());
@@ -589,9 +615,11 @@ void main() {
     addTearDown(provider.dispose);
     final errors = <Object>[];
     final gateway = MemoryAgendaNotificationGateway();
+    final runtime = MemoryAgendaNotificationRuntimeStore();
     final service = AgendaNotificationService(
       enabled: true,
       gateway: gateway,
+      runtimeStore: runtime,
       now: () => anchor,
     );
     final coordinator = AgendaCoordinator(
@@ -609,6 +637,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(coordinator.isStarted, isTrue);
     expect(errors, contains(isA<StateError>()));
+    expect(await runtime.readPendingActions(), hasLength(1));
   });
 }
 

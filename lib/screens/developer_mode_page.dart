@@ -556,9 +556,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                   leading: const Icon(Icons.devices_outlined),
                   title: l10n.developerNotificationPlan,
                   subtitle:
-                      'platform ${agenda.platformPendingCount} pending / '
-                      '${agenda.platformActiveCount} active'
-                      '${_nativeActiveNotificationSuffix(android)}',
+                      '${l10n.developerNotificationPlatformState(agenda.platformPendingCount!, agenda.platformActiveCount!)}${_nativeActiveNotificationSuffix(l10n, android)}',
                   onTap: _diagnosticRefreshEnabled
                       ? () => unawaited(_refreshNotificationDiagnostics())
                       : null,
@@ -678,6 +676,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   }
 
   String _nativeActiveNotificationSuffix(
+    AppLocalizations l10n,
     AndroidNotificationDiagnostics? diagnostics,
   ) {
     final active = diagnostics?.activeNotifications ?? const [];
@@ -688,7 +687,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     );
     final time = DateTime.fromMillisecondsSinceEpoch(latest.postTimeMillis)
         .toLocal();
-    return ' · native last posted $time';
+    return ' · ${l10n.developerNotificationNativeLastPosted(time.toString())}';
   }
 
   List<_NotificationChannelPresentation> _notificationChannels(

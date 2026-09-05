@@ -187,6 +187,78 @@ class AgendaNotificationPayload {
   );
 }
 
+/// Verifies that a notification still describes an occurrence in the current
+/// durable projection. This is shared by body taps and action buttons: a
+/// delayed action must not mutate a newly edited occurrence that reused the
+/// same stable identity.
+bool agendaNotificationPayloadMatchesProjection({
+  required AgendaNotificationPayload payload,
+  required AppData data,
+  required AgendaProjectionService projection,
+}) {
+  final parsedKey = parseNotificationPlanKey(payload.key);
+  if (payload.hasStableTag &&
+      (parsedKey == null ||
+          parsedKey.sourceType != payload.target.sourceType)) {
+    return false;
+  }
+  if (!projection.registry.sources.any(
+    (source) =>
+        source.id == payload.target.sourceType ||
+        source.descriptor.id == payload.target.sourceType,
+  )) {
+    return false;
+  }
+
+  final targetDate = _parseDate(payload.target.dateIso);
+  final anchor = targetDate ?? normalizeDateOnly(payload.fireAt.toLocal());
+  final fireDate = normalizeDateOnly(payload.fireAt.toLocal());
+  final start = addCalendarDays(
+    anchor.isBefore(fireDate) ? anchor : fireDate,
+    -2,
+  );
+  final end = addCalendarDays(anchor.isAfter(fireDate) ? anchor : fireDate, 4);
+  final occurrences = projection.occurrencesForRange(
+    data,
+    startInclusive: start,
+    endExclusive: end,
+    timetableId: payload.target.timetableId,
+  );
+  for (final occurrence in occurrences) {
+    if (occurrence.sourceType != payload.target.sourceType ||
+        occurrence.target != payload.target ||
+        (payload.occurrenceId != null &&
+            occurrence.scopedStableId != payload.occurrenceId)) {
+      continue;
+    }
+    if (parsedKey != null &&
+        (parsedKey.sourceType != occurrence.sourceType ||
+            parsedKey.stableOccurrenceId != occurrence.stableId ||
+            !occurrence.reminders.any(
+              (reminder) =>
+                  reminder.normalized().minutesBefore ==
+                  parsedKey.minutesBefore,
+            ))) {
+      continue;
+    }
+    if (!payload.hasStableTag) return true;
+    final descriptor = projection.registry.descriptorFor(occurrence.sourceType);
+    final fingerprint = payload.fingerprint;
+    if (fingerprint == null ||
+        fingerprint.length != 40 ||
+        !RegExp(r'^[0-9a-f]{40}$').hasMatch(fingerprint)) {
+      return false;
+    }
+    return agendaNotificationFingerprint(
+          occurrence: occurrence,
+          data: data,
+          descriptor: descriptor,
+        ) ==
+        fingerprint;
+  }
+  return false;
+}
+
 typedef AgendaTargetCallback = Future<void> Function(AgendaTarget target);
 
 /// Resolves stable agenda targets into provider navigation state. UI layers can
@@ -289,50 +361,11 @@ class AgendaActionRouter {
       // projection. Its handler still performs the final target validation.
       return sourceHandlers.containsKey(parsedKey.sourceType);
     }
-    if (payload.fingerprint == null ||
-        payload.fingerprint!.length != 40 ||
-        !RegExp(r'^[0-9a-f]{40}$').hasMatch(payload.fingerprint!)) {
-      return false;
-    }
-    final targetDate = _parseDate(payload.target.dateIso);
-    final anchor = targetDate ?? normalizeDateOnly(payload.fireAt.toLocal());
-    final fireDate = normalizeDateOnly(payload.fireAt.toLocal());
-    final start = addCalendarDays(
-      anchor.isBefore(fireDate) ? anchor : fireDate,
-      -2,
+    return agendaNotificationPayloadMatchesProjection(
+      payload: payload,
+      data: provider.appData,
+      projection: _projection,
     );
-    final end = addCalendarDays(
-      anchor.isAfter(fireDate) ? anchor : fireDate,
-      4,
-    );
-    final occurrences = _projection.occurrencesForRange(
-      provider.appData,
-      startInclusive: start,
-      endExclusive: end,
-      timetableId: payload.target.timetableId,
-    );
-    for (final occurrence in occurrences) {
-      if (occurrence.sourceType != parsedKey.sourceType ||
-          occurrence.stableId != parsedKey.stableOccurrenceId ||
-          occurrence.target != payload.target ||
-          occurrence.scopedStableId != payload.occurrenceId ||
-          !occurrence.reminders.any(
-            (reminder) =>
-                reminder.normalized().minutesBefore == parsedKey.minutesBefore,
-          )) {
-        continue;
-      }
-      final descriptor = _projection.registry.descriptorFor(
-        occurrence.sourceType,
-      );
-      return agendaNotificationFingerprint(
-            occurrence: occurrence,
-            data: provider.appData,
-            descriptor: descriptor,
-          ) ==
-          payload.fingerprint;
-    }
-    return false;
   }
 
   Future<bool> route(AgendaAction action) async {

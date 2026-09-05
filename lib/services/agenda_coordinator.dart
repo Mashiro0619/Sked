@@ -73,6 +73,7 @@ class AgendaCoordinator {
   AppData? _notificationRetryData;
   int? _notificationRetryRevision;
   bool _notificationRetryAttempted = false;
+  Timer? _foregroundActionPollTimer;
 
   bool get isStarted => _started && !_disposed;
   int? get lastPublishedRevision => _lastPublishedRevision;
@@ -118,13 +119,10 @@ class AgendaCoordinator {
         // the method channel is being installed is not lost.
         await _productivityBridge.initialize();
       }
-      // The provider only reaches this point after its AppData load (and any
-      // first-launch default write) settles. It is therefore safe to reopen a
-      // fence left by a previous data clear; a headless file read never gets
-      // that authority.
-      if (_canProjectProviderData) {
-        await _notificationService.activateProjectionAfterDurableData();
-      }
+      // Do not reopen a blocked projection fence merely because the provider
+      // loaded writable data. A failed clear can leave the old file intact or
+      // partially removed; only a subsequent successful committed-data event
+      // has enough durability authority to activate a fresh generation.
       // Starting or resuming the app must not invalidate a notification that
       // has just become due while Android is delivering it. Only a durable
       // data commit gets an authoritative replacement pass.
@@ -309,6 +307,36 @@ class AgendaCoordinator {
   Future<void> reconcileMaintenance() =>
       reconcileNow(mode: AgendaNotificationReconcileMode.maintenance);
 
+  /// Keeps non-UI notification actions responsive while the app remains in the
+  /// foreground. Android delivers those actions to the plugin background
+  /// isolate, so there is no main-isolate callback to wake this coordinator.
+  /// The poll is active only while foregrounded and performs no platform work
+  /// when the runtime action queue is empty.
+  void setForegroundActive(bool active) {
+    if (_disposed) return;
+    if (!active || !_notificationService.isSupported) {
+      _foregroundActionPollTimer?.cancel();
+      _foregroundActionPollTimer = null;
+      return;
+    }
+    if (_foregroundActionPollTimer != null) return;
+    _foregroundActionPollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(_pollForegroundActions()),
+    );
+  }
+
+  Future<void> _pollForegroundActions() async {
+    if (_disposed || !_canProjectProviderData) return;
+    try {
+      if (await _notificationService.hasPendingActions()) {
+        await _notificationService.reconcilePendingActions();
+      }
+    } catch (error, stackTrace) {
+      onError?.call(error, stackTrace);
+    }
+  }
+
   /// Read-only runtime diagnostics for the notification settings/developer
   /// surface. The coordinator owns the single service instance so callers
   /// never create a second plugin instance.
@@ -433,7 +461,10 @@ class AgendaCoordinator {
     if (actionId == null || actionId.isEmpty) return;
     if (actionId == 'snooze_10m') return;
     if (actionId == 'handled') {
-      await _syncHandledGeneralReminder(payload);
+      final synced = await _syncHandledGeneralReminder(payload);
+      if (!synced) {
+        throw StateError('Unable to persist the handled reminder action.');
+      }
       return;
     }
     await _onAgendaIntent(payload ?? '');
@@ -444,12 +475,12 @@ class AgendaCoordinator {
   /// so mirror that one source-specific action into its existing provider
   /// model after the runtime operation succeeds. Courses intentionally remain
   /// runtime-only: marking one class handled must not change its schedule.
-  Future<void> _syncHandledGeneralReminder(String? payload) async {
+  Future<bool> _syncHandledGeneralReminder(String? payload) async {
     try {
       final envelope = AgendaNotificationPayload.tryDecode(payload);
       if (envelope == null ||
           envelope.target.sourceType != AgendaSourceType.generalEvent) {
-        return;
+        return true;
       }
       final target = envelope.target;
       final calendarId = target.calendarId?.trim();
@@ -463,10 +494,10 @@ class AgendaCoordinator {
           occurrenceKey == null ||
           occurrenceKey.isEmpty ||
           rawDate == null) {
-        return;
+        return true;
       }
       final parsedDate = tryParseStrictIsoDateTime(rawDate);
-      if (parsedDate == null) return;
+      if (parsedDate == null) return true;
       final keyParts = parseGeneralOccurrenceKey(occurrenceKey);
       final keyStart = keyParts == null
           ? null
@@ -495,14 +526,16 @@ class AgendaCoordinator {
       }
       if (occurrence == null ||
           _provider.isGeneralReminderHandled(occurrence)) {
-        return;
+        return true;
       }
       await _provider.dismissGeneralReminder(occurrence);
+      return true;
     } catch (error, stackTrace) {
       // Notification action callbacks are invoked by a plugin as `void`
       // handlers. Contain provider failures here so they never become an
       // unhandled asynchronous error in the platform callback dispatcher.
       onError?.call(error, stackTrace);
+      return false;
     }
   }
 
@@ -523,6 +556,8 @@ class AgendaCoordinator {
     _providerReadyTimeout = null;
     _notificationRetryTimer?.cancel();
     _notificationRetryTimer = null;
+    _foregroundActionPollTimer?.cancel();
+    _foregroundActionPollTimer = null;
     _notificationRetryData = null;
     _notificationRetryRevision = null;
     _removeProviderReadyListener?.call();

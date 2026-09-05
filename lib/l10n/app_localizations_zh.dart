@@ -2331,6 +2331,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String developerNotificationPlatformState(int pending, int active) {
+    return '$pending 条待处理 / $active 条显示中';
+  }
+
+  @override
+  String developerNotificationNativeLastPosted(String time) {
+    return '原生最近显示于 $time';
+  }
+
+  @override
   String get developerNotificationNoDiagnostic => '尚无重算记录。';
 
   @override
@@ -4859,6 +4869,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String developerNotificationChannelSummary(Object state, Object importance) {
     return '$state；$importance';
+  }
+
+  @override
+  String developerNotificationPlatformState(int pending, int active) {
+    return '$pending 條待處理 / $active 條顯示中';
+  }
+
+  @override
+  String developerNotificationNativeLastPosted(String time) {
+    return '原生最近顯示於 $time';
   }
 
   @override
