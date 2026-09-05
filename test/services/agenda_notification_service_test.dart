@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,6 +13,7 @@ import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_projection_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/notification_planner.dart';
+import 'package:sked/services/windows_notification_backend.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 const _timezoneChannel = MethodChannel('flutter_timezone');
@@ -111,7 +114,8 @@ class _FakeAndroidNotificationsPlatform
     AndroidNotificationDetails? notificationDetails,
     AndroidScheduleMode scheduleMode = AndroidScheduleMode.exact,
   }) async {
-    if (scheduleMode == AndroidScheduleMode.exactAllowWhileIdle) {
+    if (scheduleMode == AndroidScheduleMode.exactAllowWhileIdle ||
+        scheduleMode == AndroidScheduleMode.alarmClock) {
       final error = exactScheduleError;
       if (error != null) {
         if (revokeExactAlarmAfterScheduleError) {
@@ -171,6 +175,106 @@ class _FakeAndroidNotificationsPlatform
 
   @override
   Future<bool?> openAppNotificationSettings() async => openSettingsResult;
+
+  void deliver(NotificationResponse response) => _onResponse?.call(response);
+}
+
+class _RecordedWindowsSchedule {
+  const _RecordedWindowsSchedule({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.scheduledDate,
+    required this.payload,
+    required this.notificationDetails,
+  });
+
+  final int id;
+  final String? title;
+  final String? body;
+  final tz.TZDateTime scheduledDate;
+  final String? payload;
+  final WindowsNotificationDetails? notificationDetails;
+}
+
+class _FakeWindowsNotificationsPlatform
+    implements AgendaWindowsNotificationBackend {
+  bool initializeResult = true;
+  int initializeCount = 0;
+  WindowsInitializationSettings? initializationSettings;
+  DidReceiveNotificationResponseCallback? _onResponse;
+  NotificationAppLaunchDetails? launchDetails =
+      const NotificationAppLaunchDetails(false);
+  List<PendingNotificationRequest> pendingRequests = const [];
+  List<ActiveNotification> activeNotifications = const [];
+  final List<_RecordedWindowsSchedule> schedules = [];
+  final List<int> shownIds = [];
+  final List<int> cancelledIds = [];
+
+  @override
+  Future<bool> initialize({
+    required WindowsInitializationSettings settings,
+    required DidReceiveNotificationResponseCallback onResponse,
+  }) async {
+    initializeCount += 1;
+    initializationSettings = settings;
+    _onResponse = onResponse;
+    return initializeResult;
+  }
+
+  @override
+  Future<NotificationAppLaunchDetails?>
+  getNotificationAppLaunchDetails() async => launchDetails;
+
+  @override
+  Future<List<PendingNotificationRequest>>
+  pendingNotificationRequests() async => List.unmodifiable(pendingRequests);
+
+  @override
+  Future<List<ActiveNotification>> getActiveNotifications() async =>
+      List.unmodifiable(activeNotifications);
+
+  @override
+  Future<void> zonedSchedule({
+    required int id,
+    String? title,
+    String? body,
+    required tz.TZDateTime scheduledDate,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+    WindowsNotificationDetails? notificationDetails,
+  }) async {
+    schedules.add(
+      _RecordedWindowsSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        payload: payload,
+        notificationDetails: notificationDetails,
+      ),
+    );
+  }
+
+  @override
+  Future<void> show({
+    required int id,
+    String? title,
+    String? body,
+    String? payload,
+    WindowsNotificationDetails? notificationDetails,
+  }) async {
+    shownIds.add(id);
+  }
+
+  @override
+  Future<void> cancel({required int id}) async => cancelledIds.add(id);
+
+  @override
+  Future<void> cancelAll() async {
+    schedules.clear();
+    cancelledIds.add(-1);
+  }
 
   void deliver(NotificationResponse response) => _onResponse?.call(response);
 }
@@ -827,6 +931,45 @@ void main() {
       },
     );
 
+    test('cancels a notification by its platform id', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+      await gateway.cancelNotificationId(9876, tag: 'sked_agenda:test');
+
+      expect(platform.cancelledIds, [9876]);
+      expect(platform.cancelledTags, ['sked_agenda:test']);
+    });
+
+    test('cancels an unmanaged key through its legacy preferred id', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      const key = 'never-scheduled-key';
+
+      await gateway.cancel(key);
+
+      expect(platform.cancelledIds, [notificationIdForKey(key)]);
+      expect(platform.cancelledTags, [null]);
+    });
+
+    test('rejects a developer test without a fire time', () async {
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+      final request = const AgendaNotificationTestRequest(
+        id: 2000000001,
+        channel: AgendaNotificationTestChannel.course,
+        title: 'Test',
+        body: 'Test body',
+        localeCode: 'en',
+        channelId: 'sked_course_reminders',
+        channelName: 'Course reminders',
+        channelDescription: 'Course reminder tests',
+      );
+
+      await expectLater(
+        gateway.scheduleTestNotification(request),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(platform.schedules, isEmpty);
+    });
+
     test(
       'schedules localized Android details and preserves managed ownership',
       () async {
@@ -938,6 +1081,29 @@ void main() {
       );
     });
 
+    test(
+      'falls back when exact scheduling fails after permission is revoked',
+      () async {
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+        platform.exactScheduleError = PlatformException(code: 'alarm-failed');
+        platform.exactAlarmsAllowedResult = false;
+
+        await gateway.schedule(
+          _platformRequest(
+            key: 'exact-revoked-fallback',
+            fireAt: DateTime.now().add(const Duration(days: 1)),
+          ),
+          exact: true,
+        );
+
+        expect(platform.schedules, hasLength(1));
+        expect(
+          platform.schedules.single.scheduleMode,
+          AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      },
+    );
+
     test('uses alarm-clock mode for the delayed developer test when exact alarms are allowed', () async {
       final gateway = FlutterAgendaNotificationGateway(enabled: true);
       final fireAt = DateTime.now().add(const Duration(minutes: 1));
@@ -965,6 +1131,31 @@ void main() {
 
     test('uses inexact idle mode for the delayed developer test without exact alarm access', () async {
       platform.exactAlarmsAllowedResult = false;
+      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+
+      await gateway.scheduleTestNotification(
+        AgendaNotificationTestRequest(
+          id: 2000000001,
+          channel: AgendaNotificationTestChannel.course,
+          title: 'Test',
+          body: 'Test body',
+          localeCode: 'en',
+          channelId: 'sked_course_reminders',
+          channelName: 'Course reminders',
+          channelDescription: 'Course reminder tests',
+          fireAt: DateTime.now().add(const Duration(minutes: 1)),
+        ),
+      );
+
+      expect(
+        platform.schedules.single.scheduleMode,
+        AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    });
+
+    test('falls back from a revoked alarm-clock developer test', () async {
+      platform.exactScheduleError = PlatformException(code: 'alarm-failed');
+      platform.revokeExactAlarmAfterScheduleError = true;
       final gateway = FlutterAgendaNotificationGateway(enabled: true);
 
       await gateway.scheduleTestNotification(
@@ -1186,6 +1377,190 @@ void main() {
     );
   });
 
+  group('FlutterAgendaNotificationGateway Windows adapter', () {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    late _FakeWindowsNotificationsPlatform platform;
+    late TargetPlatform? previousTargetPlatform;
+
+    setUp(() {
+      previousTargetPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      platform = _FakeWindowsNotificationsPlatform();
+      messenger.setMockMethodCallHandler(_timezoneChannel, (call) async {
+        expect(call.method, 'getLocalTimezone');
+        return 'Etc/UTC';
+      });
+    });
+
+    tearDown(() {
+      messenger.setMockMethodCallHandler(_timezoneChannel, null);
+      debugDefaultTargetPlatformOverride = previousTargetPlatform;
+      tz.setLocalLocation(tz.UTC);
+    });
+
+    test('initializes with a stable MSIX toast identity', () async {
+      final gateway = FlutterAgendaNotificationGateway(
+        windowsBackend: platform,
+      );
+      await gateway.initialize(onTap: (_) {});
+
+      expect(platform.initializeCount, 1);
+      expect(platform.initializationSettings?.appName, 'Sked');
+      expect(platform.initializationSettings?.appUserModelId, 'Mashiro.Sked');
+      expect(
+        platform.initializationSettings?.guid,
+        '5d9d8f6a-4d1a-4f3a-9b0a-6a3e7d2c1f58',
+      );
+      expect(tz.local.name, tz.UTC.name);
+    });
+
+    test(
+      'schedules independent Windows toasts with foreground actions',
+      () async {
+        final gateway = FlutterAgendaNotificationGateway(
+          windowsBackend: platform,
+        );
+        await gateway.initialize(onTap: (_) {});
+        final first = _platformRequest(
+          key: 'windows-first',
+          fireAt: DateTime.utc(2030, 1, 2, 8),
+        );
+        final second = _platformRequest(
+          key: 'windows-second',
+          fireAt: DateTime.utc(2030, 1, 2, 9),
+        );
+
+        await gateway.schedule(first, exact: true);
+        await gateway.schedule(second, exact: true);
+
+        expect(platform.schedules, hasLength(2));
+        expect(platform.schedules[0].id, isNot(platform.schedules[1].id));
+        expect(
+          platform.schedules[0].notificationDetails?.scenario,
+          WindowsNotificationScenario.reminder,
+        );
+        expect(
+          platform.schedules[0].notificationDetails?.actions,
+          hasLength(2),
+        );
+        expect(
+          platform.schedules[0].notificationDetails!.actions.first.arguments,
+          startsWith('sked.windows.action.v1:snooze_10m:'),
+        );
+      },
+    );
+
+    test(
+      'reuses runtime ownership when Windows pending requests omit payloads',
+      () async {
+        final runtime = MemoryAgendaNotificationRuntimeStore();
+        final request = _platformRequest(
+          key: 'windows-owned',
+          fireAt: DateTime.utc(2030, 1, 2, 8),
+        );
+        await runtime.saveBackgroundRequest(
+          AgendaNotificationBackgroundRequest(
+            key: request.key,
+            notificationId: 1234,
+            title: request.title,
+            body: request.body,
+            payload: request.payload,
+            fireAt: request.fireAt,
+            localeCode: request.localeCode,
+            lockScreenShowTitles: request.lockScreenShowTitles,
+          ),
+        );
+        final gateway = FlutterAgendaNotificationGateway(
+          windowsBackend: platform,
+          runtimeStore: runtime,
+        );
+
+        await gateway.schedule(request, exact: true);
+
+        expect(platform.schedules.single.id, 1234);
+        expect(await gateway.pendingPlan(), {request.key: request.fireAt});
+        expect((await gateway.pendingMetadata())[request.key]?.id, 1234);
+      },
+    );
+
+    test(
+      'clears scheduled developer tests after a Windows process restart',
+      () async {
+        const testId = 2000000101;
+        platform.pendingRequests = [
+          const PendingNotificationRequest(testId, null, null, null),
+        ];
+        final gateway = FlutterAgendaNotificationGateway(
+          windowsBackend: platform,
+        );
+
+        await gateway.clearTestNotifications();
+
+        expect(platform.cancelledIds, contains(testId));
+      },
+    );
+
+    test('routes Windows body taps and action envelopes separately', () async {
+      final gateway = FlutterAgendaNotificationGateway(
+        windowsBackend: platform,
+      );
+      final taps = <String?>[];
+      final actions = <String>[];
+      await gateway.initialize(
+        onTap: taps.add,
+        onAction: (payload, actionId) => actions.add('$actionId:$payload'),
+      );
+      final payload = _platformPayload(
+        'windows-route',
+        fireAt: DateTime.utc(2030, 1, 2, 8),
+      );
+      final encoded = base64Url
+          .encode(utf8.encode(payload))
+          .replaceAll('=', '');
+
+      platform.deliver(
+        NotificationResponse(
+          notificationResponseType:
+              NotificationResponseType.selectedNotification,
+          payload: payload,
+        ),
+      );
+      platform.deliver(
+        NotificationResponse(
+          notificationResponseType:
+              NotificationResponseType.selectedNotificationAction,
+          payload: 'sked.windows.action.v1:handled:$encoded',
+          actionId: 'sked.windows.action.v1:handled:$encoded',
+        ),
+      );
+
+      expect(taps, [payload]);
+      expect(actions, ['handled:$payload']);
+    });
+
+    test(
+      'reports Windows scheduler semantics and package capability',
+      () async {
+        final gateway = FlutterAgendaNotificationGateway(
+          windowsBackend: platform,
+        );
+        final snapshot = await gateway.platformSnapshot();
+
+        expect(snapshot.platform, AgendaNotificationPlatform.windows);
+        expect(
+          snapshot.permissionState,
+          AgendaNotificationPermissionState.unknown,
+        );
+        expect(
+          snapshot.exactAlarmState,
+          AgendaNotificationExactAlarmState.notApplicable,
+        );
+        expect(snapshot.canCancelActive, isFalse);
+      },
+    );
+  });
+
   test('memory gateway reports configured permission states', () async {
     final gateway = MemoryAgendaNotificationGateway()
       ..permissionGranted = false
@@ -1241,6 +1616,19 @@ void main() {
         restartedGateway.scheduled[key]!.fireAt,
         DateTime(2026, 8, 3, 8, 5),
       );
+    },
+  );
+
+  test(
+    'reports whether a runtime action is waiting for foreground work',
+    () async {
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: MemoryAgendaNotificationGateway(),
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+      );
+
+      expect(await service.hasPendingActions(), isFalse);
     },
   );
 
@@ -2423,6 +2811,7 @@ void main() {
       final key = gateway.scheduled.keys.single;
 
       gateway.tap(key);
+      gateway.act(key, 'unknown');
 
       expect(received, [gateway.scheduled[key]!.payload]);
     },

@@ -2407,6 +2407,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationTestBlockedChannel => '所选通知通道已被阻止，无法测试。';
 
   @override
+  String get developerNotificationWindowsPermissionManaged =>
+      '由 Windows 通知设置管理';
+
+  @override
+  String get developerNotificationWindowsExactNotApplicable => 'Windows 不适用';
+
+  @override
+  String get developerNotificationWindowsIdentity => 'Windows 包身份';
+
+  @override
+  String get developerNotificationWindowsMsixReady => '已检测到 MSIX 身份，可取消已显示通知';
+
+  @override
+  String get developerNotificationWindowsMsixRequired =>
+      '请安装 MSIX 版本，才能可靠取消已显示通知';
+
+  @override
   String get collapseWorkspaceNavigation => '折叠工作区导航';
 
   @override
@@ -4946,6 +4963,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developerNotificationTestBlockedChannel => '所選通知通道已被封鎖，無法測試。';
+
+  @override
+  String get developerNotificationWindowsPermissionManaged =>
+      '由 Windows 通知設定管理';
+
+  @override
+  String get developerNotificationWindowsExactNotApplicable => 'Windows 不適用';
+
+  @override
+  String get developerNotificationWindowsIdentity => 'Windows 套件身分';
+
+  @override
+  String get developerNotificationWindowsMsixReady => '已偵測到 MSIX 身分，可取消已顯示通知';
+
+  @override
+  String get developerNotificationWindowsMsixRequired =>
+      '請安裝 MSIX 版本，才能可靠取消已顯示通知';
 
   @override
   String get collapseWorkspaceNavigation => '摺疊工作區導覽';

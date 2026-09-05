@@ -39,6 +39,9 @@ const Map<String, String> coverageUnavailableSourceReasons = <String, String>{
       'is selected only when dart:io is unavailable',
   'lib/services/app_exit_controller_io.dart':
       'terminates the native process and cannot be exercised in VM tests',
+  'lib/services/windows_notification_backend.dart': 'wraps the Windows-only FFI notification DLL and is exercised by Windows builds',
+  'lib/services/windows_notification_identity.dart':
+      'contains Windows-only compile-time toast identity constants',
 };
 
 final RegExp _localizationSourcePattern = RegExp(

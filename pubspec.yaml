@@ -49,6 +49,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
   xml: ^6.6.1
+  msix: ^3.18.0
 
 # Temporary pins for https://github.com/pichillilorenzo/flutter_inappwebview/pull/2809.
 # Xcode 26 rejects the published beta.3 Apple plugins because their
@@ -89,3 +90,13 @@ flutter_launcher_icons:
   image_path: "assets/sked.png"
   adaptive_icon_foreground: "assets/sked_0.png"
   adaptive_icon_background: "#FFFFFF"
+
+msix_config:
+  display_name: Sked
+  publisher_display_name: Mashiro
+  identity_name: Mashiro.Sked
+  logo_path: assets/sked.png
+  capabilities: internetClient
+  toast_activator:
+    clsid: 5d9d8f6a-4d1a-4f3a-9b0a-6a3e7d2c1f58
+    display_name: Sked notification activator

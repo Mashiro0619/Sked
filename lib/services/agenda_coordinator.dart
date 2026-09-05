@@ -347,6 +347,21 @@ class AgendaCoordinator {
   Future<AgendaNotificationDiagnostics?> notificationDiagnostics() =>
       readNotificationDiagnostics();
 
+  /// Returns live platform capability/state without creating another
+  /// notification plugin instance. Android callers may continue using the
+  /// richer AndroidProductivityBridge channel snapshot alongside this view.
+  Future<AgendaNotificationPlatformSnapshot?> notificationPlatformSnapshot() {
+    final gateway = _notificationService.gateway;
+    if (gateway is AgendaNotificationPlatformDiagnosticsGateway) {
+      final diagnostics =
+          gateway as AgendaNotificationPlatformDiagnosticsGateway;
+      return _notificationService.initialize().then(
+        (_) => diagnostics.platformSnapshot(),
+      );
+    }
+    return Future<AgendaNotificationPlatformSnapshot?>.value();
+  }
+
   /// Runs a non-destructive maintenance pass from developer diagnostics.
   Future<void> runNotificationMaintenance() => reconcileMaintenance();
 

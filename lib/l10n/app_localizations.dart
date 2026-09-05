@@ -4611,6 +4611,36 @@ abstract class AppLocalizations {
   /// **'Tests are unavailable because the selected notification channel is blocked.'**
   String get developerNotificationTestBlockedChannel;
 
+  /// No description provided for @developerNotificationWindowsPermissionManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Managed by Windows notification settings'**
+  String get developerNotificationWindowsPermissionManaged;
+
+  /// No description provided for @developerNotificationWindowsExactNotApplicable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not applicable on Windows'**
+  String get developerNotificationWindowsExactNotApplicable;
+
+  /// No description provided for @developerNotificationWindowsIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows package identity'**
+  String get developerNotificationWindowsIdentity;
+
+  /// No description provided for @developerNotificationWindowsMsixReady.
+  ///
+  /// In en, this message translates to:
+  /// **'MSIX identity available; active cards can be cancelled'**
+  String get developerNotificationWindowsMsixReady;
+
+  /// No description provided for @developerNotificationWindowsMsixRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Install the MSIX build to cancel active cards reliably'**
+  String get developerNotificationWindowsMsixRequired;
+
   /// No description provided for @collapseWorkspaceNavigation.
   ///
   /// In en, this message translates to:

@@ -2559,6 +2559,25 @@ class AppLocalizationsEl extends AppLocalizations {
       'Tests are unavailable because the selected notification channel is blocked.';
 
   @override
+  String get developerNotificationWindowsPermissionManaged =>
+      'Managed by Windows notification settings';
+
+  @override
+  String get developerNotificationWindowsExactNotApplicable =>
+      'Not applicable on Windows';
+
+  @override
+  String get developerNotificationWindowsIdentity => 'Windows package identity';
+
+  @override
+  String get developerNotificationWindowsMsixReady =>
+      'MSIX identity available; active cards can be cancelled';
+
+  @override
+  String get developerNotificationWindowsMsixRequired =>
+      'Install the MSIX build to cancel active cards reliably';
+
+  @override
   String get collapseWorkspaceNavigation => 'Σύμπτυξη πλοήγησης χώρου εργασίας';
 
   @override

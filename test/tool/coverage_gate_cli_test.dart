@@ -264,4 +264,6 @@ const _coverageUnavailableSourcePaths = <String>[
   'lib/services/app_exit_controller.dart',
   'lib/services/app_exit_controller_stub.dart',
   'lib/services/app_exit_controller_io.dart',
+  'lib/services/windows_notification_backend.dart',
+  'lib/services/windows_notification_identity.dart',
 ];

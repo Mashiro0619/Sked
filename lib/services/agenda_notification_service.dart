@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
@@ -21,6 +22,9 @@ import 'agenda_notification_runtime_store.dart';
 import 'agenda_notification_fingerprint.dart';
 import 'agenda_runtime_mutation_lock.dart';
 import 'notification_planner.dart';
+import 'windows_notification_backend.dart';
+
+import 'windows_notification_identity.dart';
 
 const _backgroundNotificationActionIds = <String>{'snooze_10m', 'handled'};
 
@@ -295,6 +299,21 @@ abstract interface class AgendaNotificationPlatformDiagnosticsGateway {
   Future<AgendaNotificationPlatformSnapshot> platformSnapshot();
 }
 
+/// The native notification surface used by the current gateway.
+enum AgendaNotificationPlatform { unsupported, android, windows }
+
+/// Windows does not expose a reliable app-level notification permission query
+/// through the local toast API. Keep that state explicit instead of treating
+/// an unknown value as granted or blocked.
+enum AgendaNotificationPermissionState { granted, denied, unknown, unsupported }
+
+enum AgendaNotificationExactAlarmState {
+  exact,
+  inexact,
+  notApplicable,
+  unknown,
+}
+
 /// Optional gateway capability exposing logical keys for both pending and
 /// currently displayed Sked notifications. The platform cache drops a request
 /// as soon as it fires, so reconciliation needs this view to cancel a stale
@@ -314,11 +333,21 @@ class AgendaNotificationPlatformSnapshot {
     required this.sampledAt,
     required this.pendingIds,
     required this.activeIds,
+    this.platform = AgendaNotificationPlatform.unsupported,
+    this.permissionState = AgendaNotificationPermissionState.unknown,
+    this.exactAlarmState = AgendaNotificationExactAlarmState.unknown,
+    this.hasPackageIdentity = false,
+    this.canCancelActive = false,
   });
 
   final DateTime sampledAt;
   final List<int> pendingIds;
   final List<int> activeIds;
+  final AgendaNotificationPlatform platform;
+  final AgendaNotificationPermissionState permissionState;
+  final AgendaNotificationExactAlarmState exactAlarmState;
+  final bool hasPackageIdentity;
+  final bool canCancelActive;
 
   int get pendingCount => pendingIds.length;
   int get activeCount => activeIds.length;
@@ -656,6 +685,13 @@ class MemoryAgendaNotificationGateway
           .map((item) => item.id)
           .toList(growable: false),
       activeIds: const [],
+      platform: AgendaNotificationPlatform.unsupported,
+      permissionState: permissionGranted
+          ? AgendaNotificationPermissionState.granted
+          : AgendaNotificationPermissionState.denied,
+      exactAlarmState: exactAlarmGranted
+          ? AgendaNotificationExactAlarmState.exact
+          : AgendaNotificationExactAlarmState.inexact,
     );
   }
 
@@ -783,14 +819,21 @@ class FlutterAgendaNotificationGateway
     FlutterLocalNotificationsPlugin? plugin,
     bool? enabled,
     AgendaNotificationTestIdAllocator? developerTestIdAllocator,
+    AgendaWindowsNotificationBackend? windowsBackend,
+    this._runtimeStore,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
-       _enabled = enabled ?? _isAndroid,
+       _enabled = enabled ?? (_isAndroid || _isWindows),
+       _windowsBackend =
+           windowsBackend ??
+           (_isWindows ? FlutterAgendaWindowsNotificationBackend() : null),
        _developerTestIdAllocator =
            developerTestIdAllocator ??
            SharedPreferencesAgendaNotificationTestIdAllocator();
 
   final FlutterLocalNotificationsPlugin _plugin;
   final bool _enabled;
+  final AgendaWindowsNotificationBackend? _windowsBackend;
+  final AgendaNotificationRuntimeStore? _runtimeStore;
   final AgendaNotificationTestIdAllocator _developerTestIdAllocator;
   bool _initialized = false;
   bool _launchDetailsConsumed = false;
@@ -815,6 +858,8 @@ class FlutterAgendaNotificationGateway
   final Map<String, int> _sessionManagedNotificationIds = <String, int>{};
   final Set<int> _developerTestNotificationIdsInSession = <int>{};
   final Set<int> _knownDeveloperTestNotificationIds = <int>{};
+  final Map<String, AgendaNotificationBackgroundRequest>
+  _persistedManagedRequests = <String, AgendaNotificationBackgroundRequest>{};
   Future<void> _developerTestTail = Future<void>.value();
 
   Future<int> _allocateDeveloperTestId() async {
@@ -841,6 +886,39 @@ class FlutterAgendaNotificationGateway
     return result;
   }
 
+  AgendaWindowsNotificationBackend get _windows =>
+      _windowsBackend ??
+      (throw StateError('Windows notification backend is unavailable.'));
+
+  Future<List<PendingNotificationRequest>> _pendingRequests() => _isWindows
+      ? _windows.pendingNotificationRequests()
+      : _plugin.pendingNotificationRequests();
+
+  Future<List<ActiveNotification>> _activeNotifications() => _isWindows
+      ? _windows.getActiveNotifications()
+      : _plugin.getActiveNotifications();
+
+  Future<void> _cancelPlatformNotification(int id, {String? tag}) =>
+      _isWindows ? _windows.cancel(id: id) : _plugin.cancel(id: id, tag: tag);
+
+  Future<void> _restorePersistedOwnership() async {
+    if (!_isWindows ||
+        _runtimeStore is! AgendaNotificationBackgroundRequestIndex) {
+      return;
+    }
+    final index = _runtimeStore as AgendaNotificationBackgroundRequestIndex;
+    for (final key in await index.backgroundRequestKeys()) {
+      final request = await index.readBackgroundRequestForOwnership(key);
+      if (request == null) continue;
+      _persistedManagedRequests[key] = request;
+      _managedNotificationIds[key] = request.notificationId;
+      _sessionManagedNotificationIds[key] = request.notificationId;
+      _occupiedNotificationIds.add(request.notificationId);
+      final payload = AgendaNotificationPayload.tryDecode(request.payload);
+      if (payload?.hasStableTag == true) _taggedManagedKeys.add(key);
+    }
+  }
+
   @override
   bool? get lastScheduledExact => _lastScheduledExact;
 
@@ -854,13 +932,16 @@ class FlutterAgendaNotificationGateway
         sampledAt: DateTime.now(),
         pendingIds: const [],
         activeIds: const [],
+        platform: AgendaNotificationPlatform.unsupported,
+        permissionState: AgendaNotificationPermissionState.unsupported,
+        exactAlarmState: AgendaNotificationExactAlarmState.notApplicable,
       );
     }
     return withAgendaRuntimeMutationLock(() async {
       final pending = await _refreshNotificationIdCache();
       var activeIds = const <int>[];
       try {
-        activeIds = (await _plugin.getActiveNotifications())
+        activeIds = (await _activeNotifications())
             .map((item) => item.id)
             .whereType<int>()
             .toList(growable: false);
@@ -872,10 +953,36 @@ class FlutterAgendaNotificationGateway
       } on PlatformException {
         // A transient platform query failure must not break reconciliation.
       }
+      final platform = _isWindows
+          ? AgendaNotificationPlatform.windows
+          : AgendaNotificationPlatform.android;
+      final notificationsAllowed = await notificationsEnabled;
+      final exactAllowed = await exactAlarmsAllowed;
+      var hasPackageIdentity = false;
+      if (_isWindows) {
+        try {
+          hasPackageIdentity = MsixUtils.hasPackageIdentity();
+        } catch (_) {
+          // A development runner may not have the native FFI DLL available.
+        }
+      }
       return AgendaNotificationPlatformSnapshot(
         sampledAt: DateTime.now(),
         pendingIds: pending.map((item) => item.id).toList(growable: false),
         activeIds: activeIds,
+        platform: platform,
+        permissionState: _isWindows
+            ? AgendaNotificationPermissionState.unknown
+            : notificationsAllowed
+            ? AgendaNotificationPermissionState.granted
+            : AgendaNotificationPermissionState.denied,
+        exactAlarmState: _isWindows
+            ? AgendaNotificationExactAlarmState.notApplicable
+            : exactAllowed
+            ? AgendaNotificationExactAlarmState.exact
+            : AgendaNotificationExactAlarmState.inexact,
+        hasPackageIdentity: hasPackageIdentity,
+        canCancelActive: !_isWindows || hasPackageIdentity,
       );
     });
   }
@@ -895,7 +1002,9 @@ class FlutterAgendaNotificationGateway
   @override
   Future<void> cancelNotificationId(int id, {String? tag}) async {
     if (!_enabled) return;
-    await withAgendaRuntimeMutationLock(() => _plugin.cancel(id: id, tag: tag));
+    await withAgendaRuntimeMutationLock(
+      () => _cancelPlatformNotification(id, tag: tag),
+    );
   }
 
   @override
@@ -912,27 +1021,28 @@ class FlutterAgendaNotificationGateway
     // old zone until the process is restarted.
     await _refreshTimeZone();
     if (!_initialized) {
-      final initialized = await _plugin.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('ic_stat_notification'),
-        ),
-        onDidReceiveNotificationResponse: (response) {
-          if (response.notificationResponseType ==
-              NotificationResponseType.notificationDismissed) {
-            return;
-          }
-          final actionId = response.actionId;
-          if (actionId != null && actionId.isNotEmpty) {
-            _onAction?.call(response.payload, actionId);
-          } else {
-            _onTap?.call(response.payload);
-          }
-        },
-        onDidReceiveBackgroundNotificationResponse:
-            agendaNotificationBackgroundAction,
-      );
+      final initialized = _isWindows
+          ? await _windows.initialize(
+              settings: const WindowsInitializationSettings(
+                appName: WindowsNotificationIdentity.appName,
+                appUserModelId: WindowsNotificationIdentity.appUserModelId,
+                guid: WindowsNotificationIdentity.activationGuid,
+                iconPath: WindowsNotificationIdentity.iconPath,
+              ),
+              onResponse: _handleNotificationResponse,
+            )
+          : await _plugin.initialize(
+              settings: const InitializationSettings(
+                android: AndroidInitializationSettings('ic_stat_notification'),
+              ),
+              onDidReceiveNotificationResponse: _handleNotificationResponse,
+              onDidReceiveBackgroundNotificationResponse:
+                  agendaNotificationBackgroundAction,
+            );
       if (initialized != true) {
-        throw StateError('Unable to initialize Android notifications.');
+        throw StateError(
+          'Unable to initialize ${_isWindows ? 'Windows' : 'Android'} notifications.',
+        );
       }
       _initialized = true;
     }
@@ -977,7 +1087,9 @@ class FlutterAgendaNotificationGateway
   }
 
   Future<void> _consumeLaunchDetails() async {
-    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    final launchDetails = _isWindows
+        ? await _windows.getNotificationAppLaunchDetails()
+        : await _plugin.getNotificationAppLaunchDetails();
     // Mark the read complete only after the platform call succeeds. A thrown
     // platform exception therefore leaves the payload eligible for retry.
     _launchDetailsConsumed = true;
@@ -986,6 +1098,28 @@ class FlutterAgendaNotificationGateway
     if (response == null ||
         response.notificationResponseType ==
             NotificationResponseType.notificationDismissed) {
+      return;
+    }
+    _handleNotificationResponse(response);
+  }
+
+  void _handleNotificationResponse(NotificationResponse response) {
+    if (response.notificationResponseType ==
+        NotificationResponseType.notificationDismissed) {
+      return;
+    }
+    if (_isWindows) {
+      if (response.notificationResponseType ==
+          NotificationResponseType.selectedNotificationAction) {
+        final action = _decodeWindowsActionEnvelope(
+          response.payload ?? response.actionId,
+        );
+        if (action != null) {
+          _onAction?.call(action.payload, action.actionId);
+        }
+        return;
+      }
+      _onTap?.call(response.payload);
       return;
     }
     final actionId = response.actionId;
@@ -1006,6 +1140,11 @@ class FlutterAgendaNotificationGateway
           final decoded = _decodeNotificationPayload(request.payload);
           if (decoded != null) result[decoded.key] = decoded.fireAt;
         }
+        if (_isWindows) {
+          for (final entry in _persistedManagedRequests.entries) {
+            result.putIfAbsent(entry.key, () => entry.value.fireAt);
+          }
+        }
         return result;
       });
 
@@ -1025,6 +1164,23 @@ class FlutterAgendaNotificationGateway
             exact: decoded.scheduleExact,
             hasStableTag: decoded.hasStableTag,
           );
+        }
+        if (_isWindows) {
+          for (final entry in _persistedManagedRequests.entries) {
+            final decoded = AgendaNotificationPayload.tryDecode(
+              entry.value.payload,
+            );
+            result.putIfAbsent(
+              entry.key,
+              () => AgendaNotificationMetadata(
+                fireAt: entry.value.fireAt,
+                fingerprint: decoded?.fingerprint ?? '',
+                id: entry.value.notificationId,
+                exact: decoded?.scheduleExact ?? true,
+                hasStableTag: decoded?.hasStableTag ?? false,
+              ),
+            );
+          }
         }
         return result;
       });
@@ -1048,6 +1204,12 @@ class FlutterAgendaNotificationGateway
     // a different occurrence gets a distinct id even when its preferred hash
     // is already occupied by another notification.
     final notificationId = _notificationIdForRequest(request);
+    if (_isWindows && _managedNotificationIds[request.key] == notificationId) {
+      // Windows exposes pending requests without payloads and its native
+      // adapter adds a new ScheduledToastNotification rather than updating
+      // one by logical key. Remove the old schedule before replacing it.
+      await _windows.cancel(id: notificationId);
+    }
     final sourceLabel = request.sourceLabel ?? request.occurrence.sourceType;
     final channelId =
         request.channelId ?? 'sked_${request.occurrence.sourceType}_reminders';
@@ -1056,49 +1218,82 @@ class FlutterAgendaNotificationGateway
         request.channelDescription ?? 'Reminders from $sourceLabel.';
     final copy = _notificationCopy(request.localeCode);
     final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        channelId,
-        channelName,
-        channelDescription: channelDescription,
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: 'ic_stat_notification',
-        autoCancel: true,
-        tag: _agendaNotificationTag(request.key),
-        visibility: request.lockScreenShowTitles
-            ? NotificationVisibility.public
-            : NotificationVisibility.private,
-        actions: [
-          AndroidNotificationAction(
-            'snooze_10m',
-            copy.snoozeAction,
-            showsUserInterface: false,
-          ),
-          AndroidNotificationAction(
-            'handled',
-            copy.handledAction,
-            showsUserInterface: false,
-          ),
-        ],
-      ),
+      android: _isAndroid
+          ? AndroidNotificationDetails(
+              channelId,
+              channelName,
+              channelDescription: channelDescription,
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: 'ic_stat_notification',
+              autoCancel: true,
+              tag: _agendaNotificationTag(request.key),
+              visibility: request.lockScreenShowTitles
+                  ? NotificationVisibility.public
+                  : NotificationVisibility.private,
+              actions: [
+                AndroidNotificationAction(
+                  'snooze_10m',
+                  copy.snoozeAction,
+                  showsUserInterface: false,
+                ),
+                AndroidNotificationAction(
+                  'handled',
+                  copy.handledAction,
+                  showsUserInterface: false,
+                ),
+              ],
+            )
+          : null,
+      windows: _isWindows
+          ? WindowsNotificationDetails(
+              duration: WindowsNotificationDuration.long,
+              scenario: WindowsNotificationScenario.reminder,
+              actions: [
+                WindowsAction(
+                  content: copy.snoozeAction,
+                  arguments: _windowsActionEnvelope(
+                    'snooze_10m',
+                    request.payload,
+                  ),
+                ),
+                WindowsAction(
+                  content: copy.handledAction,
+                  arguments: _windowsActionEnvelope('handled', request.payload),
+                ),
+              ],
+            )
+          : null,
     );
     final scheduledDate = tz.TZDateTime.from(
       request.fireAt.toLocal(),
       tz.local,
     );
-    _lastScheduledExact = await _scheduleWithExactAlarmFallback(
-      exactRequested: exact,
-      canScheduleExact: () => exactAlarmsAllowed,
-      schedule: (mode) => _plugin.zonedSchedule(
+    if (_isWindows) {
+      await _windows.zonedSchedule(
         id: notificationId,
         title: request.title,
         body: request.body,
-        notificationDetails: details,
+        notificationDetails: details.windows,
         scheduledDate: scheduledDate,
-        androidScheduleMode: mode,
-        payload: _payloadForScheduleMode(request.payload, mode),
-      ),
-    );
+        payload: request.payload,
+      );
+      _lastScheduledExact = true;
+    } else {
+      _lastScheduledExact = await _scheduleWithExactAlarmFallback(
+        exactRequested: exact,
+        canScheduleExact: () => exactAlarmsAllowed,
+        schedule: (mode) => _plugin.zonedSchedule(
+          id: notificationId,
+          title: request.title,
+          body: request.body,
+          notificationDetails: details,
+          scheduledDate: scheduledDate,
+          androidScheduleMode: mode,
+          payload: _payloadForScheduleMode(request.payload, mode),
+        ),
+      );
+    }
     _lastScheduledNotificationId = notificationId;
     _managedNotificationIds[request.key] = notificationId;
     _sessionManagedNotificationIds[request.key] = notificationId;
@@ -1142,9 +1337,9 @@ class FlutterAgendaNotificationGateway
       // active card after its scheduled-cache entry has been removed. Legacy
       // requests have no tag and must use the untagged cancellation path.
       if (wasTagged || _taggedManagedKeys.contains(key)) {
-        await _plugin.cancel(id: id, tag: _agendaNotificationTag(key));
+        await _cancelPlatformNotification(id, tag: _agendaNotificationTag(key));
       } else {
-        await _plugin.cancel(id: id);
+        await _cancelPlatformNotification(id);
       }
       _occupiedNotificationIds.remove(id);
       _sessionAllocatedNotificationIds.remove(id);
@@ -1182,14 +1377,17 @@ class FlutterAgendaNotificationGateway
       final key = managedKeysById[id];
       if (key != null) {
         if (_taggedManagedKeys.contains(key)) {
-          await _plugin.cancel(id: id, tag: _agendaNotificationTag(key));
+          await _cancelPlatformNotification(
+            id,
+            tag: _agendaNotificationTag(key),
+          );
         } else {
-          await _plugin.cancel(id: id);
+          await _cancelPlatformNotification(id);
         }
       } else {
         // IDs allocated in this session but not yet associated with a key are
         // still safe to cancel as untagged legacy records.
-        await _plugin.cancel(id: id);
+        await _cancelPlatformNotification(id);
       }
       _occupiedNotificationIds.remove(id);
       _sessionAllocatedNotificationIds.remove(id);
@@ -1209,13 +1407,24 @@ class FlutterAgendaNotificationGateway
           final id = await _allocateDeveloperTestId();
           final effective = request.copyWith(id: id);
           try {
-            await _plugin.show(
-              id: effective.id,
-              title: effective.title,
-              body: effective.body,
-              notificationDetails: _testNotificationDetails(effective),
-              payload: _developerTestPayload(effective.channel, effective.id),
-            );
+            if (_isWindows) {
+              await _windows.show(
+                id: effective.id,
+                title: effective.title,
+                body: effective.body,
+                notificationDetails: _testNotificationDetails(effective)
+                    .windows,
+                payload: _developerTestPayload(effective.channel, effective.id),
+              );
+            } else {
+              await _plugin.show(
+                id: effective.id,
+                title: effective.title,
+                body: effective.body,
+                notificationDetails: _testNotificationDetails(effective),
+                payload: _developerTestPayload(effective.channel, effective.id),
+              );
+            }
             _developerTestNotificationIdsInSession.add(effective.id);
           } catch (_) {
             _occupiedNotificationIds.remove(id);
@@ -1249,19 +1458,30 @@ class FlutterAgendaNotificationGateway
       // a broken notification channel from that OS delivery quota. User agenda
       // reminders continue to use the less intrusive normal reminder mode.
       try {
-        await _scheduleDeveloperTestWithFallback(
-          exactRequested: exact,
-          canScheduleExact: () => exactAlarmsAllowed,
-          schedule: (mode) => _plugin.zonedSchedule(
+        if (_isWindows) {
+          await _windows.zonedSchedule(
             id: effective.id,
             title: effective.title,
             body: effective.body,
-            notificationDetails: _testNotificationDetails(effective),
             scheduledDate: tz.TZDateTime.from(fireAt.toLocal(), tz.local),
-            androidScheduleMode: mode,
+            notificationDetails: _testNotificationDetails(effective).windows,
             payload: _developerTestPayload(effective.channel, effective.id),
-          ),
-        );
+          );
+        } else {
+          await _scheduleDeveloperTestWithFallback(
+            exactRequested: exact,
+            canScheduleExact: () => exactAlarmsAllowed,
+            schedule: (mode) => _plugin.zonedSchedule(
+              id: effective.id,
+              title: effective.title,
+              body: effective.body,
+              notificationDetails: _testNotificationDetails(effective),
+              scheduledDate: tz.TZDateTime.from(fireAt.toLocal(), tz.local),
+              androidScheduleMode: mode,
+              payload: _developerTestPayload(effective.channel, effective.id),
+            ),
+          );
+        }
         _developerTestNotificationIdsInSession.add(effective.id);
       } catch (_) {
         _occupiedNotificationIds.remove(id);
@@ -1283,8 +1503,8 @@ class FlutterAgendaNotificationGateway
         // New diagnostic notifications use a unique tag as well as a unique
         // ID.  Also issue the untagged cancellation for notifications created by
         // pre-2.2.0 builds, whose payloads did not carry a tag identity.
-        await _plugin.cancel(id: id, tag: _developerTestTag(id));
-        await _plugin.cancel(id: id);
+        await _cancelPlatformNotification(id, tag: _developerTestTag(id));
+        await _cancelPlatformNotification(id);
         _occupiedNotificationIds.remove(id);
       }
       _developerTestNotificationIdsInSession.clear();
@@ -1304,9 +1524,10 @@ class FlutterAgendaNotificationGateway
   /// still need reserving so a new agenda item cannot replace a message the
   /// user has not dismissed.
   Future<List<PendingNotificationRequest>> _refreshNotificationIdCache() async {
-    final requests = await _plugin.pendingNotificationRequests();
+    final requests = await _pendingRequests();
     _managedNotificationIds.clear();
     _activeManagedNotificationIds.clear();
+    _persistedManagedRequests.clear();
     // Keep mappings allocated during this process even when Android's
     // scheduled-notification preference has not caught up yet. This closes a
     // small async gap in which a same-key update could otherwise allocate a
@@ -1319,6 +1540,10 @@ class FlutterAgendaNotificationGateway
         _sessionManagedNotificationIds[decoded.key] = request.id;
         if (decoded.hasStableTag) _taggedManagedKeys.add(decoded.key);
       } else if (_isDeveloperTestPayload(request.payload)) {
+        _knownDeveloperTestNotificationIds.add(request.id);
+      } else if (_isWindows && _isDeveloperTestNotificationId(request.id)) {
+        // Windows pending requests intentionally omit payload/title/body.
+        // The reserved ID range is the durable namespace for developer tests.
         _knownDeveloperTestNotificationIds.add(request.id);
       }
     }
@@ -1335,8 +1560,9 @@ class FlutterAgendaNotificationGateway
       // replace the visible diagnostic card.
       ..addAll(_developerTestNotificationIdsInSession)
       ..addAll(_knownDeveloperTestNotificationIds);
+    await _restorePersistedOwnership();
     try {
-      final active = await _plugin.getActiveNotifications();
+      final active = await _activeNotifications();
       for (final notification in active) {
         final id = notification.id;
         if (id == null) continue;
@@ -1391,22 +1617,31 @@ class FlutterAgendaNotificationGateway
   NotificationDetails _testNotificationDetails(
     AgendaNotificationTestRequest request,
   ) => NotificationDetails(
-    android: AndroidNotificationDetails(
-      request.channelId,
-      request.channelName,
-      channelDescription: request.channelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: 'ic_stat_notification',
-      autoCancel: true,
-      tag: _developerTestTag(request.id),
-      visibility: NotificationVisibility.public,
-    ),
+    android: _isAndroid
+        ? AndroidNotificationDetails(
+            request.channelId,
+            request.channelName,
+            channelDescription: request.channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: 'ic_stat_notification',
+            autoCancel: true,
+            tag: _developerTestTag(request.id),
+            visibility: NotificationVisibility.public,
+          )
+        : null,
+    windows: _isWindows
+        ? const WindowsNotificationDetails(
+            duration: WindowsNotificationDuration.long,
+            scenario: WindowsNotificationScenario.reminder,
+          )
+        : null,
   );
 
   @override
   Future<bool> requestPermission() async {
     if (!_enabled) return true;
+    if (_isWindows) return true;
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -1417,6 +1652,7 @@ class FlutterAgendaNotificationGateway
   @override
   Future<bool> requestExactAlarmPermission() async {
     if (!_enabled) return true;
+    if (_isWindows) return true;
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -1430,6 +1666,7 @@ class FlutterAgendaNotificationGateway
   @override
   Future<bool> get notificationsEnabled async {
     if (!_enabled) return true;
+    if (_isWindows) return true;
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -1440,6 +1677,7 @@ class FlutterAgendaNotificationGateway
   @override
   Future<bool> get exactAlarmsAllowed async {
     if (!_enabled) return true;
+    if (_isWindows) return true;
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -1450,6 +1688,16 @@ class FlutterAgendaNotificationGateway
   @override
   Future<bool> openNotificationSettings() async {
     if (!_enabled) return true;
+    if (_isWindows) {
+      try {
+        return await launchUrl(
+          Uri.parse('ms-settings:notifications'),
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (_) {
+        return false;
+      }
+    }
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -1555,21 +1803,45 @@ class AgendaNotificationStatus {
   bool get isTruncated => truncatedCount > 0;
 }
 
-/// Coordinates the source-neutral planner with the Android notification
+/// Coordinates the source-neutral planner with the native notification
 /// gateway. The service is intentionally independent from Provider/UI.
 class AgendaNotificationService {
-  AgendaNotificationService({
-    this.projection = const AgendaProjectionService(),
-    this.planner = const NotificationPlanner(),
-    this.reconciler = const NotificationReconciler(),
+  factory AgendaNotificationService({
+    AgendaProjectionService projection = const AgendaProjectionService(),
+    NotificationPlanner planner = const NotificationPlanner(),
+    NotificationReconciler reconciler = const NotificationReconciler(),
     AgendaNotificationGateway? gateway,
     AgendaNotificationRuntimeStore? runtimeStore,
     bool? enabled,
-    this.now = DateTime.now,
-  }) : gateway = gateway ?? FlutterAgendaNotificationGateway(enabled: enabled),
-       _enabled = enabled ?? _isAndroid,
-       _runtimeStore =
-           runtimeStore ?? SharedPreferencesAgendaNotificationRuntimeStore();
+    DateTime Function() now = DateTime.now,
+  }) {
+    final store =
+        runtimeStore ?? SharedPreferencesAgendaNotificationRuntimeStore();
+    return AgendaNotificationService._(
+      projection: projection,
+      planner: planner,
+      reconciler: reconciler,
+      gateway:
+          gateway ??
+          FlutterAgendaNotificationGateway(
+            enabled: enabled,
+            runtimeStore: store,
+          ),
+      enabled: enabled,
+      now: now,
+      runtimeStore: store,
+    );
+  }
+
+  AgendaNotificationService._({
+    required this.projection,
+    required this.planner,
+    required this.reconciler,
+    required this.gateway,
+    required bool? enabled,
+    required this.now,
+    required this._runtimeStore,
+  }) : _enabled = enabled ?? (_isAndroid || _isWindows);
 
   final AgendaProjectionService projection;
   final NotificationPlanner planner;
@@ -3017,6 +3289,36 @@ String _developerTestPayload(AgendaNotificationTestChannel channel, int id) =>
 
 String _developerTestTag(int id) => 'sked_developer_test_$id';
 
+const _windowsActionPrefix = 'sked.windows.action.v1:';
+
+String _windowsActionEnvelope(String actionId, String payload) {
+  if (!_backgroundNotificationActionIds.contains(actionId)) {
+    throw ArgumentError.value(actionId, 'actionId');
+  }
+  final encoded = base64Url.encode(utf8.encode(payload)).replaceAll('=', '');
+  return '$_windowsActionPrefix$actionId:$encoded';
+}
+
+({String actionId, String payload})? _decodeWindowsActionEnvelope(
+  String? value,
+) {
+  if (value == null || !value.startsWith(_windowsActionPrefix)) return null;
+  final body = value.substring(_windowsActionPrefix.length);
+  final separator = body.indexOf(':');
+  if (separator <= 0 || separator == body.length - 1) return null;
+  final actionId = body.substring(0, separator);
+  if (!_backgroundNotificationActionIds.contains(actionId)) return null;
+  try {
+    final encoded = body.substring(separator + 1);
+    final padding = (4 - encoded.length % 4) % 4;
+    final payload = utf8.decode(base64Url.decode('$encoded${'=' * padding}'));
+    if (payload.isEmpty) return null;
+    return (actionId: actionId, payload: payload);
+  } on FormatException {
+    return null;
+  }
+}
+
 // Android's active-notification API exposes the tag after a scheduled request
 // has fired and disappeared from flutter_local_notifications' pending cache.
 // Keep the logical planner key in the tag so a fresh gateway instance can
@@ -3260,3 +3562,6 @@ AgendaNotificationPayload? _decodeNotificationPayload(String? payload) =>
 
 bool get _isAndroid =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+bool get _isWindows =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;

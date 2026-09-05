@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -41,6 +42,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   bool? _exactAlarmAllowed;
   bool _permissionError = false;
   Future<void>? _permissionRefreshOperation;
+
+  bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   @override
   void initState() {
@@ -290,7 +294,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 ? _handleNotificationPermission
                 : null,
           ),
-          if (_notificationService.isSupported)
+          if (_notificationService.isSupported && !_isWindows)
             SettingsConnectedTile(
               key: const ValueKey('notification-exact-alarm'),
               leading: const Icon(Icons.alarm_outlined),
@@ -417,6 +421,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   String _permissionSubtitle(AppLocalizations l10n) {
     if (!_notificationService.isSupported) {
       return l10n.notificationPlatformUnsupported;
+    }
+    if (_isWindows) {
+      return l10n.developerNotificationWindowsPermissionManaged;
     }
     if (_permissionError) return l10n.notificationPermissionRequestFailed;
     if (_permissionLoading || _notificationsPermissionGranted == null) {

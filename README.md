@@ -81,6 +81,8 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 
 Android 是 Sked 的主要发布平台，可从 [Google Play](https://play.google.com/store/apps/details?id=com.mashiro.sked) 下载，也可以在本仓库的 [GitHub Releases](https://github.com/Mashiro0619/Sked/releases) 获取 APK。Windows 构建包同样发布在 GitHub Releases。
 
+Windows 通知使用系统 Toast。开发调试可以运行 `flutter build windows --release`；验证包使用 `pwsh -File tool/build_msix.ps1 -Unsigned`。正式发布必须设置 `SKED_MSIX_CERTIFICATE_PATH`、`SKED_MSIX_CERTIFICATE_PASSWORD` 和 `SKED_MSIX_PUBLISHER`，再运行 `pwsh -File tool/build_msix.ps1` 生成签名 MSIX。MSIX 的应用身份用于可靠取消已显示通知。散装 Windows 程序仍可显示和安排通知，但 Windows 不保证它能读取或取消已经进入操作中心的历史卡片。
+
 macOS 和 Linux 目前仅保持源码构建兼容，不提供预编译安装包。项目暂不提供在线 Web 版，也不发布 Web 构建包；仓库中的 Web 工程仅用于保持代码兼容。
 
 ## 官方发布渠道

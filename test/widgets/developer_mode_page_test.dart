@@ -171,6 +171,24 @@ AgendaCoordinator _developerNotificationCoordinator(
   );
 }
 
+class _WindowsMemoryNotificationGateway
+    extends MemoryAgendaNotificationGateway {
+  @override
+  Future<AgendaNotificationPlatformSnapshot> platformSnapshot() async {
+    final base = await super.platformSnapshot();
+    return AgendaNotificationPlatformSnapshot(
+      sampledAt: base.sampledAt,
+      pendingIds: base.pendingIds,
+      activeIds: base.activeIds,
+      platform: AgendaNotificationPlatform.windows,
+      permissionState: AgendaNotificationPermissionState.unknown,
+      exactAlarmState: AgendaNotificationExactAlarmState.notApplicable,
+      hasPackageIdentity: false,
+      canCancelActive: false,
+    );
+  }
+}
+
 AgendaNotificationDiagnostics _developerNotificationDiagnostics({
   DateTime? now,
 }) {
@@ -363,6 +381,45 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets(
+    'Windows notification diagnostics use the coordinator-owned toast surface',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = _WindowsMemoryNotificationGateway();
+      final coordinator = _developerNotificationCoordinator(provider, gateway);
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(enabled: false);
+      addTearDown(bridge.dispose);
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      expect(
+        find.byKey(const ValueKey('developer-notification-windows-identity')),
+        findsOneWidget,
+      );
+      expect(find.text('Not applicable on Windows'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('developer-notification-open-settings')),
+        findsOneWidget,
+      );
+      final immediate = find.byKey(
+        const ValueKey('developer-notification-immediate-test'),
+      );
+      expect(tester.widget<FilledButton>(immediate).onPressed, isNotNull);
+      await tester.ensureVisible(immediate);
+      await tester.pumpAndSettle();
+      await tester.tap(immediate);
+      await tester.pumpAndSettle();
+      expect(gateway.testNotifications, hasLength(1));
+    },
+  );
 
   testWidgets(
     'notification diagnostics show Android channel state through the bridge',

@@ -81,6 +81,8 @@ For a student timetable, create a timetable and period-time set before adding co
 
 Android is Sked's primary release platform. Install it from [Google Play](https://play.google.com/store/apps/details?id=com.mashiro.sked), or download the APK from this repository's [GitHub Releases](https://github.com/Mashiro0619/Sked/releases). Windows packages are also published through GitHub Releases.
 
+Windows notifications use system toasts. Use `flutter build windows --release` for development builds; use `pwsh -File tool/build_msix.ps1 -Unsigned` for a validation package. For production, set `SKED_MSIX_CERTIFICATE_PATH`, `SKED_MSIX_CERTIFICATE_PASSWORD`, and `SKED_MSIX_PUBLISHER`, then run `pwsh -File tool/build_msix.ps1` to create a signed MSIX. MSIX package identity is required to reliably cancel notifications already shown in Action Center. Unpackaged Windows builds can still show and schedule notifications, but Windows does not guarantee history lookup or cancellation for those cards.
+
 macOS and Linux are currently kept source-build compatible but do not have prebuilt packages. The project does not provide a hosted Web app or publish Web build artifacts; the Web project remains in the repository only for source compatibility.
 
 ## Official Distribution

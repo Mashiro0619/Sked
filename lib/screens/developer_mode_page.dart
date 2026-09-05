@@ -41,6 +41,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   late final bool _ownsProductivityBridge;
   AgendaCoordinator? _agendaCoordinator;
   AndroidNotificationDiagnostics? _androidNotificationDiagnostics;
+  AgendaNotificationPlatformSnapshot? _platformNotificationSnapshot;
   AgendaNotificationDiagnostics? _agendaNotificationDiagnostics;
   AgendaNotificationTestChannel _testChannel =
       AgendaNotificationTestChannel.course;
@@ -49,7 +50,9 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   var _diagnosticInitialized = false;
   String? _diagnosticError;
 
-  bool get _notificationsSupported => _productivityBridge.isSupported;
+  bool get _notificationsSupported =>
+      _productivityBridge.isSupported ||
+      (_agendaCoordinator?.notificationService.isSupported ?? false);
 
   bool get _notificationActionsEnabled =>
       _notificationsSupported &&
@@ -148,6 +151,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
           setState(() {
             _androidNotificationDiagnostics =
                 const AndroidNotificationDiagnostics.unsupported();
+            _platformNotificationSnapshot = null;
             _agendaNotificationDiagnostics = null;
           });
         }
@@ -159,14 +163,20 @@ class _DeveloperModePageState extends State<DeveloperModePage>
       }
       // Channel creation is lazy. Read Android state after a maintenance pass
       // so the diagnostic panel reflects channels created by that same pass.
-      final android = await _productivityBridge.notificationDiagnostics();
+      final android = _productivityBridge.isSupported
+          ? await _productivityBridge.notificationDiagnostics()
+          : null;
       final agenda = coordinator == null
           ? null
           : await coordinator.notificationDiagnostics();
+      final platform = coordinator == null
+          ? null
+          : await coordinator.notificationPlatformSnapshot();
       if (!mounted) return;
       setState(() {
         _agendaNotificationDiagnostics = agenda;
         _androidNotificationDiagnostics = android;
+        _platformNotificationSnapshot = platform;
       });
     } catch (error, stackTrace) {
       debugPrint(
@@ -222,6 +232,19 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     );
   }
 
+  Future<void> _openNotificationSettings() async {
+    final coordinator = _agendaCoordinator;
+    if (coordinator == null) return;
+    await runUiCommand(
+      debugLabel: 'Open Windows notification settings',
+      command: () async {
+        await coordinator.notificationService.gateway
+            .openNotificationSettings();
+        await _refreshNotificationDiagnostics();
+      },
+    );
+  }
+
   Future<void> _scheduleThirtySecondNotificationTest() async {
     if (!_notificationActionsEnabled) return;
     final coordinator = _agendaCoordinator;
@@ -256,6 +279,29 @@ class _DeveloperModePageState extends State<DeveloperModePage>
 
   Future<_NotificationTestBlock?> _refreshNotificationTestBlock() async {
     if (!_notificationsSupported) return _NotificationTestBlock.unsupported;
+    if (!_productivityBridge.isSupported) {
+      final coordinator = _agendaCoordinator;
+      if (coordinator == null) {
+        return _NotificationTestBlock.coordinatorUnavailable;
+      }
+      try {
+        final platform = await coordinator.notificationPlatformSnapshot();
+        if (mounted) {
+          setState(() {
+            _platformNotificationSnapshot = platform;
+            _diagnosticError = null;
+          });
+        }
+        return _notificationTestBlock(null);
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Refreshing Windows notification test status failed: '
+          '$error\n$stackTrace',
+        );
+        if (mounted) setState(() => _diagnosticError = error.toString());
+        return _NotificationTestBlock.statusUnavailable;
+      }
+    }
     try {
       final android = await _productivityBridge.notificationDiagnostics();
       if (mounted) {
@@ -281,6 +327,11 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     if (!_notificationsSupported) return _NotificationTestBlock.unsupported;
     if (_agendaCoordinator == null) {
       return _NotificationTestBlock.coordinatorUnavailable;
+    }
+    final platform = _platformNotificationSnapshot;
+    if (!_productivityBridge.isSupported &&
+        platform?.platform == AgendaNotificationPlatform.windows) {
+      return null;
     }
     if (android == null) return _NotificationTestBlock.statusUnavailable;
     if (!android.appNotificationsEnabled || !android.postNotificationsGranted) {
@@ -422,25 +473,33 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     required bool appNotificationsEnabled,
   }) {
     final android = _androidNotificationDiagnostics;
+    final platform = _platformNotificationSnapshot;
     final agenda = _agendaNotificationDiagnostics;
     final diagnosticError = _diagnosticError;
     final coordinator = _agendaCoordinator;
-    final statusLoading = _diagnosticLoading && android == null;
+    final statusLoading =
+        _diagnosticLoading && android == null && platform == null;
+    final isWindows = platform?.platform == AgendaNotificationPlatform.windows;
     final systemNotificationsEnabled = android?.appNotificationsEnabled;
     final postNotificationsGranted = android?.postNotificationsGranted;
     final exactAlarmsAllowed = android?.exactAlarmsAllowed;
-    final statusText =
-        systemNotificationsEnabled == null || postNotificationsGranted == null
+    final statusText = isWindows
+        ? l10n.developerNotificationWindowsPermissionManaged
+        : systemNotificationsEnabled == null || postNotificationsGranted == null
         ? l10n.notificationPermissionChecking
         : systemNotificationsEnabled && postNotificationsGranted
         ? l10n.developerNotificationPermissionAllowed
         : l10n.developerNotificationPermissionBlocked;
-    final exactText = exactAlarmsAllowed == null
+    final exactText = isWindows
+        ? l10n.developerNotificationWindowsExactNotApplicable
+        : exactAlarmsAllowed == null
         ? l10n.notificationPermissionChecking
         : exactAlarmsAllowed
         ? l10n.developerNotificationExactAlarmAllowed
         : l10n.developerNotificationExactAlarmInexact;
-    final channels = _notificationChannels(l10n, android);
+    final channels = isWindows
+        ? const <_NotificationChannelPresentation>[]
+        : _notificationChannels(l10n, android);
     final selectedChannelBlock = _notificationTestBlock(android);
     final testEnabled =
         _notificationActionsEnabled && selectedChannelBlock == null;
@@ -525,6 +584,20 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                     ? null
                     : () => unawaited(_refreshNotificationDiagnostics()),
               ),
+              if (isWindows)
+                SettingsConnectedTile(
+                  key: const ValueKey(
+                    'developer-notification-windows-identity',
+                  ),
+                  leading: const Icon(Icons.inventory_2_outlined),
+                  title: l10n.developerNotificationWindowsIdentity,
+                  subtitle: platform!.hasPackageIdentity
+                      ? l10n.developerNotificationWindowsMsixReady
+                      : l10n.developerNotificationWindowsMsixRequired,
+                  onTap: _diagnosticRefreshEnabled
+                      ? () => unawaited(_refreshNotificationDiagnostics())
+                      : null,
+                ),
               SettingsConnectedTile(
                 key: const ValueKey('developer-notification-time-zone'),
                 leading: const Icon(Icons.public_outlined),
@@ -632,7 +705,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                 ),
             ],
           ),
-          if (!statusLoading)
+          if (!statusLoading && !isWindows)
             SettingsConnectedGroup(
               children: [
                 for (final channel in channels)
@@ -670,6 +743,9 @@ class _DeveloperModePageState extends State<DeveloperModePage>
           onImmediateTest: () => unawaited(_sendImmediateNotificationTest()),
           onDelayedTest: () =>
               unawaited(_scheduleThirtySecondNotificationTest()),
+          onOpenSettings: isWindows
+              ? () => unawaited(_openNotificationSettings())
+              : null,
         ),
       ],
     );
@@ -824,6 +900,7 @@ class _NotificationDiagnosticActions extends StatelessWidget {
     required this.onMaintenance,
     required this.onImmediateTest,
     required this.onDelayedTest,
+    this.onOpenSettings,
   });
 
   final AgendaNotificationTestChannel selectedChannel;
@@ -838,6 +915,7 @@ class _NotificationDiagnosticActions extends StatelessWidget {
   final VoidCallback onMaintenance;
   final VoidCallback onImmediateTest;
   final VoidCallback onDelayedTest;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -927,6 +1005,13 @@ class _NotificationDiagnosticActions extends StatelessWidget {
             icon: const Icon(Icons.refresh_outlined),
             label: Text(l10n.developerNotificationRefresh),
           ),
+          if (onOpenSettings != null)
+            TextButton.icon(
+              key: const ValueKey('developer-notification-open-settings'),
+              onPressed: refreshEnabled ? onOpenSettings : null,
+              icon: const Icon(Icons.settings_outlined),
+              label: Text(l10n.notificationPermissionOpenSettings),
+            ),
         ],
       ),
     );

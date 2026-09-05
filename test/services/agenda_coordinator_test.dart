@@ -468,20 +468,30 @@ void main() {
     },
   );
 
-  test('uses safe defaults on unsupported platforms', () async {
-    final previousPlatform = debugDefaultTargetPlatformOverride;
-    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-    addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
-    final provider = await _provider();
-    addTearDown(provider.dispose);
-    final coordinator = AgendaCoordinator(provider: provider);
-    addTearDown(coordinator.dispose);
+  test(
+    'uses Windows notification defaults without Android bridge support',
+    () async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
+      final provider = await _provider();
+      addTearDown(provider.dispose);
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: AgendaNotificationService(
+          enabled: true,
+          gateway: MemoryAgendaNotificationGateway(),
+        ),
+        productivityBridge: AndroidProductivityBridge(enabled: false),
+      );
+      addTearDown(coordinator.dispose);
 
-    await coordinator.start();
+      await coordinator.start();
 
-    expect(coordinator.isStarted, isTrue);
-    expect(coordinator.lastPublishedRevision, isNull);
-  });
+      expect(coordinator.isStarted, isTrue);
+      expect(coordinator.notificationService.isSupported, isTrue);
+    },
+  );
 
   test('reports an explicit readiness failure and does not start', () async {
     final provider = TimetableProvider(
