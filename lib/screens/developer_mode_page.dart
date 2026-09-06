@@ -245,6 +245,18 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     );
   }
 
+  Future<void> _openBatteryOptimizationSettings() async {
+    if (!_productivityBridge.isSupported) return;
+    await runUiCommand(
+      debugLabel: 'Open battery optimization settings',
+      command: () async {
+        await _productivityBridge.openBatteryOptimizationSettings();
+        await _agendaCoordinator?.reconcileNow();
+        await _refreshNotificationDiagnostics();
+      },
+    );
+  }
+
   Future<void> _scheduleThirtySecondNotificationTest() async {
     if (!_notificationActionsEnabled) return;
     final coordinator = _agendaCoordinator;
@@ -337,6 +349,12 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     if (!android.appNotificationsEnabled || !android.postNotificationsGranted) {
       return _NotificationTestBlock.systemNotificationsBlocked;
     }
+    if (!android.exactAlarmsAllowed) {
+      return _NotificationTestBlock.exactAlarmRequired;
+    }
+    if (!android.batteryOptimizationIgnored) {
+      return _NotificationTestBlock.batteryOptimizationRequired;
+    }
     final channel = _selectedChannelState(android);
     if (channel?.exists == true && !channel!.enabled) {
       return _NotificationTestBlock.channelBlocked;
@@ -373,6 +391,10 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         l10n.developerNotificationTestBlockedSystem,
       _NotificationTestBlock.channelBlocked =>
         l10n.developerNotificationTestBlockedChannel,
+      _NotificationTestBlock.exactAlarmRequired =>
+        l10n.notificationExactAlarmRequired,
+      _NotificationTestBlock.batteryOptimizationRequired =>
+        l10n.notificationBatteryOptimizationRequired,
     };
   }
 
@@ -496,7 +518,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         ? l10n.notificationPermissionChecking
         : exactAlarmsAllowed
         ? l10n.developerNotificationExactAlarmAllowed
-        : l10n.developerNotificationExactAlarmInexact;
+        : l10n.developerNotificationExactAlarmBlocked;
     final channels = isWindows
         ? const <_NotificationChannelPresentation>[]
         : _notificationChannels(l10n, android);
@@ -584,6 +606,31 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                     ? null
                     : () => unawaited(_refreshNotificationDiagnostics()),
               ),
+              if (!isWindows)
+                SettingsConnectedTile(
+                  key: const ValueKey(
+                    'developer-notification-battery-optimization-status',
+                  ),
+                  leading: const Icon(Icons.battery_saver_outlined),
+                  title: l10n.notificationBatteryOptimization,
+                  subtitle: android == null
+                      ? l10n.notificationPermissionChecking
+                      : android.batteryOptimizationIgnored
+                      ? l10n.notificationBatteryOptimizationAllowed
+                      : l10n.notificationBatteryOptimizationRequired,
+                  onTap: android?.batteryOptimizationIgnored == true
+                      ? () => unawaited(_refreshNotificationDiagnostics())
+                      : () => unawaited(_openBatteryOptimizationSettings()),
+                ),
+              if (!isWindows)
+                SettingsConnectedTile(
+                  key: const ValueKey(
+                    'developer-notification-background-limits',
+                  ),
+                  leading: const Icon(Icons.phonelink_erase_outlined),
+                  title: l10n.developerNotificationBackgroundLimits,
+                  subtitle: l10n.developerNotificationOemBackgroundRestriction,
+                ),
               if (isWindows)
                 SettingsConnectedTile(
                   key: const ValueKey(
@@ -629,7 +676,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                   leading: const Icon(Icons.devices_outlined),
                   title: l10n.developerNotificationPlan,
                   subtitle:
-                      '${l10n.developerNotificationPlatformState(agenda.platformPendingCount!, agenda.platformActiveCount!)}${_nativeActiveNotificationSuffix(l10n, android)}',
+                      '${l10n.developerNotificationPlatformState(agenda.platformPendingCount!, agenda.platformActiveCount!)}${_nativeActiveNotificationSuffix(l10n, android, agenda)}',
                   onTap: _diagnosticRefreshEnabled
                       ? () => unawaited(_refreshNotificationDiagnostics())
                       : null,
@@ -754,10 +801,42 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   String _nativeActiveNotificationSuffix(
     AppLocalizations l10n,
     AndroidNotificationDiagnostics? diagnostics,
+    AgendaNotificationDiagnostics? agenda,
   ) {
-    final active = diagnostics?.activeNotifications ?? const [];
+    final plan = agenda?.plan ?? const <AgendaNotificationDiagnosticPlanItem>[];
+    final planKeys = plan.map((item) => item.key).toSet();
+    final active = (diagnostics?.activeNotifications ?? const [])
+        .where((item) {
+          final tag = item.tag;
+          return tag != null && tag.startsWith('sked_agenda:');
+        })
+        .toList(growable: false);
     if (active.isEmpty) return '';
-    final latest = active.reduce(
+    final activeForCurrentPlan = active
+        .where(
+          (item) =>
+              planKeys.contains(item.tag!.substring('sked_agenda:'.length)),
+        )
+        .toList(growable: false);
+    final nextReminder = _nextReminder(agenda);
+    final nextTag = nextReminder == null
+        ? null
+        : 'sked_agenda:${nextReminder.key}';
+    final matchingNext = nextTag == null
+        ? const <AndroidActiveNotificationState>[]
+        : activeForCurrentPlan
+              .where((item) => item.tag == nextTag)
+              .toList(growable: false);
+    // A notification normally remains in the previous persisted plan until a
+    // later reconcile. If a fresh reconcile has already removed the fired
+    // item, its app-owned tag is still valid delivery evidence. Prefer a
+    // current plan match but retain that post time instead of hiding it.
+    final candidates = matchingNext.isNotEmpty
+        ? matchingNext
+        : activeForCurrentPlan.isNotEmpty
+        ? activeForCurrentPlan
+        : active;
+    final latest = candidates.reduce(
       (left, right) =>
           left.postTimeMillis >= right.postTimeMillis ? left : right,
     );
@@ -880,6 +959,8 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         l10n.developerNotificationReconcileResultSuccess,
       AgendaNotificationDiagnosticResult.skipped =>
         l10n.developerNotificationReconcileResultSkipped,
+      AgendaNotificationDiagnosticResult.blocked =>
+        l10n.developerNotificationReconcileResultBlocked,
       AgendaNotificationDiagnosticResult.failed =>
         l10n.developerNotificationReconcileResultFailed,
     };
@@ -1024,6 +1105,8 @@ enum _NotificationTestBlock {
   statusUnavailable,
   systemNotificationsBlocked,
   channelBlocked,
+  exactAlarmRequired,
+  batteryOptimizationRequired,
 }
 
 class _NotificationChannelPresentation {

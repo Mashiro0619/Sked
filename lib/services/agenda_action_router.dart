@@ -53,6 +53,7 @@ class AgendaNotificationPayload {
     required this.fireAt,
     required this.target,
     this.occurrenceId,
+    this.occurrenceRevision,
     this.fingerprint,
     this.actionId,
     this.scheduleExact = false,
@@ -64,6 +65,7 @@ class AgendaNotificationPayload {
   final DateTime fireAt;
   final AgendaTarget target;
   final String? occurrenceId;
+  final String? occurrenceRevision;
   final String? fingerprint;
   final String? actionId;
   final bool scheduleExact;
@@ -81,6 +83,7 @@ class AgendaNotificationPayload {
     'sourceType': target.sourceType,
     'target': target.toJson(),
     if (occurrenceId != null) 'occurrenceId': occurrenceId,
+    if (occurrenceRevision != null) 'occurrenceRevision': occurrenceRevision,
     if (fingerprint != null) 'fingerprint': fingerprint,
     if (actionId != null) 'actionId': actionId,
     if (scheduleExact) 'scheduleExact': true,
@@ -128,18 +131,30 @@ class AgendaNotificationPayload {
     if (sourceType is! String || sourceType.trim() != target.sourceType) {
       return null;
     }
-    for (final field in const ['occurrenceId', 'fingerprint', 'actionId']) {
+    for (final field in const [
+      'occurrenceId',
+      'occurrenceRevision',
+      'fingerprint',
+      'actionId',
+    ]) {
       if (map.containsKey(field) &&
           map[field] != null &&
           (map[field] is! String ||
               (map[field] as String).trim().isEmpty ||
               (field == 'actionId'
                   ? (map[field] as String).length > 128
+                  : field == 'occurrenceRevision'
+                  ? (map[field] as String).length > 128
                   : (map[field] as String).length > 2048))) {
         return null;
       }
     }
     final occurrenceId = _optionalString(map, 'occurrenceId');
+    final occurrenceRevision = _optionalString(map, 'occurrenceRevision');
+    if (occurrenceRevision != null &&
+        !RegExp(r'^[0-9a-f]{40}$').hasMatch(occurrenceRevision)) {
+      return null;
+    }
     final fingerprint = _optionalString(map, 'fingerprint');
     final scheduleExact = map['scheduleExact'];
     if (scheduleExact != null && scheduleExact is! bool) return null;
@@ -161,6 +176,7 @@ class AgendaNotificationPayload {
       fireAt: fireAt,
       target: target,
       occurrenceId: occurrenceId,
+      occurrenceRevision: occurrenceRevision,
       fingerprint: fingerprint,
       actionId: _optionalString(map, 'actionId'),
       scheduleExact: scheduleExact == true,
@@ -171,6 +187,7 @@ class AgendaNotificationPayload {
 
   AgendaNotificationPayload copyWith({
     DateTime? fireAt,
+    String? occurrenceRevision,
     String? fingerprint,
     bool? scheduleExact,
     bool? hasStableTag,
@@ -179,12 +196,44 @@ class AgendaNotificationPayload {
     fireAt: fireAt ?? this.fireAt,
     target: target,
     occurrenceId: occurrenceId,
+    occurrenceRevision: occurrenceRevision ?? this.occurrenceRevision,
     fingerprint: fingerprint ?? this.fingerprint,
     actionId: actionId,
     scheduleExact: scheduleExact ?? this.scheduleExact,
     hasStableTag: hasStableTag ?? this.hasStableTag,
     version: version,
   );
+}
+
+/// Notification actions change runtime state, unlike a body tap which only
+/// navigates. Require the revision-bearing envelope for those mutations so a
+/// card posted by an older build cannot suppress an edited occurrence.
+bool agendaNotificationPayloadHasRuntimeIdentity(
+  AgendaNotificationPayload payload,
+) =>
+    payload.occurrenceId?.trim().isNotEmpty == true &&
+    payload.occurrenceRevision?.trim().isNotEmpty == true;
+
+/// Compares an action envelope with the rendered request currently stored for
+/// the same planner key. This is used by the Android background isolate before
+/// it recreates a snooze without access to AppData.
+bool agendaNotificationPayloadMatchesScheduledRequest({
+  required AgendaNotificationPayload action,
+  required AgendaNotificationPayload scheduled,
+}) {
+  if (!agendaNotificationPayloadHasRuntimeIdentity(action) ||
+      !agendaNotificationPayloadHasRuntimeIdentity(scheduled)) {
+    return false;
+  }
+  final actionFingerprint = action.fingerprint;
+  final scheduledFingerprint = scheduled.fingerprint;
+  return action.key == scheduled.key &&
+      action.target == scheduled.target &&
+      action.occurrenceId == scheduled.occurrenceId &&
+      action.occurrenceRevision == scheduled.occurrenceRevision &&
+      actionFingerprint != null &&
+      actionFingerprint.isNotEmpty &&
+      actionFingerprint == scheduledFingerprint;
 }
 
 /// Verifies that a notification still describes an occurrence in the current
@@ -229,6 +278,10 @@ bool agendaNotificationPayloadMatchesProjection({
         occurrence.target != payload.target ||
         (payload.occurrenceId != null &&
             occurrence.scopedStableId != payload.occurrenceId)) {
+      continue;
+    }
+    if (payload.occurrenceRevision != null &&
+        agendaOccurrenceRevision(occurrence) != payload.occurrenceRevision) {
       continue;
     }
     if (parsedKey != null &&

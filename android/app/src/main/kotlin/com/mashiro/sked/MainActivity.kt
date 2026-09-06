@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
@@ -67,6 +68,10 @@ class MainActivity : FlutterActivity() {
     private var productivityChannel: MethodChannel? = null
     private var pendingNotificationPermissionResult: MethodChannel.Result? = null
     private var pendingExactAlarmPermissionResult: MethodChannel.Result? = null
+    private var exactAlarmPermissionRequestLeftActivity = false
+    private var pendingBatteryOptimizationResult: MethodChannel.Result? = null
+    private var batteryOptimizationRequestLeftActivity = false
+    private var batteryOptimizationFallbackOpened = false
     private var pendingSaveResult: MethodChannel.Result? = null
     private var pendingSaveContent: String? = null
     private var pendingSaveFileName: String? = null
@@ -88,9 +93,37 @@ class MainActivity : FlutterActivity() {
         // lifecycle rather than a result intent. Resolve the Flutter call only
         // after the user has left Settings so the caller observes the actual
         // permission state and can reconcile existing alarms immediately.
-        val result = pendingExactAlarmPermissionResult ?: return
-        pendingExactAlarmPermissionResult = null
-        result.success(canScheduleExactAlarms())
+        resolveExactAlarmPermissionRequest()
+        resolveBatteryOptimizationRequest()
+    }
+
+    override fun onPause() {
+        if (pendingExactAlarmPermissionResult != null) {
+            exactAlarmPermissionRequestLeftActivity = true
+        }
+        if (pendingBatteryOptimizationResult != null) {
+            batteryOptimizationRequestLeftActivity = true
+        }
+        super.onPause()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Some OEM request surfaces are dialogs rather than a full Activity.
+        // They can take focus without consistently producing a pause/resume
+        // pair, so use focus loss as the same evidence that the request UI was
+        // actually shown. Do not resolve merely because the launch call returned.
+        if (!hasFocus) {
+            if (pendingExactAlarmPermissionResult != null) {
+                exactAlarmPermissionRequestLeftActivity = true
+            }
+            if (pendingBatteryOptimizationResult != null) {
+                batteryOptimizationRequestLeftActivity = true
+            }
+        } else {
+            resolveExactAlarmPermissionRequest()
+            resolveBatteryOptimizationRequest()
+        }
     }
 
     override fun onDestroy() {
@@ -105,6 +138,13 @@ class MainActivity : FlutterActivity() {
         }
         pendingExactAlarmPermissionResult?.let { result ->
             pendingExactAlarmPermissionResult = null
+            exactAlarmPermissionRequestLeftActivity = false
+            result.success(false)
+        }
+        pendingBatteryOptimizationResult?.let { result ->
+            pendingBatteryOptimizationResult = null
+            batteryOptimizationRequestLeftActivity = false
+            batteryOptimizationFallbackOpened = false
             result.success(false)
         }
         super.onDestroy()
@@ -186,6 +226,10 @@ class MainActivity : FlutterActivity() {
                         result.success(canScheduleExactAlarms())
                     "requestExactAlarmPermission" ->
                         requestExactAlarmPermission(result)
+                    AndroidProductivityContract.METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS ->
+                        result.success(isIgnoringBatteryOptimizations())
+                    AndroidProductivityContract.METHOD_OPEN_BATTERY_OPTIMIZATION_SETTINGS ->
+                        openBatteryOptimizationSettings(result)
                     AndroidProductivityContract.METHOD_GET_NOTIFICATION_DIAGNOSTICS ->
                         result.success(notificationDiagnostics())
                     "scheduleAgendaReconciliation" -> {
@@ -206,6 +250,16 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        // A settings Activity can outlive the Flutter engine that initiated
+        // it. Its MethodChannel.Result belongs to that old engine, so never
+        // retain it until onResume() or the platform permission callback.
+        // A newly attached engine must be free to issue a fresh request.
+        pendingNotificationPermissionResult = null
+        pendingExactAlarmPermissionResult = null
+        exactAlarmPermissionRequestLeftActivity = false
+        pendingBatteryOptimizationResult = null
+        batteryOptimizationRequestLeftActivity = false
+        batteryOptimizationFallbackOpened = false
         appInstanceLeaseChannel?.setMethodCallHandler(null)
         appInstanceLeaseChannel = null
         productivityChannel?.setMethodCallHandler(null)
@@ -287,6 +341,99 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun resolveExactAlarmPermissionRequest() {
+        if (pendingExactAlarmPermissionResult == null ||
+            !exactAlarmPermissionRequestLeftActivity
+        ) {
+            return
+        }
+        val result = pendingExactAlarmPermissionResult!!
+        pendingExactAlarmPermissionResult = null
+        exactAlarmPermissionRequestLeftActivity = false
+        result.success(canScheduleExactAlarms())
+    }
+
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        val manager = getSystemService(PowerManager::class.java) ?: return false
+        return manager.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    private fun openBatteryOptimizationSettings(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+            isIgnoringBatteryOptimizations()
+        ) {
+            result.success(true)
+            return
+        }
+        if (pendingBatteryOptimizationResult != null) {
+            result.error(
+                "busy",
+                "A battery optimization request is already in progress.",
+                null,
+            )
+            return
+        }
+        pendingBatteryOptimizationResult = result
+        batteryOptimizationRequestLeftActivity = false
+        batteryOptimizationFallbackOpened = false
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:$packageName"),
+                ),
+            )
+        } catch (_: ActivityNotFoundException) {
+            if (!openBatteryOptimizationSettingsFallback()) {
+                pendingBatteryOptimizationResult = null
+                result.success(false)
+            }
+        } catch (_: SecurityException) {
+            if (!openBatteryOptimizationSettingsFallback()) {
+                pendingBatteryOptimizationResult = null
+                result.success(false)
+            }
+        }
+    }
+
+    /** Resolves only after returning from Android's request/settings surface. */
+    private fun resolveBatteryOptimizationRequest() {
+        val result = pendingBatteryOptimizationResult ?: return
+        if (!batteryOptimizationRequestLeftActivity) return
+        if (isIgnoringBatteryOptimizations()) {
+            pendingBatteryOptimizationResult = null
+            batteryOptimizationRequestLeftActivity = false
+            batteryOptimizationFallbackOpened = false
+            result.success(true)
+            return
+        }
+        // OEM request dialogs can close without applying the allowlist change.
+        // The public settings list is the only universal fallback; wait for its
+        // return too and report the actual PowerManager state, never launch
+        // success merely because an Activity could be started.
+        if (!batteryOptimizationFallbackOpened &&
+            openBatteryOptimizationSettingsFallback()
+        ) {
+            return
+        }
+        pendingBatteryOptimizationResult = null
+        batteryOptimizationRequestLeftActivity = false
+        batteryOptimizationFallbackOpened = false
+        result.success(false)
+    }
+
+    private fun openBatteryOptimizationSettingsFallback(): Boolean {
+        return try {
+            batteryOptimizationFallbackOpened = true
+            batteryOptimizationRequestLeftActivity = false
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /**
      * Reports the Android-owned part of notification delivery. Scheduling and
      * test notifications remain in the existing Flutter agenda service; this
@@ -330,6 +477,7 @@ class MainActivity : FlutterActivity() {
             "appNotificationsEnabled" to NotificationManagerCompat.from(this).areNotificationsEnabled(),
             "postNotificationsGranted" to isNotificationPermissionGranted(),
             "exactAlarmsAllowed" to canScheduleExactAlarms(),
+            "batteryOptimizationIgnored" to isIgnoringBatteryOptimizations(),
             "channels" to channels,
             "activeNotifications" to activeNotifications,
         )
@@ -345,6 +493,7 @@ class MainActivity : FlutterActivity() {
             return
         }
         pendingExactAlarmPermissionResult = result
+        exactAlarmPermissionRequestLeftActivity = false
         try {
             startActivity(
                 Intent(
@@ -354,9 +503,11 @@ class MainActivity : FlutterActivity() {
             )
         } catch (_: ActivityNotFoundException) {
             pendingExactAlarmPermissionResult = null
+            exactAlarmPermissionRequestLeftActivity = false
             result.success(false)
         } catch (_: SecurityException) {
             pendingExactAlarmPermissionResult = null
+            exactAlarmPermissionRequestLeftActivity = false
             result.success(false)
         }
     }

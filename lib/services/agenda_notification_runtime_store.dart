@@ -213,7 +213,7 @@ enum AgendaNotificationReconcileMode { authoritative, maintenance }
 enum AgendaNotificationReconcileOrigin { foreground, background }
 
 /// Terminal result recorded for the most recent notification projection.
-enum AgendaNotificationDiagnosticResult { success, skipped, failed }
+enum AgendaNotificationDiagnosticResult { success, skipped, blocked, failed }
 
 /// A durable fence around notification projection work.
 ///
@@ -304,6 +304,7 @@ class AgendaNotificationDiagnostics {
     required this.result,
     required this.notificationsEnabled,
     required this.exactAlarmsAllowed,
+    this.batteryOptimizationIgnored = true,
     required this.plannedCount,
     required this.scheduledCount,
     required this.truncatedCount,
@@ -324,6 +325,7 @@ class AgendaNotificationDiagnostics {
   final AgendaNotificationDiagnosticResult result;
   final bool notificationsEnabled;
   final bool exactAlarmsAllowed;
+  final bool batteryOptimizationIgnored;
   final int plannedCount;
   final int scheduledCount;
   final int truncatedCount;
@@ -347,6 +349,7 @@ class AgendaNotificationDiagnostics {
     result: result,
     notificationsEnabled: notificationsEnabled,
     exactAlarmsAllowed: exactAlarmsAllowed,
+    batteryOptimizationIgnored: batteryOptimizationIgnored,
     plannedCount: plannedCount,
     scheduledCount: scheduledCount,
     truncatedCount: truncatedCount,
@@ -368,6 +371,7 @@ class AgendaNotificationDiagnostics {
     'result': result.name,
     'notificationsEnabled': notificationsEnabled,
     'exactAlarmsAllowed': exactAlarmsAllowed,
+    'batteryOptimizationIgnored': batteryOptimizationIgnored,
     'plannedCount': plannedCount,
     'scheduledCount': scheduledCount,
     'truncatedCount': truncatedCount,
@@ -408,6 +412,8 @@ class AgendaNotificationDiagnostics {
         result == null ||
         value['notificationsEnabled'] is! bool ||
         value['exactAlarmsAllowed'] is! bool ||
+        (value['batteryOptimizationIgnored'] != null &&
+            value['batteryOptimizationIgnored'] is! bool) ||
         plannedCount == null ||
         scheduledCount == null ||
         truncatedCount == null ||
@@ -462,6 +468,9 @@ class AgendaNotificationDiagnostics {
       result: result,
       notificationsEnabled: value['notificationsEnabled'] as bool,
       exactAlarmsAllowed: value['exactAlarmsAllowed'] as bool,
+      batteryOptimizationIgnored: value['batteryOptimizationIgnored'] == null
+          ? true
+          : value['batteryOptimizationIgnored'] as bool,
       plannedCount: plannedCount,
       scheduledCount: scheduledCount,
       truncatedCount: truncatedCount,

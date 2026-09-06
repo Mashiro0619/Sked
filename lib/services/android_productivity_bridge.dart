@@ -6,12 +6,21 @@ import 'package:flutter/services.dart';
 /// Stable method-channel names shared by the Flutter and Android layers.
 abstract final class AndroidProductivityChannel {
   static const name = 'com.mashiro.sked/android_productivity';
+
+  /// Registered by the app's generated plugin registrant, including the
+  /// short-lived Flutter engine used for notification action callbacks.
+  static const backgroundName =
+      'com.mashiro.sked/android_productivity_background';
   static const getInitialAgendaIntent = 'getInitialAgendaIntent';
   static const requestNotificationPermission = 'requestNotificationPermission';
   static const isNotificationPermissionGranted =
       'isNotificationPermissionGranted';
   static const canScheduleExactAlarms = 'canScheduleExactAlarms';
   static const requestExactAlarmPermission = 'requestExactAlarmPermission';
+  static const isIgnoringBatteryOptimizations =
+      'isIgnoringBatteryOptimizations';
+  static const openBatteryOptimizationSettings =
+      'openBatteryOptimizationSettings';
   static const scheduleAgendaReconciliation = 'scheduleAgendaReconciliation';
   static const cancelAgendaReconciliation = 'cancelAgendaReconciliation';
   static const completeBackgroundAgendaReconciliation =
@@ -109,6 +118,7 @@ class AndroidNotificationDiagnostics {
     required this.appNotificationsEnabled,
     required this.postNotificationsGranted,
     required this.exactAlarmsAllowed,
+    required this.batteryOptimizationIgnored,
     required this.channels,
     this.activeNotifications = const [],
   });
@@ -118,6 +128,7 @@ class AndroidNotificationDiagnostics {
       appNotificationsEnabled = false,
       postNotificationsGranted = false,
       exactAlarmsAllowed = false,
+      batteryOptimizationIgnored = false,
       channels = const [],
       activeNotifications = const [];
 
@@ -125,6 +136,7 @@ class AndroidNotificationDiagnostics {
   final bool appNotificationsEnabled;
   final bool postNotificationsGranted;
   final bool exactAlarmsAllowed;
+  final bool batteryOptimizationIgnored;
   final List<AndroidNotificationChannelState> channels;
   final List<AndroidActiveNotificationState> activeNotifications;
 
@@ -134,6 +146,7 @@ class AndroidNotificationDiagnostics {
     final appNotificationsEnabled = value['appNotificationsEnabled'];
     final postNotificationsGranted = value['postNotificationsGranted'];
     final exactAlarmsAllowed = value['exactAlarmsAllowed'];
+    final batteryOptimizationIgnored = value['batteryOptimizationIgnored'];
     final rawChannels = value['channels'];
     final rawActive = value['activeNotifications'] ?? const [];
     if (supported is! bool ||
@@ -163,6 +176,11 @@ class AndroidNotificationDiagnostics {
       appNotificationsEnabled: appNotificationsEnabled,
       postNotificationsGranted: postNotificationsGranted,
       exactAlarmsAllowed: exactAlarmsAllowed,
+      batteryOptimizationIgnored: batteryOptimizationIgnored == null
+          ? false
+          : batteryOptimizationIgnored is bool
+          ? batteryOptimizationIgnored
+          : false,
       channels: List.unmodifiable(channels),
       activeNotifications: List.unmodifiable(activeNotifications),
     );
@@ -273,6 +291,28 @@ class AndroidProductivityBridge {
     if (!_enabled || _disposed) return true;
     return await _channel.invokeMethod<bool>(
           AndroidProductivityChannel.requestExactAlarmPermission,
+        ) ??
+        false;
+  }
+
+  Future<bool> isIgnoringBatteryOptimizations() async {
+    if (!_enabled || _disposed) return true;
+    try {
+      return await _channel.invokeMethod<bool>(
+            AndroidProductivityChannel.isIgnoringBatteryOptimizations,
+          ) ??
+          false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  Future<bool> openBatteryOptimizationSettings() async {
+    if (!_enabled || _disposed) return true;
+    return await _channel.invokeMethod<bool>(
+          AndroidProductivityChannel.openBatteryOptimizationSettings,
         ) ??
         false;
   }

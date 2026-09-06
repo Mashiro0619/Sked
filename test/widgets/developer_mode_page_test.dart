@@ -137,6 +137,7 @@ void _mockAndroidNotificationDiagnostics({
   required bool exactAlarmsAllowed,
   bool? postNotificationsGranted,
   List<Map<String, Object?>> channels = const [],
+  List<Map<String, Object?>> activeNotifications = const [],
 }) {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(_productivityChannel, (call) async {
@@ -148,7 +149,9 @@ void _mockAndroidNotificationDiagnostics({
             'postNotificationsGranted':
                 postNotificationsGranted ?? notificationsEnabled,
             'exactAlarmsAllowed': exactAlarmsAllowed,
+            'batteryOptimizationIgnored': true,
             'channels': channels,
+            'activeNotifications': activeNotifications,
           };
         }
         return null;
@@ -463,7 +466,11 @@ void main() {
       );
 
       expect(find.text('Blocked'), findsOneWidget);
-      expect(find.text('Inexact fallback'), findsOneWidget);
+      expect(find.text('Not allowed'), findsOneWidget);
+      expect(
+        find.text('Vendor background restrictions may affect delivery.'),
+        findsOneWidget,
+      );
       expect(find.text('Course reminders'), findsWidgets);
       expect(find.text('Schedule reminders'), findsWidgets);
       expect(find.textContaining('Importance: 4'), findsOneWidget);
@@ -565,6 +572,142 @@ void main() {
         find.text('Not created yet. A developer test will create it.'),
         findsNWidgets(2),
       );
+    },
+  );
+
+  testWidgets(
+    'notification diagnostics only associate an active post time with its plan key',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final runtimeStore = MemoryAgendaNotificationRuntimeStore()
+        ..diagnostics = _developerNotificationDiagnostics();
+      final coordinator = _developerNotificationCoordinator(
+        provider,
+        gateway,
+        runtimeStore: runtimeStore,
+      );
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: true,
+        exactAlarmsAllowed: true,
+        activeNotifications: const [
+          <String, Object?>{
+            'id': 1,
+            'tag': 'sked_developer_test_1',
+            'postTimeMillis': 3000,
+          },
+          <String, Object?>{
+            'id': 2,
+            'tag': 'sked_agenda:course:next',
+            'postTimeMillis': 2000,
+          },
+          <String, Object?>{
+            'id': 3,
+            'tag': 'foreign-notification',
+            'postTimeMillis': 4000,
+          },
+        ],
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      final matchingTime = DateTime.fromMillisecondsSinceEpoch(2000)
+          .toLocal()
+          .toString();
+      final developerTestTime = DateTime.fromMillisecondsSinceEpoch(3000)
+          .toLocal()
+          .toString();
+      final foreignTime = DateTime.fromMillisecondsSinceEpoch(4000)
+          .toLocal()
+          .toString();
+      expect(
+        find.textContaining('native last posted $matchingTime'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(developerTestTime), findsNothing);
+      expect(find.textContaining(foreignTime), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'notification diagnostics retain a tagged delivered post time after its plan is empty',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final runtimeStore = MemoryAgendaNotificationRuntimeStore()
+        ..diagnostics = AgendaNotificationDiagnostics(
+          recordedAt: DateTime(2026, 8, 3, 8),
+          mode: AgendaNotificationReconcileMode.authoritative,
+          result: AgendaNotificationDiagnosticResult.success,
+          notificationsEnabled: true,
+          exactAlarmsAllowed: true,
+          plannedCount: 0,
+          scheduledCount: 0,
+          truncatedCount: 0,
+          retainedPendingCount: 0,
+          plan: [],
+          platformPendingCount: 0,
+          platformActiveCount: 1,
+        );
+      final coordinator = _developerNotificationCoordinator(
+        provider,
+        gateway,
+        runtimeStore: runtimeStore,
+      );
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      _mockAndroidNotificationDiagnostics(
+        notificationsEnabled: true,
+        exactAlarmsAllowed: true,
+        activeNotifications: const [
+          <String, Object?>{
+            'id': 4,
+            'tag': 'sked_agenda:course|table|course|2026-08-03|10',
+            'postTimeMillis': 5000,
+          },
+          <String, Object?>{
+            'id': 5,
+            'tag': 'sked_developer_test_5',
+            'postTimeMillis': 6000,
+          },
+        ],
+      );
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      final delivered = DateTime.fromMillisecondsSinceEpoch(5000)
+          .toLocal()
+          .toString();
+      final developerTest = DateTime.fromMillisecondsSinceEpoch(6000)
+          .toLocal()
+          .toString();
+      expect(
+        find.textContaining('native last posted $delivered'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(developerTest), findsNothing);
     },
   );
 

@@ -1,0 +1,18 @@
+name: sked_android_productivity_plugin
+description: Background Android capability bridge for Sked.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.mashiro.sked.androidproductivity
+        pluginClass: AndroidProductivityBackgroundPlugin

@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/agenda_coordinator.dart';
+import '../services/android_productivity_bridge.dart';
 import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
@@ -34,12 +35,14 @@ class NotificationSettingsPage extends StatefulWidget {
 class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     with WidgetsBindingObserver, UiCommandRunner<NotificationSettingsPage> {
   late final AgendaNotificationService _notificationService;
+  late final AndroidProductivityBridge _productivityBridge;
   AgendaCoordinator? _agendaCoordinator;
   var _notificationServiceResolved = false;
 
   bool _permissionLoading = false;
   bool? _notificationsPermissionGranted;
   bool? _exactAlarmAllowed;
+  bool? _batteryOptimizationIgnored;
   bool _permissionError = false;
   Future<void>? _permissionRefreshOperation;
 
@@ -50,6 +53,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _productivityBridge = AndroidProductivityBridge();
   }
 
   @override
@@ -79,6 +83,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _productivityBridge.dispose();
     super.dispose();
   }
 
@@ -90,7 +95,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   }
 
   Future<void> _refreshPermissionState() {
-    if (!_notificationService.isSupported) return Future<void>.value();
+    if (!_notificationService.isSupported) {
+      return Future<void>.value();
+    }
     final current = _permissionRefreshOperation;
     if (current != null) return current;
     final operation = _refreshPermissionStateNow();
@@ -113,6 +120,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
       final gateway = _notificationService.gateway;
       final notificationsEnabled = await gateway.notificationsEnabled;
       final exactAlarmsAllowed = await gateway.exactAlarmsAllowed;
+      final batteryOptimizationIgnored =
+          gateway is AgendaNotificationBatteryOptimizationGateway
+          ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
+                .batteryOptimizationIgnored
+          : true;
       if (!mounted) return;
       // Opening Android's permission settings is asynchronous.  The first
       // reconciliation runs before the user makes a choice, so detect a
@@ -124,13 +136,19 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
       final exactAlarmChanged =
           _exactAlarmAllowed != null &&
           _exactAlarmAllowed != exactAlarmsAllowed;
+      final batteryOptimizationChanged =
+          _batteryOptimizationIgnored != null &&
+          _batteryOptimizationIgnored != batteryOptimizationIgnored;
       setState(() {
         _notificationsPermissionGranted = notificationsEnabled;
         _exactAlarmAllowed = exactAlarmsAllowed;
+        _batteryOptimizationIgnored = batteryOptimizationIgnored;
         _permissionLoading = false;
         _permissionError = false;
       });
-      if (permissionChanged || exactAlarmChanged) {
+      if (permissionChanged ||
+          exactAlarmChanged ||
+          batteryOptimizationChanged) {
         await _agendaCoordinator?.reconcileNow();
       }
     } catch (error, stackTrace) {
@@ -219,6 +237,28 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     await _refreshPermissionState();
   }
 
+  Future<void> _requestBatteryOptimizationExemption() async {
+    if (!_notificationService.isSupported || _isWindows || uiCommandBusy) {
+      return;
+    }
+    setState(() {
+      _permissionLoading = true;
+      _permissionError = false;
+    });
+    await runUiCommand(
+      debugLabel: 'Open battery optimization settings',
+      command: () async {
+        await _productivityBridge.openBatteryOptimizationSettings();
+        // The native method resolves only after it has read PowerManager on
+        // return from the direct request or public-settings fallback. Rebuild
+        // regardless of the outcome so a revoked/unchanged allowlist cannot
+        // leave a future alarm looking valid until another lifecycle event.
+        await _agendaCoordinator?.reconcileNow();
+      },
+    );
+    await _refreshPermissionState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -231,6 +271,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         final exactAlarmSubtitle = _exactAlarmSubtitle(l10n);
         final children = <Widget>[
           SettingsSectionHeader(title: l10n.notificationSettingsSection),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              l10n.notificationPrecisionLimitations,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           SettingsSwitchTile(
             key: const ValueKey('notification-settings-enabled'),
             icon: Icons.notifications_active_outlined,
@@ -317,6 +367,30 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       _exactAlarmAllowed == true
                   ? null
                   : _requestExactAlarmPermission,
+            ),
+          if (_notificationService.isSupported && !_isWindows)
+            SettingsConnectedTile(
+              key: const ValueKey('notification-battery-optimization'),
+              leading: const Icon(Icons.battery_saver_outlined),
+              title: l10n.notificationBatteryOptimization,
+              subtitle: _batteryOptimizationSubtitle(l10n),
+              trailing: IconButton(
+                key: const ValueKey('notification-battery-optimization-action'),
+                tooltip: l10n.notificationBatteryOptimizationRequest,
+                onPressed:
+                    uiCommandBusy ||
+                        _permissionLoading ||
+                        _batteryOptimizationIgnored == true
+                    ? null
+                    : _requestBatteryOptimizationExemption,
+                icon: const Icon(Icons.open_in_new),
+              ),
+              onTap:
+                  uiCommandBusy ||
+                      _permissionLoading ||
+                      _batteryOptimizationIgnored == true
+                  ? null
+                  : _requestBatteryOptimizationExemption,
             ),
           SettingsSwitchTile(
             key: const ValueKey('notification-lock-screen-titles'),
@@ -441,6 +515,15 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     return _exactAlarmAllowed == true
         ? l10n.notificationExactAlarmAllowed
         : l10n.notificationExactAlarmRequired;
+  }
+
+  String _batteryOptimizationSubtitle(AppLocalizations l10n) {
+    if (_permissionLoading || _batteryOptimizationIgnored == null) {
+      return l10n.notificationPermissionChecking;
+    }
+    return _batteryOptimizationIgnored == true
+        ? l10n.notificationBatteryOptimizationAllowed
+        : l10n.notificationBatteryOptimizationRequired;
   }
 }
 

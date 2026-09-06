@@ -4336,11 +4336,11 @@ abstract class AppLocalizations {
   /// **'Allowed'**
   String get developerNotificationExactAlarmAllowed;
 
-  /// No description provided for @developerNotificationExactAlarmInexact.
+  /// No description provided for @developerNotificationExactAlarmBlocked.
   ///
   /// In en, this message translates to:
-  /// **'Inexact fallback'**
-  String get developerNotificationExactAlarmInexact;
+  /// **'Not allowed'**
+  String get developerNotificationExactAlarmBlocked;
 
   /// No description provided for @developerNotificationPlan.
   ///
@@ -4587,11 +4587,29 @@ abstract class AppLocalizations {
   /// **'Skipped'**
   String get developerNotificationReconcileResultSkipped;
 
+  /// No description provided for @developerNotificationReconcileResultBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked until all precise-delivery conditions are met'**
+  String get developerNotificationReconcileResultBlocked;
+
   /// No description provided for @developerNotificationReconcileResultFailed.
   ///
   /// In en, this message translates to:
   /// **'Failed'**
   String get developerNotificationReconcileResultFailed;
+
+  /// No description provided for @developerNotificationBackgroundLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'Vendor background limits'**
+  String get developerNotificationBackgroundLimits;
+
+  /// No description provided for @developerNotificationOemBackgroundRestriction.
+  ///
+  /// In en, this message translates to:
+  /// **'Vendor background restrictions may affect delivery.'**
+  String get developerNotificationOemBackgroundRestriction;
 
   /// No description provided for @developerNotificationTestChecking.
   ///
@@ -4743,6 +4761,12 @@ abstract class AppLocalizations {
   /// **'Schedules only items with a reminder. Set a course default below for courses that inherit it.'**
   String get notificationSettingsEnabledHint;
 
+  /// No description provided for @notificationPrecisionLimitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.'**
+  String get notificationPrecisionLimitations;
+
   /// No description provided for @notificationSettingsEnabledSummary.
   ///
   /// In en, this message translates to:
@@ -4850,6 +4874,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allow exact alarms'**
   String get notificationExactAlarmRequest;
+
+  /// No description provided for @notificationBatteryOptimization.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimization'**
+  String get notificationBatteryOptimization;
+
+  /// No description provided for @notificationBatteryOptimizationAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Android battery optimization allowlisted'**
+  String get notificationBatteryOptimizationAllowed;
+
+  /// No description provided for @notificationBatteryOptimizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise reminders require the Android battery-optimization allowlist'**
+  String get notificationBatteryOptimizationRequired;
+
+  /// No description provided for @notificationBatteryOptimizationRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Open battery optimization settings'**
+  String get notificationBatteryOptimizationRequest;
 
   /// No description provided for @notificationLockScreenTitles.
   ///

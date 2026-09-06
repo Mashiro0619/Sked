@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_background_reconciler.dart';
+import 'package:sked/services/agenda_notification_fingerprint.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/agenda_projection_service.dart';
@@ -329,6 +330,7 @@ void main() {
       key: 'background-general-handled',
       fireAt: anchor.add(const Duration(minutes: 50)),
       occurrenceId: occurrence.scopedStableId,
+      occurrenceRevision: agendaOccurrenceRevision(occurrence),
       target: occurrence.target,
     ).encode();
     final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
@@ -355,7 +357,12 @@ void main() {
     expect(await runtime.readPendingActions(), hasLength(1));
     expect(
       await runtime.readHandledOccurrenceIds(),
-      contains(occurrence.scopedStableId),
+      contains(
+        agendaRuntimeOccurrenceId(
+          occurrenceId: occurrence.scopedStableId,
+          revision: agendaOccurrenceRevision(occurrence),
+        ),
+      ),
     );
     expect(gateway.scheduled, isEmpty);
 

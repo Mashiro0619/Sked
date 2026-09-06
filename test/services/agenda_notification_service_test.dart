@@ -10,13 +10,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
+import 'package:sked/services/agenda_notification_fingerprint.dart';
 import 'package:sked/services/agenda_projection_service.dart';
 import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/notification_planner.dart';
 import 'package:sked/services/windows_notification_backend.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 const _timezoneChannel = MethodChannel('flutter_timezone');
+const _androidProductivityChannel = MethodChannel(
+  AndroidProductivityChannel.name,
+);
 
 class _RecordedAndroidSchedule {
   const _RecordedAndroidSchedule({
@@ -61,6 +66,7 @@ class _FakeAndroidNotificationsPlatform
       const NotificationAppLaunchDetails(false);
   List<PendingNotificationRequest> pendingRequests = const [];
   List<ActiveNotification> activeNotifications = const [];
+  List<AndroidNotificationChannel> notificationChannels = const [];
   Object? activeNotificationsError;
   final List<_RecordedAndroidSchedule> schedules = [];
   final List<int> shownIds = [];
@@ -104,6 +110,10 @@ class _FakeAndroidNotificationsPlatform
   }
 
   @override
+  Future<List<AndroidNotificationChannel>?> getNotificationChannels() async =>
+      notificationChannels;
+
+  @override
   Future<void> zonedSchedule({
     required int id,
     String? title,
@@ -114,8 +124,7 @@ class _FakeAndroidNotificationsPlatform
     AndroidNotificationDetails? notificationDetails,
     AndroidScheduleMode scheduleMode = AndroidScheduleMode.exact,
   }) async {
-    if (scheduleMode == AndroidScheduleMode.exactAllowWhileIdle ||
-        scheduleMode == AndroidScheduleMode.alarmClock) {
+    if (scheduleMode == AndroidScheduleMode.alarmClock) {
       final error = exactScheduleError;
       if (error != null) {
         if (revokeExactAlarmAfterScheduleError) {
@@ -343,6 +352,8 @@ class _RecordingGateway extends MemoryAgendaNotificationGateway {
   final List<String> cancelledKeys = [];
   final List<bool> exactScheduleModes = [];
   var failPendingPlan = false;
+  bool channelGranted = true;
+  final Map<String, bool> channelGrants = {};
 
   @override
   Future<Map<String, DateTime>> pendingPlan() async {
@@ -360,6 +371,10 @@ class _RecordingGateway extends MemoryAgendaNotificationGateway {
     exactScheduleModes.add(exact);
     await super.schedule(request, exact: exact);
   }
+
+  @override
+  Future<bool> notificationChannelEnabled(String channelId) async =>
+      channelGrants[channelId] ?? channelGranted;
 
   @override
   Future<void> cancel(String key) async {
@@ -380,6 +395,17 @@ class _FailingScheduleGateway extends _RecordingGateway {
       throw StateError('synthetic schedule failure');
     }
     await super.schedule(request, exact: exact);
+  }
+}
+
+class _RevokingExactScheduleGateway extends _RecordingGateway {
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    exactAlarmGranted = false;
+    throw PlatformException(code: 'exact_alarms_not_permitted');
   }
 }
 
@@ -524,10 +550,19 @@ void main() {
         expect(call.method, 'getLocalTimezone');
         return 'Etc/UTC';
       });
+      messenger.setMockMethodCallHandler(
+        _androidProductivityChannel,
+        (call) async =>
+            call.method ==
+                AndroidProductivityChannel.isIgnoringBatteryOptimizations
+            ? true
+            : null,
+      );
     });
 
     tearDown(() {
       messenger.setMockMethodCallHandler(_timezoneChannel, null);
+      messenger.setMockMethodCallHandler(_androidProductivityChannel, null);
       debugDefaultTargetPlatformOverride = previousTargetPlatform;
       tz.setLocalLocation(tz.UTC);
       AndroidFlutterLocalNotificationsPlugin.registerWith();
@@ -985,13 +1020,7 @@ void main() {
           channelDescription: 'Reminders from exams.',
           sourceLabel: 'Exam',
         );
-        final fallback = _platformRequest(
-          key: 'fallback-channel',
-          fireAt: fireAt.add(const Duration(minutes: 1)),
-        );
-
         await gateway.schedule(custom, exact: true);
-        await gateway.schedule(fallback, exact: false);
 
         final customSchedule = platform.schedules.first;
         final customDetails = customSchedule.notificationDetails!;
@@ -999,10 +1028,7 @@ void main() {
         expect(customSchedule.title, 'Mathematics');
         expect(customSchedule.body, '08:00');
         expect(customSchedule.payload, custom.payload);
-        expect(
-          customSchedule.scheduleMode,
-          AndroidScheduleMode.exactAllowWhileIdle,
-        );
+        expect(customSchedule.scheduleMode, AndroidScheduleMode.alarmClock);
         expect(customDetails.channelId, 'sked_exam_reminders');
         expect(customDetails.channelName, 'Exam reminders');
         expect(customDetails.channelDescription, 'Reminders from exams.');
@@ -1013,16 +1039,6 @@ void main() {
           'handled',
         ]);
         expect(customDetails.actions?.first.title, '延後 10 分鐘');
-
-        final fallbackDetails = platform.schedules.last.notificationDetails!;
-        expect(
-          platform.schedules.last.scheduleMode,
-          AndroidScheduleMode.inexactAllowWhileIdle,
-        );
-        expect(fallbackDetails.channelId, 'sked_course_reminders');
-        expect(fallbackDetails.channelName, 'course reminders');
-        expect(fallbackDetails.channelDescription, 'Reminders from course.');
-        expect(fallbackDetails.visibility, NotificationVisibility.private);
 
         await gateway.cancel(custom.key);
         expect(platform.cancelledIds, [custom.id]);
@@ -1038,69 +1054,55 @@ void main() {
         ];
         await gateway.cancelAll();
 
-        // The fallback request was scheduled successfully but is not present
-        // in this fake platform's pending list yet.  The gateway must still
-        // cancel its session-owned ID during a full agenda clear, while
-        // leaving the foreign ID untouched.
         expect(platform.cancelledIds, containsAll(<int>[custom.id, 91]));
-        expect(
-          platform.cancelledIds,
-          contains(gateway.lastScheduledNotificationId),
-        );
-        expect(platform.cancelledIds, hasLength(3));
+        expect(platform.cancelledIds, hasLength(2));
         expect(platform.cancelledIds, isNot(contains(92)));
       },
     );
 
-    test('retries the plugin exact-permission error as inexact', () async {
-      final gateway = FlutterAgendaNotificationGateway(enabled: true);
-      platform.exactScheduleError = PlatformException(
-        code: 'exact_alarms_not_permitted',
-      );
-      // The system query may still report the old value while Settings is
-      // changing. The plugin's specific error must be sufficient to recover.
-      platform.exactAlarmsAllowedResult = true;
+    test(
+      'surfaces the plugin exact-permission error without degrading',
+      () async {
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+        platform.exactScheduleError = PlatformException(
+          code: 'exact_alarms_not_permitted',
+        );
+        // The system query may still report the old value while Settings is
+        // changing. The plugin's specific error must be sufficient to recover.
+        platform.exactAlarmsAllowedResult = true;
 
-      await gateway.schedule(
-        _platformRequest(
-          key: 'exact-fallback',
-          fireAt: DateTime.now().add(const Duration(days: 1)),
-        ),
-        exact: true,
-      );
-
-      expect(platform.schedules, hasLength(1));
-      expect(
-        platform.schedules.single.scheduleMode,
-        AndroidScheduleMode.inexactAllowWhileIdle,
-      );
-      expect(
-        AgendaNotificationPayload.tryDecode(platform.schedules.single.payload)
-            ?.scheduleExact,
-        isFalse,
-      );
-    });
+        await expectLater(
+          gateway.schedule(
+            _platformRequest(
+              key: 'exact-fallback',
+              fireAt: DateTime.now().add(const Duration(days: 1)),
+            ),
+            exact: true,
+          ),
+          throwsA(isA<PlatformException>()),
+        );
+        expect(platform.schedules, isEmpty);
+      },
+    );
 
     test(
-      'falls back when exact scheduling fails after permission is revoked',
+      'surfaces an exact scheduling failure after permission is revoked',
       () async {
         final gateway = FlutterAgendaNotificationGateway(enabled: true);
         platform.exactScheduleError = PlatformException(code: 'alarm-failed');
         platform.exactAlarmsAllowedResult = false;
 
-        await gateway.schedule(
-          _platformRequest(
-            key: 'exact-revoked-fallback',
-            fireAt: DateTime.now().add(const Duration(days: 1)),
+        await expectLater(
+          gateway.schedule(
+            _platformRequest(
+              key: 'exact-revoked-fallback',
+              fireAt: DateTime.now().add(const Duration(days: 1)),
+            ),
+            exact: true,
           ),
-          exact: true,
+          throwsA(isA<PlatformException>()),
         );
-
-        expect(platform.schedules, hasLength(1));
-        expect(
-          platform.schedules.single.scheduleMode,
-          AndroidScheduleMode.inexactAllowWhileIdle,
-        );
+        expect(platform.schedules, isEmpty);
       },
     );
 
@@ -1129,53 +1131,54 @@ void main() {
       );
     });
 
-    test('uses inexact idle mode for the delayed developer test without exact alarm access', () async {
-      platform.exactAlarmsAllowedResult = false;
-      final gateway = FlutterAgendaNotificationGateway(enabled: true);
+    test(
+      'rejects the delayed developer test without exact alarm access',
+      () async {
+        platform.exactAlarmsAllowedResult = false;
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
 
-      await gateway.scheduleTestNotification(
-        AgendaNotificationTestRequest(
-          id: 2000000001,
-          channel: AgendaNotificationTestChannel.course,
-          title: 'Test',
-          body: 'Test body',
-          localeCode: 'en',
-          channelId: 'sked_course_reminders',
-          channelName: 'Course reminders',
-          channelDescription: 'Course reminder tests',
-          fireAt: DateTime.now().add(const Duration(minutes: 1)),
-        ),
-      );
+        await expectLater(
+          gateway.scheduleTestNotification(
+            AgendaNotificationTestRequest(
+              id: 2000000001,
+              channel: AgendaNotificationTestChannel.course,
+              title: 'Test',
+              body: 'Test body',
+              localeCode: 'en',
+              channelId: 'sked_course_reminders',
+              channelName: 'Course reminders',
+              channelDescription: 'Course reminder tests',
+              fireAt: DateTime.now().add(const Duration(minutes: 1)),
+            ),
+          ),
+          throwsA(isA<StateError>()),
+        );
+        expect(platform.schedules, isEmpty);
+      },
+    );
 
-      expect(
-        platform.schedules.single.scheduleMode,
-        AndroidScheduleMode.inexactAllowWhileIdle,
-      );
-    });
-
-    test('falls back from a revoked alarm-clock developer test', () async {
+    test('rejects a revoked alarm-clock developer test', () async {
       platform.exactScheduleError = PlatformException(code: 'alarm-failed');
       platform.revokeExactAlarmAfterScheduleError = true;
       final gateway = FlutterAgendaNotificationGateway(enabled: true);
 
-      await gateway.scheduleTestNotification(
-        AgendaNotificationTestRequest(
-          id: 2000000001,
-          channel: AgendaNotificationTestChannel.course,
-          title: 'Test',
-          body: 'Test body',
-          localeCode: 'en',
-          channelId: 'sked_course_reminders',
-          channelName: 'Course reminders',
-          channelDescription: 'Course reminder tests',
-          fireAt: DateTime.now().add(const Duration(minutes: 1)),
+      await expectLater(
+        gateway.scheduleTestNotification(
+          AgendaNotificationTestRequest(
+            id: 2000000001,
+            channel: AgendaNotificationTestChannel.course,
+            title: 'Test',
+            body: 'Test body',
+            localeCode: 'en',
+            channelId: 'sked_course_reminders',
+            channelName: 'Course reminders',
+            channelDescription: 'Course reminder tests',
+            fireAt: DateTime.now().add(const Duration(minutes: 1)),
+          ),
         ),
+        throwsA(isA<StateError>()),
       );
-
-      expect(
-        platform.schedules.single.scheduleMode,
-        AndroidScheduleMode.inexactAllowWhileIdle,
-      );
+      expect(platform.schedules, isEmpty);
     });
 
     test(
@@ -1663,6 +1666,34 @@ void main() {
     expect(gateway.scheduled, isNotEmpty);
   });
 
+  test('legacy action payloads cannot mutate a current occurrence', () async {
+    final runtime = MemoryAgendaNotificationRuntimeStore();
+    final gateway = MemoryAgendaNotificationGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtime,
+      now: () => DateTime(2026, 8, 3, 7, 40),
+    );
+    await service.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7));
+    final request = gateway.scheduled.values.single;
+    final current = AgendaNotificationPayload.tryDecode(request.payload)!;
+    final legacyPayload = AgendaNotificationPayload(
+      key: current.key,
+      fireAt: current.fireAt,
+      target: current.target,
+      occurrenceId: current.occurrenceId,
+      fingerprint: current.fingerprint,
+      scheduleExact: current.scheduleExact,
+      hasStableTag: current.hasStableTag,
+    ).encode();
+
+    await service.handleAction(legacyPayload, 'handled');
+
+    expect(runtime.handledOccurrenceIds, isEmpty);
+    expect(gateway.scheduled, hasLength(1));
+  });
+
   test('handled suppresses all reminders for the occurrence', () async {
     final runtime = MemoryAgendaNotificationRuntimeStore();
     final gateway = MemoryAgendaNotificationGateway();
@@ -1686,6 +1717,168 @@ void main() {
     );
     await restarted.reconcile(_data(), anchor: DateTime(2026, 8, 3, 7, 45));
     expect(restartedGateway.scheduled, isEmpty);
+  });
+
+  test(
+    'editing a handled course creates a new runtime occurrence revision',
+    () async {
+      final runtime = MemoryAgendaNotificationRuntimeStore();
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => DateTime(2026, 8, 3, 7),
+      );
+      final anchor = DateTime(2026, 8, 3, 7);
+
+      await service.reconcile(_data(), anchor: anchor);
+      final oldRequest = gateway.scheduled.values.single;
+      await service.handleAction(oldRequest.payload, 'handled');
+      expect(runtime.handledOccurrenceIds, isNotEmpty);
+
+      final edited = _data().copyWith(
+        studentMode: _data().studentMode.copyWith(
+          timetables: [
+            _data().studentMode.timetables.single.copyWith(
+              courses: [
+                _data().studentMode.timetables.single.courses.single.copyWith(
+                  startMinutes: 8 * 60 + 5,
+                  endMinutes: 9 * 60 + 5,
+                  timeRange: '08:05 - 09:05',
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await service.reconcile(edited, anchor: anchor);
+
+      expect(gateway.scheduled, hasLength(1));
+      expect(
+        gateway.scheduled.values.single.fireAt,
+        DateTime(2026, 8, 3, 7, 55),
+      );
+      expect(
+        (await service.readNotificationDiagnostics())?.plan.single.fireAt,
+        DateTime(2026, 8, 3, 7, 55),
+      );
+    },
+  );
+
+  test(
+    'migrates a legacy handled occurrence to its current revision',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 7, 40);
+      final data = _data();
+      final occurrence = const AgendaProjectionService()
+          .project(
+            data,
+            startInclusive: anchor,
+            endExclusive: anchor.add(const Duration(days: 1)),
+          )
+          .single;
+      final runtime = MemoryAgendaNotificationRuntimeStore();
+      await runtime.addHandledOccurrence(occurrence.scopedStableId);
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+
+      await service.reconcile(data, anchor: anchor);
+
+      final revisionKey = agendaRuntimeOccurrenceId(
+        occurrenceId: occurrence.scopedStableId,
+        revision: agendaOccurrenceRevision(occurrence),
+      );
+      expect(gateway.scheduled, isEmpty);
+      expect(runtime.handledOccurrenceIds, contains(revisionKey));
+      expect(
+        runtime.handledOccurrenceIds,
+        isNot(contains(occurrence.scopedStableId)),
+      );
+
+      final edited = data.copyWith(
+        studentMode: data.studentMode.copyWith(
+          timetables: [
+            data.studentMode.timetables.single.copyWith(
+              courses: [
+                data.studentMode.timetables.single.courses.single.copyWith(
+                  startMinutes: 8 * 60 + 5,
+                  endMinutes: 9 * 60 + 5,
+                  timeRange: '08:05 - 09:05',
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await service.reconcile(edited, anchor: anchor);
+
+      expect(
+        gateway.scheduled.values.single.fireAt,
+        DateTime(2026, 8, 3, 7, 55),
+      );
+    },
+  );
+
+  test('migrates a legacy snooze without carrying it across an edit', () async {
+    final anchor = DateTime(2026, 8, 3, 7, 40);
+    final data = _data();
+    final occurrence = const AgendaProjectionService()
+        .project(
+          data,
+          startInclusive: anchor,
+          endExclusive: anchor.add(const Duration(days: 1)),
+        )
+        .single;
+    final legacyKey = buildNotificationPlanKey(
+      occurrence.sourceType,
+      occurrence.stableId,
+      10,
+    );
+    final snoozedAt = DateTime(2026, 8, 3, 8, 3);
+    final runtime = MemoryAgendaNotificationRuntimeStore();
+    await runtime.setSnooze(legacyKey, snoozedAt);
+    final gateway = MemoryAgendaNotificationGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: runtime,
+      now: () => anchor,
+    );
+
+    await service.reconcile(data, anchor: anchor);
+
+    final revisionKey = agendaRuntimeOccurrenceId(
+      occurrenceId: occurrence.scopedStableId,
+      revision: agendaOccurrenceRevision(occurrence),
+    );
+    expect(gateway.scheduled.values.single.fireAt, snoozedAt);
+    expect(runtime.snoozes, containsPair(revisionKey, snoozedAt));
+    expect(runtime.snoozes, isNot(contains(legacyKey)));
+
+    final edited = data.copyWith(
+      studentMode: data.studentMode.copyWith(
+        timetables: [
+          data.studentMode.timetables.single.copyWith(
+            courses: [
+              data.studentMode.timetables.single.courses.single.copyWith(
+                startMinutes: 8 * 60 + 5,
+                endMinutes: 9 * 60 + 5,
+                timeRange: '08:05 - 09:05',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    await service.reconcile(edited, anchor: anchor);
+
+    expect(gateway.scheduled.values.single.fireAt, DateTime(2026, 8, 3, 7, 55));
   });
 
   test('handled state is scoped to the contributing source', () async {
@@ -2052,6 +2245,10 @@ void main() {
       expect(gateway.cancelledKeys, contains(key));
       expect(status.notificationsEnabled, isFalse);
       expect(status.scheduledCount, 0);
+      expect(
+        (await service.readNotificationDiagnostics())?.result,
+        AgendaNotificationDiagnosticResult.blocked,
+      );
     },
   );
 
@@ -2067,6 +2264,7 @@ void main() {
       final anchor = DateTime(2026, 8, 3, 7);
       await service.reconcile(_data(), anchor: anchor);
       final key = gateway.scheduled.keys.single;
+      gateway.batteryOptimizationGranted = false;
 
       final disabled = _data().copyWith(
         notificationSettings: const NotificationSettings(
@@ -2079,7 +2277,13 @@ void main() {
       expect(gateway.scheduled, isEmpty);
       expect(gateway.cancelledKeys, contains(key));
       expect(status.notificationsEnabled, isTrue);
+      expect(status.batteryOptimizationIgnored, isFalse);
       expect(status.scheduledCount, 0);
+      expect(
+        (await service.readNotificationDiagnostics())
+            ?.batteryOptimizationIgnored,
+        isFalse,
+      );
     },
   );
 
@@ -2129,6 +2333,10 @@ void main() {
       expect(gateway.cancelledKeys, isEmpty);
       expect(status.scheduledCount, 1);
       expect(status.retainedPendingCount, 1);
+      expect(
+        (await service.readNotificationDiagnostics())?.result,
+        AgendaNotificationDiagnosticResult.blocked,
+      );
     },
   );
 
@@ -2160,7 +2368,7 @@ void main() {
   );
 
   test(
-    'reconcile uses inexact scheduling when exact alarms are unavailable',
+    'reconcile blocks scheduling when exact alarms are unavailable',
     () async {
       final gateway = _RecordingGateway()..exactAlarmGranted = false;
       final service = AgendaNotificationService(
@@ -2174,14 +2382,20 @@ void main() {
         anchor: DateTime(2026, 8, 3, 7),
       );
 
-      expect(gateway.exactScheduleModes, [isFalse]);
+      expect(gateway.exactScheduleModes, isEmpty);
       expect(status.exactAlarmsAllowed, isFalse);
-      expect(status.scheduledCount, 1);
+      expect(status.scheduledCount, 0);
+      expect(status.precisionBlocked, isTrue);
+      expect(gateway.scheduled, isEmpty);
+      expect(
+        (await service.readNotificationDiagnostics())?.result,
+        AgendaNotificationDiagnosticResult.blocked,
+      );
     },
   );
 
   test(
-    'reconcile replaces inexact reminders when exact alarms become available',
+    'reconcile schedules reminders after exact alarms become available',
     () async {
       final gateway = _RecordingGateway()..exactAlarmGranted = false;
       final service = AgendaNotificationService(
@@ -2192,12 +2406,7 @@ void main() {
       final anchor = DateTime(2026, 8, 3, 7);
 
       await service.reconcile(_data(), anchor: anchor);
-      final key = gateway.scheduled.keys.single;
-      expect(
-        AgendaNotificationPayload.tryDecode(gateway.scheduled[key]!.payload)
-            ?.scheduleExact,
-        isFalse,
-      );
+      expect(gateway.scheduled, isEmpty);
       gateway.cancelledKeys.clear();
       gateway.exactScheduleModes.clear();
 
@@ -2206,6 +2415,8 @@ void main() {
 
       expect(gateway.cancelledKeys, isEmpty);
       expect(gateway.exactScheduleModes, [isTrue]);
+      expect(gateway.scheduled, hasLength(1));
+      final key = gateway.scheduled.keys.single;
       expect(
         AgendaNotificationPayload.tryDecode(gateway.scheduled[key]!.payload)
             ?.scheduleExact,
@@ -2215,6 +2426,102 @@ void main() {
       expect(status.scheduledCount, 1);
     },
   );
+
+  test(
+    'reconcile classifies an exact-alarm revocation race as blocked',
+    () async {
+      final gateway = _RevokingExactScheduleGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => DateTime(2026, 8, 3, 7, 40),
+      );
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7),
+      );
+
+      expect(status.precisionBlocked, isTrue);
+      expect(status.exactAlarmsAllowed, isFalse);
+      expect(status.scheduledCount, 0);
+      expect(gateway.scheduled, isEmpty);
+      expect(
+        (await service.readNotificationDiagnostics())?.result,
+        AgendaNotificationDiagnosticResult.blocked,
+      );
+    },
+  );
+
+  test(
+    'reconcile blocks scheduling when battery optimization is active',
+    () async {
+      final gateway = _RecordingGateway()..batteryOptimizationGranted = false;
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => DateTime(2026, 8, 3, 7, 40),
+      );
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7),
+      );
+
+      expect(gateway.scheduled, isEmpty);
+      expect(status.precisionBlocked, isTrue);
+      expect(status.batteryOptimizationIgnored, isFalse);
+      final diagnostics = await service.readNotificationDiagnostics();
+      expect(diagnostics?.result, AgendaNotificationDiagnosticResult.blocked);
+      expect(diagnostics?.batteryOptimizationIgnored, isFalse);
+    },
+  );
+
+  test(
+    'reconcile blocks scheduling when a notification channel is disabled',
+    () async {
+      final gateway = _RecordingGateway()..channelGranted = false;
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        now: () => DateTime(2026, 8, 3, 7, 40),
+      );
+
+      final status = await service.reconcile(
+        _data(),
+        anchor: DateTime(2026, 8, 3, 7),
+      );
+
+      expect(gateway.scheduled, isEmpty);
+      expect(status.precisionBlocked, isTrue);
+      expect(
+        (await service.readNotificationDiagnostics())?.result,
+        AgendaNotificationDiagnosticResult.blocked,
+      );
+    },
+  );
+
+  test('an unused disabled channel does not block course reminders', () async {
+    final gateway = _RecordingGateway()
+      ..channelGrants['sked_schedule_reminders'] = false;
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      now: () => DateTime(2026, 8, 3, 7, 40),
+    );
+
+    final status = await service.reconcile(
+      _data(),
+      anchor: DateTime(2026, 8, 3, 7),
+    );
+
+    expect(gateway.scheduled, hasLength(1));
+    expect(status.precisionBlocked, isFalse);
+    expect(
+      (await service.readNotificationDiagnostics())?.result,
+      AgendaNotificationDiagnosticResult.success,
+    );
+  });
 
   test(
     'reconcile keeps the nearest reminders within the platform cap',
@@ -2865,7 +3172,7 @@ void main() {
       await service.reconcile(_data(), anchor: current);
       final key = gateway.scheduled.keys.single;
       await service.handleAction(gateway.scheduled[key]!.payload, 'snooze_10m');
-      expect(runtime.snoozes[key], DateTime(2026, 8, 3, 7, 40));
+      expect(runtime.snoozes.values.single, DateTime(2026, 8, 3, 7, 40));
 
       current = DateTime(2026, 8, 3, 7, 45);
       await service.reconcile(_data(), anchor: current);
@@ -3002,6 +3309,7 @@ void main() {
         key: 'course|table|course|2026-08-03|10',
         fireAt: DateTime(2026, 8, 3, 7, 50),
         occurrenceId: 'course|table|course|2026-08-03',
+        occurrenceRevision: '1111111111111111111111111111111111111111',
         target: const AgendaTarget(
           sourceType: AgendaSourceType.course,
           timetableId: 'table',
@@ -3032,9 +3340,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final before = DateTime.now();
     const key = 'course|table|course|2026-08-03|10';
+    const occurrenceId = 'course|table|course|2026-08-03';
+    const revision = '2222222222222222222222222222222222222222';
     final payload = AgendaNotificationPayload(
       key: key,
       fireAt: before,
+      occurrenceId: occurrenceId,
+      occurrenceRevision: revision,
       target: const AgendaTarget(
         sourceType: AgendaSourceType.course,
         timetableId: 'table',
@@ -3054,7 +3366,11 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     final runtime = SharedPreferencesAgendaNotificationRuntimeStore();
-    final snoozedUntil = (await runtime.readSnoozes())[key];
+    final runtimeKey = agendaRuntimeOccurrenceId(
+      occurrenceId: occurrenceId,
+      revision: revision,
+    );
+    final snoozedUntil = (await runtime.readSnoozes())[runtimeKey];
     final pending = await runtime.readPendingActions();
     expect(snoozedUntil, isNotNull);
     expect(
@@ -3068,5 +3384,65 @@ void main() {
     expect(pending, hasLength(1));
     expect(pending.single.payload, payload);
     expect(pending.single.actionId, 'snooze_10m');
+  });
+
+  test('background snooze ignores a stored request from a newer occurrence revision', () async {
+    SharedPreferences.setMockInitialValues({});
+    const key = 'course|table|course|2026-08-03|10';
+    const occurrenceId = 'course|table|course|2026-08-03';
+    const oldRevision = '3333333333333333333333333333333333333333';
+    const currentRevision = '4444444444444444444444444444444444444444';
+    const target = AgendaTarget(
+      sourceType: AgendaSourceType.course,
+      timetableId: 'table',
+      courseId: 'course',
+      dateIso: '2026-08-03',
+    );
+    final current = DateTime.now();
+    final oldPayload = AgendaNotificationPayload(
+      key: key,
+      fireAt: current.add(const Duration(minutes: 10)),
+      occurrenceId: occurrenceId,
+      occurrenceRevision: oldRevision,
+      fingerprint: 'old-fingerprint',
+      target: target,
+    ).encode();
+    final currentPayload = AgendaNotificationPayload(
+      key: key,
+      fireAt: current.add(const Duration(minutes: 15)),
+      occurrenceId: occurrenceId,
+      occurrenceRevision: currentRevision,
+      fingerprint: 'current-fingerprint',
+      target: target,
+    ).encode();
+    final runtime = SharedPreferencesAgendaNotificationRuntimeStore();
+    await runtime.saveBackgroundRequest(
+      AgendaNotificationBackgroundRequest(
+        key: key,
+        notificationId: 101,
+        title: 'Course',
+        body: '08:05',
+        payload: currentPayload,
+        fireAt: current.add(const Duration(minutes: 15)),
+        localeCode: 'en',
+        lockScreenShowTitles: false,
+        channelId: 'sked_course_reminders',
+        channelName: 'Course reminders',
+        channelDescription: 'Course reminders',
+      ),
+    );
+
+    agendaNotificationBackgroundAction(
+      NotificationResponse(
+        notificationResponseType:
+            NotificationResponseType.selectedNotificationAction,
+        actionId: 'snooze_10m',
+        payload: oldPayload,
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(await runtime.readSnoozes(), isEmpty);
+    expect(await runtime.readPendingActions(), isEmpty);
   });
 }

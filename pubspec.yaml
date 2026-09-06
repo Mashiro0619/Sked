@@ -39,6 +39,8 @@ dependencies:
   timezone: ^0.11.1
   material_ui: ^1.0.0
   cupertino_ui: ^1.0.0
+  sked_android_productivity_plugin:
+    path: packages/android_productivity_plugin
 
 dev_dependencies:
   flutter_test:

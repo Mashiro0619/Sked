@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
+import android.os.PowerManager
 import androidx.work.BackoffPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -63,7 +65,7 @@ object AgendaBackgroundReconcileScheduler {
         // This is only rolling-window maintenance, never user-facing reminder
         // delivery. Do not use allow-while-idle here: Android quotas those
         // wakeups per UID and a maintenance alarm can otherwise delay the
-        // actual course/event reminder that uses exactAllowWhileIdle.
+        // actual course/event reminder that uses alarmClock.
         alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
     }
 
@@ -142,6 +144,19 @@ class AgendaBackgroundReconcileWorker(
                     AndroidProductivityContract.CHANNEL,
                 ).setMethodCallHandler { call, result ->
                     when (call.method) {
+                        AndroidProductivityContract.METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS -> {
+                            val power = applicationContext
+                                .getSystemService(PowerManager::class.java)
+                            result.success(
+                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                                    true
+                                } else {
+                                    power?.isIgnoringBatteryOptimizations(
+                                        applicationContext.packageName,
+                                    ) == true
+                                },
+                            )
+                        }
                         "scheduleAgendaReconciliation" -> {
                             AgendaBackgroundReconcileScheduler.schedule(
                                 applicationContext,

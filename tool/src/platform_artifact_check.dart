@@ -113,6 +113,7 @@ List<String> androidMergedManifestIssues(
     // platform capabilities, not app-defined exported permissions.
     'android.permission.POST_NOTIFICATIONS',
     'android.permission.RECEIVE_BOOT_COMPLETED',
+    'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
     'android.permission.SCHEDULE_EXACT_ALARM',
     // These are brought in by flutter_local_notifications/WorkManager and
     // are required by their Android implementation.

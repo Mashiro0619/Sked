@@ -2249,7 +2249,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationExactAlarmAllowed => '已允许';
 
   @override
-  String get developerNotificationExactAlarmInexact => '使用不精确降级';
+  String get developerNotificationExactAlarmBlocked => '系统未允许';
 
   @override
   String get developerNotificationPlan => '日程通知计划';
@@ -2395,7 +2395,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationReconcileResultSkipped => '已跳过';
 
   @override
+  String get developerNotificationReconcileResultBlocked => '满足全部精准投递条件前不会排程';
+
+  @override
   String get developerNotificationReconcileResultFailed => '失败';
+
+  @override
+  String get developerNotificationBackgroundLimits => '厂商后台限制';
+
+  @override
+  String get developerNotificationOemBackgroundRestriction => '厂商后台限制可能影响投递。';
 
   @override
   String get developerNotificationTestChecking => '正在检查通知状态，暂时无法测试。';
@@ -2480,6 +2489,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '仅为已设置提醒的项目安排通知。继承课程需在下方设置课程默认提醒。';
 
   @override
+  String get notificationPrecisionLimitations =>
+      'Android 无法提供数学意义上的绝对精准。设备关机、系统时间修改、系统崩溃或厂商固件后台限制仍可能导致投递延迟。';
+
+  @override
   String get notificationSettingsEnabledSummary => '已启用';
 
   @override
@@ -2534,6 +2547,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationExactAlarmRequest => '允许精确闹钟';
+
+  @override
+  String get notificationBatteryOptimization => '电池优化';
+
+  @override
+  String get notificationBatteryOptimizationAllowed => '已加入 Android 电池优化白名单';
+
+  @override
+  String get notificationBatteryOptimizationRequired =>
+      '精准提醒需要加入 Android 电池优化白名单';
+
+  @override
+  String get notificationBatteryOptimizationRequest => '打开电池优化设置';
 
   @override
   String get notificationLockScreenTitles => '在锁屏上显示标题';
@@ -4807,7 +4833,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerNotificationExactAlarmAllowed => '已允許';
 
   @override
-  String get developerNotificationExactAlarmInexact => '使用非精確降級';
+  String get developerNotificationExactAlarmBlocked => '系統未允許';
 
   @override
   String get developerNotificationPlan => '日程通知計畫';
@@ -4953,7 +4979,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerNotificationReconcileResultSkipped => '已略過';
 
   @override
+  String get developerNotificationReconcileResultBlocked => '滿足全部精準投遞條件前不會排程';
+
+  @override
   String get developerNotificationReconcileResultFailed => '失敗';
+
+  @override
+  String get developerNotificationBackgroundLimits => '廠商背景限制';
+
+  @override
+  String get developerNotificationOemBackgroundRestriction => '廠商背景限制可能影響投遞。';
 
   @override
   String get developerNotificationTestChecking => '正在檢查通知狀態，暫時無法測試。';
@@ -5038,6 +5073,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
       '僅為已設定提醒的項目安排通知。繼承課程需在下方設定課程預設提醒。';
 
   @override
+  String get notificationPrecisionLimitations =>
+      'Android 無法提供數學意義上的絕對精準。裝置關機、系統時間修改、系統崩潰或廠商韌體背景限制仍可能導致投遞延遲。';
+
+  @override
   String get notificationSettingsEnabledSummary => '已啟用';
 
   @override
@@ -5092,6 +5131,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationExactAlarmRequest => '允許精確鬧鐘';
+
+  @override
+  String get notificationBatteryOptimization => '電池最佳化';
+
+  @override
+  String get notificationBatteryOptimizationAllowed => '已加入 Android 電池最佳化白名單';
+
+  @override
+  String get notificationBatteryOptimizationRequired =>
+      '精確提醒需要加入 Android 電池最佳化白名單';
+
+  @override
+  String get notificationBatteryOptimizationRequest => '開啟電池最佳化設定';
 
   @override
   String get notificationLockScreenTitles => '在鎖定畫面顯示標題';

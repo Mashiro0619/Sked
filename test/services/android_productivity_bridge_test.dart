@@ -24,6 +24,7 @@ void main() {
             'appNotificationsEnabled': true,
             'postNotificationsGranted': true,
             'exactAlarmsAllowed': false,
+            'batteryOptimizationIgnored': true,
             'channels': <Object?>[
               <String, Object?>{
                 'id': 'sked_schedule_reminders',
@@ -58,6 +59,7 @@ void main() {
     expect(diagnostics.appNotificationsEnabled, isTrue);
     expect(diagnostics.postNotificationsGranted, isTrue);
     expect(diagnostics.exactAlarmsAllowed, isFalse);
+    expect(diagnostics.batteryOptimizationIgnored, isTrue);
     expect(diagnostics.channels.map((channel) => channel.id), [
       'sked_course_reminders',
       'sked_schedule_reminders',
@@ -117,6 +119,24 @@ void main() {
     expect(diagnostics.channels, isEmpty);
     expect(called, isFalse);
   });
+
+  test(
+    'battery settings request returns the system-confirmed allowlist state',
+    () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            expect(
+              call.method,
+              AndroidProductivityChannel.openBatteryOptimizationSettings,
+            );
+            return false;
+          });
+      final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
+      addTearDown(bridge.dispose);
+
+      expect(await bridge.openBatteryOptimizationSettings(), isFalse);
+    },
+  );
 
   test('disposing a diagnostics-only bridge preserves the coordinator intent handler', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

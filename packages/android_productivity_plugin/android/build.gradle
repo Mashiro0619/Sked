@@ -1,0 +1,29 @@
+group 'com.mashiro.sked.androidproductivity'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.1.0'
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.mashiro.sked.androidproductivity'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 21
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

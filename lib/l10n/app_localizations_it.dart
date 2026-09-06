@@ -2379,7 +2379,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get developerNotificationExactAlarmAllowed => 'Allowed';
 
   @override
-  String get developerNotificationExactAlarmInexact => 'Inexact fallback';
+  String get developerNotificationExactAlarmBlocked => 'Not allowed';
 
   @override
   String get developerNotificationPlan => 'Agenda notification plan';
@@ -2535,7 +2535,19 @@ class AppLocalizationsIt extends AppLocalizations {
   String get developerNotificationReconcileResultSkipped => 'Skipped';
 
   @override
+  String get developerNotificationReconcileResultBlocked =>
+      'Blocked until all precise-delivery conditions are met';
+
+  @override
   String get developerNotificationReconcileResultFailed => 'Failed';
+
+  @override
+  String get developerNotificationBackgroundLimits =>
+      'Vendor background limits';
+
+  @override
+  String get developerNotificationOemBackgroundRestriction =>
+      'Vendor background restrictions may affect delivery.';
 
   @override
   String get developerNotificationTestChecking =>
@@ -2631,6 +2643,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Schedules only items with a reminder. Set a course default below for courses that inherit it.';
 
   @override
+  String get notificationPrecisionLimitations =>
+      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+
+  @override
   String get notificationSettingsEnabledSummary => 'Enabled';
 
   @override
@@ -2687,6 +2703,21 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get notificationExactAlarmRequest => 'Allow exact alarms';
+
+  @override
+  String get notificationBatteryOptimization => 'Battery optimization';
+
+  @override
+  String get notificationBatteryOptimizationAllowed =>
+      'Android battery optimization allowlisted';
+
+  @override
+  String get notificationBatteryOptimizationRequired =>
+      'Precise reminders require the Android battery-optimization allowlist';
+
+  @override
+  String get notificationBatteryOptimizationRequest =>
+      'Open battery optimization settings';
 
   @override
   String get notificationLockScreenTitles => 'Show titles on the lock screen';

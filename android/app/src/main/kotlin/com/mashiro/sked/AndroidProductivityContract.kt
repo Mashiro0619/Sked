@@ -7,4 +7,8 @@ object AndroidProductivityContract {
     const val EXTRA_AGENDA_TARGET = "com.mashiro.sked.extra.AGENDA_TARGET"
     const val ACTION_AGENDA_RECONCILE = "com.mashiro.sked.action.AGENDA_RECONCILE"
     const val METHOD_GET_NOTIFICATION_DIAGNOSTICS = "getNotificationDiagnostics"
+    const val METHOD_IS_IGNORING_BATTERY_OPTIMIZATIONS =
+        "isIgnoringBatteryOptimizations"
+    const val METHOD_OPEN_BATTERY_OPTIMIZATION_SETTINGS =
+        "openBatteryOptimizationSettings"
 }

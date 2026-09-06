@@ -21,12 +21,27 @@ import 'agenda_projection_service.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_notification_fingerprint.dart';
 import 'agenda_runtime_mutation_lock.dart';
+import 'android_productivity_bridge.dart';
 import 'notification_planner.dart';
 import 'windows_notification_backend.dart';
 
 import 'windows_notification_identity.dart';
 
 const _backgroundNotificationActionIds = <String>{'snooze_10m', 'handled'};
+
+class _AgendaNotificationPrecisionBlocked implements Exception {
+  const _AgendaNotificationPrecisionBlocked({
+    required this.reason,
+    required this.notificationsEnabled,
+    required this.exactAlarmsAllowed,
+    required this.batteryOptimizationIgnored,
+  });
+
+  final String reason;
+  final bool notificationsEnabled;
+  final bool exactAlarmsAllowed;
+  final bool batteryOptimizationIgnored;
+}
 
 /// Entry point used by flutter_local_notifications when an action is selected
 /// while the app UI is not running. It can immediately reschedule a snooze
@@ -52,8 +67,7 @@ void agendaNotificationBackgroundAction(NotificationResponse response) async {
       payload.isEmpty ||
       !_backgroundNotificationActionIds.contains(actionId) ||
       decoded == null ||
-      (actionId == 'handled' &&
-          (decoded.occurrenceId == null || decoded.occurrenceId!.isEmpty))) {
+      !agendaNotificationPayloadHasRuntimeIdentity(decoded)) {
     return;
   }
   await _persistBackgroundNotificationAction(decoded, payload, actionId);
@@ -75,16 +89,33 @@ Future<void> _persistBackgroundNotificationAction(
     switch (actionId) {
       case 'snooze_10m':
         final fireAt = DateTime.now().add(const Duration(minutes: 10));
-        await store.setSnoozeForRuntimeFence(decoded.key, fireAt, runtimeFence);
         final request = await store.readBackgroundRequestForRuntimeFence(
           decoded.key,
           runtimeFence,
         );
+        final scheduledPayload = request == null
+            ? null
+            : AgendaNotificationPayload.tryDecode(request.payload);
+        // A current background request with a different revision means this
+        // card predates an edit. It must not recreate a snooze for the new
+        // occurrence just because planner keys intentionally remain stable.
         if (request != null &&
+            (scheduledPayload == null ||
+                !agendaNotificationPayloadMatchesScheduledRequest(
+                  action: decoded,
+                  scheduled: scheduledPayload,
+                ))) {
+          return;
+        }
+        final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
+        if (runtimeKey == null) return;
+        await store.setSnoozeForRuntimeFence(runtimeKey, fireAt, runtimeFence);
+        if (request != null &&
+            scheduledPayload != null &&
             await store.isRuntimeFenceCurrent(runtimeFence) &&
             await _scheduleBackgroundSnooze(
               request: request,
-              payload: decoded,
+              payload: scheduledPayload,
               fireAt: fireAt,
               isRuntimeFenceCurrent: () =>
                   store.isRuntimeFenceCurrent(runtimeFence),
@@ -107,13 +138,12 @@ Future<void> _persistBackgroundNotificationAction(
         );
         return;
       case 'handled':
-        final occurrenceId = decoded.occurrenceId;
-        if (occurrenceId != null && occurrenceId.isNotEmpty) {
-          await store.addHandledOccurrenceForRuntimeFence(
-            occurrenceId,
-            runtimeFence,
-          );
-        }
+        final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
+        if (runtimeKey == null) return;
+        await store.addHandledOccurrenceForRuntimeFence(
+          runtimeKey,
+          runtimeFence,
+        );
         if (!await store.isRuntimeFenceCurrent(runtimeFence)) return;
         // General-event acknowledgement is provider-owned, so preserve the
         // action for the next projection even though device notification
@@ -168,7 +198,13 @@ Future<bool> _scheduleBackgroundSnooze({
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    final exact = await android?.canScheduleExactNotifications() ?? true;
+    if (android == null ||
+        !await _backgroundExactDeliveryAllowed(
+          android,
+          channelId: request.channelId ?? 'sked_agenda_reminders',
+        )) {
+      return false;
+    }
     final copy = _notificationCopy(request.localeCode);
     var updatedPayload = payload.copyWith(fireAt: fireAt).encode();
     final channelId = request.channelId ?? 'sked_agenda_reminders';
@@ -202,29 +238,19 @@ Future<bool> _scheduleBackgroundSnooze({
         ],
       ),
     );
-    await _scheduleWithExactAlarmFallback(
-      exactRequested: exact,
-      canScheduleExact: () async =>
-          await android?.canScheduleExactNotifications() ?? true,
-      schedule: (mode) async {
-        final scheduledExact = mode == AndroidScheduleMode.exactAllowWhileIdle;
-        updatedPayload = scheduledExact == exact
-            ? payload.copyWith(fireAt: fireAt).encode()
-            : payload
-                  .copyWith(fireAt: fireAt, scheduleExact: scheduledExact)
-                  .encode();
-        await withAgendaRuntimeMutationLock(
-          () => plugin.zonedSchedule(
-            id: request.notificationId,
-            title: request.title,
-            body: request.body,
-            notificationDetails: details,
-            scheduledDate: tz.TZDateTime.from(fireAt.toLocal(), tz.local),
-            androidScheduleMode: mode,
-            payload: updatedPayload,
-          ),
-        );
-      },
+    updatedPayload = payload
+        .copyWith(fireAt: fireAt, scheduleExact: true)
+        .encode();
+    await withAgendaRuntimeMutationLock(
+      () => plugin.zonedSchedule(
+        id: request.notificationId,
+        title: request.title,
+        body: request.body,
+        notificationDetails: details,
+        scheduledDate: tz.TZDateTime.from(fireAt.toLocal(), tz.local),
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        payload: updatedPayload,
+      ),
     );
     if (!await isRuntimeFenceCurrent()) {
       await withAgendaRuntimeMutationLock(
@@ -261,22 +287,43 @@ Future<bool> _scheduleBackgroundSnooze({
   }
 }
 
+Future<bool> _backgroundExactDeliveryAllowed(
+  AndroidFlutterLocalNotificationsPlugin android, {
+  required String channelId,
+}) async {
+  try {
+    if (await android.areNotificationsEnabled() != true ||
+        await android.canScheduleExactNotifications() != true) {
+      return false;
+    }
+    final batteryOptimizationIgnored =
+        await const MethodChannel(AndroidProductivityChannel.backgroundName)
+            .invokeMethod<bool>(
+              AndroidProductivityChannel.isIgnoringBatteryOptimizations,
+            ) ??
+        false;
+    if (!batteryOptimizationIgnored) return false;
+    final channels = await android.getNotificationChannels();
+    AndroidNotificationChannel? channel;
+    for (final item in channels ?? const <AndroidNotificationChannel>[]) {
+      if (item.id == channelId) {
+        channel = item;
+        break;
+      }
+    }
+    return channel == null || channel.importance != Importance.none;
+  } on PlatformException {
+    return false;
+  } on MissingPluginException {
+    return false;
+  }
+}
+
 /// Optional richer pending-notification contract.  Keeping this separate from
 /// [AgendaNotificationGateway] preserves compatibility with small test and
 /// platform gateways that only implement the original fire-time map.
 abstract interface class AgendaNotificationMetadataGateway {
   Future<Map<String, AgendaNotificationMetadata>> pendingMetadata();
-}
-
-/// Optional outcome exposed by gateways that can determine the mode Android
-/// actually accepted for the most recently scheduled notification.
-///
-/// Exact-alarm access can be revoked after the capability check but before the
-/// platform schedule call. The production gateway retries inexactly in that
-/// case; exposing the accepted mode lets the service record the real result
-/// and use the same mode for the rest of that reconciliation pass.
-abstract interface class AgendaNotificationScheduleModeGateway {
-  bool? get lastScheduledExact;
 }
 
 /// Optional outcome exposed by gateways that need to resolve a platform
@@ -627,16 +674,27 @@ abstract interface class AgendaNotificationGateway {
   Future<bool> openNotificationSettings();
 }
 
+/// Optional Android capability used by the strict reminder policy. Desktop
+/// and small test gateways may omit it and are treated as unrestricted.
+abstract interface class AgendaNotificationBatteryOptimizationGateway {
+  Future<bool> get batteryOptimizationIgnored;
+}
+
+abstract interface class AgendaNotificationChannelStateGateway {
+  Future<bool> notificationChannelEnabled(String channelId);
+}
+
 /// In-memory gateway useful for widget/unit tests and desktop previews.
 class MemoryAgendaNotificationGateway
     implements
         AgendaNotificationGateway,
         AgendaNotificationMetadataGateway,
-        AgendaNotificationScheduleModeGateway,
         AgendaNotificationScheduleIdGateway,
         AgendaNotificationPlatformDiagnosticsGateway,
         AgendaNotificationOwnershipGateway,
         AgendaNotificationIdCancellationGateway,
+        AgendaNotificationBatteryOptimizationGateway,
+        AgendaNotificationChannelStateGateway,
         AgendaNotificationTestGateway {
   MemoryAgendaNotificationGateway({
     AgendaNotificationTestIdAllocator? developerTestIdAllocator,
@@ -656,7 +714,7 @@ class MemoryAgendaNotificationGateway
   void Function(String? payload, String? actionId)? _onAction;
   bool permissionGranted = true;
   bool exactAlarmGranted = true;
-  bool? _lastScheduledExact;
+  bool batteryOptimizationGranted = true;
   int? _lastScheduledNotificationId;
 
   Future<T> _enqueueDeveloperTest<T>(Future<T> Function() operation) {
@@ -670,9 +728,6 @@ class MemoryAgendaNotificationGateway
     _developerTestTail = result.then<void>((_) {}, onError: (_, _) {});
     return result;
   }
-
-  @override
-  bool? get lastScheduledExact => _lastScheduledExact;
 
   @override
   int? get lastScheduledNotificationId => _lastScheduledNotificationId;
@@ -744,7 +799,6 @@ class MemoryAgendaNotificationGateway
     // Keep optional platform scheduling outcomes coherent for every request.
     // The in-memory gateway never probes, so its actual ID is the stable
     // preferred ID carried by the request.
-    _lastScheduledExact = exact;
     _lastScheduledNotificationId = request.id;
     scheduled[request.key] = request;
   }
@@ -766,6 +820,13 @@ class MemoryAgendaNotificationGateway
 
   @override
   Future<bool> get exactAlarmsAllowed async => exactAlarmGranted;
+
+  @override
+  Future<bool> get batteryOptimizationIgnored async =>
+      batteryOptimizationGranted;
+
+  @override
+  Future<bool> notificationChannelEnabled(String channelId) async => true;
 
   @override
   Future<bool> openNotificationSettings() async => true;
@@ -809,11 +870,12 @@ class FlutterAgendaNotificationGateway
     implements
         AgendaNotificationGateway,
         AgendaNotificationMetadataGateway,
-        AgendaNotificationScheduleModeGateway,
         AgendaNotificationScheduleIdGateway,
         AgendaNotificationPlatformDiagnosticsGateway,
         AgendaNotificationOwnershipGateway,
         AgendaNotificationIdCancellationGateway,
+        AgendaNotificationBatteryOptimizationGateway,
+        AgendaNotificationChannelStateGateway,
         AgendaNotificationTestGateway {
   FlutterAgendaNotificationGateway({
     FlutterLocalNotificationsPlugin? plugin,
@@ -840,7 +902,6 @@ class FlutterAgendaNotificationGateway
   Future<void>? _launchDetailsRead;
   void Function(String? payload)? _onTap;
   void Function(String? payload, String? actionId)? _onAction;
-  bool? _lastScheduledExact;
   int? _lastScheduledNotificationId;
   bool _notificationIdCacheLoaded = false;
   final Map<String, int> _managedNotificationIds = <String, int>{};
@@ -918,9 +979,6 @@ class FlutterAgendaNotificationGateway
       if (payload?.hasStableTag == true) _taggedManagedKeys.add(key);
     }
   }
-
-  @override
-  bool? get lastScheduledExact => _lastScheduledExact;
 
   @override
   int? get lastScheduledNotificationId => _lastScheduledNotificationId;
@@ -1278,20 +1336,18 @@ class FlutterAgendaNotificationGateway
         scheduledDate: scheduledDate,
         payload: request.payload,
       );
-      _lastScheduledExact = true;
     } else {
-      _lastScheduledExact = await _scheduleWithExactAlarmFallback(
-        exactRequested: exact,
-        canScheduleExact: () => exactAlarmsAllowed,
-        schedule: (mode) => _plugin.zonedSchedule(
-          id: notificationId,
-          title: request.title,
-          body: request.body,
-          notificationDetails: details,
-          scheduledDate: scheduledDate,
-          androidScheduleMode: mode,
-          payload: _payloadForScheduleMode(request.payload, mode),
-        ),
+      if (!exact) {
+        throw StateError('Exact alarms are required for agenda reminders.');
+      }
+      await _plugin.zonedSchedule(
+        id: notificationId,
+        title: request.title,
+        body: request.body,
+        notificationDetails: details,
+        scheduledDate: scheduledDate,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        payload: request.payload,
       );
     }
     _lastScheduledNotificationId = notificationId;
@@ -1455,8 +1511,8 @@ class FlutterAgendaNotificationGateway
       // (normally to roughly one delivery per minute, and more aggressively in
       // Doze). This developer-only check intentionally uses the alarm-clock
       // path when the user has granted exact-alarm access, so it can distinguish
-      // a broken notification channel from that OS delivery quota. User agenda
-      // reminders continue to use the less intrusive normal reminder mode.
+      // a broken notification channel from that OS delivery quota. Production
+      // agenda reminders use the same alarm-clock delivery mode.
       try {
         if (_isWindows) {
           await _windows.zonedSchedule(
@@ -1468,7 +1524,7 @@ class FlutterAgendaNotificationGateway
             payload: _developerTestPayload(effective.channel, effective.id),
           );
         } else {
-          await _scheduleDeveloperTestWithFallback(
+          await _scheduleDeveloperTestStrict(
             exactRequested: exact,
             canScheduleExact: () => exactAlarmsAllowed,
             schedule: (mode) => _plugin.zonedSchedule(
@@ -1686,6 +1742,47 @@ class FlutterAgendaNotificationGateway
   }
 
   @override
+  Future<bool> get batteryOptimizationIgnored async {
+    if (!_enabled || _isWindows || !_isAndroid) return true;
+    try {
+      return await const MethodChannel(AndroidProductivityChannel.name)
+              .invokeMethod<bool>(
+                AndroidProductivityChannel.isIgnoringBatteryOptimizations,
+              ) ??
+          false;
+    } on PlatformException {
+      // Fail closed when the native capability cannot be verified.
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> notificationChannelEnabled(String channelId) async {
+    if (!_enabled || _isWindows || !_isAndroid) return true;
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final channels = await android?.getNotificationChannels();
+      AndroidNotificationChannel? channel;
+      for (final item in channels ?? const <AndroidNotificationChannel>[]) {
+        if (item.id == channelId) {
+          channel = item;
+          break;
+        }
+      }
+      return channel == null || channel.importance != Importance.none;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  @override
   Future<bool> openNotificationSettings() async {
     if (!_enabled) return true;
     if (_isWindows) {
@@ -1706,51 +1803,16 @@ class FlutterAgendaNotificationGateway
   }
 }
 
-/// Schedules in exact mode when it is still available, but recovers from the
-/// Android permission changing between the capability check and the platform
-/// call.  This is deliberately narrow: an unrelated platform failure still
-/// reaches the caller and is visible in diagnostics.
-Future<bool> _scheduleWithExactAlarmFallback({
+/// The diagnostic delayed test deliberately uses Android's alarm-clock mode.
+/// It is rejected when exact access is absent or revoked so the result cannot
+/// be mistaken for a precise delivery test.
+Future<void> _scheduleDeveloperTestStrict({
   required bool exactRequested,
   required Future<bool> Function() canScheduleExact,
   required Future<void> Function(AndroidScheduleMode mode) schedule,
 }) async {
   if (!exactRequested) {
-    await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
-    return false;
-  }
-  try {
-    await schedule(AndroidScheduleMode.exactAllowWhileIdle);
-    return true;
-  } on PlatformException catch (error) {
-    // Only an exact-alarm permission revocation warrants a retry.  If Android
-    // still reports exact scheduling as available, preserve the original
-    // failure rather than concealing a bad notification configuration. The
-    // plugin reports this code directly from Android; prefer it over a second
-    // capability query because the latter may still be stale during a
-    // permission-revocation race.
-    final permissionDenied =
-        error.code == _exactAlarmPermissionErrorCode ||
-        !(await canScheduleExact());
-    if (!permissionDenied) rethrow;
-    await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
-    return false;
-  }
-}
-
-/// The diagnostic delayed test deliberately uses Android's alarm-clock mode
-/// when exact alarms are available. Unlike ordinary reminder delivery, this
-/// is an explicit developer action and is intended to reveal whether the
-/// platform can wake and post a notification at all. It must still degrade to
-/// an idle-tolerant inexact alarm when exact access is absent or revoked.
-Future<void> _scheduleDeveloperTestWithFallback({
-  required bool exactRequested,
-  required Future<bool> Function() canScheduleExact,
-  required Future<void> Function(AndroidScheduleMode mode) schedule,
-}) async {
-  if (!exactRequested) {
-    await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
-    return;
+    throw StateError('Exact alarms are required for delayed tests.');
   }
   try {
     await schedule(AndroidScheduleMode.alarmClock);
@@ -1758,32 +1820,23 @@ Future<void> _scheduleDeveloperTestWithFallback({
     final permissionDenied =
         error.code == _exactAlarmPermissionErrorCode ||
         !(await canScheduleExact());
-    if (!permissionDenied) rethrow;
-    await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
+    if (permissionDenied) {
+      throw StateError('Exact alarms are required for delayed tests.');
+    }
+    rethrow;
   }
-}
-
-String _payloadForScheduleMode(String payload, AndroidScheduleMode mode) {
-  final decoded = AgendaNotificationPayload.tryDecode(payload);
-  if (decoded == null) return payload;
-  final exact = mode == AndroidScheduleMode.exactAllowWhileIdle;
-  // Keep the original envelope byte-for-byte for the normal exact path. This
-  // avoids needless payload churn (and preserves compatibility with callers
-  // that omit the optional flag), while an inexact fallback must explicitly
-  // clear a previously true marker so background recovery does not retry exact
-  // mode after the permission race.
-  if (exact || !decoded.scheduleExact) return payload;
-  return decoded.copyWith(scheduleExact: false).encode();
 }
 
 class AgendaNotificationStatus {
   const AgendaNotificationStatus({
     required this.notificationsEnabled,
     required this.exactAlarmsAllowed,
+    this.batteryOptimizationIgnored = true,
     required this.scheduledCount,
     this.truncatedCount = 0,
     this.retainedPendingCount = 0,
     this.mode = AgendaNotificationReconcileMode.authoritative,
+    this.precisionBlocked = false,
     this.nextMaintenanceAt,
     this.overflowCatchUpAt,
     this.lastError,
@@ -1791,10 +1844,12 @@ class AgendaNotificationStatus {
 
   final bool notificationsEnabled;
   final bool exactAlarmsAllowed;
+  final bool batteryOptimizationIgnored;
   final int scheduledCount;
   final int truncatedCount;
   final int retainedPendingCount;
   final AgendaNotificationReconcileMode mode;
+  final bool precisionBlocked;
   final DateTime? nextMaintenanceAt;
   final DateTime? overflowCatchUpAt;
   final Object? lastError;
@@ -1981,6 +2036,7 @@ class AgendaNotificationService {
     _status = AgendaNotificationStatus(
       notificationsEnabled: _status.notificationsEnabled,
       exactAlarmsAllowed: _status.exactAlarmsAllowed,
+      batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
       scheduledCount: _status.scheduledCount,
       truncatedCount: _status.truncatedCount,
       retainedPendingCount: _status.retainedPendingCount,
@@ -1998,6 +2054,7 @@ class AgendaNotificationService {
         result: AgendaNotificationDiagnosticResult.failed,
         notificationsEnabled: _status.notificationsEnabled,
         exactAlarmsAllowed: _status.exactAlarmsAllowed,
+        batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
         plannedCount: 0,
         scheduledCount: _status.scheduledCount,
         truncatedCount: _status.truncatedCount,
@@ -2053,9 +2110,29 @@ class AgendaNotificationService {
     if (!await gateway.notificationsEnabled) {
       throw StateError('Android notifications are not permitted.');
     }
-    await testGateway.scheduleTestNotification(
-      _developerTestRequest(channel, localeCode: localeCode, fireAt: fireAt),
+    if (!await gateway.exactAlarmsAllowed) {
+      throw StateError('Exact alarms are required for delayed tests.');
+    }
+    final request = _developerTestRequest(
+      channel,
+      localeCode: localeCode,
+      fireAt: fireAt,
     );
+    if (gateway is AgendaNotificationBatteryOptimizationGateway &&
+        !await (gateway as AgendaNotificationBatteryOptimizationGateway)
+            .batteryOptimizationIgnored) {
+      throw StateError(
+        'Battery optimization must be disabled for delayed tests.',
+      );
+    }
+    if (gateway is AgendaNotificationChannelStateGateway &&
+        !await (gateway as AgendaNotificationChannelStateGateway)
+            .notificationChannelEnabled(request.channelId)) {
+      throw StateError(
+        'The notification channel is blocked for delayed tests.',
+      );
+    }
+    await testGateway.scheduleTestNotification(request);
   }
 
   AgendaNotificationTestGateway _testGatewayOrThrow() {
@@ -2267,8 +2344,13 @@ class AgendaNotificationService {
       // plan so a queued snooze/handled operation is reflected immediately.
       await _drainPendingActions();
       final notificationsEnabled = await gateway.notificationsEnabled;
-      var exactAllowed = await gateway.exactAlarmsAllowed;
-      if (!data.notificationSettings.enabled || !notificationsEnabled) {
+      final exactAllowed = await gateway.exactAlarmsAllowed;
+      final batteryOptimizationIgnored =
+          gateway is AgendaNotificationBatteryOptimizationGateway
+          ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
+                .batteryOptimizationIgnored
+          : true;
+      if (!data.notificationSettings.enabled) {
         final existing = await gateway.pendingPlan();
         final ownedKeys = <String>{
           ...existing.keys,
@@ -2293,6 +2375,7 @@ class AgendaNotificationService {
         _status = AgendaNotificationStatus(
           notificationsEnabled: notificationsEnabled,
           exactAlarmsAllowed: exactAllowed,
+          batteryOptimizationIgnored: batteryOptimizationIgnored,
           scheduledCount: retainedPendingKeys.length,
           truncatedCount: 0,
           retainedPendingCount: retainedPendingKeys.length,
@@ -2306,6 +2389,7 @@ class AgendaNotificationService {
             result: AgendaNotificationDiagnosticResult.skipped,
             notificationsEnabled: notificationsEnabled,
             exactAlarmsAllowed: exactAllowed,
+            batteryOptimizationIgnored: batteryOptimizationIgnored,
             plannedCount: 0,
             scheduledCount: retainedPendingKeys.length,
             truncatedCount: 0,
@@ -2313,6 +2397,24 @@ class AgendaNotificationService {
             plan: const [],
           ),
           projectionFence: projectionFence,
+        );
+        return;
+      }
+      final precisionBlockReason = await _precisionBlockReason(
+        notificationsEnabled: notificationsEnabled,
+        exactAlarmsAllowed: exactAllowed,
+        batteryOptimizationIgnored: batteryOptimizationIgnored,
+      );
+      if (precisionBlockReason != null) {
+        await _recordPrecisionBlocked(
+          current: current,
+          mode: mode,
+          origin: origin,
+          projectionFence: projectionFence,
+          notificationsEnabled: notificationsEnabled,
+          exactAlarmsAllowed: exactAllowed,
+          batteryOptimizationIgnored: batteryOptimizationIgnored,
+          reason: precisionBlockReason,
         );
         return;
       }
@@ -2326,6 +2428,7 @@ class AgendaNotificationService {
         startInclusive: current.subtract(_snoozeLookback),
         endExclusive: current.add(const Duration(days: 14)),
       );
+      await _migrateLegacyRuntimeOverrides(projectedOccurrences);
       // General-event acknowledgements are part of the persisted schedule
       // model. Keep them out of the platform plan just like the in-app
       // reminder list does; otherwise a later commit or app restart would
@@ -2352,13 +2455,34 @@ class AgendaNotificationService {
           ...(await (_runtimeStore as AgendaNotificationBackgroundRequestIndex)
               .backgroundRequestKeys()),
       };
-      final retainedPendingKeys = _retainedPendingKeys(
+      final rawRetainedPendingKeys = _retainedPendingKeys(
         existing,
         now: current,
         mode: mode,
       );
-      final selected = _selectDesiredPlan(runtimePlan, retainedPendingKeys);
+      final blockedChannelIds = await _blockedNotificationChannelIds(
+        runtimePlan,
+      );
+      final permittedRuntimePlan = blockedChannelIds.isEmpty
+          ? runtimePlan
+          : runtimePlan
+                .where(
+                  (item) =>
+                      !blockedChannelIds.contains(_channelIdForItem(item)),
+                )
+                .toList(growable: false);
+      final retainedPendingKeys = blockedChannelIds.isEmpty
+          ? rawRetainedPendingKeys
+          : {
+              for (final key in rawRetainedPendingKeys)
+                if (!_planKeyUsesBlockedChannel(key, blockedChannelIds)) key,
+            };
+      final selected = _selectDesiredPlan(
+        permittedRuntimePlan,
+        retainedPendingKeys,
+      );
       final desired = selected.items;
+      final channelBlocked = blockedChannelIds.isNotEmpty;
       await _backgroundRequestStore?.pruneBackgroundRequests(now: current);
       final metadata = gateway is AgendaNotificationMetadataGateway
           ? await (gateway as AgendaNotificationMetadataGateway)
@@ -2407,6 +2531,31 @@ class AgendaNotificationService {
       // the plan atomically from the user's perspective.
       for (final item in desired) {
         if (!(await _allowsProjectionFence(projectionFence))) return;
+        final latestNotificationsEnabled = await gateway.notificationsEnabled;
+        final latestExactAlarmsAllowed = await gateway.exactAlarmsAllowed;
+        final latestBatteryOptimizationIgnored =
+            gateway is AgendaNotificationBatteryOptimizationGateway
+            ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
+                  .batteryOptimizationIgnored
+            : true;
+        final latestBlockReason = await _precisionBlockReason(
+          notificationsEnabled: latestNotificationsEnabled,
+          exactAlarmsAllowed: latestExactAlarmsAllowed,
+          batteryOptimizationIgnored: latestBatteryOptimizationIgnored,
+        );
+        if (latestBlockReason != null) {
+          await _recordPrecisionBlocked(
+            current: current,
+            mode: mode,
+            origin: origin,
+            projectionFence: projectionFence,
+            notificationsEnabled: latestNotificationsEnabled,
+            exactAlarmsAllowed: latestExactAlarmsAllowed,
+            batteryOptimizationIgnored: latestBatteryOptimizationIgnored,
+            reason: latestBlockReason,
+          );
+          return;
+        }
         // Maintenance is deliberately not allowed to touch a notification
         // that is due (or was due) within the protection window.  This must
         // also cover metadata/fingerprint changes: cancelling and recreating
@@ -2426,14 +2575,35 @@ class AgendaNotificationService {
           // cards on Android because notification identity includes the tag.
           await _cancelManagedNotification(item.key);
         }
-        final requestedExact = exactAllowed;
-        final request = _requestFor(item, data, exact: requestedExact);
-        await gateway.schedule(request, exact: exactAllowed);
-        var acceptedExact = requestedExact;
-        if (gateway
-            case final AgendaNotificationScheduleModeGateway modeGateway) {
-          acceptedExact = modeGateway.lastScheduledExact ?? requestedExact;
-          exactAllowed = acceptedExact;
+        final request = _requestFor(item, data, exact: true);
+        try {
+          await gateway.schedule(request, exact: true);
+        } catch (error) {
+          // Android can revoke exact-alarm or notification access between the
+          // capability read above and the actual AlarmManager call. Re-read
+          // every strict condition and classify that race as blocked so no
+          // future plan is left looking valid.
+          final afterNotificationsEnabled = await gateway.notificationsEnabled;
+          final afterExactAlarmsAllowed = await gateway.exactAlarmsAllowed;
+          final afterBatteryOptimizationIgnored =
+              gateway is AgendaNotificationBatteryOptimizationGateway
+              ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
+                    .batteryOptimizationIgnored
+              : true;
+          final afterBlockReason = await _precisionBlockReason(
+            notificationsEnabled: afterNotificationsEnabled,
+            exactAlarmsAllowed: afterExactAlarmsAllowed,
+            batteryOptimizationIgnored: afterBatteryOptimizationIgnored,
+          );
+          if (afterBlockReason != null) {
+            throw _AgendaNotificationPrecisionBlocked(
+              reason: afterBlockReason,
+              notificationsEnabled: afterNotificationsEnabled,
+              exactAlarmsAllowed: afterExactAlarmsAllowed,
+              batteryOptimizationIgnored: afterBatteryOptimizationIgnored,
+            );
+          }
+          rethrow;
         }
         final scheduledNotificationId =
             gateway is AgendaNotificationScheduleIdGateway
@@ -2456,7 +2626,6 @@ class AgendaNotificationService {
         await _backgroundRequestStore?.saveBackgroundRequest(
           _backgroundRequestFor(
             request,
-            exact: acceptedExact,
             notificationId: scheduledNotificationId,
           ),
         );
@@ -2471,7 +2640,7 @@ class AgendaNotificationService {
         current,
         earliestOmittedFireAt: selected.earliestOmittedFireAt,
         protectedFireAts: [
-          ...runtimePlan.map((item) => item.fireAt),
+          ...permittedRuntimePlan.map((item) => item.fireAt),
           for (final key in retainedPendingKeys)
             if (existing[key] != null) existing[key]!,
         ],
@@ -2479,10 +2648,12 @@ class AgendaNotificationService {
       _status = AgendaNotificationStatus(
         notificationsEnabled: notificationsEnabled,
         exactAlarmsAllowed: exactAllowed,
+        batteryOptimizationIgnored: batteryOptimizationIgnored,
         scheduledCount: selected.scheduledCount,
         truncatedCount: selected.truncatedCount,
         retainedPendingCount: retainedPendingKeys.length,
         mode: mode,
+        precisionBlocked: channelBlocked,
         nextMaintenanceAt: maintenance.nextMaintenanceAt,
         overflowCatchUpAt: maintenance.overflowCatchUpAt,
       );
@@ -2491,7 +2662,9 @@ class AgendaNotificationService {
           recordedAt: current,
           mode: mode,
           origin: origin,
-          result: AgendaNotificationDiagnosticResult.success,
+          result: channelBlocked
+              ? AgendaNotificationDiagnosticResult.blocked
+              : AgendaNotificationDiagnosticResult.success,
           notificationsEnabled: notificationsEnabled,
           exactAlarmsAllowed: exactAllowed,
           plannedCount: selected.candidateCount,
@@ -2501,13 +2674,30 @@ class AgendaNotificationService {
           plan: _diagnosticPlan(desired),
           nextMaintenanceAt: maintenance.nextMaintenanceAt,
           overflowCatchUpAt: maintenance.overflowCatchUpAt,
+          error: channelBlocked
+              ? 'A notification channel is blocked in system settings.'
+              : null,
         ),
         projectionFence: projectionFence,
       );
     } catch (error) {
+      if (error case final _AgendaNotificationPrecisionBlocked blocked) {
+        await _recordPrecisionBlocked(
+          current: current,
+          mode: mode,
+          origin: origin,
+          projectionFence: projectionFence,
+          notificationsEnabled: blocked.notificationsEnabled,
+          exactAlarmsAllowed: blocked.exactAlarmsAllowed,
+          batteryOptimizationIgnored: blocked.batteryOptimizationIgnored,
+          reason: blocked.reason,
+        );
+        return;
+      }
       _status = AgendaNotificationStatus(
         notificationsEnabled: _status.notificationsEnabled,
         exactAlarmsAllowed: _status.exactAlarmsAllowed,
+        batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
         scheduledCount: _status.scheduledCount,
         truncatedCount: _status.truncatedCount,
         retainedPendingCount: _status.retainedPendingCount,
@@ -2524,6 +2714,7 @@ class AgendaNotificationService {
           result: AgendaNotificationDiagnosticResult.failed,
           notificationsEnabled: _status.notificationsEnabled,
           exactAlarmsAllowed: _status.exactAlarmsAllowed,
+          batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
           plannedCount: 0,
           scheduledCount: _status.scheduledCount,
           truncatedCount: _status.truncatedCount,
@@ -2537,6 +2728,124 @@ class AgendaNotificationService {
       );
       rethrow;
     }
+  }
+
+  Future<String?> _precisionBlockReason({
+    required bool notificationsEnabled,
+    required bool exactAlarmsAllowed,
+    required bool batteryOptimizationIgnored,
+  }) async {
+    if (!notificationsEnabled) {
+      return 'System notification permission is required for agenda reminders.';
+    }
+    if (!exactAlarmsAllowed) {
+      return 'Exact alarms are required for agenda reminders.';
+    }
+    if (!batteryOptimizationIgnored) {
+      return 'Battery optimization must be disabled for agenda reminders.';
+    }
+    return null;
+  }
+
+  Future<Set<String>> _blockedNotificationChannelIds(
+    Iterable<NotificationPlanItem> items,
+  ) async {
+    if (gateway is! AgendaNotificationChannelStateGateway) return const {};
+    final channels = gateway as AgendaNotificationChannelStateGateway;
+    final channelIds = {for (final item in items) _channelIdForItem(item)};
+    final blocked = <String>{};
+    for (final channelId in channelIds) {
+      if (!await channels.notificationChannelEnabled(channelId)) {
+        blocked.add(channelId);
+      }
+    }
+    return blocked;
+  }
+
+  String _channelIdForItem(NotificationPlanItem item) =>
+      projection.registry.descriptorFor(item.occurrence.sourceType).channelId;
+
+  bool _planKeyUsesBlockedChannel(String key, Set<String> blockedChannelIds) {
+    final parsed = parseNotificationPlanKey(key);
+    if (parsed == null) return false;
+    return blockedChannelIds.contains(
+      projection.registry.descriptorFor(parsed.sourceType).channelId,
+    );
+  }
+
+  Future<void> _recordPrecisionBlocked({
+    required DateTime current,
+    required AgendaNotificationReconcileMode mode,
+    required AgendaNotificationReconcileOrigin origin,
+    required AgendaNotificationProjectionFence? projectionFence,
+    required bool notificationsEnabled,
+    required bool exactAlarmsAllowed,
+    required bool batteryOptimizationIgnored,
+    required String reason,
+  }) async {
+    final existing = await gateway.pendingPlan();
+    final ownedKeys = <String>{
+      ...existing.keys,
+      if (gateway case final AgendaNotificationOwnershipGateway owned)
+        ...(await owned.ownedNotificationKeys()),
+      if (_runtimeStore
+          case final AgendaNotificationBackgroundRequestIndex index)
+        ...(await index.backgroundRequestKeys()),
+    };
+    var retainedPendingKeys = _retainedPendingKeys(
+      existing,
+      now: current,
+      mode: mode,
+    );
+    if (gateway case final AgendaNotificationMetadataGateway metadataGateway) {
+      try {
+        final metadata = await metadataGateway.pendingMetadata();
+        retainedPendingKeys = {
+          for (final key in retainedPendingKeys)
+            if (metadata[key]?.exact == true) key,
+        };
+      } catch (_) {
+        // Unknown scheduling mode cannot be treated as precise while the
+        // policy is blocked. Cancel it instead of preserving a legacy alarm.
+        retainedPendingKeys = const {};
+      }
+    }
+    for (final key in ownedKeys) {
+      if (!(await _allowsProjectionFence(projectionFence))) return;
+      if (retainedPendingKeys.contains(key)) continue;
+      await _cancelManagedNotification(key);
+    }
+    final nextMaintenanceAt = _nextDailyMaintenanceAt(current);
+    _status = AgendaNotificationStatus(
+      notificationsEnabled: notificationsEnabled,
+      exactAlarmsAllowed: exactAlarmsAllowed,
+      batteryOptimizationIgnored: batteryOptimizationIgnored,
+      scheduledCount: retainedPendingKeys.length,
+      truncatedCount: 0,
+      retainedPendingCount: retainedPendingKeys.length,
+      mode: mode,
+      precisionBlocked: true,
+      nextMaintenanceAt: nextMaintenanceAt,
+    );
+    await _recordDiagnostics(
+      AgendaNotificationDiagnostics(
+        recordedAt: current,
+        mode: mode,
+        origin: origin,
+        result: AgendaNotificationDiagnosticResult.blocked,
+        notificationsEnabled: notificationsEnabled,
+        exactAlarmsAllowed: exactAlarmsAllowed,
+        batteryOptimizationIgnored: batteryOptimizationIgnored,
+        plannedCount: 0,
+        scheduledCount: retainedPendingKeys.length,
+        truncatedCount: 0,
+        retainedPendingCount: retainedPendingKeys.length,
+        plan: const [],
+        nextMaintenanceAt: nextMaintenanceAt,
+        error: reason,
+      ),
+      projectionFence: projectionFence,
+    );
   }
 
   Set<String> _retainedPendingKeys(
@@ -2723,7 +3032,8 @@ class AgendaNotificationService {
     // the user taps "snooze" after that point, reintroduce the same stable
     // key with the temporary fire time so it can still be scheduled.
     for (final occurrence in occurrences) {
-      if (_handledOccurrenceIds.contains(_runtimeOccurrenceId(occurrence))) {
+      final runtimeKey = _runtimeOccurrenceId(occurrence);
+      if (_handledOccurrenceIds.contains(runtimeKey)) {
         continue;
       }
       for (final rawReminder in occurrence.reminders) {
@@ -2733,7 +3043,7 @@ class AgendaNotificationService {
           occurrence.stableId,
           reminder.minutesBefore,
         );
-        final snoozedAt = _snoozedUntil[key];
+        final snoozedAt = _snoozedUntil[runtimeKey];
         if (snoozedAt == null || !snoozedAt.isAfter(now)) continue;
         byKey.putIfAbsent(
           key,
@@ -2749,18 +3059,17 @@ class AgendaNotificationService {
     final result = <NotificationPlanItem>[];
     final staleSnoozes = <String>[];
     for (final item in byKey.values) {
-      if (_handledOccurrenceIds.contains(
-        _runtimeOccurrenceId(item.occurrence),
-      )) {
+      final runtimeKey = _runtimeOccurrenceId(item.occurrence);
+      if (_handledOccurrenceIds.contains(runtimeKey)) {
         continue;
       }
-      final snoozedAt = _snoozedUntil[item.key];
+      final snoozedAt = _snoozedUntil[runtimeKey];
       if (snoozedAt == null) {
         result.add(item);
         continue;
       }
       if (!snoozedAt.isAfter(now)) {
-        staleSnoozes.add(item.key);
+        staleSnoozes.add(runtimeKey);
         result.add(item);
         continue;
       }
@@ -2780,6 +3089,60 @@ class AgendaNotificationService {
       }
     }
     return List.unmodifiable(result);
+  }
+
+  /// Pre-revision builds stored handled state under a bare scoped occurrence
+  /// ID and snoozes under a planner key. Those keys cannot safely suppress a
+  /// later edit. Once a live projection is available, bind each unambiguous
+  /// legacy record to that occurrence's current revision and remove the old
+  /// key. Records outside the rolling projection are left untouched until they
+  /// become eligible (snoozes naturally expire in the meantime).
+  Future<void> _migrateLegacyRuntimeOverrides(
+    Iterable<AgendaOccurrence> occurrences,
+  ) async {
+    final projected = occurrences.toList(growable: false);
+    if (projected.isEmpty) return;
+
+    final byScopedId = <String, AgendaOccurrence>{
+      for (final occurrence in projected) occurrence.scopedStableId: occurrence,
+    };
+    final byLegacySnoozeKey = <String, AgendaOccurrence>{
+      for (final occurrence in projected)
+        for (final rawReminder in occurrence.reminders)
+          buildNotificationPlanKey(
+            occurrence.sourceType,
+            occurrence.stableId,
+            rawReminder.normalized().minutesBefore,
+          ): occurrence,
+    };
+
+    var handled = _handledOccurrenceIds;
+    for (final legacyKey in _handledOccurrenceIds) {
+      if (isAgendaRuntimeOccurrenceId(legacyKey)) continue;
+      final occurrence = byScopedId[legacyKey];
+      if (occurrence == null) continue;
+      final runtimeKey = _runtimeOccurrenceId(occurrence);
+      await _runtimeStore.addHandledOccurrence(runtimeKey);
+      await _runtimeStore.removeHandledOccurrence(legacyKey);
+      handled = {...handled, runtimeKey}..remove(legacyKey);
+    }
+    _handledOccurrenceIds = handled;
+
+    var snoozes = _snoozedUntil;
+    for (final entry in _snoozedUntil.entries) {
+      if (isAgendaRuntimeOccurrenceId(entry.key)) continue;
+      final occurrence = byLegacySnoozeKey[entry.key];
+      if (occurrence == null) continue;
+      final runtimeKey = _runtimeOccurrenceId(occurrence);
+      final existing = snoozes[runtimeKey];
+      final fireAt = existing != null && existing.isAfter(entry.value)
+          ? existing
+          : entry.value;
+      await _runtimeStore.setSnooze(runtimeKey, fireAt);
+      await _runtimeStore.removeSnooze(entry.key);
+      snoozes = {...snoozes, runtimeKey: fireAt}..remove(entry.key);
+    }
+    _snoozedUntil = snoozes;
   }
 
   /// Covers the small race where a projection begins just after a reminder's
@@ -2869,7 +3232,10 @@ class AgendaNotificationService {
   }) async {
     if (_runtimeClearing || actionId == null || actionId.isEmpty) return false;
     final decoded = _decodeNotificationPayload(payload);
-    if (decoded == null) return false;
+    if (decoded == null ||
+        !agendaNotificationPayloadHasRuntimeIdentity(decoded)) {
+      return false;
+    }
     final currentData = _lastData;
     if (currentData != null &&
         !agendaNotificationPayloadMatchesProjection(
@@ -2884,20 +3250,22 @@ class AgendaNotificationService {
     var accepted = true;
     switch (actionId) {
       case 'snooze_10m':
-        final existing = _snoozedUntil[decoded.key];
+        final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
+        if (runtimeKey == null) return false;
+        final existing = _snoozedUntil[runtimeKey];
         if (existing != null && existing.isAfter(now())) {
           await _notifyActionCallback(payload, actionId);
           return true;
         }
         final fireAt = now().add(const Duration(minutes: 10));
-        _snoozedUntil = {..._snoozedUntil, decoded.key: fireAt};
-        await _runtimeStore.setSnooze(decoded.key, fireAt);
+        _snoozedUntil = {..._snoozedUntil, runtimeKey: fireAt};
+        await _runtimeStore.setSnooze(runtimeKey, fireAt);
         break;
       case 'handled':
-        final occurrenceId = decoded.occurrenceId;
-        if (occurrenceId == null || occurrenceId.isEmpty) return false;
-        _handledOccurrenceIds = {..._handledOccurrenceIds, occurrenceId};
-        await _runtimeStore.addHandledOccurrence(occurrenceId);
+        final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
+        if (runtimeKey == null) return false;
+        _handledOccurrenceIds = {..._handledOccurrenceIds, runtimeKey};
+        await _runtimeStore.addHandledOccurrence(runtimeKey);
         await _cancelManagedNotification(decoded.key);
         break;
       default:
@@ -2997,10 +3365,10 @@ class AgendaNotificationService {
       final permanentlyInvalid =
           decoded == null ||
           !payloadMatchesCurrent ||
+          !agendaNotificationPayloadHasRuntimeIdentity(decoded) ||
           !_backgroundNotificationActionIds.contains(action.actionId) ||
           (action.actionId == 'handled' &&
-              (decoded.occurrenceId == null ||
-                  decoded.occurrenceId!.trim().isEmpty));
+              !agendaNotificationPayloadHasRuntimeIdentity(decoded));
       // A headless pass has no Provider instance and therefore cannot persist
       // a general-event acknowledgement. Keep that action queued until the
       // foreground coordinator supplies its provider callback; otherwise a
@@ -3060,6 +3428,7 @@ class AgendaNotificationService {
       // Runtime handled state is namespaced by source. Two adapters may use
       // the same local stable ID without suppressing one another.
       occurrenceId: item.occurrence.scopedStableId,
+      occurrenceRevision: agendaOccurrenceRevision(item.occurrence),
       fingerprint: _notificationFingerprintForItem(
         item,
         data,
@@ -3090,19 +3459,13 @@ class AgendaNotificationService {
 
   AgendaNotificationBackgroundRequest _backgroundRequestFor(
     AgendaNotificationRequest request, {
-    required bool exact,
     int? notificationId,
   }) => AgendaNotificationBackgroundRequest(
     key: request.key,
     notificationId: notificationId ?? request.id,
     title: request.title,
     body: request.body,
-    payload: _payloadForScheduleMode(
-      request.payload,
-      exact
-          ? AndroidScheduleMode.exactAllowWhileIdle
-          : AndroidScheduleMode.inexactAllowWhileIdle,
-    ),
+    payload: request.payload,
     fireAt: request.fireAt,
     localeCode: request.localeCode,
     lockScreenShowTitles: request.lockScreenShowTitles,
@@ -3517,7 +3880,21 @@ Locale _localeFromCode(String code) {
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
 String _runtimeOccurrenceId(AgendaOccurrence occurrence) =>
-    occurrence.scopedStableId;
+    agendaRuntimeOccurrenceId(
+      occurrenceId: occurrence.scopedStableId,
+      revision: agendaOccurrenceRevision(occurrence),
+    );
+
+String? _runtimeOverrideKeyForPayload(AgendaNotificationPayload payload) {
+  final occurrenceId = payload.occurrenceId?.trim();
+  if (occurrenceId == null || occurrenceId.isEmpty) return null;
+  final revision = payload.occurrenceRevision?.trim();
+  if (revision == null || revision.isEmpty) return null;
+  return agendaRuntimeOccurrenceId(
+    occurrenceId: occurrenceId,
+    revision: revision,
+  );
+}
 
 bool _isPersistentlyHandled(AppData data, AgendaOccurrence occurrence) {
   if (occurrence.sourceType != AgendaSourceType.generalEvent) return false;

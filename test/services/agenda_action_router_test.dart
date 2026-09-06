@@ -112,6 +112,7 @@ void main() {
         fireAt: DateTime.utc(2026, 8, 3, 7, 50),
         target: target,
         occurrenceId: 'course|table|course|2026-08-03',
+        occurrenceRevision: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         fingerprint: 'fingerprint',
         actionId: 'handled',
       );
@@ -122,6 +123,10 @@ void main() {
       expect(decoded!.key, envelope.key);
       expect(decoded.fireAt, envelope.fireAt);
       expect(decoded.target, target);
+      expect(
+        decoded.occurrenceRevision,
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
       expect(decoded.actionId, 'handled');
 
       String encodeMap(Map<String, dynamic> value) =>
@@ -151,6 +156,57 @@ void main() {
           '$agendaNotificationPayloadPrefix{not-json}',
         ),
         isNull,
+      );
+    },
+  );
+
+  test(
+    'runtime action identity requires the current revision and fingerprint',
+    () {
+      const target = AgendaTarget(sourceType: AgendaSourceType.course);
+      final action = AgendaNotificationPayload(
+        key: 'agenda-key',
+        fireAt: DateTime.utc(2026, 8, 3, 7, 50),
+        target: target,
+        occurrenceId: 'course|occurrence',
+        occurrenceRevision: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        fingerprint: 'before-edit',
+      );
+      final matching = action.copyWith(fireAt: DateTime.utc(2026, 8, 3, 8));
+      final changedRevision = action.copyWith(
+        occurrenceRevision: 'cccccccccccccccccccccccccccccccccccccccc',
+      );
+      final changedFingerprint = action.copyWith(fingerprint: 'after-edit');
+      final legacy = AgendaNotificationPayload(
+        key: action.key,
+        fireAt: action.fireAt,
+        target: target,
+        occurrenceId: action.occurrenceId,
+        fingerprint: action.fingerprint,
+      );
+
+      expect(agendaNotificationPayloadHasRuntimeIdentity(action), isTrue);
+      expect(agendaNotificationPayloadHasRuntimeIdentity(legacy), isFalse);
+      expect(
+        agendaNotificationPayloadMatchesScheduledRequest(
+          action: action,
+          scheduled: matching,
+        ),
+        isTrue,
+      );
+      expect(
+        agendaNotificationPayloadMatchesScheduledRequest(
+          action: action,
+          scheduled: changedRevision,
+        ),
+        isFalse,
+      );
+      expect(
+        agendaNotificationPayloadMatchesScheduledRequest(
+          action: action,
+          scheduled: changedFingerprint,
+        ),
+        isFalse,
       );
     },
   );
