@@ -108,6 +108,22 @@ class _ToggleFailingScheduleGateway extends MemoryAgendaNotificationGateway {
   }
 }
 
+class _AuthoritativeDiagnosticsRuntimeStore
+    extends MemoryAgendaNotificationRuntimeStore {
+  final authoritativeWritten = Completer<AgendaNotificationDiagnostics>();
+
+  @override
+  Future<void> writeNotificationDiagnostics(
+    AgendaNotificationDiagnostics value,
+  ) async {
+    await super.writeNotificationDiagnostics(value);
+    if (value.mode == AgendaNotificationReconcileMode.authoritative &&
+        !authoritativeWritten.isCompleted) {
+      authoritativeWritten.complete(value);
+    }
+  }
+}
+
 Future<TimetableProvider> _provider() async =>
     _providerWithData(buildInitialAppData(buildDefaultPeriodTimes()));
 
@@ -179,9 +195,11 @@ void main() {
       final provider = await _provider();
       addTearDown(provider.dispose);
       final gateway = MemoryAgendaNotificationGateway();
+      final runtime = _AuthoritativeDiagnosticsRuntimeStore();
       final service = AgendaNotificationService(
         enabled: true,
         gateway: gateway,
+        runtimeStore: runtime,
       );
       final coordinator = AgendaCoordinator(
         provider: provider,
@@ -189,10 +207,13 @@ void main() {
         productivityBridge: AndroidProductivityBridge(enabled: false),
       );
       addTearDown(coordinator.dispose);
+      addTearDown(service.dispose);
 
       await coordinator.start();
       await provider.updateNotificationSettings(enabled: true);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await runtime.authoritativeWritten.future.timeout(
+        const Duration(seconds: 5),
+      );
 
       expect(coordinator.isStarted, isTrue);
       expect(
