@@ -1845,6 +1845,38 @@
   "@developerNotificationBackgroundLimits": {},
   "developerNotificationOemBackgroundRestriction": "廠商背景限制可能影響投遞。",
   "@developerNotificationOemBackgroundRestriction": {},
+  "developerNotificationAutostart": "廠商背景啟動",
+  "@developerNotificationAutostart": {},
+  "developerNotificationAutostartVendor": "廠商 {vendor}，已找到廠商設定入口。Android 無法公開其授權狀態。",
+  "@developerNotificationAutostartVendor": {
+    "placeholders": {
+      "vendor": {}
+    }
+  },
+  "developerNotificationAutostartFallback": "廠商 {vendor}，使用應用程式詳細資料回退。Android 無法公開其授權狀態。",
+  "@developerNotificationAutostartFallback": {
+    "placeholders": {
+      "vendor": {}
+    }
+  },
+  "developerNotificationAutostartUnavailable": "沒有可用的廠商背景設定入口。",
+  "@developerNotificationAutostartUnavailable": {},
+  "developerNotificationAutostartLastTarget": "最近開啟目標：{target}",
+  "@developerNotificationAutostartLastTarget": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "developerNotificationAutostartTargetVendor": "廠商設定",
+  "@developerNotificationAutostartTargetVendor": {},
+  "developerNotificationAutostartTargetApplicationDetails": "應用程式詳細資料",
+  "@developerNotificationAutostartTargetApplicationDetails": {},
+  "developerNotificationAutostartTargetUnavailable": "無",
+  "@developerNotificationAutostartTargetUnavailable": {},
+  "developerNotificationRebootBoundaryTitle": "重新啟動恢復邊界",
+  "@developerNotificationRebootBoundaryTitle": {},
+  "developerNotificationRebootBoundary": "首次解鎖後才會開始恢復；被強制停止的應用程式無法自動啟動。",
+  "@developerNotificationRebootBoundary": {},
   "developerNotificationTestChecking": "正在檢查通知狀態，暫時無法測試。",
   "@developerNotificationTestChecking": {},
   "developerNotificationTestBlockedSystem": "系統通知已被封鎖，無法測試。",
@@ -1965,6 +1997,18 @@
   "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "開啟電池最佳化設定",
   "@notificationBatteryOptimizationRequest": {},
+  "notificationAutostart": "廠商背景啟動",
+  "@notificationAutostart": {},
+  "notificationAutostartVendorHint": "請允許自動啟動或背景執行，確保重新啟動後可以恢復提醒。",
+  "@notificationAutostartVendorHint": {},
+  "notificationAutostartFallbackHint": "請開啟 Sked 應用程式詳細資料並允許背景執行。Android 無法驗證此廠商設定。",
+  "@notificationAutostartFallbackHint": {},
+  "notificationAutostartUnavailable": "找不到廠商設定頁面，請手動檢查 Sked 應用程式詳細資料。",
+  "@notificationAutostartUnavailable": {},
+  "notificationAutostartRequest": "開啟廠商背景設定",
+  "@notificationAutostartRequest": {},
+  "notificationAutostartOpenFailed": "無法開啟廠商背景設定，請手動檢查 Sked 應用程式詳細資料。",
+  "@notificationAutostartOpenFailed": {},
   "notificationLockScreenTitles": "在鎖定畫面顯示標題",
   "@notificationLockScreenTitles": {},
   "notificationLockScreenTitlesHint": "關閉後，鎖定畫面通知不會顯示詳細內容。",

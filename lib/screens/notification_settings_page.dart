@@ -23,10 +23,12 @@ class NotificationSettingsPage extends StatefulWidget {
     super.key,
     this.notificationService,
     this.agendaCoordinator,
+    this.productivityBridge,
   });
 
   final AgendaNotificationService? notificationService;
   final AgendaCoordinator? agendaCoordinator;
+  final AndroidProductivityBridge? productivityBridge;
 
   @override
   State<NotificationSettingsPage> createState() =>
@@ -37,6 +39,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     with WidgetsBindingObserver, UiCommandRunner<NotificationSettingsPage> {
   late final AgendaNotificationService _notificationService;
   late final AndroidProductivityBridge _productivityBridge;
+  late final bool _ownsProductivityBridge;
   AgendaCoordinator? _agendaCoordinator;
   var _notificationServiceResolved = false;
 
@@ -44,6 +47,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   bool? _notificationsPermissionGranted;
   bool? _exactAlarmAllowed;
   bool? _batteryOptimizationIgnored;
+  AndroidAutostartSupport? _autostartSupport;
+  AndroidAutostartOpenResult? _lastAutostartOpenResult;
   bool _permissionError = false;
   Future<void>? _permissionRefreshOperation;
 
@@ -54,7 +59,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _productivityBridge = AndroidProductivityBridge();
+    _ownsProductivityBridge = widget.productivityBridge == null;
+    _productivityBridge =
+        widget.productivityBridge ?? AndroidProductivityBridge();
   }
 
   @override
@@ -92,7 +99,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     if (_notificationServiceResolved) {
       _notificationService.removeListener(_onNotificationStatusChanged);
     }
-    _productivityBridge.dispose();
+    if (_ownsProductivityBridge) _productivityBridge.dispose();
     super.dispose();
   }
 
@@ -134,6 +141,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
           ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
                 .batteryOptimizationIgnored
           : true;
+      final autostartSupport = !_isWindows && _productivityBridge.isSupported
+          ? await _productivityBridge.getAutostartSupport()
+          : null;
       if (!mounted) return;
       // Settings surfaces are asynchronous. The first read may happen before
       // the user makes a choice, so detect a later permission change on resume
@@ -152,6 +162,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         _notificationsPermissionGranted = notificationsEnabled;
         _exactAlarmAllowed = exactAlarmsAllowed;
         _batteryOptimizationIgnored = batteryOptimizationIgnored;
+        _autostartSupport = autostartSupport;
         _permissionLoading = false;
         _permissionError = false;
       });
@@ -266,6 +277,27 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     await _refreshPermissionState();
   }
 
+  Future<void> _requestAutostartSettings() async {
+    if (!_notificationService.isSupported ||
+        !_productivityBridge.isSupported ||
+        _isWindows ||
+        uiCommandBusy) {
+      return;
+    }
+    setState(() {
+      _permissionLoading = true;
+      _permissionError = false;
+    });
+    await runUiCommand(
+      debugLabel: 'Open vendor background-start settings',
+      command: () async {
+        final result = await _productivityBridge.openAutostartSettings();
+        if (mounted) setState(() => _lastAutostartOpenResult = result);
+      },
+    );
+    await _refreshPermissionState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -276,6 +308,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             : l10n.notificationPermissionRequest;
         final permissionSubtitle = _permissionSubtitle(l10n);
         final exactAlarmSubtitle = _exactAlarmSubtitle(l10n);
+        final autostartSubtitle = _autostartSubtitle(l10n);
         final coverage = _notificationService.status.coverage;
         final showCoverageNotice =
             provider.notificationsEnabled &&
@@ -368,7 +401,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 ? _handleNotificationPermission
                 : null,
           ),
-          if (_notificationService.isSupported && !_isWindows)
+          if (_notificationService.isSupported &&
+              _productivityBridge.isSupported &&
+              !_isWindows)
             SettingsConnectedTile(
               key: const ValueKey('notification-exact-alarm'),
               leading: const Icon(Icons.alarm_outlined),
@@ -392,7 +427,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   ? null
                   : _requestExactAlarmPermission,
             ),
-          if (_notificationService.isSupported && !_isWindows)
+          if (_notificationService.isSupported &&
+              _productivityBridge.isSupported &&
+              !_isWindows)
             SettingsConnectedTile(
               key: const ValueKey('notification-battery-optimization'),
               leading: const Icon(Icons.battery_saver_outlined),
@@ -415,6 +452,36 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       _batteryOptimizationIgnored == true
                   ? null
                   : _requestBatteryOptimizationExemption,
+            ),
+          if (_notificationService.isSupported &&
+              _productivityBridge.isSupported &&
+              !_isWindows)
+            SettingsConnectedTile(
+              key: const ValueKey('notification-autostart'),
+              leading: const Icon(Icons.rocket_launch_outlined),
+              title: l10n.notificationAutostart,
+              subtitle: autostartSubtitle,
+              trailing: IconButton(
+                key: const ValueKey('notification-autostart-action'),
+                tooltip: l10n.notificationAutostartRequest,
+                onPressed:
+                    uiCommandBusy ||
+                        _permissionLoading ||
+                        _autostartSupport == null ||
+                        (!_autostartSupport!.vendorEntryAvailable &&
+                            !_autostartSupport!.fallbackAvailable)
+                    ? null
+                    : _requestAutostartSettings,
+                icon: const Icon(Icons.open_in_new),
+              ),
+              onTap:
+                  uiCommandBusy ||
+                      _permissionLoading ||
+                      _autostartSupport == null ||
+                      (!_autostartSupport!.vendorEntryAvailable &&
+                          !_autostartSupport!.fallbackAvailable)
+                  ? null
+                  : _requestAutostartSettings,
             ),
           SettingsSwitchTile(
             key: const ValueKey('notification-lock-screen-titles'),
@@ -548,6 +615,24 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     return _batteryOptimizationIgnored == true
         ? l10n.notificationBatteryOptimizationAllowed
         : l10n.notificationBatteryOptimizationRequired;
+  }
+
+  String _autostartSubtitle(AppLocalizations l10n) {
+    if (_permissionLoading || _autostartSupport == null) {
+      return l10n.notificationPermissionChecking;
+    }
+    final support = _autostartSupport!;
+    final result = _lastAutostartOpenResult;
+    if (result != null && !result.opened) {
+      return l10n.notificationAutostartOpenFailed;
+    }
+    if (support.vendorEntryAvailable) {
+      return l10n.notificationAutostartVendorHint;
+    }
+    if (support.fallbackAvailable) {
+      return l10n.notificationAutostartFallbackHint;
+    }
+    return l10n.notificationAutostartUnavailable;
   }
 }
 

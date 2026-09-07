@@ -163,6 +163,84 @@ void main() {
     });
   });
 
+  test(
+    'Android boot recovery keeps both notification receivers without FGS',
+    () {
+      final manifest = _readXml('android/app/src/main/AndroidManifest.xml');
+      final receivers = manifest.descendants
+          .whereType<XmlElement>()
+          .where((element) => element.localName == 'receiver')
+          .map(
+            (element) =>
+                element.getAttribute('name', namespace: _androidNamespace),
+          )
+          .whereType<String>()
+          .toSet();
+
+      expect(
+        receivers,
+        containsAll(<String>[
+          'com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver',
+          '.AgendaBackgroundReconcileReceiver',
+        ]),
+      );
+      final permissions = manifest.descendants
+          .whereType<XmlElement>()
+          .where(
+            (element) =>
+                _androidPermissionElementNames.contains(element.localName),
+          )
+          .map(
+            (element) =>
+                element.getAttribute('name', namespace: _androidNamespace),
+          )
+          .whereType<String>()
+          .toSet();
+      expect(
+        permissions,
+        isNot(contains('android.permission.FOREGROUND_SERVICE')),
+      );
+      expect(
+        permissions,
+        isNot(contains('android.permission.SYSTEM_ALERT_WINDOW')),
+      );
+    },
+  );
+
+  test('Android manifest exposes only known OEM settings packages', () {
+    final manifest = _readXml('android/app/src/main/AndroidManifest.xml');
+    final queries = _singleElement(manifest, 'queries');
+    final visiblePackages = queries.children
+        .whereType<XmlElement>()
+        .where((element) => element.localName == 'package')
+        .map(
+          (element) =>
+              element.getAttribute('name', namespace: _androidNamespace),
+        )
+        .whereType<String>()
+        .toSet();
+
+    expect(visiblePackages, {
+      'com.miui.securitycenter',
+      'com.huawei.systemmanager',
+      'com.hihonor.systemmanager',
+      'com.coloros.safecenter',
+      'com.oppo.safe',
+      'com.oneplus.security',
+      'com.iqoo.secure',
+      'com.vivo.permissionmanager',
+    });
+    expect(
+      manifest.descendants.whereType<XmlElement>().where(
+        (element) =>
+            element.localName == 'uses-permission' &&
+            element.getAttribute('name', namespace: _androidNamespace) ==
+                'android.permission.QUERY_ALL_PACKAGES',
+      ),
+      isEmpty,
+    );
+  });
+
   test('Android cleartext policy has one explicit dynamic-endpoint source', () {
     final config = _readXml(
       'android/app/src/main/res/xml/network_security_config.xml',

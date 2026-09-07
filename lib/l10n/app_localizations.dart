@@ -4698,6 +4698,66 @@ abstract class AppLocalizations {
   /// **'Vendor background restrictions may affect delivery.'**
   String get developerNotificationOemBackgroundRestriction;
 
+  /// No description provided for @developerNotificationAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Vendor background start'**
+  String get developerNotificationAutostart;
+
+  /// No description provided for @developerNotificationAutostartVendor.
+  ///
+  /// In en, this message translates to:
+  /// **'Vendor {vendor}; a vendor settings entry is available. Android cannot expose its grant state.'**
+  String developerNotificationAutostartVendor(Object vendor);
+
+  /// No description provided for @developerNotificationAutostartFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Vendor {vendor}; using the app-details fallback. Android cannot expose its grant state.'**
+  String developerNotificationAutostartFallback(Object vendor);
+
+  /// No description provided for @developerNotificationAutostartUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No vendor background settings entry is available.'**
+  String get developerNotificationAutostartUnavailable;
+
+  /// No description provided for @developerNotificationAutostartLastTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Last opened target: {target}'**
+  String developerNotificationAutostartLastTarget(Object target);
+
+  /// No description provided for @developerNotificationAutostartTargetVendor.
+  ///
+  /// In en, this message translates to:
+  /// **'vendor settings'**
+  String get developerNotificationAutostartTargetVendor;
+
+  /// No description provided for @developerNotificationAutostartTargetApplicationDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'application details'**
+  String get developerNotificationAutostartTargetApplicationDetails;
+
+  /// No description provided for @developerNotificationAutostartTargetUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'none'**
+  String get developerNotificationAutostartTargetUnavailable;
+
+  /// No description provided for @developerNotificationRebootBoundaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reboot recovery boundary'**
+  String get developerNotificationRebootBoundaryTitle;
+
+  /// No description provided for @developerNotificationRebootBoundary.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery starts after the first unlock; a force-stopped app cannot self-start.'**
+  String get developerNotificationRebootBoundary;
+
   /// No description provided for @developerNotificationTestChecking.
   ///
   /// In en, this message translates to:
@@ -5003,6 +5063,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open battery optimization settings'**
   String get notificationBatteryOptimizationRequest;
+
+  /// No description provided for @notificationAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Vendor background start'**
+  String get notificationAutostart;
+
+  /// No description provided for @notificationAutostartVendorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow autostart or background running so reminders can be restored after a reboot.'**
+  String get notificationAutostartVendorHint;
+
+  /// No description provided for @notificationAutostartFallbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.'**
+  String get notificationAutostartFallbackHint;
+
+  /// No description provided for @notificationAutostartUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No vendor settings page was found. Check Sked\'s app details manually.'**
+  String get notificationAutostartUnavailable;
+
+  /// No description provided for @notificationAutostartRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Open vendor background settings'**
+  String get notificationAutostartRequest;
+
+  /// No description provided for @notificationAutostartOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open vendor background settings. Check Sked\'s app details manually.'**
+  String get notificationAutostartOpenFailed;
 
   /// No description provided for @notificationLockScreenTitles.
   ///

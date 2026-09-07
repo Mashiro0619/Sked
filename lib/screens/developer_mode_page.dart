@@ -41,6 +41,8 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   late final bool _ownsProductivityBridge;
   AgendaCoordinator? _agendaCoordinator;
   AndroidNotificationDiagnostics? _androidNotificationDiagnostics;
+  AndroidAutostartSupport? _autostartSupport;
+  AndroidAutostartOpenResult? _lastAutostartOpenResult;
   AgendaNotificationPlatformSnapshot? _platformNotificationSnapshot;
   AgendaNotificationDiagnostics? _agendaNotificationDiagnostics;
   AgendaNotificationTestChannel _testChannel =
@@ -175,6 +177,9 @@ class _DeveloperModePageState extends State<DeveloperModePage>
       final android = _productivityBridge.isSupported
           ? await _productivityBridge.notificationDiagnostics()
           : null;
+      final autostart = _productivityBridge.isSupported
+          ? await _productivityBridge.getAutostartSupport()
+          : null;
       final agenda = coordinator == null
           ? null
           : await coordinator.notificationDiagnostics();
@@ -185,6 +190,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
       setState(() {
         _agendaNotificationDiagnostics = agenda;
         _androidNotificationDiagnostics = android;
+        _autostartSupport = autostart;
         _platformNotificationSnapshot = platform;
       });
     } catch (error, stackTrace) {
@@ -261,6 +267,17 @@ class _DeveloperModePageState extends State<DeveloperModePage>
       command: () async {
         await _productivityBridge.openBatteryOptimizationSettings();
         await _refreshNotificationDiagnostics();
+      },
+    );
+  }
+
+  Future<void> _openAutostartSettings() async {
+    if (!_productivityBridge.isSupported) return;
+    await runUiCommand(
+      debugLabel: 'Open vendor background-start settings',
+      command: () async {
+        final result = await _productivityBridge.openAutostartSettings();
+        if (mounted) setState(() => _lastAutostartOpenResult = result);
       },
     );
   }
@@ -614,7 +631,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                     ? null
                     : () => unawaited(_refreshNotificationDiagnostics()),
               ),
-              if (!isWindows)
+              if (!isWindows && _productivityBridge.isSupported)
                 SettingsConnectedTile(
                   key: const ValueKey(
                     'developer-notification-battery-optimization-status',
@@ -630,7 +647,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                       ? () => unawaited(_refreshNotificationDiagnostics())
                       : () => unawaited(_openBatteryOptimizationSettings()),
                 ),
-              if (!isWindows)
+              if (!isWindows && _productivityBridge.isSupported)
                 SettingsConnectedTile(
                   key: const ValueKey(
                     'developer-notification-background-limits',
@@ -638,6 +655,23 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                   leading: const Icon(Icons.phonelink_erase_outlined),
                   title: l10n.developerNotificationBackgroundLimits,
                   subtitle: l10n.developerNotificationOemBackgroundRestriction,
+                ),
+              if (!isWindows && _productivityBridge.isSupported)
+                SettingsConnectedTile(
+                  key: const ValueKey('developer-notification-autostart'),
+                  leading: const Icon(Icons.rocket_launch_outlined),
+                  title: l10n.developerNotificationAutostart,
+                  subtitle: _autostartSummary(l10n),
+                  onTap: _productivityBridge.isSupported && !_diagnosticLoading
+                      ? () => unawaited(_openAutostartSettings())
+                      : null,
+                ),
+              if (!isWindows && _productivityBridge.isSupported)
+                SettingsConnectedTile(
+                  key: const ValueKey('developer-notification-reboot-boundary'),
+                  leading: const Icon(Icons.restart_alt_outlined),
+                  title: l10n.developerNotificationRebootBoundaryTitle,
+                  subtitle: l10n.developerNotificationRebootBoundary,
                 ),
               if (isWindows)
                 SettingsConnectedTile(
@@ -861,6 +895,29 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     final time = DateTime.fromMillisecondsSinceEpoch(latest.postTimeMillis)
         .toLocal();
     return ' · ${l10n.developerNotificationNativeLastPosted(time.toString())}';
+  }
+
+  String _autostartSummary(AppLocalizations l10n) {
+    final support = _autostartSupport;
+    if (_diagnosticLoading || support == null) {
+      return l10n.notificationPermissionChecking;
+    }
+    final summary = support.vendorEntryAvailable
+        ? l10n.developerNotificationAutostartVendor(support.vendorId)
+        : support.fallbackAvailable
+        ? l10n.developerNotificationAutostartFallback(support.vendorId)
+        : l10n.developerNotificationAutostartUnavailable;
+    final result = _lastAutostartOpenResult;
+    if (result == null) return summary;
+    final target = switch (result.target) {
+      AndroidAutostartSettingsTarget.vendor =>
+        l10n.developerNotificationAutostartTargetVendor,
+      AndroidAutostartSettingsTarget.applicationDetails =>
+        l10n.developerNotificationAutostartTargetApplicationDetails,
+      AndroidAutostartSettingsTarget.unsupported =>
+        l10n.developerNotificationAutostartTargetUnavailable,
+    };
+    return '$summary · ${l10n.developerNotificationAutostartLastTarget(target)}';
   }
 
   List<_NotificationChannelPresentation> _notificationChannels(

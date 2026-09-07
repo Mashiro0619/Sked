@@ -213,6 +213,10 @@ class MainActivity : FlutterActivity() {
                         result.success(isIgnoringBatteryOptimizations())
                     AndroidProductivityContract.METHOD_OPEN_BATTERY_OPTIMIZATION_SETTINGS ->
                         openBatteryOptimizationSettings(result)
+                    AndroidProductivityContract.METHOD_GET_AUTOSTART_SUPPORT ->
+                        result.success(AndroidAutostartSettings.support(this))
+                    AndroidProductivityContract.METHOD_OPEN_AUTOSTART_SETTINGS ->
+                        result.success(AndroidAutostartSettings.open(this))
                     AndroidProductivityContract.METHOD_GET_NOTIFICATION_DIAGNOSTICS ->
                         result.success(notificationDiagnostics())
                     "scheduleAgendaReconciliation" -> {

@@ -11,4 +11,6 @@ object AndroidProductivityContract {
         "isIgnoringBatteryOptimizations"
     const val METHOD_OPEN_BATTERY_OPTIMIZATION_SETTINGS =
         "openBatteryOptimizationSettings"
+    const val METHOD_GET_AUTOSTART_SUPPORT = "getAutostartSupport"
+    const val METHOD_OPEN_AUTOSTART_SETTINGS = "openAutostartSettings"
 }

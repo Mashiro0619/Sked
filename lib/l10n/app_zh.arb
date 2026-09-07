@@ -1843,6 +1843,38 @@
   "@developerNotificationBackgroundLimits": {},
   "developerNotificationOemBackgroundRestriction": "厂商后台限制可能影响投递。",
   "@developerNotificationOemBackgroundRestriction": {},
+  "developerNotificationAutostart": "厂商后台启动",
+  "@developerNotificationAutostart": {},
+  "developerNotificationAutostartVendor": "厂商 {vendor}，已找到厂商设置入口。Android 无法公开其授权状态。",
+  "@developerNotificationAutostartVendor": {
+    "placeholders": {
+      "vendor": {}
+    }
+  },
+  "developerNotificationAutostartFallback": "厂商 {vendor}，使用应用详情页回退。Android 无法公开其授权状态。",
+  "@developerNotificationAutostartFallback": {
+    "placeholders": {
+      "vendor": {}
+    }
+  },
+  "developerNotificationAutostartUnavailable": "没有可用的厂商后台设置入口。",
+  "@developerNotificationAutostartUnavailable": {},
+  "developerNotificationAutostartLastTarget": "最近打开目标：{target}",
+  "@developerNotificationAutostartLastTarget": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "developerNotificationAutostartTargetVendor": "厂商设置",
+  "@developerNotificationAutostartTargetVendor": {},
+  "developerNotificationAutostartTargetApplicationDetails": "应用详情",
+  "@developerNotificationAutostartTargetApplicationDetails": {},
+  "developerNotificationAutostartTargetUnavailable": "无",
+  "@developerNotificationAutostartTargetUnavailable": {},
+  "developerNotificationRebootBoundaryTitle": "重启恢复边界",
+  "@developerNotificationRebootBoundaryTitle": {},
+  "developerNotificationRebootBoundary": "首次解锁后才会开始恢复；被强行停止的应用无法自启动。",
+  "@developerNotificationRebootBoundary": {},
   "developerNotificationTestChecking": "正在检查通知状态，暂时无法测试。",
   "@developerNotificationTestChecking": {},
   "developerNotificationTestBlockedSystem": "系统通知已被阻止，无法测试。",
@@ -1963,6 +1995,18 @@
   "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "打开电池优化设置",
   "@notificationBatteryOptimizationRequest": {},
+  "notificationAutostart": "厂商后台启动",
+  "@notificationAutostart": {},
+  "notificationAutostartVendorHint": "请允许自启动或后台运行，确保重启后可以恢复提醒。",
+  "@notificationAutostartVendorHint": {},
+  "notificationAutostartFallbackHint": "请打开 Sked 应用详情并允许后台运行。Android 无法验证此厂商设置。",
+  "@notificationAutostartFallbackHint": {},
+  "notificationAutostartUnavailable": "未找到厂商设置页面，请手动检查 Sked 应用详情。",
+  "@notificationAutostartUnavailable": {},
+  "notificationAutostartRequest": "打开厂商后台设置",
+  "@notificationAutostartRequest": {},
+  "notificationAutostartOpenFailed": "无法打开厂商后台设置，请手动检查 Sked 应用详情。",
+  "@notificationAutostartOpenFailed": {},
   "notificationLockScreenTitles": "在锁屏上显示标题",
   "@notificationLockScreenTitles": {},
   "notificationLockScreenTitlesHint": "关闭后，锁屏通知不会显示详细内容。",

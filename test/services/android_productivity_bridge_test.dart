@@ -135,6 +135,95 @@ void main() {
     expect(await bridge.openBatteryOptimizationSettings(), isFalse);
   });
 
+  test(
+    'autostart support decodes vendor availability without grant state',
+    () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            expect(call.method, AndroidProductivityChannel.getAutostartSupport);
+            return <String, Object?>{
+              'vendorId': 'xiaomi',
+              'vendorEntryAvailable': true,
+              'fallbackAvailable': true,
+            };
+          });
+      final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
+      addTearDown(bridge.dispose);
+
+      final support = await bridge.getAutostartSupport();
+
+      expect(support.vendorId, 'xiaomi');
+      expect(support.vendorEntryAvailable, isTrue);
+      expect(support.fallbackAvailable, isTrue);
+    },
+  );
+
+  test(
+    'autostart open result distinguishes target from authorization',
+    () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            expect(
+              call.method,
+              AndroidProductivityChannel.openAutostartSettings,
+            );
+            return <String, Object?>{
+              'vendorId': 'unknown',
+              'opened': true,
+              'target': 'applicationDetails',
+            };
+          });
+      final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
+      addTearDown(bridge.dispose);
+
+      final result = await bridge.openAutostartSettings();
+
+      expect(result.opened, isTrue);
+      expect(result.target, AndroidAutostartSettingsTarget.applicationDetails);
+    },
+  );
+
+  test('malformed autostart responses safely degrade', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == AndroidProductivityChannel.getAutostartSupport) {
+            return <String, Object?>{
+              'vendorId': 'xiaomi',
+              'vendorEntryAvailable': 'yes',
+              'fallbackAvailable': true,
+            };
+          }
+          return <String, Object?>{
+            'vendorId': 'xiaomi',
+            'opened': true,
+            'target': 'unexpected',
+          };
+        });
+    final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
+    addTearDown(bridge.dispose);
+
+    expect((await bridge.getAutostartSupport()).vendorId, 'unknown');
+    expect(
+      (await bridge.openAutostartSettings()).target,
+      AndroidAutostartSettingsTarget.unsupported,
+    );
+  });
+
+  test('non Android autostart calls do not touch the method channel', () async {
+    var called = false;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (_) async {
+          called = true;
+          return null;
+        });
+    final bridge = AndroidProductivityBridge(channel: channel, enabled: false);
+    addTearDown(bridge.dispose);
+
+    expect((await bridge.getAutostartSupport()).vendorId, 'unknown');
+    expect((await bridge.openAutostartSettings()).opened, isFalse);
+    expect(called, isFalse);
+  });
+
   test('disposing a diagnostics-only bridge preserves the coordinator intent handler', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {

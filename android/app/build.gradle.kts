@@ -88,6 +88,7 @@ tasks.matching { isReleaseBuildTask(it.name) }.configureEach {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    testImplementation("junit:junit:4.13.2")
     // A native WorkManager host keeps the rolling notification projection
     // current after boot and time-zone changes without parsing app data.
     implementation("androidx.work:work-runtime-ktx:2.10.5")

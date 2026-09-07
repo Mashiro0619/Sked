@@ -2543,6 +2543,46 @@ class AppLocalizationsJa extends AppLocalizations {
       'Vendor background restrictions may affect delivery.';
 
   @override
+  String get developerNotificationAutostart => 'Vendor background start';
+
+  @override
+  String developerNotificationAutostartVendor(Object vendor) {
+    return 'Vendor $vendor; a vendor settings entry is available. Android cannot expose its grant state.';
+  }
+
+  @override
+  String developerNotificationAutostartFallback(Object vendor) {
+    return 'Vendor $vendor; using the app-details fallback. Android cannot expose its grant state.';
+  }
+
+  @override
+  String get developerNotificationAutostartUnavailable =>
+      'No vendor background settings entry is available.';
+
+  @override
+  String developerNotificationAutostartLastTarget(Object target) {
+    return 'Last opened target: $target';
+  }
+
+  @override
+  String get developerNotificationAutostartTargetVendor => 'vendor settings';
+
+  @override
+  String get developerNotificationAutostartTargetApplicationDetails =>
+      'application details';
+
+  @override
+  String get developerNotificationAutostartTargetUnavailable => 'none';
+
+  @override
+  String get developerNotificationRebootBoundaryTitle =>
+      'Reboot recovery boundary';
+
+  @override
+  String get developerNotificationRebootBoundary =>
+      'Recovery starts after the first unlock; a force-stopped app cannot self-start.';
+
+  @override
   String get developerNotificationTestChecking =>
       'Tests are unavailable while notification status is being checked.';
 
@@ -2720,6 +2760,28 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get notificationBatteryOptimizationRequest =>
       'Open battery optimization settings';
+
+  @override
+  String get notificationAutostart => 'Vendor background start';
+
+  @override
+  String get notificationAutostartVendorHint =>
+      'Allow autostart or background running so reminders can be restored after a reboot.';
+
+  @override
+  String get notificationAutostartFallbackHint =>
+      'Open Sked\'s app details and allow background running. Android cannot verify this vendor setting.';
+
+  @override
+  String get notificationAutostartUnavailable =>
+      'No vendor settings page was found. Check Sked\'s app details manually.';
+
+  @override
+  String get notificationAutostartRequest => 'Open vendor background settings';
+
+  @override
+  String get notificationAutostartOpenFailed =>
+      'Could not open vendor background settings. Check Sked\'s app details manually.';
 
   @override
   String get notificationLockScreenTitles => 'Show titles on the lock screen';

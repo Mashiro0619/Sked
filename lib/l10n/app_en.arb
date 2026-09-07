@@ -1845,6 +1845,38 @@
   "@developerNotificationBackgroundLimits": {},
   "developerNotificationOemBackgroundRestriction": "Vendor background restrictions may affect delivery.",
   "@developerNotificationOemBackgroundRestriction": {},
+  "developerNotificationAutostart": "Vendor background start",
+  "@developerNotificationAutostart": {},
+  "developerNotificationAutostartVendor": "Vendor {vendor}; a vendor settings entry is available. Android cannot expose its grant state.",
+  "@developerNotificationAutostartVendor": {
+    "placeholders": {
+      "vendor": {}
+    }
+  },
+  "developerNotificationAutostartFallback": "Vendor {vendor}; using the app-details fallback. Android cannot expose its grant state.",
+  "@developerNotificationAutostartFallback": {
+    "placeholders": {
+      "vendor": {}
+    }
+  },
+  "developerNotificationAutostartUnavailable": "No vendor background settings entry is available.",
+  "@developerNotificationAutostartUnavailable": {},
+  "developerNotificationAutostartLastTarget": "Last opened target: {target}",
+  "@developerNotificationAutostartLastTarget": {
+    "placeholders": {
+      "target": {}
+    }
+  },
+  "developerNotificationAutostartTargetVendor": "vendor settings",
+  "@developerNotificationAutostartTargetVendor": {},
+  "developerNotificationAutostartTargetApplicationDetails": "application details",
+  "@developerNotificationAutostartTargetApplicationDetails": {},
+  "developerNotificationAutostartTargetUnavailable": "none",
+  "@developerNotificationAutostartTargetUnavailable": {},
+  "developerNotificationRebootBoundaryTitle": "Reboot recovery boundary",
+  "@developerNotificationRebootBoundaryTitle": {},
+  "developerNotificationRebootBoundary": "Recovery starts after the first unlock; a force-stopped app cannot self-start.",
+  "@developerNotificationRebootBoundary": {},
   "developerNotificationTestChecking": "Tests are unavailable while notification status is being checked.",
   "@developerNotificationTestChecking": {},
   "developerNotificationTestBlockedSystem": "Tests are unavailable because system notifications are blocked.",
@@ -1965,6 +1997,18 @@
   "@notificationBatteryOptimizationRequired": {},
   "notificationBatteryOptimizationRequest": "Open battery optimization settings",
   "@notificationBatteryOptimizationRequest": {},
+  "notificationAutostart": "Vendor background start",
+  "@notificationAutostart": {},
+  "notificationAutostartVendorHint": "Allow autostart or background running so reminders can be restored after a reboot.",
+  "@notificationAutostartVendorHint": {},
+  "notificationAutostartFallbackHint": "Open Sked's app details and allow background running. Android cannot verify this vendor setting.",
+  "@notificationAutostartFallbackHint": {},
+  "notificationAutostartUnavailable": "No vendor settings page was found. Check Sked's app details manually.",
+  "@notificationAutostartUnavailable": {},
+  "notificationAutostartRequest": "Open vendor background settings",
+  "@notificationAutostartRequest": {},
+  "notificationAutostartOpenFailed": "Could not open vendor background settings. Check Sked's app details manually.",
+  "@notificationAutostartOpenFailed": {},
   "notificationLockScreenTitles": "Show titles on the lock screen",
   "@notificationLockScreenTitles": {},
   "notificationLockScreenTitlesHint": "When off, notification details stay private on the lock screen.",

@@ -21,6 +21,8 @@ abstract final class AndroidProductivityChannel {
       'isIgnoringBatteryOptimizations';
   static const openBatteryOptimizationSettings =
       'openBatteryOptimizationSettings';
+  static const getAutostartSupport = 'getAutostartSupport';
+  static const openAutostartSettings = 'openAutostartSettings';
   static const scheduleAgendaReconciliation = 'scheduleAgendaReconciliation';
   static const cancelAgendaReconciliation = 'cancelAgendaReconciliation';
   static const completeBackgroundAgendaReconciliation =
@@ -187,6 +189,88 @@ class AndroidNotificationDiagnostics {
   }
 }
 
+enum AndroidAutostartSettingsTarget { vendor, applicationDetails, unsupported }
+
+/// Describes whether a vendor-specific background-start settings activity can
+/// be opened. Android does not expose the actual autostart grant state, so
+/// this model intentionally contains no "allowed" boolean.
+class AndroidAutostartSupport {
+  const AndroidAutostartSupport({
+    required this.vendorId,
+    required this.vendorEntryAvailable,
+    required this.fallbackAvailable,
+  });
+
+  const AndroidAutostartSupport.unsupported()
+    : vendorId = 'unknown',
+      vendorEntryAvailable = false,
+      fallbackAvailable = false;
+
+  final String vendorId;
+  final bool vendorEntryAvailable;
+  final bool fallbackAvailable;
+
+  static AndroidAutostartSupport? tryDecode(Object? value) {
+    if (value is! Map) return null;
+    final vendorId = value['vendorId'];
+    final vendorEntryAvailable = value['vendorEntryAvailable'];
+    final fallbackAvailable = value['fallbackAvailable'];
+    if (vendorId is! String ||
+        vendorId.trim().isEmpty ||
+        vendorEntryAvailable is! bool ||
+        fallbackAvailable is! bool) {
+      return null;
+    }
+    return AndroidAutostartSupport(
+      vendorId: vendorId,
+      vendorEntryAvailable: vendorEntryAvailable,
+      fallbackAvailable: fallbackAvailable,
+    );
+  }
+}
+
+class AndroidAutostartOpenResult {
+  const AndroidAutostartOpenResult({
+    required this.vendorId,
+    required this.opened,
+    required this.target,
+  });
+
+  const AndroidAutostartOpenResult.unsupported()
+    : vendorId = 'unknown',
+      opened = false,
+      target = AndroidAutostartSettingsTarget.unsupported;
+
+  final String vendorId;
+  final bool opened;
+  final AndroidAutostartSettingsTarget target;
+
+  static AndroidAutostartOpenResult? tryDecode(Object? value) {
+    if (value is! Map) return null;
+    final vendorId = value['vendorId'];
+    final opened = value['opened'];
+    final rawTarget = value['target'];
+    if (vendorId is! String ||
+        vendorId.trim().isEmpty ||
+        opened is! bool ||
+        rawTarget is! String) {
+      return null;
+    }
+    final target = switch (rawTarget) {
+      'vendor' => AndroidAutostartSettingsTarget.vendor,
+      'applicationDetails' => AndroidAutostartSettingsTarget.applicationDetails,
+      'unsupported' => AndroidAutostartSettingsTarget.unsupported,
+      _ => null,
+    };
+    if (target == null) return null;
+    return AndroidAutostartOpenResult(
+      vendorId: vendorId,
+      opened: opened,
+      target: target,
+    );
+  }
+}
+
 /// Flutter-side facade for Android permissions, background reconciliation and deep links.
 ///
 /// The facade is deliberately a no-op outside Android. This keeps the domain
@@ -323,6 +407,40 @@ class AndroidProductivityBridge {
       return false;
     } on MissingPluginException {
       return false;
+    }
+  }
+
+  Future<AndroidAutostartSupport> getAutostartSupport() async {
+    if (!_enabled || _disposed) {
+      return const AndroidAutostartSupport.unsupported();
+    }
+    try {
+      final raw = await _channel.invokeMethod<Object?>(
+        AndroidProductivityChannel.getAutostartSupport,
+      );
+      return AndroidAutostartSupport.tryDecode(raw) ??
+          const AndroidAutostartSupport.unsupported();
+    } on PlatformException {
+      return const AndroidAutostartSupport.unsupported();
+    } on MissingPluginException {
+      return const AndroidAutostartSupport.unsupported();
+    }
+  }
+
+  Future<AndroidAutostartOpenResult> openAutostartSettings() async {
+    if (!_enabled || _disposed) {
+      return const AndroidAutostartOpenResult.unsupported();
+    }
+    try {
+      final raw = await _channel.invokeMethod<Object?>(
+        AndroidProductivityChannel.openAutostartSettings,
+      );
+      return AndroidAutostartOpenResult.tryDecode(raw) ??
+          const AndroidAutostartOpenResult.unsupported();
+    } on PlatformException {
+      return const AndroidAutostartOpenResult.unsupported();
+    } on MissingPluginException {
+      return const AndroidAutostartOpenResult.unsupported();
     }
   }
 

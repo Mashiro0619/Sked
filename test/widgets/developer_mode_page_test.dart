@@ -136,6 +136,9 @@ void _mockAndroidNotificationDiagnostics({
   required bool notificationsEnabled,
   required bool exactAlarmsAllowed,
   bool? postNotificationsGranted,
+  String autostartVendor = 'unknown',
+  bool autostartVendorEntryAvailable = false,
+  bool autostartFallbackAvailable = true,
   List<Map<String, Object?>> channels = const [],
   List<Map<String, Object?>> activeNotifications = const [],
 }) {
@@ -152,6 +155,13 @@ void _mockAndroidNotificationDiagnostics({
             'batteryOptimizationIgnored': true,
             'channels': channels,
             'activeNotifications': activeNotifications,
+          };
+        }
+        if (call.method == AndroidProductivityChannel.getAutostartSupport) {
+          return <String, Object?>{
+            'vendorId': autostartVendor,
+            'vendorEntryAvailable': autostartVendorEntryAvailable,
+            'fallbackAvailable': autostartFallbackAvailable,
           };
         }
         return null;
@@ -388,6 +398,47 @@ void main() {
   });
 
   testWidgets(
+    'hides Android-only settings when the notification service is enabled but the bridge is unsupported',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final coordinator = _developerNotificationCoordinator(
+        provider,
+        MemoryAgendaNotificationGateway(),
+      );
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(enabled: false);
+      addTearDown(bridge.dispose);
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      expect(
+        find.byKey(const ValueKey('developer-notification-autostart')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('developer-notification-reboot-boundary')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(
+          const ValueKey('developer-notification-battery-optimization-status'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('developer-notification-background-limits')),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
     'Windows notification diagnostics use the coordinator-owned toast surface',
     (tester) async {
       final (provider, _) = await _createProvider();
@@ -492,6 +543,78 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'notification diagnostics expose vendor background-start guidance',
+    (tester) async {
+      final (provider, _) = await _createProvider();
+      addTearDown(provider.dispose);
+      final gateway = MemoryAgendaNotificationGateway();
+      final coordinator = _developerNotificationCoordinator(provider, gateway);
+      addTearDown(coordinator.dispose);
+      final bridge = AndroidProductivityBridge(
+        channel: _productivityChannel,
+        enabled: true,
+      );
+      addTearDown(bridge.dispose);
+      var opened = false;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_productivityChannel, (call) async {
+            if (call.method ==
+                AndroidProductivityChannel.getNotificationDiagnostics) {
+              return <String, Object?>{
+                'supported': true,
+                'appNotificationsEnabled': true,
+                'postNotificationsGranted': true,
+                'exactAlarmsAllowed': true,
+                'batteryOptimizationIgnored': true,
+                'channels': const <Object?>[],
+                'activeNotifications': const <Object?>[],
+              };
+            }
+            if (call.method == AndroidProductivityChannel.getAutostartSupport) {
+              return <String, Object?>{
+                'vendorId': 'xiaomi',
+                'vendorEntryAvailable': true,
+                'fallbackAvailable': true,
+              };
+            }
+            if (call.method ==
+                AndroidProductivityChannel.openAutostartSettings) {
+              opened = true;
+              return <String, Object?>{
+                'vendorId': 'xiaomi',
+                'opened': true,
+                'target': 'vendor',
+              };
+            }
+            return null;
+          });
+
+      await _pumpDeveloperPage(
+        tester,
+        provider,
+        agendaCoordinator: coordinator,
+        productivityBridge: bridge,
+      );
+
+      final tile = find.byKey(
+        const ValueKey('developer-notification-autostart'),
+      );
+      expect(tile, findsOneWidget);
+      expect(
+        find.textContaining(
+          'Vendor xiaomi; a vendor settings entry is available.',
+        ),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(opened, isTrue);
     },
   );
 

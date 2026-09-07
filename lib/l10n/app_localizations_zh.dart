@@ -2457,6 +2457,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationOemBackgroundRestriction => '厂商后台限制可能影响投递。';
 
   @override
+  String get developerNotificationAutostart => '厂商后台启动';
+
+  @override
+  String developerNotificationAutostartVendor(Object vendor) {
+    return '厂商 $vendor，已找到厂商设置入口。Android 无法公开其授权状态。';
+  }
+
+  @override
+  String developerNotificationAutostartFallback(Object vendor) {
+    return '厂商 $vendor，使用应用详情页回退。Android 无法公开其授权状态。';
+  }
+
+  @override
+  String get developerNotificationAutostartUnavailable => '没有可用的厂商后台设置入口。';
+
+  @override
+  String developerNotificationAutostartLastTarget(Object target) {
+    return '最近打开目标：$target';
+  }
+
+  @override
+  String get developerNotificationAutostartTargetVendor => '厂商设置';
+
+  @override
+  String get developerNotificationAutostartTargetApplicationDetails => '应用详情';
+
+  @override
+  String get developerNotificationAutostartTargetUnavailable => '无';
+
+  @override
+  String get developerNotificationRebootBoundaryTitle => '重启恢复边界';
+
+  @override
+  String get developerNotificationRebootBoundary =>
+      '首次解锁后才会开始恢复；被强行停止的应用无法自启动。';
+
+  @override
   String get developerNotificationTestChecking => '正在检查通知状态，暂时无法测试。';
 
   @override
@@ -2621,6 +2658,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationBatteryOptimizationRequest => '打开电池优化设置';
+
+  @override
+  String get notificationAutostart => '厂商后台启动';
+
+  @override
+  String get notificationAutostartVendorHint => '请允许自启动或后台运行，确保重启后可以恢复提醒。';
+
+  @override
+  String get notificationAutostartFallbackHint =>
+      '请打开 Sked 应用详情并允许后台运行。Android 无法验证此厂商设置。';
+
+  @override
+  String get notificationAutostartUnavailable => '未找到厂商设置页面，请手动检查 Sked 应用详情。';
+
+  @override
+  String get notificationAutostartRequest => '打开厂商后台设置';
+
+  @override
+  String get notificationAutostartOpenFailed => '无法打开厂商后台设置，请手动检查 Sked 应用详情。';
 
   @override
   String get notificationLockScreenTitles => '在锁屏上显示标题';
@@ -5102,6 +5158,44 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerNotificationOemBackgroundRestriction => '廠商背景限制可能影響投遞。';
 
   @override
+  String get developerNotificationAutostart => '廠商背景啟動';
+
+  @override
+  String developerNotificationAutostartVendor(Object vendor) {
+    return '廠商 $vendor，已找到廠商設定入口。Android 無法公開其授權狀態。';
+  }
+
+  @override
+  String developerNotificationAutostartFallback(Object vendor) {
+    return '廠商 $vendor，使用應用程式詳細資料回退。Android 無法公開其授權狀態。';
+  }
+
+  @override
+  String get developerNotificationAutostartUnavailable => '沒有可用的廠商背景設定入口。';
+
+  @override
+  String developerNotificationAutostartLastTarget(Object target) {
+    return '最近開啟目標：$target';
+  }
+
+  @override
+  String get developerNotificationAutostartTargetVendor => '廠商設定';
+
+  @override
+  String get developerNotificationAutostartTargetApplicationDetails =>
+      '應用程式詳細資料';
+
+  @override
+  String get developerNotificationAutostartTargetUnavailable => '無';
+
+  @override
+  String get developerNotificationRebootBoundaryTitle => '重新啟動恢復邊界';
+
+  @override
+  String get developerNotificationRebootBoundary =>
+      '首次解鎖後才會開始恢復；被強制停止的應用程式無法自動啟動。';
+
+  @override
   String get developerNotificationTestChecking => '正在檢查通知狀態，暫時無法測試。';
 
   @override
@@ -5266,6 +5360,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationBatteryOptimizationRequest => '開啟電池最佳化設定';
+
+  @override
+  String get notificationAutostart => '廠商背景啟動';
+
+  @override
+  String get notificationAutostartVendorHint => '請允許自動啟動或背景執行，確保重新啟動後可以恢復提醒。';
+
+  @override
+  String get notificationAutostartFallbackHint =>
+      '請開啟 Sked 應用程式詳細資料並允許背景執行。Android 無法驗證此廠商設定。';
+
+  @override
+  String get notificationAutostartUnavailable =>
+      '找不到廠商設定頁面，請手動檢查 Sked 應用程式詳細資料。';
+
+  @override
+  String get notificationAutostartRequest => '開啟廠商背景設定';
+
+  @override
+  String get notificationAutostartOpenFailed =>
+      '無法開啟廠商背景設定，請手動檢查 Sked 應用程式詳細資料。';
 
   @override
   String get notificationLockScreenTitles => '在鎖定畫面顯示標題';
