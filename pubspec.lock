@@ -276,12 +276,13 @@ packages:
     source: hosted
     version: "6.2.0-beta.3"
   flutter_inappwebview_android:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: flutter_inappwebview_android
-      sha256: "8dfb76bd4e507112c3942c2272eeb01fab2e42be11374e5eb226f58698e7a04b"
-      url: "https://pub.dev"
-    source: hosted
+      path: flutter_inappwebview_android
+      ref: e879b0350f3a09e6e0eb0667569bcaa74cc59acb
+      resolved-ref: e879b0350f3a09e6e0eb0667569bcaa74cc59acb
+      url: "https://github.com/pichillilorenzo/flutter_inappwebview.git"
+    source: git
     version: "1.2.0-beta.3"
   flutter_inappwebview_internal_annotations:
     dependency: transitive

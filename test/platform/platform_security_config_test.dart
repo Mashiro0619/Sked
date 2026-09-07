@@ -475,6 +475,32 @@ void main() {
     expect(lockfile, contains('path: flutter_inappwebview_ios'));
   });
 
+  test('Android WebView edge-to-edge fix is pinned to an immutable commit', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final lockfile = File('pubspec.lock').readAsStringSync();
+    final androidBuild = File('android/build.gradle.kts').readAsStringSync();
+    const fixedCommit = 'e879b0350f3a09e6e0eb0667569bcaa74cc59acb';
+
+    expect(
+      pubspec,
+      contains(
+        'url: https://github.com/pichillilorenzo/flutter_inappwebview.git',
+      ),
+    );
+    expect(pubspec, contains('ref: $fixedCommit'));
+    expect(pubspec, contains('path: flutter_inappwebview_android'));
+    expect(lockfile, contains('resolved-ref: $fixedCommit'));
+    expect(lockfile, contains('path: flutter_inappwebview_android'));
+    expect(androidBuild, contains('TrustedWebActivity.java'));
+    expect(androidBuild, contains('import android.os.Build;'));
+  });
+
+  test('Flutter opts into Android edge-to-edge system UI explicitly', () {
+    final main = File('lib/main.dart').readAsStringSync();
+
+    expect(main, contains('SystemUiMode.edgeToEdge'));
+  });
+
   test('CI uses Node 24 actions and guards generated Android artifacts', () {
     final workflow = File('.github/workflows/flutter.yml').readAsStringSync();
 

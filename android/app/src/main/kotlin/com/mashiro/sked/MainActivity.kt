@@ -353,9 +353,9 @@ class MainActivity : FlutterActivity() {
             return
         }
         try {
-            // The request action displays a confirmation dialog whose result is
-            // unreliable on several OEMs. Open Sked's app-details surface so
-            // the user can choose the vendor's actual battery policy manually.
+            // Open Sked's app-details surface so the user can choose the
+            // vendor's actual battery policy manually. There is no public,
+            // cross-OEM intent for the nested battery page.
             startActivity(
                 Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
