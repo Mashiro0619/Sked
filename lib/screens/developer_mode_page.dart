@@ -35,7 +35,7 @@ class DeveloperModePage extends StatefulWidget {
 }
 
 class _DeveloperModePageState extends State<DeveloperModePage>
-    with UiCommandRunner<DeveloperModePage> {
+    with WidgetsBindingObserver, UiCommandRunner<DeveloperModePage> {
   late DeveloperSampleLanguage _language;
   late final AndroidProductivityBridge _productivityBridge;
   late final bool _ownsProductivityBridge;
@@ -66,6 +66,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ownsProductivityBridge = widget.productivityBridge == null;
     _productivityBridge =
         widget.productivityBridge ?? AndroidProductivityBridge();
@@ -103,8 +104,18 @@ class _DeveloperModePageState extends State<DeveloperModePage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (_ownsProductivityBridge) _productivityBridge.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // A battery settings page can change the allowlist without returning a
+      // result to the channel. Re-read the native state and reconcile on return.
+      unawaited(_refreshNotificationDiagnostics(recovery: true));
+    }
   }
 
   Future<void> _addSamples() async {
@@ -123,12 +134,10 @@ class _DeveloperModePageState extends State<DeveloperModePage>
       );
   }
 
-  Future<void> _refreshNotificationDiagnostics({bool maintenance = false}) {
+  Future<void> _refreshNotificationDiagnostics({bool recovery = false}) {
     final active = _diagnosticRefresh;
     if (active != null) return active;
-    final operation = _refreshNotificationDiagnosticsNow(
-      maintenance: maintenance,
-    );
+    final operation = _refreshNotificationDiagnosticsNow(recovery: recovery);
     _diagnosticRefresh = operation;
     return operation.whenComplete(() {
       if (identical(_diagnosticRefresh, operation)) {
@@ -138,7 +147,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   }
 
   Future<void> _refreshNotificationDiagnosticsNow({
-    required bool maintenance,
+    required bool recovery,
   }) async {
     if (!mounted) return;
     setState(() {
@@ -158,10 +167,10 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         return;
       }
       final coordinator = _agendaCoordinator;
-      if (maintenance && coordinator != null) {
-        await coordinator.runNotificationMaintenance();
+      if (recovery && coordinator != null) {
+        await coordinator.runNotificationRecovery();
       }
-      // Channel creation is lazy. Read Android state after a maintenance pass
+      // Channel creation is lazy. Read Android state after a recovery pass
       // so the diagnostic panel reflects channels created by that same pass.
       final android = _productivityBridge.isSupported
           ? await _productivityBridge.notificationDiagnostics()
@@ -189,20 +198,20 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     }
   }
 
-  Future<void> _runNotificationMaintenance() async {
+  Future<void> _runNotificationRecovery() async {
     if (!_notificationActionsEnabled) return;
     final coordinator = _agendaCoordinator;
     if (coordinator == null) return;
     final completed = await runUiCommand(
       debugLabel: 'Rebuild notification plan from developer mode',
       command: () async {
-        await coordinator.runNotificationMaintenance();
+        await coordinator.runNotificationRecovery();
         await _refreshNotificationDiagnostics();
       },
     );
     if (!completed || !mounted) return;
     _showSnackBar(
-      AppLocalizations.of(context).developerNotificationMaintenanceComplete,
+      AppLocalizations.of(context).developerNotificationRecoveryComplete,
     );
   }
 
@@ -251,7 +260,6 @@ class _DeveloperModePageState extends State<DeveloperModePage>
       debugLabel: 'Open battery optimization settings',
       command: () async {
         await _productivityBridge.openBatteryOptimizationSettings();
-        await _agendaCoordinator?.reconcileNow();
         await _refreshNotificationDiagnostics();
       },
     );
@@ -660,9 +668,9 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                 title: l10n.developerNotificationPlan,
                 subtitle: agenda == null
                     ? l10n.developerNotificationNoDiagnostic
-                    : l10n.developerNotificationPlanSummary(
-                        agenda.scheduledCount,
-                        agenda.plannedCount,
+                    : l10n.developerNotificationDirectCapacitySummary(
+                        agenda.directScheduledCount,
+                        agenda.directCapacity,
                       ),
                 onTap: _diagnosticLoading
                     ? null
@@ -682,6 +690,17 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                       : null,
                 ),
               SettingsConnectedTile(
+                key: const ValueKey('developer-notification-coverage'),
+                leading: const Icon(Icons.verified_outlined),
+                title: l10n.developerNotificationCoverage,
+                subtitle: agenda == null
+                    ? l10n.developerNotificationNoDiagnostic
+                    : _coverageLabel(l10n, agenda.coverage),
+                onTap: _diagnosticRefreshEnabled
+                    ? () => unawaited(_refreshNotificationDiagnostics())
+                    : null,
+              ),
+              SettingsConnectedTile(
                 key: const ValueKey('developer-notification-next-reminder'),
                 leading: const Icon(Icons.notifications_active_outlined),
                 title: l10n.developerNotificationNextReminder,
@@ -692,34 +711,33 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                     ? () => unawaited(_refreshNotificationDiagnostics())
                     : null,
               ),
-              SettingsConnectedTile(
-                key: const ValueKey('developer-notification-next-maintenance'),
-                leading: const Icon(Icons.event_repeat_outlined),
-                title: l10n.developerNotificationNextMaintenance,
-                subtitle: agenda?.nextMaintenanceAt == null
-                    ? l10n.developerNotificationNoMaintenance
-                    : _formatDateTime(context, agenda!.nextMaintenanceAt!),
-                onTap: _diagnosticRefreshEnabled
-                    ? () => unawaited(_refreshNotificationDiagnostics())
-                    : null,
-              ),
-              SettingsConnectedTile(
-                key: const ValueKey('developer-notification-truncation'),
-                leading: const Icon(Icons.filter_list_off_outlined),
-                title: l10n.developerNotificationTruncation,
-                subtitle: agenda == null
-                    ? l10n.developerNotificationNoDiagnostic
-                    : l10n.developerNotificationTruncationCount(
-                        agenda.truncatedCount,
-                      ),
-                onTap: _diagnosticRefreshEnabled
-                    ? () => unawaited(_refreshNotificationDiagnostics())
-                    : null,
-              ),
+              if (agenda?.nextRenewalAt case final nextRenewalAt?)
+                SettingsConnectedTile(
+                  key: const ValueKey('developer-notification-next-renewal'),
+                  leading: const Icon(Icons.event_repeat_outlined),
+                  title: l10n.developerNotificationNextRenewal,
+                  subtitle: _formatDateTime(context, nextRenewalAt),
+                  onTap: _diagnosticRefreshEnabled
+                      ? () => unawaited(_refreshNotificationDiagnostics())
+                      : null,
+                ),
+              if (agenda?.lateRecoveryCount case final lateRecoveryCount?
+                  when lateRecoveryCount > 0)
+                SettingsConnectedTile(
+                  key: const ValueKey('developer-notification-late-recovery'),
+                  leading: const Icon(Icons.history_toggle_off_outlined),
+                  title: l10n.developerNotificationLateRecovery,
+                  subtitle: l10n.developerNotificationLateRecoveryCount(
+                    lateRecoveryCount,
+                  ),
+                  onTap: _diagnosticRefreshEnabled
+                      ? () => unawaited(_refreshNotificationDiagnostics())
+                      : null,
+                ),
               SettingsConnectedTile(
                 key: const ValueKey('developer-notification-last-reconcile'),
                 leading: const Icon(Icons.history_outlined),
-                title: l10n.developerNotificationLastReconciliation,
+                title: l10n.developerNotificationLastSynchronization,
                 subtitle: agenda == null
                     ? l10n.developerNotificationNoDiagnostic
                     : l10n.developerNotificationReconciliationSummary(
@@ -777,7 +795,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
           selectedChannel: _testChannel,
           channelSelectionEnabled: _notificationActionsEnabled,
           testEnabled: testEnabled,
-          maintenanceEnabled: _notificationActionsEnabled,
+          recoveryEnabled: _notificationActionsEnabled,
           refreshEnabled: _diagnosticRefreshEnabled,
           testBlockMessage: testBlockMessage,
           l10n: l10n,
@@ -786,7 +804,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
             setState(() => _testChannel = channel);
           },
           onRefresh: () => unawaited(_refreshNotificationDiagnostics()),
-          onMaintenance: () => unawaited(_runNotificationMaintenance()),
+          onRecovery: () => unawaited(_runNotificationRecovery()),
           onImmediateTest: () => unawaited(_sendImmediateNotificationTest()),
           onDelayedTest: () =>
               unawaited(_scheduleThirtySecondNotificationTest()),
@@ -945,8 +963,26 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     return switch (mode) {
       AgendaNotificationReconcileMode.authoritative =>
         l10n.developerNotificationReconcileModeAuthoritative,
-      AgendaNotificationReconcileMode.maintenance =>
-        l10n.developerNotificationReconcileModeMaintenance,
+      AgendaNotificationReconcileMode.recovery =>
+        l10n.developerNotificationReconcileModeRecovery,
+    };
+  }
+
+  String _coverageLabel(
+    AppLocalizations l10n,
+    AgendaNotificationCoverage coverage,
+  ) {
+    return switch (coverage) {
+      AgendaNotificationCoverage.ready =>
+        l10n.developerNotificationCoverageReady,
+      AgendaNotificationCoverage.renewable =>
+        l10n.developerNotificationCoverageRenewable,
+      AgendaNotificationCoverage.capacityLimited =>
+        l10n.developerNotificationCoverageCapacityLimited,
+      AgendaNotificationCoverage.blocked =>
+        l10n.developerNotificationCoverageBlocked,
+      AgendaNotificationCoverage.failed =>
+        l10n.developerNotificationCoverageFailed,
     };
   }
 
@@ -972,13 +1008,13 @@ class _NotificationDiagnosticActions extends StatelessWidget {
     required this.selectedChannel,
     required this.channelSelectionEnabled,
     required this.testEnabled,
-    required this.maintenanceEnabled,
+    required this.recoveryEnabled,
     required this.refreshEnabled,
     required this.testBlockMessage,
     required this.l10n,
     required this.onChannelChanged,
     required this.onRefresh,
-    required this.onMaintenance,
+    required this.onRecovery,
     required this.onImmediateTest,
     required this.onDelayedTest,
     this.onOpenSettings,
@@ -987,13 +1023,13 @@ class _NotificationDiagnosticActions extends StatelessWidget {
   final AgendaNotificationTestChannel selectedChannel;
   final bool channelSelectionEnabled;
   final bool testEnabled;
-  final bool maintenanceEnabled;
+  final bool recoveryEnabled;
   final bool refreshEnabled;
   final String? testBlockMessage;
   final AppLocalizations l10n;
   final ValueChanged<AgendaNotificationTestChannel> onChannelChanged;
   final VoidCallback onRefresh;
-  final VoidCallback onMaintenance;
+  final VoidCallback onRecovery;
   final VoidCallback onImmediateTest;
   final VoidCallback onDelayedTest;
   final VoidCallback? onOpenSettings;
@@ -1075,10 +1111,10 @@ class _NotificationDiagnosticActions extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           TextButton.icon(
-            key: const ValueKey('developer-notification-maintenance'),
-            onPressed: maintenanceEnabled ? onMaintenance : null,
+            key: const ValueKey('developer-notification-recovery'),
+            onPressed: recoveryEnabled ? onRecovery : null,
             icon: const Icon(Icons.sync_outlined),
-            label: Text(l10n.developerNotificationRunMaintenance),
+            label: Text(l10n.developerNotificationRunRecovery),
           ),
           TextButton.icon(
             key: const ValueKey('developer-notification-refresh'),

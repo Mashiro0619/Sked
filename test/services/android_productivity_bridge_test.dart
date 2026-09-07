@@ -120,23 +120,20 @@ void main() {
     expect(called, isFalse);
   });
 
-  test(
-    'battery settings request returns the system-confirmed allowlist state',
-    () async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-            expect(
-              call.method,
-              AndroidProductivityChannel.openBatteryOptimizationSettings,
-            );
-            return false;
-          });
-      final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
-      addTearDown(bridge.dispose);
+  test('battery settings request does not claim that opening settings granted access', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          expect(
+            call.method,
+            AndroidProductivityChannel.openBatteryOptimizationSettings,
+          );
+          return false;
+        });
+    final bridge = AndroidProductivityBridge(channel: channel, enabled: true);
+    addTearDown(bridge.dispose);
 
-      expect(await bridge.openBatteryOptimizationSettings(), isFalse);
-    },
-  );
+    expect(await bridge.openBatteryOptimizationSettings(), isFalse);
+  });
 
   test('disposing a diagnostics-only bridge preserves the coordinator intent handler', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

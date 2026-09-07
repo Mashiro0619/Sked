@@ -4348,6 +4348,51 @@ abstract class AppLocalizations {
   /// **'Agenda notification plan'**
   String get developerNotificationPlan;
 
+  /// No description provided for @developerNotificationCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Coverage'**
+  String get developerNotificationCoverage;
+
+  /// No description provided for @developerNotificationCoverageReady.
+  ///
+  /// In en, this message translates to:
+  /// **'All known finite reminders are directly scheduled'**
+  String get developerNotificationCoverageReady;
+
+  /// No description provided for @developerNotificationCoverageRenewable.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring reminders use best-effort long-term renewal'**
+  String get developerNotificationCoverageRenewable;
+
+  /// No description provided for @developerNotificationCoverageCapacityLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct alarm capacity is full; later reminders use best-effort renewal'**
+  String get developerNotificationCoverageCapacityLimited;
+
+  /// No description provided for @developerNotificationCoverageBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise-delivery requirements are not met'**
+  String get developerNotificationCoverageBlocked;
+
+  /// No description provided for @developerNotificationCoverageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The latest reminder sync failed'**
+  String get developerNotificationCoverageFailed;
+
+  /// No description provided for @developerNotificationDirectCapacitySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{scheduled} direct alarms / {capacity} capacity'**
+  String developerNotificationDirectCapacitySummary(
+    int scheduled,
+    int capacity,
+  );
+
   /// No description provided for @developerNotificationPlanSummary.
   ///
   /// In en, this message translates to:
@@ -4516,6 +4561,12 @@ abstract class AppLocalizations {
   /// **'Next maintenance'**
   String get developerNotificationNextMaintenance;
 
+  /// No description provided for @developerNotificationNextRenewal.
+  ///
+  /// In en, this message translates to:
+  /// **'Next best-effort renewal'**
+  String get developerNotificationNextRenewal;
+
   /// No description provided for @developerNotificationNoMaintenance.
   ///
   /// In en, this message translates to:
@@ -4539,6 +4590,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Latest reconciliation'**
   String get developerNotificationLastReconciliation;
+
+  /// No description provided for @developerNotificationLastSynchronization.
+  ///
+  /// In en, this message translates to:
+  /// **'Last reminder sync'**
+  String get developerNotificationLastSynchronization;
+
+  /// No description provided for @developerNotificationLateRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Late reminder recovery'**
+  String get developerNotificationLateRecovery;
+
+  /// No description provided for @developerNotificationLateRecoveryCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} reminder(s) were recovered after their original time'**
+  String developerNotificationLateRecoveryCount(int count);
 
   /// No description provided for @developerNotificationReconciliationSummary.
   ///
@@ -4574,6 +4643,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Maintenance'**
   String get developerNotificationReconcileModeMaintenance;
+
+  /// No description provided for @developerNotificationReconcileModeRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery'**
+  String get developerNotificationReconcileModeRecovery;
+
+  /// No description provided for @developerNotificationRunRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Run reminder recovery'**
+  String get developerNotificationRunRecovery;
+
+  /// No description provided for @developerNotificationRecoveryComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder recovery completed'**
+  String get developerNotificationRecoveryComplete;
 
   /// No description provided for @developerNotificationReconcileResultSuccess.
   ///
@@ -4748,6 +4835,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reminders & notifications'**
   String get notificationSettingsSection;
+
+  /// No description provided for @notificationCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder coverage'**
+  String get notificationCoverage;
+
+  /// No description provided for @notificationCoverageRenewable.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeating schedules without an end date use background renewal for long-term coverage.'**
+  String get notificationCoverageRenewable;
+
+  /// No description provided for @notificationCoverageCapacityLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Android can directly hold up to {capacity} reminders; later reminders are renewed in advance.'**
+  String notificationCoverageCapacityLimited(int capacity);
 
   /// No description provided for @notificationSettingsEnabled.
   ///

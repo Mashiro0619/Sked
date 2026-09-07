@@ -2255,6 +2255,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationPlan => '日程通知计划';
 
   @override
+  String get developerNotificationCoverage => '提醒覆盖状态';
+
+  @override
+  String get developerNotificationCoverageReady => '所有已知有限提醒都已直接安排';
+
+  @override
+  String get developerNotificationCoverageRenewable => '无限重复提醒使用尽力续排维持长期覆盖';
+
+  @override
+  String get developerNotificationCoverageCapacityLimited =>
+      '直接闹钟容量已满，后续提醒依赖尽力续排';
+
+  @override
+  String get developerNotificationCoverageBlocked => '未满足精准投递条件';
+
+  @override
+  String get developerNotificationCoverageFailed => '最近一次提醒同步失败';
+
+  @override
+  String developerNotificationDirectCapacitySummary(
+    int scheduled,
+    int capacity,
+  ) {
+    return '已直接安排 $scheduled 条 / 容量 $capacity 条';
+  }
+
+  @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
     return '已排程 $scheduled 条，计划 $planned 条';
   }
@@ -2353,6 +2380,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get developerNotificationNextMaintenance => '下一次维护';
 
   @override
+  String get developerNotificationNextRenewal => '下一次尽力续排';
+
+  @override
   String get developerNotificationNoMaintenance => '尚未安排';
 
   @override
@@ -2365,6 +2395,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get developerNotificationLastReconciliation => '最近一次重算';
+
+  @override
+  String get developerNotificationLastSynchronization => '最近一次提醒同步';
+
+  @override
+  String get developerNotificationLateRecovery => '迟到提醒恢复';
+
+  @override
+  String developerNotificationLateRecoveryCount(int count) {
+    return '有 $count 条提醒在原定时间后被恢复投递';
+  }
 
   @override
   String developerNotificationReconciliationSummary(
@@ -2387,6 +2428,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get developerNotificationReconcileModeMaintenance => '维护重算';
+
+  @override
+  String get developerNotificationReconcileModeRecovery => '恢复同步';
+
+  @override
+  String get developerNotificationRunRecovery => '执行提醒恢复';
+
+  @override
+  String get developerNotificationRecoveryComplete => '提醒恢复已完成';
 
   @override
   String get developerNotificationReconcileResultSuccess => '成功';
@@ -2480,6 +2530,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationSettingsSection => '提醒与通知';
+
+  @override
+  String get notificationCoverage => '提醒覆盖状态';
+
+  @override
+  String get notificationCoverageRenewable => '没有结束条件的重复日程会通过后台续排维持长期覆盖。';
+
+  @override
+  String notificationCoverageCapacityLimited(int capacity) {
+    return 'Android 最多可直接安排 $capacity 条提醒；后续提醒会提前尝试续排。';
+  }
 
   @override
   String get notificationSettingsEnabled => '启用提醒与通知';
@@ -4839,6 +4900,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerNotificationPlan => '日程通知計畫';
 
   @override
+  String get developerNotificationCoverage => '提醒覆蓋狀態';
+
+  @override
+  String get developerNotificationCoverageReady => '所有已知有限提醒都已直接安排';
+
+  @override
+  String get developerNotificationCoverageRenewable => '無限重複提醒使用盡力續排維持長期覆蓋';
+
+  @override
+  String get developerNotificationCoverageCapacityLimited =>
+      '直接鬧鐘容量已滿，後續提醒依賴盡力續排';
+
+  @override
+  String get developerNotificationCoverageBlocked => '未滿足精準投遞條件';
+
+  @override
+  String get developerNotificationCoverageFailed => '最近一次提醒同步失敗';
+
+  @override
+  String developerNotificationDirectCapacitySummary(
+    int scheduled,
+    int capacity,
+  ) {
+    return '已直接安排 $scheduled 則 / 容量 $capacity 則';
+  }
+
+  @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
     return '已排程 $scheduled 則，計畫 $planned 則';
   }
@@ -4937,6 +5025,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get developerNotificationNextMaintenance => '下一次維護';
 
   @override
+  String get developerNotificationNextRenewal => '下一次盡力續排';
+
+  @override
   String get developerNotificationNoMaintenance => '尚未安排';
 
   @override
@@ -4949,6 +5040,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developerNotificationLastReconciliation => '最近一次重算';
+
+  @override
+  String get developerNotificationLastSynchronization => '最近一次提醒同步';
+
+  @override
+  String get developerNotificationLateRecovery => '遲到提醒恢復';
+
+  @override
+  String developerNotificationLateRecoveryCount(int count) {
+    return '有 $count 則提醒在原定時間後被恢復投遞';
+  }
 
   @override
   String developerNotificationReconciliationSummary(
@@ -4971,6 +5073,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get developerNotificationReconcileModeMaintenance => '維護重算';
+
+  @override
+  String get developerNotificationReconcileModeRecovery => '恢復同步';
+
+  @override
+  String get developerNotificationRunRecovery => '執行提醒恢復';
+
+  @override
+  String get developerNotificationRecoveryComplete => '提醒恢復已完成';
 
   @override
   String get developerNotificationReconcileResultSuccess => '成功';
@@ -5064,6 +5175,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationSettingsSection => '提醒與通知';
+
+  @override
+  String get notificationCoverage => '提醒覆蓋狀態';
+
+  @override
+  String get notificationCoverageRenewable => '沒有結束條件的重複日程會透過背景續排維持長期覆蓋。';
+
+  @override
+  String notificationCoverageCapacityLimited(int capacity) {
+    return 'Android 最多可直接安排 $capacity 則提醒；後續提醒會提前嘗試續排。';
+  }
 
   @override
   String get notificationSettingsEnabled => '啟用提醒與通知';

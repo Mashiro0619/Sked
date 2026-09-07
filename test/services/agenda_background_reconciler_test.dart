@@ -54,7 +54,7 @@ AppData _data() {
 
 void main() {
   test(
-    'reprojects persisted data and schedules daily notification maintenance',
+    'reprojects persisted finite data without scheduling a renewal',
     () async {
       final gateway = MemoryAgendaNotificationGateway();
       final anchor = DateTime(2026, 9, 2, 8);
@@ -74,10 +74,10 @@ void main() {
 
       expect(result.succeeded, isTrue);
       expect(gateway.scheduled, hasLength(1));
-      expect(result.nextReconcileAt, DateTime(2026, 9, 3, 3, 17));
+      expect(result.nextRenewalAt, isNull);
       expect(
         (await service.readNotificationDiagnostics())?.mode,
-        AgendaNotificationReconcileMode.maintenance,
+        AgendaNotificationReconcileMode.recovery,
       );
       expect(
         (await service.readNotificationDiagnostics())?.origin,
@@ -116,7 +116,7 @@ void main() {
       final result = await reconciler.reconcile();
 
       expect(result.succeeded, isTrue);
-      expect(result.nextReconcileAt, isNull);
+      expect(result.nextRenewalAt, isNull);
       expect(gateway.scheduled, isEmpty);
       expect(loadCount, 2);
     },
@@ -178,7 +178,7 @@ void main() {
       final result = await pass;
 
       expect(result.skipped, isTrue);
-      expect(result.nextReconcileAt, isNull);
+      expect(result.nextRenewalAt, isNull);
       expect(result.notificationError, isNull);
       expect(gateway.scheduled, isEmpty);
       expect((await runtime.readProjectionFence()).blocked, isTrue);
@@ -223,52 +223,55 @@ void main() {
       final result = await pass;
 
       expect(result.skipped, isTrue);
-      expect(result.nextReconcileAt, isNull);
+      expect(result.nextRenewalAt, isNull);
       expect(gateway.scheduled, isEmpty);
       expect(await workerService.readNotificationDiagnostics(), isNull);
     },
   );
 
-  test('cancels a native maintenance wakeup written after a foreground clear begins', () async {
-    final anchor = DateTime(2026, 9, 2, 8);
-    final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
-    final service = AgendaNotificationService(
-      enabled: true,
-      gateway: MemoryAgendaNotificationGateway(),
-      runtimeStore: runtime,
-      now: () => anchor,
-    );
-    final reconciler = AgendaBackgroundReconciler(
-      notificationService: service,
-      clock: () => anchor,
-    );
-    final scheduleStarted = Completer<void>();
-    final finishSchedule = Completer<void>();
-    var scheduled = 0;
-    var cancelled = 0;
-    final result = AgendaBackgroundReconcileResult(
-      nextReconcileAt: anchor.add(const Duration(days: 1)),
-      projectionFence: await service.readProjectionFence(),
-    );
+  test(
+    'cancels a native renewal wakeup written after a foreground clear begins',
+    () async {
+      final anchor = DateTime(2026, 9, 2, 8);
+      final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: MemoryAgendaNotificationGateway(),
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      final reconciler = AgendaBackgroundReconciler(
+        notificationService: service,
+        clock: () => anchor,
+      );
+      final scheduleStarted = Completer<void>();
+      final finishSchedule = Completer<void>();
+      var scheduled = 0;
+      var cancelled = 0;
+      final result = AgendaBackgroundReconcileResult(
+        nextRenewalAt: anchor.add(const Duration(days: 1)),
+        projectionFence: await service.readProjectionFence(),
+      );
 
-    final publish = reconciler.publishNextMaintenanceWakeup(
-      result,
-      schedule: (_) async {
-        scheduled += 1;
-        scheduleStarted.complete();
-        await finishSchedule.future;
-      },
-      cancel: () async => cancelled += 1,
-    );
+      final publish = reconciler.publishNextRenewalWakeup(
+        result,
+        schedule: (_) async {
+          scheduled += 1;
+          scheduleStarted.complete();
+          await finishSchedule.future;
+        },
+        cancel: () async => cancelled += 1,
+      );
 
-    await scheduleStarted.future;
-    await service.blockProjectionForDataClear();
-    finishSchedule.complete();
+      await scheduleStarted.future;
+      await service.blockProjectionForDataClear();
+      finishSchedule.complete();
 
-    expect(await publish, isFalse);
-    expect(scheduled, 1);
-    expect(cancelled, 1);
-  });
+      expect(await publish, isFalse);
+      expect(scheduled, 1);
+      expect(cancelled, 1);
+    },
+  );
 
   test('background load failures are visible in runtime diagnostics', () async {
     final anchor = DateTime(2026, 9, 2, 8);

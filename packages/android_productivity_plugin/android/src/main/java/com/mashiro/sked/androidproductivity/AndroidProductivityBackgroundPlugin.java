@@ -58,9 +58,14 @@ public final class AndroidProductivityBackgroundPlugin
     if (applicationContext == null) {
       return false;
     }
-    final PowerManager powerManager =
-        applicationContext.getSystemService(PowerManager.class);
-    return powerManager != null
-        && powerManager.isIgnoringBatteryOptimizations(applicationContext.getPackageName());
+    try {
+      final PowerManager powerManager =
+          applicationContext.getSystemService(PowerManager.class);
+      return powerManager != null
+          && powerManager.isIgnoringBatteryOptimizations(applicationContext.getPackageName());
+    } catch (SecurityException ignored) {
+      // Fail closed when an OEM rejects the system-level query.
+      return false;
+    }
   }
 }

@@ -126,7 +126,7 @@ class AgendaCoordinator {
       // Starting or resuming the app must not invalidate a notification that
       // has just become due while Android is delivering it. Only a durable
       // data commit gets an authoritative replacement pass.
-      await reconcileMaintenance();
+      await reconcileRecovery();
     } catch (error, stackTrace) {
       _started = false;
       final commitSubscription = _commitSubscription;
@@ -266,7 +266,7 @@ class AgendaCoordinator {
         }
       }
       // Do not mark a committed snapshot as published, and do not replace a
-      // previously valid maintenance wake-up, when the notification platform
+      // previously valid renewal wake-up, when the notification platform
       // failed. The next resume/manual diagnostic pass must be able to retry
       // the same durable snapshot instead of silently treating this commit as
       // complete.
@@ -280,15 +280,13 @@ class AgendaCoordinator {
         return;
       }
       try {
-        // A background pass is a daily/catch-up maintenance operation. It is
-        // deliberately not scheduled at a reminder's exact fire time.
-        final nextReconcileAt =
-            notificationStatus?.nextMaintenanceAt ??
-            _notificationService.status.nextMaintenanceAt;
+        // A native background wake-up exists only for best-effort renewal; it
+        // never delivers a user-facing reminder or competes at its fire time.
+        final nextRenewalAt =
+            notificationStatus?.nextRenewalAt ??
+            _notificationService.status.nextRenewalAt;
         if (_productivityBridge.isSupported) {
-          await _productivityBridge.scheduleAgendaReconciliation(
-            nextReconcileAt,
-          );
+          await _productivityBridge.scheduleAgendaReconciliation(nextRenewalAt);
         }
         _lastPublishedRevision = effectiveRevision;
       } catch (error, stackTrace) {
@@ -300,12 +298,12 @@ class AgendaCoordinator {
   }
 
   /// Requests a fresh platform projection after returning to the foreground.
-  Future<void> onResume() => reconcileMaintenance();
+  Future<void> onResume() => reconcileRecovery();
 
   /// Rebuilds only future notifications and protects managed notifications
-  /// that have become due within the maintenance grace window.
-  Future<void> reconcileMaintenance() =>
-      reconcileNow(mode: AgendaNotificationReconcileMode.maintenance);
+  /// that have become due within the recovery grace window.
+  Future<void> reconcileRecovery() =>
+      reconcileNow(mode: AgendaNotificationReconcileMode.recovery);
 
   /// Keeps non-UI notification actions responsive while the app remains in the
   /// foreground. Android delivers those actions to the plugin background
@@ -362,8 +360,8 @@ class AgendaCoordinator {
     return Future<AgendaNotificationPlatformSnapshot?>.value();
   }
 
-  /// Runs a non-destructive maintenance pass from developer diagnostics.
-  Future<void> runNotificationMaintenance() => reconcileMaintenance();
+  /// Runs a non-destructive recovery pass from developer diagnostics.
+  Future<void> runNotificationRecovery() => reconcileRecovery();
 
   /// Sends an immediate, non-agenda diagnostic notification through the
   /// selected production channel using this coordinator's owned service.

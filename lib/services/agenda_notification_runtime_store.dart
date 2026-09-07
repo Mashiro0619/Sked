@@ -197,12 +197,13 @@ class AgendaNotificationBackgroundRequest {
   static const maxLocaleLength = 64;
 }
 
-/// Identifies whether a projection is allowed to fully replace the platform
-/// notification plan or is only maintaining an already published plan.
+/// Identifies whether a projection may fully replace the platform plan or is
+/// recovering it after lifecycle work such as boot, time-zone changes, or a
+/// best-effort renewal.
 ///
-/// A maintenance pass is deliberately weaker than an authoritative foreground
+/// A recovery pass is deliberately weaker than an authoritative foreground
 /// pass: it must not race a notification that has just become due.
-enum AgendaNotificationReconcileMode { authoritative, maintenance }
+enum AgendaNotificationReconcileMode { authoritative, recovery }
 
 /// Identifies whether a notification projection was performed by a foreground
 /// Flutter host or the Android headless maintenance worker.
@@ -214,6 +215,25 @@ enum AgendaNotificationReconcileOrigin { foreground, background }
 
 /// Terminal result recorded for the most recent notification projection.
 enum AgendaNotificationDiagnosticResult { success, skipped, blocked, failed }
+
+/// Describes how completely Android currently covers future reminders.
+enum AgendaNotificationCoverage {
+  /// Every known finite reminder is directly scheduled with the platform.
+  ready,
+
+  /// Infinite recurring reminders have direct coverage for the current
+  /// window, then need a best-effort renewal before that window ends.
+  renewable,
+
+  /// Direct platform capacity is full; later reminders depend on renewal.
+  capacityLimited,
+
+  /// A required Android permission, channel, or battery allowlist is absent.
+  blocked,
+
+  /// Scheduling failed for a reason other than a known capability block.
+  failed,
+}
 
 /// A durable fence around notification projection work.
 ///
@@ -305,14 +325,16 @@ class AgendaNotificationDiagnostics {
     required this.notificationsEnabled,
     required this.exactAlarmsAllowed,
     this.batteryOptimizationIgnored = true,
-    required this.plannedCount,
-    required this.scheduledCount,
-    required this.truncatedCount,
-    required this.retainedPendingCount,
+    this.coverage = AgendaNotificationCoverage.ready,
+    required this.directScheduledCount,
+    required this.directCapacity,
+    this.hasUnboundedRecurrence = false,
+    this.hasCapacityOverflow = false,
+    this.retainedPendingCount = 0,
+    this.lateRecoveryCount = 0,
     required this.plan,
     this.origin = AgendaNotificationReconcileOrigin.foreground,
-    this.nextMaintenanceAt,
-    this.overflowCatchUpAt,
+    this.nextRenewalAt,
     this.platformPendingCount,
     this.platformActiveCount,
     this.platformSampledAt,
@@ -326,13 +348,15 @@ class AgendaNotificationDiagnostics {
   final bool notificationsEnabled;
   final bool exactAlarmsAllowed;
   final bool batteryOptimizationIgnored;
-  final int plannedCount;
-  final int scheduledCount;
-  final int truncatedCount;
+  final AgendaNotificationCoverage coverage;
+  final int directScheduledCount;
+  final int directCapacity;
+  final bool hasUnboundedRecurrence;
+  final bool hasCapacityOverflow;
   final int retainedPendingCount;
+  final int lateRecoveryCount;
   final List<AgendaNotificationDiagnosticPlanItem> plan;
-  final DateTime? nextMaintenanceAt;
-  final DateTime? overflowCatchUpAt;
+  final DateTime? nextRenewalAt;
   final int? platformPendingCount;
   final int? platformActiveCount;
   final DateTime? platformSampledAt;
@@ -350,13 +374,15 @@ class AgendaNotificationDiagnostics {
     notificationsEnabled: notificationsEnabled,
     exactAlarmsAllowed: exactAlarmsAllowed,
     batteryOptimizationIgnored: batteryOptimizationIgnored,
-    plannedCount: plannedCount,
-    scheduledCount: scheduledCount,
-    truncatedCount: truncatedCount,
+    coverage: coverage,
+    directScheduledCount: directScheduledCount,
+    directCapacity: directCapacity,
+    hasUnboundedRecurrence: hasUnboundedRecurrence,
+    hasCapacityOverflow: hasCapacityOverflow,
     retainedPendingCount: retainedPendingCount,
+    lateRecoveryCount: lateRecoveryCount,
     plan: plan,
-    nextMaintenanceAt: nextMaintenanceAt,
-    overflowCatchUpAt: overflowCatchUpAt,
+    nextRenewalAt: nextRenewalAt,
     platformPendingCount: pendingCount,
     platformActiveCount: activeCount,
     platformSampledAt: sampledAt,
@@ -372,15 +398,16 @@ class AgendaNotificationDiagnostics {
     'notificationsEnabled': notificationsEnabled,
     'exactAlarmsAllowed': exactAlarmsAllowed,
     'batteryOptimizationIgnored': batteryOptimizationIgnored,
-    'plannedCount': plannedCount,
-    'scheduledCount': scheduledCount,
-    'truncatedCount': truncatedCount,
+    'coverage': coverage.name,
+    'directScheduledCount': directScheduledCount,
+    'directCapacity': directCapacity,
+    'hasUnboundedRecurrence': hasUnboundedRecurrence,
+    'hasCapacityOverflow': hasCapacityOverflow,
     'retainedPendingCount': retainedPendingCount,
+    'lateRecoveryCount': lateRecoveryCount,
     'plan': plan.map((item) => item.toJson()).toList(growable: false),
-    if (nextMaintenanceAt != null)
-      'nextMaintenanceAt': nextMaintenanceAt!.toIso8601String(),
-    if (overflowCatchUpAt != null)
-      'overflowCatchUpAt': overflowCatchUpAt!.toIso8601String(),
+    if (nextRenewalAt != null)
+      'nextRenewalAt': nextRenewalAt!.toIso8601String(),
     if (platformPendingCount != null)
       'platformPendingCount': platformPendingCount,
     if (platformActiveCount != null) 'platformActiveCount': platformActiveCount,
@@ -400,12 +427,15 @@ class AgendaNotificationDiagnostics {
         ? AgendaNotificationReconcileOrigin.foreground
         : _parseReconcileOrigin(value['origin']);
     final result = _parseDiagnosticResult(value['result']);
-    final plannedCount = _decodeNonNegativeInt(value['plannedCount']);
-    final scheduledCount = _decodeNonNegativeInt(value['scheduledCount']);
-    final truncatedCount = _decodeNonNegativeInt(value['truncatedCount']);
+    final coverage = _parseNotificationCoverage(value['coverage']);
+    final directScheduledCount = _decodeNonNegativeInt(
+      value['directScheduledCount'],
+    );
+    final directCapacity = _decodeNonNegativeInt(value['directCapacity']);
     final retainedPendingCount = _decodeNonNegativeInt(
       value['retainedPendingCount'],
     );
+    final lateRecoveryCount = _decodeNonNegativeInt(value['lateRecoveryCount']);
     if (recordedAt == null ||
         mode == null ||
         origin == null ||
@@ -414,10 +444,13 @@ class AgendaNotificationDiagnostics {
         value['exactAlarmsAllowed'] is! bool ||
         (value['batteryOptimizationIgnored'] != null &&
             value['batteryOptimizationIgnored'] is! bool) ||
-        plannedCount == null ||
-        scheduledCount == null ||
-        truncatedCount == null ||
-        retainedPendingCount == null) {
+        coverage == null ||
+        directScheduledCount == null ||
+        directCapacity == null ||
+        value['hasUnboundedRecurrence'] is! bool ||
+        value['hasCapacityOverflow'] is! bool ||
+        retainedPendingCount == null ||
+        lateRecoveryCount == null) {
       return null;
     }
 
@@ -427,8 +460,7 @@ class AgendaNotificationDiagnostics {
       return raw is String ? DateTime.tryParse(raw) : null;
     }
 
-    final nextMaintenanceAt = decodeOptionalDate('nextMaintenanceAt');
-    final overflowCatchUpAt = decodeOptionalDate('overflowCatchUpAt');
+    final nextRenewalAt = decodeOptionalDate('nextRenewalAt');
     final platformSampledAt = decodeOptionalDate('platformSampledAt');
     final platformPendingCount = _decodeNullableNonNegativeInt(
       value['platformPendingCount'],
@@ -436,8 +468,7 @@ class AgendaNotificationDiagnostics {
     final platformActiveCount = _decodeNullableNonNegativeInt(
       value['platformActiveCount'],
     );
-    if ((value['nextMaintenanceAt'] != null && nextMaintenanceAt == null) ||
-        (value['overflowCatchUpAt'] != null && overflowCatchUpAt == null) ||
+    if ((value['nextRenewalAt'] != null && nextRenewalAt == null) ||
         (value['platformSampledAt'] != null && platformSampledAt == null) ||
         (value.containsKey('platformPendingCount') &&
             platformPendingCount == null) ||
@@ -471,13 +502,15 @@ class AgendaNotificationDiagnostics {
       batteryOptimizationIgnored: value['batteryOptimizationIgnored'] == null
           ? true
           : value['batteryOptimizationIgnored'] as bool,
-      plannedCount: plannedCount,
-      scheduledCount: scheduledCount,
-      truncatedCount: truncatedCount,
+      coverage: coverage,
+      directScheduledCount: directScheduledCount,
+      directCapacity: directCapacity,
+      hasUnboundedRecurrence: value['hasUnboundedRecurrence'] as bool,
+      hasCapacityOverflow: value['hasCapacityOverflow'] as bool,
       retainedPendingCount: retainedPendingCount,
+      lateRecoveryCount: lateRecoveryCount,
       plan: List.unmodifiable(plan),
-      nextMaintenanceAt: nextMaintenanceAt,
-      overflowCatchUpAt: overflowCatchUpAt,
+      nextRenewalAt: nextRenewalAt,
       platformPendingCount: platformPendingCount,
       platformActiveCount: platformActiveCount,
       platformSampledAt: platformSampledAt,
@@ -485,9 +518,17 @@ class AgendaNotificationDiagnostics {
     );
   }
 
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
   static const maxPlanItems = 32;
   static const maxErrorLength = 2048;
+}
+
+AgendaNotificationCoverage? _parseNotificationCoverage(Object? value) {
+  if (value is! String) return null;
+  for (final coverage in AgendaNotificationCoverage.values) {
+    if (coverage.name == value) return coverage;
+  }
+  return null;
 }
 
 AgendaNotificationReconcileMode? _parseReconcileMode(Object? value) {

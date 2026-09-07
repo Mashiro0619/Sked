@@ -62,10 +62,10 @@ object AgendaBackgroundReconcileScheduler {
             enqueue(context, AndroidProductivityContract.ACTION_AGENDA_RECONCILE)
             return
         }
-        // This is only rolling-window maintenance, never user-facing reminder
-        // delivery. Do not use allow-while-idle here: Android quotas those
-        // wakeups per UID and a maintenance alarm can otherwise delay the
-        // actual course/event reminder that uses alarmClock.
+        // This is only an ahead-of-time best-effort renewal, never
+        // user-facing reminder delivery. Do not use allow-while-idle here:
+        // Android quotas those wakeups per UID and a renewal alarm can
+        // otherwise delay the actual course/event reminder using alarmClock.
         alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
     }
 

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../services/agenda_notification_service.dart';
+import '../services/agenda_notification_runtime_store.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/android_productivity_bridge.dart';
 import '../widgets/sked_dropdown_menu.dart';
@@ -69,7 +70,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
         widget.notificationService ??
         AgendaNotificationService();
     _notificationServiceResolved = true;
+    _notificationService.addListener(_onNotificationStatusChanged);
     unawaited(_refreshPermissionState());
+  }
+
+  void _onNotificationStatusChanged() {
+    if (mounted) setState(() {});
   }
 
   AgendaCoordinator? _readAgendaCoordinator() {
@@ -83,6 +89,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (_notificationServiceResolved) {
+      _notificationService.removeListener(_onNotificationStatusChanged);
+    }
     _productivityBridge.dispose();
     super.dispose();
   }
@@ -126,10 +135,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 .batteryOptimizationIgnored
           : true;
       if (!mounted) return;
-      // Opening Android's permission settings is asynchronous.  The first
-      // reconciliation runs before the user makes a choice, so detect a
-      // later, known permission change on resume and rebuild the platform
-      // plan with the newly granted (or revoked) capability.
+      // Settings surfaces are asynchronous. The first read may happen before
+      // the user makes a choice, so detect a later permission change on resume
+      // and rebuild the platform plan with the newly granted (or revoked)
+      // capability.
       final permissionChanged =
           _notificationsPermissionGranted != null &&
           _notificationsPermissionGranted != notificationsEnabled;
@@ -249,11 +258,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
       debugLabel: 'Open battery optimization settings',
       command: () async {
         await _productivityBridge.openBatteryOptimizationSettings();
-        // The native method resolves only after it has read PowerManager on
-        // return from the direct request or public-settings fallback. Rebuild
-        // regardless of the outcome so a revoked/unchanged allowlist cannot
-        // leave a future alarm looking valid until another lifecycle event.
-        await _agendaCoordinator?.reconcileNow();
+        // Opening settings is not a grant. The current read below only clears
+        // the loading state; a later resume reads the user's choice and then
+        // triggers reconciliation if the allowlist actually changed.
       },
     );
     await _refreshPermissionState();
@@ -269,6 +276,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             : l10n.notificationPermissionRequest;
         final permissionSubtitle = _permissionSubtitle(l10n);
         final exactAlarmSubtitle = _exactAlarmSubtitle(l10n);
+        final coverage = _notificationService.status.coverage;
+        final showCoverageNotice =
+            provider.notificationsEnabled &&
+            !_isWindows &&
+            (coverage == AgendaNotificationCoverage.renewable ||
+                coverage == AgendaNotificationCoverage.capacityLimited);
         final children = <Widget>[
           SettingsSectionHeader(title: l10n.notificationSettingsSection),
           Padding(
@@ -292,6 +305,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 : (value) =>
                       unawaited(_setNotificationsEnabled(provider, value)),
           ),
+          if (showCoverageNotice)
+            SettingsConnectedTile(
+              key: const ValueKey('notification-coverage-notice'),
+              leading: const Icon(Icons.info_outline),
+              title: l10n.notificationCoverage,
+              subtitle: coverage == AgendaNotificationCoverage.capacityLimited
+                  ? l10n.notificationCoverageCapacityLimited(
+                      _notificationService.status.directCapacity,
+                    )
+                  : l10n.notificationCoverageRenewable,
+            ),
           SettingsSectionHeader(title: l10n.notificationDefaultsSection),
           _buildReminderDropdown(
             key: const ValueKey('notification-course-default-reminder'),

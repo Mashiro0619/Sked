@@ -1673,6 +1673,25 @@
   "@developerNotificationExactAlarmBlocked": {},
   "developerNotificationPlan": "Agenda notification plan",
   "@developerNotificationPlan": {},
+  "developerNotificationCoverage": "Coverage",
+  "@developerNotificationCoverage": {},
+  "developerNotificationCoverageReady": "All known finite reminders are directly scheduled",
+  "@developerNotificationCoverageReady": {},
+  "developerNotificationCoverageRenewable": "Recurring reminders use best-effort long-term renewal",
+  "@developerNotificationCoverageRenewable": {},
+  "developerNotificationCoverageCapacityLimited": "Direct alarm capacity is full; later reminders use best-effort renewal",
+  "@developerNotificationCoverageCapacityLimited": {},
+  "developerNotificationCoverageBlocked": "Precise-delivery requirements are not met",
+  "@developerNotificationCoverageBlocked": {},
+  "developerNotificationCoverageFailed": "The latest reminder sync failed",
+  "@developerNotificationCoverageFailed": {},
+  "developerNotificationDirectCapacitySummary": "{scheduled} direct alarms / {capacity} capacity",
+  "@developerNotificationDirectCapacitySummary": {
+    "placeholders": {
+      "scheduled": {"type": "int"},
+      "capacity": {"type": "int"}
+    }
+  },
   "developerNotificationPlanSummary": "{scheduled} scheduled, {planned} planned",
   "@developerNotificationPlanSummary": {
     "placeholders": {
@@ -1765,6 +1784,8 @@
   "@developerNotificationNoPendingReminder": {},
   "developerNotificationNextMaintenance": "Next maintenance",
   "@developerNotificationNextMaintenance": {},
+  "developerNotificationNextRenewal": "Next best-effort renewal",
+  "@developerNotificationNextRenewal": {},
   "developerNotificationNoMaintenance": "Not scheduled",
   "@developerNotificationNoMaintenance": {},
   "developerNotificationTruncation": "Plan truncation",
@@ -1779,6 +1800,16 @@
   },
   "developerNotificationLastReconciliation": "Latest reconciliation",
   "@developerNotificationLastReconciliation": {},
+  "developerNotificationLastSynchronization": "Last reminder sync",
+  "@developerNotificationLastSynchronization": {},
+  "developerNotificationLateRecovery": "Late reminder recovery",
+  "@developerNotificationLateRecovery": {},
+  "developerNotificationLateRecoveryCount": "{count} reminder(s) were recovered after their original time",
+  "@developerNotificationLateRecoveryCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
   "@developerNotificationReconciliationSummary": {
     "placeholders": {
@@ -1796,6 +1827,12 @@
   "@developerNotificationReconcileModeAuthoritative": {},
   "developerNotificationReconcileModeMaintenance": "Maintenance",
   "@developerNotificationReconcileModeMaintenance": {},
+  "developerNotificationReconcileModeRecovery": "Recovery",
+  "@developerNotificationReconcileModeRecovery": {},
+  "developerNotificationRunRecovery": "Run reminder recovery",
+  "@developerNotificationRunRecovery": {},
+  "developerNotificationRecoveryComplete": "Reminder recovery completed",
+  "@developerNotificationRecoveryComplete": {},
   "developerNotificationReconcileResultSuccess": "Succeeded",
   "@developerNotificationReconcileResultSuccess": {},
   "developerNotificationReconcileResultSkipped": "Skipped",
@@ -1862,6 +1899,16 @@
   },
   "notificationSettingsSection": "Reminders & notifications",
   "@notificationSettingsSection": {},
+  "notificationCoverage": "Reminder coverage",
+  "@notificationCoverage": {},
+  "notificationCoverageRenewable": "Repeating schedules without an end date use background renewal for long-term coverage.",
+  "@notificationCoverageRenewable": {},
+  "notificationCoverageCapacityLimited": "Android can directly hold up to {capacity} reminders; later reminders are renewed in advance.",
+  "@notificationCoverageCapacityLimited": {
+    "placeholders": {
+      "capacity": {"type": "int"}
+    }
+  },
   "notificationSettingsEnabled": "Enable reminders and notifications",
   "@notificationSettingsEnabled": {},
   "notificationSettingsEnabledHint": "Schedules only items with a reminder. Set a course default below for courses that inherit it.",
@@ -1934,5 +1981,6 @@
   "@notificationWidgetsRefresh": {},
   "notificationWidgetsRefreshed": "Widgets refreshed",
   "@notificationWidgetsRefreshed": {},
-  "notificationPlatformUnsupported": "This platform does not provide native notifications."
+  "notificationPlatformUnsupported": "This platform does not provide native notifications.",
+  "@notificationPlatformUnsupported": {}
 }

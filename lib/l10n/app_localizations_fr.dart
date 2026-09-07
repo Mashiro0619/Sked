@@ -2397,6 +2397,37 @@ class AppLocalizationsFr extends AppLocalizations {
   String get developerNotificationPlan => 'Agenda notification plan';
 
   @override
+  String get developerNotificationCoverage => 'Coverage';
+
+  @override
+  String get developerNotificationCoverageReady =>
+      'All known finite reminders are directly scheduled';
+
+  @override
+  String get developerNotificationCoverageRenewable =>
+      'Recurring reminders use best-effort long-term renewal';
+
+  @override
+  String get developerNotificationCoverageCapacityLimited =>
+      'Direct alarm capacity is full; later reminders use best-effort renewal';
+
+  @override
+  String get developerNotificationCoverageBlocked =>
+      'Precise-delivery requirements are not met';
+
+  @override
+  String get developerNotificationCoverageFailed =>
+      'The latest reminder sync failed';
+
+  @override
+  String developerNotificationDirectCapacitySummary(
+    int scheduled,
+    int capacity,
+  ) {
+    return '$scheduled direct alarms / $capacity capacity';
+  }
+
+  @override
   String developerNotificationPlanSummary(int scheduled, int planned) {
     return '$scheduled scheduled, $planned planned';
   }
@@ -2505,6 +2536,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get developerNotificationNextMaintenance => 'Next maintenance';
 
   @override
+  String get developerNotificationNextRenewal => 'Next best-effort renewal';
+
+  @override
   String get developerNotificationNoMaintenance => 'Not scheduled';
 
   @override
@@ -2517,6 +2551,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get developerNotificationLastReconciliation => 'Latest reconciliation';
+
+  @override
+  String get developerNotificationLastSynchronization => 'Last reminder sync';
+
+  @override
+  String get developerNotificationLateRecovery => 'Late reminder recovery';
+
+  @override
+  String developerNotificationLateRecoveryCount(int count) {
+    return '$count reminder(s) were recovered after their original time';
+  }
 
   @override
   String developerNotificationReconciliationSummary(
@@ -2539,6 +2584,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get developerNotificationReconcileModeMaintenance => 'Maintenance';
+
+  @override
+  String get developerNotificationReconcileModeRecovery => 'Recovery';
+
+  @override
+  String get developerNotificationRunRecovery => 'Run reminder recovery';
+
+  @override
+  String get developerNotificationRecoveryComplete =>
+      'Reminder recovery completed';
 
   @override
   String get developerNotificationReconcileResultSuccess => 'Succeeded';
@@ -2646,6 +2701,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationSettingsSection => 'Reminders & notifications';
+
+  @override
+  String get notificationCoverage => 'Reminder coverage';
+
+  @override
+  String get notificationCoverageRenewable =>
+      'Repeating schedules without an end date use background renewal for long-term coverage.';
+
+  @override
+  String notificationCoverageCapacityLimited(int capacity) {
+    return 'Android can directly hold up to $capacity reminders; later reminders are renewed in advance.';
+  }
 
   @override
   String get notificationSettingsEnabled =>

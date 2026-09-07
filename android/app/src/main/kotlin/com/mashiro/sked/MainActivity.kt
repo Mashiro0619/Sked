@@ -69,9 +69,6 @@ class MainActivity : FlutterActivity() {
     private var pendingNotificationPermissionResult: MethodChannel.Result? = null
     private var pendingExactAlarmPermissionResult: MethodChannel.Result? = null
     private var exactAlarmPermissionRequestLeftActivity = false
-    private var pendingBatteryOptimizationResult: MethodChannel.Result? = null
-    private var batteryOptimizationRequestLeftActivity = false
-    private var batteryOptimizationFallbackOpened = false
     private var pendingSaveResult: MethodChannel.Result? = null
     private var pendingSaveContent: String? = null
     private var pendingSaveFileName: String? = null
@@ -94,15 +91,11 @@ class MainActivity : FlutterActivity() {
         // after the user has left Settings so the caller observes the actual
         // permission state and can reconcile existing alarms immediately.
         resolveExactAlarmPermissionRequest()
-        resolveBatteryOptimizationRequest()
     }
 
     override fun onPause() {
         if (pendingExactAlarmPermissionResult != null) {
             exactAlarmPermissionRequestLeftActivity = true
-        }
-        if (pendingBatteryOptimizationResult != null) {
-            batteryOptimizationRequestLeftActivity = true
         }
         super.onPause()
     }
@@ -117,12 +110,8 @@ class MainActivity : FlutterActivity() {
             if (pendingExactAlarmPermissionResult != null) {
                 exactAlarmPermissionRequestLeftActivity = true
             }
-            if (pendingBatteryOptimizationResult != null) {
-                batteryOptimizationRequestLeftActivity = true
-            }
         } else {
             resolveExactAlarmPermissionRequest()
-            resolveBatteryOptimizationRequest()
         }
     }
 
@@ -139,12 +128,6 @@ class MainActivity : FlutterActivity() {
         pendingExactAlarmPermissionResult?.let { result ->
             pendingExactAlarmPermissionResult = null
             exactAlarmPermissionRequestLeftActivity = false
-            result.success(false)
-        }
-        pendingBatteryOptimizationResult?.let { result ->
-            pendingBatteryOptimizationResult = null
-            batteryOptimizationRequestLeftActivity = false
-            batteryOptimizationFallbackOpened = false
             result.success(false)
         }
         super.onDestroy()
@@ -257,9 +240,6 @@ class MainActivity : FlutterActivity() {
         pendingNotificationPermissionResult = null
         pendingExactAlarmPermissionResult = null
         exactAlarmPermissionRequestLeftActivity = false
-        pendingBatteryOptimizationResult = null
-        batteryOptimizationRequestLeftActivity = false
-        batteryOptimizationFallbackOpened = false
         appInstanceLeaseChannel?.setMethodCallHandler(null)
         appInstanceLeaseChannel = null
         productivityChannel?.setMethodCallHandler(null)
@@ -355,8 +335,14 @@ class MainActivity : FlutterActivity() {
 
     private fun isIgnoringBatteryOptimizations(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
-        val manager = getSystemService(PowerManager::class.java) ?: return false
-        return manager.isIgnoringBatteryOptimizations(packageName)
+        return try {
+            val manager = getSystemService(PowerManager::class.java) ?: return false
+            manager.isIgnoringBatteryOptimizations(packageName)
+        } catch (_: SecurityException) {
+            // A vendor may reject the query even when the public API exists.
+            // Treat that as not allowlisted so reminders remain blocked.
+            false
+        }
     }
 
     private fun openBatteryOptimizationSettings(result: MethodChannel.Result) {
@@ -366,67 +352,36 @@ class MainActivity : FlutterActivity() {
             result.success(true)
             return
         }
-        if (pendingBatteryOptimizationResult != null) {
-            result.error(
-                "busy",
-                "A battery optimization request is already in progress.",
-                null,
-            )
-            return
-        }
-        pendingBatteryOptimizationResult = result
-        batteryOptimizationRequestLeftActivity = false
-        batteryOptimizationFallbackOpened = false
         try {
+            // The request action displays a confirmation dialog whose result is
+            // unreliable on several OEMs. Open Sked's app-details surface so
+            // the user can choose the vendor's actual battery policy manually.
             startActivity(
                 Intent(
-                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:$packageName"),
                 ),
             )
+            // Opening Android settings is not a grant. Return immediately; the
+            // caller queries PowerManager again after the app resumes.
+            result.success(false)
         } catch (_: ActivityNotFoundException) {
             if (!openBatteryOptimizationSettingsFallback()) {
-                pendingBatteryOptimizationResult = null
                 result.success(false)
+                return
             }
+            result.success(false)
         } catch (_: SecurityException) {
             if (!openBatteryOptimizationSettingsFallback()) {
-                pendingBatteryOptimizationResult = null
                 result.success(false)
+                return
             }
+            result.success(false)
         }
-    }
-
-    /** Resolves only after returning from Android's request/settings surface. */
-    private fun resolveBatteryOptimizationRequest() {
-        val result = pendingBatteryOptimizationResult ?: return
-        if (!batteryOptimizationRequestLeftActivity) return
-        if (isIgnoringBatteryOptimizations()) {
-            pendingBatteryOptimizationResult = null
-            batteryOptimizationRequestLeftActivity = false
-            batteryOptimizationFallbackOpened = false
-            result.success(true)
-            return
-        }
-        // OEM request dialogs can close without applying the allowlist change.
-        // The public settings list is the only universal fallback; wait for its
-        // return too and report the actual PowerManager state, never launch
-        // success merely because an Activity could be started.
-        if (!batteryOptimizationFallbackOpened &&
-            openBatteryOptimizationSettingsFallback()
-        ) {
-            return
-        }
-        pendingBatteryOptimizationResult = null
-        batteryOptimizationRequestLeftActivity = false
-        batteryOptimizationFallbackOpened = false
-        result.success(false)
     }
 
     private fun openBatteryOptimizationSettingsFallback(): Boolean {
         return try {
-            batteryOptimizationFallbackOpened = true
-            batteryOptimizationRequestLeftActivity = false
             startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             true
         } catch (_: Exception) {

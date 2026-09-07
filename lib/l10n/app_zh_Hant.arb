@@ -1673,6 +1673,25 @@
   "@developerNotificationExactAlarmBlocked": {},
   "developerNotificationPlan": "日程通知計畫",
   "@developerNotificationPlan": {},
+  "developerNotificationCoverage": "提醒覆蓋狀態",
+  "@developerNotificationCoverage": {},
+  "developerNotificationCoverageReady": "所有已知有限提醒都已直接安排",
+  "@developerNotificationCoverageReady": {},
+  "developerNotificationCoverageRenewable": "無限重複提醒使用盡力續排維持長期覆蓋",
+  "@developerNotificationCoverageRenewable": {},
+  "developerNotificationCoverageCapacityLimited": "直接鬧鐘容量已滿，後續提醒依賴盡力續排",
+  "@developerNotificationCoverageCapacityLimited": {},
+  "developerNotificationCoverageBlocked": "未滿足精準投遞條件",
+  "@developerNotificationCoverageBlocked": {},
+  "developerNotificationCoverageFailed": "最近一次提醒同步失敗",
+  "@developerNotificationCoverageFailed": {},
+  "developerNotificationDirectCapacitySummary": "已直接安排 {scheduled} 則 / 容量 {capacity} 則",
+  "@developerNotificationDirectCapacitySummary": {
+    "placeholders": {
+      "scheduled": {"type": "int"},
+      "capacity": {"type": "int"}
+    }
+  },
   "developerNotificationPlanSummary": "已排程 {scheduled} 則，計畫 {planned} 則",
   "@developerNotificationPlanSummary": {
     "placeholders": {
@@ -1765,6 +1784,8 @@
   "@developerNotificationNoPendingReminder": {},
   "developerNotificationNextMaintenance": "下一次維護",
   "@developerNotificationNextMaintenance": {},
+  "developerNotificationNextRenewal": "下一次盡力續排",
+  "@developerNotificationNextRenewal": {},
   "developerNotificationNoMaintenance": "尚未安排",
   "@developerNotificationNoMaintenance": {},
   "developerNotificationTruncation": "計畫截斷",
@@ -1779,6 +1800,16 @@
   },
   "developerNotificationLastReconciliation": "最近一次重算",
   "@developerNotificationLastReconciliation": {},
+  "developerNotificationLastSynchronization": "最近一次提醒同步",
+  "@developerNotificationLastSynchronization": {},
+  "developerNotificationLateRecovery": "遲到提醒恢復",
+  "@developerNotificationLateRecovery": {},
+  "developerNotificationLateRecoveryCount": "有 {count} 則提醒在原定時間後被恢復投遞",
+  "@developerNotificationLateRecoveryCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
   "@developerNotificationReconciliationSummary": {
     "placeholders": {
@@ -1796,6 +1827,12 @@
   "@developerNotificationReconcileModeAuthoritative": {},
   "developerNotificationReconcileModeMaintenance": "維護重算",
   "@developerNotificationReconcileModeMaintenance": {},
+  "developerNotificationReconcileModeRecovery": "恢復同步",
+  "@developerNotificationReconcileModeRecovery": {},
+  "developerNotificationRunRecovery": "執行提醒恢復",
+  "@developerNotificationRunRecovery": {},
+  "developerNotificationRecoveryComplete": "提醒恢復已完成",
+  "@developerNotificationRecoveryComplete": {},
   "developerNotificationReconcileResultSuccess": "成功",
   "@developerNotificationReconcileResultSuccess": {},
   "developerNotificationReconcileResultSkipped": "已略過",
@@ -1862,6 +1899,16 @@
   },
   "notificationSettingsSection": "提醒與通知",
   "@notificationSettingsSection": {},
+  "notificationCoverage": "提醒覆蓋狀態",
+  "@notificationCoverage": {},
+  "notificationCoverageRenewable": "沒有結束條件的重複日程會透過背景續排維持長期覆蓋。",
+  "@notificationCoverageRenewable": {},
+  "notificationCoverageCapacityLimited": "Android 最多可直接安排 {capacity} 則提醒；後續提醒會提前嘗試續排。",
+  "@notificationCoverageCapacityLimited": {
+    "placeholders": {
+      "capacity": {"type": "int"}
+    }
+  },
   "notificationSettingsEnabled": "啟用提醒與通知",
   "@notificationSettingsEnabled": {},
   "notificationSettingsEnabledHint": "僅為已設定提醒的項目安排通知。繼承課程需在下方設定課程預設提醒。",
@@ -1934,5 +1981,6 @@
   "@notificationWidgetsRefresh": {},
   "notificationWidgetsRefreshed": "小工具已重新整理",
   "@notificationWidgetsRefreshed": {},
-  "notificationPlatformUnsupported": "目前平台不提供原生通知。"
+  "notificationPlatformUnsupported": "目前平台不提供原生通知。",
+  "@notificationPlatformUnsupported": {}
 }

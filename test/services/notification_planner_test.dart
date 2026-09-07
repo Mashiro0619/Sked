@@ -120,67 +120,62 @@ void main() {
     },
   );
 
-  test(
-    'planner caps distant reminders deterministically and exposes truncation',
-    () {
-      final now = DateTime(2026, 8, 3, 8);
-      const planner = NotificationPlanner(maxScheduledNotifications: 3);
-      final occurrences = [
-        _occurrence(
-          id: 'later',
-          start: now.add(const Duration(hours: 4)),
-          end: now.add(const Duration(hours: 5)),
-          reminders: const [AgendaReminder(minutesBefore: 0)],
-        ),
-        _occurrence(
-          id: 'same-time-z',
-          start: now.add(const Duration(hours: 1)),
-          end: now.add(const Duration(hours: 2)),
-          reminders: const [AgendaReminder(minutesBefore: 0)],
-        ),
-        _occurrence(
-          id: 'same-time-a',
-          start: now.add(const Duration(hours: 1)),
-          end: now.add(const Duration(hours: 2)),
-          reminders: const [AgendaReminder(minutesBefore: 0)],
-        ),
-        _occurrence(
-          id: 'middle',
-          start: now.add(const Duration(hours: 2)),
-          end: now.add(const Duration(hours: 3)),
-          reminders: const [AgendaReminder(minutesBefore: 0)],
-        ),
-        _occurrence(
-          id: 'furthest',
-          start: now.add(const Duration(hours: 5)),
-          end: now.add(const Duration(hours: 6)),
-          reminders: const [AgendaReminder(minutesBefore: 0)],
-        ),
-      ];
+  test('planner caps distant reminders deterministically and exposes capacity overflow', () {
+    final now = DateTime(2026, 8, 3, 8);
+    const planner = NotificationPlanner(maxScheduledNotifications: 3);
+    final occurrences = [
+      _occurrence(
+        id: 'later',
+        start: now.add(const Duration(hours: 4)),
+        end: now.add(const Duration(hours: 5)),
+        reminders: const [AgendaReminder(minutesBefore: 0)],
+      ),
+      _occurrence(
+        id: 'same-time-z',
+        start: now.add(const Duration(hours: 1)),
+        end: now.add(const Duration(hours: 2)),
+        reminders: const [AgendaReminder(minutesBefore: 0)],
+      ),
+      _occurrence(
+        id: 'same-time-a',
+        start: now.add(const Duration(hours: 1)),
+        end: now.add(const Duration(hours: 2)),
+        reminders: const [AgendaReminder(minutesBefore: 0)],
+      ),
+      _occurrence(
+        id: 'middle',
+        start: now.add(const Duration(hours: 2)),
+        end: now.add(const Duration(hours: 3)),
+        reminders: const [AgendaReminder(minutesBefore: 0)],
+      ),
+      _occurrence(
+        id: 'furthest',
+        start: now.add(const Duration(hours: 5)),
+        end: now.add(const Duration(hours: 6)),
+        reminders: const [AgendaReminder(minutesBefore: 0)],
+      ),
+    ];
 
-      final uncapped = planner.buildPlanResult(
-        occurrences,
-        now: now,
-        applyLimit: false,
-      );
-      final capped = planner.limitPlan(uncapped.items.reversed);
+    final uncapped = planner.buildPlanResult(
+      occurrences,
+      now: now,
+      applyLimit: false,
+    );
+    final capped = planner.limitPlan(uncapped.items.reversed);
 
-      expect(uncapped.items, hasLength(5));
-      expect(uncapped.truncatedCount, 0);
-      expect(capped.items.map((item) => item.occurrence.stableId), [
-        'same-time-a',
-        'same-time-z',
-        'middle',
-      ]);
-      expect(capped.truncatedCount, 2);
-      expect(capped.candidateCount, 5);
-      expect(capped.isTruncated, isTrue);
-      expect(
-        planner.buildPlan(occurrences, now: now).map((item) => item.key),
-        capped.items.map((item) => item.key),
-      );
-    },
-  );
+    expect(uncapped.items, hasLength(5));
+    expect(uncapped.hasCapacityOverflow, isFalse);
+    expect(capped.items.map((item) => item.occurrence.stableId), [
+      'same-time-a',
+      'same-time-z',
+      'middle',
+    ]);
+    expect(capped.hasCapacityOverflow, isTrue);
+    expect(
+      planner.buildPlan(occurrences, now: now).map((item) => item.key),
+      capped.items.map((item) => item.key),
+    );
+  });
 
   test('planner safely treats a negative cap as no schedulable items', () {
     final now = DateTime(2026, 8, 3, 8);
@@ -195,7 +190,7 @@ void main() {
     ], now: now);
 
     expect(result.items, isEmpty);
-    expect(result.truncatedCount, 1);
+    expect(result.hasCapacityOverflow, isTrue);
   });
 
   test('planner resolves duplicate runtime keys to the earliest reminder', () {
@@ -223,7 +218,7 @@ void main() {
 
     expect(result.items, hasLength(1));
     expect(result.items.single.fireAt, earlier.fireAt);
-    expect(result.truncatedCount, 0);
+    expect(result.hasCapacityOverflow, isFalse);
   });
 
   test(

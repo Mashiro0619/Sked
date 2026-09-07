@@ -2,6 +2,8 @@ import '../utils/time_utils.dart';
 import 'general_event.dart';
 import 'general_schedule.dart';
 
+final _lastSupportedGeneralDate = DateTime.utc(9999, 12, 31);
+
 class GeneralEventOccurrence {
   const GeneralEventOccurrence({
     required this.event,
@@ -229,6 +231,65 @@ List<GeneralEventOccurrence> expandGeneralOccurrences({
   return results;
 }
 
+/// Returns an exclusive upper bound for a finite event recurrence.
+///
+/// A null result means that the event repeats without an end date or count, or
+/// that a finite boundary lies outside the supported civil-date range.
+/// Notification planning uses this to keep such sequences on a bounded,
+/// best-effort renewal horizon instead of crashing while calculating a date.
+DateTime? finiteGeneralEventEndExclusive(GeneralEvent event) {
+  final start = tryParseStrictIsoDateTime(event.startDateTimeIso);
+  final rawEnd = tryParseStrictIsoDateTime(event.endDateTimeIso);
+  if (start == null || rawEnd == null) return null;
+  final end = rawEnd.isAfter(start)
+      ? rawEnd
+      : event.isAllDay
+      ? _safeAddCalendarDays(start, 1)
+      : _safeAddDuration(start, const Duration(hours: 1));
+  if (end == null) return null;
+  final rule = event.recurrenceRule;
+  if (!rule.isRepeating) return end;
+
+  DateTime? countEnd;
+  var countBoundaryRepresentable = true;
+  final count = rule.count;
+  if (count != null && count > 0) {
+    final lastStart = _addRecurrenceSteps(start, rule, count - 1);
+    if (lastStart != null) {
+      countEnd = _safeAddDuration(lastStart, end.difference(start));
+      countEnd = countEnd == null
+          ? null
+          : _safeAddDuration(countEnd, const Duration(microseconds: 1));
+    } else {
+      // A finite count can be larger than DateTime's representable range.
+      // Do not throw or pretend that the event has no end. Returning null
+      // makes the planner use its bounded renewable horizon instead.
+      countBoundaryRepresentable = false;
+    }
+  }
+
+  DateTime? untilEnd;
+  final until = _parseUntil(rule.untilDateIso);
+  if (until != null) {
+    // An occurrence may start at any time on the inclusive UNTIL date. Leave
+    // one full civil day plus its event duration so the projection cannot
+    // accidentally exclude that last valid occurrence.
+    final untilDay = _safeAddCalendarDays(normalizeDateOnly(until), 1);
+    if (untilDay != null) {
+      untilEnd = _safeAddDuration(untilDay, end.difference(start));
+    }
+  }
+
+  if (!countBoundaryRepresentable && untilEnd == null) return null;
+  if (countEnd == null) return untilEnd;
+  // If an UNTIL boundary itself cannot be represented, the count boundary is
+  // still a safe (possibly wider) finite projection bound. Occurrence
+  // expansion continues to enforce UNTIL independently.
+  if (until != null && untilEnd == null) return countEnd;
+  if (untilEnd == null) return countEnd;
+  return countEnd.isBefore(untilEnd) ? countEnd : untilEnd;
+}
+
 List<GeneralEventOccurrence> expandGeneralEventOccurrences({
   required GeneralSchedule calendar,
   required GeneralEvent event,
@@ -245,8 +306,11 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
   final effectiveEventEnd = eventEnd.isAfter(eventStart)
       ? eventEnd
       : event.isAllDay
-      ? calendarDateEndExclusive(eventStart)
-      : eventStart.add(const Duration(hours: 1));
+      ? _safeAddCalendarDays(eventStart, 1)
+      : _safeAddDuration(eventStart, const Duration(hours: 1));
+  if (effectiveEventEnd == null) {
+    return const [];
+  }
   final duration = effectiveEventEnd.difference(eventStart);
   final rawAllDaySpan = calendarDaysBetween(eventStart, effectiveEventEnd);
   final allDaySpan = rawAllDaySpan < 1 ? 1 : rawAllDaySpan;
@@ -273,15 +337,17 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
   final exceptions = event.recurrenceExceptionDateIso.toSet();
   final until = _parseUntil(rule.untilDateIso);
   final maxCount = rule.count == null || rule.count! < 1 ? null : rule.count!;
+  final rangeStart = event.isAllDay
+      ? _safeAddCalendarDays(startInclusive, -allDaySpan) ?? startInclusive
+      : _safeSubtractDuration(startInclusive, duration) ?? startInclusive;
   final firstCandidateIndex = _firstCandidateIndex(
     eventStart: eventStart,
-    rangeStart: event.isAllDay
-        ? addCalendarDays(startInclusive, -allDaySpan)
-        : startInclusive.subtract(duration),
+    rangeStart: rangeStart,
     rule: rule,
   );
   final results = <GeneralEventOccurrence>[];
   var index = firstCandidateIndex;
+  DateTime? previousOccurrenceStart;
   while (true) {
     if (maxCount != null && index >= maxCount) {
       break;
@@ -290,12 +356,22 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
     if (occurrenceStart == null) {
       break;
     }
+    // Every supported recurrence unit is strictly increasing. This guard
+    // keeps malformed/overflowed calendar arithmetic from becoming a loop.
+    if (previousOccurrenceStart != null &&
+        !occurrenceStart.isAfter(previousOccurrenceStart)) {
+      break;
+    }
+    previousOccurrenceStart = occurrenceStart;
     if (until != null && calendarDaysBetween(until, occurrenceStart) > 0) {
       break;
     }
     final occurrenceEnd = event.isAllDay
-        ? addCalendarDays(occurrenceStart, allDaySpan)
-        : occurrenceStart.add(duration);
+        ? _safeAddCalendarDays(occurrenceStart, allDaySpan)
+        : _safeAddDuration(occurrenceStart, duration);
+    if (occurrenceEnd == null) {
+      break;
+    }
     if (!occurrenceStart.isBefore(endExclusive) &&
         !_overlaps(
           occurrenceStart,
@@ -324,9 +400,6 @@ List<GeneralEventOccurrence> expandGeneralEventOccurrences({
       );
     }
     index += 1;
-    if (index - firstCandidateIndex > 3700) {
-      break;
-    }
   }
   return results;
 }
@@ -540,13 +613,51 @@ DateTime? _addRecurrenceSteps(
   GeneralEventRecurrenceRule rule,
   int index,
 ) {
+  try {
+    final interval = rule.normalizedInterval;
+    if (!_recurrenceIndexWithinSupportedDateRange(start, rule, index)) {
+      return null;
+    }
+    final amount = index * interval;
+    return switch (_effectiveUnit(rule)) {
+      GeneralEventRecurrenceUnit.day => addCalendarDays(start, amount),
+      GeneralEventRecurrenceUnit.week => addCalendarDays(start, amount * 7),
+      GeneralEventRecurrenceUnit.month => _addMonths(start, amount),
+    };
+  } catch (_) {
+    // DateTime and Duration throw when a corrupted count/interval projects
+    // outside their representable range. Treat that as the end of the
+    // sequence; callers can then fall back to a bounded renewable horizon.
+    return null;
+  }
+}
+
+// Event dates are parsed and persisted with the strict ISO helper, whose
+// supported civil-year range is 1..9999.  Check the offset before constructing
+// a DateTime: the VM can otherwise normalize an enormous day/month overflow
+// into a misleading but apparently valid date instead of throwing.
+bool _recurrenceIndexWithinSupportedDateRange(
+  DateTime start,
+  GeneralEventRecurrenceRule rule,
+  int index,
+) {
+  if (index < 0 || start.year < 1 || start.year > 9999) {
+    return false;
+  }
   final interval = rule.normalizedInterval;
-  final amount = index * interval;
-  return switch (_effectiveUnit(rule)) {
-    GeneralEventRecurrenceUnit.day => addCalendarDays(start, amount),
-    GeneralEventRecurrenceUnit.week => addCalendarDays(start, amount * 7),
-    GeneralEventRecurrenceUnit.month => _addMonths(start, amount),
-  };
+  final unit = _effectiveUnit(rule);
+  switch (unit) {
+    case GeneralEventRecurrenceUnit.day:
+      final maximumDays = calendarDaysBetween(start, _lastSupportedGeneralDate);
+      return maximumDays >= 0 && index <= maximumDays ~/ interval;
+    case GeneralEventRecurrenceUnit.week:
+      final maximumDays = calendarDaysBetween(start, _lastSupportedGeneralDate);
+      final maximumSteps = maximumDays < 0 ? -1 : maximumDays ~/ 7;
+      return maximumSteps >= 0 && index <= maximumSteps ~/ interval;
+    case GeneralEventRecurrenceUnit.month:
+      final maximumMonths = (9999 - start.year) * 12 + (12 - start.month);
+      return maximumMonths >= 0 && index <= maximumMonths ~/ interval;
+  }
 }
 
 DateTime? _legacyElapsedRecurrenceStart(
@@ -554,16 +665,20 @@ DateTime? _legacyElapsedRecurrenceStart(
   GeneralEventRecurrenceRule rule,
   int index,
 ) {
-  final interval = rule.normalizedInterval;
-  return switch (_effectiveUnit(rule)) {
-    GeneralEventRecurrenceUnit.day => start.add(
-      Duration(days: index * interval),
-    ),
-    GeneralEventRecurrenceUnit.week => start.add(
-      Duration(days: index * interval * 7),
-    ),
-    GeneralEventRecurrenceUnit.month => null,
-  };
+  try {
+    final interval = rule.normalizedInterval;
+    return switch (_effectiveUnit(rule)) {
+      GeneralEventRecurrenceUnit.day => start.add(
+        Duration(days: index * interval),
+      ),
+      GeneralEventRecurrenceUnit.week => start.add(
+        Duration(days: index * interval * 7),
+      ),
+      GeneralEventRecurrenceUnit.month => null,
+    };
+  } catch (_) {
+    return null;
+  }
 }
 
 String _dateIso(DateTime value) =>
@@ -575,6 +690,39 @@ DateTime _addMonths(DateTime start, int months) {
   final month = (targetMonthZero % 12) + 1;
   final day = start.day.clamp(1, _daysInMonth(year, month)).toInt();
   return dateTimeOnCalendarDate(DateTime.utc(year, month, day), start);
+}
+
+DateTime? _safeAddDuration(DateTime value, Duration duration) {
+  try {
+    final result = value.add(duration);
+    if (duration > Duration.zero && !result.isAfter(value)) return null;
+    if (duration < Duration.zero && !result.isBefore(value)) return null;
+    return result;
+  } catch (_) {
+    return null;
+  }
+}
+
+DateTime? _safeSubtractDuration(DateTime value, Duration duration) {
+  try {
+    final result = value.subtract(duration);
+    if (duration > Duration.zero && !result.isBefore(value)) return null;
+    if (duration < Duration.zero && !result.isAfter(value)) return null;
+    return result;
+  } catch (_) {
+    return null;
+  }
+}
+
+DateTime? _safeAddCalendarDays(DateTime value, int days) {
+  try {
+    final result = addCalendarDays(value, days);
+    if (days > 0 && !result.isAfter(value)) return null;
+    if (days < 0 && !result.isBefore(value)) return null;
+    return result;
+  } catch (_) {
+    return null;
+  }
 }
 
 int _daysInMonth(int year, int month) {

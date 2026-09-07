@@ -1557,6 +1557,70 @@ void main() {
       expect(occurrences.map((item) => item.start.day), [20, 24, 26]);
     });
 
+    test(
+      'continues past dense exceptions instead of applying a fixed scan cap',
+      () {
+        final start = DateTime(2020, 1, 1, 9);
+        const skippedOccurrences = 3701;
+        final event = GeneralEvent(
+          id: 'dense-exceptions',
+          calendarId: 'sched1',
+          title: 'Dense exceptions',
+          startDateTimeIso: start.toIso8601String(),
+          endDateTimeIso: start.add(const Duration(hours: 1)).toIso8601String(),
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+            count: skippedOccurrences + 2,
+          ),
+          recurrenceExceptionDateIso: [
+            for (var index = 0; index < skippedOccurrences; index++)
+              _testDateIso(DateTime(2020, 1, 1).add(Duration(days: index))),
+          ],
+        );
+        final schedule = GeneralSchedule(
+          id: 'sched1',
+          name: 'Work',
+          events: [event],
+        );
+
+        final occurrences = expandGeneralEventOccurrences(
+          calendar: schedule,
+          event: event,
+          startInclusive: start,
+          endExclusive: start.add(const Duration(days: skippedOccurrences + 2)),
+        );
+
+        expect(occurrences, hasLength(2));
+        expect(occurrences.first.sequence, skippedOccurrences);
+        expect(
+          occurrences.first.start,
+          start.add(const Duration(days: skippedOccurrences)),
+        );
+      },
+    );
+
+    test('does not throw when a counted recurrence exceeds DateTime range', () {
+      final event = GeneralEvent(
+        id: 'unrepresentable-count',
+        calendarId: 'sched1',
+        title: 'Large count',
+        startDateTimeIso: '2026-01-01T09:00:00.000',
+        endDateTimeIso: '2026-01-01T10:00:00.000',
+        recurrenceRule: const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.daily,
+          unit: GeneralEventRecurrenceUnit.day,
+          count: 1 << 30,
+        ),
+      );
+
+      expect(() => finiteGeneralEventEndExclusive(event), returnsNormally);
+      // A finite boundary that cannot be represented is deliberately treated
+      // as renewable by the notification planner instead of crashing or
+      // claiming that the whole sequence is directly covered.
+      expect(finiteGeneralEventEndExclusive(event), isNull);
+    });
+
     test('bounds legacy exception migration for a very large count', () {
       final rawStart = DateTime(2026, 1, 1, 23);
       final normalizedStart = DateTime(2026, 1, 2);

@@ -225,7 +225,7 @@ void main() {
       final initialDiagnostics = await coordinator.notificationDiagnostics();
       expect(
         initialDiagnostics?.mode,
-        AgendaNotificationReconcileMode.maintenance,
+        AgendaNotificationReconcileMode.recovery,
       );
 
       await coordinator.showImmediateNotificationTest(
@@ -234,7 +234,7 @@ void main() {
       await coordinator.scheduleThirtySecondNotificationTest(
         AgendaNotificationTestChannel.schedule,
       );
-      await coordinator.runNotificationMaintenance();
+      await coordinator.runNotificationRecovery();
 
       expect(gateway.testNotifications, hasLength(2));
       expect(

@@ -918,7 +918,10 @@ class FlutterAgendaNotificationGateway
   final Set<int> _sessionAllocatedNotificationIds = <int>{};
   final Map<String, int> _sessionManagedNotificationIds = <String, int>{};
   final Set<int> _developerTestNotificationIdsInSession = <int>{};
+  final Set<int> _scheduledDeveloperTestNotificationIdsInSession = <int>{};
   final Set<int> _knownDeveloperTestNotificationIds = <int>{};
+  final Set<int> _knownScheduledDeveloperTestNotificationIds = <int>{};
+  final Map<int, DateTime> _scheduledDeveloperTestFireAts = <int, DateTime>{};
   final Map<String, AgendaNotificationBackgroundRequest>
   _persistedManagedRequests = <String, AgendaNotificationBackgroundRequest>{};
   Future<void> _developerTestTail = Future<void>.value();
@@ -1503,7 +1506,10 @@ class FlutterAgendaNotificationGateway
           'A test fire time is required.',
         );
       }
-      await _ensureNotificationIdCache();
+      // Refresh on every delayed test so alarms that already fired release
+      // their diagnostic slot without requiring an explicit clear action.
+      await _refreshNotificationIdCache();
+      if (_isAndroid) _ensureDeveloperTestAlarmCapacity();
       final id = await _allocateDeveloperTestId();
       final effective = request.copyWith(id: id);
       final exact = await exactAlarmsAllowed;
@@ -1539,8 +1545,12 @@ class FlutterAgendaNotificationGateway
           );
         }
         _developerTestNotificationIdsInSession.add(effective.id);
+        _scheduledDeveloperTestNotificationIdsInSession.add(effective.id);
+        _scheduledDeveloperTestFireAts[effective.id] = fireAt;
       } catch (_) {
         _occupiedNotificationIds.remove(id);
+        _scheduledDeveloperTestNotificationIdsInSession.remove(id);
+        _scheduledDeveloperTestFireAts.remove(id);
         rethrow;
       }
     });
@@ -1564,9 +1574,24 @@ class FlutterAgendaNotificationGateway
         _occupiedNotificationIds.remove(id);
       }
       _developerTestNotificationIdsInSession.clear();
+      _scheduledDeveloperTestNotificationIdsInSession.clear();
+      _scheduledDeveloperTestFireAts.clear();
       _knownDeveloperTestNotificationIds.clear();
+      _knownScheduledDeveloperTestNotificationIds.clear();
     });
   });
+
+  void _ensureDeveloperTestAlarmCapacity() {
+    final scheduled = <int>{
+      ..._scheduledDeveloperTestNotificationIdsInSession,
+      ..._knownScheduledDeveloperTestNotificationIds,
+    };
+    if (scheduled.length >= _maxDeveloperTestScheduledNotifications) {
+      throw StateError(
+        'Too many pending developer tests; clear existing tests first.',
+      );
+    }
+  }
 
   Future<void> _ensureNotificationIdCache() async {
     if (_notificationIdCacheLoaded) return;
@@ -1581,6 +1606,7 @@ class FlutterAgendaNotificationGateway
   /// user has not dismissed.
   Future<List<PendingNotificationRequest>> _refreshNotificationIdCache() async {
     final requests = await _pendingRequests();
+    _knownScheduledDeveloperTestNotificationIds.clear();
     _managedNotificationIds.clear();
     _activeManagedNotificationIds.clear();
     _persistedManagedRequests.clear();
@@ -1597,13 +1623,28 @@ class FlutterAgendaNotificationGateway
         if (decoded.hasStableTag) _taggedManagedKeys.add(decoded.key);
       } else if (_isDeveloperTestPayload(request.payload)) {
         _knownDeveloperTestNotificationIds.add(request.id);
+        _knownScheduledDeveloperTestNotificationIds.add(request.id);
       } else if (_isWindows && _isDeveloperTestNotificationId(request.id)) {
         // Windows pending requests intentionally omit payload/title/body.
         // The reserved ID range is the durable namespace for developer tests.
         _knownDeveloperTestNotificationIds.add(request.id);
+        _knownScheduledDeveloperTestNotificationIds.add(request.id);
+      } else if (_isAndroid && _isDeveloperTestNotificationId(request.id)) {
+        // A damaged/legacy payload must still consume the reserved alarm slot
+        // and remain removable by the developer-test cleanup action.
+        _knownDeveloperTestNotificationIds.add(request.id);
+        _knownScheduledDeveloperTestNotificationIds.add(request.id);
       }
     }
     final platformIds = requests.map((request) => request.id).toSet();
+    final currentTime = DateTime.now();
+    _scheduledDeveloperTestFireAts.removeWhere((id, fireAt) {
+      if (platformIds.contains(id) || fireAt.isAfter(currentTime)) {
+        return false;
+      }
+      _scheduledDeveloperTestNotificationIdsInSession.remove(id);
+      return true;
+    });
     _occupiedNotificationIds
       ..clear()
       ..addAll(platformIds)
@@ -1832,38 +1873,41 @@ class AgendaNotificationStatus {
     required this.notificationsEnabled,
     required this.exactAlarmsAllowed,
     this.batteryOptimizationIgnored = true,
-    required this.scheduledCount,
-    this.truncatedCount = 0,
+    required this.directScheduledCount,
+    this.directCapacity = defaultMaxScheduledNotifications,
+    this.coverage = AgendaNotificationCoverage.ready,
+    this.hasUnboundedRecurrence = false,
+    this.hasCapacityOverflow = false,
     this.retainedPendingCount = 0,
     this.mode = AgendaNotificationReconcileMode.authoritative,
-    this.precisionBlocked = false,
-    this.nextMaintenanceAt,
-    this.overflowCatchUpAt,
+    this.nextRenewalAt,
+    this.lateRecoveryCount = 0,
     this.lastError,
   });
 
   final bool notificationsEnabled;
   final bool exactAlarmsAllowed;
   final bool batteryOptimizationIgnored;
-  final int scheduledCount;
-  final int truncatedCount;
+  final int directScheduledCount;
+  final int directCapacity;
+  final AgendaNotificationCoverage coverage;
+  final bool hasUnboundedRecurrence;
+  final bool hasCapacityOverflow;
   final int retainedPendingCount;
   final AgendaNotificationReconcileMode mode;
-  final bool precisionBlocked;
-  final DateTime? nextMaintenanceAt;
-  final DateTime? overflowCatchUpAt;
+  final DateTime? nextRenewalAt;
+  final int lateRecoveryCount;
   final Object? lastError;
 
   bool get healthy => lastError == null;
-  bool get isTruncated => truncatedCount > 0;
 }
 
 /// Coordinates the source-neutral planner with the native notification
 /// gateway. The service is intentionally independent from Provider/UI.
-class AgendaNotificationService {
+class AgendaNotificationService extends ChangeNotifier {
   factory AgendaNotificationService({
     AgendaProjectionService projection = const AgendaProjectionService(),
-    NotificationPlanner planner = const NotificationPlanner(),
+    NotificationPlanner? planner,
     NotificationReconciler reconciler = const NotificationReconciler(),
     AgendaNotificationGateway? gateway,
     AgendaNotificationRuntimeStore? runtimeStore,
@@ -1874,7 +1918,13 @@ class AgendaNotificationService {
         runtimeStore ?? SharedPreferencesAgendaNotificationRuntimeStore();
     return AgendaNotificationService._(
       projection: projection,
-      planner: planner,
+      planner:
+          planner ??
+          NotificationPlanner(
+            maxScheduledNotifications: _isWindows
+                ? _windowsMaxScheduledNotifications
+                : defaultMaxScheduledNotifications,
+          ),
       reconciler: reconciler,
       gateway:
           gateway ??
@@ -1919,11 +1969,16 @@ class AgendaNotificationService {
   AgendaNotificationStatus _status = const AgendaNotificationStatus(
     notificationsEnabled: true,
     exactAlarmsAllowed: true,
-    scheduledCount: 0,
+    directScheduledCount: 0,
   );
 
   AgendaNotificationStatus get status => _status;
   bool get isSupported => _enabled;
+
+  void _publishStatus(AgendaNotificationStatus value) {
+    _status = value;
+    notifyListeners();
+  }
 
   AgendaNotificationProjectionFenceStore? get _projectionFenceStore =>
       _runtimeStore is AgendaNotificationProjectionFenceStore
@@ -1931,7 +1986,7 @@ class AgendaNotificationService {
       : null;
 
   /// Captures the runtime-only projection fence shared with headless Android
-  /// maintenance. Stores that predate this optional contract remain active so
+  /// recovery. Stores that predate this optional contract remain active so
   /// existing injected test stores stay source compatible.
   Future<AgendaNotificationProjectionFence> readProjectionFence() async {
     final store = _projectionFenceStore;
@@ -2014,7 +2069,7 @@ class AgendaNotificationService {
     await reconcile(
       data,
       anchor: now(),
-      mode: AgendaNotificationReconcileMode.maintenance,
+      mode: AgendaNotificationReconcileMode.recovery,
       onPayload: _onPayload,
       onAction: _onAction,
     );
@@ -2033,17 +2088,22 @@ class AgendaNotificationService {
   }) async {
     if (!(await _allowsProjectionFence(projectionFence))) return;
     final current = (recordedAt ?? now()).toLocal();
-    _status = AgendaNotificationStatus(
-      notificationsEnabled: _status.notificationsEnabled,
-      exactAlarmsAllowed: _status.exactAlarmsAllowed,
-      batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
-      scheduledCount: _status.scheduledCount,
-      truncatedCount: _status.truncatedCount,
-      retainedPendingCount: _status.retainedPendingCount,
-      mode: mode,
-      nextMaintenanceAt: _status.nextMaintenanceAt,
-      overflowCatchUpAt: _status.overflowCatchUpAt,
-      lastError: error,
+    _publishStatus(
+      AgendaNotificationStatus(
+        notificationsEnabled: _status.notificationsEnabled,
+        exactAlarmsAllowed: _status.exactAlarmsAllowed,
+        batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
+        directScheduledCount: _status.directScheduledCount,
+        directCapacity: _status.directCapacity,
+        coverage: AgendaNotificationCoverage.failed,
+        hasUnboundedRecurrence: _status.hasUnboundedRecurrence,
+        hasCapacityOverflow: _status.hasCapacityOverflow,
+        retainedPendingCount: _status.retainedPendingCount,
+        mode: mode,
+        nextRenewalAt: _status.nextRenewalAt,
+        lateRecoveryCount: _status.lateRecoveryCount,
+        lastError: error,
+      ),
     );
     if (!(await _allowsProjectionFence(projectionFence))) return;
     await _recordDiagnostics(
@@ -2055,13 +2115,15 @@ class AgendaNotificationService {
         notificationsEnabled: _status.notificationsEnabled,
         exactAlarmsAllowed: _status.exactAlarmsAllowed,
         batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
-        plannedCount: 0,
-        scheduledCount: _status.scheduledCount,
-        truncatedCount: _status.truncatedCount,
+        coverage: AgendaNotificationCoverage.failed,
+        directScheduledCount: _status.directScheduledCount,
+        directCapacity: _status.directCapacity,
+        hasUnboundedRecurrence: _status.hasUnboundedRecurrence,
+        hasCapacityOverflow: _status.hasCapacityOverflow,
         retainedPendingCount: _status.retainedPendingCount,
+        lateRecoveryCount: _status.lateRecoveryCount,
         plan: const [],
-        nextMaintenanceAt: _status.nextMaintenanceAt,
-        overflowCatchUpAt: _status.overflowCatchUpAt,
+        nextRenewalAt: _status.nextRenewalAt,
         error: _diagnosticError(error),
       ),
     );
@@ -2227,9 +2289,9 @@ class AgendaNotificationService {
           result: AgendaNotificationDiagnosticResult.skipped,
           notificationsEnabled: false,
           exactAlarmsAllowed: false,
-          plannedCount: 0,
-          scheduledCount: _status.scheduledCount,
-          truncatedCount: 0,
+          coverage: AgendaNotificationCoverage.ready,
+          directScheduledCount: _status.directScheduledCount,
+          directCapacity: planner.maxScheduledNotifications,
           retainedPendingCount: 0,
           plan: const [],
         ),
@@ -2260,49 +2322,60 @@ class AgendaNotificationService {
     return _status;
   }
 
-  /// Returns the next background maintenance point without scheduling a pass
-  /// at an individual reminder's fire time. The latter would race Android's
-  /// notification delivery and could cancel a notification that is just due.
-  ///
-  /// Kept as a compatibility API for callers that only need the maintenance
-  /// boundary; normal application code should prefer [status] returned by
-  /// [reconcile].
-  Future<DateTime?> nextReconcileAt(
-    AppData data, {
-    DateTime? anchor,
-    Duration horizon = const Duration(days: 14),
-  }) async {
-    if (!_enabled ||
-        !data.notificationSettings.enabled ||
-        !(await gateway.notificationsEnabled)) {
+  /// Returns the next best-effort renewal point without creating a platform
+  /// request. Direct alarms remain the sole delivery path for reminders that
+  /// are already inside the current coverage window.
+  Future<DateTime?> nextRenewalAt(AppData data, {DateTime? anchor}) async {
+    if (!_enabled || !data.notificationSettings.enabled) {
       return null;
     }
     await _ensureRuntimeState();
+    final notificationsEnabled = await gateway.notificationsEnabled;
+    final exactAlarmsAllowed = await gateway.exactAlarmsAllowed;
+    final batteryOptimizationIgnored =
+        gateway is AgendaNotificationBatteryOptimizationGateway
+        ? await (gateway as AgendaNotificationBatteryOptimizationGateway)
+              .batteryOptimizationIgnored
+        : true;
+    if (await _precisionBlockReason(
+          notificationsEnabled: notificationsEnabled,
+          exactAlarmsAllowed: exactAlarmsAllowed,
+          batteryOptimizationIgnored: batteryOptimizationIgnored,
+        ) !=
+        null) {
+      return null;
+    }
     final current = (anchor ?? now()).toLocal();
-    final projected = projection
-        .project(
-          data,
-          startInclusive: current.subtract(_snoozeLookback),
-          endExclusive: current.add(horizon),
-        )
-        .where((occurrence) => !_isPersistentlyHandled(data, occurrence));
-    final plan = planner.buildPlanResult(
+    final scope = _projectNotificationCoverage(data, current);
+    final projected = scope.occurrences.where(
+      (occurrence) =>
+          !_isPersistentlyHandled(data, occurrence) &&
+          !_handledOccurrenceIds.contains(_runtimeOccurrenceId(occurrence)),
+    );
+    final plan = _candidatePlanner().buildPlanResult(
       projected,
       now: current,
-      horizon: horizon,
-      applyLimit: false,
+      horizon: scope.endExclusive.difference(current),
     );
     final runtime = await _applyRuntimeState(
       projected,
       plan.items,
       now: current,
     );
-    final selected = _selectDesiredPlan(runtime, const {});
-    return _maintenanceTimes(
-      current,
-      earliestOmittedFireAt: selected.earliestOmittedFireAt,
-      protectedFireAts: runtime.map((item) => item.fireAt),
-    ).nextMaintenanceAt;
+    if ((await _blockedNotificationChannelIds(runtime)).isNotEmpty) {
+      return null;
+    }
+    final selected = _selectDesiredPlan(
+      runtime,
+      const {},
+      hasSourceOverflow: plan.hasCapacityOverflow,
+    );
+    return _nextRenewalAt(
+      now: current,
+      selected: selected,
+      scope: scope,
+      directFireAts: selected.items.map((item) => item.fireAt),
+    );
   }
 
   Future<void> _reconcileNow(
@@ -2372,14 +2445,16 @@ class AgendaNotificationService {
           if (retainedPendingKeys.contains(key)) continue;
           await _cancelManagedNotification(key);
         }
-        _status = AgendaNotificationStatus(
-          notificationsEnabled: notificationsEnabled,
-          exactAlarmsAllowed: exactAllowed,
-          batteryOptimizationIgnored: batteryOptimizationIgnored,
-          scheduledCount: retainedPendingKeys.length,
-          truncatedCount: 0,
-          retainedPendingCount: retainedPendingKeys.length,
-          mode: mode,
+        _publishStatus(
+          AgendaNotificationStatus(
+            notificationsEnabled: notificationsEnabled,
+            exactAlarmsAllowed: exactAllowed,
+            batteryOptimizationIgnored: batteryOptimizationIgnored,
+            directScheduledCount: retainedPendingKeys.length,
+            directCapacity: planner.maxScheduledNotifications,
+            retainedPendingCount: retainedPendingKeys.length,
+            mode: mode,
+          ),
         );
         await _recordDiagnostics(
           AgendaNotificationDiagnostics(
@@ -2390,9 +2465,8 @@ class AgendaNotificationService {
             notificationsEnabled: notificationsEnabled,
             exactAlarmsAllowed: exactAllowed,
             batteryOptimizationIgnored: batteryOptimizationIgnored,
-            plannedCount: 0,
-            scheduledCount: retainedPendingKeys.length,
-            truncatedCount: 0,
+            directScheduledCount: retainedPendingKeys.length,
+            directCapacity: planner.maxScheduledNotifications,
             retainedPendingCount: retainedPendingKeys.length,
             plan: const [],
           ),
@@ -2419,31 +2493,35 @@ class AgendaNotificationService {
         return;
       }
       // A snooze may be tapped a few minutes after an occurrence has started.
-      // The regular upcoming query intentionally starts at `now`, so include
-      // a small lookback while reconciling to let the runtime override
-      // reintroduce that same occurrence without scheduling unrelated past
-      // reminders.
-      final projectedOccurrences = projection.project(
-        data,
-        startInclusive: current.subtract(_snoozeLookback),
-        endExclusive: current.add(const Duration(days: 14)),
-      );
-      await _migrateLegacyRuntimeOverrides(projectedOccurrences);
+      // Build one direct-delivery scope for all finite reminders, while
+      // keeping unbounded recurrence inside its explicit best-effort window.
+      final coverageScope = _projectNotificationCoverage(data, current);
+      await _migrateLegacyRuntimeOverrides(coverageScope.occurrences);
       // General-event acknowledgements are part of the persisted schedule
       // model. Keep them out of the platform plan just like the in-app
       // reminder list does; otherwise a later commit or app restart would
       // recreate an occurrence the user explicitly marked as handled.
-      final occurrences = projectedOccurrences
-          .where((occurrence) => !_isPersistentlyHandled(data, occurrence))
+      final occurrences = coverageScope.occurrences
+          .where(
+            (occurrence) =>
+                !_isPersistentlyHandled(data, occurrence) &&
+                !_handledOccurrenceIds.contains(
+                  _runtimeOccurrenceId(occurrence),
+                ),
+          )
           .toList(growable: false);
-      final uncappedPlan = planner.buildPlanResult(
+      final boundedPlan = _candidatePlanner().buildPlanResult(
         occurrences,
         now: current,
-        applyLimit: false,
+        horizon: coverageScope.endExclusive.difference(current),
+      );
+      final lateRecovery = _lateReminderCompensations(
+        occurrences,
+        now: current,
       );
       final runtimePlan = await _applyRuntimeState(occurrences, [
-        ...uncappedPlan.items,
-        ..._lateReminderCompensations(occurrences, now: current),
+        ...boundedPlan.items,
+        ...lateRecovery,
       ], now: current);
       final existing = await gateway.pendingPlan();
       final ownedKeys = <String>{
@@ -2477,11 +2555,12 @@ class AgendaNotificationService {
               for (final key in rawRetainedPendingKeys)
                 if (!_planKeyUsesBlockedChannel(key, blockedChannelIds)) key,
             };
-      final selected = _selectDesiredPlan(
+      var selected = _selectDesiredPlan(
         permittedRuntimePlan,
         retainedPendingKeys,
+        hasSourceOverflow: boundedPlan.hasCapacityOverflow,
       );
-      final desired = selected.items;
+      var desired = selected.items;
       final channelBlocked = blockedChannelIds.isNotEmpty;
       await _backgroundRequestStore?.pruneBackgroundRequests(now: current);
       final metadata = gateway is AgendaNotificationMetadataGateway
@@ -2492,11 +2571,11 @@ class AgendaNotificationService {
         for (final entry in existing.entries)
           entry.key: metadata[entry.key]?.fireAt ?? entry.value,
       };
-      final diff = reconciler.diff(
+      var diff = reconciler.diff(
         desired: desired,
         existingFireTimes: existingForDiff,
       );
-      final keysToCancel = <String>{...diff.toCancel};
+      var keysToCancel = <String>{...diff.toCancel};
       if (mode == AgendaNotificationReconcileMode.authoritative) {
         // A fired card is no longer present in [pendingPlan], but it remains
         // owned by Sked through its stable Android tag. Include those active
@@ -2504,6 +2583,92 @@ class AgendaNotificationService {
         keysToCancel.addAll(
           ownedKeys.where((key) => !desired.any((item) => item.key == key)),
         );
+      }
+
+      // Never let a full replacement temporarily exceed the platform alarm
+      // budget. Scheduling all new keys first is normally the least risky
+      // ordering, but it can create 900 Android alarms while replacing a full
+      // 450-item plan. Cancel only the farthest stale pending keys needed to
+      // make room; this preserves the nearest old reminders if a later
+      // platform call fails. Ordinary replacements with available capacity
+      // keep the old plan until the new request succeeds.
+      final preCancelledKeys = <String>{};
+      final pendingStaleKeys =
+          keysToCancel
+              .where(
+                (key) =>
+                    existingForDiff.containsKey(key) &&
+                    !retainedPendingKeys.contains(key),
+              )
+              .toList()
+            ..sort((left, right) {
+              final leftTime = existingForDiff[left]!;
+              final rightTime = existingForDiff[right]!;
+              final time = rightTime.compareTo(leftTime);
+              return time != 0 ? time : right.compareTo(left);
+            });
+      final newKeys = <String>{
+        for (final item in desired)
+          if (!existingForDiff.containsKey(item.key)) item.key,
+      };
+      final requiredPreCancellation = math.max(
+        0,
+        existingForDiff.length +
+            newKeys.length -
+            planner.maxScheduledNotifications,
+      );
+      final preCancellationCount = math.min(
+        requiredPreCancellation,
+        pendingStaleKeys.length,
+      );
+      // Consume these keys one at a time immediately before each new alarm is
+      // written. If the platform rejects a later schedule, only the farthest
+      // old alarms already paired with attempted replacements are affected,
+      // rather than losing the whole replacement batch up front.
+      final pendingPreCancellationKeys = pendingStaleKeys
+          .take(preCancellationCount)
+          .toList();
+
+      // A legacy installation can already be above the configured budget, or
+      // it can contain more new keys than there are cancellable stale entries.
+      // Do not schedule beyond the remaining slots. Keep existing desired keys
+      // (they update in place) and retain the highest-priority new keys.
+      final remainingPendingCount =
+          existingForDiff.length - preCancellationCount;
+      final availableNewSlots = math.max(
+        0,
+        planner.maxScheduledNotifications - remainingPendingCount,
+      );
+      if (newKeys.length > availableNewSlots) {
+        final allowedNewKeys = <String>{};
+        for (final item in desired) {
+          if (existingForDiff.containsKey(item.key)) continue;
+          if (allowedNewKeys.length >= availableNewSlots) break;
+          allowedNewKeys.add(item.key);
+        }
+        desired = List.unmodifiable(
+          desired.where(
+            (item) =>
+                existingForDiff.containsKey(item.key) ||
+                allowedNewKeys.contains(item.key),
+          ),
+        );
+        selected = _SelectedNotificationPlan(
+          items: desired,
+          directScheduledCount: desired.length + retainedPendingKeys.length,
+          hasCapacityOverflow: true,
+        );
+        diff = reconciler.diff(
+          desired: desired,
+          existingFireTimes: existingForDiff,
+        );
+        keysToCancel = <String>{...diff.toCancel, ...preCancelledKeys};
+        if (mode == AgendaNotificationReconcileMode.authoritative) {
+          keysToCancel.addAll(
+            ownedKeys.where((key) => !desired.any((item) => item.key == key)),
+          );
+        }
+        keysToCancel.removeAll(preCancelledKeys);
       }
       // A changed title, location, target, or lock-screen policy must replace
       // the notification even when its stable key and fire time are unchanged.
@@ -2525,10 +2690,11 @@ class AgendaNotificationService {
           changedKeys.add(item.key);
         }
       }
-      // Publish desired alarms before removing stale ones. If a platform call
-      // fails, the previous successful plan stays active instead of being
-      // partially deleted first. A later authoritative pass can then replace
-      // the plan atomically from the user's perspective.
+      // With enough platform headroom, publish desired alarms before removing
+      // stale ones so a scheduling failure leaves the previous plan active.
+      // Full-capacity replacements were made room for above; those are
+      // deliberately reported as failed/partial if a subsequent platform call
+      // cannot complete, and the next reconciliation repairs the plan.
       for (final item in desired) {
         if (!(await _allowsProjectionFence(projectionFence))) return;
         final latestNotificationsEnabled = await gateway.notificationsEnabled;
@@ -2556,7 +2722,7 @@ class AgendaNotificationService {
           );
           return;
         }
-        // Maintenance is deliberately not allowed to touch a notification
+        // Recovery is deliberately not allowed to touch a notification
         // that is due (or was due) within the protection window.  This must
         // also cover metadata/fingerprint changes: cancelling and recreating
         // such an item can race Android's delivery just as a fire-time change
@@ -2565,6 +2731,14 @@ class AgendaNotificationService {
         if (!diff.toSchedule.any((candidate) => candidate.key == item.key) &&
             !changedKeys.contains(item.key)) {
           continue;
+        }
+        if (!existingForDiff.containsKey(item.key) &&
+            pendingPreCancellationKeys.isNotEmpty) {
+          final key = pendingPreCancellationKeys.removeAt(0);
+          if (!(await _allowsProjectionFence(projectionFence))) return;
+          await _cancelManagedNotification(key);
+          preCancelledKeys.add(key);
+          keysToCancel.remove(key);
         }
         final prior = metadata[item.key];
         if (prior != null &&
@@ -2630,32 +2804,61 @@ class AgendaNotificationService {
           ),
         );
       }
+      // If fewer new alarms were needed than the reserved capacity estimate,
+      // remove the remaining stale entries now that all replacements have
+      // succeeded.
+      for (final key in pendingPreCancellationKeys) {
+        if (!(await _allowsProjectionFence(projectionFence))) return;
+        await _cancelManagedNotification(key);
+        preCancelledKeys.add(key);
+        keysToCancel.remove(key);
+      }
       for (final key in keysToCancel) {
         if (!(await _allowsProjectionFence(projectionFence))) return;
         if (retainedPendingKeys.contains(key)) continue;
         await _cancelManagedNotification(key);
       }
       if (!(await _allowsProjectionFence(projectionFence))) return;
-      final maintenance = _maintenanceTimes(
-        current,
-        earliestOmittedFireAt: selected.earliestOmittedFireAt,
-        protectedFireAts: [
-          ...permittedRuntimePlan.map((item) => item.fireAt),
-          for (final key in retainedPendingKeys)
-            if (existing[key] != null) existing[key]!,
-        ],
-      );
-      _status = AgendaNotificationStatus(
-        notificationsEnabled: notificationsEnabled,
-        exactAlarmsAllowed: exactAllowed,
-        batteryOptimizationIgnored: batteryOptimizationIgnored,
-        scheduledCount: selected.scheduledCount,
-        truncatedCount: selected.truncatedCount,
-        retainedPendingCount: retainedPendingKeys.length,
-        mode: mode,
-        precisionBlocked: channelBlocked,
-        nextMaintenanceAt: maintenance.nextMaintenanceAt,
-        overflowCatchUpAt: maintenance.overflowCatchUpAt,
+      final directFireAts = <DateTime>[
+        ...desired.map((item) => item.fireAt),
+        for (final key in retainedPendingKeys)
+          if (existing[key] != null) existing[key]!,
+      ];
+      final coverage = channelBlocked
+          ? AgendaNotificationCoverage.blocked
+          : selected.hasCapacityOverflow
+          ? AgendaNotificationCoverage.capacityLimited
+          : coverageScope.hasUnboundedRecurrence
+          ? AgendaNotificationCoverage.renewable
+          : AgendaNotificationCoverage.ready;
+      final nextRenewalAt = channelBlocked
+          ? null
+          : _nextRenewalAt(
+              now: current,
+              selected: selected,
+              scope: coverageScope,
+              directFireAts: directFireAts,
+            );
+      final lateRecoveryCount = desired
+          .where(
+            (item) => item.priority == NotificationPlanPriority.lateRecovery,
+          )
+          .length;
+      _publishStatus(
+        AgendaNotificationStatus(
+          notificationsEnabled: notificationsEnabled,
+          exactAlarmsAllowed: exactAllowed,
+          batteryOptimizationIgnored: batteryOptimizationIgnored,
+          directScheduledCount: selected.directScheduledCount,
+          directCapacity: planner.maxScheduledNotifications,
+          coverage: coverage,
+          hasUnboundedRecurrence: coverageScope.hasUnboundedRecurrence,
+          hasCapacityOverflow: selected.hasCapacityOverflow,
+          retainedPendingCount: retainedPendingKeys.length,
+          mode: mode,
+          nextRenewalAt: nextRenewalAt,
+          lateRecoveryCount: lateRecoveryCount,
+        ),
       );
       await _recordDiagnostics(
         AgendaNotificationDiagnostics(
@@ -2667,13 +2870,15 @@ class AgendaNotificationService {
               : AgendaNotificationDiagnosticResult.success,
           notificationsEnabled: notificationsEnabled,
           exactAlarmsAllowed: exactAllowed,
-          plannedCount: selected.candidateCount,
-          scheduledCount: selected.scheduledCount,
-          truncatedCount: selected.truncatedCount,
+          coverage: coverage,
+          directScheduledCount: selected.directScheduledCount,
+          directCapacity: planner.maxScheduledNotifications,
+          hasUnboundedRecurrence: coverageScope.hasUnboundedRecurrence,
+          hasCapacityOverflow: selected.hasCapacityOverflow,
           retainedPendingCount: retainedPendingKeys.length,
+          lateRecoveryCount: lateRecoveryCount,
           plan: _diagnosticPlan(desired),
-          nextMaintenanceAt: maintenance.nextMaintenanceAt,
-          overflowCatchUpAt: maintenance.overflowCatchUpAt,
+          nextRenewalAt: nextRenewalAt,
           error: channelBlocked
               ? 'A notification channel is blocked in system settings.'
               : null,
@@ -2694,17 +2899,22 @@ class AgendaNotificationService {
         );
         return;
       }
-      _status = AgendaNotificationStatus(
-        notificationsEnabled: _status.notificationsEnabled,
-        exactAlarmsAllowed: _status.exactAlarmsAllowed,
-        batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
-        scheduledCount: _status.scheduledCount,
-        truncatedCount: _status.truncatedCount,
-        retainedPendingCount: _status.retainedPendingCount,
-        mode: mode,
-        nextMaintenanceAt: _status.nextMaintenanceAt,
-        overflowCatchUpAt: _status.overflowCatchUpAt,
-        lastError: error,
+      _publishStatus(
+        AgendaNotificationStatus(
+          notificationsEnabled: _status.notificationsEnabled,
+          exactAlarmsAllowed: _status.exactAlarmsAllowed,
+          batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
+          directScheduledCount: _status.directScheduledCount,
+          directCapacity: _status.directCapacity,
+          coverage: AgendaNotificationCoverage.failed,
+          hasUnboundedRecurrence: _status.hasUnboundedRecurrence,
+          hasCapacityOverflow: _status.hasCapacityOverflow,
+          retainedPendingCount: _status.retainedPendingCount,
+          mode: mode,
+          nextRenewalAt: _status.nextRenewalAt,
+          lateRecoveryCount: _status.lateRecoveryCount,
+          lastError: error,
+        ),
       );
       await _recordDiagnostics(
         AgendaNotificationDiagnostics(
@@ -2715,13 +2925,15 @@ class AgendaNotificationService {
           notificationsEnabled: _status.notificationsEnabled,
           exactAlarmsAllowed: _status.exactAlarmsAllowed,
           batteryOptimizationIgnored: _status.batteryOptimizationIgnored,
-          plannedCount: 0,
-          scheduledCount: _status.scheduledCount,
-          truncatedCount: _status.truncatedCount,
+          coverage: AgendaNotificationCoverage.failed,
+          directScheduledCount: _status.directScheduledCount,
+          directCapacity: _status.directCapacity,
+          hasUnboundedRecurrence: _status.hasUnboundedRecurrence,
+          hasCapacityOverflow: _status.hasCapacityOverflow,
           retainedPendingCount: _status.retainedPendingCount,
+          lateRecoveryCount: _status.lateRecoveryCount,
           plan: const [],
-          nextMaintenanceAt: _status.nextMaintenanceAt,
-          overflowCatchUpAt: _status.overflowCatchUpAt,
+          nextRenewalAt: _status.nextRenewalAt,
           error: _diagnosticError(error),
         ),
         projectionFence: projectionFence,
@@ -2745,6 +2957,143 @@ class AgendaNotificationService {
       return 'Battery optimization must be disabled for agenda reminders.';
     }
     return null;
+  }
+
+  _NotificationCoverageScope _projectNotificationCoverage(
+    AppData data,
+    DateTime current,
+  ) {
+    final startInclusive = current.subtract(_snoozeLookback);
+    if (_isWindows) {
+      // Windows keeps its existing short-horizon toast scheduling policy.
+      // Android's 450-alarm direct coverage and renewal rules rely on Android
+      // platform behavior and must not leak into the desktop implementation.
+      final endExclusive = current.add(_windowsReminderHorizon);
+      return _NotificationCoverageScope(
+        occurrences: projection.project(
+          data,
+          startInclusive: startInclusive,
+          endExclusive: endExclusive,
+        ),
+        hasUnboundedRecurrence: false,
+        unboundedEndExclusive: endExclusive,
+        endExclusive: endExclusive,
+      );
+    }
+    final unboundedGeneralEventIds = <String>{};
+    final finiteGeneralEventIds = <String>{};
+    var finiteEndExclusive = current.add(_unboundedReminderHorizon);
+
+    TimetableData? activeTimetable;
+    for (final timetable in data.studentMode.timetables) {
+      if (timetable.id == data.studentMode.activeTimetableId) {
+        activeTimetable = timetable;
+        break;
+      }
+    }
+    if (activeTimetable != null) {
+      final courseEndExclusive = addCalendarDays(
+        startOfWeekFor(
+          activeTimetable.config,
+          activeTimetable.config.totalWeeks,
+        ),
+        7,
+      );
+      if (courseEndExclusive.isAfter(finiteEndExclusive)) {
+        finiteEndExclusive = courseEndExclusive;
+      }
+    }
+
+    for (final calendar in data.generalMode.schedules) {
+      if (!calendar.isVisible) continue;
+      for (final event in calendar.events) {
+        if (event.reminders.isEmpty) continue;
+        final identity = _generalEventIdentity(calendar.id, event.id);
+        final finiteEnd = finiteGeneralEventEndExclusive(event);
+        if (event.recurrenceRule.isRepeating && finiteEnd == null) {
+          unboundedGeneralEventIds.add(identity);
+          continue;
+        }
+        finiteGeneralEventIds.add(identity);
+        if (finiteEnd != null && finiteEnd.isAfter(finiteEndExclusive)) {
+          finiteEndExclusive = finiteEnd;
+        }
+      }
+    }
+
+    final nonGeneralSources = projection.registry.sources
+        .where((source) => source.id != AgendaSourceType.generalEvent)
+        .toList(growable: false);
+    final generalSources = projection.registry.sources
+        .where((source) => source.id == AgendaSourceType.generalEvent)
+        .toList(growable: false);
+    final nonGeneralProjection = AgendaProjectionService(
+      registry: AgendaSourceRegistry(sources: nonGeneralSources),
+    );
+    final generalProjection = AgendaProjectionService(
+      registry: AgendaSourceRegistry(sources: generalSources),
+    );
+    final finiteGeneralData = _withGeneralEventIds(data, finiteGeneralEventIds);
+    final finiteOccurrences = [
+      ...nonGeneralProjection.project(
+        data,
+        startInclusive: startInclusive,
+        endExclusive: finiteEndExclusive,
+      ),
+      ...generalProjection.project(
+        finiteGeneralData,
+        startInclusive: startInclusive,
+        endExclusive: finiteEndExclusive,
+      ),
+    ];
+    final unboundedEndExclusive = current.add(_unboundedReminderHorizon);
+    final unboundedOccurrences = unboundedGeneralEventIds.isEmpty
+        ? const <AgendaOccurrence>[]
+        : generalProjection.project(
+            _withGeneralEventIds(data, unboundedGeneralEventIds),
+            startInclusive: startInclusive,
+            endExclusive: unboundedEndExclusive,
+          );
+    final byId = <String, AgendaOccurrence>{
+      for (final occurrence in finiteOccurrences)
+        occurrence.scopedStableId: occurrence,
+      for (final occurrence in unboundedOccurrences)
+        occurrence.scopedStableId: occurrence,
+    };
+    final occurrences = byId.values.toList()
+      ..sort((left, right) {
+        final time = left.start.compareTo(right.start);
+        return time != 0
+            ? time
+            : left.scopedStableId.compareTo(right.scopedStableId);
+      });
+    return _NotificationCoverageScope(
+      occurrences: List.unmodifiable(occurrences),
+      hasUnboundedRecurrence: unboundedGeneralEventIds.isNotEmpty,
+      unboundedEndExclusive: unboundedEndExclusive,
+      endExclusive: finiteEndExclusive.isAfter(unboundedEndExclusive)
+          ? finiteEndExclusive
+          : unboundedEndExclusive,
+    );
+  }
+
+  AppData _withGeneralEventIds(AppData data, Set<String> eventIds) {
+    return data.copyWith(
+      generalMode: data.generalMode.copyWith(
+        schedules: [
+          for (final calendar in data.generalMode.schedules)
+            calendar.copyWith(
+              events: [
+                for (final event in calendar.events)
+                  if (eventIds.contains(
+                    _generalEventIdentity(calendar.id, event.id),
+                  ))
+                    event,
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   Future<Set<String>> _blockedNotificationChannelIds(
@@ -2815,17 +3164,17 @@ class AgendaNotificationService {
       if (retainedPendingKeys.contains(key)) continue;
       await _cancelManagedNotification(key);
     }
-    final nextMaintenanceAt = _nextDailyMaintenanceAt(current);
-    _status = AgendaNotificationStatus(
-      notificationsEnabled: notificationsEnabled,
-      exactAlarmsAllowed: exactAlarmsAllowed,
-      batteryOptimizationIgnored: batteryOptimizationIgnored,
-      scheduledCount: retainedPendingKeys.length,
-      truncatedCount: 0,
-      retainedPendingCount: retainedPendingKeys.length,
-      mode: mode,
-      precisionBlocked: true,
-      nextMaintenanceAt: nextMaintenanceAt,
+    _publishStatus(
+      AgendaNotificationStatus(
+        notificationsEnabled: notificationsEnabled,
+        exactAlarmsAllowed: exactAlarmsAllowed,
+        batteryOptimizationIgnored: batteryOptimizationIgnored,
+        directScheduledCount: retainedPendingKeys.length,
+        directCapacity: planner.maxScheduledNotifications,
+        coverage: AgendaNotificationCoverage.blocked,
+        retainedPendingCount: retainedPendingKeys.length,
+        mode: mode,
+      ),
     );
     await _recordDiagnostics(
       AgendaNotificationDiagnostics(
@@ -2836,12 +3185,11 @@ class AgendaNotificationService {
         notificationsEnabled: notificationsEnabled,
         exactAlarmsAllowed: exactAlarmsAllowed,
         batteryOptimizationIgnored: batteryOptimizationIgnored,
-        plannedCount: 0,
-        scheduledCount: retainedPendingKeys.length,
-        truncatedCount: 0,
+        coverage: AgendaNotificationCoverage.blocked,
+        directScheduledCount: retainedPendingKeys.length,
+        directCapacity: planner.maxScheduledNotifications,
         retainedPendingCount: retainedPendingKeys.length,
         plan: const [],
-        nextMaintenanceAt: nextMaintenanceAt,
         error: reason,
       ),
       projectionFence: projectionFence,
@@ -2853,8 +3201,8 @@ class AgendaNotificationService {
     required DateTime now,
     required AgendaNotificationReconcileMode mode,
   }) {
-    if (mode != AgendaNotificationReconcileMode.maintenance) return const {};
-    final earliestRetained = now.subtract(_maintenancePendingGrace);
+    if (mode != AgendaNotificationReconcileMode.recovery) return const {};
+    final earliestRetained = now.subtract(_recoveryPendingGrace);
     return {
       for (final entry in existing.entries)
         if (!entry.value.isAfter(now) &&
@@ -2865,8 +3213,9 @@ class AgendaNotificationService {
 
   _SelectedNotificationPlan _selectDesiredPlan(
     Iterable<NotificationPlanItem> candidates,
-    Set<String> retainedPendingKeys,
-  ) {
+    Set<String> retainedPendingKeys, {
+    bool hasSourceOverflow = false,
+  }) {
     final byKey = <String, NotificationPlanItem>{};
     for (final item in candidates) {
       final existing = byKey[item.key];
@@ -2875,110 +3224,103 @@ class AgendaNotificationService {
         byKey[item.key] = item;
       }
     }
-    final ordered = byKey.values.toList()..sort(_compareNotificationPlanItems);
-    final retainedNotInCandidates = retainedPendingKeys
-        .where((key) => !byKey.containsKey(key))
-        .length;
+    final ordered = byKey.values.toList()..sort(_compareForDirectSelection);
     final capacity = math.max(
       0,
       planner.maxScheduledNotifications - retainedPendingKeys.length,
     );
     final selected = <NotificationPlanItem>[];
-    final omitted = <NotificationPlanItem>[];
+    var hasCapacityOverflow = hasSourceOverflow;
     for (final item in ordered) {
       // A just-due pending notification stays alive unchanged during a
-      // maintenance pass. It already consumes one platform slot, so do not
+      // recovery pass. It already consumes one platform slot, so do not
       // schedule a duplicate and reserve capacity for it.
       if (retainedPendingKeys.contains(item.key)) continue;
       if (selected.length < capacity) {
         selected.add(item);
       } else {
-        omitted.add(item);
+        hasCapacityOverflow = true;
+        break;
       }
     }
     return _SelectedNotificationPlan(
       items: List.unmodifiable(selected),
-      candidateCount: ordered.length + retainedNotInCandidates,
-      scheduledCount: selected.length + retainedPendingKeys.length,
-      truncatedCount: omitted.length,
-      earliestOmittedFireAt: omitted.isEmpty ? null : omitted.first.fireAt,
+      directScheduledCount: selected.length + retainedPendingKeys.length,
+      hasCapacityOverflow: hasCapacityOverflow,
     );
   }
 
-  _NotificationMaintenanceTimes _maintenanceTimes(
-    DateTime now, {
-    required DateTime? earliestOmittedFireAt,
-    required Iterable<DateTime> protectedFireAts,
+  NotificationPlanner _candidatePlanner() => NotificationPlanner(
+    maxScheduledNotifications: math.max(
+      0,
+      planner.maxScheduledNotifications + 1,
+    ),
+  );
+
+  DateTime? _nextRenewalAt({
+    required DateTime now,
+    required _SelectedNotificationPlan selected,
+    required _NotificationCoverageScope scope,
+    required Iterable<DateTime> directFireAts,
   }) {
+    if (_isWindows) return null;
+    if (!selected.hasCapacityOverflow && !scope.hasUnboundedRecurrence) {
+      return null;
+    }
     final protectedEpochs = {
-      for (final fireAt in protectedFireAts) fireAt.millisecondsSinceEpoch,
+      for (final fireAt in directFireAts) fireAt.millisecondsSinceEpoch,
     };
-    final daily = _avoidMaintenanceCollision(
-      _nextDailyMaintenanceAt(now),
+    if (selected.hasCapacityOverflow) {
+      final future =
+          directFireAts.where((fireAt) => fireAt.isAfter(now)).toList()..sort();
+      if (future.isEmpty) return now.add(_minimumRenewalDelay);
+      final retainedBuffer = math.min(
+        _renewalDirectAlarmBuffer,
+        math.max(1, planner.maxScheduledNotifications - 1),
+      );
+      final index = math.max(0, future.length - retainedBuffer - 1);
+      final candidate = future[index].add(_renewalAfterWatermarkDelay);
+      return _avoidRenewalCollision(
+        candidate.isAfter(now) ? candidate : now.add(_minimumRenewalDelay),
+        protectedEpochs,
+      );
+    }
+    return _avoidRenewalCollision(
+      scope.unboundedEndExclusive.subtract(_unboundedRenewalLead),
       protectedEpochs,
     );
-    final overflow = earliestOmittedFireAt == null
-        ? null
-        : _avoidMaintenanceCollision(
-            earliestOmittedFireAt.add(_overflowMaintenanceDelay),
-            protectedEpochs,
-          );
-    final validOverflow = overflow?.isAfter(now) == true ? overflow : null;
-    final next = validOverflow != null && validOverflow.isBefore(daily)
-        ? validOverflow
-        : daily;
-    return _NotificationMaintenanceTimes(
-      nextMaintenanceAt: next,
-      overflowCatchUpAt: validOverflow,
-    );
   }
 
-  DateTime _nextDailyMaintenanceAt(DateTime current) {
-    final local = current.toLocal();
-    final today = DateTime(
-      local.year,
-      local.month,
-      local.day,
-      _dailyMaintenanceHour,
-      _dailyMaintenanceMinute,
-    );
-    if (today.isAfter(local)) return today;
-    // Reconstruct the next local calendar date instead of adding a fixed
-    // 24-hour duration.  A duration would move this maintenance boundary to
-    // 02:17 or 04:17 on daylight-saving transitions.
-    return DateTime(
-      local.year,
-      local.month,
-      local.day + 1,
-      _dailyMaintenanceHour,
-      _dailyMaintenanceMinute,
-    );
-  }
-
-  DateTime _avoidMaintenanceCollision(
+  DateTime _avoidRenewalCollision(
     DateTime candidate,
     Set<int> protectedEpochs,
   ) {
     var adjusted = candidate;
     while (protectedEpochs.contains(adjusted.millisecondsSinceEpoch)) {
-      adjusted = adjusted.add(_maintenanceCollisionDelay);
+      adjusted = adjusted.add(_renewalCollisionDelay);
     }
     return adjusted;
   }
 
   List<AgendaNotificationDiagnosticPlanItem> _diagnosticPlan(
     Iterable<NotificationPlanItem> items,
-  ) => List.unmodifiable(
-    items
-        .take(AgendaNotificationDiagnostics.maxPlanItems)
-        .map(
-          (item) => AgendaNotificationDiagnosticPlanItem(
-            key: item.key,
-            fireAt: item.fireAt,
-            sourceType: item.occurrence.sourceType,
+  ) {
+    // Selection order intentionally puts snoozes first so they win capacity.
+    // Diagnostics answer a different question: the next delivery must be the
+    // earliest fire time, regardless of that priority ordering.
+    final ordered = items.toList()..sort(_compareNotificationPlanItems);
+    return List.unmodifiable(
+      ordered
+          .take(AgendaNotificationDiagnostics.maxPlanItems)
+          .map(
+            (item) => AgendaNotificationDiagnosticPlanItem(
+              key: item.key,
+              fireAt: item.fireAt,
+              sourceType: item.occurrence.sourceType,
+            ),
           ),
-        ),
-  );
+    );
+  }
 
   Future<void> _recordDiagnostics(
     AgendaNotificationDiagnostics diagnostics, {
@@ -3052,6 +3394,7 @@ class AgendaNotificationService {
             occurrence: occurrence,
             reminder: reminder,
             fireAt: snoozedAt,
+            priority: NotificationPlanPriority.userSnooze,
           ),
         );
       }
@@ -3079,6 +3422,7 @@ class AgendaNotificationService {
           occurrence: item.occurrence,
           reminder: item.reminder,
           fireAt: snoozedAt,
+          priority: NotificationPlanPriority.userSnooze,
         ),
       );
     }
@@ -3182,6 +3526,7 @@ class AgendaNotificationService {
             occurrence: occurrence,
             reminder: reminder,
             fireAt: deliveryAt,
+            priority: NotificationPlanPriority.lateRecovery,
           ),
         );
       }
@@ -3568,10 +3913,12 @@ class AgendaNotificationService {
       _handledOccurrenceIds = const {};
       _lastData = null;
       _latestDiagnostics = null;
-      _status = const AgendaNotificationStatus(
-        notificationsEnabled: true,
-        exactAlarmsAllowed: true,
-        scheduledCount: 0,
+      _publishStatus(
+        const AgendaNotificationStatus(
+          notificationsEnabled: true,
+          exactAlarmsAllowed: true,
+          directScheduledCount: 0,
+        ),
       );
     } finally {
       _runtimeClearing = false;
@@ -3582,14 +3929,27 @@ class AgendaNotificationService {
 const _snoozeLookback = Duration(days: 2);
 const _lateReminderGrace = Duration(minutes: 1);
 const _lateReminderDeliveryDelay = Duration(seconds: 5);
-const _maintenancePendingGrace = Duration(minutes: 10);
-const _overflowMaintenanceDelay = Duration(minutes: 10);
-const _maintenanceCollisionDelay = Duration(minutes: 1);
-const _dailyMaintenanceHour = 3;
-const _dailyMaintenanceMinute = 17;
+const _recoveryPendingGrace = Duration(minutes: 10);
+const _unboundedReminderHorizon = Duration(days: 365);
+const _unboundedRenewalLead = Duration(days: 30);
+const _renewalAfterWatermarkDelay = Duration(minutes: 15);
+const _renewalCollisionDelay = Duration(seconds: 30);
+// If every direct slot is occupied by recently-fired entries, wait only long
+// enough for the recovery grace to expire. A one-hour fallback would leave
+// near-term reminders unscheduled even though capacity becomes available
+// after the ten-minute protection window.
+const _minimumRenewalDelay = Duration(minutes: 15);
+const _renewalDirectAlarmBuffer = 300;
+const _windowsMaxScheduledNotifications = 200;
+const _windowsReminderHorizon = Duration(days: 14);
 const _exactAlarmPermissionErrorCode = 'exact_alarms_not_permitted';
 const _developerTestNotificationIdStart = 2000000001;
 const _developerTestNotificationIdEnd = 2147483647;
+// Keep diagnostic delayed alarms below the remaining headroom after the
+// production direct-alarm budget (450) and the one native renewal wake-up.
+// Samsung has reported a 500-request AlarmManager ceiling. Immediate tests do
+// not consume AlarmManager slots.
+const _maxDeveloperTestScheduledNotifications = 49;
 const _developerCourseTestNotificationId = _developerTestNotificationIdStart;
 const _developerScheduleTestNotificationId =
     _developerTestNotificationIdStart + 1;
@@ -3599,27 +3959,27 @@ const _notificationIdProbeLimit = 100000;
 class _SelectedNotificationPlan {
   const _SelectedNotificationPlan({
     required this.items,
-    required this.candidateCount,
-    required this.scheduledCount,
-    required this.truncatedCount,
-    required this.earliestOmittedFireAt,
+    required this.directScheduledCount,
+    required this.hasCapacityOverflow,
   });
 
   final List<NotificationPlanItem> items;
-  final int candidateCount;
-  final int scheduledCount;
-  final int truncatedCount;
-  final DateTime? earliestOmittedFireAt;
+  final int directScheduledCount;
+  final bool hasCapacityOverflow;
 }
 
-class _NotificationMaintenanceTimes {
-  const _NotificationMaintenanceTimes({
-    required this.nextMaintenanceAt,
-    required this.overflowCatchUpAt,
+class _NotificationCoverageScope {
+  const _NotificationCoverageScope({
+    required this.occurrences,
+    required this.hasUnboundedRecurrence,
+    required this.unboundedEndExclusive,
+    required this.endExclusive,
   });
 
-  final DateTime nextMaintenanceAt;
-  final DateTime? overflowCatchUpAt;
+  final List<AgendaOccurrence> occurrences;
+  final bool hasUnboundedRecurrence;
+  final DateTime unboundedEndExclusive;
+  final DateTime endExclusive;
 }
 
 int _compareNotificationPlanItems(
@@ -3629,6 +3989,17 @@ int _compareNotificationPlanItems(
   final time = a.fireAt.compareTo(b.fireAt);
   return time != 0 ? time : a.key.compareTo(b.key);
 }
+
+int _compareForDirectSelection(
+  NotificationPlanItem left,
+  NotificationPlanItem right,
+) {
+  final priority = right.priority.index.compareTo(left.priority.index);
+  return priority != 0 ? priority : _compareNotificationPlanItems(left, right);
+}
+
+String _generalEventIdentity(String? calendarId, String? eventId) =>
+    '${calendarId ?? ''}\u0000${eventId ?? ''}';
 
 int _developerTestNotificationId(AgendaNotificationTestChannel channel) =>
     switch (channel) {

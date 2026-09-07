@@ -333,14 +333,15 @@ void main() {
       );
       final diagnostics = AgendaNotificationDiagnostics(
         recordedAt: now,
-        mode: AgendaNotificationReconcileMode.maintenance,
+        mode: AgendaNotificationReconcileMode.recovery,
         origin: AgendaNotificationReconcileOrigin.background,
         result: AgendaNotificationDiagnosticResult.success,
         notificationsEnabled: true,
         exactAlarmsAllowed: false,
-        plannedCount: 3,
-        scheduledCount: 2,
-        truncatedCount: 1,
+        coverage: AgendaNotificationCoverage.renewable,
+        directScheduledCount: 2,
+        directCapacity: 450,
+        hasUnboundedRecurrence: true,
         retainedPendingCount: 1,
         plan: [
           AgendaNotificationDiagnosticPlanItem(
@@ -349,8 +350,7 @@ void main() {
             sourceType: 'course',
           ),
         ],
-        nextMaintenanceAt: DateTime(2026, 8, 4, 3, 17),
-        overflowCatchUpAt: now.add(const Duration(minutes: 20)),
+        nextRenewalAt: now.add(const Duration(days: 335)),
         platformPendingCount: 2,
         platformActiveCount: 1,
         platformSampledAt: now,
@@ -358,9 +358,10 @@ void main() {
 
       await store.writeNotificationDiagnostics(diagnostics);
       final restored = await store.readNotificationDiagnostics();
-      expect(restored?.mode, AgendaNotificationReconcileMode.maintenance);
+      expect(restored?.mode, AgendaNotificationReconcileMode.recovery);
       expect(restored?.origin, AgendaNotificationReconcileOrigin.background);
-      expect(restored?.truncatedCount, 1);
+      expect(restored?.coverage, AgendaNotificationCoverage.renewable);
+      expect(restored?.directScheduledCount, 2);
       expect(restored?.plan.single.sourceType, 'course');
       expect(restored?.platformPendingCount, 2);
       expect(restored?.platformActiveCount, 1);
@@ -379,26 +380,23 @@ void main() {
     },
   );
 
-  test(
-    'legacy diagnostic records default their reconcile origin to foreground',
-    () {
-      final decoded = AgendaNotificationDiagnostics.tryDecode({
-        'v': AgendaNotificationDiagnostics.schemaVersion,
-        'recordedAt': '2026-08-03T12:00:00.000',
-        'mode': 'maintenance',
-        'result': 'success',
-        'notificationsEnabled': true,
-        'exactAlarmsAllowed': true,
-        'plannedCount': 0,
-        'scheduledCount': 0,
-        'truncatedCount': 0,
-        'retainedPendingCount': 0,
-        'plan': const [],
-      });
+  test('old diagnostic schemas are discarded', () {
+    final decoded = AgendaNotificationDiagnostics.tryDecode({
+      'v': 1,
+      'recordedAt': '2026-08-03T12:00:00.000',
+      'mode': 'maintenance',
+      'result': 'success',
+      'notificationsEnabled': true,
+      'exactAlarmsAllowed': true,
+      'plannedCount': 0,
+      'scheduledCount': 0,
+      'truncatedCount': 0,
+      'retainedPendingCount': 0,
+      'plan': const [],
+    });
 
-      expect(decoded?.origin, AgendaNotificationReconcileOrigin.foreground);
-    },
-  );
+    expect(decoded, isNull);
+  });
 
   test('memory runtime store removes individual state and bounds oversized data', () async {
     var now = DateTime(2026, 8, 3, 12);

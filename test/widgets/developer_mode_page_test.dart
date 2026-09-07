@@ -198,14 +198,16 @@ AgendaNotificationDiagnostics _developerNotificationDiagnostics({
   final current = now ?? DateTime.now();
   return AgendaNotificationDiagnostics(
     recordedAt: current,
-    mode: AgendaNotificationReconcileMode.maintenance,
+    mode: AgendaNotificationReconcileMode.recovery,
     origin: AgendaNotificationReconcileOrigin.background,
     result: AgendaNotificationDiagnosticResult.success,
     notificationsEnabled: false,
     exactAlarmsAllowed: false,
-    plannedCount: 205,
-    scheduledCount: 200,
-    truncatedCount: 5,
+    coverage: AgendaNotificationCoverage.capacityLimited,
+    directScheduledCount: 450,
+    directCapacity: 450,
+    hasUnboundedRecurrence: true,
+    hasCapacityOverflow: true,
     retainedPendingCount: 1,
     plan: [
       AgendaNotificationDiagnosticPlanItem(
@@ -214,7 +216,7 @@ AgendaNotificationDiagnostics _developerNotificationDiagnostics({
         sourceType: 'course',
       ),
     ],
-    nextMaintenanceAt: current.add(const Duration(days: 1)),
+    nextRenewalAt: current.add(const Duration(days: 1)),
     platformPendingCount: 200,
     platformActiveCount: 3,
     platformSampledAt: current,
@@ -538,18 +540,23 @@ void main() {
         find.byKey(const ValueKey('developer-notification-time-zone')),
         findsOneWidget,
       );
-      expect(find.text('200 scheduled, 205 planned'), findsOneWidget);
+      expect(find.text('450 direct alarms / 450 capacity'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('developer-notification-next-reminder')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey('developer-notification-next-maintenance')),
+        find.byKey(const ValueKey('developer-notification-next-renewal')),
         findsOneWidget,
       );
-      expect(find.text('5 omitted by the plan limit'), findsOneWidget);
       expect(
-        find.textContaining('Background · Maintenance · Succeeded'),
+        find.text(
+          'Direct alarm capacity is full; later reminders use best-effort renewal',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Background · Recovery · Succeeded'),
         findsOneWidget,
       );
       expect(
@@ -654,9 +661,8 @@ void main() {
           result: AgendaNotificationDiagnosticResult.success,
           notificationsEnabled: true,
           exactAlarmsAllowed: true,
-          plannedCount: 0,
-          scheduledCount: 0,
-          truncatedCount: 0,
+          directScheduledCount: 0,
+          directCapacity: 450,
           retainedPendingCount: 0,
           plan: [],
           platformPendingCount: 0,

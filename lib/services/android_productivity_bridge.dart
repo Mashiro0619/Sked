@@ -311,10 +311,19 @@ class AndroidProductivityBridge {
 
   Future<bool> openBatteryOptimizationSettings() async {
     if (!_enabled || _disposed) return true;
-    return await _channel.invokeMethod<bool>(
-          AndroidProductivityChannel.openBatteryOptimizationSettings,
-        ) ??
-        false;
+    try {
+      // The native side returns false after merely launching Settings. A true
+      // value is reserved for the already-confirmed allowlist state; callers
+      // must query again after the app resumes to observe a user decision.
+      return await _channel.invokeMethod<bool>(
+            AndroidProductivityChannel.openBatteryOptimizationSettings,
+          ) ??
+          false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
   }
 
   /// Reads system-level notification state and all current `sked_` channels.
