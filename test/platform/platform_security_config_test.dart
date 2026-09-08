@@ -82,7 +82,7 @@ void main() {
         )
         .map(
           (element) =>
-              element.getAttribute('name', namespace: _androidNamespace),
+              element.getAttribute('name', namespaceUri: _androidNamespace),
         )
         .toSet();
     final application = _singleElement(manifest, 'application');
@@ -106,43 +106,43 @@ void main() {
       isNot(contains('android.permission.WRITE_EXTERNAL_STORAGE')),
     );
     expect(
-      application.getAttribute('allowBackup', namespace: _androidNamespace),
+      application.getAttribute('allowBackup', namespaceUri: _androidNamespace),
       'false',
     );
     expect(
       application.getAttribute(
         'fullBackupContent',
-        namespace: _androidNamespace,
+        namespaceUri: _androidNamespace,
       ),
       'false',
     );
     expect(
       application.getAttribute(
         'dataExtractionRules',
-        namespace: _androidNamespace,
+        namespaceUri: _androidNamespace,
       ),
       '@xml/data_extraction_rules',
     );
     expect(
       application.getAttribute(
         'networkSecurityConfig',
-        namespace: _androidNamespace,
+        namespaceUri: _androidNamespace,
       ),
       '@xml/network_security_config',
     );
     expect(
       application.getAttribute(
         'usesCleartextTraffic',
-        namespace: _androidNamespace,
+        namespaceUri: _androidNamespace,
       ),
       isNull,
     );
     expect(
-      application.getAttribute('debuggable', namespace: _androidNamespace),
+      application.getAttribute('debuggable', namespaceUri: _androidNamespace),
       isNull,
     );
     expect(
-      application.getAttribute('testOnly', namespace: _androidNamespace),
+      application.getAttribute('testOnly', namespaceUri: _androidNamespace),
       isNull,
     );
 
@@ -172,7 +172,7 @@ void main() {
           .where((element) => element.localName == 'receiver')
           .map(
             (element) =>
-                element.getAttribute('name', namespace: _androidNamespace),
+                element.getAttribute('name', namespaceUri: _androidNamespace),
           )
           .whereType<String>()
           .toSet();
@@ -192,7 +192,7 @@ void main() {
           )
           .map(
             (element) =>
-                element.getAttribute('name', namespace: _androidNamespace),
+                element.getAttribute('name', namespaceUri: _androidNamespace),
           )
           .whereType<String>()
           .toSet();
@@ -215,7 +215,7 @@ void main() {
         .where((element) => element.localName == 'package')
         .map(
           (element) =>
-              element.getAttribute('name', namespace: _androidNamespace),
+              element.getAttribute('name', namespaceUri: _androidNamespace),
         )
         .whereType<String>()
         .toSet();
@@ -234,7 +234,7 @@ void main() {
       manifest.descendants.whereType<XmlElement>().where(
         (element) =>
             element.localName == 'uses-permission' &&
-            element.getAttribute('name', namespace: _androidNamespace) ==
+            element.getAttribute('name', namespaceUri: _androidNamespace) ==
                 'android.permission.QUERY_ALL_PACKAGES',
       ),
       isEmpty,
@@ -582,15 +582,15 @@ void main() {
   test('CI uses Node 24 actions and guards generated Android artifacts', () {
     final workflow = File('.github/workflows/flutter.yml').readAsStringSync();
 
-    expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(3));
+    expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(4));
     expect(
       RegExp(r'actions/upload-artifact@v7').allMatches(workflow),
-      hasLength(2),
+      hasLength(3),
     );
     expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
     expect(
       RegExp(r"flutter-version: '3\.47\.0'").allMatches(workflow),
-      hasLength(3),
+      hasLength(4),
     );
     expect(workflow, isNot(contains('actions/checkout@v4')));
     expect(workflow, isNot(contains('actions/upload-artifact@v4')));

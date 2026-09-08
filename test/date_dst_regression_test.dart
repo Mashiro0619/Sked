@@ -8,8 +8,8 @@ import 'package:sked/services/import_export_service.dart';
 import 'package:sked/screens/home_screen.dart';
 
 void main() {
-  final scenario = _scenarioFor(Platform.environment['SKED_DST_TEST_ZONE']);
-  if (scenario == null) {
+  final zone = Platform.environment['SKED_DST_TEST_ZONE'];
+  if (zone == null) {
     test(
       'named-timezone DST regressions are enabled by dedicated CI steps',
       () {},
@@ -18,7 +18,10 @@ void main() {
     return;
   }
 
-  group('calendar behavior in a real DST timezone', () {
+  // A misspelled CI zone must fail instead of silently skipping this suite.
+  final scenario = _scenarioFor(zone);
+
+  group('calendar behavior in $zone', () {
     test('the requested timezone is active', () {
       expect(scenario.springBefore.timeZoneOffset, scenario.springOffsetBefore);
       expect(scenario.springAfter.timeZoneOffset, scenario.springOffsetAfter);
@@ -61,60 +64,62 @@ void main() {
       expect(startOfWeekFor(config, 2), scenario.fallSemesterWeekTwo);
     });
 
-    test('live timetable refresh stays minute-aligned across fall-back', () {
-      final transitionDay = addCalendarDays(scenario.fallBefore, 1);
-      const expectedDelay = Duration(
-        seconds: 29,
-        milliseconds: 749,
-        microseconds: 500,
-      );
-      DateTime? legacyFailureCandidate;
-
-      for (var hour = 0; hour <= 4; hour += 1) {
-        final candidate = DateTime(
-          transitionDay.year,
-          transitionDay.month,
-          transitionDay.day,
-          hour,
-          59,
-          30,
-          250,
-          500,
+    test(
+      'live timetable refresh stays minute-aligned around seasonal dates',
+      () {
+        final transitionDay = addCalendarDays(scenario.fallBefore, 1);
+        const expectedDelay = Duration(
+          seconds: 29,
+          milliseconds: 749,
+          microseconds: 500,
         );
-        final legacyNextMinute = DateTime(
-          candidate.year,
-          candidate.month,
-          candidate.day,
-          candidate.hour,
-          candidate.minute + 1,
-        );
-        if (legacyNextMinute.difference(candidate) != expectedDelay) {
-          legacyFailureCandidate = candidate;
-          break;
-        }
-      }
+        DateTime? legacyFailureCandidate;
 
-      expect(
-        legacyFailureCandidate,
-        isNotNull,
-        reason: 'The configured timezone must expose the fall-back bug.',
-      );
-      expect(
-        timetableLiveRefreshDelayUntilNextMinute(legacyFailureCandidate!),
-        expectedDelay,
-      );
-      expect(
-        timetableLiveRefreshDelayUntilNextMinute(
-          DateTime(
+        for (var hour = 0; hour <= 4; hour += 1) {
+          final candidate = DateTime(
             transitionDay.year,
             transitionDay.month,
             transitionDay.day,
-            12,
+            hour,
+            59,
+            30,
+            250,
+            500,
+          );
+          final legacyNextMinute = DateTime(
+            candidate.year,
+            candidate.month,
+            candidate.day,
+            candidate.hour,
+            candidate.minute + 1,
+          );
+          expect(
+            timetableLiveRefreshDelayUntilNextMinute(candidate),
+            expectedDelay,
+          );
+          if (legacyNextMinute.difference(candidate) != expectedDelay) {
+            legacyFailureCandidate = candidate;
+          }
+        }
+
+        expect(
+          legacyFailureCandidate,
+          scenario.observesDaylightSaving ? isNotNull : isNull,
+          reason: 'Only a DST timezone should expose the fall-back bug.',
+        );
+        expect(
+          timetableLiveRefreshDelayUntilNextMinute(
+            DateTime(
+              transitionDay.year,
+              transitionDay.month,
+              transitionDay.day,
+              12,
+            ),
           ),
-        ),
-        const Duration(minutes: 1),
-      );
-    });
+          const Duration(minutes: 1),
+        );
+      },
+    );
 
     test('daily and weekly recurrences retain their local start time', () {
       final calendar = GeneralSchedule(
@@ -281,32 +286,166 @@ void main() {
       );
     });
 
-    test(
-      'legacy fall-back exception migrates without overdeleting new data',
-      () {
-        final start = normalizeDateOnly(scenario.fallBefore);
-        final firstLegacyOccurrenceStart = start.add(const Duration(days: 1));
-        final legacyOccurrenceStart = start.add(const Duration(days: 2));
-        final civilOccurrenceStart = addCalendarDays(start, 2);
-        GeneralScheduleData migrateLegacyExceptions(
-          List<String> exceptions, {
-          int count = 4,
-          String? untilDateIso,
-        }) {
-          final event = _allDayEvent(
-            id: 'legacy-exception',
+    if (scenario.observesDaylightSaving) {
+      test(
+        'legacy fall-back exception migrates without overdeleting new data',
+        () {
+          final start = normalizeDateOnly(scenario.fallBefore);
+          final firstLegacyOccurrenceStart = start.add(const Duration(days: 1));
+          final legacyOccurrenceStart = start.add(const Duration(days: 2));
+          final civilOccurrenceStart = addCalendarDays(start, 2);
+          GeneralScheduleData migrateLegacyExceptions(
+            List<String> exceptions, {
+            int count = 4,
+            String? untilDateIso,
+          }) {
+            final event = _allDayEvent(
+              id: 'legacy-exception',
+              start: start,
+              end: nextCalendarDate(start),
+              recurrenceRule: GeneralEventRecurrenceRule(
+                type: GeneralEventRecurrence.daily,
+                unit: GeneralEventRecurrenceUnit.day,
+                count: count,
+                untilDateIso: untilDateIso,
+              ),
+              exceptions: exceptions,
+            );
+            return GeneralScheduleData.fromJson({
+              'schemaVersion': 3,
+              'activeScheduleId': 'cal',
+              'schedules': [
+                GeneralSchedule(
+                  id: 'cal',
+                  name: 'Calendar',
+                  events: [event],
+                ).toJson(),
+              ],
+            });
+          }
+
+          final migrated = migrateLegacyExceptions([
+            _dateIso(legacyOccurrenceStart),
+          ]);
+          final migratedEvent = migrated.activeSchedule.events.single;
+
+          final occurrences = expandGeneralEventOccurrences(
+            calendar: migrated.activeSchedule,
+            event: migratedEvent,
+            startInclusive: start,
+            endExclusive: addCalendarDays(start, 4),
+          );
+          final currentInputEvent = _allDayEvent(
+            id: 'current-exception',
             start: start,
             end: nextCalendarDate(start),
-            recurrenceRule: GeneralEventRecurrenceRule(
+            recurrenceRule: const GeneralEventRecurrenceRule(
               type: GeneralEventRecurrence.daily,
               unit: GeneralEventRecurrenceUnit.day,
-              count: count,
-              untilDateIso: untilDateIso,
+              count: 4,
             ),
-            exceptions: exceptions,
+            exceptions: [_dateIso(civilOccurrenceStart)],
           );
-          return GeneralScheduleData.fromJson({
-            'schemaVersion': 3,
+          final currentData = GeneralScheduleData.fromJson({
+            'schemaVersion': generalScheduleSchemaVersion,
+            'activeScheduleId': 'cal',
+            'schedules': [
+              GeneralSchedule(
+                id: 'cal',
+                name: 'Calendar',
+                events: [currentInputEvent],
+              ).toJson(),
+            ],
+          });
+          final currentEvent = currentData.activeSchedule.events.single;
+          final currentOccurrences = expandGeneralEventOccurrences(
+            calendar: currentData.activeSchedule,
+            event: currentEvent,
+            startInclusive: start,
+            endExclusive: addCalendarDays(start, 4),
+          );
+          final migratedWithUnrelatedException = migrateLegacyExceptions([
+            _dateIso(legacyOccurrenceStart),
+            _dateIso(start.add(const Duration(days: 3))),
+          ]);
+          final countBounded = migrateLegacyExceptions([
+            _dateIso(legacyOccurrenceStart),
+          ], count: 2);
+          final untilBounded = migrateLegacyExceptions([
+            _dateIso(legacyOccurrenceStart),
+          ], untilDateIso: _dateIso(legacyOccurrenceStart));
+
+          expect(
+            _dateIso(firstLegacyOccurrenceStart),
+            _dateIso(legacyOccurrenceStart),
+          );
+          expect(legacyOccurrenceStart.day, isNot(civilOccurrenceStart.day));
+          expect(migratedEvent.recurrenceExceptionDateIso, [
+            _dateIso(civilOccurrenceStart),
+          ]);
+          expect(
+            migratedEvent.recurrenceExceptionDateIso,
+            isNot(contains(_dateIso(legacyOccurrenceStart))),
+          );
+          expect(
+            occurrences.map((item) => item.start),
+            isNot(contains(civilOccurrenceStart)),
+          );
+          expect(currentEvent.recurrenceExceptionDateIso, [
+            _dateIso(civilOccurrenceStart),
+          ]);
+          expect(
+            currentOccurrences.map((item) => item.start),
+            contains(addCalendarDays(start, 3)),
+          );
+          expect(
+            migratedWithUnrelatedException
+                .activeSchedule
+                .events
+                .single
+                .recurrenceExceptionDateIso,
+            [
+              _dateIso(civilOccurrenceStart),
+              _dateIso(addCalendarDays(start, 3)),
+            ],
+          );
+          expect(
+            countBounded
+                .activeSchedule
+                .events
+                .single
+                .recurrenceExceptionDateIso,
+            [_dateIso(legacyOccurrenceStart)],
+          );
+          expect(
+            untilBounded
+                .activeSchedule
+                .events
+                .single
+                .recurrenceExceptionDateIso,
+            [_dateIso(legacyOccurrenceStart)],
+          );
+        },
+      );
+    } else {
+      test('legacy exceptions retain their civil date without DST', () {
+        final start = normalizeDateOnly(scenario.fallBefore);
+        final exceptionDate = addCalendarDays(start, 2);
+        expect(start.add(const Duration(days: 2)), exceptionDate);
+        final event = _allDayEvent(
+          id: 'non-dst-exception',
+          start: start,
+          end: nextCalendarDate(start),
+          recurrenceRule: const GeneralEventRecurrenceRule(
+            type: GeneralEventRecurrence.daily,
+            unit: GeneralEventRecurrenceUnit.day,
+            count: 4,
+          ),
+          exceptions: [_dateIso(exceptionDate)],
+        );
+        for (final version in [3, generalScheduleSchemaVersion]) {
+          final data = GeneralScheduleData.fromJson({
+            'schemaVersion': version,
             'activeScheduleId': 'cal',
             'schedules': [
               GeneralSchedule(
@@ -316,100 +455,25 @@ void main() {
               ).toJson(),
             ],
           });
+          final calendar = data.activeSchedule;
+          final migrated = calendar.events.single;
+          expect(migrated.recurrenceExceptionDateIso, [
+            _dateIso(exceptionDate),
+          ]);
+          final occurrences = expandGeneralEventOccurrences(
+            calendar: calendar,
+            event: migrated,
+            startInclusive: start,
+            endExclusive: addCalendarDays(start, 4),
+          );
+          expect(occurrences.map((item) => item.start), [
+            start,
+            addCalendarDays(start, 1),
+            addCalendarDays(start, 3),
+          ]);
         }
-
-        final migrated = migrateLegacyExceptions([
-          _dateIso(legacyOccurrenceStart),
-        ]);
-        final migratedEvent = migrated.activeSchedule.events.single;
-
-        final occurrences = expandGeneralEventOccurrences(
-          calendar: migrated.activeSchedule,
-          event: migratedEvent,
-          startInclusive: start,
-          endExclusive: addCalendarDays(start, 4),
-        );
-        final currentInputEvent = _allDayEvent(
-          id: 'current-exception',
-          start: start,
-          end: nextCalendarDate(start),
-          recurrenceRule: const GeneralEventRecurrenceRule(
-            type: GeneralEventRecurrence.daily,
-            unit: GeneralEventRecurrenceUnit.day,
-            count: 4,
-          ),
-          exceptions: [_dateIso(civilOccurrenceStart)],
-        );
-        final currentData = GeneralScheduleData.fromJson({
-          'schemaVersion': generalScheduleSchemaVersion,
-          'activeScheduleId': 'cal',
-          'schedules': [
-            GeneralSchedule(
-              id: 'cal',
-              name: 'Calendar',
-              events: [currentInputEvent],
-            ).toJson(),
-          ],
-        });
-        final currentEvent = currentData.activeSchedule.events.single;
-        final currentOccurrences = expandGeneralEventOccurrences(
-          calendar: currentData.activeSchedule,
-          event: currentEvent,
-          startInclusive: start,
-          endExclusive: addCalendarDays(start, 4),
-        );
-        final migratedWithUnrelatedException = migrateLegacyExceptions([
-          _dateIso(legacyOccurrenceStart),
-          _dateIso(start.add(const Duration(days: 3))),
-        ]);
-        final countBounded = migrateLegacyExceptions([
-          _dateIso(legacyOccurrenceStart),
-        ], count: 2);
-        final untilBounded = migrateLegacyExceptions([
-          _dateIso(legacyOccurrenceStart),
-        ], untilDateIso: _dateIso(legacyOccurrenceStart));
-
-        expect(
-          _dateIso(firstLegacyOccurrenceStart),
-          _dateIso(legacyOccurrenceStart),
-        );
-        expect(legacyOccurrenceStart.day, isNot(civilOccurrenceStart.day));
-        expect(migratedEvent.recurrenceExceptionDateIso, [
-          _dateIso(civilOccurrenceStart),
-        ]);
-        expect(
-          migratedEvent.recurrenceExceptionDateIso,
-          isNot(contains(_dateIso(legacyOccurrenceStart))),
-        );
-        expect(
-          occurrences.map((item) => item.start),
-          isNot(contains(civilOccurrenceStart)),
-        );
-        expect(currentEvent.recurrenceExceptionDateIso, [
-          _dateIso(civilOccurrenceStart),
-        ]);
-        expect(
-          currentOccurrences.map((item) => item.start),
-          contains(addCalendarDays(start, 3)),
-        );
-        expect(
-          migratedWithUnrelatedException
-              .activeSchedule
-              .events
-              .single
-              .recurrenceExceptionDateIso,
-          [_dateIso(civilOccurrenceStart), _dateIso(addCalendarDays(start, 3))],
-        );
-        expect(
-          countBounded.activeSchedule.events.single.recurrenceExceptionDateIso,
-          [_dateIso(legacyOccurrenceStart)],
-        );
-        expect(
-          untilBounded.activeSchedule.events.single.recurrenceExceptionDateIso,
-          [_dateIso(legacyOccurrenceStart)],
-        );
-      },
-    );
+      });
+    }
 
     test('legacy fall-back acknowledgement migrates to its civil start', () {
       final start = normalizeDateOnly(scenario.fallBefore);
@@ -544,7 +608,7 @@ String _dateIso(DateTime value) =>
     '${value.month.toString().padLeft(2, '0')}-'
     '${value.day.toString().padLeft(2, '0')}';
 
-_DstScenario? _scenarioFor(String? name) {
+_DstScenario _scenarioFor(String name) {
   return switch (name) {
     'america-new-york' => _DstScenario(
       springBefore: DateTime(2026, 3, 7, 9),
@@ -576,7 +640,27 @@ _DstScenario? _scenarioFor(String? name) {
       fallSemesterStart: DateTime(2026, 10, 19),
       fallSemesterWeekTwo: DateTime(2026, 10, 26),
     ),
-    _ => null,
+    // Shanghai is the non-DST control for the same spring/fall date windows.
+    'asia-shanghai' => _DstScenario(
+      springBefore: DateTime(2026, 3, 7, 9),
+      springAfter: DateTime(2026, 3, 9, 9),
+      springTransitionDate: DateTime(2026, 3, 8),
+      springOffsetBefore: const Duration(hours: 8),
+      springOffsetAfter: const Duration(hours: 8),
+      springSemesterStart: DateTime(2026, 3, 2),
+      springSemesterWeekTwo: DateTime(2026, 3, 9),
+      fallBefore: DateTime(2026, 10, 31, 9),
+      fallAfter: DateTime(2026, 11, 2, 9),
+      fallOffsetBefore: const Duration(hours: 8),
+      fallOffsetAfter: const Duration(hours: 8),
+      fallSemesterStart: DateTime(2026, 10, 26),
+      fallSemesterWeekTwo: DateTime(2026, 11, 2),
+    ),
+    _ => throw ArgumentError.value(
+      name,
+      'SKED_DST_TEST_ZONE',
+      'Expected america-new-york, europe-berlin, or asia-shanghai.',
+    ),
   };
 }
 
@@ -610,4 +694,6 @@ class _DstScenario {
   final Duration fallOffsetAfter;
   final DateTime fallSemesterStart;
   final DateTime fallSemesterWeekTwo;
+
+  bool get observesDaylightSaving => springOffsetBefore != springOffsetAfter;
 }

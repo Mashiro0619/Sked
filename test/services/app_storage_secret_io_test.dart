@@ -333,6 +333,120 @@ void main() {
     await _expectFileExcludes(backup, sentinel);
   });
 
+  test(
+    'interrupted scrub restores its rollback before an older ordinary backup',
+    () async {
+      const sentinel = 'SKED_ROLLBACK_ONLY_KEY';
+      final layout = AppStorageLayout(
+        directoryProvider: () async => tempDirectory,
+      );
+      final main = await layout.appDataFile;
+      final backup = await layout.appDataBackupFile;
+      final original = jsonEncode(_legacySnapshotWithApiKey(sentinel));
+      final rollback = File('${main.path}.secret-scrub.rollback');
+      await rollback.writeAsString(original, flush: true);
+      final olderBackup = buildInitialAppData(buildDefaultPeriodTimes())
+          .encode();
+      await backup.writeAsString(olderBackup, flush: true);
+
+      final result = await IoTimetableStorage(layout: layout).load();
+
+      expect(result.status, StorageLoadStatus.success);
+      expect(result.data!.aiApiSettings.customModel, 'legacy-model');
+      // The provider must still migrate this legacy key into secure storage;
+      // restoring a transaction must not silently discard the only copy.
+      expect(result.data!.aiApiSettings.customApiKey, sentinel);
+      expect(await main.readAsString(), original);
+      expect(await backup.readAsString(), olderBackup);
+      expect(await rollback.exists(), isFalse);
+    },
+  );
+
+  test('committed scrub main wins over rollback and staged output', () async {
+    const sentinel = 'SKED_STALE_SCRUB_KEY';
+    final layout = AppStorageLayout(
+      directoryProvider: () async => tempDirectory,
+    );
+    final main = await layout.appDataFile;
+    final committed = buildInitialAppData(buildDefaultPeriodTimes())
+        .copyWith(localeCode: 'en')
+        .encode();
+    final original = jsonEncode(_legacySnapshotWithApiKey(sentinel));
+    final rollback = File('${main.path}.secret-scrub.rollback');
+    final staged = File('${main.path}.secret-scrub.tmp');
+    await main.writeAsString(committed, flush: true);
+    await rollback.writeAsString(original, flush: true);
+    await staged.writeAsString(
+      AppData.decodeStorageSnapshot(original).encode(),
+      flush: true,
+    );
+
+    final result = await IoTimetableStorage(layout: layout).load();
+
+    expect(result.canWrite, isTrue);
+    expect(result.data!.aiApiSettings.customModel, isNot('legacy-model'));
+    expect(await main.readAsString(), committed);
+    expect(await rollback.exists(), isFalse);
+    expect(await staged.exists(), isFalse);
+    await _expectFileExcludes(main, sentinel);
+  });
+
+  for (final unsafeTarget in ['empty', 'corrupt', 'still contains key']) {
+    test(
+      'an $unsafeTarget scrub target preserves rollback and closes the write gate',
+      () async {
+        const sentinel = 'SKED_UNSAFE_SCRUB_KEY';
+        final layout = AppStorageLayout(
+          directoryProvider: () async => tempDirectory,
+        );
+        final main = await layout.appDataFile;
+        final original = jsonEncode(_legacySnapshotWithApiKey(sentinel));
+        final rollback = File('${main.path}.secret-scrub.rollback');
+        final staged = File('${main.path}.secret-scrub.tmp');
+        final stagedContents = switch (unsafeTarget) {
+          'empty' => '',
+          'corrupt' => '{broken',
+          _ => original,
+        };
+        await rollback.writeAsString(original, flush: true);
+        await staged.writeAsString(stagedContents, flush: true);
+
+        final result = await IoTimetableStorage(layout: layout).load();
+
+        expect(result.status, StorageLoadStatus.ioFailure);
+        expect(result.canWrite, isFalse);
+        expect(result.data, isNull);
+        expect(await main.exists(), isFalse);
+        expect(await rollback.readAsString(), original);
+        expect(await staged.readAsString(), stagedContents);
+      },
+    );
+  }
+
+  test(
+    'an orphan sanitized scrub target is promoted before ordinary recovery',
+    () async {
+      const sentinel = 'SKED_ORPHAN_SCRUB_KEY';
+      final layout = AppStorageLayout(
+        directoryProvider: () async => tempDirectory,
+      );
+      final main = await layout.appDataFile;
+      final source = jsonEncode(_legacySnapshotWithApiKey(sentinel));
+      final sanitized = AppData.decodeStorageSnapshot(source).encode();
+      final staged = File('${main.path}.secret-scrub.tmp');
+      await staged.writeAsString(sanitized, flush: true);
+
+      final result = await IoTimetableStorage(layout: layout).load();
+
+      expect(result.status, StorageLoadStatus.success);
+      expect(result.data!.aiApiSettings.customModel, 'legacy-model');
+      expect(result.data!.aiApiSettings.customApiKey, isEmpty);
+      expect(await main.readAsString(), sanitized);
+      expect(await staged.exists(), isFalse);
+      await _expectFileExcludes(main, sentinel);
+    },
+  );
+
   test('sanitizer scrubs valid AppData recovery artifacts', () async {
     const sentinel = 'SKED_RECOVERY_ARTIFACT_KEY';
     final supportDirectory = Directory(

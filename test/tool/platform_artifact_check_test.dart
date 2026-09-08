@@ -19,6 +19,53 @@ void main() {
     );
   });
 
+  test('undeclared Android namespaces cannot satisfy security attributes', () {
+    final manifest = _androidManifest().replaceFirst(
+      'xmlns:android="$androidXmlNamespace"',
+      '',
+    );
+    expect(
+      androidMergedManifestIssues(
+        manifest,
+        applicationId: _applicationId,
+        expectedTargetSdk: _expectedTargetSdk,
+      ),
+      contains(contains('android:name')),
+    );
+  });
+
+  test('mismatched XML tags produce a diagnostic instead of escaping the validator', () {
+    final manifest = _androidManifest().replaceFirst(
+      '</application>',
+      '</mismatched>',
+    );
+    expect(
+      androidMergedManifestIssues(
+        manifest,
+        applicationId: _applicationId,
+        expectedTargetSdk: _expectedTargetSdk,
+      ),
+      contains(contains('not valid XML')),
+    );
+  });
+
+  test(
+    'Android security attributes are matched by namespace URI, not prefix',
+    () {
+      final manifest = _androidManifest()
+          .replaceAll('xmlns:android=', 'xmlns:platform=')
+          .replaceAll('android:', 'platform:');
+      expect(
+        androidMergedManifestIssues(
+          manifest,
+          applicationId: _applicationId,
+          expectedTargetSdk: _expectedTargetSdk,
+        ),
+        isEmpty,
+      );
+    },
+  );
+
   test('requires private notification receivers when the notification surface is present', () {
     final notificationPermission = '''
       <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

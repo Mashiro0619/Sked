@@ -28,6 +28,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Verify internal plugin lockfile
+        working-directory: packages/android_productivity_plugin
+        run: flutter pub get --enforce-lockfile
+
       # The generated localizations under lib/l10n/ are committed on purpose,
       # so CI has to guarantee they still match the .arb sources. Regenerating
       # here must be a no-op; anything else means an .arb was edited without
@@ -129,11 +133,93 @@ jobs:
           SKED_DST_TEST_ZONE: europe-berlin
         run: flutter test test/date_dst_regression_test.dart
 
-      - name: Build web
-        run: flutter build web --debug
+      - name: Test calendar regressions in Asia/Shanghai (non-DST control)
+        env:
+          TZ: Asia/Shanghai
+          SKED_DST_TEST_ZONE: asia-shanghai
+        run: flutter test test/date_dst_regression_test.dart
 
-      - name: Build Android APK
-        run: flutter build apk --debug
+      - name: Build web release
+        run: flutter build web --release
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report-${{ github.run_attempt }}
+          path: |
+            coverage/lcov.info
+            coverage/lcov.base.info
+            coverage/lcov.filtered.info
+            coverage/coverage-summary.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  android-build:
+    name: Build Android release (CI signing only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Verify internal plugin lockfile
+        working-directory: packages/android_productivity_plugin
+        run: flutter pub get --enforce-lockfile
+
+      # These APK/AAB builds exercise release shrinking and packaging, not
+      # production signing. Never expose a publishing key to pull requests.
+      - name: Prepare ephemeral CI signing key
+        shell: bash
+        run: |
+          set -eu
+          umask 077
+          signing_password="$(openssl rand -hex 32)"
+          echo "::add-mask::$signing_password"
+          keytool -genkeypair -noprompt \
+            -keystore "$RUNNER_TEMP/sked-ci-release.jks" \
+            -storetype JKS \
+            -storepass "$signing_password" \
+            -keypass "$signing_password" \
+            -alias sked-ci -keyalg RSA -keysize 2048 -validity 2 \
+            -dname "CN=Sked CI, OU=CI, O=Sked, C=CN"
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=sked-ci\nstoreFile=%s\n' \
+            "$signing_password" "$signing_password" \
+            "$RUNNER_TEMP/sked-ci-release.jks" > android/key.properties
+
+      # gradlew and its wrapper JAR are generated and ignored by Git. The
+      # first Flutter Android build must prepare them before direct Gradle use.
+      - name: Build Android APK release
+        run: flutter build apk --release
+
+      # This Flutter/AGP setup exposes the debug JVM test variant only.
+      # APK/AAB release compilation and shrinking are checked separately.
+      - name: Test Android native unit tests
+        id: android-unit-tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      # Keep tooling preparation enabled: --no-pub can retain the debug
+      # registrant even though release excludes dev-only integration_test.
+      - name: Build Android App Bundle release
+        run: flutter build appbundle --release
 
       - name: Generate release Android security artifacts
         id: android-security-artifacts
@@ -165,18 +251,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload coverage report
-        if: always()
+      - name: Upload Android native test report
+        if: ${{ !cancelled() && steps.android-unit-tests.outcome != 'skipped' }}
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-report-${{ github.run_attempt }}
-          path: |
-            coverage/lcov.info
-            coverage/lcov.base.info
-            coverage/lcov.filtered.info
-            coverage/coverage-summary.txt
+          name: android-native-tests-${{ github.run_attempt }}
+          path: build/app/test-results/testDebugUnitTest/*.xml
           if-no-files-found: error
           retention-days: 14
+
+      - name: Remove ephemeral CI signing key
+        if: always()
+        shell: bash
+        run: rm -f -- android/key.properties "$RUNNER_TEMP/sked-ci-release.jks"
 
   linux-build:
     name: Build linux release

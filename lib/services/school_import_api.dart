@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
+import 'school_import_error_redactor.dart';
 
 sealed class SchoolImportStreamEvent {
   const SchoolImportStreamEvent();
@@ -341,10 +342,33 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     SchoolImportParserSettings? parserSettings,
   }) async {
     final settings = parserSettings ?? const SchoolImportParserSettings();
-    return _importWithCustomOpenAi(payload, settings);
+    try {
+      return await _importWithCustomOpenAi(payload, settings);
+    } on FormatException catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FormatException(
+          _safeRequestError(error.message, settings.customApiKey),
+        ),
+        stackTrace,
+      );
+    }
   }
 
   Future<List<String>> fetchCustomModels({
+    required String baseUrl,
+    required String apiKey,
+  }) async {
+    try {
+      return await _fetchCustomModels(baseUrl: baseUrl, apiKey: apiKey);
+    } on FormatException catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FormatException(_safeRequestError(error.message, apiKey)),
+        stackTrace,
+      );
+    }
+  }
+
+  Future<List<String>> _fetchCustomModels({
     required String baseUrl,
     required String apiKey,
   }) async {
@@ -1035,7 +1059,11 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     http.Client? client,
   }) async* {
     final settings = parserSettings ?? const SchoolImportParserSettings();
-    yield* _importStreamWithCustomOpenAi(payload, settings, client: client);
+    yield* _importStreamWithCustomOpenAi(payload, settings, client: client).map(
+      (event) => event is ParseError
+          ? ParseError(_safeRequestError(event.message, settings.customApiKey))
+          : event,
+    );
   }
 
   Stream<SchoolImportStreamEvent> _importStreamWithCustomOpenAi(
@@ -1268,6 +1296,9 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
     final normalized = value.trim();
     return normalized.isEmpty ? null : _boundedUtf8(normalized);
   }
+
+  static String _safeRequestError(String message, String apiKey) =>
+      _boundedUtf8(redactSchoolImportError(message, apiKey: apiKey));
 
   static String _errorWithDetails(
     String summary,

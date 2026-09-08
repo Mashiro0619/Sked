@@ -15,6 +15,7 @@ class _ControlledTimetableStorage implements TimetableStorage {
   final List<Object?> saveErrors = [];
   final List<AppData> writeLog = [];
   int saveCount = 0;
+  void Function(int index)? onSaveStarted;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -24,6 +25,7 @@ class _ControlledTimetableStorage implements TimetableStorage {
   Future<void> save(AppData data) async {
     final index = saveCount;
     saveCount += 1;
+    onSaveStarted?.call(index);
     if (index < saveGates.length) {
       await saveGates[index]?.future;
     }
@@ -414,6 +416,104 @@ void main() {
 
       expect(provider.canWrite, isFalse);
       expect(notifications, greaterThan(notificationsAfterEdit));
+    },
+  );
+  test(
+    'dispose flushes a pending debounce without notifying disposed listeners',
+    () async {
+      final storage = _ControlledTimetableStorage(_initialApp());
+      final provider = _providerWith(storage);
+      await provider.load();
+      storage.saveCount = 0;
+      storage.writeLog.clear();
+      final started = Completer<void>();
+      final gate = Completer<void>();
+      storage.onSaveStarted = (_) => started.complete();
+      storage.saveGates.add(gate);
+      var notifications = 0;
+      provider.addListener(() => notifications += 1);
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      final notificationsBeforeDispose = notifications;
+      provider.dispose();
+      final flushed = provider.flushPendingUiStateSaves();
+      await started.future;
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-01');
+      gate.complete();
+      await flushed;
+
+      expect(storage.saveCount, 1);
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-02');
+      expect(notifications, notificationsBeforeDispose);
+    },
+  );
+
+  test(
+    'dispose queues the latest debounce behind an in-flight flush',
+    () async {
+      final storage = _ControlledTimetableStorage(_initialApp());
+      final provider = _providerWith(storage);
+      await provider.load();
+      storage.saveCount = 0;
+      storage.writeLog.clear();
+      final started = [Completer<void>(), Completer<void>()];
+      final gates = [Completer<void>(), Completer<void>()];
+      storage.saveGates.addAll(gates);
+      storage.onSaveStarted = (index) => started[index].complete();
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      final firstFlush = provider.flushPendingUiStateSaves();
+      await started[0].future;
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 3));
+      provider.dispose();
+      final finalFlush = provider.flushPendingUiStateSaves();
+      gates[0].complete();
+      await firstFlush;
+      await started[1].future;
+      expect(storage.writeLog.single.generalMode.selectedDateIso, '2026-06-02');
+      gates[1].complete();
+      await finalFlush;
+
+      expect(storage.writeLog.map((data) => data.generalMode.selectedDateIso), [
+        '2026-06-02',
+        '2026-06-03',
+      ]);
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-03');
+    },
+  );
+
+  test(
+    'a disposed deferred save failure stays observable and keeps durable data',
+    () async {
+      final storage = _ControlledTimetableStorage(_initialApp());
+      final provider = _providerWith(storage);
+      await provider.load();
+      storage.saveCount = 0;
+      storage.writeLog.clear();
+      final started = Completer<void>();
+      final gate = Completer<void>();
+      storage.saveGates.add(gate);
+      storage.saveErrors.add(const StorageWriteException('disk unavailable'));
+      storage.onSaveStarted = (_) => started.complete();
+      var notifications = 0;
+      provider.addListener(() => notifications += 1);
+
+      await provider.setSelectedGeneralDate(DateTime(2026, 6, 2));
+      final notificationsBeforeDispose = notifications;
+      provider.dispose();
+      final observedFailure = expectLater(
+        provider.flushPendingUiStateSaves(),
+        throwsA(isA<StorageWriteException>()),
+      );
+      await started.future;
+      gate.complete();
+      await observedFailure;
+      await provider.quiesceForShutdown();
+
+      expect(provider.canWrite, isFalse);
+      expect(storage.writeLog, isEmpty);
+      expect(storage.data!.generalMode.selectedDateIso, '2026-06-01');
+      expect(notifications, notificationsBeforeDispose);
     },
   );
 }

@@ -25,7 +25,7 @@ dependencies:
   url_launcher: ^6.3.2
   font_awesome_flutter: ^11.0.0
   http: ^1.5.0
-  html: ^0.15.6
+  html: ^0.15.7
   crypto: ^3.0.6
   package_info_plus: ^10.2.1
   # 6.2 is the first line whose Android plugin supports AGP 9.
@@ -37,8 +37,8 @@ dependencies:
   flutter_timezone: ^5.1.0
   intl: ^0.20.2
   timezone: ^0.11.1
-  material_ui: ^1.0.0
-  cupertino_ui: ^1.0.0
+  material_ui: ^1.1.1
+  cupertino_ui: ^1.0.2
   sked_android_productivity_plugin:
     path: packages/android_productivity_plugin
 
@@ -50,7 +50,8 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
-  xml: ^6.6.1
+  xml: ^7.0.1
+  yaml: ^3.1.3
   msix: ^3.18.0
 
 # Temporary pins for https://github.com/pichillilorenzo/flutter_inappwebview/pull/2809.

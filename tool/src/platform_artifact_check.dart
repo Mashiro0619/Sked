@@ -559,7 +559,7 @@ List<String> macosBundleMetadataIssues({
 XmlDocument? _parseXml(String contents, String label, List<String> issues) {
   try {
     return XmlDocument.parse(contents);
-  } on XmlParserException catch (error) {
+  } on XmlException catch (error) {
     issues.add('$label is not valid XML: $error');
     return null;
   }
@@ -640,7 +640,7 @@ bool _isAndroidValuesResourcePath(String path) {
 }
 
 String? _androidAttribute(XmlElement element, String name) {
-  return element.getAttribute(name, namespace: androidXmlNamespace);
+  return element.getAttribute(name, namespaceUri: androidXmlNamespace);
 }
 
 void _expectAndroidAttribute(

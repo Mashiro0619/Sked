@@ -1699,6 +1699,193 @@ void main() {
       expectSmallError(parseMessage);
     });
 
+    group('request error redaction', () {
+      const key = 'sk-SKED_ERROR_SECRET';
+      const baseUrl =
+          'https://user:URL_PASSWORD@api.example.test/v1?token=QUERY_SECRET#FRAGMENT_SECRET';
+      const settings = SchoolImportParserSettings(
+        source: schoolImportParserSourceCustomOpenAi,
+        customBaseUrl: baseUrl,
+        customApiKey: key,
+        customModel: 'test-model',
+      );
+      void expectRedacted(String message) {
+        for (final secret in [
+          key,
+          'URL_PASSWORD',
+          'QUERY_SECRET',
+          'FRAGMENT_SECRET',
+        ]) {
+          expect(message, isNot(contains(secret)));
+        }
+        expect(message, contains('api.example.test'));
+        expect(message, isNot(contains('user:')));
+        expect(
+          utf8.encode(message).length,
+          lessThanOrEqualTo(SchoolImportApi.maxErrorMessageBytes),
+        );
+      }
+
+      test('redacts credentials from model-list transport errors', () async {
+        final client = _StreamingClient((request) async {
+          expect(request.headers['Authorization'], 'Bearer $key');
+          throw http.ClientException(
+            'Connection rejected; Authorization: Bearer $key',
+            request.url,
+          );
+        });
+        final api = SchoolImportApi(client: client);
+        try {
+          await api.fetchCustomModels(baseUrl: baseUrl, apiKey: key);
+          fail('Expected a transport failure.');
+        } on FormatException catch (error) {
+          expect(error.message, startsWith('Unable to fetch the model list.'));
+          expectRedacted(error.toString());
+        }
+      });
+
+      test('redacts credentials from non-stream response errors', () async {
+        final client = _StreamingClient(
+          (request) async => http.StreamedResponse(
+            Stream.value(utf8.encode('Rejected $key at ${request.url}')),
+            401,
+          ),
+        );
+        try {
+          await SchoolImportApi(
+            client: client,
+          ).importCurrentPageWithRawResponse(payload, parserSettings: settings);
+          fail('Expected an HTTP failure.');
+        } on FormatException catch (error) {
+          expect(error.message, contains('401'));
+          expectRedacted(error.toString());
+        }
+      });
+
+      test('redacts credentials from slash-escaped JSON HTTP errors', () async {
+        final client = _StreamingClient((request) async {
+          expect(request.headers['Authorization'], 'Bearer $key');
+          final body = jsonEncode({
+            'error': {'message': 'Rejected $key at $baseUrl'},
+          }).replaceAll('/', r'\/');
+          return http.StreamedResponse(Stream.value(utf8.encode(body)), 401);
+        });
+        final events = await const SchoolImportApi()
+            .importCurrentPageStream(
+              payload,
+              parserSettings: settings,
+              client: client,
+            )
+            .toList();
+
+        expect(events.whereType<ParseDone>(), isEmpty);
+        final message = events.whereType<ParseError>().single.message;
+        expect(message, contains('401'));
+        expectRedacted(message);
+      });
+
+      test(
+        'redacts the whole quoted key in a JSON authorization echo',
+        () async {
+          const quotedKey = 'sk-prefix-quoted"suffix-sensitive';
+          const quotedSettings = SchoolImportParserSettings(
+            source: schoolImportParserSourceCustomOpenAi,
+            customBaseUrl: baseUrl,
+            customApiKey: quotedKey,
+            customModel: 'test-model',
+          );
+          final client = _StreamingClient((request) async {
+            expect(request.headers['Authorization'], 'Bearer $quotedKey');
+            final body = jsonEncode({
+              'Authorization': 'Bearer $quotedKey',
+              'message': 'denied',
+            });
+            return http.StreamedResponse(Stream.value(utf8.encode(body)), 401);
+          });
+          final events = await const SchoolImportApi()
+              .importCurrentPageStream(
+                payload,
+                parserSettings: quotedSettings,
+                client: client,
+              )
+              .toList();
+
+          expect(events.whereType<ParseDone>(), isEmpty);
+          final message = events.whereType<ParseError>().single.message;
+          expect(message, isNot(contains('sk-prefix-quoted')));
+          expect(message, isNot(contains('suffix-sensitive')));
+          expect(message, contains('denied'));
+          expect(
+            utf8.encode(message).length,
+            lessThanOrEqualTo(SchoolImportApi.maxErrorMessageBytes),
+          );
+        },
+      );
+
+      test('redacts a truncated JSON authorization echo completely', () async {
+        final longKey =
+            'sk-prefix-quoted"suffix-sensitive,${'repeated-secret' * 400}';
+        final longKeySettings = SchoolImportParserSettings(
+          source: schoolImportParserSourceCustomOpenAi,
+          customBaseUrl: baseUrl,
+          customApiKey: longKey,
+          customModel: 'test-model',
+        );
+        final client = _StreamingClient((request) async {
+          expect(request.headers['Authorization'], 'Bearer $longKey');
+          final body = jsonEncode({'Authorization': 'Bearer $longKey'});
+          return http.StreamedResponse(Stream.value(utf8.encode(body)), 401);
+        });
+        final events = await const SchoolImportApi()
+            .importCurrentPageStream(
+              payload,
+              parserSettings: longKeySettings,
+              client: client,
+            )
+            .toList();
+
+        expect(events.whereType<ParseDone>(), isEmpty);
+        final message = events.whereType<ParseError>().single.message;
+        expect(message, contains('401'));
+        expect(message, isNot(contains('suffix-sensitive')));
+        expect(message, isNot(contains('repeated-secret')));
+        expect(message, contains('[response body truncated]'));
+        expect(
+          utf8.encode(message).length,
+          lessThanOrEqualTo(SchoolImportApi.maxErrorMessageBytes),
+        );
+      });
+
+      for (final streamingResponse in [false, true]) {
+        test(
+          'redacts credentials from ${streamingResponse ? 'SSE' : 'HTTP'} stream errors',
+          () async {
+            final client = _StreamingClient((request) async {
+              final detail = 'Rejected $key at ${request.url}';
+              final body = streamingResponse
+                  ? 'data: ${jsonEncode({
+                      'error': {'message': detail},
+                    })}\n\n'
+                  : detail;
+              return http.StreamedResponse(
+                Stream.value(utf8.encode(body)),
+                streamingResponse ? 200 : 401,
+              );
+            });
+            final events = await const SchoolImportApi()
+                .importCurrentPageStream(
+                  payload,
+                  parserSettings: settings,
+                  client: client,
+                )
+                .toList();
+            expect(events.whereType<ParseDone>(), isEmpty);
+            expectRedacted(events.whereType<ParseError>().single.message);
+          },
+        );
+      }
+    });
+
     test('generic transport exception strings remain bounded', () async {
       final client = _StreamingClient((request) async {
         throw StateError('连接异常详情' * 4000);

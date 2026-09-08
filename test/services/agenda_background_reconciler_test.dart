@@ -87,6 +87,183 @@ void main() {
   );
 
   test(
+    'a recreated background service rebuilds lost platform alarms',
+    () async {
+      final anchor = DateTime(2026, 9, 2, 8);
+      final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+      final data = _data();
+      final firstGateway = MemoryAgendaNotificationGateway();
+      final firstService = AgendaNotificationService(
+        enabled: true,
+        gateway: firstGateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      await firstService.reconcile(data, anchor: anchor);
+      final original = firstGateway.scheduled.values.single;
+      firstService.dispose();
+
+      // The runtime and AppData survive, but the replacement process has no
+      // in-memory service state and the platform has lost its alarm queue.
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      addTearDown(service.dispose);
+      final result = await AgendaBackgroundReconciler(
+        notificationService: service,
+        loadData: () async =>
+            AgendaBackgroundDataSnapshot(data: data, canWrite: true),
+        clock: () => anchor,
+      ).reconcile();
+
+      expect(result.succeeded, isTrue);
+      expect(result.shouldRetry, isFalse);
+      expect(gateway.scheduled, hasLength(1));
+      expect(gateway.scheduled.values.single.fireAt, original.fireAt);
+      expect(gateway.scheduled.values.single.key, original.key);
+      final diagnostics = await service.readNotificationDiagnostics();
+      expect(diagnostics?.mode, AgendaNotificationReconcileMode.recovery);
+      expect(diagnostics?.origin, AgendaNotificationReconcileOrigin.background);
+      expect(diagnostics?.result, AgendaNotificationDiagnosticResult.success);
+    },
+  );
+
+  for (final capability
+      in <String, void Function(MemoryAgendaNotificationGateway, bool)>{
+        'notification permission': (gateway, value) =>
+            gateway.permissionGranted = value,
+        'exact alarm permission': (gateway, value) =>
+            gateway.exactAlarmGranted = value,
+        'battery allowlist': (gateway, value) =>
+            gateway.batteryOptimizationGranted = value,
+      }.entries) {
+    test(
+      'background recreation rechecks revoked and restored ${capability.key}',
+      () async {
+        final anchor = DateTime(2026, 9, 2, 8);
+        final runtime = MemoryAgendaNotificationRuntimeStore(
+          clock: () => anchor,
+        );
+        final gateway = MemoryAgendaNotificationGateway();
+        final data = _data();
+        final original = AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          runtimeStore: runtime,
+          now: () => anchor,
+        );
+        await original.reconcile(data, anchor: anchor);
+        expect(gateway.scheduled, hasLength(1));
+        original.dispose();
+        capability.value(gateway, false);
+
+        Future<AgendaBackgroundReconcileResult> restart() async {
+          final service = AgendaNotificationService(
+            enabled: true,
+            gateway: gateway,
+            runtimeStore: runtime,
+            now: () => anchor,
+          );
+          try {
+            return await AgendaBackgroundReconciler(
+              notificationService: service,
+              loadData: () async =>
+                  AgendaBackgroundDataSnapshot(data: data, canWrite: true),
+              clock: () => anchor,
+            ).reconcile();
+          } finally {
+            service.dispose();
+          }
+        }
+
+        final blocked = await restart();
+        expect(blocked.shouldRetry, isFalse);
+        expect(blocked.nextRenewalAt, isNull);
+        expect(gateway.scheduled, isEmpty);
+        expect(
+          runtime.diagnostics?.result,
+          AgendaNotificationDiagnosticResult.blocked,
+        );
+        expect(
+          runtime.diagnostics?.coverage,
+          AgendaNotificationCoverage.blocked,
+        );
+
+        capability.value(gateway, true);
+        final restored = await restart();
+        expect(restored.succeeded, isTrue);
+        expect(restored.shouldRetry, isFalse);
+        expect(gateway.scheduled, hasLength(1));
+        expect(
+          gateway.scheduled.values.single.fireAt,
+          DateTime(2026, 9, 2, 9, 45),
+        );
+        expect(
+          runtime.diagnostics?.result,
+          AgendaNotificationDiagnosticResult.success,
+        );
+        expect(runtime.diagnostics?.coverage, AgendaNotificationCoverage.ready);
+      },
+    );
+  }
+
+  test(
+    'a background retry after recreation replaces the failed diagnostic',
+    () async {
+      var anchor = DateTime(2026, 9, 2, 8);
+      final runtime = MemoryAgendaNotificationRuntimeStore(clock: () => anchor);
+      final failedService = AgendaNotificationService(
+        enabled: true,
+        gateway: _FailingGateway(),
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      final failed = await AgendaBackgroundReconciler(
+        notificationService: failedService,
+        loadData: () async =>
+            AgendaBackgroundDataSnapshot(data: _data(), canWrite: true),
+        clock: () => anchor,
+      ).reconcile();
+      expect(failed.shouldRetry, isTrue);
+      expect(
+        runtime.diagnostics?.result,
+        AgendaNotificationDiagnosticResult.failed,
+      );
+      failedService.dispose();
+
+      anchor = anchor.add(const Duration(minutes: 15));
+      final gateway = MemoryAgendaNotificationGateway();
+      final recoveredService = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      addTearDown(recoveredService.dispose);
+      final recovered = await AgendaBackgroundReconciler(
+        notificationService: recoveredService,
+        loadData: () async =>
+            AgendaBackgroundDataSnapshot(data: _data(), canWrite: true),
+        clock: () => anchor,
+      ).reconcile();
+
+      expect(recovered.succeeded, isTrue);
+      expect(recovered.shouldRetry, isFalse);
+      expect(gateway.scheduled, hasLength(1));
+      expect(
+        runtime.diagnostics?.result,
+        AgendaNotificationDiagnosticResult.success,
+      );
+      expect(runtime.diagnostics?.recordedAt, anchor);
+      expect(runtime.diagnostics?.error, isNull);
+    },
+  );
+
+  test(
     'reprojects the latest snapshot when durable data changes mid-pass',
     () async {
       final anchor = DateTime(2026, 9, 2, 8);

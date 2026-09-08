@@ -670,6 +670,45 @@ void main() {
     );
 
     test(
+      'refreshes the timezone without reinitializing the Android plugin',
+      () async {
+        var zone = 'Asia/Shanghai';
+        var zoneReads = 0;
+        messenger.setMockMethodCallHandler(_timezoneChannel, (call) async {
+          expect(call.method, 'getLocalTimezone');
+          zoneReads += 1;
+          return zone;
+        });
+        final gateway = FlutterAgendaNotificationGateway(enabled: true);
+        final fireAt = DateTime.utc(2030, 1, 2, 8);
+        await gateway.initialize(onTap: (_) {});
+        await gateway.schedule(
+          _platformRequest(key: 'shanghai', fireAt: fireAt),
+          exact: true,
+        );
+        expect(
+          platform.schedules.single.scheduledDate.location.name,
+          'Asia/Shanghai',
+        );
+        expect(platform.schedules.single.scheduledDate.hour, 16);
+
+        zone = 'Europe/Berlin';
+        await gateway.initialize(onTap: (_) {});
+        await gateway.schedule(
+          _platformRequest(key: 'berlin', fireAt: fireAt),
+          exact: true,
+        );
+        final rescheduled = platform.schedules.last.scheduledDate;
+        expect(rescheduled.location.name, 'Europe/Berlin');
+        expect(rescheduled.hour, 9);
+        expect(rescheduled.toUtc(), fireAt);
+        expect(zoneReads, 2);
+        expect(platform.initializeCount, 1);
+        expect(platform.launchDetailsCount, 1);
+      },
+    );
+
+    test(
       'forwards a notification body tap that launched a cold process',
       () async {
         platform.launchDetails = const NotificationAppLaunchDetails(
