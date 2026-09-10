@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,17 +16,24 @@ import 'package:sked/services/export_service.dart';
 import 'package:sked/services/privacy_service.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
+import 'package:sked/widgets/app_modal_sheet.dart';
+import 'package:flutter/services.dart';
 
 class _MemorySchoolSiteStore extends SchoolSiteStore {
   _MemorySchoolSiteStore(this.source) : super.base();
 
   String? source;
+  bool failNext = false;
 
   @override
   Future<String?> load() async => source;
 
   @override
   Future<void> save(String source) async {
+    if (failNext) {
+      failNext = false;
+      throw StateError('retryable site write');
+    }
     this.source = source;
   }
 
@@ -192,6 +198,124 @@ Future<void> _pumpRouteTransition(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'site edit stays beside its list and keeps its draft across rotation',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1280, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final semantics = tester.ensureSemantics();
+      try {
+        final provider = await _createProvider();
+        addTearDown(provider.dispose);
+        final store = _MemorySchoolSiteStore(
+          encodeSchoolSites(const [
+            SchoolSite(
+              name: 'Original school',
+              loginUrl: 'https://original.example/login',
+            ),
+            SchoolSite(
+              name: 'Other school',
+              loginUrl: 'https://other.example/login',
+            ),
+          ]),
+        );
+        await _pumpSchoolSitesPage(
+          tester,
+          provider,
+          siteService: SchoolSiteService(store: store),
+        );
+        final l = AppLocalizations.of(
+          tester.element(find.byType(SchoolSitesPage)),
+        );
+        await tester.tap(find.byTooltip(l.schoolSitesEdit).first);
+        await tester.pumpAndSettle();
+        final fields = find.descendant(
+          of: find.byType(AppSheetScaffold),
+          matching: find.byType(TextField),
+        );
+        final titleElement = tester.element(fields.first);
+        expect(tester.getTopLeft(fields.first).dx, greaterThan(280));
+        expect(find.bySemanticsLabel(RegExp('Other school')), findsWidgets);
+        await tester.enterText(fields.first, 'Preserved school draft');
+        tester.view.physicalSize = const Size(360, 800);
+        await tester.pumpAndSettle();
+        expect(tester.element(fields.first), same(titleElement));
+        expect(find.bySemanticsLabel(RegExp('Other school')), findsNothing);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(find.text(l.unsavedChangesMessage), findsOneWidget);
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text(l.cancel),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextField>(fields.first).controller!.text,
+          'Preserved school draft',
+        );
+        tester.view.physicalSize = const Size(1280, 800);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l.save));
+        await tester.pumpAndSettle();
+        expect(
+          decodeSchoolSitesStrict(store.source!).first.name,
+          'Preserved school draft',
+        );
+        expect(find.byType(AppSheetScaffold), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
+  testWidgets('site form validates and retains its draft after a failed save', (
+    tester,
+  ) async {
+    final store = _MemorySchoolSiteStore('[]');
+    final service = SchoolSiteService(store: store);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SchoolSitesPage(siteService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l = AppLocalizations.of(tester.element(find.byType(SchoolSitesPage)));
+    await tester.tap(find.byTooltip(l.schoolSitesAdd));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l.save));
+    await tester.pumpAndSettle();
+    expect(find.text(l.schoolSitesFormInvalid), findsOneWidget);
+    final fields = find.descendant(
+      of: find.byType(AppSheetScaffold),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(fields.at(0), 'Retained school');
+    await tester.enterText(fields.at(1), 'https://school.example/login');
+    store.failNext = true;
+    await tester.tap(find.text(l.save));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppSheetScaffold), findsOneWidget);
+    expect(
+      tester.widget<TextField>(fields.at(0)).controller!.text,
+      'Retained school',
+    );
+    await tester.tap(find.text(l.save));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppSheetScaffold), findsNothing);
+    expect(
+      decodeSchoolSitesStrict(store.source!).single.name,
+      'Retained school',
+    );
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('add school entry ignores rapid duplicate taps', (tester) async {
@@ -205,7 +329,7 @@ void main() {
     await tester.tap(addButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(AppSheetScaffold), findsOneWidget);
     expect(find.text('Add school'), findsWidgets);
   });
 
@@ -601,7 +725,7 @@ void main() {
     ]);
     await lease.release();
 
-    expect(find.text('Existing'), findsOneWidget);
+    expect(find.text('Existing'), findsNWidgets(2));
     final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
     await tester.tap(find.byTooltip(l10n.importExport));
     await tester.pumpAndSettle();
@@ -611,7 +735,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Existing'), findsNothing);
-    expect(find.text('Restored'), findsOneWidget);
+    expect(find.text('Restored'), findsNWidgets(2));
     expect(decodeSchoolSitesStrict(store.source!).single.name, 'Restored');
   });
 }

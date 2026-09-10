@@ -447,6 +447,8 @@ void main() {
       120,
       scrollable: find.byType(Scrollable).first,
     );
+    await Scrollable.ensureVisible(tester.element(gridMenu), alignment: 0.4);
+    await tester.pumpAndSettle();
     await tester.tap(gridMenu);
     await tester.pumpAndSettle();
     await tester.tap(find.text('30 min').last);

@@ -7,13 +7,16 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/ui_command.dart';
+import '../widgets/workspace_navigation.dart';
+import '../widgets/app_layout_tokens.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 import 'general_schedule_home_screen.dart';
 import 'home_screen.dart';
 
-const double _compactNavigationBreakpoint = 600;
+const double _compactNavigationBreakpoint = AppBreakpoints.compact;
 // Medium windows keep a compact rail. A full drawer only becomes useful once
 // the workspace still has substantial room beside its 240 dp navigation.
-const double _permanentDrawerBreakpoint = 1200;
+const double _permanentDrawerBreakpoint = AppBreakpoints.large;
 const double _compactRailWidth = 80;
 // Keep the permanent drawer close to Material's compact width.  Destination
 // labels below are flexible so longer localizations never create a layout
@@ -172,7 +175,11 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         final supportsCollapsibleNavigation =
             width >= _permanentDrawerBreakpoint;
         final hideWorkspaceNavigation =
-            widget.provider.hideHomeWorkspaceNavigation;
+            widget.provider.hideHomeWorkspaceNavigation ||
+            !widget.provider.hasMultipleWorkspaces ||
+            (WorkbenchChromeMetrics.of(context).desktop ||
+                (width >= AppBreakpoints.expanded &&
+                    MediaQuery.textScalerOf(context).scale(14) / 14 <= 1.5));
         final navigationCollapsed =
             supportsCollapsibleNavigation &&
             widget.provider.homeWorkspaceNavigationCollapsed;
@@ -192,40 +199,56 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             !uiCommandBusy &&
             !_navigationToggleInFlight &&
             !_settingsOpen;
-        final workspaceStack = _AdaptiveWorkspaceStack(
-          key: _workspaceStackKey,
-          selectedIndex: selectedIndex,
-          enabled: widget.enabled,
-          busy: uiCommandBusy,
-          studentPreferredFocusNode: _studentWeekShortcutFocusNode,
-          studentBuilder: (active, interactive) => HomeScreen(
-            key: const ValueKey('student-home'),
-            embedded: true,
-            active: active,
-            interactive: interactive,
-            weekShortcutFocusNode: _studentWeekShortcutFocusNode,
-            showSettingsAction: showWorkspaceSettingsAction,
-            settingsEnabled: compactSettingsEnabled,
-            settingsAction: showWorkspaceSettingsAction
-                ? _openSettingsFromWorkspace
-                : null,
-            settingsFocusNode: showWorkspaceSettingsAction && active
-                ? _settingsFocusNode
-                : null,
-          ),
-          generalBuilder: (active, interactive) => GeneralScheduleHomeScreen(
-            key: const ValueKey('general-home'),
-            embedded: true,
-            active: active,
-            interactive: interactive,
-            showSettingsAction: showWorkspaceSettingsAction,
-            settingsEnabled: compactSettingsEnabled,
-            settingsAction: showWorkspaceSettingsAction
-                ? _openSettingsFromWorkspace
-                : null,
-            settingsFocusNode: showWorkspaceSettingsAction && active
-                ? _settingsFocusNode
-                : null,
+        final workspaceStack = WorkspaceNavigationScope(
+          enabled: compactSettingsEnabled,
+          integrated:
+              WorkbenchChromeMetrics.of(context).desktop ||
+              (width >= AppBreakpoints.expanded &&
+                  MediaQuery.textScalerOf(context).scale(14) / 14 <= 1.5),
+          onSelect: (mode) =>
+              unawaited(_selectWorkspace(mode == AppMode.student ? 0 : 1)),
+          onToggleResources: () => unawaited(_toggleWorkspaceNavigation()),
+          child: _AdaptiveWorkspaceStack(
+            key: _workspaceStackKey,
+            selectedIndex: selectedIndex,
+            enabled: widget.enabled,
+            busy: uiCommandBusy,
+            studentPreferredFocusNode: _studentWeekShortcutFocusNode,
+            studentBuilder: (active, interactive) =>
+                !widget.provider.isWorkspaceEnabled(AppMode.student)
+                ? const SizedBox.shrink()
+                : HomeScreen(
+                    key: const ValueKey('student-home'),
+                    embedded: true,
+                    active: active,
+                    interactive: interactive,
+                    weekShortcutFocusNode: _studentWeekShortcutFocusNode,
+                    showSettingsAction: showWorkspaceSettingsAction,
+                    settingsEnabled: compactSettingsEnabled,
+                    settingsAction: showWorkspaceSettingsAction
+                        ? _openSettingsFromWorkspace
+                        : null,
+                    settingsFocusNode: showWorkspaceSettingsAction && active
+                        ? _settingsFocusNode
+                        : null,
+                  ),
+            generalBuilder: (active, interactive) =>
+                !widget.provider.isWorkspaceEnabled(AppMode.general)
+                ? const SizedBox.shrink()
+                : GeneralScheduleHomeScreen(
+                    key: const ValueKey('general-home'),
+                    embedded: true,
+                    active: active,
+                    interactive: interactive,
+                    showSettingsAction: showWorkspaceSettingsAction,
+                    settingsEnabled: compactSettingsEnabled,
+                    settingsAction: showWorkspaceSettingsAction
+                        ? _openSettingsFromWorkspace
+                        : null,
+                    settingsFocusNode: showWorkspaceSettingsAction && active
+                        ? _settingsFocusNode
+                        : null,
+                  ),
           ),
         );
 

@@ -10,6 +10,7 @@ import '../l10n/app_locale.dart' as app_locale;
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
+import '../services/agenda_runtime_mutation_lock.dart';
 import '../services/general_calendar_service.dart';
 import '../services/general_calendar_ics_service.dart';
 import '../services/general_occurrence_cache.dart';
@@ -36,6 +37,10 @@ const _importExportService = ImportExportService();
 const _studentTimetableService = student_timetable.StudentTimetableService();
 
 enum AppImportMode { replaceAll, addAll }
+
+class WorkspaceChangeCancelledException implements Exception {
+  const WorkspaceChangeCancelledException();
+}
 
 class AppBackupRestoreInProgressException implements Exception {
   const AppBackupRestoreInProgressException();
@@ -90,6 +95,29 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   List<String> _journalRecoveryArtifacts = const [];
   String? _corruptAppBackupRestoreJournalArtifact;
 
+  final Map<AppMode, Set<Future<bool> Function()>> _workspaceExitGuards = {};
+
+  VoidCallback registerWorkspaceExitGuard(
+    AppMode mode,
+    Future<bool> Function() guard,
+  ) {
+    (_workspaceExitGuards[mode] ??= {}).add(guard);
+    return () => _workspaceExitGuards[mode]?.remove(guard);
+  }
+
+  Future<bool> _prepareWorkspaceDisable(AppMode mode) async {
+    for (final guard in [...?_workspaceExitGuards[mode]]) {
+      if (!await guard()) return false;
+    }
+    return true;
+  }
+
+  void requireWorkspaceEnabled(AppMode mode) {
+    if (!_appData.isWorkspaceEnabled(mode)) {
+      throw StateError('Workspace is disabled: ${mode.value}');
+    }
+  }
+
   AppData get _appData;
   set _appData(AppData value);
   void _replaceRuntimeCustomSchoolImportApiKey(String value);
@@ -109,6 +137,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   set _storagePath(String? value);
 
   AppRepository get _repository;
+  Future<void> Function(Future<void> Function()) get _workspaceMutationLock;
   String Function() get _systemLocaleCodeResolver;
   SettingsService get _settings;
   PrivacyService get _privacy;
@@ -378,6 +407,8 @@ class TimetableProvider extends _TimetableProviderBase
     SchoolSiteService? schoolSiteService,
     AppBackupRestoreJournal? backupRestoreJournal,
     @visibleForTesting Duration? uiStateSaveDelay,
+    @visibleForTesting
+    Future<void> Function(Future<void> Function())? workspaceMutationLock,
   }) : _repository =
            repository ?? AppRepository(storage: storage ?? TimetableStorage()),
        _systemLocaleCodeResolver =
@@ -388,6 +419,8 @@ class TimetableProvider extends _TimetableProviderBase
        _schoolSites = schoolSiteService ?? SchoolSiteService(),
        _backupRestoreJournal =
            backupRestoreJournal ?? AppBackupRestoreJournal(),
+       _workspaceMutationLock =
+           workspaceMutationLock ?? withAgendaRuntimeMutationLock<void>,
        _uiStateSaveDelay = uiStateSaveDelay ?? _defaultUiStateSaveDelay;
 
   @override
@@ -408,6 +441,9 @@ class TimetableProvider extends _TimetableProviderBase
   final GeneralOccurrenceCache _generalOccurrenceCache =
       GeneralOccurrenceCache();
 
+  @override
+  final Future<void> Function(Future<void> Function()) _workspaceMutationLock;
+
   AppData _appDataValue = buildInitialAppData(buildDefaultPeriodTimes());
   var _appDataMutationEpoch = 0;
   // A mode switch is persisted as a single command.  Keep the mode exposed to
@@ -416,6 +452,7 @@ class TimetableProvider extends _TimetableProviderBase
   // privacy/update refresh) can make MyApp rebuild with the target mode's
   // theme while the write is still pending.
   AppMode? _visibleActiveModeOverride;
+  Set<AppMode>? _visibleEnabledWorkspacesOverride;
   Future<void>? _modeSwitchInFlight;
   Completer<void>? _modeSwitchBarrier;
 
@@ -561,6 +598,103 @@ class TimetableProvider extends _TimetableProviderBase
   String? get ignoredUpdateVersion => _appData.ignoredUpdateVersion;
   String? get availableUpdateVersion => _appData.availableUpdateVersion;
 
+  AppData get committedAppData => _repository.persisted ?? _appData;
+
+  Set<AppMode> get enabledWorkspaces =>
+      _visibleEnabledWorkspacesOverride ?? _appData.enabledWorkspaces;
+  bool isWorkspaceEnabled(AppMode mode) => enabledWorkspaces.contains(mode);
+  bool get hasMultipleWorkspaces => enabledWorkspaces.length > 1;
+
+  Future<void> setWorkspaceEnabled(AppMode mode, bool enabled) async {
+    while (_modeSwitchInFlight != null) {
+      try {
+        await _modeSwitchInFlight;
+      } catch (_) {
+        /* The initiating caller owns failure. */
+      }
+    }
+    if (_appData.isWorkspaceEnabled(mode) == enabled) return;
+    if (!enabled && _appData.enabledWorkspaces.length == 1) {
+      throw StateError('At least one workspace must remain enabled.');
+    }
+    Future<void> change() async {
+      if (!enabled && !await _prepareWorkspaceDisable(mode)) return;
+      await _workspaceMutationLock(() async {
+        // Guards may flush edits or a restore may finish while awaiting the
+        // runtime lock. Derive availability from the current snapshot, not the
+        // state from before those asynchronous boundaries.
+        if (!enabled && mode == AppMode.student) {
+          while (true) {
+            final pending = _pendingSecretWrite;
+            await pending;
+            if (identical(pending, _pendingSecretWrite)) break;
+          }
+        }
+        await _commitWorkspaceAvailability(mode, enabled);
+      });
+    }
+
+    final operation = change();
+    _modeSwitchInFlight = operation;
+    try {
+      await operation;
+    } finally {
+      if (identical(_modeSwitchInFlight, operation)) _modeSwitchInFlight = null;
+    }
+  }
+
+  Future<void> _commitWorkspaceAvailability(
+    AppMode changed,
+    bool enabled,
+  ) async {
+    _ensureAppBackupRestoreMutationAllowed();
+    final previous = _appData;
+    if (previous.isWorkspaceEnabled(changed) == enabled) return;
+    final next = {...previous.enabledWorkspaces};
+    enabled ? next.add(changed) : next.remove(changed);
+    if (next.isEmpty) {
+      throw StateError('At least one workspace must remain enabled.');
+    }
+    final barrier = Completer<void>();
+    _modeSwitchBarrier = barrier;
+    _visibleActiveModeOverride = previous.activeMode;
+    _visibleEnabledWorkspacesOverride = previous.enabledWorkspaces;
+    _appData = _appData.copyWith(
+      enabledWorkspaces: next,
+      activeMode: next.contains(previous.activeMode)
+          ? previous.activeMode
+          : next.single,
+      workspaceReminderNotBefore: {
+        ...previous.workspaceReminderNotBefore,
+        if (enabled) changed: DateTime.now().toUtc(),
+      },
+    );
+    try {
+      await _saveAndNotify(
+        notify: false,
+        allowDuringModeSwitch: true,
+        rollbackOnFailure: false,
+      );
+    } catch (_) {
+      _restoreAppDataAfterPersistenceFailure(
+        _appData.copyWith(
+          enabledWorkspaces: previous.enabledWorkspaces,
+          activeMode: previous.activeMode,
+          workspaceReminderNotBefore: previous.workspaceReminderNotBefore,
+        ),
+      );
+      rethrow;
+    } finally {
+      _visibleActiveModeOverride = null;
+      _visibleEnabledWorkspacesOverride = null;
+      if (!_isDisposed) notifyListeners();
+      if (identical(_modeSwitchBarrier, barrier)) {
+        _modeSwitchBarrier = null;
+        barrier.complete();
+      }
+    }
+  }
+
   AppMode get activeMode => _visibleActiveModeOverride ?? _appData.activeMode;
   bool get isGeneralMode => activeMode == AppMode.general;
   bool get isStudentMode => activeMode == AppMode.student;
@@ -580,6 +714,7 @@ class TimetableProvider extends _TimetableProviderBase
       }
     }
 
+    requireWorkspaceEnabled(mode);
     if (activeMode == mode) return;
     final previousMode = activeMode;
     final operation = _switchModeTransaction(mode, previousMode);
@@ -729,6 +864,26 @@ class TimetableProvider extends _TimetableProviderBase
     }
   }
 
+  /// User-requested close may fail or be cancelled. Unlike teardown, errors
+  /// must reach the UI before the native window is destroyed.
+  Future<bool> prepareForWindowClose() async {
+    if (isDataClearCommitted) {
+      await quiesceForShutdown();
+      return true;
+    }
+    if (_appBackupRestoreReservationCount > 0 || isDataClearActive) {
+      return false;
+    }
+    for (final mode in [...enabledWorkspaces]) {
+      if (!await _prepareWorkspaceDisable(mode)) return false;
+    }
+    await flushPendingUiStateSaves();
+    await _repository.waitForPendingWrites(propagateErrors: true);
+    await _pendingSecretWrite;
+    await _schoolSites.waitForPendingOperations();
+    return true;
+  }
+
   Future<void> quiesceForShutdown() async {
     final dataClear = _dataClearInFlight;
     if (dataClear != null) {
@@ -812,6 +967,7 @@ class TimetableProvider extends _TimetableProviderBase
     required Future<void> Function() exit,
   }) async {
     _dataClearReserved = true;
+    if (!_isDisposed) notifyListeners();
     final token = _reserveAppBackupRestore();
     final schoolSiteLeaseFuture = _schoolSites.reserveRestore();
     SchoolSiteRestoreLease? schoolSiteLease;
@@ -839,6 +995,7 @@ class TimetableProvider extends _TimetableProviderBase
         } finally {
           _releaseAppBackupRestore();
           _dataClearReserved = false;
+          if (!_isDisposed) notifyListeners();
         }
       }
     }

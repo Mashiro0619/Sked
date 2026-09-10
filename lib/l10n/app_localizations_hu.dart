@@ -1281,11 +1281,11 @@ class AppLocalizationsHu extends AppLocalizations {
   String get schoolWebImportSuccess => 'Web menetrend importált';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API configuration';
+  String get schoolImportParserSettingsTitle => 'Órarend-feldolgozó API';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+      'Az órarendek importálásához használt OpenAI-kompatibilis API beállítása. Ez nem a csevegőasszisztens beállítása.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser forrás';
@@ -2194,7 +2194,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
-      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
+      'A munkaterületek navigációjának elrejtése. A főképernyő munkaterület-menüjében továbbra is válthat.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';
@@ -2752,7 +2752,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+      'Az emlékeztetők a rendszerengedélyektől és a háttérben futástól függenek. A kikapcsolás, az idő módosítása vagy a rendszer korlátozásai késést okozhatnak.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';
@@ -2879,4 +2879,133 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get notificationPlatformUnsupported =>
       'This platform does not provide native notifications.';
+
+  @override
+  String get workspaceFeatures => 'Funkciók kezelése';
+
+  @override
+  String get workspaceBoth => 'Órarend és naptár';
+
+  @override
+  String get workspaceOnlyStudent => 'Csak órarend';
+
+  @override
+  String get workspaceOnlyGeneral => 'Csak naptár';
+
+  @override
+  String get workspaceDisableTitle => 'Kikapcsolja ezt a munkaterületet?';
+
+  @override
+  String get workspaceDisableMessage =>
+      'Az adatok és beállítások megmaradnak. A funkciók és emlékeztetők leállnak, amíg itt újra be nem kapcsolja.';
+
+  @override
+  String get workspaceEnableHint =>
+      'Válassza ki a használt funkciókat. Legalább egynek bekapcsolva kell maradnia.';
+
+  @override
+  String get workspaceLastRequired =>
+      'Legalább egy munkaterületnek bekapcsolva kell maradnia.';
+
+  @override
+  String get workspaceReminderCleanupFailed =>
+      'A munkaterület ki van kapcsolva, de az emlékeztetőket nem sikerült eltávolítani. Próbálja újra az értesítések helyreállítását.';
+
+  @override
+  String get settingsSearch => 'Beállítások keresése';
+
+  @override
+  String get settingsNoResults => 'Nincs megfelelő beállítás';
+
+  @override
+  String get settingsDataPrivacy => 'Adatok és adatvédelem';
+
+  @override
+  String get workspacePreferences => 'Megjelenítés és kezelés';
+
+  @override
+  String get workspaceManage => 'Kezelés';
+
+  @override
+  String get selectedDayAgenda => 'Kiválasztott nap';
+
+  @override
+  String get notificationTroubleshooting => 'Engedélyek és hibaelhárítás';
+
+  @override
+  String get settingsConnection => 'Kapcsolat';
+
+  @override
+  String get settingsAdvanced => 'Speciális';
+
+  @override
+  String get unsavedChangesMessage =>
+      'Nem mentett módosításai vannak. Elveti őket és kilép?';
+
+  @override
+  String get backupWorkspaceSelection =>
+      'A teljes biztonsági másolat az adatokat és a bekapcsolt munkaterületek kiválasztását is tartalmazza.';
+
+  @override
+  String get assistantLayoutPreview => 'AI · Layout preview';
+
+  @override
+  String get assistantSelectionContext =>
+      'Uses the current selection as context';
+
+  @override
+  String get assistantPreviewDescription =>
+      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+
+  @override
+  String get assistantDraftLabel => 'Message draft';
+
+  @override
+  String get assistantPreviewNoSend =>
+      'Layout preview only. Nothing will be sent or changed.';
+
+  @override
+  String get resizePanel => 'Resize panel';
+
+  @override
+  String get minimizeWindow => 'Minimize';
+
+  @override
+  String get maximizeWindow => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get closeWindow => 'Close window';
+
+  @override
+  String get courseSystemReminder => 'System reminder';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return 'Use default ($reminder)';
+  }
+
+  @override
+  String get courseReminderMasterOff =>
+      'System reminders are off in notification settings. This course preference can still be saved.';
+
+  @override
+  String get courseReminderDefaultOff =>
+      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+
+  @override
+  String get courseReminderDeliveryHint =>
+      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+
+  @override
+  String get courseReminderPermissionUnknown =>
+      'System notification status has not been checked. Review notification settings before relying on reminders.';
+
+  @override
+  String get courseReminderMinutesLabel => 'Minutes before class';
+
+  @override
+  String get exportAction => 'Export';
 }

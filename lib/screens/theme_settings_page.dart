@@ -1,4 +1,11 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/workbench_form_row.dart';
+
 import 'dart:async';
+import 'dart:convert';
+
+import '../widgets/adaptive_navigation_scope.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -7,12 +14,15 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../providers/workspace_theme_target.dart';
+import '../theme/app_theme.dart';
+import '../widgets/settings_preview_layout.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/editor_exit_guard.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
-import '../widgets/sked_expressive_components.dart';
 import '../widgets/ui_command.dart';
 
 part 'theme_settings_color_sections.dart';
@@ -70,7 +80,7 @@ int _derivedOutlineColorValue(int themeSeedColorValue) {
 
 int _effectiveUiColorValue(
   BuildContext context,
-  TimetableProvider provider,
+  WorkspaceThemeTarget provider,
   String key,
 ) {
   final colorScheme = Theme.of(context).colorScheme;
@@ -100,7 +110,7 @@ String _uiColorLabel(BuildContext context, String key) {
 
 int _effectiveGeneralMonthTextColorValue(
   BuildContext context,
-  TimetableProvider provider,
+  WorkspaceThemeTarget provider,
   String key,
 ) {
   final customValue = provider.colorfulUiColorValues[key];
@@ -155,193 +165,57 @@ class _SegmentOption {
   final String label;
 }
 
-class _ResponsiveSegmentedButton extends StatelessWidget {
-  const _ResponsiveSegmentedButton({
+class _AppearanceChoiceField extends StatelessWidget {
+  const _AppearanceChoiceField({
     super.key,
     required this.segments,
     required this.selected,
     required this.onSelectionChanged,
     this.choiceListKey,
   });
-
   final List<_SegmentOption> segments;
   final Set<String> selected;
   final ValueChanged<Set<String>> onSelectionChanged;
   final Key? choiceListKey;
-
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final theme = Theme.of(context);
-        final textStyle = theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        );
-        final textScaler = MediaQuery.textScalerOf(context);
-        final direction = Directionality.of(context);
-        final segmentWidth = constraints.maxWidth / segments.length;
-        const horizontalLabelPadding = 8.0;
-        final labelsFit =
-            constraints.maxWidth.isFinite &&
-            segments.every((segment) {
-              final painter = TextPainter(
-                text: TextSpan(text: segment.label, style: textStyle),
-                textDirection: direction,
-                textScaler: textScaler,
-                locale: Localizations.maybeLocaleOf(context),
-                maxLines: 1,
-              )..layout();
-              return painter.width <=
-                  (segmentWidth - horizontalLabelPadding).clamp(
-                    0.0,
-                    double.infinity,
-                  );
-            });
-        final buttonSegments = [
-          for (final segment in segments)
-            ButtonSegment<String>(
-              value: segment.value,
-              label: Text(
-                segment.label,
-                maxLines: labelsFit ? 1 : null,
-                softWrap: !labelsFit,
-                overflow: labelsFit ? TextOverflow.clip : null,
-                textAlign: TextAlign.center,
-              ),
-              tooltip: segment.label,
-            ),
-        ];
-        final style = ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-          ),
-          textStyle: WidgetStatePropertyAll(textStyle),
-        );
-        if (!labelsFit) {
-          return _ConnectedSingleChoiceList(
-            key: choiceListKey,
-            segments: segments,
-            selected: selected,
-            onSelectionChanged: onSelectionChanged,
-          );
-        }
-        return SkedExpressiveSegmentedButton<String>(
-          expandedInsets: EdgeInsets.zero,
-          segments: buttonSegments,
-          selected: selected,
-          showSelectedIcon: false,
-          movingIndicator: true,
-          movingIndicatorFillsSegment: true,
-          style: style,
-          onSelectionChanged: onSelectionChanged,
-        );
-      },
-    );
-  }
-}
-
-class _ConnectedSingleChoiceList extends StatelessWidget {
-  const _ConnectedSingleChoiceList({
-    super.key,
-    required this.segments,
-    required this.selected,
-    required this.onSelectionChanged,
-  });
-
-  final List<_SegmentOption> segments;
-  final Set<String> selected;
-  final ValueChanged<Set<String>> onSelectionChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final shapes = skedShapeSchemeOf(context);
-    return Material(
-      color: colors.surfaceContainerLow,
-      shape: shapes.container,
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var index = 0; index < segments.length; index++) ...[
-            if (index > 0)
-              Divider(
-                height: 1,
-                color: colors.outlineVariant.withValues(alpha: 0.55),
-              ),
-            _ConnectedSingleChoiceRow(
-              segment: segments[index],
-              selected: selected.contains(segments[index].value),
-              onTap: () => onSelectionChanged({segments[index].value}),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ConnectedSingleChoiceRow extends StatelessWidget {
-  const _ConnectedSingleChoiceRow({
-    required this.segment,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _SegmentOption segment;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Semantics(
-      button: true,
-      selected: selected,
-      inMutuallyExclusiveGroup: true,
-      label: segment.label,
-      onTap: onTap,
-      child: ExcludeSemantics(
-        child: ExpressiveTap(
-          onTap: onTap,
-          borderRadius: BorderRadius.zero,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      segment.label,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: colors.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(
-                    selected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                    color: selected ? colors.primary : colors.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
+  Widget build(BuildContext context) => Align(
+    alignment: AlignmentDirectional.centerStart,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 320),
+      child: DropdownButtonFormField<String>(
+        key: choiceListKey,
+        initialValue: selected.first,
+        isExpanded: true,
+        itemHeight: null,
+        decoration: InputDecoration(
+          isDense: WorkbenchChromeMetrics.of(context).desktop,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
           ),
         ),
+        items: [
+          for (final option in segments)
+            DropdownMenuItem(
+              value: option.value,
+              child: Text(
+                option.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+        onChanged: (value) {
+          if (value != null) onSelectionChanged({value});
+        },
       ),
-    );
-  }
+    ),
+  );
 }
 
 class ThemeSettingsPage extends StatefulWidget {
-  const ThemeSettingsPage({super.key});
+  const ThemeSettingsPage({super.key, this.initialWorkspace});
+  final AppMode? initialWorkspace;
 
   @override
   State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
@@ -349,26 +223,23 @@ class ThemeSettingsPage extends StatefulWidget {
 
 class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     with UiCommandRunner<ThemeSettingsPage> {
+  late AppMode? _targetMode = widget.initialWorkspace;
   var _outlineSettingsPageOpen = false;
 
   void _updateSetting(String debugLabel, Future<void> Function() command) {
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
   }
 
-  void _switchWorkspace(TimetableProvider provider, String value) {
-    final targetMode = value == AppMode.general.value
-        ? AppMode.general
-        : AppMode.student;
-    if (targetMode == provider.activeMode) return;
-    _updateSetting(
-      'Switch theme workspace',
-      () => provider.switchMode(targetMode),
-    );
+  void _switchWorkspace(WorkspaceThemeTarget provider, String value) {
+    final target = AppMode.values.singleWhere((mode) => mode.value == value);
+    if (provider.source.isWorkspaceEnabled(target)) {
+      setState(() => _targetMode = target);
+    }
   }
 
   Future<void> _openOutlineSettingsPage(
     BuildContext context,
-    TimetableProvider provider,
+    WorkspaceThemeTarget provider,
   ) async {
     if (_outlineSettingsPageOpen || uiCommandBusy) return;
     _outlineSettingsPageOpen = true;
@@ -376,7 +247,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
+            value: provider.source,
             child: const _ThemeSettingsOutlinePage(),
           ),
         ),
@@ -389,7 +260,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   @override
   Widget build(BuildContext context) {
     return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
+      builder: (context, source, child) {
+        final target =
+            _targetMode != null && source.isWorkspaceEnabled(_targetMode!)
+            ? _targetMode!
+            : source.activeMode;
+        final provider = WorkspaceThemeTarget(source, target);
         final l10n = AppLocalizations.of(context);
         final hasCustomColor = !_isPresetThemeColor(
           provider.themeSeedColorValue,
@@ -401,7 +277,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         final switcherDuration = SkedMotionPolicy.of(context)
             .effects(SkedMotionSpeed.fast);
         return Scaffold(
-          appBar: AppBar(title: Text(l10n.theme)),
+          appBar: WorkbenchAppBar(
+            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+            title: Text(l10n.theme),
+          ),
           body: SafeArea(
             top: false,
             child: Column(
@@ -413,99 +292,104 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                 Expanded(
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
-                    child: ResponsiveSettingsBody(
+                    child: SettingsPreviewLayout(
+                      preview: _WorkspaceThemePreview(target: provider),
                       scrollViewKey: const PageStorageKey(
                         'theme-settings-scroll-view',
                       ),
-                      firstColumnSectionIndices: const {0, 1, 2},
                       children: [
-                        SettingsSectionHeader(
-                          title: l10n.settingsSectionWorkspace,
-                        ),
-                        _ResponsiveSegmentedButton(
-                          key: const ValueKey('theme-workspace-mode-segmented'),
-                          choiceListKey: const ValueKey(
-                            'theme-workspace-mode-choice-list',
-                          ),
-                          segments: [
-                            _SegmentOption(
-                              value: AppMode.student.value,
-                              label: l10n.timetable,
-                            ),
-                            _SegmentOption(
-                              value: AppMode.general.value,
-                              label: l10n.themeWorkspaceSchedule,
-                            ),
-                          ],
-                          selected: {provider.activeMode.value},
-                          onSelectionChanged: (selection) {
-                            if (selection.isEmpty) return;
-                            _switchWorkspace(provider, selection.first);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        SettingsSectionHeader(title: l10n.theme),
-                        _ResponsiveSegmentedButton(
-                          key: const ValueKey(
-                            'theme-brightness-mode-segmented',
-                          ),
-                          choiceListKey: const ValueKey(
-                            'theme-brightness-mode-choice-list',
-                          ),
-                          segments: [
-                            _SegmentOption(
-                              value: 'system',
-                              label: l10n.themeFollowSystem,
-                            ),
-                            _SegmentOption(
-                              value: 'light',
-                              label: l10n.themeLight,
-                            ),
-                            _SegmentOption(
-                              value: 'dark',
-                              label: l10n.themeDark,
-                            ),
-                          ],
-                          selected: {provider.themeMode},
-                          onSelectionChanged: (selection) {
-                            if (selection.isEmpty) {
-                              return;
-                            }
-                            _updateSetting(
-                              'Update theme brightness mode',
-                              () => provider.updateThemeMode(selection.first),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        SettingsSectionHeader(title: l10n.themeColor),
-                        _ResponsiveSegmentedButton(
-                          key: const ValueKey('theme-color-mode-segmented'),
-                          choiceListKey: const ValueKey(
-                            'theme-color-mode-choice-list',
-                          ),
-                          segments: [
-                            _SegmentOption(
-                              value: themeColorModeSingle,
-                              label: l10n.themeColorModeSingle,
-                            ),
-                            _SegmentOption(
-                              value: themeColorModeColorful,
-                              label: l10n.themeColorModeColorful,
-                            ),
-                          ],
-                          selected: {provider.themeColorMode},
-                          onSelectionChanged: (selection) {
-                            if (selection.isEmpty) {
-                              return;
-                            }
-                            _updateSetting(
-                              'Update theme color mode',
-                              () => provider.updateThemeColorMode(
-                                selection.first,
+                        if (source.hasMultipleWorkspaces)
+                          WorkbenchFormRow(
+                            label: l10n.settingsSectionWorkspace,
+                            child: _AppearanceChoiceField(
+                              key: const ValueKey('theme-workspace-target'),
+                              choiceListKey: const ValueKey(
+                                'theme-workspace-mode-choice-list',
                               ),
-                            );
-                          },
+                              segments: [
+                                if (source.isWorkspaceEnabled(AppMode.student))
+                                  _SegmentOption(
+                                    value: AppMode.student.value,
+                                    label: l10n.timetable,
+                                  ),
+                                if (source.isWorkspaceEnabled(AppMode.general))
+                                  _SegmentOption(
+                                    value: AppMode.general.value,
+                                    label: l10n.themeWorkspaceSchedule,
+                                  ),
+                              ],
+                              selected: {provider.activeMode.value},
+                              onSelectionChanged: (selection) {
+                                if (selection.isEmpty) return;
+                                _switchWorkspace(provider, selection.first);
+                              },
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        WorkbenchFormRow(
+                          label: l10n.theme,
+                          child: _AppearanceChoiceField(
+                            key: const ValueKey('theme-brightness-choice'),
+                            choiceListKey: const ValueKey(
+                              'theme-brightness-mode-choice-list',
+                            ),
+                            segments: [
+                              _SegmentOption(
+                                value: 'system',
+                                label: l10n.themeFollowSystem,
+                              ),
+                              _SegmentOption(
+                                value: 'light',
+                                label: l10n.themeLight,
+                              ),
+                              _SegmentOption(
+                                value: 'dark',
+                                label: l10n.themeDark,
+                              ),
+                            ],
+                            selected: {provider.themeMode},
+                            onSelectionChanged: (selection) {
+                              if (selection.isEmpty) {
+                                return;
+                              }
+                              _updateSetting(
+                                'Update theme brightness mode',
+                                () => provider.updateThemeMode(selection.first),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        WorkbenchFormRow(
+                          label: l10n.themeColor,
+                          child: _AppearanceChoiceField(
+                            key: const ValueKey('theme-color-choice'),
+                            choiceListKey: const ValueKey(
+                              'theme-color-mode-choice-list',
+                            ),
+                            segments: [
+                              _SegmentOption(
+                                value: themeColorModeSingle,
+                                label: l10n.themeColorModeSingle,
+                              ),
+                              _SegmentOption(
+                                value: themeColorModeColorful,
+                                label: l10n.themeColorModeColorful,
+                              ),
+                            ],
+                            selected: {provider.themeColorMode},
+                            onSelectionChanged: (selection) {
+                              if (selection.isEmpty) {
+                                return;
+                              }
+                              _updateSetting(
+                                'Update theme color mode',
+                                () => provider.updateThemeColorMode(
+                                  selection.first,
+                                ),
+                              );
+                            },
+                          ),
                         ),
                         const SizedBox(height: 16),
                         const SettingsSectionBreak(),
@@ -666,7 +550,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   Future<void> _openCustomColorDialog(
     BuildContext context,
-    TimetableProvider provider,
+    WorkspaceThemeTarget provider,
   ) async {
     final l10n = AppLocalizations.of(context);
     var selectedColor = Color(provider.themeSeedColorValue);
@@ -849,7 +733,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   Future<void> _openCourseTextColorDialog(
     BuildContext context,
-    TimetableProvider provider,
+    WorkspaceThemeTarget provider,
   ) async {
     final l10n = AppLocalizations.of(context);
     var mode = provider.colorfulCourseTextColorMode;
@@ -905,7 +789,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 12),
-                            _ResponsiveSegmentedButton(
+                            _AppearanceChoiceField(
                               segments: [
                                 _SegmentOption(
                                   value: colorfulCourseTextColorModeAuto,
@@ -926,7 +810,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 });
                               },
                             ),
-                            AnimatedSize(
+                            SkedAnimatedSize(
                               duration: const Duration(milliseconds: 220),
                               curve: Curves.easeInOut,
                               alignment: Alignment.topCenter,
@@ -1066,7 +950,7 @@ class _SingleThemeColorSection extends StatelessWidget {
     required this.onPickCustomColor,
   });
 
-  final TimetableProvider provider;
+  final WorkspaceThemeTarget provider;
   final bool hasCustomColor;
   final ValueChanged<int> onSelectColor;
   final VoidCallback onPickCustomColor;
@@ -1134,7 +1018,7 @@ class _OutlineSettingsCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final TimetableProvider provider;
+  final WorkspaceThemeTarget provider;
   final int effectiveOutlineColorValue;
   final double outlineWidth;
   final VoidCallback onTap;
@@ -1773,6 +1657,166 @@ class _CompactColorPickerState extends State<_CompactColorPicker> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WorkspaceThemePreview extends StatelessWidget {
+  const _WorkspaceThemePreview({required this.target});
+  final WorkspaceThemeTarget target;
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final brightness = switch (target.themeMode) {
+      'dark' => Brightness.dark,
+      'light' => Brightness.light,
+      _ => MediaQuery.platformBrightnessOf(context),
+    };
+    final theme = buildAppTheme(
+      seedColor: Color(target.themeSeedColorValue),
+      brightness: brightness,
+      themeColorMode: target.themeColorMode,
+      colorfulUiColorValues: target.colorfulUiColorValues,
+    );
+    final colors = theme.colorScheme;
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    return Theme(
+      key: const ValueKey('theme-workspace-preview'),
+      data: theme,
+      child: Material(
+        color: colors.surface,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                target.isStudentMode ? l.timetable : l.generalSchedule,
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: colors.outlineVariant),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 18,
+                            color: colors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l.today,
+                              style: theme.textTheme.labelLarge,
+                            ),
+                          ),
+                          Icon(Icons.add, size: 18, color: colors.primary),
+                        ],
+                      ),
+                    ),
+                    Divider(height: 1, color: colors.outlineVariant),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 12, 12),
+                      child: Column(
+                        children: [
+                          for (var i = 0; i < 2; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 48 * scale,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        i == 0 ? '09:00' : '10:30',
+                                        style: theme.textTheme.labelSmall,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: i == 0
+                                            ? colors.primaryContainer
+                                            : colors.secondaryContainer,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            target.isStudentMode
+                                                ? l.courseName
+                                                : l.eventTitle,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: i == 0
+                                                      ? colors
+                                                            .onPrimaryContainer
+                                                      : colors
+                                                            .onSecondaryContainer,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            i == 0
+                                                ? (target.isStudentMode
+                                                      ? l.location
+                                                      : l.place)
+                                                : (target.isStudentMode
+                                                      ? l.teacherName
+                                                      : l.calendars),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: i == 0
+                                                      ? colors
+                                                            .onPrimaryContainer
+                                                      : colors
+                                                            .onSecondaryContainer,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: FilledButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(target.isStudentMode ? l.addCourse : l.addEvent),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

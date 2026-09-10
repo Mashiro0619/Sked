@@ -91,19 +91,21 @@ class TimetableInformationDialogSurface extends StatelessWidget {
     required this.form,
     required this.actions,
     this.leading,
+    this.embedded = false,
   });
 
   final Widget title;
   final Widget form;
   final Widget? leading;
   final List<Widget> actions;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Theme.of(context).colorScheme.surface,
-      elevation: 6,
-      borderRadius: BorderRadius.circular(28),
+      elevation: embedded ? 0 : 6,
+      borderRadius: BorderRadius.circular(embedded ? 0 : 28),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Column(

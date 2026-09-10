@@ -636,7 +636,7 @@
   "@permissionSettingsExportMessage": {},
   "privacyPolicyTitle": "隐私政策",
   "@privacyPolicyTitle": {},
-  "privacyPolicyEntryDesc": "了解应用如何处理本地存储、学校站点配置、文件导入导出、课表文本 / HTML 解析和外部链接。",
+  "privacyPolicyEntryDesc": "了解本地数据、导入导出、可选网络请求与外部链接的处理方式。",
   "@privacyPolicyEntryDesc": {},
   "privacyPolicyAcceptedVersionLabel": "已同意版本：{version}",
   "@privacyPolicyAcceptedVersionLabel": {
@@ -711,8 +711,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} 个有效站点，{invalidCount} 个无效条目。",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "文件中的学校站点列表为空。",
@@ -720,7 +724,9 @@
   "schoolSitesImportInvalidEntry": "第 {position} 项无效，将在导入时跳过。",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "合并",
@@ -732,8 +738,12 @@
   "schoolSitesImportReplaceConfirmMessage": "此操作会移除当前 {currentCount} 个站点，并保存导入的 {importedCount} 个站点，且无法撤销。",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "学校站点数据需要恢复",
@@ -870,9 +880,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "网页课表已导入",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API 配置",
+  "schoolImportParserSettingsTitle": "课表解析 API",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "配置课表解析及其他 AI 功能使用的 OpenAI 兼容接口。",
+  "schoolImportParserSettingsDesc": "配置课表导入使用的 OpenAI 兼容接口；这不是对话助手配置。",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "解析来源",
   "@schoolImportParserSourceTitle": {},
@@ -1207,7 +1217,9 @@
   "visibleCategoryCount": "{count} 个分类",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "无可见分类",
@@ -1551,7 +1563,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "隐藏主界面工作区导航",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "隐藏底部栏、导航轨或侧边栏；隐藏后可在设置中切换工作区。",
+  "hideHomeWorkspaceNavigationDesc": "隐藏工作区导航；仍可通过主界面的工作区菜单切换。",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "日期显示格式",
   "@generalDateLabelFormat": {},
@@ -1686,8 +1698,12 @@
   "developerNotificationDirectCapacitySummary": "已直接安排 {scheduled} 条 / 容量 {capacity} 条",
   "@developerNotificationDirectCapacitySummary": {
     "placeholders": {
-      "scheduled": {"type": "int"},
-      "capacity": {"type": "int"}
+      "scheduled": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationPlanSummary": "已排程 {scheduled} 条，计划 {planned} 条",
@@ -1766,13 +1782,21 @@
   "developerNotificationPlatformState": "{pending} 条待处理 / {active} 条显示中",
   "@developerNotificationPlatformState": {
     "placeholders": {
-      "pending": {"type": "int"},
-      "active": {"type": "int"}
+      "pending": {
+        "type": "int"
+      },
+      "active": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationNativeLastPosted": "原生最近显示于 {time}",
   "@developerNotificationNativeLastPosted": {
-    "placeholders": {"time": {"type": "String"}}
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "developerNotificationNoDiagnostic": "尚无重算记录。",
   "@developerNotificationNoDiagnostic": {},
@@ -1805,7 +1829,9 @@
   "developerNotificationLateRecoveryCount": "有 {count} 条提醒在原定时间后被恢复投递",
   "@developerNotificationLateRecoveryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
@@ -1936,14 +1962,16 @@
   "notificationCoverageCapacityLimited": "Android 最多可直接安排 {capacity} 条提醒；后续提醒会提前尝试续排。",
   "@notificationCoverageCapacityLimited": {
     "placeholders": {
-      "capacity": {"type": "int"}
+      "capacity": {
+        "type": "int"
+      }
     }
   },
   "notificationSettingsEnabled": "启用提醒与通知",
   "@notificationSettingsEnabled": {},
   "notificationSettingsEnabledHint": "仅为已设置提醒的项目安排通知。继承课程需在下方设置课程默认提醒。",
   "@notificationSettingsEnabledHint": {},
-  "notificationPrecisionLimitations": "Android 无法提供数学意义上的绝对精准。设备关机、系统时间修改、系统崩溃或厂商固件后台限制仍可能导致投递延迟。",
+  "notificationPrecisionLimitations": "提醒受系统权限与后台运行限制影响；关机、时间变更或系统限制可能导致延迟。",
   "@notificationPrecisionLimitations": {},
   "notificationSettingsEnabledSummary": "已启用",
   "@notificationSettingsEnabledSummary": {},
@@ -2024,5 +2052,43 @@
   "notificationWidgetsRefreshed": "小组件已刷新",
   "@notificationWidgetsRefreshed": {},
   "notificationPlatformUnsupported": "当前平台不提供原生通知。",
-  "@notificationPlatformUnsupported": {}
+  "@notificationPlatformUnsupported": {},
+  "workspaceFeatures": "功能管理",
+  "workspaceBoth": "课表与日程",
+  "workspaceOnlyStudent": "仅课表",
+  "workspaceOnlyGeneral": "仅日程",
+  "workspaceDisableTitle": "停用此工作区？",
+  "workspaceDisableMessage": "数据与配置会保留。相关功能和提醒将停止，可随时在此重新启用。",
+  "workspaceEnableHint": "只启用你需要的功能，至少保留一个。",
+  "workspaceLastRequired": "至少需要保留一个工作区。",
+  "workspaceReminderCleanupFailed": "工作区已停用，但提醒清理未完成，请重试通知恢复。",
+  "settingsSearch": "搜索设置",
+  "settingsNoResults": "没有匹配的设置",
+  "settingsDataPrivacy": "数据与隐私",
+  "workspacePreferences": "显示与交互",
+  "workspaceManage": "管理",
+  "selectedDayAgenda": "当天安排",
+  "notificationTroubleshooting": "权限与排障",
+  "settingsConnection": "连接信息",
+  "settingsAdvanced": "高级",
+  "unsavedChangesMessage": "还有未保存的更改，要放弃并离开吗？",
+  "backupWorkspaceSelection": "完整备份包含数据和工作区启用选择。",
+  "assistantLayoutPreview": "AI · 布局预览",
+  "assistantSelectionContext": "使用当前选中项目作为上下文",
+  "assistantPreviewDescription": "在这里对话并处理当前工作区。此预览仅演示布局，尚未接入 AI。",
+  "assistantDraftLabel": "消息草稿",
+  "assistantPreviewNoSend": "仅布局预览，不会发送消息或修改数据。",
+  "resizePanel": "调整面板宽度",
+  "minimizeWindow": "最小化",
+  "maximizeWindow": "最大化",
+  "restoreWindow": "还原窗口",
+  "closeWindow": "关闭窗口",
+  "courseSystemReminder": "系统提醒",
+  "courseReminderInherit": "跟随默认（{reminder}）",
+  "courseReminderMasterOff": "通知总开关已关闭。仍可保存此课程的提醒设置。",
+  "courseReminderDefaultOff": "尚未设置课程默认提醒。可为此课程自定义，或前往通知设置配置默认值。",
+  "courseReminderDeliveryHint": "此设置随课程保存；能否送达仍取决于系统通知权限及后台限制。",
+  "courseReminderPermissionUnknown": "尚未确认系统通知状态。请在通知设置中检查权限。",
+  "courseReminderMinutesLabel": "课前提醒分钟数",
+  "exportAction": "导出"
 }

@@ -1280,11 +1280,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get schoolWebImportSuccess => 'Web-Stundenplan importiert';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API configuration';
+  String get schoolImportParserSettingsTitle => 'API für Stundenplanimport';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+      'Konfiguriere die OpenAI-kompatible API für den Stundenplanimport, nicht für einen Chat-Assistenten.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser-Quelle';
@@ -2195,7 +2195,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
-      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
+      'Blende die Arbeitsbereichsnavigation aus. Wechseln ist weiterhin über das Arbeitsbereichsmenü der Hauptansicht möglich.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';
@@ -2753,7 +2753,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+      'Erinnerungen hängen von Systemberechtigungen und Hintergrundausführung ab. Ausschalten, Zeitänderungen oder Systembeschränkungen können sie verzögern.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';
@@ -2880,4 +2880,133 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get notificationPlatformUnsupported =>
       'This platform does not provide native notifications.';
+
+  @override
+  String get workspaceFeatures => 'Funktionsverwaltung';
+
+  @override
+  String get workspaceBoth => 'Stundenplan und Termine';
+
+  @override
+  String get workspaceOnlyStudent => 'Nur Stundenplan';
+
+  @override
+  String get workspaceOnlyGeneral => 'Nur Termine';
+
+  @override
+  String get workspaceDisableTitle => 'Diesen Arbeitsbereich deaktivieren?';
+
+  @override
+  String get workspaceDisableMessage =>
+      'Daten und Einstellungen bleiben erhalten. Funktionen und Erinnerungen werden angehalten, bis du den Bereich hier wieder aktivierst.';
+
+  @override
+  String get workspaceEnableHint =>
+      'Wähle die benötigten Funktionen. Mindestens eine muss aktiv bleiben.';
+
+  @override
+  String get workspaceLastRequired =>
+      'Mindestens ein Arbeitsbereich muss aktiv bleiben.';
+
+  @override
+  String get workspaceReminderCleanupFailed =>
+      'Der Arbeitsbereich ist deaktiviert, aber Erinnerungen konnten nicht entfernt werden. Versuche die Benachrichtigungswiederherstellung erneut.';
+
+  @override
+  String get settingsSearch => 'Einstellungen suchen';
+
+  @override
+  String get settingsNoResults => 'Keine passenden Einstellungen';
+
+  @override
+  String get settingsDataPrivacy => 'Daten und Datenschutz';
+
+  @override
+  String get workspacePreferences => 'Anzeige und Bedienung';
+
+  @override
+  String get workspaceManage => 'Verwalten';
+
+  @override
+  String get selectedDayAgenda => 'Ausgewählter Tag';
+
+  @override
+  String get notificationTroubleshooting => 'Berechtigungen und Fehlerbehebung';
+
+  @override
+  String get settingsConnection => 'Verbindung';
+
+  @override
+  String get settingsAdvanced => 'Erweitert';
+
+  @override
+  String get unsavedChangesMessage =>
+      'Du hast ungespeicherte Änderungen. Verwerfen und verlassen?';
+
+  @override
+  String get backupWorkspaceSelection =>
+      'Die vollständige Sicherung enthält Daten und die Auswahl aktiver Arbeitsbereiche.';
+
+  @override
+  String get assistantLayoutPreview => 'AI · Layout preview';
+
+  @override
+  String get assistantSelectionContext =>
+      'Uses the current selection as context';
+
+  @override
+  String get assistantPreviewDescription =>
+      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+
+  @override
+  String get assistantDraftLabel => 'Message draft';
+
+  @override
+  String get assistantPreviewNoSend =>
+      'Layout preview only. Nothing will be sent or changed.';
+
+  @override
+  String get resizePanel => 'Resize panel';
+
+  @override
+  String get minimizeWindow => 'Minimize';
+
+  @override
+  String get maximizeWindow => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get closeWindow => 'Close window';
+
+  @override
+  String get courseSystemReminder => 'System reminder';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return 'Use default ($reminder)';
+  }
+
+  @override
+  String get courseReminderMasterOff =>
+      'System reminders are off in notification settings. This course preference can still be saved.';
+
+  @override
+  String get courseReminderDefaultOff =>
+      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+
+  @override
+  String get courseReminderDeliveryHint =>
+      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+
+  @override
+  String get courseReminderPermissionUnknown =>
+      'System notification status has not been checked. Review notification settings before relying on reminders.';
+
+  @override
+  String get courseReminderMinutesLabel => 'Minutes before class';
+
+  @override
+  String get exportAction => 'Export';
 }

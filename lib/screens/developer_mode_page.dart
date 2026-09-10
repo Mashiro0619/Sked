@@ -1,4 +1,8 @@
+import '../widgets/desktop_window_host.dart';
+
 import 'dart:async';
+
+import '../services/developer_ui_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +10,9 @@ import 'package:provider/provider.dart';
 import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
+import '../models/app_mode.dart';
+import '../models/workspace_availability.dart';
+import '../services/notification_planner.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_runtime_store.dart';
 import '../services/agenda_notification_service.dart';
@@ -426,13 +433,23 @@ class _DeveloperModePageState extends State<DeveloperModePage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final available = context.watch<TimetableProvider>().enabledWorkspaces;
+    if (!available.contains(
+      _testChannel == AgendaNotificationTestChannel.course
+          ? AppMode.student
+          : AppMode.general,
+    )) {
+      _testChannel = available.contains(AppMode.student)
+          ? AgendaNotificationTestChannel.course
+          : AgendaNotificationTestChannel.schedule;
+    }
     final appNotificationsEnabled = context
         .watch<TimetableProvider>()
         .notificationsEnabled;
     return PopScope<void>(
       canPop: !uiCommandBusy,
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.developerModeTitle)),
+        appBar: WorkbenchAppBar(title: Text(l10n.developerModeTitle)),
         body: Column(
           children: [
             UiCommandBusyIndicator(
@@ -452,6 +469,7 @@ class _DeveloperModePageState extends State<DeveloperModePage>
                       ),
                     ),
                     const SizedBox(height: 20),
+                    const _DeveloperAssistantPreference(),
                     SettingsSectionHeader(title: l10n.developerSampleLanguage),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -950,7 +968,16 @@ class _DeveloperModePageState extends State<DeveloperModePage>
         ),
       );
     }
-    return channels;
+    final provider = context.read<TimetableProvider>();
+    return channels
+        .where(
+          (channel) =>
+              (channel.id != _courseReminderChannelId ||
+                  provider.isWorkspaceEnabled(AppMode.student)) &&
+              (channel.id != _scheduleReminderChannelId ||
+                  provider.isWorkspaceEnabled(AppMode.general)),
+        )
+        .toList();
   }
 
   AgendaNotificationDiagnosticPlanItem? _nextReminder(
@@ -960,6 +987,13 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     final now = DateTime.now();
     AgendaNotificationDiagnosticPlanItem? next;
     for (final item in diagnostics.plan) {
+      final source = parseNotificationPlanKey(item.key)?.sourceType;
+      if (source != null &&
+          !context.read<TimetableProvider>().appData.allowsAgendaSource(
+            source,
+          )) {
+        continue;
+      }
       if (item.fireAt.isBefore(now)) continue;
       if (next == null || item.fireAt.isBefore(next.fireAt)) next = item;
     }
@@ -1093,35 +1127,40 @@ class _NotificationDiagnosticActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TimetableProvider>();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l10n.developerNotificationTestChannel),
+          if (provider.hasMultipleWorkspaces)
+            Text(l10n.developerNotificationTestChannel),
           const SizedBox(height: 8),
-          SegmentedButton<AgendaNotificationTestChannel>(
-            key: const ValueKey('developer-notification-test-channel'),
-            expandedInsets: EdgeInsets.zero,
-            selected: {selectedChannel},
-            onSelectionChanged: channelSelectionEnabled
-                ? (selection) {
-                    if (selection.isNotEmpty) onChannelChanged(selection.first);
-                  }
-                : null,
-            segments: [
-              ButtonSegment(
-                value: AgendaNotificationTestChannel.course,
-                label: Text(l10n.developerNotificationTestCourse),
-                icon: const Icon(Icons.school_outlined),
-              ),
-              ButtonSegment(
-                value: AgendaNotificationTestChannel.schedule,
-                label: Text(l10n.developerNotificationTestSchedule),
-                icon: const Icon(Icons.event_outlined),
-              ),
-            ],
-          ),
+          if (provider.hasMultipleWorkspaces)
+            SegmentedButton<AgendaNotificationTestChannel>(
+              key: const ValueKey('developer-notification-test-channel'),
+              expandedInsets: EdgeInsets.zero,
+              selected: {selectedChannel},
+              onSelectionChanged: channelSelectionEnabled
+                  ? (selection) {
+                      if (selection.isNotEmpty) {
+                        onChannelChanged(selection.first);
+                      }
+                    }
+                  : null,
+              segments: [
+                ButtonSegment(
+                  value: AgendaNotificationTestChannel.course,
+                  label: Text(l10n.developerNotificationTestCourse),
+                  icon: const Icon(Icons.school_outlined),
+                ),
+                ButtonSegment(
+                  value: AgendaNotificationTestChannel.schedule,
+                  label: Text(l10n.developerNotificationTestSchedule),
+                  icon: const Icon(Icons.event_outlined),
+                ),
+              ],
+            ),
           if (testBlockMessage != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -1216,3 +1255,36 @@ class _NotificationChannelPresentation {
 
 const _courseReminderChannelId = 'sked_course_reminders';
 const _scheduleReminderChannelId = 'sked_schedule_reminders';
+
+class _DeveloperAssistantPreference extends StatelessWidget {
+  const _DeveloperAssistantPreference();
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<DeveloperUiPreferences?>();
+    if (p == null) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
+    return Column(
+      children: [
+        SwitchListTile(
+          key: const ValueKey('developer-assistant-visible'),
+          title: Text(l.assistantLayoutPreview),
+          subtitle: Text(l.assistantPreviewDescription),
+          value: p.assistantVisible,
+          onChanged: p.busy || !p.ready
+              ? null
+              : (value) => p.setAssistantVisible(value),
+        ),
+        if (p.busy) const LinearProgressIndicator(),
+        if (p.hasError)
+          ListTile(
+            title: Text(l.saveFailedRetry),
+            trailing: TextButton(
+              onPressed: p.busy ? null : p.retry,
+              child: Text(l.dataRecoveryRetryAction),
+            ),
+          ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+}

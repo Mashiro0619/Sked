@@ -7,6 +7,44 @@ import 'package:sked/widgets/sked_expressive_loading_indicator.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 
 void main() {
+  testWidgets('toolbar gives unused action space back to its title', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 700);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SkedWorkspaceToolbar(
+            title: SizedBox(
+              key: ValueKey('wide-toolbar-title'),
+              width: double.infinity,
+              height: 48,
+            ),
+            actions: [
+              SizedBox(
+                key: ValueKey('wide-toolbar-action'),
+                width: 100,
+                height: 48,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('wide-toolbar-title'))).width,
+      greaterThan(800),
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('wide-toolbar-action'))).width,
+      100,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'expressive segmented button keeps official selection semantics',
     (tester) async {

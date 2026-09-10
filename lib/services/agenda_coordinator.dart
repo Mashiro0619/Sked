@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import '../models/timetable_models.dart';
+import '../models/workspace_availability.dart';
+import 'agenda_runtime_mutation_lock.dart';
 import '../providers/timetable_provider.dart';
 import 'agenda_action_router.dart';
 import 'agenda_notification_service.dart';
@@ -43,7 +45,9 @@ class AgendaCoordinator {
              projection: projection ?? _defaultProjection,
            ),
        _productivityBridge = productivityBridge ?? AndroidProductivityBridge(),
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now {
+    _notificationService.committedDataReader = () => _provider.committedAppData;
+  }
 
   final TimetableProvider _provider;
   final AgendaNotificationService _notificationService;
@@ -240,7 +244,11 @@ class AgendaCoordinator {
       if (!_canProjectProviderData) return;
       final fence = await _notificationService.readProjectionFence();
       if (fence.blocked) return;
-      final snapshot = data ?? _provider.appData;
+      final requested = data ?? _provider.appData;
+      final committed = _provider.committedAppData;
+      final snapshot = requested.sameWorkspaceAvailability(committed)
+          ? requested
+          : committed;
       final effectiveRevision = revision ?? _lastPublishedRevision;
       AgendaNotificationStatus? notificationStatus;
       var notificationProjectionSucceeded = false;
@@ -294,7 +302,7 @@ class AgendaCoordinator {
       }
     }
 
-    return _enqueueReconcile(operation);
+    return _enqueueReconcile(() => withAgendaRuntimeMutationLock(operation));
   }
 
   /// Requests a fresh platform projection after returning to the foreground.
@@ -565,6 +573,7 @@ class AgendaCoordinator {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _notificationService.committedDataReader = null;
     _providerReadyTimeout?.cancel();
     _providerReadyTimeout = null;
     _notificationRetryTimer?.cancel();

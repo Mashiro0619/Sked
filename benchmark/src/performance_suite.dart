@@ -17,10 +17,10 @@ const _expectedChecksums = <String, String>{
   'cache.1000_churn': 'fnv1a64-utf16le:41afccfcf48cf9ee',
   'sanitizer.table_full': 'fnv1a64-utf16le:e8d76fa6544f75cd',
   'sanitizer.table_240k': 'fnv1a64-utf16le:3f7220f07decc524',
-  'app_data.5000_encode': 'fnv1a64-utf16le:84ee66f0dec3b449',
-  'app_data.5000_decode_storage': 'fnv1a64-utf16le:8282ed37a87f4110',
-  'app_backup.5000_encode': 'fnv1a64-utf16le:2fdfe0c739ba5bf3',
-  'app_backup.5000_decode': 'fnv1a64-utf16le:684af32a34aee910',
+  'app_data.5000_encode': 'fnv1a64-utf16le:8c67108b3c250c39',
+  'app_data.5000_decode_storage': 'fnv1a64-utf16le:e36d066bc8da45bf',
+  'app_backup.5000_encode': 'fnv1a64-utf16le:e1b21719137bb127',
+  'app_backup.5000_decode': 'fnv1a64-utf16le:7401c4a42a54dc73',
 };
 
 List<PerformanceBenchmarkCase> buildPerformanceBenchmarkCases(

@@ -1,3 +1,7 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+import '../models/app_mode.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -20,18 +24,24 @@ class TimetableDisplaySettingsPage extends StatefulWidget {
 
 class _TimetableDisplaySettingsPageState
     extends State<TimetableDisplaySettingsPage>
-    with UiCommandRunner<TimetableDisplaySettingsPage> {
+    with
+        UiCommandRunner<TimetableDisplaySettingsPage>,
+        WorkspaceRouteLifecycle<TimetableDisplaySettingsPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+
   void _updateSetting(String debugLabel, Future<void> Function() command) {
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
         final l10n = AppLocalizations.of(context);
         return Scaffold(
-          appBar: AppBar(
+          appBar: WorkbenchAppBar(
             title: Semantics(
               header: true,
               label: l10n.timetableDisplaySettings,

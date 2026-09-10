@@ -685,8 +685,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} valid sites, {invalidCount} invalid entries.",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "The file contains an empty school-site list.",
@@ -694,7 +698,9 @@
   "schoolSitesImportInvalidEntry": "Entry {position} is invalid and will be skipped.",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "Merge",
@@ -706,8 +712,12 @@
   "schoolSitesImportReplaceConfirmMessage": "This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "School-site data needs recovery",
@@ -834,9 +844,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "ตารางเวลาเว็บนำเข้า",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API configuration",
+  "schoolImportParserSettingsTitle": "API วิเคราะห์ตารางเรียน",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API used by timetable parsing and other AI features.",
+  "schoolImportParserSettingsDesc": "ตั้งค่า API ที่เข้ากันได้กับ OpenAI สำหรับนำเข้าตารางเรียน ไม่ใช่การตั้งค่าผู้ช่วยแชต",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "แหล่ง Parser",
   "@schoolImportParserSourceTitle": {},
@@ -1019,7 +1029,9 @@
   "visibleCategoryCount": "{count} categories",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "No visible categories",
@@ -1194,7 +1206,13 @@
   "timeGridHourHeightHint": "Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.",
   "@timeGridHourHeightHint": {},
   "timeGridHourHeightValue": "{height} dp",
-  "@timeGridHourHeightValue": {"placeholders": {"height": {"type": "int"}}},
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "Import JSON file",
   "@importJsonFile": {},
   "pasteJson": "Paste JSON",
@@ -1491,7 +1509,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "Hide workspace navigation",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.",
+  "hideHomeWorkspaceNavigationDesc": "ซ่อนการนำทางพื้นที่ทำงาน แต่ยังสลับได้จากเมนูพื้นที่ทำงานบนหน้าหลัก",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "Date label format",
   "@generalDateLabelFormat": {},
@@ -1636,5 +1654,44 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "workspaceFeatures": "จัดการฟีเจอร์",
+  "workspaceBoth": "ตารางเรียนและกำหนดการ",
+  "workspaceOnlyStudent": "ตารางเรียนเท่านั้น",
+  "workspaceOnlyGeneral": "กำหนดการเท่านั้น",
+  "workspaceDisableTitle": "ปิดพื้นที่ทำงานนี้หรือไม่?",
+  "workspaceDisableMessage": "ข้อมูลและการตั้งค่าจะยังคงอยู่ ฟีเจอร์และการเตือนที่เกี่ยวข้องจะหยุดจนกว่าคุณจะเปิดใช้งานอีกครั้งที่นี่",
+  "workspaceEnableHint": "เลือกฟีเจอร์ที่คุณใช้ ต้องเปิดใช้งานอย่างน้อยหนึ่งฟีเจอร์",
+  "workspaceLastRequired": "ต้องเปิดใช้งานพื้นที่ทำงานอย่างน้อยหนึ่งพื้นที่",
+  "workspaceReminderCleanupFailed": "ปิดพื้นที่ทำงานแล้ว แต่ยังล้างการเตือนไม่สำเร็จ โปรดลองกู้คืนการแจ้งเตือนอีกครั้ง",
+  "settingsSearch": "ค้นหาการตั้งค่า",
+  "settingsNoResults": "ไม่พบการตั้งค่าที่ตรงกัน",
+  "settingsDataPrivacy": "ข้อมูลและความเป็นส่วนตัว",
+  "workspacePreferences": "การแสดงผลและการโต้ตอบ",
+  "workspaceManage": "จัดการ",
+  "selectedDayAgenda": "วันที่เลือก",
+  "notificationTroubleshooting": "สิทธิ์และการแก้ไขปัญหา",
+  "settingsConnection": "การเชื่อมต่อ",
+  "settingsAdvanced": "ขั้นสูง",
+  "unsavedChangesMessage": "คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการละทิ้งและออกหรือไม่?",
+  "backupWorkspaceSelection": "ข้อมูลสำรองทั้งหมดมีข้อมูลและการเลือกพื้นที่ทำงานที่เปิดใช้งาน",
+  "assistantLayoutPreview": "AI · Layout preview",
+  "assistantSelectionContext": "Uses the current selection as context",
+  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
+  "assistantDraftLabel": "Message draft",
+  "assistantPreviewNoSend": "Layout preview only. Nothing will be sent or changed.",
+  "resizePanel": "Resize panel",
+  "minimizeWindow": "Minimize",
+  "maximizeWindow": "Maximize",
+  "restoreWindow": "Restore window",
+  "closeWindow": "Close window",
+  "notificationPrecisionLimitations": "การแจ้งเตือนขึ้นอยู่กับสิทธิ์ของระบบและการทำงานเบื้องหลัง การปิดเครื่อง การเปลี่ยนเวลา หรือข้อจำกัดของระบบอาจทำให้ล่าช้า",
+  "courseSystemReminder": "System reminder",
+  "courseReminderInherit": "Use default ({reminder})",
+  "courseReminderMasterOff": "System reminders are off in notification settings. This course preference can still be saved.",
+  "courseReminderDefaultOff": "No default course reminder is set. Choose a custom reminder here or set a default in notification settings.",
+  "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
+  "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
+  "courseReminderMinutesLabel": "Minutes before class",
+  "exportAction": "Export"
 }

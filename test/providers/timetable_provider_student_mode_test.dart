@@ -460,6 +460,154 @@ void main() {
       expect(provider.courseNameColorValues.containsKey('Physics'), isFalse);
     });
 
+    test(
+      'explicit course targets preserve the active timetable and workspace',
+      () async {
+        final provider = providerWith(
+          appData(
+            timetables: [
+              timetable(
+                id: 'table1',
+                courses: [course(id: 'course1')],
+              ),
+              timetable(
+                id: 'table2',
+                courses: [
+                  course(id: 'course1', name: 'Same ID in another table'),
+                  course(id: 'course2', name: 'Physics'),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(provider.dispose);
+        await provider.load();
+        await provider.switchTimetable('table2');
+        await provider.switchMode(AppMode.general);
+        final otherBefore = provider.activeTimetable.toJson();
+
+        await provider.saveCourse(
+          course(id: 'course1', name: 'Updated original'),
+          timetableId: 'table1',
+        );
+        await provider.saveCourse(
+          course(id: 'course3', name: 'New original'),
+          timetableId: 'table1',
+        );
+        expect(
+          provider.timetables
+              .singleWhere((t) => t.id == 'table1')
+              .courses
+              .map((c) => c.name),
+          ['Updated original', 'New original'],
+        );
+        expect(provider.activeTimetable.toJson(), otherBefore);
+        expect(provider.activeMode, AppMode.general);
+
+        await provider.deleteCourse('course1', timetableId: 'table1');
+        expect(
+          provider.timetables
+              .singleWhere((t) => t.id == 'table1')
+              .courses
+              .map((c) => c.id),
+          ['course3'],
+        );
+        expect(provider.activeTimetable.toJson(), otherBefore);
+        expect(provider.activeMode, AppMode.general);
+      },
+    );
+
+    test('explicit course commands reject a removed timetable without fallback or writes', () async {
+      final storage = _MemoryTimetableStorage(
+        appData(
+          timetables: [
+            timetable(
+              id: 'table1',
+              courses: [course(id: 'course1')],
+            ),
+            timetable(
+              id: 'table2',
+              courses: [course(id: 'course2')],
+            ),
+          ],
+        ),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+      );
+      addTearDown(provider.dispose);
+      await provider.load();
+      await provider.deleteTimetable('table1');
+      final before = provider.appData.toJson();
+      final writes = storage.saveCount;
+      await expectLater(
+        provider.saveCourse(course(), timetableId: 'table1'),
+        throwsStateError,
+      );
+      await expectLater(
+        provider.deleteCourse('course2', timetableId: 'table1'),
+        throwsStateError,
+      );
+      expect(provider.appData.toJson(), before);
+      expect(storage.saveCount, writes);
+    });
+
+    test(
+      'failed explicit course save retries on the same inactive target',
+      () async {
+        final storage = _MemoryTimetableStorage(
+          appData(
+            timetables: [
+              timetable(
+                id: 'table1',
+                courses: [course(id: 'course1')],
+              ),
+              timetable(
+                id: 'table2',
+                courses: [course(id: 'course2')],
+              ),
+            ],
+          ),
+        );
+        final provider = TimetableProvider(
+          storage: storage,
+          systemLocaleCodeResolver: () => defaultLocaleCode,
+        );
+        addTearDown(provider.dispose);
+        await provider.load();
+        await provider.switchTimetable('table2');
+        final before = provider.appData.toJson();
+        storage.saveFailures.add(StateError('retryable save error'));
+        final draft = course(id: 'course3', name: 'Retry target');
+        await expectLater(
+          provider.saveCourse(draft, timetableId: 'table1'),
+          throwsStateError,
+        );
+        expect(provider.appData.toJson(), before);
+        await provider.saveCourse(draft, timetableId: 'table1');
+        expect(
+          provider.timetables
+              .singleWhere((t) => t.id == 'table1')
+              .courses
+              .where((c) => c.id == draft.id),
+          hasLength(1),
+        );
+        expect(provider.activeTimetable.id, 'table2');
+        expect(
+          provider.activeTimetable.courses.any((c) => c.id == draft.id),
+          isFalse,
+        );
+        expect(
+          storage.data!.studentMode.timetables
+              .singleWhere((t) => t.id == 'table1')
+              .courses
+              .any((c) => c.id == draft.id),
+          isTrue,
+        );
+      },
+    );
+
     test('switches timetables and clamps selected week', () async {
       final provider = providerWith(
         appData(

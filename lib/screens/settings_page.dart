@@ -1,3 +1,5 @@
+import '../widgets/desktop_window_host.dart';
+
 import 'dart:async';
 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -12,7 +14,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../widgets/text_transfer_widgets.dart';
 
 import '../data/timetable_storage.dart';
-import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
@@ -28,10 +29,13 @@ import '../services/update_service.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
-import '../widgets/period_time_set_picker_dialog.dart';
-import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
-import '../widgets/ui_command.dart';
+import '../widgets/adaptive_settings_scaffold.dart';
+import '../widgets/adaptive_navigation_scope.dart';
+import '../models/settings_destination.dart';
+import '../models/settings_catalog.dart';
+import '../widgets/period_time_set_manager.dart';
+import 'workspace_features_page.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
@@ -42,6 +46,9 @@ import 'settings_data_transfer_controller.dart';
 import 'theme_settings_page.dart';
 import 'timetable_display_settings_page.dart';
 import 'timetable_import_flow.dart';
+
+export '../models/settings_destination.dart';
+export 'settings_data_transfer_controller.dart' show SettingsTransferDirection;
 
 enum _ExportFormat { json, ics }
 
@@ -59,16 +66,8 @@ List<String> _defaultGeneralScheduleSelectionIds(
 }
 
 enum _SettingsFlow {
-  workspaceMode,
-  homeNavigation,
-  periodTimePicker,
   schoolSitesPage,
   parserSettingsPage,
-  themeSettingsPage,
-  timetableDisplaySettingsPage,
-  generalDisplaySettingsPage,
-  notificationSettingsPage,
-  languageSettingsPage,
   studentDataActions,
   generalDataActions,
   appDataActions,
@@ -90,12 +89,18 @@ class SettingsPage extends StatefulWidget {
     this.dataClearCoordinator,
     this.urlLauncher,
     this.notificationService,
+    this.initialDestination,
+    this.initialWorkspace,
+    this.transferDirection,
   });
 
   final Future<PackageInfo> Function()? packageInfoLoader;
   final AppDataClearCoordinator? dataClearCoordinator;
   final SettingsUrlLauncher? urlLauncher;
   final AgendaNotificationService? notificationService;
+  final SettingsDestination? initialDestination;
+  final AppMode? initialWorkspace;
+  final SettingsTransferDirection? transferDirection;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -105,9 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
   static const _exportService = ExportService();
   static const _dataTransferController = SettingsDataTransferController();
 
-  String? _editingTimetableId;
   String _currentVersion = '';
-  String? _selectedPeriodTimeSetId;
   final Set<_SettingsFlow> _openFlows = <_SettingsFlow>{};
   bool _clearingAppData = false;
 
@@ -134,486 +137,285 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final provider = context.read<TimetableProvider>();
-    final timetable = provider.activeTimetableOrNull;
-    if (timetable == null) {
-      return;
-    }
-    if (_editingTimetableId == timetable.id) {
-      return;
-    }
-    _editingTimetableId = timetable.id;
-    _selectedPeriodTimeSetId = timetable.config.periodTimeSetId;
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Consumer<TimetableProvider>(
-      builder: (context, provider, child) {
-        final l10n = AppLocalizations.of(context);
-        final languageOptions = supportedLanguageOptions(l10n);
-        final currentLanguageLabel = _languageLabelForCode(
-          languageOptions,
-          provider.localeCode,
+      builder: (context, provider, _) {
+        final l = AppLocalizations.of(context);
+        final catalog = settingsCatalog(
+          l,
+          provider.enabledWorkspaces,
+          canClearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
         );
-        final timetable = provider.activeTimetableOrNull;
-        final hasTimetable = timetable != null;
-        final selectedSet = _selectedPeriodTimeSetId != null
-            ? provider.periodTimeSetForId(_selectedPeriodTimeSetId!)
-            : provider.activePeriodTimeSetOrNull;
-        final workspaceChildren = <Widget>[];
-        workspaceChildren.add(
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: SkedDropdownMenu<AppMode>(
-              key: const ValueKey('settings-workspace-mode'),
-              initialSelection: provider.activeMode,
-              label: Text(l10n.settingsWorkspaceMode),
-              leadingIcon: const Icon(Icons.swap_horiz_outlined),
-              expandedInsets: EdgeInsets.zero,
-              enabled: !_isFlowOpen(_SettingsFlow.workspaceMode),
-              dropdownMenuEntries: [
-                DropdownMenuEntry(
-                  value: AppMode.student,
-                  label: l10n.studentTimetable,
-                ),
-                DropdownMenuEntry(
-                  value: AppMode.general,
-                  label: l10n.generalSchedule,
-                ),
-              ],
-              onSelected: (value) {
-                if (value != null) {
-                  unawaited(_switchWorkspace(provider, value));
-                }
-              },
-            ),
-          ),
-        );
-        workspaceChildren.add(
-          SettingsInteractionBlocker(
-            blocked: _isFlowOpen(_SettingsFlow.homeNavigation),
-            child: SettingsConnectedTile(
-              leading: const Icon(Icons.navigation_outlined),
-              title: l10n.hideHomeWorkspaceNavigation,
-              subtitle: l10n.hideHomeWorkspaceNavigationDesc,
-              trailing: Switch(
-                value: provider.hideHomeWorkspaceNavigation,
-                onChanged: (value) =>
-                    unawaited(_updateHomeNavigation(provider, value)),
-              ),
-              semanticToggled: provider.hideHomeWorkspaceNavigation,
-              onTap: () => unawaited(
-                _updateHomeNavigation(
-                  provider,
-                  !provider.hideHomeWorkspaceNavigation,
-                ),
-              ),
-            ),
-          ),
-        );
-        final timetableChildren = <Widget>[
-          SettingsConnectedTile(
-            key: const ValueKey('settings-period-time-sets'),
-            leading: const Icon(Icons.schedule_outlined),
-            title: l10n.periodTimeSets,
-            subtitle: !hasTimetable
-                ? l10n.noTimetableSettings
-                : selectedSet == null
-                ? l10n.noPeriodTimeAvailable
-                : l10n.periodTimeSetSummary(
-                    selectedSet.name,
-                    selectedSet.periodTimes.length,
-                  ),
-            trailing: const Icon(Icons.keyboard_arrow_down),
-            onTap:
-                timetable == null || _isFlowOpen(_SettingsFlow.periodTimePicker)
-                ? null
-                : () =>
-                      unawaited(_pickPeriodTimeSet(provider, timetable.config)),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.language_outlined),
-            title: l10n.schoolWebImportEntry,
-            subtitle: l10n.schoolWebImportEntryDesc,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.schoolSitesPage)
-                ? null
-                : () => _openSchoolSitesPage(provider),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.grid_view_outlined),
-            title: l10n.timetableDisplaySettings,
-            subtitle: l10n.timetableDisplaySettingsDesc,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.timetableDisplaySettingsPage)
-                ? null
-                : () => _openTimetableDisplaySettingsPage(provider),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.import_export),
-            title: l10n.dataImportExport,
-            subtitle: l10n.dataImportExportDesc,
-            trailing: const Icon(Icons.keyboard_arrow_up),
-            onTap: _isFlowOpen(_SettingsFlow.studentDataActions)
-                ? null
-                : () => _showDataActions(provider),
-          ),
-        ];
-        final generalScheduleChildren = <Widget>[
-          SettingsConnectedTile(
-            leading: const Icon(Icons.grid_view_outlined),
-            title: l10n.generalDisplaySettings,
-            subtitle: l10n.generalDisplaySettingsDesc,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.generalDisplaySettingsPage)
-                ? null
-                : () => _openGeneralDisplaySettingsPage(provider),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.import_export),
-            title: l10n.generalScheduleImportExport,
-            subtitle: l10n.generalScheduleImportExportDesc,
-            trailing: const Icon(Icons.keyboard_arrow_up),
-            onTap: _isFlowOpen(_SettingsFlow.generalDataActions)
-                ? null
-                : () => _showGeneralDataActions(provider),
-          ),
-        ];
-        final notificationChildren = <Widget>[
-          SettingsConnectedTile(
-            key: const ValueKey('settings-notification-settings'),
-            leading: const Icon(Icons.notifications_active_outlined),
-            title: l10n.notificationSettingsSection,
-            subtitle: _notificationSettingsSummary(provider, l10n),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.notificationSettingsPage)
-                ? null
-                : () => _openNotificationSettingsPage(provider),
-          ),
-        ];
-        final appearanceChildren = [
-          SettingsConnectedTile(
-            leading: const Icon(Icons.palette_outlined),
-            title: l10n.theme,
-            subtitle: _themeSettingsSummary(provider, l10n),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.themeSettingsPage)
-                ? null
-                : () => _openThemeSettingsPage(provider),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.translate_outlined),
-            title: l10n.language,
-            subtitle: currentLanguageLabel,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.languageSettingsPage)
-                ? null
-                : () => _openLanguageSettingsPage(provider),
-          ),
-        ];
-        final dataChildren = [
-          SettingsConnectedTile(
-            key: const ValueKey('settings-parser-settings'),
-            leading: const Icon(Icons.tune_outlined),
-            title: l10n.schoolImportParserSettingsTitle,
-            subtitle: l10n.schoolImportParserSettingsDesc,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.parserSettingsPage)
-                ? null
-                : () => _openParserSettingsPage(provider),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.inventory_2_outlined),
-            title: l10n.appBackupTitle,
-            subtitle: l10n.appBackupSubtitle,
-            trailing: const Icon(Icons.keyboard_arrow_up),
-            onTap: _isFlowOpen(_SettingsFlow.appDataActions)
-                ? null
-                : () => _showAppDataActions(provider),
-          ),
-          SettingsConnectedTile(
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: l10n.privacyPolicyTitle,
-            subtitle: provider.acceptedPrivacyPolicyVersion == null
-                ? l10n.privacyPolicyEntryDesc
-                : l10n.privacyPolicyAcceptedVersionLabel(
-                    provider.acceptedPrivacyPolicyVersion!,
-                  ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.privacyPolicy)
-                ? null
-                : _openPrivacyPolicyPage,
-          ),
-          // iOS does not provide an app-initiated exit contract. Keep this
-          // destructive flow available only where Sked can actually finish
-          // by closing the process or Android activity.
-          if (!kIsWeb && defaultTargetPlatform != TargetPlatform.iOS)
-            SettingsConnectedTile(
-              key: const ValueKey('settings-clear-app-data'),
-              leading: const Icon(Icons.delete_forever_outlined),
-              title: l10n.clearAppData,
-              subtitle: l10n.clearAppDataDesc,
-              trailing: _clearingAppData
-                  ? const SizedBox.square(
-                      dimension: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.chevron_right),
-              foregroundColor: Theme.of(context).colorScheme.error,
-              onTap: _clearingAppData || _isFlowOpen(_SettingsFlow.clearAppData)
-                  ? null
-                  : () => _confirmClearAppData(provider),
-            ),
-        ];
-        final updateEntryBusy =
-            _isFlowOpen(_SettingsFlow.updateCheck) ||
-            _isFlowOpen(_SettingsFlow.developerModePage);
-        final aboutChildren = [
-          SettingsConnectedTile(
-            leading: const Icon(Icons.description_outlined),
-            title: l10n.openSourceLicenses,
-            subtitle: l10n.openSourceLicensesDesc,
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _isFlowOpen(_SettingsFlow.licensesPage)
-                ? null
-                : _openLicensesPage,
-          ),
-          SettingsConnectedTile(
-            leading: const FaIcon(FontAwesomeIcons.googlePlay),
-            title: l10n.googlePlay,
-            subtitle: l10n.googlePlayStoreDesc,
-            trailing: const Icon(Icons.open_in_new),
-            onTap: _isFlowOpen(_SettingsFlow.googlePlay)
-                ? null
-                : _openGooglePlay,
-          ),
-          SettingsConnectedTile(
-            leading: const FaIcon(FontAwesomeIcons.github),
-            title: l10n.githubRepository,
-            subtitle: l10n.starSkedOnGithub,
-            trailing: const Icon(Icons.open_in_new),
-            onTap: _isFlowOpen(_SettingsFlow.githubRepo)
-                ? null
-                : _openGithubRepo,
-          ),
-          _DeveloperModeEntryTile(
-            key: const ValueKey('settings-check-for-updates'),
-            title: l10n.checkForUpdates,
-            subtitle: _buildUpdateSubtitle(provider, l10n),
-            onTap: updateEntryBusy ? null : _checkForUpdates,
-            onLongPress: updateEntryBusy ? null : _openDeveloperModePage,
-            onLongPressHint: l10n.developerModeLongPressHint,
-            onTapHint: l10n.checkForUpdates,
-          ),
-        ];
-        // Scaffold removes the IME inset from its body when it resizes. Keep
-        // the value captured above the Scaffold so the final row still gets a
-        // scrollable tail while the keyboard is visible.
-        final rootImeInset = MediaQuery.viewInsetsOf(context).bottom;
         return PopScope(
-          canPop: !_clearingAppData,
-          child: Scaffold(
-            appBar: AppBar(title: Text(l10n.settingsTitle)),
-            body: Focus(
-              canRequestFocus: !_clearingAppData,
-              descendantsAreFocusable: !_clearingAppData,
-              descendantsAreTraversable: !_clearingAppData,
-              child: AbsorbPointer(
-                absorbing: _clearingAppData,
-                child: SafeArea(
-                  top: false,
-                  bottom: true,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final textScale =
-                          MediaQuery.textScalerOf(context).scale(14) / 14;
-                      final horizontalPadding = constraints.maxWidth < 600
-                          ? 16.0
-                          : 24.0;
-                      final maxContentWidth = constraints.maxWidth >= 840
-                          ? 1120.0
-                          : 720.0;
-                      final contentWidth =
-                          (constraints.maxWidth - horizontalPadding * 2)
-                              .clamp(0, maxContentWidth)
-                              .toDouble();
-                      final availableColumnWidth = (contentWidth - 20) / 2;
-                      final useTwoColumns =
-                          constraints.maxWidth >= 840 &&
-                          textScale <= 1.3 &&
-                          availableColumnWidth >= 360;
-                      final workspaceGroup = SettingsConnectedGroup(
-                        key: const ValueKey('settings-group-workspace'),
-                        title: l10n.settingsSectionWorkspace,
-                        children: workspaceChildren,
-                      );
-                      final timetableGroup = SettingsConnectedGroup(
-                        key: const ValueKey('settings-group-timetable'),
-                        title: l10n.settingsSectionTimetable,
-                        children: timetableChildren,
-                      );
-                      final generalScheduleGroup = SettingsConnectedGroup(
-                        key: const ValueKey('settings-group-general-schedule'),
-                        title: l10n.settingsSectionGeneralSchedule,
-                        children: generalScheduleChildren,
-                      );
-                      final notificationGroup = SettingsConnectedGroup(
-                        key: const ValueKey('settings-group-notifications'),
-                        title: l10n.notificationSettingsSection,
-                        children: notificationChildren,
-                      );
-                      final appearanceGroup = SettingsConnectedGroup(
-                        key: const ValueKey(
-                          'settings-group-appearance-language',
-                        ),
-                        title: l10n.settingsSectionAppearanceLanguage,
-                        children: appearanceChildren,
-                      );
-                      final dataGroup = SettingsConnectedGroup(
-                        key: const ValueKey('settings-group-data-security'),
-                        title: l10n.settingsSectionDataSecurity,
-                        children: dataChildren,
-                      );
-                      final aboutGroup = SettingsConnectedGroup(
-                        key: const ValueKey('settings-group-about'),
-                        title: l10n.settingsSectionAbout,
-                        children: aboutChildren,
-                      );
-                      final left = [
-                        workspaceGroup,
-                        timetableGroup,
-                        generalScheduleGroup,
-                        notificationGroup,
-                      ];
-                      final right = [appearanceGroup, dataGroup, aboutGroup];
-                      final groups = useTwoColumns
-                          ? KeyedSubtree(
-                              key: const ValueKey('settings-groups-two-column'),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: Column(children: left)),
-                                  const SizedBox(width: 20),
-                                  Expanded(child: Column(children: right)),
-                                ],
-                              ),
-                            )
-                          : KeyedSubtree(
-                              key: const ValueKey(
-                                'settings-groups-single-column',
-                              ),
-                              child: Column(children: [...left, ...right]),
-                            );
-                      return ListView(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          12,
-                          horizontalPadding,
-                          28 + rootImeInset,
-                        ),
-                        children: [
-                          Center(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: maxContentWidth,
-                              ),
-                              child: Column(
-                                children: [
-                                  if (provider.lastRecoveryStatus !=
-                                      RecoveryStatus.none)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: _RecoveryNoticeTile(
-                                        status: provider.lastRecoveryStatus,
-                                      ),
-                                    ),
-                                  groups,
-                                ],
-                              ),
-                            ),
+          canPop: !_clearingAppData && !provider.isDataClearActive,
+          child: SettingsInteractionBlocker(
+            blocked: _clearingAppData || provider.isDataClearActive,
+            child: widget.initialDestination != null
+                ? _buildDestination(widget.initialDestination!, provider)
+                : AdaptiveSettingsScaffold(
+                    catalog: catalog,
+                    notice: provider.lastRecoveryStatus == RecoveryStatus.none
+                        ? null
+                        : _RecoveryNoticeTile(
+                            status: provider.lastRecoveryStatus,
                           ),
-                        ],
-                      );
-                    },
+                    builder: (entry) => SettingsPage(
+                      initialDestination: entry.destination,
+                      initialWorkspace: entry.workspace,
+                      packageInfoLoader: widget.packageInfoLoader,
+                      dataClearCoordinator: widget.dataClearCoordinator,
+                      urlLauncher: widget.urlLauncher,
+                      notificationService: widget.notificationService,
+                    ),
                   ),
-                ),
-              ),
-            ),
           ),
         );
       },
     );
   }
 
-  bool _isFlowOpen(_SettingsFlow flow) => _openFlows.contains(flow);
-
-  Future<void> _switchWorkspace(
+  Widget _buildDestination(
+    SettingsDestination destination,
     TimetableProvider provider,
-    AppMode mode,
-  ) async {
-    if (provider.activeMode == mode ||
-        _isFlowOpen(_SettingsFlow.workspaceMode)) {
-      return;
+  ) {
+    final l10n = AppLocalizations.of(context);
+    if (destination == SettingsDestination.appearance) {
+      return ThemeSettingsPage(initialWorkspace: widget.initialWorkspace);
     }
-    await _guardFlow(_SettingsFlow.workspaceMode, () async {
-      await runUiCommandWithFeedback(
-        context: context,
-        debugLabel: 'Switch settings workspace',
-        command: () => provider.switchMode(mode),
+    if (destination == SettingsDestination.notifications) {
+      return NotificationSettingsPage(
+        notificationService: widget.notificationService,
+        agendaCoordinator: _agendaCoordinator,
       );
-    });
-  }
-
-  Future<void> _updateHomeNavigation(
-    TimetableProvider provider,
-    bool value,
-  ) async {
-    if (_isFlowOpen(_SettingsFlow.homeNavigation)) return;
-    await _guardFlow(_SettingsFlow.homeNavigation, () async {
-      await runUiCommandWithFeedback(
-        context: context,
-        debugLabel: 'Update home navigation visibility',
-        command: () => provider.updateHideHomeWorkspaceNavigation(value),
+    }
+    if (destination == SettingsDestination.language) {
+      return const LanguageSettingsPage();
+    }
+    if (destination == SettingsDestination.features) {
+      return WorkspaceFeaturesPage(
+        coordinator: _agendaCoordinator,
+        notificationService: widget.notificationService,
       );
-    });
-  }
+    }
+    final mode = destination.workspace;
+    if (mode != null && !provider.isWorkspaceEnabled(mode)) {
+      return const SizedBox.shrink();
+    }
+    if (destination == SettingsDestination.studentPreferences) {
+      return const TimetableDisplaySettingsPage();
+    }
+    if (destination == SettingsDestination.generalPreferences) {
+      return const GeneralDisplaySettingsPage();
+    }
+    if (destination == SettingsDestination.parser) {
+      return const SchoolImportParserSettingsPage();
+    }
+    if (destination == SettingsDestination.periods) {
+      return const PeriodTimeSetManagerPage();
+    }
+    if (destination == SettingsDestination.notificationPermissions) {
+      return NotificationSettingsPage(
+        troubleshooting: true,
+        notificationService: widget.notificationService,
+        agendaCoordinator: _agendaCoordinator,
+      );
+    }
+    if (destination == SettingsDestination.student ||
+        destination == SettingsDestination.general ||
+        destination == SettingsDestination.schoolImport) {
+      final student = destination != SettingsDestination.general;
+      final busy = _isFlowOpen(
+        student
+            ? _SettingsFlow.studentDataActions
+            : _SettingsFlow.generalDataActions,
+      );
+      return PopScope(
+        canPop: !busy,
+        child: Scaffold(
+          appBar: WorkbenchAppBar(
+            title: Text(
+              widget.transferDirection == SettingsTransferDirection.import
+                  ? l10n.importAction
+                  : widget.transferDirection == SettingsTransferDirection.export
+                  ? l10n.exportAction
+                  : student
+                  ? l10n.dataImportExport
+                  : l10n.generalScheduleImportExport,
+            ),
+          ),
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                // An open chooser is a guarded flow, not a pending disk write.
+                // Its task owns progress; do not animate a busy bar behind it.
+                Expanded(
+                  child: student
+                      ? _dataTransferController.studentPageContent(
+                          context,
+                          busy: busy,
+                          direction: widget.transferDirection,
+                          onAction: (action) => unawaited(
+                            _performStudentTransfer(provider, action),
+                          ),
+                          importConfiguration: [
+                            const Divider(),
+                            ListTile(
+                              leading: const Icon(Icons.language_outlined),
+                              title: Text(l10n.schoolWebImportEntry),
+                              onTap: busy
+                                  ? null
+                                  : () => _openSchoolSitesPage(provider),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.tune),
+                              title: Text(l10n.schoolImportParserSettingsTitle),
+                              onTap: busy
+                                  ? null
+                                  : () => _openParserSettingsPage(provider),
+                            ),
+                          ],
+                        )
+                      : _dataTransferController.generalPageContent(
+                          context,
+                          busy: busy,
+                          direction: widget.transferDirection,
+                          onAction: (action) => unawaited(
+                            _performGeneralTransfer(provider, action),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final dataChildren = [
+      SettingsConnectedTile(
+        leading: const Icon(Icons.inventory_2_outlined),
+        title: l10n.appBackupTitle,
+        subtitle: l10n.backupWorkspaceSelection,
+        trailing: const Icon(Icons.keyboard_arrow_up),
+        onTap: _isFlowOpen(_SettingsFlow.appDataActions)
+            ? null
+            : () => _showAppDataActions(provider),
+      ),
+      SettingsConnectedTile(
+        leading: const Icon(Icons.privacy_tip_outlined),
+        title: l10n.privacyPolicyTitle,
+        subtitle: provider.acceptedPrivacyPolicyVersion == null
+            ? l10n.privacyPolicyEntryDesc
+            : l10n.privacyPolicyAcceptedVersionLabel(
+                provider.acceptedPrivacyPolicyVersion!,
+              ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _isFlowOpen(_SettingsFlow.privacyPolicy)
+            ? null
+            : _openPrivacyPolicyPage,
+      ),
+      // iOS does not provide an app-initiated exit contract. Keep this
+      // destructive flow available only where Sked can actually finish
+      // by closing the process or Android activity.
+      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.iOS)
+        SettingsConnectedTile(
+          key: const ValueKey('settings-clear-app-data'),
+          leading: const Icon(Icons.delete_forever_outlined),
+          title: l10n.clearAppData,
+          subtitle: l10n.clearAppDataDesc,
+          trailing: _clearingAppData
+              ? const SizedBox.square(
+                  dimension: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.chevron_right),
+          foregroundColor: Theme.of(context).colorScheme.error,
+          onTap: _clearingAppData || _isFlowOpen(_SettingsFlow.clearAppData)
+              ? null
+              : () => _confirmClearAppData(provider),
+        ),
+    ];
+    final updateEntryBusy =
+        _isFlowOpen(_SettingsFlow.updateCheck) ||
+        _isFlowOpen(_SettingsFlow.developerModePage);
+    final aboutChildren = [
+      SettingsConnectedTile(
+        leading: const Icon(Icons.description_outlined),
+        title: l10n.openSourceLicenses,
+        subtitle: l10n.openSourceLicensesDesc,
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _isFlowOpen(_SettingsFlow.licensesPage)
+            ? null
+            : _openLicensesPage,
+      ),
+      SettingsConnectedTile(
+        leading: const FaIcon(FontAwesomeIcons.googlePlay),
+        title: l10n.googlePlay,
+        subtitle: l10n.googlePlayStoreDesc,
+        trailing: const Icon(Icons.open_in_new),
+        onTap: _isFlowOpen(_SettingsFlow.googlePlay) ? null : _openGooglePlay,
+      ),
+      SettingsConnectedTile(
+        leading: const FaIcon(FontAwesomeIcons.github),
+        title: l10n.githubRepository,
+        subtitle: l10n.starSkedOnGithub,
+        trailing: const Icon(Icons.open_in_new),
+        onTap: _isFlowOpen(_SettingsFlow.githubRepo) ? null : _openGithubRepo,
+      ),
+      _DeveloperModeEntryTile(
+        key: const ValueKey('settings-check-for-updates'),
+        title: l10n.checkForUpdates,
+        subtitle: _buildUpdateSubtitle(provider, l10n),
+        onTap: updateEntryBusy ? null : _checkForUpdates,
+        onLongPress: updateEntryBusy ? null : _openDeveloperModePage,
+        onLongPressHint: l10n.developerModeLongPressHint,
+        onTapHint: l10n.checkForUpdates,
+      ),
+    ];
 
-  String _themeSettingsSummary(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
-    final studentSummary = _themeSettingsForModeSummary(
-      provider.studentMode.themeMode,
-      provider.studentMode.themeColorMode,
-      l10n,
-    );
-    final generalSummary = _themeSettingsForModeSummary(
-      provider.generalMode.themeMode,
-      provider.generalMode.themeColorMode,
-      l10n,
-    );
-    return '${l10n.studentTimetable}: $studentSummary\n'
-        '${l10n.generalSchedule}: $generalSummary';
-  }
-
-  String _themeSettingsForModeSummary(
-    String themeMode,
-    String themeColorMode,
-    AppLocalizations l10n,
-  ) {
-    final mode = switch (themeMode) {
-      'dark' => l10n.themeDark,
-      'system' => l10n.themeFollowSystem,
-      _ => l10n.themeLight,
+    final (title, children) = switch (destination) {
+      SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
+      _ => (l10n.settingsDataPrivacy, dataChildren),
     };
-    final colorMode = themeColorMode == themeColorModeColorful
-        ? l10n.themeColorModeColorful
-        : l10n.themeColorModeSingle;
-    return '$mode / $colorMode';
+    return Scaffold(
+      appBar: WorkbenchAppBar(
+        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+        title: Text(title),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ResponsiveSettingsSingleColumnBody(
+          children: [
+            SettingsConnectedGroup(
+              title: title,
+              children: children
+                  .where(
+                    (item) =>
+                        item.key != const ValueKey('settings-clear-app-data'),
+                  )
+                  .toList(),
+            ),
+            if (children.any(
+              (item) => item.key == const ValueKey('settings-clear-app-data'),
+            )) ...[
+              const SizedBox(height: 32),
+              SettingsConnectedGroup(
+                title: l10n.clearAppData,
+                children: children
+                    .where(
+                      (item) =>
+                          item.key == const ValueKey('settings-clear-app-data'),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
+
+  bool _isFlowOpen(_SettingsFlow flow) => _openFlows.contains(flow);
 
   void _setFlowOpen(_SettingsFlow flow, bool value) {
     final changed = value ? _openFlows.add(flow) : _openFlows.remove(flow);
@@ -638,88 +440,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _openThemeSettingsPage(TimetableProvider provider) async {
-    await _guardFlow(_SettingsFlow.themeSettingsPage, () async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const ThemeSettingsPage(),
-          ),
-        ),
-      );
-    });
-  }
-
-  Future<void> _openTimetableDisplaySettingsPage(
-    TimetableProvider provider,
-  ) async {
-    await _guardFlow(_SettingsFlow.timetableDisplaySettingsPage, () async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const TimetableDisplaySettingsPage(),
-          ),
-        ),
-      );
-    });
-  }
-
-  Future<void> _openGeneralDisplaySettingsPage(
-    TimetableProvider provider,
-  ) async {
-    await _guardFlow(_SettingsFlow.generalDisplaySettingsPage, () async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const GeneralDisplaySettingsPage(),
-          ),
-        ),
-      );
-    });
-  }
-
-  Future<void> _openNotificationSettingsPage(TimetableProvider provider) async {
-    await _guardFlow(_SettingsFlow.notificationSettingsPage, () async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: NotificationSettingsPage(
-              notificationService: widget.notificationService,
-              agendaCoordinator: _agendaCoordinator,
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
-  String _notificationSettingsSummary(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
-    if (!provider.notificationsEnabled) {
-      return l10n.notificationSettingsDisabledSummary;
-    }
-    return l10n.notificationSettingsEnabledSummary;
-  }
-
-  Future<void> _openLanguageSettingsPage(TimetableProvider provider) async {
-    await _guardFlow(_SettingsFlow.languageSettingsPage, () async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: const LanguageSettingsPage(),
-          ),
-        ),
-      );
-    });
-  }
-
   Future<void> _openParserSettingsPage(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.parserSettingsPage, () async {
       await Navigator.of(context).push(
@@ -731,54 +451,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     });
-  }
-
-  String _languageLabelForCode(
-    List<AppLanguageOption> options,
-    String localeCode,
-  ) {
-    final normalizedCode = normalizeLocaleCode(localeCode);
-    for (final option in options) {
-      if (option.code == normalizedCode) {
-        return option.label;
-      }
-    }
-    return languageLabelForLocaleCode(
-      normalizedCode,
-      l10n: AppLocalizations.of(context),
-    );
-  }
-
-  Future<void> _pickPeriodTimeSet(
-    TimetableProvider provider,
-    TimetableConfig config,
-  ) async {
-    await runUiCommandWithFeedback(
-      context: context,
-      debugLabel: 'Select period time set',
-      command: () => _guardFlow(_SettingsFlow.periodTimePicker, () async {
-        final result = await showPeriodTimeSetPickerDialog(
-          context,
-          provider: provider,
-          selectedPeriodTimeSetId: _selectedPeriodTimeSetId!,
-        );
-        if (result == null || result == _selectedPeriodTimeSetId) {
-          return;
-        }
-        final previousId = _selectedPeriodTimeSetId;
-        setState(() => _selectedPeriodTimeSetId = result);
-        try {
-          await provider.updateTimetableConfig(
-            config.copyWith(periodTimeSetId: result),
-          );
-        } catch (_) {
-          if (mounted && _selectedPeriodTimeSetId == result) {
-            setState(() => _selectedPeriodTimeSetId = previousId);
-          }
-          rethrow;
-        }
-      }),
-    );
   }
 
   Future<void> _openPrivacyPolicyPage() async {
@@ -1022,29 +694,25 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _showDataActions(TimetableProvider provider) async {
-    await _guardFlow(_SettingsFlow.studentDataActions, () async {
-      await _dataTransferController.runStudentFlow(
-        context,
-        onAction: (action) async {
-          switch (action) {
-            case SettingsStudentDataAction.importTimetables:
-              await TimetableImportFlow.importTimetables(context, provider);
-            case SettingsStudentDataAction.importTimetablesText:
-              await _importTimetablesFromText(provider);
-            case SettingsStudentDataAction.importSchoolHtml:
-              await _openSchoolHtmlImportPage(provider);
-            case SettingsStudentDataAction.exportTimetablesShare:
-              await _exportTimetables(provider, share: true);
-            case SettingsStudentDataAction.exportTimetablesSave:
-              await _exportTimetables(provider, share: false);
-            case SettingsStudentDataAction.exportTimetablesText:
-              await _exportTimetablesAsText(provider);
-          }
-        },
-      );
-    });
-  }
+  Future<void> _performStudentTransfer(
+    TimetableProvider provider,
+    SettingsStudentDataAction action,
+  ) => _guardFlow(_SettingsFlow.studentDataActions, () async {
+    switch (action) {
+      case SettingsStudentDataAction.importTimetables:
+        await TimetableImportFlow.importTimetables(context, provider);
+      case SettingsStudentDataAction.importTimetablesText:
+        await _importTimetablesFromText(provider);
+      case SettingsStudentDataAction.importSchoolHtml:
+        await _openSchoolHtmlImportPage(provider);
+      case SettingsStudentDataAction.exportTimetablesShare:
+        await _exportTimetables(provider, share: true);
+      case SettingsStudentDataAction.exportTimetablesSave:
+        await _exportTimetables(provider, share: false);
+      case SettingsStudentDataAction.exportTimetablesText:
+        await _exportTimetablesAsText(provider);
+    }
+  });
 
   Future<void> _showAppDataActions(TimetableProvider provider) async {
     await _guardFlow(_SettingsFlow.appDataActions, () async {
@@ -1203,6 +871,19 @@ class _SettingsPageState extends State<SettingsPage> {
     String source,
     BuildContext feedbackContext,
   ) async {
+    AppData restored;
+    try {
+      restored = decodeAppBackup(
+        source,
+        localeCode: provider.localeCode,
+      ).appData;
+    } on FormatException catch (error) {
+      if (feedbackContext.mounted) {
+        ScaffoldMessenger.of(feedbackContext)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      return false;
+    }
     final confirmed = await showExpressiveDialog<bool>(
       context: feedbackContext,
       builder: (dialogContext) {
@@ -1216,7 +897,42 @@ class _SettingsPageState extends State<SettingsPage> {
         final l10n = AppLocalizations.of(dialogContext);
         return AlertDialog(
           title: Text(l10n.restoreBackupConfirmTitle),
-          content: Text(l10n.restoreBackupConfirmMessage),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.restoreBackupConfirmMessage),
+                const SizedBox(height: 16),
+                Text(l10n.backupWorkspaceSelection),
+                const SizedBox(height: 8),
+                for (final mode in AppMode.values)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      restored.isWorkspaceEnabled(mode)
+                          ? Icons.check_circle_outline
+                          : Icons.block_outlined,
+                    ),
+                    title: Text(
+                      mode == AppMode.student
+                          ? l10n.studentTimetable
+                          : l10n.generalSchedule,
+                    ),
+                    subtitle: Text(
+                      '${provider.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary} → ${restored.isWorkspaceEnabled(mode) ? l10n.notificationSettingsEnabledSummary : l10n.notificationSettingsDisabledSummary}',
+                    ),
+                    trailing: Icon(
+                      provider.isWorkspaceEnabled(mode) ==
+                              restored.isWorkspaceEnabled(mode)
+                          ? Icons.remove
+                          : Icons.swap_horiz,
+                    ),
+                  ),
+              ],
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => popWith(false),
@@ -1241,6 +957,8 @@ class _SettingsPageState extends State<SettingsPage> {
             .showSnackBar(SnackBar(content: Text(successMessage)));
       }
       return true;
+    } on WorkspaceChangeCancelledException {
+      return false;
     } on FormatException catch (error) {
       if (feedbackContext.mounted) {
         ScaffoldMessenger.of(feedbackContext)
@@ -1648,43 +1366,39 @@ class _SettingsPageState extends State<SettingsPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showGeneralDataActions(TimetableProvider provider) async {
-    await _guardFlow(_SettingsFlow.generalDataActions, () async {
-      await _dataTransferController.runGeneralFlow(
-        context,
-        onAction: (action) async {
-          switch (action) {
-            case SettingsGeneralDataAction.importSchedulesJsonFile:
-              await _importGeneralSchedulesJsonFile(provider);
-            case SettingsGeneralDataAction.importSchedulesJsonText:
-              await _importGeneralSchedulesJsonText(provider);
-            case SettingsGeneralDataAction.importSchedulesIcsFile:
-              await _importGeneralSchedulesIcsFile(provider);
-            case SettingsGeneralDataAction.importSchedulesIcsText:
-              await _importGeneralSchedulesIcsText(provider);
-            case SettingsGeneralDataAction.exportSchedulesJsonShare:
-              await _exportGeneralSchedules(provider, share: true);
-            case SettingsGeneralDataAction.exportSchedulesJsonSave:
-              await _exportGeneralSchedules(provider, share: false);
-            case SettingsGeneralDataAction.exportSchedulesJsonText:
-              await _exportGeneralSchedulesAsText(
-                provider,
-                format: _ExportFormat.json,
-              );
-            case SettingsGeneralDataAction.exportSchedulesIcsShare:
-              await _exportGeneralSchedulesIcs(provider, share: true);
-            case SettingsGeneralDataAction.exportSchedulesIcsSave:
-              await _exportGeneralSchedulesIcs(provider, share: false);
-            case SettingsGeneralDataAction.exportSchedulesIcsText:
-              await _exportGeneralSchedulesAsText(
-                provider,
-                format: _ExportFormat.ics,
-              );
-          }
-        },
-      );
-    });
-  }
+  Future<void> _performGeneralTransfer(
+    TimetableProvider provider,
+    SettingsGeneralDataAction action,
+  ) => _guardFlow(_SettingsFlow.generalDataActions, () async {
+    switch (action) {
+      case SettingsGeneralDataAction.importSchedulesJsonFile:
+        await _importGeneralSchedulesJsonFile(provider);
+      case SettingsGeneralDataAction.importSchedulesJsonText:
+        await _importGeneralSchedulesJsonText(provider);
+      case SettingsGeneralDataAction.importSchedulesIcsFile:
+        await _importGeneralSchedulesIcsFile(provider);
+      case SettingsGeneralDataAction.importSchedulesIcsText:
+        await _importGeneralSchedulesIcsText(provider);
+      case SettingsGeneralDataAction.exportSchedulesJsonShare:
+        await _exportGeneralSchedules(provider, share: true);
+      case SettingsGeneralDataAction.exportSchedulesJsonSave:
+        await _exportGeneralSchedules(provider, share: false);
+      case SettingsGeneralDataAction.exportSchedulesJsonText:
+        await _exportGeneralSchedulesAsText(
+          provider,
+          format: _ExportFormat.json,
+        );
+      case SettingsGeneralDataAction.exportSchedulesIcsShare:
+        await _exportGeneralSchedulesIcs(provider, share: true);
+      case SettingsGeneralDataAction.exportSchedulesIcsSave:
+        await _exportGeneralSchedulesIcs(provider, share: false);
+      case SettingsGeneralDataAction.exportSchedulesIcsText:
+        await _exportGeneralSchedulesAsText(
+          provider,
+          format: _ExportFormat.ics,
+        );
+    }
+  });
 
   Future<List<String>?> _pickGeneralScheduleIds({
     required List<GeneralSchedule> schedules,

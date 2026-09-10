@@ -151,6 +151,21 @@ class AgendaOccurrence {
   /// hidden records).  Consumers apply this policy centrally in projection.
   final bool includeInAgenda;
 
+  AgendaOccurrence copyWith({List<AgendaReminder>? reminders}) =>
+      AgendaOccurrence(
+        stableId: stableId,
+        sourceType: sourceType,
+        start: start,
+        end: end,
+        title: title,
+        target: target,
+        location: location,
+        isAllDay: isAllDay,
+        reminders: reminders ?? this.reminders,
+        metadata: metadata,
+        includeInAgenda: includeInAgenda,
+      );
+
   /// Alias for consumers that use the common `id` naming convention.
   String get id => stableId;
 

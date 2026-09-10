@@ -685,8 +685,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} valid sites, {invalidCount} invalid entries.",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "The file contains an empty school-site list.",
@@ -694,7 +698,9 @@
   "schoolSitesImportInvalidEntry": "Entry {position} is invalid and will be skipped.",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "Merge",
@@ -706,8 +712,12 @@
   "schoolSitesImportReplaceConfirmMessage": "This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "School-site data needs recovery",
@@ -834,9 +844,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Webbtidsplan importerad",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API configuration",
+  "schoolImportParserSettingsTitle": "API för schemaimport",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API used by timetable parsing and other AI features.",
+  "schoolImportParserSettingsDesc": "Konfigurera det OpenAI-kompatibla API:et för schemaimport, inte för en chattassistent.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "Parserkälla",
   "@schoolImportParserSourceTitle": {},
@@ -1019,7 +1029,9 @@
   "visibleCategoryCount": "{count} categories",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "No visible categories",
@@ -1194,7 +1206,13 @@
   "timeGridHourHeightHint": "Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.",
   "@timeGridHourHeightHint": {},
   "timeGridHourHeightValue": "{height} dp",
-  "@timeGridHourHeightValue": {"placeholders": {"height": {"type": "int"}}},
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "Import JSON file",
   "@importJsonFile": {},
   "pasteJson": "Paste JSON",
@@ -1491,7 +1509,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "Hide workspace navigation",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.",
+  "hideHomeWorkspaceNavigationDesc": "Dölj navigeringen mellan arbetsytor. Du kan fortfarande byta via arbetsytemenyn på huvudskärmen.",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "Date label format",
   "@generalDateLabelFormat": {},
@@ -1636,5 +1654,44 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "workspaceFeatures": "Funktionshantering",
+  "workspaceBoth": "Schema och kalender",
+  "workspaceOnlyStudent": "Endast schema",
+  "workspaceOnlyGeneral": "Endast kalender",
+  "workspaceDisableTitle": "Stänga av den här arbetsytan?",
+  "workspaceDisableMessage": "Data och inställningar sparas. Funktioner och påminnelser stoppas tills du aktiverar arbetsytan här igen.",
+  "workspaceEnableHint": "Välj de funktioner du använder. Minst en måste vara aktiv.",
+  "workspaceLastRequired": "Minst en arbetsyta måste vara aktiv.",
+  "workspaceReminderCleanupFailed": "Arbetsytan är avstängd, men påminnelserna kunde inte tas bort. Försök återställa aviseringarna igen.",
+  "settingsSearch": "Sök i inställningar",
+  "settingsNoResults": "Inga matchande inställningar",
+  "settingsDataPrivacy": "Data och integritet",
+  "workspacePreferences": "Visning och interaktion",
+  "workspaceManage": "Hantera",
+  "selectedDayAgenda": "Vald dag",
+  "notificationTroubleshooting": "Behörigheter och felsökning",
+  "settingsConnection": "Anslutning",
+  "settingsAdvanced": "Avancerat",
+  "unsavedChangesMessage": "Du har osparade ändringar. Kasta dem och lämna?",
+  "backupWorkspaceSelection": "Den fullständiga säkerhetskopian innehåller data och valet av aktiva arbetsytor.",
+  "assistantLayoutPreview": "AI · Layout preview",
+  "assistantSelectionContext": "Uses the current selection as context",
+  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
+  "assistantDraftLabel": "Message draft",
+  "assistantPreviewNoSend": "Layout preview only. Nothing will be sent or changed.",
+  "resizePanel": "Resize panel",
+  "minimizeWindow": "Minimize",
+  "maximizeWindow": "Maximize",
+  "restoreWindow": "Restore window",
+  "closeWindow": "Close window",
+  "notificationPrecisionLimitations": "Påminnelser beror på systembehörigheter och bakgrundskörning. Avstängning, tidsändringar eller systembegränsningar kan fördröja dem.",
+  "courseSystemReminder": "System reminder",
+  "courseReminderInherit": "Use default ({reminder})",
+  "courseReminderMasterOff": "System reminders are off in notification settings. This course preference can still be saved.",
+  "courseReminderDefaultOff": "No default course reminder is set. Choose a custom reminder here or set a default in notification settings.",
+  "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
+  "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
+  "courseReminderMinutesLabel": "Minutes before class",
+  "exportAction": "Export"
 }

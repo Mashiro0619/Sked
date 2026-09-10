@@ -16,7 +16,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../models/workspace_availability.dart';
 import 'agenda_action_router.dart';
+import 'agenda_background_data.dart';
 import 'agenda_projection_service.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_notification_fingerprint.dart';
@@ -26,6 +28,9 @@ import 'notification_planner.dart';
 import 'windows_notification_backend.dart';
 
 import 'windows_notification_identity.dart';
+
+@visibleForTesting
+AgendaBackgroundDataLoader? notificationBackgroundDataLoader;
 
 const _backgroundNotificationActionIds = <String>{'snooze_10m', 'handled'};
 
@@ -70,7 +75,23 @@ void agendaNotificationBackgroundAction(NotificationResponse response) async {
       !agendaNotificationPayloadHasRuntimeIdentity(decoded)) {
     return;
   }
-  await _persistBackgroundNotificationAction(decoded, payload, actionId);
+  try {
+    await withAgendaRuntimeMutationLock(() async {
+      final snapshot =
+          await (notificationBackgroundDataLoader ??
+              loadPersistedAgendaBackgroundData)();
+      if (!snapshot.canWrite ||
+          snapshot.data == null ||
+          !snapshot.data!.allowsAgendaSource(decoded.target.sourceType)) {
+        return;
+      }
+      await _persistBackgroundNotificationAction(decoded, payload, actionId);
+    });
+  } catch (error, stackTrace) {
+    debugPrint(
+      'Checking background workspace availability failed: $error\n$stackTrace',
+    );
+  }
 }
 
 Future<void> _persistBackgroundNotificationAction(
@@ -1960,6 +1981,7 @@ class AgendaNotificationService extends ChangeNotifier {
   Future<void>? _runtimeStateInitialization;
   Future<void>? _gatewayInitialization;
   AppData? _lastData;
+  AppData Function()? committedDataReader;
   Map<String, DateTime> _snoozedUntil = const {};
   Set<String> _handledOccurrenceIds = const {};
   bool _runtimeClearing = false;
@@ -2408,10 +2430,15 @@ class AgendaNotificationService extends ChangeNotifier {
     FutureOr<void> Function(String? payload, String? actionId)? onAction,
   }) async {
     final current = (anchor ?? now()).toLocal();
+    final committed = committedDataReader?.call();
+    if (committed != null && !data.sameWorkspaceAvailability(committed)) {
+      data = committed;
+    }
     try {
       _lastData = data;
       await initialize(onPayload: onPayload, onAction: onAction);
       if (!(await _allowsProjectionFence(projectionFence))) return;
+      await _cancelDisabledWorkspaceNotifications(data, projectionFence);
       // Actions selected by a background isolate are persisted until the
       // provider snapshot is available. Consume them before building this
       // plan so a queued snooze/handled operation is reflected immediately.
@@ -2985,7 +3012,10 @@ class AgendaNotificationService extends ChangeNotifier {
     var finiteEndExclusive = current.add(_unboundedReminderHorizon);
 
     TimetableData? activeTimetable;
-    for (final timetable in data.studentMode.timetables) {
+    for (final timetable
+        in data.isWorkspaceEnabled(AppMode.student)
+            ? data.studentMode.timetables
+            : const <TimetableData>[]) {
       if (timetable.id == data.studentMode.activeTimetableId) {
         activeTimetable = timetable;
         break;
@@ -3004,7 +3034,10 @@ class AgendaNotificationService extends ChangeNotifier {
       }
     }
 
-    for (final calendar in data.generalMode.schedules) {
+    for (final calendar
+        in data.isWorkspaceEnabled(AppMode.general)
+            ? data.generalMode.schedules
+            : const <GeneralSchedule>[]) {
       if (!calendar.isVisible) continue;
       for (final event in calendar.events) {
         if (event.reminders.isEmpty) continue;
@@ -3581,7 +3614,7 @@ class AgendaNotificationService extends ChangeNotifier {
         !agendaNotificationPayloadHasRuntimeIdentity(decoded)) {
       return false;
     }
-    final currentData = _lastData;
+    final currentData = committedDataReader?.call() ?? _lastData;
     if (currentData != null &&
         !agendaNotificationPayloadMatchesProjection(
           payload: decoded,
@@ -3823,6 +3856,36 @@ class AgendaNotificationService extends ChangeNotifier {
       _runtimeStore is AgendaNotificationBackgroundRequestStore
       ? _runtimeStore as AgendaNotificationBackgroundRequestStore
       : null;
+
+  Future<void> _cancelDisabledWorkspaceNotifications(
+    AppData data,
+    AgendaNotificationProjectionFence? fence,
+  ) async {
+    if (data.enabledWorkspaces.length == AppMode.values.length) return;
+    final owned = <String>{
+      ...(await gateway.pendingPlan()).keys,
+      if (gateway is AgendaNotificationOwnershipGateway)
+        ...(await (gateway as AgendaNotificationOwnershipGateway)
+            .ownedNotificationKeys()),
+      if (_runtimeStore is AgendaNotificationBackgroundRequestIndex)
+        ...(await (_runtimeStore as AgendaNotificationBackgroundRequestIndex)
+            .backgroundRequestKeys()),
+    };
+    for (final key in owned) {
+      final source = parseNotificationPlanKey(key)?.sourceType;
+      if (source == null || data.allowsAgendaSource(source)) continue;
+      if (!(await _allowsProjectionFence(fence))) return;
+      await _cancelManagedNotification(key);
+    }
+    for (final key in _snoozedUntil.keys.toList()) {
+      final separator = key.indexOf('|');
+      if (separator < 0) continue;
+      final source = Uri.decodeComponent(key.substring(0, separator));
+      if (data.allowsAgendaSource(source)) continue;
+      await _runtimeStore.removeSnooze(key);
+      _snoozedUntil = {..._snoozedUntil}..remove(key);
+    }
+  }
 
   Future<void> _cancelManagedNotification(String key) async {
     AgendaNotificationBackgroundRequest? persisted;

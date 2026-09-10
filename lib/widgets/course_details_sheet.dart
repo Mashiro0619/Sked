@@ -20,6 +20,7 @@ import 'ui_command.dart';
 class CourseDetailsSheet extends StatefulWidget {
   const CourseDetailsSheet({
     super.key,
+    required this.timetableId,
     required this.courseId,
     required this.weekday,
     required this.conflictKey,
@@ -30,6 +31,8 @@ class CourseDetailsSheet extends StatefulWidget {
     this.onMissing,
   });
 
+  /// The owning timetable, independent of the current canvas selection.
+  final String timetableId;
   final String courseId;
   final int weekday;
   final String? conflictKey;
@@ -76,7 +79,9 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
 
     final content = Consumer<TimetableProvider>(
       builder: (context, provider, child) {
-        final timetable = provider.activeTimetableOrNull;
+        final timetable = provider.timetables
+            .where((item) => item.id == widget.timetableId)
+            .firstOrNull;
         if (timetable == null) {
           _notifyMissing();
           return const SizedBox.shrink();
@@ -298,11 +303,7 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
     }
     final key =
         widget.conflictKey ??
-        buildConflictKeyForCourses(
-          provider.activeTimetable.id,
-          widget.weekday,
-          courses,
-        );
+        buildConflictKeyForCourses(widget.timetableId, widget.weekday, courses);
     final displayedCourseId = provider.displayedCourseIdForConflict(key);
     final displayedCourse = pickDisplayedCourseForConflict(
       courses,

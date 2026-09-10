@@ -13,10 +13,18 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
         provider: provider,
         onSwitch: (pickerContext, timetable) =>
             _switchTimetableFromPicker(pickerContext, provider, timetable),
-        onEdit: (pickerContext, timetable) =>
-            _openTimetableItemDialog(pickerContext, provider, timetable),
-        onCreate: (pickerContext) =>
-            _openCreateTimetableDialog(pickerContext, provider),
+        onEdit: (pickerContext, timetable) async {
+          Navigator.of(pickerContext).pop();
+          await WidgetsBinding.instance.endOfFrame;
+          if (!context.mounted) return false;
+          return _openTimetableItemDialog(context, provider, timetable);
+        },
+        onCreate: (pickerContext) async {
+          Navigator.of(pickerContext).pop();
+          await WidgetsBinding.instance.endOfFrame;
+          if (!context.mounted) return false;
+          return _openCreateTimetableDialog(context, provider);
+        },
       );
       if (availableWidth < 720) {
         await showAppModalSheet<void>(
@@ -233,7 +241,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     TimetableData? timetable,
   }) async {
     final creating = timetable == null;
-    if (_timetableItemDialogOpen || !mounted) {
+    if (_timetableItemDialogOpen || _courseEditorOpen || !mounted) {
       return false;
     }
     _setTimetableItemDialogOpen(true);
@@ -249,9 +257,13 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     var busy = false;
     var deleteDialogOpen = false;
     try {
-      final result = await showExpressiveDialog<String>(
+      final result = await showAppModalSheet<String>(
         context: context,
-        waitForTransitionComplete: true,
+        workspacePane: _pane,
+        isDismissible: false,
+        selectionId: timetable == null
+            ? 'timetable:new'
+            : 'timetable:${timetable.id}',
         builder: (context) {
           final l10n = AppLocalizations.of(context);
           final viewInsets = MediaQuery.of(context).viewInsets;
@@ -272,6 +284,14 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           return _TimetableDialogControllerOwner(
             nameController: nameController,
             weeksController: weeksController,
+            fingerprint: () =>
+                '${nameController.text}|${weeksController.text}|${selectedStartDate.toIso8601String()}|$selectedPeriodTimeSetId',
+            isBlocked: () =>
+                busy ||
+                startDatePickerOpen ||
+                periodTimeSetPickerOpen ||
+                deleteDialogOpen,
+            onExit: () => popWith(null),
             child: StatefulBuilder(
               builder: (context, setDialogState) {
                 final blocked =
@@ -366,17 +386,14 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding: EdgeInsets.fromLTRB(
-                      24,
-                      24,
-                      24,
-                      viewInsets.bottom + 24,
-                    ),
-                    child: Center(
+                    padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                    child: Align(
+                      alignment: Alignment.topCenter,
                       child: SingleChildScrollView(
                         child: Form(
                           key: formKey,
                           child: TimetableInformationDialogSurface(
+                            embedded: true,
                             title: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               mainAxisSize: MainAxisSize.min,
@@ -548,7 +565,15 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                   ),
                             actions: <Widget>[
                               TextButton(
-                                onPressed: blocked ? null : () => popWith(null),
+                                onPressed: blocked
+                                    ? null
+                                    : () => unawaited(
+                                        context
+                                            .findAncestorStateOfType<
+                                              _TimetableDialogControllerOwnerState
+                                            >()!
+                                            .requestEditorExit(),
+                                      ),
                                 child: Text(l10n.cancel),
                               ),
                               FilledButton(
@@ -580,11 +605,17 @@ class _TimetableDialogControllerOwner extends StatefulWidget {
   const _TimetableDialogControllerOwner({
     required this.nameController,
     required this.weeksController,
+    required this.fingerprint,
+    required this.isBlocked,
+    required this.onExit,
     required this.child,
   });
 
   final TextEditingController nameController;
   final TextEditingController weeksController;
+  final String Function() fingerprint;
+  final bool Function() isBlocked;
+  final VoidCallback onExit;
   final Widget child;
 
   @override
@@ -593,7 +624,28 @@ class _TimetableDialogControllerOwner extends StatefulWidget {
 }
 
 class _TimetableDialogControllerOwnerState
-    extends State<_TimetableDialogControllerOwner> {
+    extends State<_TimetableDialogControllerOwner>
+    with EditorExitGuard<_TimetableDialogControllerOwner> {
+  bool _exitAuthorized = false;
+  @override
+  String get draftFingerprint => widget.fingerprint();
+  @override
+  bool get exitBlocked => widget.isBlocked();
+  @override
+  AppMode get editorWorkspace => AppMode.student;
+  @override
+  void initState() {
+    super.initState();
+    initializeDraftGuard();
+  }
+
+  @override
+  void closeEditor() {
+    if (_exitAuthorized) return;
+    setState(() => _exitAuthorized = true);
+    widget.onExit();
+  }
+
   @override
   void dispose() {
     widget.nameController.dispose();
@@ -602,7 +654,13 @@ class _TimetableDialogControllerOwnerState
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) => PopScope(
+    canPop: _exitAuthorized,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) unawaited(requestEditorExit());
+    },
+    child: widget.child,
+  );
 }
 
 class _DeleteTimetableConfirmationDialog extends StatefulWidget {

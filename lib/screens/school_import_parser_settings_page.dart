@@ -1,3 +1,7 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+import '../models/app_mode.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -29,7 +33,14 @@ class SchoolImportParserSettingsPage extends StatefulWidget {
 
 class _SchoolImportParserSettingsPageState
     extends State<SchoolImportParserSettingsPage>
-    with WidgetsBindingObserver {
+    with
+        WidgetsBindingObserver,
+        WorkspaceRouteLifecycle<SchoolImportParserSettingsPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+  @override
+  Future<bool> prepareWorkspaceDisable() => _flushAllPendingSettings();
+
   late final TextEditingController _baseUrlController;
   late final TextEditingController _apiKeyController;
   late final TextEditingController _modelController;
@@ -41,6 +52,15 @@ class _SchoolImportParserSettingsPageState
 
   bool _showApiKey = false;
   bool _isFetchingModels = false;
+  Completer<void>? _modelFetchCancellation;
+  void _cancelModelFetch() {
+    final pending = _modelFetchCancellation;
+    _modelFetchCancellation = null;
+    if (pending != null && !pending.isCompleted) pending.complete();
+  }
+
+  @override
+  void workspaceDisabled() => _cancelModelFetch();
   bool _isSavingApiKey = false;
   bool _isDisposing = false;
   bool _allowPop = false;
@@ -82,6 +102,7 @@ class _SchoolImportParserSettingsPageState
 
   @override
   void dispose() {
+    _cancelModelFetch();
     _isDisposing = true;
     unawaited(
       _flushAllPendingSettings().catchError((error, stackTrace) {
@@ -115,6 +136,7 @@ class _SchoolImportParserSettingsPageState
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
         _syncControllers(provider);
@@ -130,7 +152,9 @@ class _SchoolImportParserSettingsPageState
             }
           },
           child: Scaffold(
-            appBar: AppBar(title: Text(l10n.schoolImportParserSettingsTitle)),
+            appBar: WorkbenchAppBar(
+              title: Text(l10n.schoolImportParserSettingsTitle),
+            ),
             body: Column(
               children: [
                 UiCommandBusyIndicator(
@@ -143,9 +167,7 @@ class _SchoolImportParserSettingsPageState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          SettingsSectionHeader(
-                            title: l10n.schoolImportParserCustomOpenAi,
-                          ),
+                          SettingsSectionHeader(title: l10n.settingsConnection),
                           Text(
                             l10n.schoolImportParserSettingsDesc,
                             style: Theme.of(context).textTheme.bodyMedium
@@ -204,6 +226,9 @@ class _SchoolImportParserSettingsPageState
                                 _scheduleApiKeyUpdate(provider, value),
                           ),
                           const SizedBox(height: 12),
+                          SettingsSectionHeader(
+                            title: l10n.schoolImportParserModel,
+                          ),
                           TextField(
                             controller: _modelController,
                             focusNode: _modelFocusNode,
@@ -230,6 +255,7 @@ class _SchoolImportParserSettingsPageState
                             label: Text(l10n.schoolImportParserFetchModels),
                           ),
                           const SizedBox(height: 16),
+                          SettingsSectionHeader(title: l10n.settingsAdvanced),
                           ExpansionTile(
                             tilePadding: EdgeInsets.zero,
                             childrenPadding: const EdgeInsets.only(top: 8),
@@ -575,7 +601,7 @@ class _SchoolImportParserSettingsPageState
     setState(() => _isFetchingModels = true);
     try {
       final saved = await _flushAllPendingSettings();
-      if (!saved || !mounted) {
+      if (!saved || !mounted || !routeWorkspaceEnabled) {
         return;
       }
       final settings = _currentModelFetchSettings();
@@ -593,7 +619,10 @@ class _SchoolImportParserSettingsPageState
         consentStore:
             widget.httpConsentStore ?? SchoolImportHttpConsentStore.session,
       );
-      if (!confirmed || !mounted || settings != _currentModelFetchSettings()) {
+      if (!confirmed ||
+          !mounted ||
+          !routeWorkspaceEnabled ||
+          settings != _currentModelFetchSettings()) {
         return;
       }
       final selectedModel = await showExpressiveDialog<String>(
@@ -606,6 +635,7 @@ class _SchoolImportParserSettingsPageState
         ),
       );
       if (!mounted ||
+          !routeWorkspaceEnabled ||
           selectedModel == null ||
           settings != _currentModelFetchSettings()) {
         return;
@@ -642,23 +672,35 @@ class _SchoolImportParserSettingsPageState
   Future<List<String>> _fetchModelsForDialog(
     _ModelFetchSettings settings,
   ) async {
-    if (!mounted || settings != _currentModelFetchSettings()) {
+    if (!mounted ||
+        !routeWorkspaceEnabled ||
+        settings != _currentModelFetchSettings()) {
       throw const _StaleModelFetchException();
     }
+    _cancelModelFetch();
+    final cancellation = Completer<void>();
+    _modelFetchCancellation = cancellation;
     try {
       final models = await widget.api.fetchCustomModels(
         baseUrl: settings.baseUrl,
         apiKey: settings.apiKey,
+        abortTrigger: cancellation.future,
       );
-      if (!mounted || settings != _currentModelFetchSettings()) {
+      if (!mounted ||
+          !routeWorkspaceEnabled ||
+          settings != _currentModelFetchSettings()) {
         throw const _StaleModelFetchException();
       }
       return models;
     } catch (error) {
-      if (!mounted || settings != _currentModelFetchSettings()) {
+      if (!mounted ||
+          !routeWorkspaceEnabled ||
+          settings != _currentModelFetchSettings()) {
         throw const _StaleModelFetchException();
       }
       rethrow;
+    } finally {
+      if (identical(_modelFetchCancellation, cancellation)) _cancelModelFetch();
     }
   }
 
@@ -724,7 +766,10 @@ class _ModelListDialog extends StatefulWidget {
   State<_ModelListDialog> createState() => _ModelListDialogState();
 }
 
-class _ModelListDialogState extends State<_ModelListDialog> {
+class _ModelListDialogState extends State<_ModelListDialog>
+    with WorkspaceRouteLifecycle<_ModelListDialog> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
   bool _isLoading = true;
   bool _requestInFlight = false;
   String? _errorMessage;

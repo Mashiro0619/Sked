@@ -27,6 +27,7 @@ class AppRepository {
   var _canWrite = true;
   Future<void> _pendingWrite = Future.value();
   var _currentRevision = 0;
+  int _writesInFlight = 0;
 
   /// 上一次 [load] 的恢复状态。UI 必须消费这个值以决定是否给用户提示
   /// （比如 banner 或设置页通知）。
@@ -40,6 +41,9 @@ class AppRepository {
 
   /// 当前内存中的 AppData 快照。[load] 之前为 null。
   AppData? get current => _current;
+
+  /// The last snapshot confirmed by storage, never an optimistic queued write.
+  AppData? get persisted => _lastPersisted;
 
   /// 从底层存储加载一次。返回值为 null 表示首次启动或彻底无数据。
   ///
@@ -84,12 +88,14 @@ class AppRepository {
   ///
   /// Backup restore uses this before taking its provider-level write lease so
   /// an earlier UI save cannot finish in the middle of the restore transaction.
-  Future<void> waitForPendingWrites() async {
+  Future<void> waitForPendingWrites({bool propagateErrors = false}) async {
+    final observeFailure = propagateErrors && _writesInFlight > 0;
     while (true) {
       final pendingWrite = _pendingWrite;
       try {
         await pendingWrite;
       } catch (_) {
+        if (observeFailure) rethrow;
         // The save caller observes the failure. Lease acquisition only needs
         // to wait for completion; storage failures are enforced by the gate.
       }
@@ -205,6 +211,7 @@ class AppRepository {
     AppData data, {
     bool allowWhileRecoveryBlocked = false,
   }) {
+    _writesInFlight++;
     final write = _pendingWrite
         .catchError((e) {
           debugPrint(
@@ -224,6 +231,16 @@ class AppRepository {
           _lastPersisted = data;
         });
     _pendingWrite = write;
+    unawaited(
+      write.then<void>(
+        (_) {
+          _writesInFlight--;
+        },
+        onError: (Object _, StackTrace _) {
+          _writesInFlight--;
+        },
+      ),
+    );
     return write;
   }
 

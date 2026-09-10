@@ -1,3 +1,11 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/editor_exit_guard.dart';
+import '../widgets/school_import_summary_preview.dart';
+import '../widgets/workbench_layout_policy.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+import '../models/app_mode.dart';
+
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
@@ -61,16 +69,62 @@ class SchoolImportResultEditorPage extends StatefulWidget {
 }
 
 class _SchoolImportResultEditorPageState
-    extends State<SchoolImportResultEditorPage> {
+    extends State<SchoolImportResultEditorPage>
+    with
+        WorkspaceRouteLifecycle<SchoolImportResultEditorPage>,
+        EditorExitGuard<SchoolImportResultEditorPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+
+  @override
+  Future<bool> prepareWorkspaceDisable() async => !_isSubmitting;
+
+  @override
+  AppMode get editorWorkspace => AppMode.student;
+  @override
+  String get draftFingerprint => _controller.text;
+  @override
+  bool get exitBlocked => _isSubmitting || _closing;
+  @override
+  void closeEditor() {
+    if (_closing) return;
+    _closing = true;
+    Navigator.of(context).pop();
+  }
+
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   String? _error;
   bool _isSubmitting = false;
+  bool _closing = false;
+  Timer? _previewTimer;
+  SchoolImportResponse? _preview;
+
+  SchoolImportResponse? _parsePreview() {
+    final json = _decodeSchoolImportObject(_controller.text);
+    if (json == null) return null;
+    try {
+      return SchoolImportApi.buildResponseFromDoneEvent(json);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _updatePreview(String _) {
+    _previewTimer?.cancel();
+    _previewTimer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted && routeWorkspaceEnabled) {
+        setState(() => _preview = _parsePreview());
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText);
+    _preview = _parsePreview();
+    initializeDraftGuard();
     _focusNode = FocusNode(debugLabel: 'school-import-result-editor');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -81,6 +135,7 @@ class _SchoolImportResultEditorPageState
 
   @override
   void dispose() {
+    _previewTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -117,6 +172,7 @@ class _SchoolImportResultEditorPageState
       if (!mounted) {
         return;
       }
+      _closing = true;
       Navigator.of(context).pop(
         SchoolImportResultEditorOutcome(
           response: response,
@@ -140,14 +196,18 @@ class _SchoolImportResultEditorPageState
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return PopScope(
-      canPop: !_isSubmitting,
+      canPop: _closing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_isSubmitting) unawaited(requestEditorExit());
+      },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        appBar: AppBar(
+        appBar: WorkbenchAppBar(
           title: Text(l10n.schoolImportResultEditorTitle),
           actions: [
             IconButton(
@@ -178,36 +238,79 @@ class _SchoolImportResultEditorPageState
                     ),
                   ),
                 Expanded(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      enabled: !_isSubmitting,
-                      autofocus: false,
-                      expands: true,
-                      maxLines: null,
-                      minLines: null,
-                      inputFormatters: [
-                        Utf16CodeUnitLimitingTextInputFormatter(
-                          widget.maxEditableCodeUnits,
-                        ),
-                      ],
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                        height: 1.5,
-                      ),
-                      textAlignVertical: TextAlignVertical.top,
-                      decoration: InputDecoration(
-                        labelText: l10n.schoolImportResultEditorTitle,
-                        alignLabelWithHint: true,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final scale =
+                          MediaQuery.textScalerOf(context).scale(14) / 14;
+                      final split = WorkbenchLayoutPolicy.formCanSplit(
+                        constraints.maxWidth,
+                        scale,
+                        navigation: 360,
+                        content: 624,
+                      );
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: TextField(
+                                controller: _controller,
+                                focusNode: _focusNode,
+                                enabled: !_isSubmitting,
+                                autofocus: false,
+                                onChanged: _updatePreview,
+                                expands: true,
+                                maxLines: null,
+                                minLines: null,
+                                inputFormatters: [
+                                  Utf16CodeUnitLimitingTextInputFormatter(
+                                    widget.maxEditableCodeUnits,
+                                  ),
+                                ],
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontFamily: 'monospace',
+                                  height: 1.5,
+                                ),
+                                textAlignVertical: TextAlignVertical.top,
+                                decoration: InputDecoration(
+                                  labelText: l10n.schoolImportResultEditorTitle,
+                                  alignLabelWithHint: true,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.all(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: split ? 24 : 0),
+                          SizedBox(
+                            width: split
+                                ? 360 * WorkbenchLayoutPolicy.textFactor(scale)
+                                : 0,
+                            child: Offstage(
+                              offstage: !split,
+                              child: ExcludeFocus(
+                                excluding: !split,
+                                child: SingleChildScrollView(
+                                  key: const ValueKey(
+                                    'school-import-json-preview',
+                                  ),
+                                  child: _preview == null
+                                      ? Text(l10n.noImportableTimetables)
+                                      : SchoolImportSummaryPreview(
+                                          response: _preview!,
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],

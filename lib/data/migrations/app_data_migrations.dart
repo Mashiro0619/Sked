@@ -7,7 +7,7 @@ import 'migration_runner.dart';
 /// 1. 把这里的常量 +1。
 /// 2. 在 [appDataMigrations] 注册新的 `from: 旧版本, to: 新版本` 实现。
 /// 3. 编写对应的单元测试，确认旧数据能升级、新数据 round-trip 保版本号。
-const int appDataCurrentSchemaVersion = 2;
+const int appDataCurrentSchemaVersion = 3;
 
 const _legacyThemeFieldKeys = <String>{
   'themeMode',
@@ -51,7 +51,24 @@ class AppDataMigrationV1ToV2 extends Migration {
 /// 已注册的 AppData 顶层迁移列表。
 ///
 /// 在 [appDataMigrationRunner] 里集中注册，避免迁移逻辑散落到 fromJson。
-const List<Migration> appDataMigrations = <Migration>[AppDataMigrationV1ToV2()];
+class AppDataMigrationV2ToV3 extends Migration {
+  const AppDataMigrationV2ToV3();
+  @override
+  int get from => 2;
+  @override
+  int get to => 3;
+  @override
+  Map<String, dynamic> apply(Map<String, dynamic> json) => {
+    ...json,
+    'activeMode': json['activeMode'] ?? 'student',
+    'enabledWorkspaces': ['student', 'general'],
+  };
+}
+
+const List<Migration> appDataMigrations = <Migration>[
+  AppDataMigrationV1ToV2(),
+  AppDataMigrationV2ToV3(),
+];
 
 /// AppData 加载路径统一使用的 runner。
 const MigrationRunner appDataMigrationRunner = MigrationRunner(

@@ -18,6 +18,7 @@ import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/screens/language_settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/school_import_api.dart';
@@ -1961,10 +1962,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('AI API 配置'), findsOneWidget);
+      expect(find.text('课表解析 API'), findsOneWidget);
       expect(find.text('Base URL'), findsOneWidget);
       expect(find.text('API 密钥'), findsOneWidget);
-      expect(find.text('模型名称'), findsOneWidget);
+      expect(find.text('模型名称'), findsWidgets);
       expect(find.text('获取模型列表'), findsOneWidget);
       expect(find.textContaining('gpt-4.1-mini'), findsOneWidget);
       final customPromptTitle = find.text('自定义提示词');
@@ -2173,7 +2174,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('英语'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-category-language')),
+        findsOneWidget,
+      );
 
       final languageEntry = find.text('语言');
       await tester.ensureVisible(languageEntry);
@@ -2190,16 +2194,14 @@ void main() {
       expect(find.text('俄语'), findsOneWidget);
       expect(find.text('日语'), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.search));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SearchBar), findsOneWidget);
-
-      await tester.enterText(find.byType(SearchBar), '简体');
+      await tester.enterText(
+        find.byKey(const ValueKey('language-search')),
+        '简体',
+      );
       await tester.pumpAndSettle();
 
       final simplifiedChineseOption = find.byKey(
-        const ValueKey('language-search-option-zh'),
+        const ValueKey('language-option-zh'),
       );
       await tester.ensureVisible(simplifiedChineseOption);
       await tester.pumpAndSettle();
@@ -2207,10 +2209,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(provider.localeCode, 'zh');
-      expect(find.text('简体中文'), findsOneWidget);
+      expect(find.byType(LanguageSettingsPage), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-category-language')),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('设置主页可直接进入AI API 配置', (tester) async {
+    testWidgets('课表导入任务可直接进入已启用课表的解析 API 配置', (tester) async {
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _withSchoolImportSettings(
@@ -2237,21 +2243,29 @@ void main() {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: SettingsPage(),
+            home: SettingsPage(
+              initialDestination: SettingsDestination.student,
+              transferDirection: SettingsTransferDirection.import,
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      final parserSettingsTile = find.byKey(
-        const ValueKey('settings-parser-settings'),
-      );
+      expect(find.byKey(const ValueKey('settings-search')), findsNothing);
+      final parserSettingsTile = find.text('课表解析 API');
       await tester.ensureVisible(parserSettingsTile);
       await tester.pumpAndSettle();
       await tester.tap(parserSettingsTile);
       await tester.pumpAndSettle();
 
-      expect(find.text('AI API 配置'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SchoolImportParserSettingsPage),
+          matching: find.text('课表解析 API'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Base URL'), findsOneWidget);
     });
 
@@ -2283,7 +2297,9 @@ void main() {
                 GlobalCupertinoLocalizations.delegate,
               ],
               supportedLocales: AppLocalizations.supportedLocales,
-              home: SettingsPage(),
+              home: SettingsPage(
+                initialDestination: SettingsDestination.general,
+              ),
             ),
           ),
         );
@@ -3008,8 +3024,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('单调主题色'), findsOneWidget);
-      expect(find.text('五彩缤纷'), findsOneWidget);
+      final choices = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(const ValueKey('theme-color-mode-choice-list')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      expect(
+        choices.items!.map((item) => (item.child as Text).data),
+        containsAll(['单调主题色', '五彩缤纷']),
+      );
+      expect(choices.value, themeColorModeColorful);
       expect(find.text('UI 配色'), findsOneWidget);
       expect(find.text('课程颜色'), findsOneWidget);
       expect(find.text('主色'), findsOneWidget);
@@ -3074,7 +3099,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('分类'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('colorful-theme-section')),
+          matching: find.text('分类'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('生活日程'), findsOneWidget);
       expect(find.text('#225577'), findsOneWidget);
       expect(
@@ -3240,7 +3271,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(SegmentedButton<String>), findsWidgets);
+      expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+      final target = find.descendant(
+        of: find.byKey(const ValueKey('live-course-outline-target')),
+        matching: find.byType(DropdownButtonFormField<String>),
+      );
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      await tester.tap(target);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('当前页全部课程').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用设置'));
@@ -3286,6 +3325,13 @@ void main() {
       await tester.tap(courseTextTile);
       await tester.pumpAndSettle();
 
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(DropdownButtonFormField<String>),
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(find.text('自动配色'), findsWidgets);
       expect(find.text('自定义颜色'), findsWidgets);
       await tester.tap(find.text('自定义颜色').last);
@@ -3310,7 +3356,14 @@ void main() {
 
       await tester.tap(find.text('课程文字色'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('自动配色'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(DropdownButtonFormField<String>),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('自动配色').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用设置'));
       await tester.pumpAndSettle();
@@ -3433,8 +3486,8 @@ void main() {
       expect(find.text('第 ${provider.selectedWeek} 周'), findsOneWidget);
       expect(find.text(provider.activeTimetable.config.name), findsOneWidget);
       expect(find.byTooltip('添加课程'), findsOneWidget);
-      expect(find.byType(SkedPrimaryFab), findsOneWidget);
-      expect(find.byType(FloatingActionButton), findsOneWidget);
+      expect(find.byType(SkedPrimaryFab), findsNothing);
+      expect(find.byType(FloatingActionButton), findsNothing);
       expect(
         find.byKey(const ValueKey('timetable-day-header-horizontal-scroll')),
         findsOneWidget,
@@ -3477,6 +3530,7 @@ void main() {
           value: provider,
           child: _buildLocalizedApp(
             CourseDetailsSheet(
+              timetableId: provider.activeTimetable.id,
               courseId: course.id,
               weekday: course.dayOfWeek,
               conflictKey: null,
@@ -3638,7 +3692,7 @@ void main() {
       expect(find.byTooltip('Filter by color'), findsNothing);
     });
 
-    testWidgets('general reminder strip can mark an occurrence handled', (
+    testWidgets('compact reminder task can mark an occurrence handled', (
       tester,
     ) async {
       // Pin a wider/taller surface so the day-view event card has room for the
@@ -3690,6 +3744,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.textContaining('Upcoming'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('general-reminders-action')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('general-reminders-list')),
+        findsOneWidget,
+      );
       expect(find.textContaining('Upcoming'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Mark handled'));
@@ -3753,59 +3814,77 @@ void main() {
       );
     });
 
-    testWidgets('general week view fits all visible days on narrow screens', (
-      tester,
-    ) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() async {
-        await tester.binding.setSurfaceSize(null);
-      });
+    testWidgets(
+      'general week view preserves readable days through horizontal scrolling',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        addTearDown(() async {
+          await tester.binding.setSurfaceSize(null);
+        });
 
-      const calendar = GeneralSchedule(id: 'cal1', name: 'Work', events: []);
-      final provider = TimetableProvider(
-        storage: MemoryTimetableStorage(
-          initialData: _buildTestAppData().copyWith(
-            activeMode: AppMode.general,
-            generalMode: GeneralScheduleData(
-              activeScheduleId: 'cal1',
-              schedules: [calendar],
-              selectedDateIso: '2026-05-18',
+        const calendar = GeneralSchedule(id: 'cal1', name: 'Work', events: []);
+        final provider = TimetableProvider(
+          storage: MemoryTimetableStorage(
+            initialData: _buildTestAppData().copyWith(
+              activeMode: AppMode.general,
+              generalMode: GeneralScheduleData(
+                activeScheduleId: 'cal1',
+                schedules: [calendar],
+                selectedDateIso: '2026-05-18',
+              ),
             ),
           ),
-        ),
-      );
-      await provider.load();
+        );
+        await provider.load();
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
-          child: _buildLocalizedApp(
-            const GeneralScheduleHomeScreen(),
-            locale: const Locale('en'),
+        await tester.pumpWidget(
+          ChangeNotifierProvider<TimetableProvider>.value(
+            value: provider,
+            child: _buildLocalizedApp(
+              const GeneralScheduleHomeScreen(),
+              locale: const Locale('en'),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      for (final label in const [
-        'Mon',
-        'Tue',
-        'Wed',
-        'Thu',
-        'Fri',
-        'Sat',
-        'Sun',
-      ]) {
-        expect(find.text(label), findsOneWidget);
-      }
-      final sundayRight = tester.getBottomRight(find.text('Sun')).dx;
-      expect(sundayRight, lessThanOrEqualTo(390));
+        for (final label in const [
+          'Mon',
+          'Tue',
+          'Wed',
+          'Thu',
+          'Fri',
+          'Sat',
+          'Sun',
+        ]) {
+          expect(find.text(label), findsOneWidget);
+        }
+        final sundayRight = tester.getBottomRight(find.text('Sun')).dx;
+        expect(sundayRight, greaterThan(390));
 
-      final horizontalScrollViews = tester
-          .widgetList<SingleChildScrollView>(find.byType(SingleChildScrollView))
-          .where((widget) => widget.scrollDirection == Axis.horizontal);
-      expect(horizontalScrollViews, isEmpty);
-    });
+        final horizontalScrollViews = tester
+            .widgetList<SingleChildScrollView>(
+              find.byType(SingleChildScrollView),
+            )
+            .where((widget) => widget.scrollDirection == Axis.horizontal);
+        expect(horizontalScrollViews, isNotEmpty);
+        final scroll = find
+            .byWidgetPredicate(
+              (w) =>
+                  w is SingleChildScrollView &&
+                  w.scrollDirection == Axis.horizontal,
+            )
+            .last;
+        await tester.drag(scroll, const Offset(-500, 0));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getBottomRight(find.text('Sun')).dx,
+          lessThanOrEqualTo(390),
+        );
+        expect(provider.selectedGeneralDate.day, 18);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('没有课表时显示新建和导入引导', (tester) async {
       final provider = TimetableProvider(

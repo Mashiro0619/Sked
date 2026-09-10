@@ -268,6 +268,7 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
   Future<void> completeFirstLaunch(
     AppMode mode, {
     required bool hideWorkspaceNavigation,
+    Set<AppMode>? enabledWorkspaces,
   }) async {
     final active = _remotePrivacyPolicyVersion ?? bundledPrivacyPolicyVersion;
     if (_parsePrivacyPolicyVersion(active) == null) {
@@ -278,17 +279,23 @@ mixin _TimetableProviderLifecycle on _TimetableProviderBase {
       _appData.privacyPolicyAcceptedVersion,
       active,
     );
-    if (_appData.activeMode == mode &&
+    final enabled = enabledWorkspaces ?? _appData.enabledWorkspaces;
+    if (enabled.isEmpty || !enabled.contains(mode)) {
+      throw StateError('At least one workspace must be enabled.');
+    }
+    if (setEquals(_appData.enabledWorkspaces, enabled) &&
+        _appData.activeMode == mode &&
         preservesExistingAcceptance &&
         _appData.hideHomeWorkspaceNavigation == hideWorkspaceNavigation &&
-        _appData.homeWorkspaceNavigationCollapsed) {
+        !_appData.homeWorkspaceNavigationCollapsed) {
       return;
     }
 
     _appData = _appData.copyWith(
       activeMode: mode,
+      enabledWorkspaces: enabled,
       hideHomeWorkspaceNavigation: hideWorkspaceNavigation,
-      homeWorkspaceNavigationCollapsed: true,
+      homeWorkspaceNavigationCollapsed: false,
       privacyPolicyAcceptedVersion: preservesExistingAcceptance
           ? _appData.privacyPolicyAcceptedVersion
           : active,

@@ -1780,7 +1780,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyPolicyEntryDesc.
   ///
   /// In en, this message translates to:
-  /// **'Learn how the app handles local storage, school-site configuration, file import/export, timetable text / HTML parsing, and external links.'**
+  /// **'How local data, import and export, optional network requests and external links are handled.'**
   String get privacyPolicyEntryDesc;
 
   /// No description provided for @privacyPolicyAcceptedVersionLabel.
@@ -2371,13 +2371,13 @@ abstract class AppLocalizations {
   /// No description provided for @schoolImportParserSettingsTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI API configuration'**
+  /// **'Timetable parsing API'**
   String get schoolImportParserSettingsTitle;
 
   /// No description provided for @schoolImportParserSettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Configure the OpenAI-compatible API used by timetable parsing and other AI features.'**
+  /// **'Configure the OpenAI-compatible API for timetable import. This does not configure a chat assistant.'**
   String get schoolImportParserSettingsDesc;
 
   /// No description provided for @schoolImportParserSourceTitle.
@@ -3991,7 +3991,7 @@ abstract class AppLocalizations {
   /// No description provided for @hideHomeWorkspaceNavigationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.'**
+  /// **'Hide workspace navigation. You can still switch using the workspace menu on the main screen.'**
   String get hideHomeWorkspaceNavigationDesc;
 
   /// No description provided for @generalDateLabelFormat.
@@ -4929,7 +4929,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationPrecisionLimitations.
   ///
   /// In en, this message translates to:
-  /// **'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.'**
+  /// **'Reminders depend on system permissions and background execution. Power-off, time changes, or system restrictions may delay delivery.'**
   String get notificationPrecisionLimitations;
 
   /// No description provided for @notificationSettingsEnabledSummary.
@@ -5153,6 +5153,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This platform does not provide native notifications.'**
   String get notificationPlatformUnsupported;
+
+  /// No description provided for @workspaceFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Features'**
+  String get workspaceFeatures;
+
+  /// No description provided for @workspaceBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable and schedule'**
+  String get workspaceBoth;
+
+  /// No description provided for @workspaceOnlyStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable only'**
+  String get workspaceOnlyStudent;
+
+  /// No description provided for @workspaceOnlyGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule only'**
+  String get workspaceOnlyGeneral;
+
+  /// No description provided for @workspaceDisableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off this workspace?'**
+  String get workspaceDisableTitle;
+
+  /// No description provided for @workspaceDisableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Its data and preferences will be kept. Its features and reminders will stop until you turn it on again here.'**
+  String get workspaceDisableMessage;
+
+  /// No description provided for @workspaceEnableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the features you use. At least one must stay on.'**
+  String get workspaceEnableHint;
+
+  /// No description provided for @workspaceLastRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'At least one workspace must stay on.'**
+  String get workspaceLastRequired;
+
+  /// No description provided for @workspaceReminderCleanupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The workspace is off, but reminders could not be cleared. Retry notification recovery.'**
+  String get workspaceReminderCleanupFailed;
+
+  /// No description provided for @settingsSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
+  String get settingsSearch;
+
+  /// No description provided for @settingsNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching settings'**
+  String get settingsNoResults;
+
+  /// No description provided for @settingsDataPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Data and privacy'**
+  String get settingsDataPrivacy;
+
+  /// No description provided for @workspacePreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Display and interaction'**
+  String get workspacePreferences;
+
+  /// No description provided for @workspaceManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get workspaceManage;
+
+  /// No description provided for @selectedDayAgenda.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected day'**
+  String get selectedDayAgenda;
+
+  /// No description provided for @notificationTroubleshooting.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions and troubleshooting'**
+  String get notificationTroubleshooting;
+
+  /// No description provided for @settingsConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get settingsConnection;
+
+  /// No description provided for @settingsAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get settingsAdvanced;
+
+  /// No description provided for @unsavedChangesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Discard them and leave?'**
+  String get unsavedChangesMessage;
+
+  /// No description provided for @backupWorkspaceSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'The full backup includes data and enabled workspaces.'**
+  String get backupWorkspaceSelection;
+
+  /// No description provided for @assistantLayoutPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · Layout preview'**
+  String get assistantLayoutPreview;
+
+  /// No description provided for @assistantSelectionContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses the current selection as context'**
+  String get assistantSelectionContext;
+
+  /// No description provided for @assistantPreviewDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Discuss and work in the current workspace. This preview only demonstrates the layout; AI is not connected.'**
+  String get assistantPreviewDescription;
+
+  /// No description provided for @assistantDraftLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message draft'**
+  String get assistantDraftLabel;
+
+  /// No description provided for @assistantPreviewNoSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Layout preview only. Nothing will be sent or changed.'**
+  String get assistantPreviewNoSend;
+
+  /// No description provided for @resizePanel.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize panel'**
+  String get resizePanel;
+
+  /// No description provided for @minimizeWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize'**
+  String get minimizeWindow;
+
+  /// No description provided for @maximizeWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximize'**
+  String get maximizeWindow;
+
+  /// No description provided for @restoreWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore window'**
+  String get restoreWindow;
+
+  /// No description provided for @closeWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Close window'**
+  String get closeWindow;
+
+  /// No description provided for @courseSystemReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'System reminder'**
+  String get courseSystemReminder;
+
+  /// No description provided for @courseReminderInherit.
+  ///
+  /// In en, this message translates to:
+  /// **'Use default ({reminder})'**
+  String courseReminderInherit(String reminder);
+
+  /// No description provided for @courseReminderMasterOff.
+  ///
+  /// In en, this message translates to:
+  /// **'System reminders are off in notification settings. This course preference can still be saved.'**
+  String get courseReminderMasterOff;
+
+  /// No description provided for @courseReminderDefaultOff.
+  ///
+  /// In en, this message translates to:
+  /// **'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.'**
+  String get courseReminderDefaultOff;
+
+  /// No description provided for @courseReminderDeliveryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.'**
+  String get courseReminderDeliveryHint;
+
+  /// No description provided for @courseReminderPermissionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'System notification status has not been checked. Review notification settings before relying on reminders.'**
+  String get courseReminderPermissionUnknown;
+
+  /// No description provided for @courseReminderMinutesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Minutes before class'**
+  String get courseReminderMinutesLabel;
+
+  /// No description provided for @exportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportAction;
 }
 
 class _AppLocalizationsDelegate

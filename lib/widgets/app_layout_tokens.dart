@@ -16,7 +16,21 @@ abstract final class AppRadii {
 }
 
 abstract final class AppBreakpoints {
-  static const desktop = 900.0;
+  static const compact = 600.0;
+  static const expanded = 840.0;
+  static const large = 1200.0;
+  static const desktop = expanded;
+  static const resourcePane = 224.0;
+  static const compactResourcePane = 80.0;
+  static const detailPane = 360.0;
+  static const assistantPane = 400.0;
+  static const pointerCompactResourcePane = 56.0;
+  static const minimumWeekCanvas = 800.0;
+  static const settingsNavigation = 224.0;
+  static const minimumSettingsContent = 520.0;
+  static const paneDivider = 1.0;
+  static const minimumCanvas = 600.0;
+  static const paneGap = 16.0;
 }
 
 abstract final class AppInsets {

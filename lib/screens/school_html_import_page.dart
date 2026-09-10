@@ -1,3 +1,8 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/adaptive_form_columns.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+import '../models/app_mode.dart';
+
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -45,7 +50,18 @@ class SchoolHtmlImportPage extends StatefulWidget {
   State<SchoolHtmlImportPage> createState() => _SchoolHtmlImportPageState();
 }
 
-class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
+class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
+    with WorkspaceRouteLifecycle<SchoolHtmlImportPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+  @override
+  void workspaceDisabled() => _workflow.cancelActiveParse();
+
+  @override
+  Future<bool> prepareWorkspaceDisable() async =>
+      _htmlController.text.trim().isEmpty ||
+      await confirmWorkspaceDraftDiscard(context);
+
   static const int _maxRememberedTruncatedContents = 8;
 
   late final SchoolImportWorkflow _workflow;
@@ -100,11 +116,12 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider>();
     final isConfigured = isSchoolImportParserConfigured(provider);
     return Scaffold(
-      appBar: AppBar(
+      appBar: WorkbenchAppBar(
         title: Text(l10n.schoolHtmlImportPageTitle),
         actions: [
           if (widget.showReturnToWebPageButton)
@@ -122,21 +139,19 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
               )
             : LayoutBuilder(
                 builder: (context, constraints) {
-                  final mediaQuery = MediaQuery.of(context);
                   final horizontalPadding = constraints.maxWidth < 600
                       ? 16.0
                       : 24.0;
-                  final availableHeight = math.max(
-                    0.0,
-                    constraints.maxHeight - mediaQuery.viewInsets.bottom,
-                  );
+                  // Scaffold has already removed the keyboard from these
+                  // constraints; subtracting viewInsets again wastes editor space.
+                  final availableHeight = constraints.maxHeight;
                   final editorHeight = _editorHeight(
                     availableHeight: availableHeight,
                     isNarrow: constraints.maxWidth < 600,
                   );
                   final maxContentWidth = constraints.maxWidth < 840
                       ? 720.0
-                      : 960.0;
+                      : 1280.0;
                   return ListView(
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
@@ -153,85 +168,107 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage> {
                           constraints: BoxConstraints(
                             maxWidth: maxContentWidth,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                height: editorHeight,
-                                child: TextField(
-                                  controller: _htmlController,
-                                  enabled: !_isSubmitting,
-                                  inputFormatters: [_boundedInputFormatter],
-                                  onChanged: _handleContentChanged,
-                                  expands: true,
-                                  maxLines: null,
-                                  minLines: null,
-                                  decoration: InputDecoration(
-                                    labelText: l10n.schoolHtmlImportHtmlLabel,
-                                    hintText: l10n.schoolHtmlImportHtmlHint,
-                                    prefixIconConstraints: const BoxConstraints(
-                                      minWidth: 48,
-                                      maxWidth: 48,
-                                      minHeight: 48,
-                                      maxHeight: 48,
-                                    ),
-                                    prefixIcon: const Align(
-                                      alignment: Alignment.topCenter,
-                                      child: Padding(
-                                        padding: EdgeInsets.only(top: 12),
-                                        child: Icon(Icons.code),
+                          child: AdaptiveFormColumns(
+                            primary: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  height: editorHeight,
+                                  child: TextField(
+                                    controller: _htmlController,
+                                    enabled: !_isSubmitting,
+                                    inputFormatters: [_boundedInputFormatter],
+                                    onChanged: _handleContentChanged,
+                                    expands: true,
+                                    maxLines: null,
+                                    minLines: null,
+                                    decoration: InputDecoration(
+                                      labelText: l10n.schoolHtmlImportHtmlLabel,
+                                      hintText: l10n.schoolHtmlImportHtmlHint,
+                                      prefixIconConstraints:
+                                          const BoxConstraints(
+                                            minWidth: 48,
+                                            maxWidth: 48,
+                                            minHeight: 48,
+                                            maxHeight: 48,
+                                          ),
+                                      prefixIcon: const Align(
+                                        alignment: Alignment.topCenter,
+                                        child: Padding(
+                                          padding: EdgeInsets.only(top: 12),
+                                          child: Icon(Icons.code),
+                                        ),
                                       ),
+                                      alignLabelWithHint: true,
                                     ),
-                                    alignLabelWithHint: true,
                                   ),
                                 ),
-                              ),
-                              if (_contentWasTruncated) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      size: 18,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .tertiary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        l10n.schoolImportContentTruncated,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
+                                if (_contentWasTruncated) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 18,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .tertiary,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          l10n.schoolImportContentTruncated,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  l10n.schoolHtmlImportNonHtmlHint,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
                                 ),
                               ],
-                              const SizedBox(height: 8),
-                              Text(
-                                l10n.schoolHtmlImportNonHtmlHint,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                            ),
+                            secondary: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (widget.initialTitle.isNotEmpty)
+                                  Text(
+                                    widget.initialTitle,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                if (widget.initialUrl.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 8,
+                                      bottom: 16,
                                     ),
-                              ),
-                              const SizedBox(height: 20),
-                              _buildImportActions(
-                                l10n,
-                                useHorizontalLayout:
-                                    constraints.maxWidth >= 560,
-                              ),
-                            ],
+                                    child: SelectableText(widget.initialUrl),
+                                  ),
+                                _buildImportActions(
+                                  l10n,
+                                  useHorizontalLayout: false,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

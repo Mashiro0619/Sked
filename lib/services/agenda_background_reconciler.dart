@@ -5,34 +5,14 @@ import 'dart:ui' show DartPluginRegistrant;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../data/app_repository.dart';
-import '../data/timetable_storage.dart';
 import '../models/timetable_models.dart';
 import 'agenda_notification_service.dart';
+import 'agenda_background_data.dart';
+export 'agenda_background_data.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_projection_service.dart';
 import 'agenda_runtime_mutation_lock.dart';
 import 'android_productivity_bridge.dart';
-
-/// A persisted snapshot that can safely be consumed outside the foreground
-/// [TimetableProvider].
-///
-/// The background worker deliberately reads through [AppRepository] instead
-/// of constructing a Provider.  Loading a Provider can run user-facing data
-/// migration and recovery flows, while a background projection only needs the
-/// last durable, write-safe AppData snapshot.
-class AgendaBackgroundDataSnapshot {
-  const AgendaBackgroundDataSnapshot({
-    required this.data,
-    required this.canWrite,
-  });
-
-  final AppData? data;
-  final bool canWrite;
-}
-
-typedef AgendaBackgroundDataLoader =
-    Future<AgendaBackgroundDataSnapshot> Function();
 
 /// Result returned to Android after a background agenda pass.
 class AgendaBackgroundReconcileResult {
@@ -228,15 +208,6 @@ bool _samePersistedSnapshot(AppData left, AppData right) =>
 
 /// Loads only the last committed AppData snapshot for a headless Android
 /// worker.  [AppRepository.load] never writes a replacement default here.
-Future<AgendaBackgroundDataSnapshot> loadPersistedAgendaBackgroundData() async {
-  final repository = AppRepository(storage: TimetableStorage());
-  final data = await repository.load();
-  return AgendaBackgroundDataSnapshot(
-    data: data,
-    canWrite: repository.canWrite,
-  );
-}
-
 /// Android WorkManager entry point. It is intentionally top-level and kept
 /// free of UI/provider references so Flutter can invoke it in a headless
 /// engine after boot, a time-zone change, or a best-effort renewal boundary.

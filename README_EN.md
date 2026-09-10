@@ -69,11 +69,11 @@ Sked is a Flutter app for student timetables and everyday schedules. Courses are
 - Light, dark, system, and custom-color themes.
 - Configurable course styles, date formats, toolbar sizing, and common interactions.
 - Optional workspace navigation and floating add buttons on the home screen.
-- Layouts that adapt to phone and desktop window sizes, with a multilingual interface.
+- Timetables, calendars, and editor panes adapt to the available phone, tablet, and desktop window space, with a multilingual interface.
 
 ## Getting Started
 
-Choose Student Timetable or General Schedule on first launch. You can switch modes later from Settings and optionally hide the workspace navigation on the home screen.
+On first launch, enable Timetable only, Schedule only, or Both (which starts in Timetable). Switch enabled workspaces from the main screen. Use Settings → Feature management to disable or re-enable a workspace: disabling preserves its data, hides its entry points, and stops its reminders. At least one workspace must remain enabled. Hiding navigation while both are enabled is a separate preference, not a way to disable a workspace.
 
 For a student timetable, create a timetable and period-time set before adding courses, or import an existing timetable from a file, text, HTML, or a school webpage. For general scheduling, create a calendar and then add events or import a JSON or ICS file.
 
@@ -96,7 +96,7 @@ Sked is currently licensed under AGPL-3.0. Anyone may redistribute the source co
 
 ## Custom Timetable Parsing
 
-When importing a school webpage, text, or HTML timetable, Sked can use an OpenAI-compatible API to structure the timetable. The project does not provide a public parsing service, so the following settings must be configured in the app:
+When importing a school webpage, text, or HTML timetable, Sked can use an OpenAI-compatible API to structure the timetable. The project does not provide a public parsing service, so configure the following through the Parsing API settings entry in the timetable import flow, also available before a timetable has been created:
 
 - `Base URL`: the API address, for example `https://api.example.com/v1`.
 - `API key`: the Bearer token used by the API.

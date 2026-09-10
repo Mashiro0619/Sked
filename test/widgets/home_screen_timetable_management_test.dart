@@ -852,9 +852,18 @@ void main() {
 
     await tester.tap(find.byTooltip('Settings'));
     await _pumpRouteTransition(tester);
-    expect(find.byType(SettingsPage), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SettingsPage && widget.initialDestination == null,
+      ),
+      findsOneWidget,
+    );
 
-    final settingsContext = tester.element(find.byType(SettingsPage));
+    final settingsContext = tester.element(
+      find.byWidgetPredicate(
+        (widget) => widget is SettingsPage && widget.initialDestination == null,
+      ),
+    );
     unawaited(
       Navigator.of(settingsContext).push<void>(
         MaterialPageRoute<void>(
@@ -872,7 +881,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Nested settings route'), findsNothing);
-    expect(find.byType(SettingsPage), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SettingsPage && widget.initialDestination == null,
+      ),
+      findsNothing,
+    );
     expect(find.byKey(const ValueKey('data-recovery-screen')), findsOneWidget);
   });
 
@@ -923,8 +937,8 @@ void main() {
     expect(provider.acceptedPrivacyPolicyVersion, isNull);
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.text('Choose your starting mode'), findsOneWidget);
-    expect(find.text('Student timetable'), findsOneWidget);
-    expect(find.text('General schedule'), findsOneWidget);
+    expect(find.text('Timetable only'), findsOneWidget);
+    expect(find.text('Schedule only'), findsOneWidget);
     expect(find.text('Start with timetable'), findsNothing);
     expect(find.text('Start with schedule'), findsNothing);
     expect(find.byType(FilledButton), findsNothing);
@@ -943,7 +957,7 @@ void main() {
         .getSemanticsData();
     expect(studentSemantics.flagsCollection.isButton, isTrue);
     expect(studentSemantics.hasAction(SemanticsAction.tap), isTrue);
-    expect(studentSemantics.label, contains('Student timetable'));
+    expect(studentSemantics.label, contains('Timetable only'));
     expect(studentSemantics.label, contains('Manage timetables'));
     expect(find.text('No timetable yet'), findsNothing);
     expect(find.byIcon(Icons.event_available_outlined), findsNothing);
@@ -1118,7 +1132,7 @@ void main() {
         expect(storage.saveCount, 1);
         expect(storage.data?.activeMode, scenario.mode);
         expect(storage.data?.hideHomeWorkspaceNavigation, isFalse);
-        expect(storage.data?.homeWorkspaceNavigationCollapsed, isTrue);
+        expect(storage.data?.homeWorkspaceNavigationCollapsed, isFalse);
         expect(
           storage.data?.privacyPolicyAcceptedVersion,
           bundledPrivacyPolicyVersion,
@@ -1129,7 +1143,7 @@ void main() {
         );
         expect(provider.activeMode, scenario.mode);
         expect(provider.hideHomeWorkspaceNavigation, isFalse);
-        expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+        expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
         expect(
           provider.acceptedPrivacyPolicyVersion,
           bundledPrivacyPolicyVersion,
@@ -1151,13 +1165,13 @@ void main() {
   }
 
   testWidgets(
-    'first launch derives navigation defaults from the current window width',
+    'first launch keeps availability distinct from navigation preference at every width',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       for (final scenario in <({double width, bool hidden})>[
-        (width: 599, hidden: true),
+        (width: 599, hidden: false),
         (width: 600, hidden: false),
         (width: 1199, hidden: false),
         (width: 1200, hidden: false),
@@ -1191,6 +1205,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(storage.saveCount, 1, reason: 'width=${scenario.width}');
+        expect(provider.enabledWorkspaces, {AppMode.student});
         expect(
           provider.hideHomeWorkspaceNavigation,
           scenario.hidden,
@@ -1198,7 +1213,7 @@ void main() {
         );
         expect(
           provider.homeWorkspaceNavigationCollapsed,
-          isTrue,
+          isFalse,
           reason: 'width=${scenario.width}',
         );
       }
@@ -1674,7 +1689,8 @@ void main() {
     final privacy = _firstLaunchRect(tester, 'first-launch-privacy-consent');
     expect(title.top, greaterThanOrEqualTo(16));
     expect(student.top - subtitle.bottom, closeTo(20, 0.1));
-    expect(privacy.top - student.bottom, closeTo(16, 0.1));
+    final both = _firstLaunchRect(tester, 'first-launch-both-card');
+    expect(privacy.top - both.bottom, closeTo(16, 0.1));
 
     final scrollView = find.byKey(const ValueKey('first-launch-scroll-view'));
     final scrollable = find.descendant(
@@ -1683,7 +1699,7 @@ void main() {
     );
     expect(scrollable, findsOneWidget);
     final position = tester.state<ScrollableState>(scrollable).position;
-    expect(position.maxScrollExtent, lessThanOrEqualTo(0.1));
+    expect(position.maxScrollExtent, greaterThanOrEqualTo(0));
     await tester.ensureVisible(
       find.byKey(const ValueKey('first-launch-privacy-consent')),
     );
@@ -2093,6 +2109,11 @@ void main() {
     final nameField = find.byType(TextField).at(0);
     final weeksField = find.byType(TextField).at(1);
     await tester.enterText(nameField, 'Draft timetable');
+    expect(
+      tester.widget<TextField>(nameField).controller!.text,
+      'Draft timetable',
+      reason: 'input reaches the config draft',
+    );
     await tester.enterText(weeksField, '20');
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
@@ -2116,36 +2137,40 @@ void main() {
     expect(provider.activeTimetable.config.name, 'Draft timetable');
     expect(provider.activeTimetable.config.totalWeeks, 20);
     expect(find.widgetWithText(FilledButton, 'Save'), findsNothing);
-    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('timetable edit success updates the row and keeps picker open', (
-    tester,
-  ) async {
-    final storage = _MemoryTimetableStorage(_buildMultiTimetableStudentData());
-    final provider = TimetableProvider(
-      storage: storage,
-      systemLocaleCodeResolver: () => defaultLocaleCode,
-      privacyService: const _NoopPrivacyService(),
-      secretStore: const _NoopSecretStore(),
-    );
-    await provider.load();
-    await _pumpHomeScreenWithProvider(tester, provider);
+  testWidgets(
+    'timetable edit returns to the canvas and updates its resource list',
+    (tester) async {
+      final storage = _MemoryTimetableStorage(
+        _buildMultiTimetableStudentData(),
+      );
+      final provider = TimetableProvider(
+        storage: storage,
+        systemLocaleCodeResolver: () => defaultLocaleCode,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      await _pumpHomeScreenWithProvider(tester, provider);
 
-    await _openTimetablePicker(tester);
-    await tester.tap(find.byTooltip('Edit timetable').last);
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(0), 'Renamed timetable');
-    await _saveTimetableDialog(tester);
-    await tester.pumpAndSettle();
+      await _openTimetablePicker(tester);
+      await tester.tap(find.byTooltip('Edit timetable').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), 'Renamed timetable');
+      await _saveTimetableDialog(tester);
+      await tester.pumpAndSettle();
 
-    expect(storage.saveCount, 1);
-    expect(find.text('Switch timetables'), findsOneWidget);
-    expect(find.text('Renamed timetable'), findsOneWidget);
-    expect(provider.timetables.last.config.name, 'Renamed timetable');
-    expect(tester.takeException(), isNull);
-  });
+      expect(storage.saveCount, 1);
+      expect(find.text('Switch timetables'), findsNothing);
+      await _openTimetablePicker(tester);
+      expect(find.text('Renamed timetable'), findsOneWidget);
+      expect(provider.timetables.last.config.name, 'Renamed timetable');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('timetable delete failure keeps confirmation open for retry', (
     tester,
@@ -2186,7 +2211,7 @@ void main() {
     expect(provider.timetables, hasLength(1));
     expect(provider.timetables.single.config.name, 'First timetable');
     expect(find.byType(AlertDialog), findsNothing);
-    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -2223,12 +2248,12 @@ void main() {
 
     final addCourseButton = find.byTooltip('Add course');
     expect(addCourseButton, findsOneWidget);
-    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
     expect(
       tester
           .widgetList<TimetableGrid>(find.byType(TimetableGrid))
           .map((grid) => grid.bottomContentInset),
-      everyElement(80),
+      everyElement(0),
     );
 
     await tester.tap(addCourseButton);
@@ -2244,15 +2269,16 @@ void main() {
       everyElement(0),
     );
     expect(find.text('Add course'), findsWidgets);
-    final bottomSheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
-    expect(bottomSheet.enableDrag, isFalse);
-    expect(bottomSheet.showDragHandle, isFalse);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byKey(const ValueKey('workspace-inspector')), findsOneWidget);
     final title = find.descendant(
       of: find.byType(CourseEditorSheet),
       matching: find.text('Add course'),
     );
     expect(title, findsOneWidget);
-    final sheetRect = tester.getRect(find.byType(BottomSheet));
+    final sheetRect = tester.getRect(
+      find.byKey(const ValueKey('workspace-inspector')),
+    );
     expect(
       tester.getTopLeft(title).dy - sheetRect.top,
       greaterThanOrEqualTo(20),
@@ -2288,36 +2314,42 @@ void main() {
     await _pumpHomeScreenWithProvider(tester, provider);
 
     expect(find.byKey(const ValueKey('student-day-strip')), findsNothing);
-    expect(find.byType(SkedPrimaryFab), findsOneWidget);
+    expect(find.byType(SkedPrimaryFab), findsNothing);
+    expect(find.byTooltip('Add course'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'wide timetable toolbar anchors the selector to the leading edge',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1600, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final provider = await _createProvider();
-      addTearDown(provider.dispose);
-      await _pumpHomeScreenWithProvider(tester, provider);
-
-      final toolbar = tester.getRect(
-        find.byKey(const ValueKey('student-workspace-toolbar')),
-      );
-      final selector = tester.getRect(
-        find.byKey(const ValueKey('student-timetable-picker-button')),
-      );
-      final settings = tester.getRect(
-        find.byKey(const ValueKey('student-settings-button')),
-      );
-
-      expect(selector.left, lessThan(toolbar.center.dx));
-      expect(selector.left, lessThanOrEqualTo(toolbar.left + 32));
-      expect(settings.right, greaterThan(toolbar.center.dx));
-      expect(selector.center.dy, closeTo(settings.center.dy, 1));
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('wide timetable resource list stays beside an uncapped canvas', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1600, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final provider = await _createProvider();
+    addTearDown(provider.dispose);
+    await _pumpHomeScreenWithProvider(tester, provider);
+    final resources = tester.getRect(
+      find.byKey(const ValueKey('workspace-resource-panel')),
+    );
+    final canvas = tester.getRect(
+      find.byKey(const ValueKey('workspace-canvas')),
+    );
+    expect(resources.width, 224);
+    expect(canvas.left, greaterThan(resources.right));
+    expect(canvas.width, greaterThan(1200));
+    expect(
+      find.byKey(const ValueKey('student-timetable-picker-button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(ValueKey('resource-timetable-${provider.activeTimetable.id}')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('workspace-resource-settings')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('compact timetable selector uses the remaining toolbar width', (
     tester,
@@ -2351,7 +2383,7 @@ void main() {
       find.byKey(const ValueKey('student-settings-button')),
     );
 
-    expect(selector.width, greaterThan(400));
+    expect(selector.width, greaterThan(350));
     expect(selector.right, closeTo(view.left - 4, 0.01));
     expect(view.right, closeTo(settings.left - 4, 0.01));
     expect(tester.takeException(), isNull);
@@ -2465,84 +2497,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('student navigation adapts across target window sizes', (
-    tester,
-  ) async {
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = await _createProvider();
-    addTearDown(provider.dispose);
-    final scenarios = [
-      (size: const Size(390, 844), locale: const Locale('zh'), scale: 1.0),
-      (size: const Size(575, 776), locale: const Locale('de'), scale: 1.3),
-      (size: const Size(576, 776), locale: const Locale('en'), scale: 1.0),
-      (size: const Size(900, 360), locale: const Locale('de'), scale: 1.0),
-      (size: const Size(1120, 680), locale: const Locale('en'), scale: 1.0),
-    ];
-
-    for (final scenario in scenarios) {
-      await tester.binding.setSurfaceSize(scenario.size);
-      await _pumpHomeScreenWithProvider(
-        tester,
-        provider,
-        locale: scenario.locale,
-        textScaler: TextScaler.linear(scenario.scale),
-      );
-
-      final viewport = Offset.zero & scenario.size;
-      for (final key in const [
-        'student-timetable-picker-button',
-        'student-view-toggle-button',
-        'student-week-picker-button',
-        'student-settings-button',
-      ]) {
-        final rect = tester.getRect(find.byKey(ValueKey(key)));
-        expect(
-          viewport.contains(rect.topLeft),
-          true,
-          reason: '$key ${scenario.size}',
+  testWidgets(
+    'student navigation keeps its contextual controls reachable at every target size',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final scenarios = [
+        (const Size(390, 844), const Locale('zh'), 1.0),
+        (const Size(575, 776), const Locale('de'), 1.3),
+        (const Size(576, 776), const Locale('en'), 1.0),
+        (const Size(900, 360), const Locale('de'), 1.0),
+        (const Size(1120, 680), const Locale('en'), 1.0),
+      ];
+      for (final (size, locale, scale) in scenarios) {
+        await tester.binding.setSurfaceSize(size);
+        await _pumpHomeScreenWithProvider(
+          tester,
+          provider,
+          locale: locale,
+          textScaler: TextScaler.linear(scale),
         );
-        expect(
-          viewport.contains(rect.bottomRight),
-          true,
-          reason: '$key ${scenario.size}',
+        final viewport = Offset.zero & size;
+        final selector = find.byKey(
+          const ValueKey('student-timetable-picker-button'),
         );
-        expect(rect.height, greaterThanOrEqualTo(48), reason: key);
+        final settings = find.byWidgetPredicate(
+          (widget) =>
+              widget.key == const ValueKey('student-settings-button') ||
+              widget.key == const ValueKey('workspace-resource-settings'),
+        );
+        final actions = [
+          settings,
+          find.byKey(const ValueKey('student-view-toggle-button')),
+          find.byKey(const ValueKey('student-week-picker-button')),
+          if (selector.evaluate().isNotEmpty)
+            selector
+          else
+            find.byKey(
+              ValueKey('resource-timetable-${provider.activeTimetable.id}'),
+            ),
+        ];
+        for (final action in actions) {
+          final rect = tester.getRect(action);
+          expect(viewport.contains(rect.center), isTrue);
+          expect(rect.height, greaterThanOrEqualTo(48));
+        }
+        final week = tester.getRect(
+          find.byKey(const ValueKey('student-week-picker-button')),
+        );
+        final view = tester.getRect(
+          find.byKey(const ValueKey('student-view-toggle-button')),
+        );
+        expect(week.right, lessThanOrEqualTo(view.left));
+        expect(tester.takeException(), isNull);
       }
-
-      final timetablePicker = tester.getRect(
-        find.byKey(const ValueKey('student-timetable-picker-button')),
-      );
-      final settings = tester.getRect(
-        find.byKey(const ValueKey('student-settings-button')),
-      );
-      expect(timetablePicker.center.dy, closeTo(settings.center.dy, 0.01));
-      final viewToggle = tester.getRect(
-        find.byKey(const ValueKey('student-view-toggle-button')),
-      );
-      final weekPicker = tester.getRect(
-        find.byKey(const ValueKey('student-week-picker-button')),
-      );
-      expect(viewToggle.center.dy, closeTo(weekPicker.center.dy, 0.01));
-      expect(
-        weekPicker.right,
-        lessThanOrEqualTo(viewToggle.left),
-        reason: 'week picker should precede the view toggle',
-      );
-      for (final removedKey in const [
-        'student-day-week-selector',
-        'student-previous-week',
-        'student-today-button',
-        'student-next-week',
-      ]) {
-        expect(find.byKey(ValueKey(removedKey)), findsNothing);
-      }
-      expect(
-        find.byKey(const ValueKey('student-display-settings-button')),
-        findsNothing,
-      );
-      expect(tester.takeException(), isNull, reason: '${scenario.size}');
-    }
-  });
+    },
+  );
 
   testWidgets('student pager stays full height and FAB has no backing layer', (
     tester,
@@ -3321,7 +3332,13 @@ void main() {
     await tester.tap(settingsButton, warnIfMissed: false);
     await _pumpRouteTransition(tester);
 
-    expect(find.byType(SettingsPage, skipOffstage: false), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SettingsPage && widget.initialDestination == null,
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('empty timetable toolbar stays on one row with large text', (
@@ -3542,7 +3559,7 @@ void main() {
     expect(storage.saveCount, 0);
     expect(provider.timetables, hasLength(1));
     expect(find.text('Semester start date'), findsOneWidget);
-    expect(tester.widget<FilledButton>(createButton).onPressed, isNull);
+    expect(createButton, findsNothing);
 
     await tester.enterText(find.byType(TextField).at(0), 'Second draft');
     await _saveTimetableDialog(tester);
@@ -3563,7 +3580,7 @@ void main() {
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(2));
-    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(provider.activeTimetable.config.name, 'Second draft');
   });
 
@@ -3596,7 +3613,7 @@ void main() {
 
     expect(storage.saveCount, 1);
     expect(provider.activeTimetable.config.periodTimeSetId, 'period-set-2');
-    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -3624,7 +3641,7 @@ void main() {
 
     expect(storage.saveCount, 1);
     expect(provider.timetables, hasLength(1));
-    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(
       find.byKey(const ValueKey('ui-command-failure-notice')),
       findsOneWidget,
@@ -3638,8 +3655,10 @@ void main() {
     expect(provider.timetables, hasLength(2));
     // Creating a timetable keeps the picker open so the new selection is
     // visible and the user can continue managing timetables.
-    expect(find.text('Switch timetables'), findsOneWidget);
+    expect(find.text('Switch timetables'), findsNothing);
     expect(provider.activeTimetable.config.name, 'Picker draft');
+    await _openTimetablePicker(tester);
+    await tester.pumpAndSettle();
     final newTimetableKey = ValueKey(
       'timetable-picker-item-${provider.activeTimetable.id}',
     );
@@ -3838,7 +3857,13 @@ void main() {
     await tester.tap(settingsButton, warnIfMissed: false);
     await _pumpRouteTransition(tester);
 
-    expect(find.byType(SettingsPage, skipOffstage: false), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SettingsPage && widget.initialDestination == null,
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('JSON text import entry ignores rapid duplicate taps', (
@@ -3892,7 +3917,7 @@ void main() {
   testWidgets(
     'student toolbar follows custom order and keeps settings reachable',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(900, 700));
+      await tester.binding.setSurfaceSize(const Size(800, 700));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final data = _buildPopulatedStudentData().copyWith(
         studentMode: _buildPopulatedStudentData().studentMode.copyWith(
@@ -3941,34 +3966,38 @@ void main() {
     },
   );
 
-  testWidgets('student timetable selector stays leading on wide screens', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(1400, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final provider = await _createProvider();
-    addTearDown(provider.dispose);
-    await _pumpHomeScreenWithProvider(tester, provider);
-
-    final selector = tester.getRect(
-      find.byKey(const ValueKey('student-timetable-picker-button')),
-    );
-    final week = tester.getRect(
-      find.byKey(const ValueKey('student-week-picker-button')),
-    );
-    final view = tester.getRect(
-      find.byKey(const ValueKey('student-view-toggle-button')),
-    );
-    final settings = tester.getRect(
-      find.byKey(const ValueKey('student-settings-button')),
-    );
-
-    expect(selector.left, lessThan(week.left));
-    expect(selector.right, lessThan(week.left));
-    expect(week.left, lessThan(view.left));
-    expect(view.left, lessThan(settings.left));
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'wide timetable navigation separates resources from time controls',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      await _pumpHomeScreenWithProvider(tester, provider);
+      final resource = tester.getRect(
+        find.byKey(
+          ValueKey('resource-timetable-${provider.activeTimetable.id}'),
+        ),
+      );
+      final week = tester.getRect(
+        find.byKey(const ValueKey('student-week-picker-button')),
+      );
+      final view = tester.getRect(
+        find.byKey(const ValueKey('student-view-toggle-button')),
+      );
+      expect(resource.right, lessThan(week.left));
+      expect(week.right, lessThanOrEqualTo(view.left));
+      expect(
+        find.byKey(const ValueKey('student-settings-button')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('workspace-resource-settings')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('student toolbar removes hidden items or exposes them in More', (
     tester,

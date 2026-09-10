@@ -425,3 +425,32 @@ class _SkedDirectionalTransitionState extends State<SkedDirectionalTransition>
     super.dispose();
   }
 }
+
+/// AnimatedSize may synchronously notify from performLayout when restarted
+/// with a zero duration. Reduced-motion and inactive workspaces use the same
+/// final geometry without instantiating an animation controller.
+class SkedAnimatedSize extends StatelessWidget {
+  const SkedAnimatedSize({
+    super.key,
+    required this.duration,
+    required this.child,
+    this.alignment = Alignment.center,
+    this.curve = Curves.linear,
+    this.clipBehavior = Clip.hardEdge,
+  });
+  final Duration duration;
+  final Widget child;
+  final AlignmentGeometry alignment;
+  final Curve curve;
+  final Clip clipBehavior;
+  @override
+  Widget build(BuildContext context) => duration == Duration.zero
+      ? ClipRect(clipBehavior: clipBehavior, child: child)
+      : AnimatedSize(
+          duration: duration,
+          alignment: alignment,
+          curve: curve,
+          clipBehavior: clipBehavior,
+          child: child,
+        );
+}

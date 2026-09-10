@@ -30,6 +30,7 @@ class _ModeSwitchActionState extends State<ModeSwitchAction>
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TimetableProvider>();
+    if (!provider.hasMultipleWorkspaces) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final isStudent = provider.isStudentMode;
     return ExpressiveSwitcher(

@@ -1269,11 +1269,11 @@ class AppLocalizationsCs extends AppLocalizations {
   String get schoolWebImportSuccess => 'Webový rozvrh importován';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API configuration';
+  String get schoolImportParserSettingsTitle => 'API pro zpracování rozvrhu';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+      'Nastavte API kompatibilní s OpenAI pro import rozvrhů, nikoli pro chatovacího asistenta.';
 
   @override
   String get schoolImportParserSourceTitle => 'Zdroj parseru';
@@ -2180,7 +2180,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
-      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
+      'Skryje navigaci pracovních prostorů. Přepínat je lze v nabídce na hlavní obrazovce.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';
@@ -2739,7 +2739,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+      'Připomenutí závisí na systémových oprávněních a běhu na pozadí. Vypnutí, změny času nebo systémová omezení je mohou zpozdit.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';
@@ -2866,4 +2866,133 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get notificationPlatformUnsupported =>
       'This platform does not provide native notifications.';
+
+  @override
+  String get workspaceFeatures => 'Správa funkcí';
+
+  @override
+  String get workspaceBoth => 'Rozvrh a kalendář';
+
+  @override
+  String get workspaceOnlyStudent => 'Pouze rozvrh';
+
+  @override
+  String get workspaceOnlyGeneral => 'Pouze kalendář';
+
+  @override
+  String get workspaceDisableTitle => 'Vypnout tento pracovní prostor?';
+
+  @override
+  String get workspaceDisableMessage =>
+      'Data a předvolby zůstanou zachovány. Funkce a připomenutí se pozastaví, dokud prostor zde znovu nezapnete.';
+
+  @override
+  String get workspaceEnableHint =>
+      'Vyberte používané funkce. Alespoň jedna musí zůstat zapnutá.';
+
+  @override
+  String get workspaceLastRequired =>
+      'Alespoň jeden pracovní prostor musí zůstat zapnutý.';
+
+  @override
+  String get workspaceReminderCleanupFailed =>
+      'Pracovní prostor je vypnutý, ale připomenutí se nepodařilo odstranit. Zkuste obnovení oznámení znovu.';
+
+  @override
+  String get settingsSearch => 'Hledat v nastavení';
+
+  @override
+  String get settingsNoResults => 'Žádné odpovídající nastavení';
+
+  @override
+  String get settingsDataPrivacy => 'Data a soukromí';
+
+  @override
+  String get workspacePreferences => 'Zobrazení a ovládání';
+
+  @override
+  String get workspaceManage => 'Spravovat';
+
+  @override
+  String get selectedDayAgenda => 'Vybraný den';
+
+  @override
+  String get notificationTroubleshooting => 'Oprávnění a řešení problémů';
+
+  @override
+  String get settingsConnection => 'Připojení';
+
+  @override
+  String get settingsAdvanced => 'Pokročilé';
+
+  @override
+  String get unsavedChangesMessage =>
+      'Máte neuložené změny. Zahodit je a odejít?';
+
+  @override
+  String get backupWorkspaceSelection =>
+      'Úplná záloha obsahuje data a výběr zapnutých pracovních prostorů.';
+
+  @override
+  String get assistantLayoutPreview => 'AI · Layout preview';
+
+  @override
+  String get assistantSelectionContext =>
+      'Uses the current selection as context';
+
+  @override
+  String get assistantPreviewDescription =>
+      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+
+  @override
+  String get assistantDraftLabel => 'Message draft';
+
+  @override
+  String get assistantPreviewNoSend =>
+      'Layout preview only. Nothing will be sent or changed.';
+
+  @override
+  String get resizePanel => 'Resize panel';
+
+  @override
+  String get minimizeWindow => 'Minimize';
+
+  @override
+  String get maximizeWindow => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get closeWindow => 'Close window';
+
+  @override
+  String get courseSystemReminder => 'System reminder';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return 'Use default ($reminder)';
+  }
+
+  @override
+  String get courseReminderMasterOff =>
+      'System reminders are off in notification settings. This course preference can still be saved.';
+
+  @override
+  String get courseReminderDefaultOff =>
+      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+
+  @override
+  String get courseReminderDeliveryHint =>
+      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+
+  @override
+  String get courseReminderPermissionUnknown =>
+      'System notification status has not been checked. Review notification settings before relying on reminders.';
+
+  @override
+  String get courseReminderMinutesLabel => 'Minutes before class';
+
+  @override
+  String get exportAction => 'Export';
 }

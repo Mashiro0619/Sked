@@ -1739,6 +1739,8 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
 class AppData {
   factory AppData({
     required AppMode activeMode,
+    Set<AppMode> enabledWorkspaces = const {AppMode.student, AppMode.general},
+    Map<AppMode, DateTime> workspaceReminderNotBefore = const {},
     required StudentModeData studentMode,
     required GeneralScheduleData generalMode,
     String localeCode = defaultLocaleCode,
@@ -1755,6 +1757,9 @@ class AppData {
     String? ignoredUpdateVersion,
     String? availableUpdateVersion,
   }) {
+    if (enabledWorkspaces.isEmpty || !enabledWorkspaces.contains(activeMode)) {
+      throw const FormatException('Active workspace must be enabled.');
+    }
     var nextStudentMode = studentMode;
     var nextGeneralMode = generalMode;
     final hasThemeUpdate =
@@ -1789,6 +1794,8 @@ class AppData {
     }
     return AppData._(
       activeMode: activeMode,
+      enabledWorkspaces: Set.unmodifiable(enabledWorkspaces),
+      workspaceReminderNotBefore: Map.unmodifiable(workspaceReminderNotBefore),
       studentMode: nextStudentMode,
       generalMode: nextGeneralMode,
       localeCode: localeCode,
@@ -1805,6 +1812,8 @@ class AppData {
 
   const AppData._({
     required this.activeMode,
+    required this.enabledWorkspaces,
+    required this.workspaceReminderNotBefore,
     required this.studentMode,
     required this.generalMode,
     this.localeCode = defaultLocaleCode,
@@ -1819,6 +1828,11 @@ class AppData {
   });
 
   final AppMode activeMode;
+  final Set<AppMode> enabledWorkspaces;
+  final Map<AppMode, DateTime> workspaceReminderNotBefore;
+
+  bool isWorkspaceEnabled(AppMode mode) => enabledWorkspaces.contains(mode);
+
   final StudentModeData studentMode;
   final GeneralScheduleData generalMode;
   final String localeCode;
@@ -1843,6 +1857,15 @@ class AppData {
   Map<String, dynamic> toJson() => {
     'schemaVersion': appDataCurrentSchemaVersion,
     'activeMode': activeMode.value,
+    'enabledWorkspaces': [
+      for (final mode in AppMode.values)
+        if (isWorkspaceEnabled(mode)) mode.value,
+    ],
+    if (workspaceReminderNotBefore.isNotEmpty)
+      'workspaceReminderNotBefore': {
+        for (final entry in workspaceReminderNotBefore.entries)
+          entry.key.value: entry.value.toUtc().toIso8601String(),
+      },
     'studentMode': studentMode.toJson(),
     'generalMode': generalMode.toJson(),
     'localeCode': normalizeLocaleCode(localeCode),
@@ -1867,6 +1890,10 @@ class AppData {
   };
 
   factory AppData.fromJson(Map<String, dynamic> json) {
+    if (_tryDecodeIntegerVersion(json['schemaVersion']) == 3 &&
+        !AppMode.values.any((mode) => mode.value == json['activeMode'])) {
+      throw const FormatException('Stored active workspace is invalid.');
+    }
     final usesLegacyThemeOwnership =
         !json.containsKey('schemaVersion') ||
         _tryDecodeIntegerVersion(json['schemaVersion']) == 1;
@@ -1929,6 +1956,8 @@ class AppData {
     }
     return AppData(
       activeMode: activeMode,
+      enabledWorkspaces: _decodeEnabledWorkspaces(migrated),
+      workspaceReminderNotBefore: _decodeWorkspaceReminderBoundaries(migrated),
       studentMode: studentMode,
       generalMode: generalMode,
       localeCode: localeCode,
@@ -1959,6 +1988,8 @@ class AppData {
 
   AppData copyWith({
     AppMode? activeMode,
+    Set<AppMode>? enabledWorkspaces,
+    Map<AppMode, DateTime>? workspaceReminderNotBefore,
     StudentModeData? studentMode,
     GeneralScheduleData? generalMode,
     String? localeCode,
@@ -2011,6 +2042,9 @@ class AppData {
     }
     return AppData(
       activeMode: nextActiveMode,
+      enabledWorkspaces: enabledWorkspaces ?? this.enabledWorkspaces,
+      workspaceReminderNotBefore:
+          workspaceReminderNotBefore ?? this.workspaceReminderNotBefore,
       studentMode: nextStudentMode,
       generalMode: nextGeneralMode,
       localeCode: normalizeLocaleCode(localeCode ?? this.localeCode),
@@ -2050,6 +2084,44 @@ class AppData {
     _validateStorageSnapshotShape(migrated);
     return AppData.fromJson(migrated);
   }
+}
+
+Set<AppMode> _decodeEnabledWorkspaces(Map<String, dynamic> json) {
+  final raw = json['enabledWorkspaces'];
+  if (raw is! List ||
+      raw.isEmpty ||
+      raw.length > AppMode.values.length ||
+      raw.toSet().length != raw.length ||
+      raw.any((value) => !AppMode.values.any((mode) => mode.value == value))) {
+    throw const FormatException('Stored enabled workspaces are invalid.');
+  }
+  return raw
+      .map((value) => AppMode.values.singleWhere((mode) => mode.value == value))
+      .toSet();
+}
+
+Map<AppMode, DateTime> _decodeWorkspaceReminderBoundaries(
+  Map<String, dynamic> json,
+) {
+  if (!json.containsKey('workspaceReminderNotBefore')) return const {};
+  final raw = json['workspaceReminderNotBefore'];
+  if (raw is! Map) {
+    throw const FormatException('Stored reminder boundaries are invalid.');
+  }
+  final result = <AppMode, DateTime>{};
+  for (final entry in raw.entries) {
+    if (!AppMode.values.any((mode) => mode.value == entry.key) ||
+        entry.value is! String) {
+      throw const FormatException('Stored reminder boundary is invalid.');
+    }
+    final date = DateTime.tryParse(entry.value as String);
+    if (date == null || !date.isUtc) {
+      throw const FormatException('Stored reminder boundary must be UTC.');
+    }
+    result[AppMode.values.singleWhere((mode) => mode.value == entry.key)] =
+        date;
+  }
+  return result;
 }
 
 Map<String, dynamic> _decodeAiApiSettingsJson(

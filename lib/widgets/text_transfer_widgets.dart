@@ -1,3 +1,5 @@
+import 'desktop_window_host.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -51,7 +53,7 @@ class _TextImportPageState extends State<TextImportPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: WorkbenchAppBar(title: Text(widget.title)),
       body: SafeArea(
         top: false,
         child: Center(

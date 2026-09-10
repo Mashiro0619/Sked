@@ -1,3 +1,6 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -20,19 +23,25 @@ class GeneralDisplaySettingsPage extends StatefulWidget {
 }
 
 class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
-    with UiCommandRunner<GeneralDisplaySettingsPage> {
+    with
+        UiCommandRunner<GeneralDisplaySettingsPage>,
+        WorkspaceRouteLifecycle<GeneralDisplaySettingsPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.general;
+
   void _updateSetting(String debugLabel, Future<void> Function() command) {
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
         final localeCode = app_locale.normalizeLocaleCode(provider.localeCode);
         return Scaffold(
-          appBar: AppBar(title: Text(l10n.generalDisplaySettings)),
+          appBar: WorkbenchAppBar(title: Text(l10n.generalDisplaySettings)),
           body: Column(
             children: [
               UiCommandBusyIndicator(

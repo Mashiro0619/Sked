@@ -912,7 +912,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyPolicyEntryDesc =>
-      'Learn how the app handles local storage, school-site configuration, file import/export, timetable text / HTML parsing, and external links.';
+      'How local data, import and export, optional network requests and external links are handled.';
 
   @override
   String privacyPolicyAcceptedVersionLabel(Object version) {
@@ -1263,11 +1263,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schoolWebImportSuccess => 'Web timetable imported';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API configuration';
+  String get schoolImportParserSettingsTitle => 'Timetable parsing API';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+      'Configure the OpenAI-compatible API for timetable import. This does not configure a chat assistant.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parser source';
@@ -2173,7 +2173,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
-      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
+      'Hide workspace navigation. You can still switch using the workspace menu on the main screen.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';
@@ -2729,7 +2729,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+      'Reminders depend on system permissions and background execution. Power-off, time changes, or system restrictions may delay delivery.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';
@@ -2856,4 +2856,132 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationPlatformUnsupported =>
       'This platform does not provide native notifications.';
+
+  @override
+  String get workspaceFeatures => 'Features';
+
+  @override
+  String get workspaceBoth => 'Timetable and schedule';
+
+  @override
+  String get workspaceOnlyStudent => 'Timetable only';
+
+  @override
+  String get workspaceOnlyGeneral => 'Schedule only';
+
+  @override
+  String get workspaceDisableTitle => 'Turn off this workspace?';
+
+  @override
+  String get workspaceDisableMessage =>
+      'Its data and preferences will be kept. Its features and reminders will stop until you turn it on again here.';
+
+  @override
+  String get workspaceEnableHint =>
+      'Choose the features you use. At least one must stay on.';
+
+  @override
+  String get workspaceLastRequired => 'At least one workspace must stay on.';
+
+  @override
+  String get workspaceReminderCleanupFailed =>
+      'The workspace is off, but reminders could not be cleared. Retry notification recovery.';
+
+  @override
+  String get settingsSearch => 'Search settings';
+
+  @override
+  String get settingsNoResults => 'No matching settings';
+
+  @override
+  String get settingsDataPrivacy => 'Data and privacy';
+
+  @override
+  String get workspacePreferences => 'Display and interaction';
+
+  @override
+  String get workspaceManage => 'Manage';
+
+  @override
+  String get selectedDayAgenda => 'Selected day';
+
+  @override
+  String get notificationTroubleshooting => 'Permissions and troubleshooting';
+
+  @override
+  String get settingsConnection => 'Connection';
+
+  @override
+  String get settingsAdvanced => 'Advanced';
+
+  @override
+  String get unsavedChangesMessage =>
+      'You have unsaved changes. Discard them and leave?';
+
+  @override
+  String get backupWorkspaceSelection =>
+      'The full backup includes data and enabled workspaces.';
+
+  @override
+  String get assistantLayoutPreview => 'AI · Layout preview';
+
+  @override
+  String get assistantSelectionContext =>
+      'Uses the current selection as context';
+
+  @override
+  String get assistantPreviewDescription =>
+      'Discuss and work in the current workspace. This preview only demonstrates the layout; AI is not connected.';
+
+  @override
+  String get assistantDraftLabel => 'Message draft';
+
+  @override
+  String get assistantPreviewNoSend =>
+      'Layout preview only. Nothing will be sent or changed.';
+
+  @override
+  String get resizePanel => 'Resize panel';
+
+  @override
+  String get minimizeWindow => 'Minimize';
+
+  @override
+  String get maximizeWindow => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get closeWindow => 'Close window';
+
+  @override
+  String get courseSystemReminder => 'System reminder';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return 'Use default ($reminder)';
+  }
+
+  @override
+  String get courseReminderMasterOff =>
+      'System reminders are off in notification settings. This course preference can still be saved.';
+
+  @override
+  String get courseReminderDefaultOff =>
+      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+
+  @override
+  String get courseReminderDeliveryHint =>
+      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+
+  @override
+  String get courseReminderPermissionUnknown =>
+      'System notification status has not been checked. Review notification settings before relying on reminders.';
+
+  @override
+  String get courseReminderMinutesLabel => 'Minutes before class';
+
+  @override
+  String get exportAction => 'Export';
 }

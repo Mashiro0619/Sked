@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import '../models/timetable_models.dart';
+import '../models/workspace_availability.dart';
 import '../providers/timetable_provider.dart';
 import 'agenda_notification_fingerprint.dart';
 import 'agenda_projection_service.dart';
@@ -423,6 +424,7 @@ class AgendaActionRouter {
 
   Future<bool> route(AgendaAction action) async {
     final target = action.target;
+    if (!provider.appData.allowsAgendaSource(target.sourceType)) return false;
     final customHandler = sourceHandlers[target.sourceType];
     if (customHandler != null) {
       await customHandler(target);

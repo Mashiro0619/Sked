@@ -172,7 +172,9 @@ void main() {
         await repository.delete(recursive: true);
       }
     },
-    timeout: const Timeout(Duration(seconds: 30)),
+    // This test starts multiple Git and Dart processes; allow Windows process
+    // startup under the full coverage suite without relaxing any assertions.
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 }
 

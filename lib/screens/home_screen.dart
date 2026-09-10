@@ -1,3 +1,7 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/period_time_set_manager.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -9,11 +13,16 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
+import '../models/workspace_context_snapshot.dart';
 import '../providers/timetable_provider.dart';
 import '../previews/sked_preview_support.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
+import '../widgets/workspace_frame.dart';
+import '../widgets/app_layout_tokens.dart';
+import '../widgets/editor_exit_guard.dart';
+import '../widgets/workspace_navigation.dart';
 import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
@@ -87,6 +96,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _pane = WorkspacePaneController();
   PageController? _pageController;
   _StudentTimetableView? _viewMode;
   int? _selectedWeekday;
@@ -108,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _pane.dispose();
     _pageController?.dispose();
     super.dispose();
   }
@@ -265,7 +276,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final timetable = snapshot.activeTimetable;
-                final horizontalInset = constraints.maxWidth < 600 ? 8.0 : 16.0;
+                final desktop = WorkbenchChromeMetrics.of(context).desktop;
+                final horizontalInset = !desktop && constraints.maxWidth < 600
+                    ? 8.0
+                    : 0.0;
+                final showSettingsHere =
+                    widget.showSettingsAction &&
+                    WorkspaceCanvasScope.maybeOf(context)?.resources != true;
                 final settingsAction = !widget.settingsEnabled
                     ? null
                     : widget.settingsAction ??
@@ -277,14 +294,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Padding(
                     padding: EdgeInsets.fromLTRB(
                       horizontalInset,
-                      8,
+                      desktop ? 0 : 8,
                       horizontalInset,
                       0,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (widget.showSettingsAction)
+                        if (showSettingsHere)
                           _EmptyTimetableToolbar(
                             key: const ValueKey('student-workspace-toolbar'),
                             title: l10n.appTitle,
@@ -330,8 +347,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 final keyboardVisible =
                     rawKeyboardInset > 0 ||
                     MediaQuery.viewInsetsOf(context).bottom > 0;
-                final fabVisible =
-                    snapshot.showAddCourseFab &&
+                final inlineAdd = desktop || constraints.maxWidth >= 600;
+                final addVisible =
+                    (desktop || snapshot.showAddCourseFab) &&
                     widget.active &&
                     widget.interactive &&
                     !_courseEditorOpen &&
@@ -340,6 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // behind the FAB. The clearance is added only to the
                 // scrollable grid content, allowing the final course to be
                 // brought above the button without painting a blank strip.
+                final fabVisible = addVisible && !inlineAdd;
                 final fabContentInset = fabVisible ? 80.0 : 0.0;
                 _ensurePageController(week);
                 _ensureLocalViewState(config: config, selectedWeek: week);
@@ -368,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Padding(
                   padding: EdgeInsets.fromLTRB(
                     horizontalInset,
-                    8,
+                    desktop ? 0 : 8,
                     horizontalInset,
                     0,
                   ),
@@ -378,8 +397,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _StudentWorkspaceToolbar(
+                            onAddCourse: inlineAdd && addVisible
+                                ? () => _openEditor(context, provider)
+                                : null,
+                            showAddLabel: constraints.maxWidth >= 760,
                             timetable: timetable,
                             week: week,
+                            onStep: widget.interactive
+                                ? (delta) => _jumpWeekBy(provider, delta)
+                                : null,
                             weekNavigationDirection:
                                 _weekNavigationTarget == week
                                 ? _weekNavigationDirection
@@ -393,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             compactWidth: constraints.maxWidth < 600,
                             compactHeight: constraints.maxHeight < 600,
                             interactive: widget.interactive,
-                            showSettings: widget.showSettingsAction,
+                            showSettings: showSettingsHere,
                             settingsFocusNode: widget.settingsFocusNode,
                             onOpenTimetablePicker: _timetablePickerOpen
                                 ? null
@@ -490,8 +516,110 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _wrapStandalone(Widget workspace) {
-    if (widget.embedded) return workspace;
-    return Scaffold(key: widget.scaffoldKey, body: workspace);
+    final framed = Consumer<TimetableProvider>(
+      builder: (context, preferences, _) => WorkspaceFrame(
+        controller: _pane,
+        contextSnapshot: WorkspaceContextSnapshot(
+          enabledWorkspaces: preferences.enabledWorkspaces,
+          mode: AppMode.student,
+          view: _viewMode?.name ?? 'week',
+          resourceId: preferences.activeTimetableOrNull?.id,
+        ),
+        active: widget.active,
+        resourcesCollapsed: preferences.homeWorkspaceNavigationCollapsed,
+        canvas: workspace,
+        resources: Consumer<TimetableProvider>(
+          builder: (context, provider, _) {
+            final l10n = AppLocalizations.of(context);
+            return WorkspaceResourcePanel(
+              title: l10n.timetable,
+              onOpenResources: _courseEditorOpen
+                  ? null
+                  : () => _showTimetablePicker(
+                      context,
+                      provider,
+                      availableWidth: 560,
+                    ),
+              settingsFocusNode: widget.settingsFocusNode,
+              onSettings: widget.showSettingsAction && widget.settingsEnabled
+                  ? widget.settingsAction ?? () => _openSettingsPage(provider)
+                  : null,
+
+              headerActions: [
+                IconButton(
+                  tooltip: l10n.createTimetable,
+                  icon: const Icon(Icons.add),
+                  onPressed: _courseEditorOpen || _timetableItemDialogOpen
+                      ? null
+                      : () => _openCreateTimetableDialog(context, provider),
+                ),
+                PopupMenuButton<String>(
+                  key: const ValueKey('student-resource-menu'),
+                  tooltip: l10n.more,
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (value) => value == 'periods'
+                      ? Navigator.of(context, rootNavigator: true).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) => const PeriodTimeSetManagerPage(),
+                          ),
+                        )
+                      : openWorkspaceTransfer(
+                          context,
+                          AppMode.student,
+                          direction: value == 'import'
+                              ? SettingsTransferDirection.import
+                              : SettingsTransferDirection.export,
+                        ),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'periods',
+                      child: Text(l10n.periodTimeSets),
+                    ),
+                    PopupMenuItem(
+                      value: 'import',
+                      child: Text(l10n.importAction),
+                    ),
+                    PopupMenuItem(
+                      value: 'export',
+                      child: Text(l10n.exportAction),
+                    ),
+                  ],
+                ),
+              ],
+              children: [
+                for (final timetable in provider.timetables)
+                  ListTile(
+                    key: ValueKey('resource-timetable-${timetable.id}'),
+                    title: Text(timetable.config.name),
+                    selected:
+                        timetable.id == provider.activeTimetableOrNull?.id,
+                    onTap: _courseEditorOpen
+                        ? null
+                        : () => _switchTimetableFromPicker(
+                            context,
+                            provider,
+                            timetable,
+                          ),
+                    trailing: IconButton(
+                      tooltip: l10n.editTimetable,
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: _courseEditorOpen
+                          ? null
+                          : () => _openTimetableItemDialog(
+                              context,
+                              provider,
+                              timetable,
+                            ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    if (widget.embedded) return framed;
+    return Scaffold(key: widget.scaffoldKey, body: framed);
   }
 
   void _ensureLocalViewState({

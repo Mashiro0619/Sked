@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../widgets/app_modal_sheet.dart';
+import '../widgets/workbench_layout_policy.dart';
 import '../widgets/expressive_motion.dart';
 
 enum SettingsStudentDataAction {
@@ -35,6 +36,8 @@ enum SettingsAppDataAction {
   showRecoveryArtifacts,
 }
 
+enum SettingsTransferDirection { import, export }
+
 class SettingsDataTransferController {
   const SettingsDataTransferController();
 
@@ -45,55 +48,7 @@ class SettingsDataTransferController {
     final action = await _showActions<SettingsStudentDataAction>(
       context,
       icon: Icons.import_export,
-      buildSpec: (sheetContext) {
-        final l10n = AppLocalizations.of(sheetContext);
-        return _TransferSheetSpec(
-          title: l10n.dataImportExport,
-          subtitle: l10n.dataImportExportDesc,
-          groups: [
-            [
-              _TransferAction(
-                value: SettingsStudentDataAction.importTimetables,
-                icon: Icons.file_download_outlined,
-                title: l10n.importTimetableFiles,
-                subtitle: l10n.importTimetableFilesDesc,
-              ),
-              _TransferAction(
-                value: SettingsStudentDataAction.importTimetablesText,
-                icon: Icons.paste_outlined,
-                title: l10n.importTimetableText,
-                subtitle: l10n.importTimetableTextDesc,
-              ),
-              _TransferAction(
-                value: SettingsStudentDataAction.importSchoolHtml,
-                icon: Icons.html_outlined,
-                title: l10n.schoolHtmlImportEntry,
-                subtitle: l10n.schoolHtmlImportEntryDesc,
-              ),
-            ],
-            [
-              _TransferAction(
-                value: SettingsStudentDataAction.exportTimetablesShare,
-                icon: Icons.share_outlined,
-                title: l10n.shareTimetableFiles,
-                subtitle: l10n.shareTimetableFilesDesc,
-              ),
-              _TransferAction(
-                value: SettingsStudentDataAction.exportTimetablesSave,
-                icon: Icons.save_alt_outlined,
-                title: l10n.saveTimetableFiles,
-                subtitle: l10n.saveTimetableFilesDesc,
-              ),
-              _TransferAction(
-                value: SettingsStudentDataAction.exportTimetablesText,
-                icon: Icons.text_snippet_outlined,
-                title: l10n.exportTimetableText,
-                subtitle: l10n.exportTimetableTextDesc,
-              ),
-            ],
-          ],
-        );
-      },
+      buildSpec: _studentSpec,
     );
     if (action != null && context.mounted) {
       await onAction(action);
@@ -171,86 +126,169 @@ class SettingsDataTransferController {
     BuildContext context, {
     required Future<void> Function(SettingsGeneralDataAction action) onAction,
   }) async {
-    final l10n = AppLocalizations.of(context);
     final action = await _showActions<SettingsGeneralDataAction>(
       context,
       icon: Icons.event_note_outlined,
       constrainHeight: true,
-      buildSpec: (_) => _TransferSheetSpec(
-        title: l10n.generalScheduleImportExport,
-        subtitle: l10n.generalScheduleImportExportDesc,
-        groups: [
-          [
-            _TransferAction(
-              value: SettingsGeneralDataAction.importSchedulesJsonFile,
-              icon: Icons.file_download_outlined,
-              title: l10n.importJsonFile,
-              subtitle: l10n.importGeneralSchedulesDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.importSchedulesJsonText,
-              icon: Icons.paste_outlined,
-              title: l10n.pasteJson,
-              subtitle: l10n.importGeneralSchedulesJsonTextDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.importSchedulesIcsFile,
-              icon: Icons.calendar_month_outlined,
-              title: l10n.importIcsFile,
-              subtitle: l10n.importIcsFileDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.importSchedulesIcsText,
-              icon: Icons.event_note_outlined,
-              title: l10n.pasteIcs,
-              subtitle: l10n.pasteIcsDesc,
-            ),
-          ],
-          [
-            _TransferAction(
-              value: SettingsGeneralDataAction.exportSchedulesJsonShare,
-              icon: Icons.share_outlined,
-              title: '${l10n.shareGeneralSchedules} JSON',
-              subtitle: l10n.shareGeneralSchedulesDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.exportSchedulesJsonSave,
-              icon: Icons.save_alt_outlined,
-              title: '${l10n.saveGeneralSchedules} JSON',
-              subtitle: l10n.saveGeneralSchedulesDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.exportSchedulesJsonText,
-              icon: Icons.text_snippet_outlined,
-              title: l10n.copyJson,
-              subtitle: l10n.copyJsonDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.exportSchedulesIcsShare,
-              icon: Icons.ios_share_outlined,
-              title: l10n.shareIcs,
-              subtitle: l10n.shareIcsDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.exportSchedulesIcsSave,
-              icon: Icons.event_available_outlined,
-              title: l10n.saveIcs,
-              subtitle: l10n.saveIcsDesc,
-            ),
-            _TransferAction(
-              value: SettingsGeneralDataAction.exportSchedulesIcsText,
-              icon: Icons.event_note_outlined,
-              title: l10n.copyIcs,
-              subtitle: l10n.copyIcsDesc,
-            ),
-          ],
-        ],
-      ),
+      buildSpec: _generalSpec,
     );
     if (action != null && context.mounted) {
       await onAction(action);
     }
   }
+
+  _TransferSheetSpec<SettingsStudentDataAction> _studentSpec(
+    BuildContext context,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    return _TransferSheetSpec(
+      title: l10n.dataImportExport,
+      subtitle: l10n.dataImportExportDesc,
+      groups: [
+        [
+          _TransferAction(
+            value: SettingsStudentDataAction.importTimetables,
+            icon: Icons.file_download_outlined,
+            title: l10n.importTimetableFiles,
+            subtitle: l10n.importTimetableFilesDesc,
+          ),
+          _TransferAction(
+            value: SettingsStudentDataAction.importTimetablesText,
+            icon: Icons.paste_outlined,
+            title: l10n.importTimetableText,
+            subtitle: l10n.importTimetableTextDesc,
+          ),
+          _TransferAction(
+            value: SettingsStudentDataAction.importSchoolHtml,
+            icon: Icons.html_outlined,
+            title: l10n.schoolHtmlImportEntry,
+            subtitle: l10n.schoolHtmlImportEntryDesc,
+          ),
+        ],
+        [
+          _TransferAction(
+            value: SettingsStudentDataAction.exportTimetablesShare,
+            icon: Icons.share_outlined,
+            title: l10n.shareTimetableFiles,
+            subtitle: l10n.shareTimetableFilesDesc,
+          ),
+          _TransferAction(
+            value: SettingsStudentDataAction.exportTimetablesSave,
+            icon: Icons.save_alt_outlined,
+            title: l10n.saveTimetableFiles,
+            subtitle: l10n.saveTimetableFilesDesc,
+          ),
+          _TransferAction(
+            value: SettingsStudentDataAction.exportTimetablesText,
+            icon: Icons.text_snippet_outlined,
+            title: l10n.exportTimetableText,
+            subtitle: l10n.exportTimetableTextDesc,
+          ),
+        ],
+      ],
+    );
+  }
+
+  _TransferSheetSpec<SettingsGeneralDataAction> _generalSpec(
+    BuildContext context,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    return _TransferSheetSpec(
+      title: l10n.generalScheduleImportExport,
+      subtitle: l10n.generalScheduleImportExportDesc,
+      groups: [
+        [
+          _TransferAction(
+            value: SettingsGeneralDataAction.importSchedulesJsonFile,
+            icon: Icons.file_download_outlined,
+            title: l10n.importJsonFile,
+            subtitle: l10n.importGeneralSchedulesDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.importSchedulesJsonText,
+            icon: Icons.paste_outlined,
+            title: l10n.pasteJson,
+            subtitle: l10n.importGeneralSchedulesJsonTextDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.importSchedulesIcsFile,
+            icon: Icons.calendar_month_outlined,
+            title: l10n.importIcsFile,
+            subtitle: l10n.importIcsFileDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.importSchedulesIcsText,
+            icon: Icons.event_note_outlined,
+            title: l10n.pasteIcs,
+            subtitle: l10n.pasteIcsDesc,
+          ),
+        ],
+        [
+          _TransferAction(
+            value: SettingsGeneralDataAction.exportSchedulesJsonShare,
+            icon: Icons.share_outlined,
+            title: '${l10n.shareGeneralSchedules} JSON',
+            subtitle: l10n.shareGeneralSchedulesDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.exportSchedulesJsonSave,
+            icon: Icons.save_alt_outlined,
+            title: '${l10n.saveGeneralSchedules} JSON',
+            subtitle: l10n.saveGeneralSchedulesDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.exportSchedulesJsonText,
+            icon: Icons.text_snippet_outlined,
+            title: l10n.copyJson,
+            subtitle: l10n.copyJsonDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.exportSchedulesIcsShare,
+            icon: Icons.ios_share_outlined,
+            title: l10n.shareIcs,
+            subtitle: l10n.shareIcsDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.exportSchedulesIcsSave,
+            icon: Icons.event_available_outlined,
+            title: l10n.saveIcs,
+            subtitle: l10n.saveIcsDesc,
+          ),
+          _TransferAction(
+            value: SettingsGeneralDataAction.exportSchedulesIcsText,
+            icon: Icons.event_note_outlined,
+            title: l10n.copyIcs,
+            subtitle: l10n.copyIcsDesc,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget studentPageContent(
+    BuildContext context, {
+    required ValueChanged<SettingsStudentDataAction> onAction,
+    required bool busy,
+    List<Widget> importConfiguration = const [],
+    SettingsTransferDirection? direction,
+  }) => _TransferPageContent(
+    spec: _studentSpec(context),
+    onAction: onAction,
+    busy: busy,
+    importConfiguration: importConfiguration,
+    direction: direction,
+  );
+  Widget generalPageContent(
+    BuildContext context, {
+    required ValueChanged<SettingsGeneralDataAction> onAction,
+    required bool busy,
+    SettingsTransferDirection? direction,
+  }) => _TransferPageContent(
+    spec: _generalSpec(context),
+    direction: direction,
+    onAction: onAction,
+    busy: busy,
+  );
 
   Future<T?> _showActions<T>(
     BuildContext context, {
@@ -477,4 +515,79 @@ class _ActionSheetTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A direct task page, not a settings intermediary followed by another modal.
+class _TransferPageContent<T> extends StatelessWidget {
+  const _TransferPageContent({
+    required this.spec,
+    required this.onAction,
+    required this.busy,
+    this.importConfiguration = const [],
+    this.direction,
+  });
+  final _TransferSheetSpec<T> spec;
+  final ValueChanged<T> onAction;
+  final bool busy;
+  final List<Widget> importConfiguration;
+  final SettingsTransferDirection? direction;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) {
+      final l = AppLocalizations.of(context);
+      final split = WorkbenchLayoutPolicy.formCanSplit(
+        c.maxWidth,
+        MediaQuery.textScalerOf(context).scale(14) / 14,
+        navigation: 400,
+        content: 400,
+      );
+      Widget group(int index) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: Text(
+              index == 0 ? l.importAction : l.exportAction,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final action in spec.groups[index])
+            ListTile(
+              leading: Icon(action.icon, size: 20),
+              title: Text(action.title),
+              subtitle: Text(action.subtitle),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: busy ? null : () => onAction(action.value),
+            ),
+          if (index == 0) ...importConfiguration,
+        ],
+      );
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: direction == null ? 1120 : 720,
+            ),
+            child: direction != null
+                ? group(direction == SettingsTransferDirection.import ? 0 : 1)
+                : split
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: group(0)),
+                      const SizedBox(width: 32),
+                      Expanded(child: group(1)),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [group(0), const SizedBox(height: 20), group(1)],
+                  ),
+          ),
+        ),
+      );
+    },
+  );
 }

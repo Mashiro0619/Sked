@@ -685,8 +685,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} valid sites, {invalidCount} invalid entries.",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "The file contains an empty school-site list.",
@@ -694,7 +698,9 @@
   "schoolSitesImportInvalidEntry": "Entry {position} is invalid and will be skipped.",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "Merge",
@@ -706,8 +712,12 @@
   "schoolSitesImportReplaceConfirmMessage": "This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "School-site data needs recovery",
@@ -834,9 +844,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Importowany harmonogram internetowy",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API configuration",
+  "schoolImportParserSettingsTitle": "API importu planu zajęć",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API used by timetable parsing and other AI features.",
+  "schoolImportParserSettingsDesc": "Skonfiguruj API zgodne z OpenAI do importu planów zajęć, a nie asystenta czatu.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "Źródło parsera",
   "@schoolImportParserSourceTitle": {},
@@ -1019,7 +1029,9 @@
   "visibleCategoryCount": "{count} categories",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "No visible categories",
@@ -1194,7 +1206,13 @@
   "timeGridHourHeightHint": "Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.",
   "@timeGridHourHeightHint": {},
   "timeGridHourHeightValue": "{height} dp",
-  "@timeGridHourHeightValue": {"placeholders": {"height": {"type": "int"}}},
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "Import JSON file",
   "@importJsonFile": {},
   "pasteJson": "Paste JSON",
@@ -1491,7 +1509,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "Hide workspace navigation",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.",
+  "hideHomeWorkspaceNavigationDesc": "Ukryj nawigację obszarów roboczych. Nadal możesz je przełączać w menu na ekranie głównym.",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "Date label format",
   "@generalDateLabelFormat": {},
@@ -1636,5 +1654,44 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "workspaceFeatures": "Zarządzanie funkcjami",
+  "workspaceBoth": "Plan zajęć i terminarz",
+  "workspaceOnlyStudent": "Tylko plan zajęć",
+  "workspaceOnlyGeneral": "Tylko terminarz",
+  "workspaceDisableTitle": "Wyłączyć ten obszar roboczy?",
+  "workspaceDisableMessage": "Dane i ustawienia zostaną zachowane. Funkcje i przypomnienia zostaną wstrzymane do ponownego włączenia obszaru w tym miejscu.",
+  "workspaceEnableHint": "Wybierz używane funkcje. Co najmniej jedna musi pozostać włączona.",
+  "workspaceLastRequired": "Co najmniej jeden obszar roboczy musi pozostać włączony.",
+  "workspaceReminderCleanupFailed": "Obszar roboczy jest wyłączony, ale nie udało się usunąć przypomnień. Ponów odzyskiwanie powiadomień.",
+  "settingsSearch": "Szukaj ustawień",
+  "settingsNoResults": "Brak pasujących ustawień",
+  "settingsDataPrivacy": "Dane i prywatność",
+  "workspacePreferences": "Wyświetlanie i obsługa",
+  "workspaceManage": "Zarządzaj",
+  "selectedDayAgenda": "Wybrany dzień",
+  "notificationTroubleshooting": "Uprawnienia i rozwiązywanie problemów",
+  "settingsConnection": "Połączenie",
+  "settingsAdvanced": "Zaawansowane",
+  "unsavedChangesMessage": "Masz niezapisane zmiany. Odrzucić je i wyjść?",
+  "backupWorkspaceSelection": "Pełna kopia zapasowa zawiera dane i wybór włączonych obszarów roboczych.",
+  "assistantLayoutPreview": "AI · Layout preview",
+  "assistantSelectionContext": "Uses the current selection as context",
+  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
+  "assistantDraftLabel": "Message draft",
+  "assistantPreviewNoSend": "Layout preview only. Nothing will be sent or changed.",
+  "resizePanel": "Resize panel",
+  "minimizeWindow": "Minimize",
+  "maximizeWindow": "Maximize",
+  "restoreWindow": "Restore window",
+  "closeWindow": "Close window",
+  "notificationPrecisionLimitations": "Przypomnienia zależą od uprawnień systemowych i działania w tle. Wyłączenie, zmiany czasu lub ograniczenia systemu mogą je opóźnić.",
+  "courseSystemReminder": "System reminder",
+  "courseReminderInherit": "Use default ({reminder})",
+  "courseReminderMasterOff": "System reminders are off in notification settings. This course preference can still be saved.",
+  "courseReminderDefaultOff": "No default course reminder is set. Choose a custom reminder here or set a default in notification settings.",
+  "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
+  "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
+  "courseReminderMinutesLabel": "Minutes before class",
+  "exportAction": "Export"
 }

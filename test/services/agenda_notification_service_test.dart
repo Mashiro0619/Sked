@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_action_router.dart';
+import 'package:sked/services/agenda_background_data.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_fingerprint.dart';
 import 'package:sked/services/agenda_projection_service.dart';
@@ -557,6 +558,15 @@ AppData _data() {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    notificationBackgroundDataLoader = () async => AgendaBackgroundDataSnapshot(
+      data: buildInitialAppData(buildDefaultPeriodTimes()),
+      canWrite: true,
+    );
+  });
+  tearDown(() {
+    notificationBackgroundDataLoader = null;
+  });
 
   group('FlutterAgendaNotificationGateway Android adapter', () {
     final messenger =

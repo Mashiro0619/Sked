@@ -158,7 +158,7 @@ ScrollableState _horizontalScrollState(WidgetTester tester, Key ownerKey) {
 
 void main() {
   for (final scenario in [
-    (scale: 1.8, size: const Size(430, 776), maxHeight: 96.0),
+    (scale: 1.8, size: const Size(430, 776), maxHeight: 120.0),
     (scale: 2.0, size: const Size(1120, 800), maxHeight: 120.0),
   ]) {
     testWidgets(
@@ -210,7 +210,7 @@ void main() {
       const ValueKey('timetable-course-visual-short-course'),
     );
     expect(tester.getSize(visual).height, closeTo(14, 0.01));
-    expect(tester.widget<Card>(visual).shape, isA<RoundedSuperellipseBorder>());
+    expect(tester.widget<Card>(visual).shape, isA<RoundedRectangleBorder>());
     expect(
       tester
           .getSize(

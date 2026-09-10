@@ -111,7 +111,7 @@ Future<void> _pumpSettingsPage(
         locale: const Locale('en'),
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const SettingsPage(),
+        home: const SettingsPage(initialDestination: SettingsDestination.about),
       ),
     ),
   );

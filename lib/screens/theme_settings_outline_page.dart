@@ -9,7 +9,9 @@ class _ThemeSettingsOutlinePage extends StatefulWidget {
 }
 
 class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
-    with UiCommandRunner<_ThemeSettingsOutlinePage> {
+    with
+        UiCommandRunner<_ThemeSettingsOutlinePage>,
+        EditorExitGuard<_ThemeSettingsOutlinePage> {
   late final int _derivedThemeColorValue;
   late bool _enabled;
   late bool _followTheme;
@@ -22,11 +24,27 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   bool get _blocked => uiCommandBusy || _hasPopped;
 
   @override
+  String get draftFingerprint => jsonEncode([
+    _enabled,
+    _followTheme,
+    _customColorValue,
+    _customColorInitialized,
+    _outlineMode,
+    _outlineWidth,
+  ]);
+  @override
+  bool get exitBlocked => _blocked;
+  @override
+  AppMode get editorWorkspace => AppMode.student;
+  @override
+  void closeEditor() => _popOnce();
+
+  @override
   void initState() {
     super.initState();
     final provider = context.read<TimetableProvider>();
     _derivedThemeColorValue = _derivedOutlineColorValue(
-      provider.themeSeedColorValue,
+      provider.studentMode.themeSeedColorValue,
     );
     _enabled = provider.liveCourseOutlineEnabled;
     _followTheme = provider.liveCourseOutlineFollowTheme;
@@ -34,6 +52,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
     _customColorInitialized = provider.liveCourseOutlineCustomColorInitialized;
     _outlineMode = provider.liveCourseOutlineMode;
     _outlineWidth = provider.liveCourseOutlineWidth;
+    initializeDraftGuard();
   }
 
   Future<void> _apply() async {
@@ -74,7 +93,10 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
         ? _derivedThemeColorValue
         : _customColorValue;
     return PopScope(
-      canPop: !_blocked,
+      canPop: _hasPopped,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_blocked) unawaited(requestEditorExit());
+      },
       child: FocusScope(
         key: const ValueKey('theme-outline-page-focus-scope'),
         canRequestFocus: !_blocked,
@@ -82,10 +104,10 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
         descendantsAreTraversable: !_blocked,
         child: Scaffold(
           key: const ValueKey('theme-outline-settings-page'),
-          appBar: AppBar(
+          appBar: WorkbenchAppBar(
             leading: IconButton(
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              onPressed: _blocked ? null : _cancel,
+              onPressed: _blocked ? null : () => unawaited(requestEditorExit()),
               icon: const Icon(Icons.arrow_back),
             ),
             title: Text(l10n.liveCourseOutlineSettings),
@@ -194,7 +216,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                             .titleSmall,
                                       ),
                                       const SizedBox(height: 12),
-                                      _ResponsiveSegmentedButton(
+                                      _AppearanceChoiceField(
                                         key: const ValueKey(
                                           'live-course-outline-target',
                                         ),
@@ -259,7 +281,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                           borderWidth: _outlineWidth,
                                         ),
                                       ),
-                                      AnimatedSize(
+                                      SkedAnimatedSize(
                                         duration: const Duration(
                                           milliseconds: 220,
                                         ),

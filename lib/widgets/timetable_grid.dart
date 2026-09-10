@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'timetable_entry.dart';
+import 'workspace_frame.dart';
+import 'workbench_chrome_metrics.dart';
 
 const _minuteHeight = 1.4;
 const _compactHeaderHeight = 56.0;
@@ -318,8 +320,11 @@ class _TimetableGridState extends State<TimetableGrid> {
           textTheme: Theme.of(context).textTheme,
           periodTimes: slots,
           fitVisibleDaysToWidth: widget.fitVisibleDaysToWidth,
+          desktop: WorkbenchChromeMetrics.of(context).desktop,
         );
-        final baseHeaderHeight = metrics.compact
+        final baseHeaderHeight = WorkbenchChromeMetrics.of(context).desktop
+            ? 60.0
+            : metrics.compact
             ? _compactHeaderHeight
             : _regularHeaderHeight;
         // The day header contains two stacked labels. Measure their actual
@@ -736,6 +741,8 @@ class _TimeRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: [
@@ -756,6 +763,9 @@ class _TimeRail extends StatelessWidget {
                     return ClipRect(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: desktop
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.center,
                         children: [
                           Text(
                             slot.index.toString(),
@@ -763,7 +773,7 @@ class _TimeRail extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           if (showTimes) ...[
@@ -773,7 +783,10 @@ class _TimeRail extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
-                              style: textTheme.labelSmall?.copyWith(height: 1),
+                              style: textTheme.labelSmall?.copyWith(
+                                height: 1.15,
+                                color: muted,
+                              ),
                             ),
                             Text(
                               formatMinutes(slot.endMinutes),
@@ -825,6 +838,7 @@ class _TimetableMetrics {
     required TextTheme textTheme,
     required List<CoursePeriodTime> periodTimes,
     required bool fitVisibleDaysToWidth,
+    required bool desktop,
   }) {
     final safeWidth = width.isFinite && width > 0 ? width : 980.0;
     final timeLabelTextStyle = textTheme.titleSmall?.copyWith(
@@ -878,17 +892,23 @@ class _TimetableMetrics {
       timeLabelWidth: timeLabelWidth,
       dayColumnWidth: dayColumnWidth,
       daysContentWidth: daysContentWidth,
-      courseGap: dayColumnWidth < 72
+      courseGap: desktop
+          ? 3.0
+          : dayColumnWidth < 72
           ? 2.0
           : compact
           ? 4.0
           : 6.0,
-      courseVerticalGap: dayColumnWidth < 72
+      courseVerticalGap: desktop
+          ? 3.0
+          : dayColumnWidth < 72
           ? 2.0
           : compact
           ? 4.0
           : 6.0,
-      cardPadding: dayColumnWidth < 72
+      cardPadding: desktop
+          ? 6.0
+          : dayColumnWidth < 72
           ? 3.0
           : compact
           ? 6.0
@@ -912,8 +932,8 @@ double _scaledDayHeaderHeight(
       ? theme.textTheme.labelMedium
       : theme.textTheme.titleSmall;
   final dateStyle = compact
-      ? theme.textTheme.labelSmall
-      : theme.textTheme.bodySmall;
+      ? theme.textTheme.labelLarge
+      : theme.textTheme.titleMedium;
   var maxWeekdayHeight = 0.0;
   for (final weekday in weekdays) {
     final weekdayPainter = TextPainter(
@@ -980,64 +1000,57 @@ class _DayHeader extends StatelessWidget {
     required this.compact,
     required this.localeCode,
   });
-
   final int weekday;
   final DateTime date;
   final bool compact;
   final String localeCode;
-
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isToday = _isSameDate(date, DateTime.now());
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 1 : 4, vertical: 8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            formatWeekdayShortLabel(weekday, localeCode: localeCode),
-            maxLines: 1,
-            overflow: TextOverflow.fade,
-            softWrap: false,
-            style: compact
-                ? Theme.of(context).textTheme.labelMedium
-                : Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 2),
-          Container(
-            constraints: BoxConstraints(minWidth: compact ? 24 : 28),
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? 2 : 6,
-              vertical: compact ? 2 : 3,
-            ),
-            decoration: isToday
-                ? ShapeDecoration(
-                    color: colorScheme.primary.withValues(alpha: 0.10),
-                    shape: skedShapeSchemeOf(context).compact.copyWith(
-                      side: BorderSide(
-                        color: colorScheme.primary.withValues(alpha: 0.65),
-                      ),
-                    ),
-                  )
-                : null,
-            child: Text(
-              '${date.day}',
-              textAlign: TextAlign.center,
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final today = _isSameDate(date, DateTime.now());
+    return Semantics(
+      label: MaterialLocalizations.of(context).formatFullDate(date),
+      excludeSemantics: true,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: compact ? 1 : 4, vertical: 6),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              formatWeekdayShortLabel(weekday, localeCode: localeCode),
               maxLines: 1,
-              overflow: TextOverflow.fade,
-              softWrap: false,
-              style:
-                  (compact
-                          ? Theme.of(context).textTheme.labelSmall
-                          : Theme.of(context).textTheme.bodySmall)
-                      ?.copyWith(
-                        color: isToday ? colorScheme.primary : null,
-                        fontWeight: isToday ? FontWeight.w700 : null,
-                      ),
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 3 : 6,
+                vertical: 1,
+              ),
+              decoration: BoxDecoration(
+                color: today ? colors.primary : null,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                date.day.toString(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    (compact
+                            ? theme.textTheme.labelLarge
+                            : theme.textTheme.titleMedium)
+                        ?.copyWith(
+                          color: today ? colors.onPrimary : colors.onSurface,
+                          fontWeight: today ? FontWeight.w700 : FontWeight.w500,
+                        ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1426,7 +1439,11 @@ class _CourseCard extends StatelessWidget {
             layout.isPrimaryLiveTarget
         ? effectiveOutlineWidth + (compact ? 1.2 : 1.6)
         : effectiveOutlineWidth;
-    final side = layout.isLiveHighlighted
+    final selected =
+        WorkspaceSelectionScope.of(context) == 'course:${layout.course?.id}';
+    final side = selected
+        ? BorderSide(color: colorScheme.primary, width: 2)
+        : layout.isLiveHighlighted
         ? BorderSide(
             color: outlineColor,
             width: layout.isPrimaryLiveTarget
@@ -1434,7 +1451,12 @@ class _CourseCard extends StatelessWidget {
                 : effectiveOutlineWidth,
           )
         : BorderSide.none;
-    final shape = skedShapeSchemeOf(context).compact.copyWith(side: side);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(
+        WorkbenchChromeMetrics.of(context).desktop ? 5 : 8,
+      ),
+      side: side,
+    );
     final itemId = layout.entry?.id ?? layout.course?.id ?? _title;
 
     return PositionedDirectional(
@@ -1509,7 +1531,21 @@ class _CourseCard extends StatelessWidget {
                                   Text(
                                     _title,
                                     softWrap: true,
-                                    overflow: TextOverflow.visible,
+                                    overflow:
+                                        WorkbenchChromeMetrics.of(context)
+                                            .desktop
+                                        ? TextOverflow.ellipsis
+                                        : TextOverflow.visible,
+                                    maxLines:
+                                        WorkbenchChromeMetrics.of(context)
+                                            .desktop
+                                        ? (constraints.maxHeight >
+                                                  MediaQuery.textScalerOf(
+                                                    context,
+                                                  ).scale(44)
+                                              ? 2
+                                              : 1)
+                                        : null,
                                     style: titleStyle,
                                   ),
                                 if (_location.isNotEmpty)
@@ -1615,6 +1651,9 @@ class _CourseHitTarget extends StatelessWidget {
               container: true,
               button: true,
               enabled: true,
+              selected:
+                  WorkspaceSelectionScope.of(context) ==
+                  'course:${layout.course?.id}',
               label: _semanticLabelForGeometry(geometry),
               onTap: onTap,
               child: visual,

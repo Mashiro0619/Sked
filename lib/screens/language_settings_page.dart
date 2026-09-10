@@ -1,3 +1,5 @@
+import '../widgets/desktop_window_host.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -8,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
+import '../widgets/adaptive_navigation_scope.dart';
 
 class LanguageSettingsPage extends StatefulWidget {
   const LanguageSettingsPage({super.key});
@@ -17,6 +20,7 @@ class LanguageSettingsPage extends StatefulWidget {
 }
 
 class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
+  String _query = '';
   bool _isSelectingLanguage = false;
   bool _languageSelectionPopped = false;
 
@@ -27,80 +31,39 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         final l10n = AppLocalizations.of(context);
         final languageOptions = supportedLanguageOptions(l10n);
         final currentCode = normalizeLocaleCode(provider.localeCode);
-        final searchViewMinWidth = MediaQuery.sizeOf(context).width
-            .clamp(0.0, 320.0)
-            .toDouble();
         return Scaffold(
-          appBar: AppBar(
+          appBar: WorkbenchAppBar(
+            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
             title: Text(l10n.language),
-            actions: [
-              SearchAnchor(
-                viewHintText: l10n.language,
-                shrinkWrap: false,
-                viewConstraints: BoxConstraints(
-                  minWidth: searchViewMinWidth,
-                  maxWidth: 520,
-                ),
-                viewBuilder: (suggestions) {
-                  return Builder(
-                    builder: (context) {
-                      return MediaQuery.removePadding(
-                        context: context,
-                        removeTop: true,
-                        child: ListView(
-                          padding: EdgeInsets.only(
-                            bottom: MediaQuery.viewInsetsOf(context).bottom,
-                          ),
-                          children: suggestions.toList(),
-                        ),
-                      );
-                    },
-                  );
-                },
-                builder: (context, controller) {
-                  return IconButton(
-                    tooltip: MaterialLocalizations.of(context).searchFieldLabel,
-                    onPressed: _isSelectingLanguage
-                        ? null
-                        : controller.openView,
-                    icon: const Icon(Icons.search),
-                  );
-                },
-                suggestionsBuilder: (context, controller) {
-                  final results = _filterLanguageOptions(
-                    languageOptions,
-                    controller.text,
-                  );
-                  return [
-                    for (final option in results)
-                      _LanguageOptionTile(
-                        key: ValueKey('language-search-option-${option.code}'),
-                        option: option,
-                        selected: option.code == currentCode,
-                        onTap: _isSelectingLanguage || _languageSelectionPopped
-                            ? null
-                            : () {
-                                controller.closeView(option.nativeName);
-                                unawaited(
-                                  _selectLanguage(provider, option.code),
-                                );
-                              },
-                      ),
-                  ];
-                },
-              ),
-            ],
           ),
           body: Column(
             children: [
               UiCommandBusyIndicator(busy: _isSelectingLanguage),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: TextField(
+                    key: const ValueKey('language-search'),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: MaterialLocalizations.of(context)
+                          .searchFieldLabel,
+                    ),
+                    onChanged: (value) => setState(() => _query = value),
+                  ),
+                ),
+              ),
               Expanded(
                 child: SafeArea(
                   top: false,
                   child: ResponsiveSettingsSingleColumnBody(
                     child: Column(
                       children: [
-                        for (final option in languageOptions)
+                        for (final option in _filterLanguageOptions(
+                          languageOptions,
+                          _query,
+                        ))
                           _LanguageOptionTile(
                             key: ValueKey('language-option-${option.code}'),
                             option: option,
@@ -163,11 +126,12 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
       if (!saved || !mounted) {
         return;
       }
+      final closePage = !AdaptiveNavigationScope.isWide(context);
       setState(() {
         _isSelectingLanguage = false;
-        _languageSelectionPopped = true;
+        _languageSelectionPopped = closePage;
       });
-      Navigator.of(context).pop();
+      if (closePage) Navigator.of(context).pop();
     } finally {
       if (mounted && !_languageSelectionPopped) {
         setState(() => _isSelectingLanguage = false);

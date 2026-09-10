@@ -1273,11 +1273,12 @@ class AppLocalizationsFi extends AppLocalizations {
   String get schoolWebImportSuccess => 'Web aikataulu tuotu';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API configuration';
+  String get schoolImportParserSettingsTitle =>
+      'Lukujärjestyksen tuontirajapinta';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+      'Määritä OpenAI-yhteensopiva rajapinta lukujärjestysten tuontiin, ei keskusteluavustajalle.';
 
   @override
   String get schoolImportParserSourceTitle => 'Parserin lähde';
@@ -2182,7 +2183,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
-      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
+      'Piilota työtilojen navigointi. Voit edelleen vaihtaa työtilaa päänäkymän työtilavalikosta.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';
@@ -2739,7 +2740,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+      'Muistutukset riippuvat järjestelmän oikeuksista ja taustatoiminnoista. Sammutus, ajan muutokset tai järjestelmän rajoitukset voivat viivästyttää niitä.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';
@@ -2866,4 +2867,133 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get notificationPlatformUnsupported =>
       'This platform does not provide native notifications.';
+
+  @override
+  String get workspaceFeatures => 'Toimintojen hallinta';
+
+  @override
+  String get workspaceBoth => 'Lukujärjestys ja kalenteri';
+
+  @override
+  String get workspaceOnlyStudent => 'Vain lukujärjestys';
+
+  @override
+  String get workspaceOnlyGeneral => 'Vain kalenteri';
+
+  @override
+  String get workspaceDisableTitle => 'Poistetaanko tämä työtila käytöstä?';
+
+  @override
+  String get workspaceDisableMessage =>
+      'Tiedot ja asetukset säilytetään. Toiminnot ja muistutukset pysäytetään, kunnes otat työtilan uudelleen käyttöön täällä.';
+
+  @override
+  String get workspaceEnableHint =>
+      'Valitse käyttämäsi toiminnot. Vähintään yhden on oltava käytössä.';
+
+  @override
+  String get workspaceLastRequired =>
+      'Vähintään yhden työtilan on oltava käytössä.';
+
+  @override
+  String get workspaceReminderCleanupFailed =>
+      'Työtila on poistettu käytöstä, mutta muistutuksia ei voitu poistaa. Yritä ilmoitusten palautusta uudelleen.';
+
+  @override
+  String get settingsSearch => 'Hae asetuksia';
+
+  @override
+  String get settingsNoResults => 'Vastaavia asetuksia ei löytynyt';
+
+  @override
+  String get settingsDataPrivacy => 'Tiedot ja tietosuoja';
+
+  @override
+  String get workspacePreferences => 'Näyttö ja käyttö';
+
+  @override
+  String get workspaceManage => 'Hallitse';
+
+  @override
+  String get selectedDayAgenda => 'Valittu päivä';
+
+  @override
+  String get notificationTroubleshooting => 'Käyttöoikeudet ja vianmääritys';
+
+  @override
+  String get settingsConnection => 'Yhteys';
+
+  @override
+  String get settingsAdvanced => 'Lisäasetukset';
+
+  @override
+  String get unsavedChangesMessage =>
+      'Sinulla on tallentamattomia muutoksia. Hylätäänkö ne ja poistutaan?';
+
+  @override
+  String get backupWorkspaceSelection =>
+      'Täysi varmuuskopio sisältää tiedot ja käytössä olevien työtilojen valinnan.';
+
+  @override
+  String get assistantLayoutPreview => 'AI · Layout preview';
+
+  @override
+  String get assistantSelectionContext =>
+      'Uses the current selection as context';
+
+  @override
+  String get assistantPreviewDescription =>
+      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+
+  @override
+  String get assistantDraftLabel => 'Message draft';
+
+  @override
+  String get assistantPreviewNoSend =>
+      'Layout preview only. Nothing will be sent or changed.';
+
+  @override
+  String get resizePanel => 'Resize panel';
+
+  @override
+  String get minimizeWindow => 'Minimize';
+
+  @override
+  String get maximizeWindow => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get closeWindow => 'Close window';
+
+  @override
+  String get courseSystemReminder => 'System reminder';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return 'Use default ($reminder)';
+  }
+
+  @override
+  String get courseReminderMasterOff =>
+      'System reminders are off in notification settings. This course preference can still be saved.';
+
+  @override
+  String get courseReminderDefaultOff =>
+      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+
+  @override
+  String get courseReminderDeliveryHint =>
+      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+
+  @override
+  String get courseReminderPermissionUnknown =>
+      'System notification status has not been checked. Review notification settings before relying on reminders.';
+
+  @override
+  String get courseReminderMinutesLabel => 'Minutes before class';
+
+  @override
+  String get exportAction => 'Export';
 }

@@ -32,7 +32,12 @@ class _ListCalendarView extends StatelessWidget {
     }
     final entries = groups.entries.toList();
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 88),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        6,
+        16,
+        WorkbenchChromeMetrics.of(context).desktop ? 24 : 88,
+      ),
       itemCount: entries.length,
       itemBuilder: (context, index) {
         final group = entries[index];
@@ -78,14 +83,131 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
       if (occurrence.event.location.isNotEmpty) occurrence.event.location,
       occurrence.calendar.name,
     ].join('  |  ');
+    final selected =
+        WorkspaceSelectionScope.of(context) == occurrence.occurrenceKey ||
+        WorkspaceSelectionScope.of(context) == 'event:${occurrence.event.id}';
     final repeatIcon = occurrence.event.recurrenceRule.isRepeating
         ? Icon(Icons.repeat, color: colors.primary, size: 20)
         : null;
 
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final inline =
+              constraints.maxWidth >=
+              600 * WorkbenchChromeMetrics.of(context).textScale;
+          final title = Text(
+            occurrence.event.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          );
+          return Semantics(
+            selected: selected,
+            button: true,
+            child: Material(
+              color: selected
+                  ? colors.secondaryContainer.withValues(alpha: .65)
+                  : Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: colors.outlineVariant.withValues(alpha: .4),
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: inline ? 132 : 104,
+                        child: Text(
+                          _formatOccurrenceTime(context, occurrence),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: inline
+                            ? title
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  title,
+                                  Text(
+                                    [
+                                      if (occurrence.event.location.isNotEmpty)
+                                        occurrence.event.location,
+                                      occurrence.calendar.name,
+                                    ].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                      ),
+                      if (inline) ...[
+                        const SizedBox(width: 20),
+                        SizedBox(
+                          width: 150,
+                          child: Text(
+                            occurrence.event.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 120,
+                          child: Text(
+                            occurrence.calendar.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (repeatIcon != null)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(start: 8),
+                          child: repeatIcon,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
-        color: Colors.transparent,
+        color: selected ? colors.secondaryContainer : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -98,10 +220,10 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
               children: [
                 Container(
                   width: 10,
-                  height: 44,
+                  height: 10,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(5),
                   ),
                 ),
                 const SizedBox(width: 14),

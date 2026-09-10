@@ -51,6 +51,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     required this.onJumpToToday,
     required this.onViewChanged,
     required this.onOpenSettings,
+    this.onAddCourse,
+    this.onStep,
+    this.showAddLabel = false,
   });
 
   final TimetableData timetable;
@@ -70,11 +73,102 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final VoidCallback? onJumpToToday;
   final ValueChanged<_StudentTimetableView>? onViewChanged;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onAddCourse;
+  final ValueChanged<int>? onStep;
+  final bool showAddLabel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      final first = startOfWeekFor(timetable.config, week);
+      final last = addCalendarDays(first, 6);
+      return WorkbenchCommandBar(
+        key: const ValueKey('student-workspace-toolbar'),
+        navigation: [
+          if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
+          if (WorkspaceCanvasScope.maybeOf(context)?.resources != true)
+            IconButton(
+              key: const ValueKey('student-timetable-picker-button'),
+              tooltip: l10n.timetable,
+              onPressed: onOpenTimetablePicker,
+              icon: const Icon(Icons.view_sidebar_outlined),
+            ),
+          IconButton(
+            key: const ValueKey('student-previous-week'),
+            tooltip: MaterialLocalizations.of(context).previousPageTooltip,
+            onPressed: week > 1 && onStep != null ? () => onStep!(-1) : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          IconButton(
+            key: const ValueKey('student-next-week'),
+            tooltip: MaterialLocalizations.of(context).nextPageTooltip,
+            onPressed: week < timetable.config.totalWeeks && onStep != null
+                ? () => onStep!(1)
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+          TextButton(onPressed: onJumpToToday, child: Text(l10n.today)),
+          TextButton(
+            key: const ValueKey('student-week-picker-button'),
+            onPressed: onOpenWeekPicker,
+            child: Text(
+              '${l10n.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
+              style: theme.textTheme.titleMedium,
+            ),
+          ),
+        ],
+        actions: [
+          PopupMenuButton<_StudentTimetableView>(
+            key: const ValueKey('student-view-toggle'),
+            tooltip: l10n.defaultView,
+            onSelected: onViewChanged,
+            itemBuilder: (_) => [
+              CheckedPopupMenuItem(
+                value: _StudentTimetableView.week,
+                checked: viewMode == _StudentTimetableView.week,
+                child: Text(l10n.viewWeek),
+              ),
+              CheckedPopupMenuItem(
+                value: _StudentTimetableView.day,
+                checked: viewMode == _StudentTimetableView.day,
+                child: Text(l10n.viewDay),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Text(
+                    viewMode == _StudentTimetableView.week
+                        ? l10n.viewWeek
+                        : l10n.viewDay,
+                  ),
+                  const Icon(Icons.expand_more, size: 16),
+                ],
+              ),
+            ),
+          ),
+          const WorkspaceActionsMenu(mode: AppMode.student),
+          const AssistantPaneToggle(),
+          if (showSettings)
+            IconButton(
+              key: const ValueKey('student-settings-button'),
+              tooltip: l10n.settings,
+              focusNode: settingsFocusNode,
+              onPressed: onOpenSettings,
+              icon: const Icon(Icons.settings_outlined),
+            ),
+          FilledButton.icon(
+            onPressed: onAddCourse,
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l10n.addCourse),
+          ),
+        ],
+      );
+    }
+
     final phoneWidth = compactWidth;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final textScaler = MediaQuery.textScalerOf(context);
@@ -232,8 +326,13 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         hidden.isNotEmpty &&
         !hidden.contains('more');
     final hiddenActions = <String>{...hidden, if (!canShowMore) 'more'};
+    final resourceLayout = WorkspaceCanvasScope.maybeOf(context);
+    final timetableInResources =
+        resourceLayout?.resources == true &&
+        resourceLayout!.resourceWidth > AppBreakpoints.compactResourcePane;
     final actionById = <String, Widget>{
-      'timetable': buildTimetableSelector(),
+      'workspace-actions': const WorkspaceActionsMenu(mode: AppMode.student),
+      if (!timetableInResources) 'timetable': buildTimetableSelector(),
       // The surrounding slot supplies the responsive width computed below.
       'week': buildWeekPicker(width: double.infinity),
       'view': viewToggle,
@@ -289,12 +388,30 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     if (canShowMore && !orderedIds.contains('more')) {
       orderedIds.add('more');
     }
+    orderedIds.add('workspace-actions');
     // Keep settings reachable even when an older snapshot omitted it.
     if (showSettings && !orderedIds.contains('settings')) {
       orderedIds.add('settings');
     }
     return SkedWorkspaceToolbar(
       key: const ValueKey('student-workspace-toolbar'),
+      actions: [
+        const AssistantPaneToggle(),
+        if (onAddCourse != null)
+          Tooltip(
+            message: l10n.addCourse,
+            child: showAddLabel
+                ? FilledButton.icon(
+                    onPressed: onAddCourse,
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addCourse),
+                  )
+                : IconButton.filled(
+                    onPressed: onAddCourse,
+                    icon: const Icon(Icons.add),
+                  ),
+          ),
+      ],
       padding: EdgeInsets.symmetric(
         horizontal: phoneWidth ? 8 : 16,
         vertical: phoneWidth || compactHeight ? 4 : 8,
@@ -311,6 +428,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           // final `contentWidth` check read from this one map, so adding an
           // action of a different width cannot make the two disagree.
           const fixedActionWidths = <String, double>{
+            'workspace-actions': 48,
             'view': 48,
             'settings': 48,
             'more': 48,
@@ -1589,6 +1707,8 @@ class _EmptyTimetableToolbar extends StatelessWidget {
           Expanded(
             child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
+          if (context.watch<TimetableProvider>().hideHomeWorkspaceNavigation)
+            const WorkspaceModeMenu(),
           if (showSettingsAction)
             SizedBox.square(
               dimension: 48,

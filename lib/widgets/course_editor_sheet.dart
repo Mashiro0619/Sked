@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'editor_exit_guard.dart';
+import 'course_system_reminder_field.dart';
+
 import 'dart:async';
 
 import 'package:flutter/widget_previews.dart';
@@ -52,7 +57,8 @@ class CourseEditorSheet extends StatefulWidget {
   State<CourseEditorSheet> createState() => _CourseEditorSheetState();
 }
 
-class _CourseEditorSheetState extends State<CourseEditorSheet> {
+class _CourseEditorSheetState extends State<CourseEditorSheet>
+    with EditorExitGuard<CourseEditorSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _teacherController;
   late final TextEditingController _locationController;
@@ -71,8 +77,30 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
   bool _actionInProgress = false;
   late bool _scheduleSectionExpanded;
   late bool _detailsSectionExpanded;
-  late bool _reminderSectionExpanded;
   late CourseReminderBehavior _reminderBehavior;
+
+  @override
+  String get draftFingerprint => jsonEncode([
+    _nameController.text,
+    _teacherController.text,
+    _locationController.text,
+    _creditController.text,
+    _remarksController.text,
+    _customFieldsController.text,
+    _reminderMinutesController.text,
+    _selectedDayOfWeek,
+    _selectedSemesterWeeks,
+    _selectedPeriods,
+    _startTime.toString(),
+    _endTime.toString(),
+    _reminderBehavior.name,
+  ]);
+  @override
+  bool get exitBlocked => _blocked;
+  @override
+  AppMode get editorWorkspace => AppMode.student;
+  @override
+  void closeEditor() => _popOnce();
 
   bool get _blocked => _hasPopped || _pickerOpen || _actionInProgress;
 
@@ -140,8 +168,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
         _creditController.text.trim().isNotEmpty ||
         _remarksController.text.trim().isNotEmpty ||
         _customFieldsController.text.trim().isNotEmpty;
-    _reminderSectionExpanded =
-        reminder.behavior != CourseReminderBehavior.inherit;
+    initializeDraftGuard();
   }
 
   @override
@@ -171,7 +198,10 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
         : 0.72;
 
     return PopScope(
-      canPop: !_actionInProgress && !_pickerOpen && !_hasPopped,
+      canPop: _hasPopped,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_blocked) unawaited(requestEditorExit());
+      },
       child: AppSheetScaffold(
         // Short Android windows and the IME need enough room for both the
         // fixed action area and a useful scrollable form viewport.
@@ -194,7 +224,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
               ),
         actions: [
           TextButton(
-            onPressed: _blocked ? null : () => _popOnce(),
+            onPressed: _blocked ? null : () => unawaited(requestEditorExit()),
             child: Text(l10n.cancel),
           ),
           FilledButton.icon(
@@ -254,15 +284,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
               child: _buildDetailsFields(l10n),
             ),
             const SizedBox(height: 8),
-            _EditorSection(
+            CourseSystemReminderField(
               key: const ValueKey('course-reminder-section'),
-              icon: Icons.notifications_outlined,
-              title: l10n.reminder,
-              initiallyExpanded: _reminderSectionExpanded,
-              onExpansionChanged: (expanded) =>
-                  setState(() => _reminderSectionExpanded = expanded),
+              behavior: _reminderBehavior,
+              minutesController: _reminderMinutesController,
               enabled: !_blocked,
-              child: _buildReminderFields(l10n),
+              onChanged: (value) => setState(() => _reminderBehavior = value),
             ),
           ],
         ),
@@ -375,53 +402,6 @@ class _CourseEditorSheetState extends State<CourseEditorSheet> {
           ),
           maxLines: 3,
         ),
-      ],
-    );
-  }
-
-  Widget _buildReminderFields(AppLocalizations l10n) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(l10n.reminder, style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 8),
-        _VerticalChoiceList<CourseReminderBehavior>(
-          key: const ValueKey('course-reminder-behavior'),
-          selected: {_reminderBehavior},
-          onChanged: _blocked
-              ? null
-              : (value) => setState(() => _reminderBehavior = value),
-          options: [
-            _VerticalChoiceOption(
-              value: CourseReminderBehavior.inherit,
-              label: Text(l10n.notificationCourseDefaultReminder),
-              icon: const Icon(Icons.settings_backup_restore_outlined),
-            ),
-            _VerticalChoiceOption(
-              value: CourseReminderBehavior.disabled,
-              label: Text(l10n.notificationReminderOff),
-              icon: const Icon(Icons.notifications_off_outlined),
-            ),
-            _VerticalChoiceOption(
-              value: CourseReminderBehavior.custom,
-              label: Text(l10n.recurrenceCustom),
-              icon: const Icon(Icons.tune_outlined),
-            ),
-          ],
-        ),
-        if (_reminderBehavior == CourseReminderBehavior.custom) ...[
-          const SizedBox(height: 12),
-          TextField(
-            key: const ValueKey('course-reminder-custom-minutes'),
-            controller: _reminderMinutesController,
-            enabled: !_blocked,
-            keyboardType: const TextInputType.numberWithOptions(),
-            decoration: InputDecoration(
-              labelText: l10n.notificationReminderCustom(5),
-              prefixIcon: const Icon(Icons.schedule_outlined),
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -1197,7 +1177,6 @@ class _ResponsiveFormRow extends StatelessWidget {
 /// a text controller or a pending picker selection.
 class _EditorSection extends StatelessWidget {
   const _EditorSection({
-    super.key,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -1344,139 +1323,6 @@ class _SelectionIcon extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: Icon(icon, color: enabled ? colors.primary : disabledColor),
-    );
-  }
-}
-
-/// A finite-height alternative to a vertical [SegmentedButton].  The
-/// material_ui implementation currently asks for an infinite height when it
-/// is placed inside a scrolling bottom sheet.  These connected rows preserve
-/// the same single-choice semantics while allowing translated labels to wrap
-/// naturally at large text scales.
-class _VerticalChoiceList<T> extends StatelessWidget {
-  const _VerticalChoiceList({
-    super.key,
-    required this.options,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<_VerticalChoiceOption<T>> options;
-  final Set<T> selected;
-  final ValueChanged<T>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final selectedValue = selected.isEmpty ? null : selected.first;
-    return Material(
-      color: colors.surfaceContainerLow,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var index = 0; index < options.length; index++) ...[
-            if (index > 0)
-              Divider(height: 1, thickness: 1, color: colors.outlineVariant),
-            _VerticalChoiceRow<T>(
-              option: options[index],
-              selected: options[index].value == selectedValue,
-              enabled: onChanged != null,
-              onTap: onChanged == null
-                  ? null
-                  : () => onChanged!(options[index].value),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _VerticalChoiceOption<T> {
-  const _VerticalChoiceOption({
-    required this.value,
-    required this.label,
-    required this.icon,
-  });
-
-  final T value;
-  final Widget label;
-  final Widget icon;
-}
-
-class _VerticalChoiceRow<T> extends StatelessWidget {
-  const _VerticalChoiceRow({
-    required this.option,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final _VerticalChoiceOption<T> option;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final foreground = enabled
-        ? (selected ? colors.onPrimaryContainer : colors.onSurface)
-        : colors.onSurface.withValues(alpha: 0.38);
-    final secondary = enabled
-        ? (selected ? colors.onPrimaryContainer : colors.onSurfaceVariant)
-        : colors.onSurface.withValues(alpha: 0.38);
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: enabled,
-      onTap: onTap,
-      child: ExcludeSemantics(
-        child: Material(
-          color: selected
-              ? colors.primaryContainer
-              : colors.surfaceContainerLow,
-          child: InkWell(
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 56),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 14, 10),
-                child: Row(
-                  children: [
-                    IconTheme(
-                      data: IconThemeData(color: secondary, size: 22),
-                      child: option.icon,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: DefaultTextStyle.merge(
-                        style: theme.textTheme.bodyLarge!.copyWith(
-                          color: foreground,
-                          fontWeight: selected ? FontWeight.w600 : null,
-                        ),
-                        child: option.label,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(
-                      selected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: selected ? colors.primary : secondary,
-                      size: 22,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

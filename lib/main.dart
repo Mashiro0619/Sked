@@ -23,6 +23,9 @@ import 'widgets/general_event_details_sheet.dart';
 import 'widgets/general_event_editor_sheet.dart';
 import 'widgets/sked_expressive_loading_indicator.dart';
 import 'widgets/material_ui_compatibility.dart';
+import 'widgets/desktop_window_host.dart';
+import 'services/desktop_window_bridge.dart';
+import 'services/developer_ui_preferences.dart';
 
 Future<void> main() async {
   // Keep the Android WorkManager entry point in the AOT snapshot. The worker
@@ -30,6 +33,7 @@ Future<void> main() async {
   assert(_backgroundEntrypoints.isNotEmpty);
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  await DesktopWindowBridge.instance.initialize();
   _registerLicenses();
   runApp(AppBootstrap());
 }
@@ -209,23 +213,40 @@ class _AppBootstrapState extends State<AppBootstrap> {
   }
 }
 
-class _AppBootstrapGate extends StatelessWidget {
+class _AppBootstrapGate extends StatefulWidget {
   const _AppBootstrapGate({required this.status, required this.onRetry});
 
   final _AppBootstrapStatus status;
   final VoidCallback? onRetry;
 
   @override
+  State<_AppBootstrapGate> createState() => _AppBootstrapGateState();
+}
+
+class _AppBootstrapGateState extends State<_AppBootstrapGate> {
+  final _windowModals = DesktopWindowModalObserver();
+
+  @override
+  void dispose() {
+    _windowModals.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [_windowModals],
       // The bootstrap gate has no loaded user locale yet. Keep this transient
       // screen deterministic and LTR until the persisted locale is available.
       locale: const Locale('en'),
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: appLocalizationsDelegates,
-      builder: bridgeLegacyMaterialUi,
+      builder: (context, child) => bridgeLegacyMaterialUi(
+        context,
+        DesktopWindowHost(modalObserver: _windowModals, child: child!),
+      ),
       theme: buildAppTheme(
         seedColor: const Color(0xFF6750A4),
         brightness: Brightness.light,
@@ -241,8 +262,8 @@ class _AppBootstrapGate extends StatelessWidget {
       home: Builder(
         builder: (context) {
           final l10n = AppLocalizations.of(context);
-          final acquiring = status == _AppBootstrapStatus.acquiring;
-          final failed = status == _AppBootstrapStatus.failed;
+          final acquiring = widget.status == _AppBootstrapStatus.acquiring;
+          final failed = widget.status == _AppBootstrapStatus.failed;
           return Scaffold(
             body: SafeArea(
               child: Center(
@@ -286,7 +307,7 @@ class _AppBootstrapGate extends StatelessWidget {
                             ),
                             const SizedBox(height: 24),
                             FilledButton.icon(
-                              onPressed: onRetry,
+                              onPressed: widget.onRetry,
                               icon: const Icon(Icons.refresh_outlined),
                               label: Text(l10n.dataRecoveryRetryAction),
                             ),
@@ -317,18 +338,48 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late AgendaCoordinator _agendaCoordinator;
+  final _developerUi = DeveloperUiPreferences();
+  final _windowModals = DesktopWindowModalObserver();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    DesktopWindowBridge.instance.prepareClose = _prepareWindowClose;
+    unawaited(_developerUi.load());
     _agendaCoordinator = AgendaCoordinator(
       provider: widget.provider,
       onTarget: _openAgendaTarget,
     );
     _agendaCoordinator.setForegroundActive(true);
     unawaited(_agendaCoordinator.start(providerReady: widget.providerReady));
+  }
+
+  Future<bool> _prepareWindowClose() async {
+    try {
+      if (!await _developerUi.waitForPendingSave()) {
+        throw StateError('Developer UI preference save failed');
+      }
+      return await widget.provider.prepareForWindowClose();
+    } catch (_) {
+      final context = _navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(AppLocalizations.of(context).saveFailedRetry),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(MaterialLocalizations.of(context).okButtonLabel),
+              ),
+            ],
+          ),
+        );
+      }
+      return false;
+    }
   }
 
   @override
@@ -369,8 +420,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    DesktopWindowBridge.instance.prepareClose = null;
     _agendaCoordinator.setForegroundActive(false);
     _agendaCoordinator.dispose();
+    _developerUi.dispose();
+    _windowModals.dispose();
     _flushPendingUiStateSaves(widget.provider);
     super.dispose();
   }
@@ -387,17 +441,29 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         child: Selector<TimetableProvider, _AppShellSnapshot>(
           selector: (_, provider) => _AppShellSnapshot.from(provider),
           builder: (context, snapshot, child) {
-            return Provider<AgendaCoordinator>.value(
-              value: _agendaCoordinator,
+            return MultiProvider(
+              providers: [
+                Provider<AgendaCoordinator>.value(value: _agendaCoordinator),
+                ChangeNotifierProvider<DeveloperUiPreferences>.value(
+                  value: _developerUi,
+                ),
+              ],
               child: MaterialApp(
                 debugShowCheckedModeBanner: false,
                 navigatorKey: _navigatorKey,
+                navigatorObservers: [_windowModals],
                 onGenerateTitle: (context) =>
                     AppLocalizations.of(context).appTitle,
                 locale: appLocaleFromCode(snapshot.localeCode),
                 supportedLocales: AppLocalizations.supportedLocales,
                 localizationsDelegates: appLocalizationsDelegates,
-                builder: bridgeLegacyMaterialUi,
+                builder: (context, child) => bridgeLegacyMaterialUi(
+                  context,
+                  DesktopWindowHost(
+                    modalObserver: _windowModals,
+                    child: child!,
+                  ),
+                ),
                 themeMode: themeModeFromValue(snapshot.themeMode),
                 themeAnimationStyle: appThemeAnimationStyle,
                 theme: buildAppTheme(
@@ -458,6 +524,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       enableDrag: false,
       maxWidth: 860,
       builder: (sheetContext) => CourseDetailsSheet(
+        timetableId: timetable.id,
         courseId: selectedCourse.id,
         weekday: selectedCourse.dayOfWeek,
         conflictKey: null,
@@ -467,12 +534,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             await Navigator.of(sheetContext).maybePop();
           }
           if (context.mounted) {
-            await _openAgendaCourseEditor(context, selectedCourse);
+            await _openAgendaCourseEditor(
+              context,
+              selectedCourse,
+              timetableId: timetable.id,
+            );
           }
         },
         onMissing: () {
           if (sheetContext.mounted) {
-            unawaited(Navigator.of(sheetContext).maybePop());
+            final route = ModalRoute.of(sheetContext);
+            if (route != null && route.isActive) {
+              Navigator.of(sheetContext).removeRoute(route);
+            }
           }
         },
       ),
@@ -481,9 +555,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   Future<void> _openAgendaCourseEditor(
     BuildContext context,
-    CourseItem course,
-  ) async {
-    final timetable = widget.provider.activeTimetableOrNull;
+    CourseItem course, {
+    required String timetableId,
+  }) async {
+    final timetable = widget.provider.timetables
+        .where((item) => item.id == timetableId)
+        .firstOrNull;
     if (timetable == null || !context.mounted) return;
     await showAppModalSheet<CourseEditorResult>(
       context: context,
@@ -496,8 +573,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         totalWeeks: timetable.config.totalWeeks,
         initialCourse: course,
         dayOfWeek: course.dayOfWeek,
-        onSave: widget.provider.saveCourse,
-        onDelete: () => widget.provider.deleteCourse(course.id),
+        onSave: (value) =>
+            widget.provider.saveCourse(value, timetableId: timetable.id),
+        onDelete: () =>
+            widget.provider.deleteCourse(course.id, timetableId: timetable.id),
       ),
     );
   }

@@ -21,6 +21,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   Future<void> _appBackupRestoreTail = Future<void>.value();
 
   String exportSelectedGeneralSchedulesJson(List<String> scheduleIds) {
+    requireWorkspaceEnabled(AppMode.general);
     return _importExportService.exportSelectedGeneralSchedulesJson(
       _appData.generalMode,
       scheduleIds,
@@ -39,6 +40,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   }
 
   String exportSelectedGeneralSchedulesIcs(List<String> scheduleIds) {
+    requireWorkspaceEnabled(AppMode.general);
     return _importExportService.exportSelectedGeneralSchedulesIcs(
       _appData.generalMode,
       scheduleIds,
@@ -49,6 +51,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   GeneralCalendarIcsImportResult previewImportGeneralSchedulesIcs(
     String source,
   ) {
+    requireWorkspaceEnabled(AppMode.general);
     return _importExportService.previewImportGeneralSchedulesIcs(
       source,
       localeCode: _appData.localeCode,
@@ -56,6 +59,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   }
 
   List<GeneralSchedule> previewImportGeneralSchedules(String source) {
+    requireWorkspaceEnabled(AppMode.general);
     return _importExportService.previewImportGeneralSchedules(
       source,
       localeCode: _appData.localeCode,
@@ -68,6 +72,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     required GeneralScheduleImportMode mode,
     String? replacementScheduleId,
   }) async {
+    requireWorkspaceEnabled(AppMode.general);
     final mutation = _importExportService.importSelectedGeneralSchedulesJson(
       _appData.generalMode,
       source,
@@ -86,6 +91,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     required GeneralScheduleImportMode mode,
     String? replacementScheduleId,
   }) async {
+    requireWorkspaceEnabled(AppMode.general);
     final mutation = _importExportService.importGeneralSchedulesIcs(
       _appData.generalMode,
       source,
@@ -106,12 +112,14 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     return encodeAppBackup(_appData, siteResult.sites);
   }
 
-  String exportSelectedTimetablesJson(List<String> timetableIds) =>
-      _importExportService.exportSelectedTimetablesJson(
-        _appData.studentMode,
-        timetableIds,
-        localeCode: _appData.localeCode,
-      );
+  String exportSelectedTimetablesJson(List<String> timetableIds) {
+    requireWorkspaceEnabled(AppMode.student);
+    return _importExportService.exportSelectedTimetablesJson(
+      _appData.studentMode,
+      timetableIds,
+      localeCode: _appData.localeCode,
+    );
+  }
 
   String exportActiveTimetableJson() {
     final timetable = activeTimetableOrNull;
@@ -123,10 +131,15 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     return exportSelectedTimetablesJson([timetable.id]);
   }
 
-  String exportActivePeriodTimesJson() => _importExportService
-      .exportPeriodTimesJson(activePeriodTimeSet.periodTimes);
+  String exportActivePeriodTimesJson() {
+    requireWorkspaceEnabled(AppMode.student);
+    return _importExportService.exportPeriodTimesJson(
+      activePeriodTimeSet.periodTimes,
+    );
+  }
 
   List<TimetableData> previewImportTimetables(String source) {
+    requireWorkspaceEnabled(AppMode.student);
     return _importExportService.previewImportTimetables(
       source,
       localeCode: _appData.localeCode,
@@ -140,6 +153,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
   }) async {
+    requireWorkspaceEnabled(AppMode.student);
     final mutation = _importExportService.importSelectedTimetablesJson(
       _appData.studentMode,
       source,
@@ -171,6 +185,13 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       localeCode: backup.appData.localeCode,
     );
     if (mode == AppImportMode.replaceAll) {
+      for (final workspace in _appData.enabledWorkspaces) {
+        // Replacing data invalidates drafts even when the workspace stays enabled.
+        if ((_workspaceExitGuards[workspace]?.isNotEmpty ?? false) &&
+            !await _prepareWorkspaceDisable(workspace)) {
+          throw const WorkspaceChangeCancelledException();
+        }
+      }
       return _enqueueAppBackupRestore(
         () => _restoreAppBackup(imported, backup),
       );
@@ -194,6 +215,18 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     }
 
     final previousAppData = _appData;
+    final newlyEnabled = imported.enabledWorkspaces.difference(
+      previousAppData.enabledWorkspaces,
+    );
+    if (newlyEnabled.isNotEmpty) {
+      final resumedAt = DateTime.now().toUtc();
+      imported = imported.copyWith(
+        workspaceReminderNotBefore: {
+          ...imported.workspaceReminderNotBefore,
+          for (final mode in newlyEnabled) mode: resumedAt,
+        },
+      );
+    }
     final previousApiKey = previousAppData.aiApiSettings.customApiKey;
     final journalAppData = _withRuntimeCustomSchoolImportApiKey(imported, '');
     final restoredAppData = _withRuntimeCustomSchoolImportApiKey(
@@ -673,11 +706,13 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
       try {
         schoolSiteLease = await schoolSiteLeaseFuture;
         _activeSchoolSiteRestoreLease = schoolSiteLease;
-        return await _runWithAppBackupRestoreLease(
-          token,
-          action,
-          allowRecoveryBlocked: allowRecoveryBlocked,
-        );
+        return await _runWithAppBackupRestoreLease(token, () async {
+          late T value;
+          await _workspaceMutationLock(() async {
+            value = await action();
+          });
+          return value;
+        }, allowRecoveryBlocked: allowRecoveryBlocked);
       } finally {
         if (identical(_activeSchoolSiteRestoreLease, schoolSiteLease)) {
           _activeSchoolSiteRestoreLease = null;
@@ -699,6 +734,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     bool importBundledPeriodTimeSets = true,
     String? targetPeriodTimeSetId,
   }) async {
+    requireWorkspaceEnabled(AppMode.student);
     final imported = _importExportService.decodeStudentImportCandidate(
       source,
       localeCode: _appData.localeCode,
@@ -722,6 +758,7 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
   Future<void> applySchoolImportRequest(
     SchoolImportApplyRequest request,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     final mutation = _importExportService.applySchoolImportRequest(
       _appData.studentMode,
       request,

@@ -638,7 +638,7 @@
   "@permissionSettingsExportMessage": {},
   "privacyPolicyTitle": "Privacy Policy",
   "@privacyPolicyTitle": {},
-  "privacyPolicyEntryDesc": "Learn how the app handles local storage, school-site configuration, file import/export, timetable text / HTML parsing, and external links.",
+  "privacyPolicyEntryDesc": "How local data, import and export, optional network requests and external links are handled.",
   "@privacyPolicyEntryDesc": {},
   "privacyPolicyAcceptedVersionLabel": "Accepted version: {version}",
   "@privacyPolicyAcceptedVersionLabel": {
@@ -713,8 +713,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} valid sites, {invalidCount} invalid entries.",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "The file contains an empty school-site list.",
@@ -722,7 +726,9 @@
   "schoolSitesImportInvalidEntry": "Entry {position} is invalid and will be skipped.",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "Merge",
@@ -734,8 +740,12 @@
   "schoolSitesImportReplaceConfirmMessage": "This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "School-site data needs recovery",
@@ -872,9 +882,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Web timetable imported",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API configuration",
+  "schoolImportParserSettingsTitle": "Timetable parsing API",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API used by timetable parsing and other AI features.",
+  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API for timetable import. This does not configure a chat assistant.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "Parser source",
   "@schoolImportParserSourceTitle": {},
@@ -1209,7 +1219,9 @@
   "visibleCategoryCount": "{count} categories",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "No visible categories",
@@ -1553,7 +1565,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "Hide workspace navigation",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.",
+  "hideHomeWorkspaceNavigationDesc": "Hide workspace navigation. You can still switch using the workspace menu on the main screen.",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "Date label format",
   "@generalDateLabelFormat": {},
@@ -1688,8 +1700,12 @@
   "developerNotificationDirectCapacitySummary": "{scheduled} direct alarms / {capacity} capacity",
   "@developerNotificationDirectCapacitySummary": {
     "placeholders": {
-      "scheduled": {"type": "int"},
-      "capacity": {"type": "int"}
+      "scheduled": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationPlanSummary": "{scheduled} scheduled, {planned} planned",
@@ -1768,13 +1784,21 @@
   "developerNotificationPlatformState": "{pending} pending / {active} active",
   "@developerNotificationPlatformState": {
     "placeholders": {
-      "pending": {"type": "int"},
-      "active": {"type": "int"}
+      "pending": {
+        "type": "int"
+      },
+      "active": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationNativeLastPosted": "native last posted {time}",
   "@developerNotificationNativeLastPosted": {
-    "placeholders": {"time": {"type": "String"}}
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "developerNotificationNoDiagnostic": "No reconciliation recorded yet.",
   "@developerNotificationNoDiagnostic": {},
@@ -1807,7 +1831,9 @@
   "developerNotificationLateRecoveryCount": "{count} reminder(s) were recovered after their original time",
   "@developerNotificationLateRecoveryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
@@ -1938,14 +1964,16 @@
   "notificationCoverageCapacityLimited": "Android can directly hold up to {capacity} reminders; later reminders are renewed in advance.",
   "@notificationCoverageCapacityLimited": {
     "placeholders": {
-      "capacity": {"type": "int"}
+      "capacity": {
+        "type": "int"
+      }
     }
   },
   "notificationSettingsEnabled": "Enable reminders and notifications",
   "@notificationSettingsEnabled": {},
   "notificationSettingsEnabledHint": "Schedules only items with a reminder. Set a course default below for courses that inherit it.",
   "@notificationSettingsEnabledHint": {},
-  "notificationPrecisionLimitations": "Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.",
+  "notificationPrecisionLimitations": "Reminders depend on system permissions and background execution. Power-off, time changes, or system restrictions may delay delivery.",
   "@notificationPrecisionLimitations": {},
   "notificationSettingsEnabledSummary": "Enabled",
   "@notificationSettingsEnabledSummary": {},
@@ -2026,5 +2054,57 @@
   "notificationWidgetsRefreshed": "Widgets refreshed",
   "@notificationWidgetsRefreshed": {},
   "notificationPlatformUnsupported": "This platform does not provide native notifications.",
-  "@notificationPlatformUnsupported": {}
+  "@notificationPlatformUnsupported": {},
+  "workspaceFeatures": "Features",
+  "workspaceBoth": "Timetable and schedule",
+  "workspaceOnlyStudent": "Timetable only",
+  "workspaceOnlyGeneral": "Schedule only",
+  "workspaceDisableTitle": "Turn off this workspace?",
+  "workspaceDisableMessage": "Its data and preferences will be kept. Its features and reminders will stop until you turn it on again here.",
+  "workspaceEnableHint": "Choose the features you use. At least one must stay on.",
+  "workspaceLastRequired": "At least one workspace must stay on.",
+  "workspaceReminderCleanupFailed": "The workspace is off, but reminders could not be cleared. Retry notification recovery.",
+  "settingsSearch": "Search settings",
+  "settingsNoResults": "No matching settings",
+  "settingsDataPrivacy": "Data and privacy",
+  "workspacePreferences": "Display and interaction",
+  "workspaceManage": "Manage",
+  "selectedDayAgenda": "Selected day",
+  "notificationTroubleshooting": "Permissions and troubleshooting",
+  "settingsConnection": "Connection",
+  "settingsAdvanced": "Advanced",
+  "unsavedChangesMessage": "You have unsaved changes. Discard them and leave?",
+  "backupWorkspaceSelection": "The full backup includes data and enabled workspaces.",
+  "assistantLayoutPreview": "AI · Layout preview",
+  "assistantSelectionContext": "Uses the current selection as context",
+  "assistantPreviewDescription": "Discuss and work in the current workspace. This preview only demonstrates the layout; AI is not connected.",
+  "assistantDraftLabel": "Message draft",
+  "assistantPreviewNoSend": "Layout preview only. Nothing will be sent or changed.",
+  "resizePanel": "Resize panel",
+  "minimizeWindow": "Minimize",
+  "maximizeWindow": "Maximize",
+  "restoreWindow": "Restore window",
+  "closeWindow": "Close window",
+  "courseSystemReminder": "System reminder",
+  "@courseSystemReminder": {},
+  "courseReminderInherit": "Use default ({reminder})",
+  "@courseReminderInherit": {
+    "placeholders": {
+      "reminder": {
+        "type": "String"
+      }
+    }
+  },
+  "courseReminderMasterOff": "System reminders are off in notification settings. This course preference can still be saved.",
+  "@courseReminderMasterOff": {},
+  "courseReminderDefaultOff": "No default course reminder is set. Choose a custom reminder here or set a default in notification settings.",
+  "@courseReminderDefaultOff": {},
+  "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
+  "@courseReminderDeliveryHint": {},
+  "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
+  "@courseReminderPermissionUnknown": {},
+  "courseReminderMinutesLabel": "Minutes before class",
+  "@courseReminderMinutesLabel": {},
+  "exportAction": "Export",
+  "@exportAction": {}
 }

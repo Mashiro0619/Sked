@@ -128,6 +128,8 @@ Future<void> _pumpReminderScreen(
     ),
   );
   await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('general-reminders-action')));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -145,18 +147,18 @@ void main() {
       timers: timers,
     );
 
-    expect(find.text('Upcoming - Exam'), findsNothing);
+    expect(find.textContaining('Upcoming ·'), findsNothing);
 
     clock.value = DateTime(2026, 6, 16, 9, 50);
     await tester.pump(const Duration(seconds: 30));
 
-    expect(find.text('Upcoming - Exam'), findsOneWidget);
+    expect(find.textContaining('Upcoming ·'), findsOneWidget);
 
     clock.value = DateTime(2026, 6, 16, 10, 0, 30);
     await tester.pump(const Duration(minutes: 1));
 
-    expect(find.text('Upcoming - Exam'), findsNothing);
-    expect(find.text('In progress - Exam'), findsOneWidget);
+    expect(find.textContaining('Upcoming ·'), findsNothing);
+    expect(find.textContaining('In progress ·'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     expect(timers.cancellationCount, greaterThan(0));
@@ -174,7 +176,7 @@ void main() {
       timers: timers,
     );
 
-    expect(find.text('Upcoming - Exam'), findsOneWidget);
+    expect(find.textContaining('Upcoming ·'), findsOneWidget);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
@@ -183,13 +185,13 @@ void main() {
 
     clock.value = DateTime(2026, 6, 16, 10, 5);
     await tester.pump(const Duration(minutes: 5));
-    expect(find.text('Upcoming - Exam'), findsOneWidget);
+    expect(find.textContaining('Upcoming ·'), findsOneWidget);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
 
-    expect(find.text('Upcoming - Exam'), findsNothing);
-    expect(find.text('In progress - Exam'), findsOneWidget);
+    expect(find.textContaining('Upcoming ·'), findsNothing);
+    expect(find.textContaining('In progress ·'), findsOneWidget);
     expect(timers.cancellationCount, cancellationsAfterPause);
   });
 
@@ -224,7 +226,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Upcoming - Exam'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('general-reminders-action')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Upcoming ·'), findsOneWidget);
 
     tickerEnabled.value = false;
     await tester.pump();
@@ -235,8 +239,8 @@ void main() {
     tickerEnabled.value = true;
     await tester.pump();
 
-    expect(find.text('Upcoming - Exam'), findsNothing);
-    expect(find.text('In progress - Exam'), findsOneWidget);
+    expect(find.textContaining('Upcoming ·'), findsNothing);
+    expect(find.textContaining('In progress ·'), findsOneWidget);
     expect(timers.cancellationCount, cancellationsWhileHidden);
   });
 }

@@ -259,11 +259,12 @@ void main() {
 
     await tester.tap(find.text('Open language settings'));
     await _pumpRouteTransition(tester);
-    await tester.tap(find.byIcon(Icons.search));
+    await tester.enterText(
+      find.byKey(const ValueKey('language-search')),
+      'Deutsch',
+    );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(SearchBar), 'Deutsch');
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('language-search-option-de')));
+    await tester.tap(find.byKey(const ValueKey('language-option-de')));
     await tester.pumpAndSettle();
 
     expect(provider.localeCode, 'de');

@@ -75,6 +75,7 @@ void main() {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: NotificationSettingsPage(
+              troubleshooting: true,
               notificationService: fallbackService,
               productivityBridge: AndroidProductivityBridge(enabled: false),
             ),
@@ -152,7 +153,10 @@ void main() {
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: NotificationSettingsPage(productivityBridge: bridge),
+            home: NotificationSettingsPage(
+              productivityBridge: bridge,
+              troubleshooting: true,
+            ),
           ),
         ),
       );
@@ -226,7 +230,10 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: NotificationSettingsPage(productivityBridge: bridge),
+          home: NotificationSettingsPage(
+            productivityBridge: bridge,
+            troubleshooting: true,
+          ),
         ),
       ),
     );

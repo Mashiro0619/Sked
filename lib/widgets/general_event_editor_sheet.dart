@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'editor_exit_guard.dart';
+
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -46,7 +50,8 @@ class GeneralEventEditorSheet extends StatefulWidget {
       _GeneralEventEditorSheetState();
 }
 
-class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
+class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
+    with EditorExitGuard<GeneralEventEditorSheet> {
   late final TextEditingController _titleController;
   late final TextEditingController _locationController;
   late final TextEditingController _notesController;
@@ -77,6 +82,32 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
 
   bool get _isEditing => widget.initialEvent != null;
   bool get _showCalendarPicker => _calendarOptions.length > 1;
+  @override
+  String get draftFingerprint => jsonEncode([
+    _titleController.text,
+    _locationController.text,
+    _notesController.text,
+    _startDate.toIso8601String(),
+    _endDate.toIso8601String(),
+    _startTime.toString(),
+    _endTime.toString(),
+    _isAllDay,
+    _calendarId,
+    _recurrence.name,
+    _customUnit.name,
+    _interval,
+    _untilDate?.toIso8601String(),
+    _repeatCount,
+    _colorValue,
+    _reminders,
+  ]);
+  @override
+  bool get exitBlocked => _blocked;
+  @override
+  AppMode get editorWorkspace => AppMode.general;
+  @override
+  void closeEditor() => _popOnce();
+
   bool get _blocked =>
       _hasPopped || _pickerOpen || _selectionDialogOpen || _actionInProgress;
 
@@ -132,6 +163,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
         (widget.defaultReminderMinutesBefore == null
             ? const []
             : [widget.defaultReminderMinutesBefore!]);
+    initializeDraftGuard();
   }
 
   @override
@@ -347,7 +379,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
         ? 0.96
         : 0.84;
     return PopScope(
-      canPop: !_blocked,
+      canPop: _hasPopped,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_blocked) unawaited(requestEditorExit());
+      },
       child: Form(
         key: _formKey,
         child: AppSheetScaffold(
@@ -368,7 +403,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet> {
               : null,
           actions: [
             TextButton(
-              onPressed: _blocked ? null : () => _popOnce(),
+              onPressed: _blocked ? null : () => unawaited(requestEditorExit()),
               child: Text(l10n.cancel),
             ),
             FilledButton.icon(

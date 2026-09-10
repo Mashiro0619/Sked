@@ -64,13 +64,20 @@ class _BlockingOnceTimetableStorage extends _MemoryTimetableStorage {
 class _BlockingSchoolImportApi extends SchoolImportApi {
   final completer = Completer<List<String>>();
   var callCount = 0;
+  bool wasAborted = false;
 
   @override
   Future<List<String>> fetchCustomModels({
     required String baseUrl,
     required String apiKey,
+    Future<void>? abortTrigger,
   }) {
     callCount += 1;
+    unawaited(
+      abortTrigger?.then((_) {
+        wasAborted = true;
+      }),
+    );
     return completer.future;
   }
 }
@@ -82,6 +89,7 @@ class _ImmediateSchoolImportApi extends SchoolImportApi {
   Future<List<String>> fetchCustomModels({
     required String baseUrl,
     required String apiKey,
+    Future<void>? abortTrigger,
   }) async {
     callCount += 1;
     return ['model-$callCount'];
@@ -95,6 +103,7 @@ class _FailingSchoolImportApi extends SchoolImportApi {
   Future<List<String>> fetchCustomModels({
     required String baseUrl,
     required String apiKey,
+    Future<void>? abortTrigger,
   }) async {
     callCount += 1;
     throw StateError('synthetic model fetch failure');
@@ -118,6 +127,7 @@ class _CapturingBlockingSchoolImportApi extends SchoolImportApi {
   Future<List<String>> fetchCustomModels({
     required String baseUrl,
     required String apiKey,
+    Future<void>? abortTrigger,
   }) {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
@@ -251,6 +261,7 @@ Future<TimetableProvider> _createProvider({
     storage: storage ?? _MemoryTimetableStorage(_buildTestData()),
     systemLocaleCodeResolver: () => defaultLocaleCode,
     secretStore: secretStore ?? _MemorySecretStore('sk-test'),
+    workspaceMutationLock: (action) => action(),
   );
   await provider.load();
   return provider;
@@ -338,6 +349,36 @@ Finder _modelDialog() {
 }
 
 void main() {
+  testWidgets(
+    'disabling timetable cancels model loading and ignores its late result',
+    (tester) async {
+      final p = await _createProvider();
+      final api = _BlockingSchoolImportApi();
+      await _pumpPage(tester, p, api);
+      final fetch = find.text('Fetch model list');
+      await tester.ensureVisible(fetch);
+      await tester.pumpAndSettle();
+      await tester.tap(fetch);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(api.callCount, 1);
+      final before = p.customSchoolImportModel;
+      final disabled = p.setWorkspaceEnabled(AppMode.student, false);
+      await tester.pump();
+      await disabled;
+      await tester.pump();
+      expect(api.wasAborted, isTrue);
+      expect(p.isWorkspaceEnabled(AppMode.student), isFalse);
+      api.completer.complete(['late-result']);
+      await tester.pumpAndSettle();
+      expect(p.customSchoolImportModel, before);
+      expect(find.text('late-result'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      p.dispose();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('fetch model list ignores rapid duplicate taps', (tester) async {
     final provider = await _createProvider();
     final api = _BlockingSchoolImportApi();

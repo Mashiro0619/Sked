@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
+import 'workbench_layout_policy.dart';
+import 'workbench_chrome_metrics.dart';
 
 /// Blocks a settings surface during persistence without switching every child
 /// to its disabled colors. Pointer and keyboard actions are unavailable while
@@ -89,9 +91,8 @@ class ResponsiveSettingsBody extends StatelessWidget {
             derivedSecondColumnChildren != null;
         final useTwoColumns =
             hasWideColumns &&
-            constraints.maxWidth >= 840 &&
-            textScale <= 1.3 &&
-            availableColumnWidth >= 360;
+            availableColumnWidth >=
+                360 * WorkbenchLayoutPolicy.textFactor(textScale);
         final maxContentWidth = useTwoColumns ? 1120.0 : 720.0;
 
         final content = useTwoColumns
@@ -196,7 +197,8 @@ List<Widget> _groupSettingsSections(List<Widget> children) {
 class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
   const ResponsiveSettingsSingleColumnBody({
     super.key,
-    required this.child,
+    this.child,
+    this.children,
     this.scrollViewKey,
     this.controller,
     this.padding,
@@ -204,7 +206,8 @@ class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
     this.bottomPadding = 24,
   });
 
-  final Widget child;
+  final Widget? child;
+  final List<Widget>? children;
   final Key? scrollViewKey;
   final ScrollController? controller;
   final EdgeInsetsGeometry? padding;
@@ -245,7 +248,15 @@ class ResponsiveSettingsSingleColumnBody extends StatelessWidget {
                     'responsive-settings-single-column-content',
                   ),
                   constraints: const BoxConstraints(maxWidth: 720),
-                  child: SizedBox(width: double.infinity, child: child),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child:
+                        child ??
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: children ?? const [],
+                        ),
+                  ),
                 ),
               ),
             ],
@@ -326,8 +337,12 @@ class SettingsConnectedGroup extends StatelessWidget {
               ),
             ),
           Material(
-            color: colors.surfaceContainerLow,
-            shape: shapes.container,
+            color: WorkbenchChromeMetrics.of(context).desktop
+                ? Colors.transparent
+                : colors.surfaceContainerLow,
+            shape: WorkbenchChromeMetrics.of(context).desktop
+                ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
+                : shapes.container,
             clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -340,7 +355,9 @@ class SettingsConnectedGroup extends StatelessWidget {
                   if (index > 0)
                     Divider(
                       height: 1,
-                      indent: 72,
+                      indent: WorkbenchChromeMetrics.of(context).desktop
+                          ? 52
+                          : 72,
                       endIndent: 16,
                       color: colors.outlineVariant.withValues(alpha: 0.55),
                     ),
@@ -443,14 +460,18 @@ class SettingsConnectedTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.zero,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 64),
+            constraints: BoxConstraints(
+              minHeight: WorkbenchChromeMetrics.of(context).desktop ? 40 : 64,
+            ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 360;
                 return Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: compact ? 12 : 16,
-                    vertical: 10,
+                    vertical: WorkbenchChromeMetrics.of(context).desktop
+                        ? 6
+                        : 10,
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -518,6 +539,15 @@ class SettingsListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return SettingsConnectedTile(
+        leading: leading,
+        title: title,
+        subtitle: subtitle,
+        trailing: trailing,
+        onTap: onTap,
+      );
+    }
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final enabled = onTap != null;
@@ -596,11 +626,12 @@ class _SettingsTileIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return SizedBox(
-      width: 40,
-      height: 40,
+      width: WorkbenchChromeMetrics.of(context).desktop ? 24 : 40,
+      height: WorkbenchChromeMetrics.of(context).desktop ? 24 : 40,
       child: Center(
         child: IconTheme.merge(
           data: IconThemeData(
+            size: WorkbenchChromeMetrics.of(context).desktop ? 18 : 24,
             color: enabled
                 ? color ?? colors.onSurfaceVariant
                 : colors.onSurface.withValues(alpha: 0.38),
@@ -620,7 +651,10 @@ class _SettingsTileTrailing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      constraints: BoxConstraints(
+        minWidth: WorkbenchChromeMetrics.of(context).iconTarget,
+        minHeight: WorkbenchChromeMetrics.of(context).iconTarget,
+      ),
       child: Center(child: child),
     );
   }
@@ -688,6 +722,16 @@ class SettingsSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return SettingsConnectedTile(
+        leading: Icon(icon),
+        title: title,
+        subtitle: subtitle,
+        trailing: Switch(value: value, onChanged: onChanged),
+        semanticToggled: value,
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+      );
+    }
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
     final enabled = onChanged != null;

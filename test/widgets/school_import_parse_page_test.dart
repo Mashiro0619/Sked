@@ -376,6 +376,15 @@ void main() {
 
       controller.add(ParseDone(response: _responseWithMaxCourseWeek(20)));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      final reviewScroll = tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position;
+      expect(
+        reviewScroll.pixels,
+        closeTo(reviewScroll.minScrollExtent, 1),
+        reason: 'Structured review must open at its metadata, not the transcript bottom.',
+      );
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(SchoolImportParsePage)),
@@ -420,6 +429,8 @@ void main() {
         findsOneWidget,
       );
 
+      await tester.ensureVisible(find.text(l10n.schoolWebImportWarnings));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.schoolWebImportWarnings));
       await tester.pumpAndSettle();
       expect(find.text('Check the imported week range.'), findsOneWidget);

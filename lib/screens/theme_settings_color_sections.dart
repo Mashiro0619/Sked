@@ -10,7 +10,7 @@ class _ColorfulThemeSection extends StatelessWidget {
     required this.onPickCalendarColor,
   });
 
-  final TimetableProvider provider;
+  final WorkspaceThemeTarget provider;
   final ValueChanged<String> onPickUiColor;
   final ValueChanged<String> onPickGeneralMonthTextColor;
   final ValueChanged<String> onPickCourseColor;

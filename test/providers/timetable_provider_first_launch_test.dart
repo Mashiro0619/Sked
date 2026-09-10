@@ -126,12 +126,12 @@ void main() {
     expect(storage.saveCount, 1);
     expect(provider.activeMode, AppMode.student);
     expect(provider.hideHomeWorkspaceNavigation, isTrue);
-    expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
     expect(provider.acceptedPrivacyPolicyVersion, bundledPrivacyPolicyVersion);
     expect(acceptedAt, isNotNull);
     expect(storage.data!.activeMode, AppMode.student);
     expect(storage.data!.hideHomeWorkspaceNavigation, isTrue);
-    expect(storage.data!.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(storage.data!.homeWorkspaceNavigationCollapsed, isFalse);
     expect(
       storage.data!.privacyPolicyAcceptedVersion,
       bundledPrivacyPolicyVersion,
@@ -169,7 +169,7 @@ void main() {
       expect(storage.saveCount, 1);
       expect(provider.activeMode, AppMode.student);
       expect(provider.hideHomeWorkspaceNavigation, isFalse);
-      expect(provider.homeWorkspaceNavigationCollapsed, isTrue);
+      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
       expect(provider.acceptedPrivacyPolicyVersion, acceptedVersion);
       expect(storage.data!.privacyPolicyAcceptedVersion, acceptedVersion);
       expect(storage.data!.privacyPolicyAcceptedAtIso, acceptedAtIso);

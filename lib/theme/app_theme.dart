@@ -3,6 +3,7 @@ import 'package:cupertino_ui/cupertino_ui.dart'
 import 'package:material_ui/material_ui.dart';
 
 import '../utils/constants.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 import 'app_motion.dart';
 import 'general_calendar_color_theme.dart';
 import 'sked_expressive_theme.dart';
@@ -40,7 +41,19 @@ ThemeData buildAppTheme({
   final theme = ThemeData(useMaterial3: true, colorScheme: colorScheme);
   final shapes = SkedShapeScheme.standard;
   final motion = SkedMotionScheme.standard;
-  final textTheme = theme.textTheme;
+  final desktop = WorkbenchChromeMetrics.isDesktop(theme.platform);
+  final textTheme = desktop
+      ? theme.textTheme.copyWith(
+          bodyLarge: theme.textTheme.bodyLarge?.copyWith(fontSize: 14),
+          bodyMedium: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+          titleLarge: theme.textTheme.titleLarge?.copyWith(fontSize: 18),
+          titleMedium: theme.textTheme.titleMedium?.copyWith(fontSize: 14),
+          labelLarge: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
+        )
+      : theme.textTheme;
+  final controlShape = desktop
+      ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
+      : shapes.control;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
   final menuSurface = colorScheme.surfaceContainer;
   final menuOutline = colorScheme.outlineVariant.withValues(alpha: 0.72);
@@ -62,6 +75,11 @@ ThemeData buildAppTheme({
   });
 
   return theme.copyWith(
+    textTheme: textTheme,
+    visualDensity: desktop ? VisualDensity.compact : VisualDensity.standard,
+    materialTapTargetSize: desktop
+        ? MaterialTapTargetSize.shrinkWrap
+        : MaterialTapTargetSize.padded,
     extensions: [
       GeneralCalendarColorTheme.fromValues(colorfulExtensionValues),
       shapes,
@@ -80,10 +98,13 @@ ThemeData buildAppTheme({
       },
     ),
     appBarTheme: AppBarThemeData(
+      toolbarHeight: desktop ? 48 : null,
       centerTitle: false,
       elevation: 0,
       scrolledUnderElevation: 1,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: desktop
+          ? colorScheme.surfaceContainerLow
+          : colorScheme.surface,
       foregroundColor: colorScheme.onSurface,
       surfaceTintColor: colorScheme.surfaceTint,
       titleTextStyle: textTheme.titleLarge?.copyWith(
@@ -101,6 +122,9 @@ ThemeData buildAppTheme({
       shape: shapes.card,
     ),
     listTileTheme: ListTileThemeData(
+      minTileHeight: desktop ? 36 : 48,
+      minLeadingWidth: desktop ? 20 : 24,
+      horizontalTitleGap: desktop ? 10 : 16,
       iconColor: colorScheme.onSurfaceVariant,
       selectedColor: colorScheme.primary,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -116,20 +140,24 @@ ThemeData buildAppTheme({
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-        minimumSize: const Size(64, 48),
-        shape: shapes.control,
+        minimumSize: Size(64, desktop ? 36 : 48),
+        shape: controlShape,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-        minimumSize: const Size(64, 48),
-        shape: shapes.control,
+        minimumSize: Size(64, desktop ? 36 : 48),
+        shape: controlShape,
         side: BorderSide(color: colorScheme.outlineVariant),
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
+        minimumSize: desktop ? const Size.square(32) : const Size.square(48),
+        padding: EdgeInsets.all(desktop ? 6 : 8),
+        iconSize: desktop ? 18 : 24,
+        shape: controlShape,
         foregroundColor: colorScheme.onSurfaceVariant,
         highlightColor: colorScheme.primary.withValues(alpha: 0.12),
       ),
@@ -208,23 +236,23 @@ ThemeData buildAppTheme({
       filled: true,
       fillColor: colorScheme.surfaceContainerLow,
       border: OutlineInputBorder(
-        borderRadius: shapes.fieldRadius,
+        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: shapes.fieldRadius,
+        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: shapes.fieldRadius,
+        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.primary, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: shapes.fieldRadius,
+        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: shapes.fieldRadius,
+        borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
         borderSide: BorderSide(color: colorScheme.error, width: 2),
       ),
     ),
@@ -308,15 +336,15 @@ ThemeData buildAppTheme({
         filled: true,
         fillColor: colorScheme.surfaceContainerLow,
         border: OutlineInputBorder(
-          borderRadius: shapes.fieldRadius,
+          borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: shapes.fieldRadius,
+          borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: shapes.fieldRadius,
+          borderRadius: desktop ? BorderRadius.circular(6) : shapes.fieldRadius,
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
       ),
@@ -415,7 +443,7 @@ ThemeData buildAppTheme({
       contentTextStyle: textTheme.bodyMedium?.copyWith(
         color: colorScheme.onInverseSurface,
       ),
-      shape: shapes.control,
+      shape: controlShape,
       showCloseIcon: true,
       closeIconColor: colorScheme.onInverseSurface,
     ),

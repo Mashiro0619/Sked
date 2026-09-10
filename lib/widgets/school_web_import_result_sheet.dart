@@ -1,3 +1,5 @@
+import '../widgets/expressive_motion.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -771,7 +773,7 @@ class _ParserDetailsDisclosure extends StatelessWidget {
             ),
           ),
         ),
-        AnimatedSize(
+        SkedAnimatedSize(
           duration: duration,
           curve: motion.scheme.enterCurve,
           alignment: Alignment.topCenter,
@@ -905,7 +907,7 @@ class _ImportWarningsGroupState extends State<_ImportWarningsGroup> {
               ),
             ),
           ),
-          AnimatedSize(
+          SkedAnimatedSize(
             duration: duration,
             curve: motion.scheme.enterCurve,
             alignment: Alignment.topCenter,

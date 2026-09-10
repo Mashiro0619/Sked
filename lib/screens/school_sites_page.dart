@@ -1,3 +1,10 @@
+import '../widgets/editor_exit_guard.dart';
+import '../widgets/app_modal_sheet.dart';
+import '../widgets/workspace_frame.dart';
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+import '../models/app_mode.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -16,7 +23,6 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/sked_popup_menu.dart';
-import '../widgets/settings_list.dart';
 import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
 
@@ -54,10 +60,24 @@ class SchoolSitesPage extends StatefulWidget {
   State<SchoolSitesPage> createState() => _SchoolSitesPageState();
 }
 
-class _SchoolSitesPageState extends State<SchoolSitesPage> {
+class _SchoolSitesPageState extends State<SchoolSitesPage>
+    with WorkspaceRouteLifecycle<SchoolSitesPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+  @override
+  Future<bool> prepareWorkspaceDisable() async => !_siteMutationInProgress;
+
+  final _editorPane = WorkspacePaneController();
+
+  @override
+  void dispose() {
+    _editorPane.dispose();
+    super.dispose();
+  }
+
   var _loading = true;
   var _isEditMode = false;
-  var _editorDialogOpen = false;
+  var _siteEditorOpen = false;
   var _htmlImportOpen = false;
   var _webImportOpen = false;
   var _jsonImportInProgress = false;
@@ -82,19 +102,18 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final loadResult = _loadResult;
     final canUsePageActions = !_loading && loadResult?.canWrite == true;
     return Scaffold(
-      appBar: AppBar(
+      appBar: WorkbenchAppBar(
         title: Text(l10n.schoolSitesPageTitle),
         actions: [
           IconButton(
             tooltip: l10n.schoolSitesAdd,
             onPressed:
-                !canUsePageActions ||
-                    _editorDialogOpen ||
-                    _siteMutationInProgress
+                !canUsePageActions || _siteEditorOpen || _siteMutationInProgress
                 ? null
                 : _addSite,
             icon: const Icon(Icons.add),
@@ -141,76 +160,268 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
       ),
       body: SafeArea(
         top: false,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : loadResult?.canWrite == false
-            ? _SchoolSitesRecoveryView(
-                status: loadResult!.recoveryStatus,
-                hasArtifacts: _recoveryPaths.isNotEmpty,
-                canReplace: loadResult.canReplaceAfterRecovery,
-                isBusy: _recoveryActionInProgress,
-                onRetry: _retryRecovery,
-                onShowArtifacts: _recoveryPaths.isEmpty
-                    ? null
-                    : _showRecoveryArtifacts,
-                onImportReplacement: loadResult.canReplaceAfterRecovery
-                    ? _importRecoveryJson
-                    : null,
-                onStartFresh: loadResult.canReplaceAfterRecovery
-                    ? _confirmStartFresh
-                    : null,
-              )
-            : _sites.isEmpty
-            ? _SchoolSitesEmptyState(
-                onAdd: (_editorDialogOpen || _siteMutationInProgress)
-                    ? null
-                    : _addSite,
-                onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
-              )
-            : ResponsiveSettingsSingleColumnBody(
-                topPadding: 16,
-                child: Column(
-                  children: [
-                    for (var index = 0; index < _sites.length; index++) ...[
-                      if (index > 0) const SizedBox(height: 10),
-                      _SchoolSiteRow(
-                        site: _sites[index],
-                        enabled: _supportsWebImport && !_webImportOpen,
-                        onTap: _supportsWebImport && !_webImportOpen
-                            ? () => _openWebImportForSite(_sites[index])
-                            : null,
-                        trailing: _isEditMode
-                            ? SkedPopupMenuButton<_SchoolSiteItemAction>(
-                                onSelected: (action) async {
-                                  switch (action) {
-                                    case _SchoolSiteItemAction.edit:
-                                      await _editSite(index);
-                                      return;
-                                    case _SchoolSiteItemAction.delete:
-                                      await _deleteSite(index);
-                                      return;
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  SkedPopupMenuItem(
-                                    value: _SchoolSiteItemAction.edit,
-                                    child: Text(l10n.schoolSitesEdit),
-                                  ),
-                                  SkedPopupMenuItem(
-                                    value: _SchoolSiteItemAction.delete,
-                                    child: Text(l10n.delete),
-                                  ),
-                                ],
-                              )
-                            : null,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+        child: AnimatedBuilder(
+          animation: _editorPane,
+          builder: (context, _) => _buildEditorHost(
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : loadResult?.canWrite == false
+                ? _SchoolSitesRecoveryView(
+                    status: loadResult!.recoveryStatus,
+                    hasArtifacts: _recoveryPaths.isNotEmpty,
+                    canReplace: loadResult.canReplaceAfterRecovery,
+                    isBusy: _recoveryActionInProgress,
+                    onRetry: _retryRecovery,
+                    onShowArtifacts: _recoveryPaths.isEmpty
+                        ? null
+                        : _showRecoveryArtifacts,
+                    onImportReplacement: loadResult.canReplaceAfterRecovery
+                        ? _importRecoveryJson
+                        : null,
+                    onStartFresh: loadResult.canReplaceAfterRecovery
+                        ? _confirmStartFresh
+                        : null,
+                  )
+                : _sites.isEmpty
+                ? _SchoolSitesEmptyState(
+                    onAdd: (_siteEditorOpen || _siteMutationInProgress)
+                        ? null
+                        : _addSite,
+                    onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
+                  )
+                : _buildSiteBrowser(l10n),
+          ),
+        ),
       ),
     );
   }
+
+  /// The editor navigator has one stable slot even when the list becomes hidden.
+  /// Its route owns the form and discard guard; reflow never rebuilds the draft.
+  Widget _buildEditorHost(Widget browser) => LayoutBuilder(
+    builder: (context, constraints) {
+      final open = _editorPane.isOpen;
+      final wide = WorkbenchLayoutPolicy.formCanSplit(
+        constraints.maxWidth,
+        MediaQuery.textScalerOf(context).scale(14) / 14,
+        navigation: 280,
+        content: 480,
+      );
+      final listWidth =
+          280 *
+          WorkbenchLayoutPolicy.textFactor(
+            MediaQuery.textScalerOf(context).scale(14) / 14,
+          );
+      final editorWidth = wide
+          ? constraints.maxWidth - listWidth - 1
+          : constraints.maxWidth;
+      return PopScope(
+        canPop: !open,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && open) unawaited(_editorPane.close());
+        },
+        child: Shortcuts(
+          shortcuts: const {
+            SingleActivator(LogicalKeyboardKey.escape):
+                WorkspaceTaskDismissIntent(),
+          },
+          child: Actions(
+            actions: {
+              WorkspaceTaskDismissIntent:
+                  CallbackAction<WorkspaceTaskDismissIntent>(
+                    onInvoke: (_) {
+                      if (open) unawaited(_editorPane.close());
+                      return null;
+                    },
+                  ),
+            },
+            child: Stack(
+              children: [
+                PositionedDirectional(
+                  start: 0,
+                  top: 0,
+                  bottom: 0,
+                  end: open && wide ? editorWidth + 1 : 0,
+                  child: ExcludeFocus(
+                    excluding: open && !wide,
+                    child: ExcludeSemantics(
+                      excluding: open && !wide,
+                      child: browser,
+                    ),
+                  ),
+                ),
+                PositionedDirectional(
+                  end: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: editorWidth,
+                  child: Offstage(
+                    offstage: !open,
+                    child: Semantics(
+                      container: true,
+                      explicitChildNodes: true,
+                      child: FocusScope(
+                        node: _editorPane.focusScope,
+                        canRequestFocus: open,
+                        descendantsAreFocusable: open,
+                        descendantsAreTraversable: open,
+                        child: Navigator(
+                          key: _editorPane.navigatorKey,
+                          requestFocus: false,
+                          onGenerateRoute: (_) => MaterialPageRoute<void>(
+                            builder: (_) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (open && wide)
+                  PositionedDirectional(
+                    start: listWidth,
+                    top: 0,
+                    bottom: 0,
+                    width: 1,
+                    child: const VerticalDivider(width: 1),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  String? _selectedSiteUrl;
+
+  Widget _buildSiteBrowser(AppLocalizations l10n) => LayoutBuilder(
+    builder: (context, constraints) {
+      final wide = WorkbenchLayoutPolicy.formCanSplit(
+        constraints.maxWidth,
+        MediaQuery.textScalerOf(context).scale(14) / 14,
+        navigation: 280,
+        content: 480,
+      );
+      final selected = _sites.indexWhere(
+        (site) => site.loginUrl == _selectedSiteUrl,
+      );
+      final selectedIndex = selected < 0 ? 0 : selected;
+      final site = _sites[selectedIndex];
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: wide ? 280 : constraints.maxWidth,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _sites.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) => _SchoolSiteRow(
+                site: _sites[index],
+                enabled:
+                    !_siteEditorOpen &&
+                    (wide || (_supportsWebImport && !_webImportOpen)),
+                onTap: _siteEditorOpen
+                    ? null
+                    : wide
+                    ? () => setState(
+                        () => _selectedSiteUrl = _sites[index].loginUrl,
+                      )
+                    : _supportsWebImport && !_webImportOpen
+                    ? () => _openWebImportForSite(_sites[index])
+                    : null,
+                trailing: _isEditMode
+                    ? SkedPopupMenuButton<_SchoolSiteItemAction>(
+                        enabled: !_siteEditorOpen && !_siteMutationInProgress,
+                        onSelected: (action) async {
+                          switch (action) {
+                            case _SchoolSiteItemAction.edit:
+                              await _editSite(index);
+                              return;
+                            case _SchoolSiteItemAction.delete:
+                              await _deleteSite(index);
+                              return;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          SkedPopupMenuItem(
+                            value: _SchoolSiteItemAction.edit,
+                            child: Text(l10n.schoolSitesEdit),
+                          ),
+                          SkedPopupMenuItem(
+                            value: _SchoolSiteItemAction.delete,
+                            child: Text(l10n.delete),
+                          ),
+                        ],
+                      )
+                    : IconButton(
+                        tooltip: l10n.schoolSitesEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: _siteEditorOpen || _siteMutationInProgress
+                            ? null
+                            : () => _editSite(index),
+                      ),
+              ),
+            ),
+          ),
+          if (wide) const VerticalDivider(width: 1),
+          if (wide)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(32),
+                child: Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          site.name,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 20),
+                        SelectableText(site.loginUrl),
+                        const SizedBox(height: 24),
+                        Text(l10n.schoolWebImportEntryDesc),
+                        const SizedBox(height: 24),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            FilledButton.icon(
+                              icon: const Icon(Icons.open_in_browser),
+                              label: Text(l10n.schoolWebImportEntry),
+                              onPressed: _supportsWebImport && !_webImportOpen
+                                  ? () => _openWebImportForSite(site)
+                                  : null,
+                            ),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.edit_outlined),
+                              label: Text(l10n.schoolSitesEdit),
+                              onPressed:
+                                  _siteEditorOpen || _siteMutationInProgress
+                                  ? null
+                                  : () => _editSite(selectedIndex),
+                            ),
+                            TextButton(
+                              onPressed: _siteMutationInProgress
+                                  ? null
+                                  : () => _deleteSite(selectedIndex),
+                              child: Text(l10n.delete),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
 
   Future<void> _loadSites() async {
     try {
@@ -462,12 +673,12 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     }
   }
 
-  void _setEditorDialogOpen(bool value) {
-    if (_editorDialogOpen == value) return;
+  void _setSiteEditorOpen(bool value) {
+    if (_siteEditorOpen == value) return;
     if (mounted) {
-      setState(() => _editorDialogOpen = value);
+      setState(() => _siteEditorOpen = value);
     } else {
-      _editorDialogOpen = value;
+      _siteEditorOpen = value;
     }
   }
 
@@ -551,36 +762,40 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
   }
 
   Future<void> _addSite() async {
-    if (_editorDialogOpen || _siteMutationInProgress || !mounted) {
+    if (_siteEditorOpen || _siteMutationInProgress || !mounted) {
       return;
     }
-    _setEditorDialogOpen(true);
+    _setSiteEditorOpen(true);
     try {
-      final created = await _showEditorDialog();
-      if (!mounted || created == null) {
-        return;
-      }
-      await _persistSites([..._sites, created]);
+      await _showSiteEditor(
+        onSave: (site) => _persistSites([..._sites, site], showFeedback: false),
+      );
     } finally {
-      _setEditorDialogOpen(false);
+      _setSiteEditorOpen(false);
     }
   }
 
   Future<void> _editSite(int index) async {
-    if (_editorDialogOpen || _siteMutationInProgress || !mounted) {
+    if (_siteEditorOpen || _siteMutationInProgress || !mounted) {
       return;
     }
-    _setEditorDialogOpen(true);
+    _setSiteEditorOpen(true);
     try {
-      final updated = await _showEditorDialog(initialSite: _sites[index]);
-      if (!mounted || updated == null) {
-        return;
-      }
-      final nextSites = [..._sites];
-      nextSites[index] = updated;
-      await _persistSites(nextSites);
+      final original = _sites[index];
+      await _showSiteEditor(
+        initialSite: original,
+        onSave: (site) async {
+          final currentIndex = _sites.indexWhere(
+            (item) => item.loginUrl == original.loginUrl,
+          );
+          if (currentIndex < 0) return false;
+          final next = [..._sites];
+          next[currentIndex] = site;
+          return _persistSites(next, showFeedback: false);
+        },
+      );
     } finally {
-      _setEditorDialogOpen(false);
+      _setSiteEditorOpen(false);
     }
   }
 
@@ -623,84 +838,19 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     await _persistSites(nextSites);
   }
 
-  Future<SchoolSite?> _showEditorDialog({SchoolSite? initialSite}) {
-    final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController(text: initialSite?.name ?? '');
-    final urlController = TextEditingController(
-      text: initialSite?.loginUrl ?? '',
-    );
-
-    final future = showExpressiveDialog<SchoolSite>(
-      context: context,
-      builder: (context) {
-        var popped = false;
-        void popWith(SchoolSite? value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return AlertDialog(
-          title: Text(
-            initialSite == null ? l10n.schoolSitesAdd : l10n.schoolSitesEdit,
-          ),
-          content: ExpressiveDialogContent(
-            maxWidth: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: l10n.schoolSitesNameLabel,
-                    prefixIcon: const Icon(Icons.school_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: urlController,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: l10n.schoolSitesLoginUrlLabel,
-                    prefixIcon: const Icon(Icons.link),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(null),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (popped) return;
-                final site = SchoolSite(
-                  name: nameController.text.trim(),
-                  loginUrl: urlController.text.trim(),
-                );
-                if (!site.isValid) {
-                  _showMessage(l10n.schoolSitesFormInvalid);
-                  return;
-                }
-                popWith(site);
-              },
-              child: Text(l10n.save),
-            ),
-          ],
-        );
-      },
-    );
-    return future.whenComplete(() {
-      nameController.dispose();
-      urlController.dispose();
-    });
-  }
+  Future<void> _showSiteEditor({
+    SchoolSite? initialSite,
+    required Future<bool> Function(SchoolSite) onSave,
+  }) => _editorPane.show<void>(
+    (_) => _SchoolSiteEditor(initialSite: initialSite, onSave: onSave),
+    selectionId: initialSite?.loginUrl,
+    dismissOnCanvasTap: false,
+  );
 
   Future<bool> _persistSites(
     List<SchoolSite> sites, {
     String? successMessage,
+    bool showFeedback = true,
   }) async {
     if (_siteMutationInProgress || !mounted) {
       return false;
@@ -720,23 +870,23 @@ class _SchoolSitesPageState extends State<SchoolSitesPage> {
     } on SchoolSiteStaleWriteException {
       await _reloadAfterRejectedMutation();
       if (mounted) {
-        _showMessage(l10n.saveFailedRetry);
+        if (showFeedback) _showMessage(l10n.saveFailedRetry);
       }
       return false;
     } on SchoolSiteWriteBlockedException {
       await _reloadAfterRejectedMutation();
       if (mounted) {
-        _showMessage(l10n.saveFailedRetry);
+        if (showFeedback) _showMessage(l10n.saveFailedRetry);
       }
       return false;
     } on SchoolSiteStoreRecoveryBlockedException {
       await _reloadAfterRejectedMutation();
       if (mounted) {
-        _showMessage(l10n.saveFailedRetry);
+        if (showFeedback) _showMessage(l10n.saveFailedRetry);
       }
       return false;
     } catch (_) {
-      _showMessage(l10n.saveFailedRetry);
+      if (showFeedback) _showMessage(l10n.saveFailedRetry);
       return false;
     } finally {
       if (mounted) {
@@ -1411,6 +1561,148 @@ class _SchoolSiteRow extends StatelessWidget {
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SchoolSiteEditor extends StatefulWidget {
+  const _SchoolSiteEditor({this.initialSite, required this.onSave});
+  final SchoolSite? initialSite;
+  final Future<bool> Function(SchoolSite) onSave;
+  @override
+  State<_SchoolSiteEditor> createState() => _SchoolSiteEditorState();
+}
+
+class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
+    with EditorExitGuard<_SchoolSiteEditor> {
+  late final _name = TextEditingController(
+    text: widget.initialSite?.name ?? '',
+  );
+  late final _url = TextEditingController(
+    text: widget.initialSite?.loginUrl ?? '',
+  );
+  bool _saving = false;
+  bool _closing = false;
+  String? _error;
+  @override
+  AppMode get editorWorkspace => AppMode.student;
+  @override
+  String get draftFingerprint => '${_name.text}\n${_url.text}';
+  @override
+  bool get exitBlocked => _saving || _closing;
+  @override
+  void closeEditor() {
+    if (_closing) return;
+    _closing = true;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    initializeDraftGuard();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _url.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final l = AppLocalizations.of(context);
+    final site = SchoolSite(
+      name: _name.text.trim(),
+      loginUrl: _url.text.trim(),
+    );
+    if (!site.isValid) {
+      setState(() => _error = l.schoolSitesFormInvalid);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final saved = await widget.onSave(site);
+      if (!mounted) return;
+      if (saved) {
+        closeEditor();
+      } else {
+        setState(() => _error = l.saveFailedRetry);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return PopScope(
+      canPop: _closing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_saving) unawaited(requestEditorExit());
+      },
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: AppSheetScaffold(
+            contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+            title: Text(
+              widget.initialSite == null ? l.schoolSitesAdd : l.schoolSitesEdit,
+            ),
+            actions: [
+              TextButton(
+                onPressed: _saving ? null : requestEditorExit,
+                child: Text(l.cancel),
+              ),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: Text(l.save),
+              ),
+            ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _name,
+                  enabled: !_saving,
+                  decoration: InputDecoration(
+                    labelText: l.schoolSitesNameLabel,
+                    prefixIcon: const Icon(Icons.school_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _url,
+                  enabled: !_saving,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    labelText: l.schoolSitesLoginUrlLabel,
+                    prefixIcon: const Icon(Icons.link),
+                  ),
+                ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                if (_saving) const LinearProgressIndicator(),
+              ],
+            ),
           ),
         ),
       ),

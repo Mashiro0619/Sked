@@ -685,8 +685,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} valid sites, {invalidCount} invalid entries.",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "The file contains an empty school-site list.",
@@ -694,7 +698,9 @@
   "schoolSitesImportInvalidEntry": "Entry {position} is invalid and will be skipped.",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "Merge",
@@ -706,8 +712,12 @@
   "schoolSitesImportReplaceConfirmMessage": "This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "School-site data needs recovery",
@@ -834,9 +844,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "웹 시간표를 가져왔습니다",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API configuration",
+  "schoolImportParserSettingsTitle": "시간표 분석 API",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API used by timetable parsing and other AI features.",
+  "schoolImportParserSettingsDesc": "시간표 가져오기에 사용할 OpenAI 호환 API를 설정합니다. 대화형 도우미 설정이 아닙니다.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "파서 소스",
   "@schoolImportParserSourceTitle": {},
@@ -1019,7 +1029,9 @@
   "visibleCategoryCount": "{count} categories",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "No visible categories",
@@ -1194,7 +1206,13 @@
   "timeGridHourHeightHint": "Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.",
   "@timeGridHourHeightHint": {},
   "timeGridHourHeightValue": "{height} dp",
-  "@timeGridHourHeightValue": {"placeholders": {"height": {"type": "int"}}},
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "Import JSON file",
   "@importJsonFile": {},
   "pasteJson": "Paste JSON",
@@ -1491,7 +1509,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "Hide workspace navigation",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.",
+  "hideHomeWorkspaceNavigationDesc": "작업 공간 탐색을 숨깁니다. 기본 화면의 작업 공간 메뉴에서 전환할 수 있습니다.",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "Date label format",
   "@generalDateLabelFormat": {},
@@ -1636,5 +1654,44 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "workspaceFeatures": "기능 관리",
+  "workspaceBoth": "시간표 및 일정",
+  "workspaceOnlyStudent": "시간표만",
+  "workspaceOnlyGeneral": "일정만",
+  "workspaceDisableTitle": "이 작업 공간을 비활성화할까요?",
+  "workspaceDisableMessage": "데이터와 설정은 유지됩니다. 여기서 다시 활성화할 때까지 관련 기능과 알림이 중지됩니다.",
+  "workspaceEnableHint": "사용할 기능을 선택하세요. 하나 이상은 활성화해야 합니다.",
+  "workspaceLastRequired": "하나 이상의 작업 공간을 활성화해야 합니다.",
+  "workspaceReminderCleanupFailed": "작업 공간은 비활성화되었지만 알림 정리가 완료되지 않았습니다. 알림 복구를 다시 시도하세요.",
+  "settingsSearch": "설정 검색",
+  "settingsNoResults": "일치하는 설정 없음",
+  "settingsDataPrivacy": "데이터 및 개인정보",
+  "workspacePreferences": "표시 및 조작",
+  "workspaceManage": "관리",
+  "selectedDayAgenda": "선택한 날짜의 일정",
+  "notificationTroubleshooting": "권한 및 문제 해결",
+  "settingsConnection": "연결",
+  "settingsAdvanced": "고급",
+  "unsavedChangesMessage": "저장하지 않은 변경사항이 있습니다. 버리고 나갈까요?",
+  "backupWorkspaceSelection": "전체 백업에는 데이터와 활성화된 작업 공간 설정이 포함됩니다.",
+  "assistantLayoutPreview": "AI · Layout preview",
+  "assistantSelectionContext": "Uses the current selection as context",
+  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
+  "assistantDraftLabel": "Message draft",
+  "assistantPreviewNoSend": "Layout preview only. Nothing will be sent or changed.",
+  "resizePanel": "Resize panel",
+  "minimizeWindow": "Minimize",
+  "maximizeWindow": "Maximize",
+  "restoreWindow": "Restore window",
+  "closeWindow": "Close window",
+  "notificationPrecisionLimitations": "알림은 시스템 권한과 백그라운드 실행에 영향을 받습니다. 전원 종료, 시간 변경 또는 시스템 제한으로 지연될 수 있습니다.",
+  "courseSystemReminder": "System reminder",
+  "courseReminderInherit": "Use default ({reminder})",
+  "courseReminderMasterOff": "System reminders are off in notification settings. This course preference can still be saved.",
+  "courseReminderDefaultOff": "No default course reminder is set. Choose a custom reminder here or set a default in notification settings.",
+  "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
+  "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
+  "courseReminderMinutesLabel": "Minutes before class",
+  "exportAction": "Export"
 }

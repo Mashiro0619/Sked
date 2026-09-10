@@ -685,8 +685,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} valid sites, {invalidCount} invalid entries.",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "The file contains an empty school-site list.",
@@ -694,7 +698,9 @@
   "schoolSitesImportInvalidEntry": "Entry {position} is invalid and will be skipped.",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "Merge",
@@ -706,8 +712,12 @@
   "schoolSitesImportReplaceConfirmMessage": "This removes {currentCount} current sites and saves {importedCount} imported sites. This cannot be undone.",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "School-site data needs recovery",
@@ -834,9 +844,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "Веб-расписание импортировано",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API configuration",
+  "schoolImportParserSettingsTitle": "API разбора расписания",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "Configure the OpenAI-compatible API used by timetable parsing and other AI features.",
+  "schoolImportParserSettingsDesc": "Настройте совместимый с OpenAI API для импорта расписаний. Это не настройки чат-помощника.",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "Источник парсера",
   "@schoolImportParserSourceTitle": {},
@@ -1019,7 +1029,9 @@
   "visibleCategoryCount": "{count} categories",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "No visible categories",
@@ -1194,7 +1206,13 @@
   "timeGridHourHeightHint": "Adjusts the vertical scale of day and week views without changing the 15, 30, or 60 minute grid interval.",
   "@timeGridHourHeightHint": {},
   "timeGridHourHeightValue": "{height} dp",
-  "@timeGridHourHeightValue": {"placeholders": {"height": {"type": "int"}}},
+  "@timeGridHourHeightValue": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "importJsonFile": "Import JSON file",
   "@importJsonFile": {},
   "pasteJson": "Paste JSON",
@@ -1491,7 +1509,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "Hide workspace navigation",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.",
+  "hideHomeWorkspaceNavigationDesc": "Скрыть навигацию по рабочим пространствам. Переключаться можно через меню на главном экране.",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "Date label format",
   "@generalDateLabelFormat": {},
@@ -1636,5 +1654,44 @@
     "placeholders": {
       "origin": {}
     }
-  }
+  },
+  "workspaceFeatures": "Управление функциями",
+  "workspaceBoth": "Учебное расписание и события",
+  "workspaceOnlyStudent": "Только учебное расписание",
+  "workspaceOnlyGeneral": "Только события",
+  "workspaceDisableTitle": "Отключить это рабочее пространство?",
+  "workspaceDisableMessage": "Данные и настройки сохранятся. Функции и напоминания будут остановлены, пока вы не включите пространство здесь снова.",
+  "workspaceEnableHint": "Выберите нужные функции. Хотя бы одна должна оставаться включённой.",
+  "workspaceLastRequired": "Хотя бы одно рабочее пространство должно оставаться включённым.",
+  "workspaceReminderCleanupFailed": "Рабочее пространство отключено, но напоминания удалить не удалось. Повторите восстановление уведомлений.",
+  "settingsSearch": "Поиск настроек",
+  "settingsNoResults": "Подходящие настройки не найдены",
+  "settingsDataPrivacy": "Данные и конфиденциальность",
+  "workspacePreferences": "Отображение и управление",
+  "workspaceManage": "Управление",
+  "selectedDayAgenda": "Выбранный день",
+  "notificationTroubleshooting": "Разрешения и устранение неполадок",
+  "settingsConnection": "Подключение",
+  "settingsAdvanced": "Дополнительно",
+  "unsavedChangesMessage": "Есть несохранённые изменения. Отменить их и выйти?",
+  "backupWorkspaceSelection": "Полная резервная копия включает данные и выбор включённых рабочих пространств.",
+  "assistantLayoutPreview": "AI · Layout preview",
+  "assistantSelectionContext": "Uses the current selection as context",
+  "assistantPreviewDescription": "A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.",
+  "assistantDraftLabel": "Message draft",
+  "assistantPreviewNoSend": "Layout preview only. Nothing will be sent or changed.",
+  "resizePanel": "Resize panel",
+  "minimizeWindow": "Minimize",
+  "maximizeWindow": "Maximize",
+  "restoreWindow": "Restore window",
+  "closeWindow": "Close window",
+  "notificationPrecisionLimitations": "Напоминания зависят от разрешений системы и фоновой работы. Выключение, изменение времени и системные ограничения могут задержать доставку.",
+  "courseSystemReminder": "System reminder",
+  "courseReminderInherit": "Use default ({reminder})",
+  "courseReminderMasterOff": "System reminders are off in notification settings. This course preference can still be saved.",
+  "courseReminderDefaultOff": "No default course reminder is set. Choose a custom reminder here or set a default in notification settings.",
+  "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
+  "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
+  "courseReminderMinutesLabel": "Minutes before class",
+  "exportAction": "Export"
 }

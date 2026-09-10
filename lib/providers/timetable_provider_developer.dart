@@ -15,8 +15,15 @@ mixin _TimetableProviderDeveloper on _TimetableProviderBase {
       now: now ?? DateTime.now(),
     );
     final previousSelectedWeek = _selectedWeek;
-    _appData = result.data;
-    _selectedWeek = 1;
+    _appData = result.data.copyWith(
+      studentMode: _appData.isWorkspaceEnabled(AppMode.student)
+          ? result.data.studentMode
+          : _appData.studentMode,
+      generalMode: _appData.isWorkspaceEnabled(AppMode.general)
+          ? result.data.generalMode
+          : _appData.generalMode,
+    );
+    if (_appData.isWorkspaceEnabled(AppMode.student)) _selectedWeek = 1;
     try {
       await _saveAndNotify();
     } catch (_) {

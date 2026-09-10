@@ -1,8 +1,14 @@
 part of 'general_schedule_home_screen.dart';
 
-const _monthCalendarPanelMaxWidth = 940.0;
-const _monthCalendarPanelMaxHeight = 600.0;
-const _monthCalendarPanelFillHeightThreshold = 560.0;
+bool workspaceMonthCanSplit(BuildContext context, double width) =>
+    WorkspaceCanvasScope.maybeOf(context) == null &&
+    WorkbenchLayoutPolicy.formCanSplit(
+      width,
+      MediaQuery.textScalerOf(context).scale(14) / 14,
+      navigation: 320,
+      content: 600,
+    );
+
 const _monthGridSpacing = 1.0;
 const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
   'general-month-compact-selected-day-feedback',
@@ -17,6 +23,11 @@ double _monthCellHeightForWidth(double cellWidth, {required bool compact}) {
   final maxHeight = compact ? 64.0 : 82.0;
   return preferred.clamp(minHeight, maxHeight).toDouble();
 }
+
+double _monthMinimumCellHeight(
+  double textScale, {
+  required bool showLunarCalendar,
+}) => (showLunarCalendar ? 72.0 : 68.0) * textScale;
 
 class _MonthCalendarView extends StatefulWidget {
   const _MonthCalendarView({
@@ -44,7 +55,14 @@ class _MonthCalendarView extends StatefulWidget {
 class _MonthCalendarViewState extends State<_MonthCalendarView> {
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
-  final GlobalKey _agendaKey = GlobalKey();
+  final ScrollController _compactScrollController = ScrollController();
+  bool _agendaRevealScheduled = false;
+
+  @override
+  void dispose() {
+    _compactScrollController.dispose();
+    super.dispose();
+  }
 
   DateTime _visibleDayForDate(DateTime date, {int direction = 1}) {
     final normalized = normalizeDateOnly(date);
@@ -67,14 +85,24 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   }
 
   void _scheduleAgendaReveal() {
-    if (!widget.active) return;
+    if (!widget.active || _agendaRevealScheduled) return;
+    final workspace = WorkspaceCanvasScope.maybeOf(context);
+    if (workspace?.supporting == true ||
+        workspace?.dockedDetail == true ||
+        workspace?.dockedAssistant == true) {
+      return;
+    }
+    _agendaRevealScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final agendaContext = _agendaKey.currentContext;
-      if (!mounted || agendaContext == null) return;
+      _agendaRevealScheduled = false;
+      if (!mounted || !widget.active || !_compactScrollController.hasClients) {
+        return;
+      }
+      // The agenda may have left ListView's cache at large text sizes. Its
+      // scroll position is stable even when its element has been unmounted.
       unawaited(
-        Scrollable.ensureVisible(
-          agendaContext,
-          alignment: 0,
+        _compactScrollController.animateTo(
+          _compactScrollController.position.minScrollExtent,
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
         ),
@@ -149,7 +177,10 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final sideBySide = constraints.maxWidth >= 760;
+        final sideBySide = workspaceMonthCanSplit(
+          context,
+          constraints.maxWidth,
+        );
         final calendar = _MonthCalendarPanel(
           model: model,
           selectedDate: selectedDate,
@@ -169,49 +200,59 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           onOccurrenceTap: widget.onOccurrenceTap,
         );
 
+        final workspace = WorkspaceCanvasScope.maybeOf(context);
+        if (workspace?.supporting == true || workspace?.dockedDetail == true) {
+          return calendar;
+        }
         if (sideBySide) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: _monthCalendarPanelMaxWidth,
-                        maxHeight: _monthCalendarPanelMaxHeight,
-                      ),
-                      child: calendar,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 72),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 280,
-                      maxWidth: 320,
-                    ),
-                    child: agenda,
-                  ),
-                ),
-              ],
-            ),
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: calendar),
+              const VerticalDivider(width: 1),
+              SizedBox(width: 320, child: agenda),
+            ],
+          );
+        }
+
+        final textScale = WorkbenchLayoutPolicy.textFactor(
+          MediaQuery.textScalerOf(context).scale(14) / 14,
+        );
+        final agendaHeight = 240.0 * textScale;
+        final minimumCalendarHeight =
+            model.rowCount *
+                _monthMinimumCellHeight(
+                  textScale,
+                  showLunarCalendar: widget.provider.generalShowLunarCalendar,
+                ) +
+            48 * textScale;
+        if (constraints.hasBoundedHeight &&
+            constraints.maxWidth >= AppBreakpoints.minimumCanvas &&
+            constraints.maxHeight >= minimumCalendarHeight + agendaHeight + 1) {
+          // A portrait workbench has enough height for a real month canvas
+          // even when it cannot dock an agenda beside it. Do not leave half
+          // of that viewport unused by sizing the calendar like a phone card.
+          return Column(
+            children: [
+              Expanded(child: calendar),
+              const Divider(height: 1),
+              SizedBox(
+                key: const ValueKey('general-month-stacked-agenda'),
+                height: agendaHeight,
+                child: agenda,
+              ),
+            ],
           );
         }
 
         return ListView(
+          controller: _compactScrollController,
           padding: const EdgeInsets.fromLTRB(12, 6, 12, 88),
           children: [
             // On a phone the selected-day agenda is the actionable content;
             // keep it in the first viewport and let the full month grid follow
             // in the same scroll surface.
             SizedBox(
-              key: _agendaKey,
               height: 188,
               child: KeyedSubtree(
                 key: _generalMonthCompactAgendaKey,
@@ -541,15 +582,12 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final compact = MediaQuery.sizeOf(context).width < 600;
-
     return LayoutBuilder(
       builder: (context, constraints) {
+        final compact = constraints.maxWidth < 600;
         final fillsHeight =
             constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
-        final shouldFillHeight =
-            fillsHeight &&
-            constraints.maxHeight < _monthCalendarPanelFillHeightThreshold;
+        final shouldFillHeight = fillsHeight;
         final grid = _DraggableMonthGrid(
           model: widget.model,
           selectedDate: widget.selectedDate,
@@ -570,9 +608,8 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         return Material(
           key: const ValueKey('general-month-calendar-panel'),
           color: colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: colorScheme.outlineVariant),
+          shape: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: .55),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -583,10 +620,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
               _MonthWeekdayHeaderRow(
                 showWeekends: widget.provider.generalShowWeekends,
               ),
-              if (shouldFillHeight)
-                Flexible(fit: FlexFit.loose, child: grid)
-              else
-                grid,
+              if (shouldFillHeight) Expanded(child: grid) else grid,
             ],
           ),
         );
@@ -644,17 +678,27 @@ class _DraggableMonthGrid extends StatelessWidget {
     _MonthGridModel model,
     BoxConstraints constraints,
     double width,
+    double textScale,
   ) {
-    final cellWidth = width / model.columnCount;
-    final preferredCellHeight = _monthCellHeightForWidth(
-      cellWidth,
-      compact: compact,
+    final cellWidth = math.max(
+      1.0,
+      (width - (model.columnCount - 1) * _monthGridSpacing) / model.columnCount,
+    );
+    // In an unbounded phone list, expand the whole month rather than creating
+    // a second vertical scroller inside it. Use the same font and lunar-label
+    // budget as the date grid so the final week remains reachable.
+    final preferredCellHeight = math.max(
+      _monthCellHeightForWidth(cellWidth, compact: compact) * textScale,
+      _monthMinimumCellHeight(
+        textScale,
+        showLunarCalendar: provider.generalShowLunarCalendar,
+      ),
     );
     final totalSpacing = (model.rowCount - 1) * _monthGridSpacing;
     final preferredGridHeight =
         model.rowCount * preferredCellHeight + totalSpacing;
     if (constraints.hasBoundedHeight && constraints.maxHeight.isFinite) {
-      return math.min(preferredGridHeight, constraints.maxHeight);
+      return constraints.maxHeight;
     }
     return preferredGridHeight;
   }
@@ -699,7 +743,11 @@ class _DraggableMonthGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = math.max(1.0, constraints.maxWidth);
-        final height = _gridHeight(model, constraints, width);
+        final textScale = math.max(
+          1.0,
+          MediaQuery.textScalerOf(context).scale(14) / 14,
+        );
+        final height = _gridHeight(model, constraints, width, textScale);
         final showPreviousPage = dragOffset > 0;
         final showNextPage = dragOffset < 0;
 
@@ -777,22 +825,36 @@ class _MonthDateGrid extends StatelessWidget {
       builder: (context, constraints) {
         final boundedHeight =
             constraints.hasBoundedHeight && constraints.maxHeight.isFinite;
-        final cellWidth = constraints.maxWidth / model.columnCount;
-        final preferredHeight = _monthCellHeightForWidth(
-          cellWidth,
-          compact: compact,
+        final cellWidth = math.max(
+          1.0,
+          (constraints.maxWidth - (model.columnCount - 1) * _monthGridSpacing) /
+              model.columnCount,
         );
+        final textScale = math.max(
+          1.0,
+          MediaQuery.textScalerOf(context).scale(14) / 14,
+        );
+        final preferredHeight =
+            _monthCellHeightForWidth(cellWidth, compact: compact) * textScale;
         final totalSpacing = (model.rowCount - 1) * _monthGridSpacing;
         final preferredGridHeight =
             model.rowCount * preferredHeight + totalSpacing;
-        final height = boundedHeight
-            ? math.min(preferredGridHeight, constraints.maxHeight)
-            : preferredGridHeight;
-        final targetHeight = math.max(
-          1.0,
-          (height - totalSpacing) / model.rowCount,
+        final minimumCellHeight = _monthMinimumCellHeight(
+          textScale,
+          showLunarCalendar: provider.generalShowLunarCalendar,
         );
-        final gridCompact = compact || targetHeight < 64;
+        final minimumGridHeight =
+            model.rowCount * minimumCellHeight + totalSpacing;
+        final height = boundedHeight
+            ? constraints.maxHeight
+            : math.max(preferredGridHeight, minimumGridHeight);
+        final contentHeight = math.max(
+          height,
+          model.rowCount * minimumCellHeight + totalSpacing,
+        );
+        final targetHeight = (contentHeight - totalSpacing) / model.rowCount;
+        final viewportCellHeight = (height - totalSpacing) / model.rowCount;
+        final gridCompact = compact || viewportCellHeight < 64;
 
         return SizedBox(
           key: ValueKey(
@@ -800,7 +862,9 @@ class _MonthDateGrid extends StatelessWidget {
           ),
           height: height,
           child: GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
+            physics: contentHeight > height + 1
+                ? const ClampingScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: model.columnCount,
               mainAxisSpacing: _monthGridSpacing,
@@ -1023,14 +1087,19 @@ class _MonthDayCell extends StatelessWidget {
       34.0,
       math.min(math.min(cellWidth, cellHeight) - 4, 56.0),
     );
-    final compactButtonSize = hasEventMarker
-        ? math.max(28.0, compactTileSize - 10)
-        : compactTileSize;
+    final compactButtonSize = compactTileSize;
+    final compactScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final compactButtonHeight = math.max(
+      compactTileSize,
+      14 * compactScale +
+          (showLunarCalendar ? 11 * compactScale * 1.6 + 1 : 0) +
+          8,
+    );
     final compactDateStyle = theme.textTheme.titleLarge?.copyWith(
       height: 1.0,
       color: compactTextColor,
       fontWeight: FontWeight.w700,
-      fontSize: math.max(15.0, math.min(22.0, compactButtonSize * 0.48)),
+      fontSize: 14,
     );
     final compactLunarWidget = showLunarCalendar
         ? _LunarDateLabel(
@@ -1066,15 +1135,24 @@ class _MonthDayCell extends StatelessWidget {
         ),
       ),
     );
+    final dateScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final dateDimension = math.max(
+      28.0,
+      (theme.textTheme.titleMedium?.fontSize ?? 16) * dateScale * 1.35,
+    );
+    final dateStackHeight = math.max(
+      46.0,
+      dateDimension + (showLunarCalendar ? 11 * dateScale * 1.6 + 1 : 0) + 4,
+    );
     final standardDateContent = SizedBox(
       width: double.infinity,
-      height: 46,
+      height: dateStackHeight,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 28,
+            width: dateDimension,
             height: 27,
             alignment: Alignment.center,
             decoration: BoxDecoration(
@@ -1104,6 +1182,93 @@ class _MonthDayCell extends StatelessWidget {
         ],
       ),
     );
+    final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+    final showEventTitles =
+        !compact && cellWidth >= 88 && cellHeight >= 90 * textScale;
+    double lineHeight(String text, TextStyle? style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      final height = painter.height;
+      painter.dispose();
+      return height;
+    }
+
+    final eventRowHeight = math.max(
+      20.0 * textScale,
+      lineHeight('Ag', theme.textTheme.labelSmall) + 3,
+    );
+    final headerLineHeight = math.max(
+      lineHeight(date.day.toString(), theme.textTheme.titleSmall),
+      showLunarCalendar
+          ? lineHeight('节日', theme.textTheme.labelSmall?.copyWith(fontSize: 11))
+          : 0,
+    );
+    // Reserve the real font line box, the cell's padding and the overflow row.
+    // The number badge cannot consume space already budgeted for event titles.
+    final rows = math.max(
+      0,
+      ((cellHeight - 10 - headerLineHeight - 6) / eventRowHeight).floor(),
+    );
+    final titleLimit = math.min(
+      4,
+      math.max(
+        0,
+        rows - (occurrences.length > rows || occurrences.length > 4 ? 1 : 0),
+      ),
+    );
+    final detailedDate = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              '${date.day}',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: isToday ? colorScheme.primary : baseColor,
+              ),
+            ),
+            const SizedBox(width: 6),
+            if (showLunarCalendar)
+              Expanded(
+                child: _LunarDateLabel(
+                  date: date,
+                  colorScheme: colorScheme,
+                  localeCode: localeCode,
+                  enabled: true,
+                  fontSize: 11,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        for (final occurrence in occurrences.take(titleLimit))
+          SizedBox(
+            height: eventRowHeight,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                occurrence.event.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(color: baseColor),
+              ),
+            ),
+          ),
+        if (occurrences.length > titleLimit)
+          Text(
+            AppLocalizations.of(context)
+                .moreEvents(occurrences.length - titleLimit),
+            maxLines: 1,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.primary,
+            ),
+          ),
+      ],
+    );
     final standardDateStack = Center(
       child: SizedBox(
         width: double.infinity,
@@ -1130,20 +1295,22 @@ class _MonthDayCell extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
+            SizedBox(
               width: compactButtonSize,
-              height: compactButtonSize,
+              height: compactButtonHeight,
               child: Material(
                 key: isSelected
                     ? _generalMonthCompactSelectedDayFeedbackKey
                     : null,
                 color: compactButtonBackground,
-                shape: const CircleBorder(),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  customBorder: const CircleBorder(),
+                  customBorder: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                   onTap: onTap,
                   child: Padding(
                     padding: const EdgeInsets.all(2),
@@ -1208,7 +1375,7 @@ class _MonthDayCell extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(5),
-            child: standardDateStack,
+            child: showEventTitles ? detailedDate : standardDateStack,
           ),
         ),
       ),
@@ -1238,9 +1405,8 @@ class _MonthAgendaPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Material(
       color: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colorScheme.outlineVariant),
+      shape: Border.all(
+        color: colorScheme.outlineVariant.withValues(alpha: .55),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

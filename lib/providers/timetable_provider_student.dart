@@ -66,17 +66,20 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
   }
 
   Future<void> switchTimetable(String timetableId) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.switchTimetable(
       _appData.studentMode,
       timetableId,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     _selectedWeek = _currentWeekForActiveTimetable();
     await _saveAndNotify();
   }
 
   Future<void> setSelectedWeek(int week) async {
+    requireWorkspaceEnabled(AppMode.student);
     final timetable = activeTimetableOrNull;
     if (timetable == null) {
       _selectedWeek = 1;
@@ -96,6 +99,7 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
   }
 
   Future<void> updateTimetableConfig(TimetableConfig config) async {
+    requireWorkspaceEnabled(AppMode.student);
     final timetable = activeTimetableOrNull;
     if (timetable == null) {
       return;
@@ -107,6 +111,7 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     String timetableId,
     TimetableConfig config,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.updateTimetableConfig(
       _appData.studentMode,
       timetableId,
@@ -114,6 +119,7 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       fallbackPeriodTimeSet: activePeriodTimeSet,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     if (_appData.studentMode.activeTimetableId == timetableId) {
       _selectedWeek = _studentTimetableService.resolveSelectedWeek(
@@ -125,46 +131,65 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> saveCourse(CourseItem course) async {
+  // Long-lived editors must pass their original target. A removed target is
+  // an error, never permission to fall back to the currently selected table.
+  String _courseMutationTarget(String? timetableId) {
+    final target = timetableId ?? _appData.studentMode.activeTimetableId;
+    if (timetableId != null &&
+        !_appData.studentMode.timetables.any((item) => item.id == target)) {
+      throw StateError('The course target timetable no longer exists.');
+    }
+    return target;
+  }
+
+  Future<void> saveCourse(CourseItem course, {String? timetableId}) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.saveCourse(
       _appData.studentMode,
-      _appData.studentMode.activeTimetableId,
+      _courseMutationTarget(timetableId),
       course,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
 
-  Future<void> deleteCourse(String courseId) async {
+  Future<void> deleteCourse(String courseId, {String? timetableId}) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.deleteCourse(
       _appData.studentMode,
-      _appData.studentMode.activeTimetableId,
+      _courseMutationTarget(timetableId),
       courseId,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
 
   Future<void> addTimetable(TimetableConfig config) async {
+    requireWorkspaceEnabled(AppMode.student);
     final result = _studentTimetableService.addTimetable(
       _appData.studentMode,
       config,
       fallbackPeriodTimeSet:
           activePeriodTimeSetOrNull ?? _createFallbackPeriodTimeSet(),
     );
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: result.data);
     _selectedWeek = 1;
     await _saveAndNotify();
   }
 
   Future<void> deleteTimetable(String timetableId) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.deleteTimetable(
       _appData.studentMode,
       timetableId,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     _selectedWeek = _currentWeekForActiveTimetable();
     await _saveAndNotify();
@@ -174,6 +199,7 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     String? name,
     List<CoursePeriodTime>? periodTimes,
   }) async {
+    requireWorkspaceEnabled(AppMode.student);
     final defaultPeriodTimes = periodTimes == null || periodTimes.isEmpty
         ? await _loadDefaultPeriodTimes()
         : const <CoursePeriodTime>[];
@@ -184,29 +210,34 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       name: name,
       periodTimes: periodTimes,
     );
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: result.data);
     await _saveAndNotify();
     return result.periodTimeSet!;
   }
 
   Future<void> updatePeriodTimeSet(PeriodTimeSet periodTimeSet) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.updatePeriodTimeSet(
       _appData.studentMode,
       periodTimeSet,
       localeCode: _appData.localeCode,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
 
   Future<void> deletePeriodTimeSet(String periodTimeSetId) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.deletePeriodTimeSet(
       _appData.studentMode,
       periodTimeSetId,
       localeCode: _appData.localeCode,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -215,12 +246,14 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     String timetableId,
     String periodTimeSetId,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.assignPeriodTimeSetToTimetable(
       _appData.studentMode,
       timetableId,
       periodTimeSetId,
     );
     if (identical(next, _appData.studentMode)) return;
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -232,11 +265,13 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     String conflictKey,
     String courseId,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _studentTimetableService.setDisplayedCourseForConflict(
       _appData.studentMode,
       conflictKey,
       courseId,
     );
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }

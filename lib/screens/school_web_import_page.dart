@@ -1,3 +1,7 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+import '../models/app_mode.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -119,7 +123,17 @@ class SchoolWebImportPage extends StatefulWidget {
   State<SchoolWebImportPage> createState() => _SchoolWebImportPageState();
 }
 
-class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
+class _SchoolWebImportPageState extends State<SchoolWebImportPage>
+    with WorkspaceRouteLifecycle<SchoolWebImportPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+  @override
+  void workspaceDisabled() {
+    for (final pane in _panes) {
+      pane.dispose();
+    }
+  }
+
   /// Releases a missing native load-start acknowledgement after a command.
   ///
   /// This only keeps the callback bookkeeping bounded. It never controls a
@@ -184,6 +198,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<TimetableProvider?>();
     final isConfigured = isSchoolImportParserConfigured(provider);
@@ -196,7 +211,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
+        appBar: WorkbenchAppBar(
           automaticallyImplyLeading: false,
           leading: schoolWebImportShowsCloseButton()
               ? SizedBox(

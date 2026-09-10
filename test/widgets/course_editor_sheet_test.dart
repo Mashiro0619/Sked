@@ -552,7 +552,7 @@ void main() {
     final section = find.byKey(const ValueKey('course-reminder-section'));
     expect(section, findsOneWidget);
     await tester.ensureVisible(section);
-    await tester.tap(section);
+    await tester.tap(find.byKey(const ValueKey('course-reminder-behavior')));
     await tester.pumpAndSettle();
 
     expect(
@@ -562,6 +562,8 @@ void main() {
     final disabled = find.text('No reminder');
     await tester.ensureVisible(disabled);
     await tester.tap(disabled);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('course-reminder-behavior')));
     await tester.pumpAndSettle();
     final custom = find.text('Custom').last;
     await tester.ensureVisible(custom);

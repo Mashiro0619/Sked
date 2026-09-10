@@ -1,3 +1,6 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
@@ -49,7 +52,12 @@ class PeriodTimesPage extends StatefulWidget {
 }
 
 class _PeriodTimesPageState extends State<PeriodTimesPage>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, WorkspaceRouteLifecycle<PeriodTimesPage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+  @override
+  Future<bool> prepareWorkspaceDisable() => _flushPendingAutoSave();
+
   static const _autoSaveDelay = Duration(milliseconds: 400);
 
   late final TextEditingController _nameController;
@@ -129,13 +137,14 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final page = Scaffold(
-      appBar: AppBar(
+      appBar: WorkbenchAppBar(
         title: Text(l10n.periodTimesTitle),
         actions: [
           IconButton(
@@ -216,11 +225,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         final textScale = MediaQuery.textScalerOf(context).scale(1);
         final availableWidth = (constraints.maxWidth - horizontalPadding * 2)
             .clamp(0.0, double.infinity);
-        final useTwoColumns =
+        final useTableRows =
             constraints.maxWidth >= 840 &&
             textScale <= 1.3 &&
             (availableWidth - 12) / 2 >= 360;
-        final maxContentWidth = useTwoColumns ? 1120.0 : 720.0;
+        final maxContentWidth = useTableRows ? 960.0 : 720.0;
 
         return ScrollConfiguration(
           behavior: const MaterialScrollBehavior().copyWith(
@@ -267,9 +276,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
                         const SizedBox(height: 12),
                         LayoutBuilder(
                           builder: (context, gridConstraints) {
-                            final cardWidth = useTwoColumns
-                                ? (gridConstraints.maxWidth - 12) / 2
-                                : gridConstraints.maxWidth;
+                            final cardWidth = gridConstraints.maxWidth;
                             return Wrap(
                               key: const ValueKey('period-times-editor-grid'),
                               spacing: 12,
@@ -285,7 +292,9 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
                                       'period-card-${_periodTimes[index].index}',
                                     ),
                                     width: cardWidth,
-                                    child: _buildPeriodCard(index),
+                                    child: useTableRows
+                                        ? _buildPeriodRow(index)
+                                        : _buildPeriodCard(index),
                                   ),
                               ],
                             );
@@ -309,6 +318,76 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPeriodRow(int index) {
+    final l = AppLocalizations.of(context);
+    final period = _periodTimes[index];
+    final duration = period.endMinutes - period.startMinutes;
+    final gap = index == 0
+        ? null
+        : period.startMinutes - _periodTimes[index - 1].endMinutes;
+    final invalid = duration <= 0 || (gap != null && gap < 0);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 80,
+              child: Text(
+                l.periodNumberLabel(period.index),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: _PeriodTimeRange(
+                startLabel: l.startTime,
+                startValue: formatMinutes(period.startMinutes),
+                endLabel: l.endTime,
+                endValue: formatMinutes(period.endMinutes),
+                enabled: !_timePickerOpen,
+                onPickStart: () => _pickPeriodTime(index, isStart: true),
+                onPickEnd: () => _pickPeriodTime(index, isStart: false),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                invalid
+                    ? (duration <= 0
+                          ? l.endTimeMustBeLater
+                          : l.periodOverlapPrevious)
+                    : [
+                        l.durationMinutes(duration),
+                        if (gap != null) l.gapFromPrevious(gap),
+                      ].join('\n'),
+                style: TextStyle(
+                  color: invalid
+                      ? Theme.of(context).colorScheme.error
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: l.deleteThisPeriod,
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _periodTimes.length > 1
+                  ? () => _removePeriod(index)
+                  : null,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

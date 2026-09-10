@@ -638,7 +638,7 @@
   "@permissionSettingsExportMessage": {},
   "privacyPolicyTitle": "隱私政策",
   "@privacyPolicyTitle": {},
-  "privacyPolicyEntryDesc": "了解應用如何處理本機儲存、學校站點設定、檔案匯入匯出、課表文字 / HTML 解析和外部連結。",
+  "privacyPolicyEntryDesc": "了解本機資料、匯入匯出、選用網路請求與外部連結的處理方式。",
   "@privacyPolicyEntryDesc": {},
   "privacyPolicyAcceptedVersionLabel": "已同意版本：{version}",
   "@privacyPolicyAcceptedVersionLabel": {
@@ -713,8 +713,12 @@
   "schoolSitesImportPreviewSummary": "{validCount} 個有效站點，{invalidCount} 個無效項目。",
   "@schoolSitesImportPreviewSummary": {
     "placeholders": {
-      "validCount": {"type": "int"},
-      "invalidCount": {"type": "int"}
+      "validCount": {
+        "type": "int"
+      },
+      "invalidCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportEmptyPreview": "檔案中的學校站點清單為空。",
@@ -722,7 +726,9 @@
   "schoolSitesImportInvalidEntry": "第 {position} 項無效，將在匯入時略過。",
   "@schoolSitesImportInvalidEntry": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesImportMerge": "合併",
@@ -734,8 +740,12 @@
   "schoolSitesImportReplaceConfirmMessage": "此操作會移除目前 {currentCount} 個站點，並儲存匯入的 {importedCount} 個站點，且無法復原。",
   "@schoolSitesImportReplaceConfirmMessage": {
     "placeholders": {
-      "currentCount": {"type": "int"},
-      "importedCount": {"type": "int"}
+      "currentCount": {
+        "type": "int"
+      },
+      "importedCount": {
+        "type": "int"
+      }
     }
   },
   "schoolSitesRecoveryCorruptTitle": "學校站點資料需要復原",
@@ -872,9 +882,9 @@
   "@schoolWebImportEmptyPage": {},
   "schoolWebImportSuccess": "網頁課表已匯入",
   "@schoolWebImportSuccess": {},
-  "schoolImportParserSettingsTitle": "AI API 設定",
+  "schoolImportParserSettingsTitle": "課表解析 API",
   "@schoolImportParserSettingsTitle": {},
-  "schoolImportParserSettingsDesc": "設定課表解析及其他 AI 功能使用的 OpenAI 相容介面。",
+  "schoolImportParserSettingsDesc": "設定課表匯入使用的 OpenAI 相容介面；這不是對話助理設定。",
   "@schoolImportParserSettingsDesc": {},
   "schoolImportParserSourceTitle": "解析來源",
   "@schoolImportParserSourceTitle": {},
@@ -1075,7 +1085,9 @@
   "visibleCategoryCount": "{count} 個分類",
   "@visibleCategoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "noVisibleCategories": "沒有顯示的分類",
@@ -1553,7 +1565,7 @@
   "@settingsWorkspaceMode": {},
   "hideHomeWorkspaceNavigation": "隱藏主介面工作區導覽",
   "@hideHomeWorkspaceNavigation": {},
-  "hideHomeWorkspaceNavigationDesc": "隱藏底部列、導覽軌或側邊欄；隱藏後可在設定中切換工作區。",
+  "hideHomeWorkspaceNavigationDesc": "隱藏工作區導覽；仍可透過主畫面的工作區選單切換。",
   "@hideHomeWorkspaceNavigationDesc": {},
   "generalDateLabelFormat": "日期顯示格式",
   "@generalDateLabelFormat": {},
@@ -1688,8 +1700,12 @@
   "developerNotificationDirectCapacitySummary": "已直接安排 {scheduled} 則 / 容量 {capacity} 則",
   "@developerNotificationDirectCapacitySummary": {
     "placeholders": {
-      "scheduled": {"type": "int"},
-      "capacity": {"type": "int"}
+      "scheduled": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationPlanSummary": "已排程 {scheduled} 則，計畫 {planned} 則",
@@ -1768,13 +1784,21 @@
   "developerNotificationPlatformState": "{pending} 條待處理 / {active} 條顯示中",
   "@developerNotificationPlatformState": {
     "placeholders": {
-      "pending": {"type": "int"},
-      "active": {"type": "int"}
+      "pending": {
+        "type": "int"
+      },
+      "active": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationNativeLastPosted": "原生最近顯示於 {time}",
   "@developerNotificationNativeLastPosted": {
-    "placeholders": {"time": {"type": "String"}}
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "developerNotificationNoDiagnostic": "尚無重算記錄。",
   "@developerNotificationNoDiagnostic": {},
@@ -1807,7 +1831,9 @@
   "developerNotificationLateRecoveryCount": "有 {count} 則提醒在原定時間後被恢復投遞",
   "@developerNotificationLateRecoveryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "developerNotificationReconciliationSummary": "{origin} · {mode} · {result} · {time}",
@@ -1938,14 +1964,16 @@
   "notificationCoverageCapacityLimited": "Android 最多可直接安排 {capacity} 則提醒；後續提醒會提前嘗試續排。",
   "@notificationCoverageCapacityLimited": {
     "placeholders": {
-      "capacity": {"type": "int"}
+      "capacity": {
+        "type": "int"
+      }
     }
   },
   "notificationSettingsEnabled": "啟用提醒與通知",
   "@notificationSettingsEnabled": {},
   "notificationSettingsEnabledHint": "僅為已設定提醒的項目安排通知。繼承課程需在下方設定課程預設提醒。",
   "@notificationSettingsEnabledHint": {},
-  "notificationPrecisionLimitations": "Android 無法提供數學意義上的絕對精準。裝置關機、系統時間修改、系統崩潰或廠商韌體背景限制仍可能導致投遞延遲。",
+  "notificationPrecisionLimitations": "提醒受系統權限與背景執行限制影響；關機、時間變更或系統限制可能導致延遲。",
   "@notificationPrecisionLimitations": {},
   "notificationSettingsEnabledSummary": "已啟用",
   "@notificationSettingsEnabledSummary": {},
@@ -2026,5 +2054,43 @@
   "notificationWidgetsRefreshed": "小工具已重新整理",
   "@notificationWidgetsRefreshed": {},
   "notificationPlatformUnsupported": "目前平台不提供原生通知。",
-  "@notificationPlatformUnsupported": {}
+  "@notificationPlatformUnsupported": {},
+  "workspaceFeatures": "功能管理",
+  "workspaceBoth": "課表與日程",
+  "workspaceOnlyStudent": "僅課表",
+  "workspaceOnlyGeneral": "僅日程",
+  "workspaceDisableTitle": "停用此工作區？",
+  "workspaceDisableMessage": "資料與設定會保留。相關功能和提醒將停止，可隨時在此重新啟用。",
+  "workspaceEnableHint": "只啟用你需要的功能，至少保留一個。",
+  "workspaceLastRequired": "至少需要保留一個工作區。",
+  "workspaceReminderCleanupFailed": "工作區已停用，但提醒清理未完成，請重試通知復原。",
+  "settingsSearch": "搜尋設定",
+  "settingsNoResults": "沒有符合的設定",
+  "settingsDataPrivacy": "資料與隱私",
+  "workspacePreferences": "顯示與互動",
+  "workspaceManage": "管理",
+  "selectedDayAgenda": "當日安排",
+  "notificationTroubleshooting": "權限與疑難排解",
+  "settingsConnection": "連線資訊",
+  "settingsAdvanced": "進階",
+  "unsavedChangesMessage": "還有未儲存的變更，要放棄並離開嗎？",
+  "backupWorkspaceSelection": "完整備份包含資料和工作區啟用選擇。",
+  "assistantLayoutPreview": "AI · 版面預覽",
+  "assistantSelectionContext": "使用目前選取項目作為情境",
+  "assistantPreviewDescription": "在這裡對話並處理目前工作區。此預覽僅示範版面，尚未接入 AI。",
+  "assistantDraftLabel": "訊息草稿",
+  "assistantPreviewNoSend": "僅版面預覽，不會傳送訊息或修改資料。",
+  "resizePanel": "調整面板寬度",
+  "minimizeWindow": "最小化",
+  "maximizeWindow": "最大化",
+  "restoreWindow": "還原視窗",
+  "closeWindow": "關閉視窗",
+  "courseSystemReminder": "系統提醒",
+  "courseReminderInherit": "跟隨預設（{reminder}）",
+  "courseReminderMasterOff": "通知總開關已關閉，仍可儲存此課程的提醒設定。",
+  "courseReminderDefaultOff": "尚未設定課程預設提醒。可為此課程自訂，或前往通知設定配置預設值。",
+  "courseReminderDeliveryHint": "此設定隨課程儲存；能否送達仍取決於系統通知權限及背景限制。",
+  "courseReminderPermissionUnknown": "尚未確認系統通知狀態。請在通知設定中檢查權限。",
+  "courseReminderMinutesLabel": "課前提醒分鐘數",
+  "exportAction": "匯出"
 }

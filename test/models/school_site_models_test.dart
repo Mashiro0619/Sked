@@ -117,7 +117,7 @@ void main() {
     });
 
     test('does not use the AppData schema version for school-site storage', () {
-      expect(appDataCurrentSchemaVersion, 2);
+      expect(appDataCurrentSchemaVersion, 3);
       expect(schoolSiteStorageVersion, 1);
       final source =
           '''

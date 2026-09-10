@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'ui_command.dart';
+import 'workspace_frame.dart';
 
 const double appSheetWidthCompact = 560;
 const double appSheetWidthMedium = 680;
@@ -17,7 +18,16 @@ Future<T?> showAppModalSheet<T>({
   bool useRootNavigator = false,
   bool useSafeArea = false,
   RouteSettings? routeSettings,
+  WorkspacePaneController? workspacePane,
+  String? selectionId,
 }) {
+  if (workspacePane != null) {
+    return workspacePane.show<T>(
+      builder,
+      selectionId: selectionId,
+      dismissOnCanvasTap: isDismissible,
+    );
+  }
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
@@ -68,13 +78,15 @@ class AppSheetScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
+    final inTaskPane = WorkspaceTaskScope.contains(context);
     final body = SafeArea(
       top: false,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: inTaskPane ? MainAxisSize.max : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Flexible(
+            fit: inTaskPane ? FlexFit.tight : FlexFit.loose,
             child: SingleChildScrollView(
               padding: contentPadding,
               child: Column(
@@ -106,7 +118,14 @@ class AppSheetScaffold extends StatelessWidget {
           Padding(
             padding:
                 actionPadding ??
-                EdgeInsets.fromLTRB(16, 8, 16, viewInsets.bottom + 16),
+                // The hosting Scaffold already removes the IME from a task
+                // pane's constraints. Only modal sheets need a second inset.
+                EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  (inTaskPane ? 0 : viewInsets.bottom) + 16,
+                ),
             child:
                 footer ?? _AppSheetActions(leading: leading, actions: actions),
           ),
@@ -114,7 +133,7 @@ class AppSheetScaffold extends StatelessWidget {
       ),
     );
 
-    if (heightFactor == null) {
+    if (inTaskPane || heightFactor == null) {
       return body;
     }
     return FractionallySizedBox(heightFactor: heightFactor, child: body);

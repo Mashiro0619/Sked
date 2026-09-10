@@ -1382,6 +1382,29 @@ void main() {
       });
     }
 
+    test(
+      'caller cancellation aborts a model request without waiting for timeout',
+      () async {
+        final client = _AbortObservingClient();
+        final cancel = Completer<void>();
+        final api = SchoolImportApi(
+          client: client,
+          requestTimeout: const Duration(minutes: 1),
+        );
+        final result = expectLater(
+          api.fetchCustomModels(
+            baseUrl: 'https://api.example.test/v1',
+            apiKey: 'test-secret',
+            abortTrigger: cancel.future,
+          ),
+          throwsFormatException,
+        );
+        cancel.complete();
+        await client.aborted.future.timeout(const Duration(seconds: 1));
+        await result;
+      },
+    );
+
     test('request timeout aborts the underlying sensitive request', () async {
       final client = _AbortObservingClient();
       final api = SchoolImportApi(

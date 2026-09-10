@@ -1,3 +1,8 @@
+import '../widgets/desktop_window_host.dart';
+import '../widgets/adaptive_form_columns.dart';
+import '../widgets/school_import_summary_preview.dart';
+import '../widgets/workspace_route_lifecycle.dart';
+
 import 'dart:async';
 
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -82,7 +87,15 @@ class SchoolImportParsePage extends StatefulWidget {
   State<SchoolImportParsePage> createState() => _SchoolImportParsePageState();
 }
 
-class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
+class _SchoolImportParsePageState extends State<SchoolImportParsePage>
+    with WorkspaceRouteLifecycle<SchoolImportParsePage> {
+  @override
+  AppMode get routeWorkspace => AppMode.student;
+  @override
+  void workspaceDisabled() {
+    unawaited(_cancelSubscription());
+  }
+
   static const _followResumeTolerance = 1.0;
 
   final _textBuffer = StringBuffer();
@@ -207,7 +220,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     }
     setState(() {});
     if (_isDone && shouldAlignDone) {
-      _alignDoneContentToBottom();
+      _alignCompletedContent();
     } else {
       _scrollToBottom();
     }
@@ -347,7 +360,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
     var retriesRemaining = 8;
 
     void settle(Duration _) {
-      if (!mounted || !_scrollController.hasClients || !_followOutput) {
+      if (!mounted ||
+          (_isDone && _hasDirectImportConfiguration) ||
+          !_scrollController.hasClients ||
+          !_followOutput) {
         return;
       }
       final position = _scrollController.position;
@@ -372,7 +388,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
   /// the switcher and footer have laid out. A few frames are enough for both
   /// the normal route and reduced-motion transitions without disturbing users
   /// who intentionally scrolled away from the end.
-  void _alignDoneContentToBottom() {
+  void _alignCompletedContent() {
     var framesRemaining = 24;
 
     void align(_) {
@@ -383,7 +399,11 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
         return;
       }
       final position = _scrollController.position;
-      final target = position.maxScrollExtent;
+      // The structured review starts with editable semester metadata. Pinning
+      // its bottom (the old transcript behavior) hides that first step on phones.
+      final target = _hasDirectImportConfiguration
+          ? position.minScrollExtent
+          : position.maxScrollExtent;
       if ((position.pixels - target).abs() > _followResumeTolerance) {
         try {
           position.jumpTo(target);
@@ -643,6 +663,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
@@ -653,7 +674,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
       },
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        appBar: AppBar(
+        appBar: WorkbenchAppBar(
           title: Text(l10n.schoolImportParsePageTitle),
           leading: IconButton(
             tooltip: l10n.cancel,
@@ -672,30 +693,37 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
                     controller: _scrollController,
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                     children: [
-                      ExpressiveSwitcher(
-                        child: KeyedSubtree(
-                          key: ValueKey(
-                            _error != null
-                                ? 'error'
+                      AdaptiveFormColumns(
+                        secondaryWidth: 380,
+                        primary: ExpressiveSwitcher(
+                          child: KeyedSubtree(
+                            key: ValueKey(
+                              _error != null
+                                  ? 'error'
+                                  : _isDone
+                                  ? 'done'
+                                  : 'parsing',
+                            ),
+                            child: _error != null
+                                ? _buildErrorState(context, l10n)
                                 : _isDone
-                                ? 'done'
-                                : 'parsing',
+                                ? _buildDoneState(context, l10n)
+                                : _buildParsingState(context, l10n),
                           ),
-                          child: _error != null
-                              ? _buildErrorState(context, l10n)
-                              : _isDone
-                              ? _buildDoneState(context, l10n)
-                              : _buildParsingState(context, l10n),
                         ),
+                        secondary: _isDone && _response != null
+                            ? LayoutBuilder(
+                                builder: (context, constraints) =>
+                                    constraints.maxWidth < 500
+                                    ? SchoolImportSummaryPreview(
+                                        response: _response!,
+                                      )
+                                    : const SizedBox.shrink(),
+                              )
+                            : (_error == null || _previewText.isNotEmpty)
+                            ? _buildRawPreview(context, l10n)
+                            : null,
                       ),
-                      if (_error == null && !_isDone) ...[
-                        const SizedBox(height: 16),
-                        _buildRawPreview(context, l10n),
-                      ],
-                      if (_error != null && _previewText.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _buildRawPreview(context, l10n),
-                      ],
                     ],
                   ),
                 ),
@@ -1107,7 +1135,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage> {
               ),
             ),
           ),
-          AnimatedSize(
+          SkedAnimatedSize(
             duration: duration,
             curve: motion.scheme.enterCurve,
             alignment: Alignment.topCenter,

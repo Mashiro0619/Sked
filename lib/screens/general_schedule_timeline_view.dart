@@ -185,42 +185,60 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification.metrics is PageMetrics) {
-          if (notification.depth == 0 &&
-              notification is ScrollStartNotification &&
-              notification.dragDetails != null) {
-            _pageScrolling = true;
-          } else if (_pageScrolling && notification is ScrollEndNotification) {
-            _handlePageSettled(notification);
-          }
-        }
-        return false;
-      },
-      child: PageView.builder(
-        key: _generalWeekPagerKey,
-        controller: _controller,
-        physics: widget.active
-            ? const PageScrollPhysics()
-            : const NeverScrollableScrollPhysics(),
-        itemBuilder: (context, index) {
-          final weekStart = _weekStartForPage(index);
-          return _WeekTimelinePage(
-            weekStart: weekStart,
-            selectedDate: addCalendarDays(weekStart, _selectedWeekdayOffset()),
-            provider: widget.provider,
-            filter: widget.filter,
-            onEmptySlotTap: widget.onEmptySlotTap,
-            onOccurrenceTap: widget.onOccurrenceTap,
-            onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
-            onAllDayCollapsedGroupTap: widget.onAllDayCollapsedGroupTap,
-            allDayTimelineCollapsed: widget.allDayTimelineCollapsed,
-            onAllDayTimelineCollapsedChanged:
-                widget.onAllDayTimelineCollapsedChanged,
-          );
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) =>
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics is PageMetrics) {
+                if (notification.depth == 0 &&
+                    notification is ScrollStartNotification &&
+                    notification.dragDetails != null) {
+                  _pageScrolling = true;
+                } else if (_pageScrolling &&
+                    notification is ScrollEndNotification) {
+                  _handlePageSettled(notification);
+                }
+              }
+              return false;
+            },
+            child: PageView.builder(
+              key: _generalWeekPagerKey,
+              controller: _controller,
+              physics:
+                  widget.active &&
+                      constraints.maxWidth >=
+                          (64 +
+                                  (widget.provider.generalShowWeekends
+                                          ? 7
+                                          : 5) *
+                                      96) *
+                              WorkbenchLayoutPolicy.textFactor(
+                                MediaQuery.textScalerOf(context).scale(14) / 14,
+                              )
+                  ? const PageScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                final weekStart = _weekStartForPage(index);
+                return _WeekTimelinePage(
+                  weekStart: weekStart,
+                  selectedDate: addCalendarDays(
+                    weekStart,
+                    _selectedWeekdayOffset(),
+                  ),
+                  provider: widget.provider,
+                  filter: widget.filter,
+                  onDaySelected: widget.onDaySelected,
+                  onEmptySlotTap: widget.onEmptySlotTap,
+                  onOccurrenceTap: widget.onOccurrenceTap,
+                  onMoreOccurrencesTap: widget.onMoreOccurrencesTap,
+                  onAllDayCollapsedGroupTap: widget.onAllDayCollapsedGroupTap,
+                  allDayTimelineCollapsed: widget.allDayTimelineCollapsed,
+                  onAllDayTimelineCollapsedChanged:
+                      widget.onAllDayTimelineCollapsedChanged,
+                );
+              },
+            ),
+          ),
     );
   }
 }
@@ -229,6 +247,7 @@ class _WeekTimelinePage extends StatelessWidget {
   const _WeekTimelinePage({
     required this.weekStart,
     required this.selectedDate,
+    required this.onDaySelected,
     required this.provider,
     required this.filter,
     required this.onEmptySlotTap,
@@ -241,6 +260,7 @@ class _WeekTimelinePage extends StatelessWidget {
 
   final DateTime weekStart;
   final DateTime selectedDate;
+  final ValueChanged<DateTime> onDaySelected;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final ValueChanged<DateTime>? onEmptySlotTap;
@@ -268,6 +288,7 @@ class _WeekTimelinePage extends StatelessWidget {
       gridMinutes: provider.generalTimeGridMinutes,
       hourHeight: provider.generalTimeGridHourHeight.toDouble(),
       showHeader: true,
+      onDaySelected: onDaySelected,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
       onMoreOccurrencesTap: onMoreOccurrencesTap,
@@ -783,7 +804,11 @@ class _DayWeekPicker extends StatelessWidget {
           selectedDayPageFallback,
         );
         return Container(
-          height: 66,
+          height:
+              66 *
+              WorkbenchLayoutPolicy.textFactor(
+                MediaQuery.textScalerOf(context).scale(14) / 14,
+              ),
           decoration: BoxDecoration(
             color: colorScheme.surface,
             border: Border(
@@ -889,8 +914,8 @@ class _DayWeekPickerRow extends StatelessWidget {
                         ? _generalDayPickerSelectionIndicatorKey
                         : null,
                     decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      color: colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                 ),
@@ -941,63 +966,16 @@ class _DayPickerItem extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-
   final DateTime date;
   final bool selected;
   final VoidCallback onTap;
-
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isToday = _sameDay(date, DateTime.now());
-    final background = selected
-        ? colorScheme.primary.withValues(alpha: 0.20)
-        : isToday
-        ? colorScheme.primary.withValues(alpha: 0.14)
-        : Colors.transparent;
-    final foreground = selected
-        ? colorScheme.primary
-        : isToday
-        ? colorScheme.primary
-        : colorScheme.onSurface;
-    return Material(
-      color: background,
-      borderRadius: BorderRadius.circular(8),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _weekdayLabel(context, date),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  date.day.toString(),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: foreground,
-                    fontWeight: selected || isToday
-                        ? FontWeight.w800
-                        : FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _DayHeader(
+    date: date,
+    width: double.infinity,
+    selected: selected,
+    onTap: onTap,
+  );
 }
 
 class _CalendarTimeline extends StatelessWidget {
@@ -1010,6 +988,7 @@ class _CalendarTimeline extends StatelessWidget {
     required this.gridMinutes,
     required this.hourHeight,
     required this.showHeader,
+    this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
     required this.onMoreOccurrencesTap,
@@ -1018,7 +997,6 @@ class _CalendarTimeline extends StatelessWidget {
     required this.onAllDayTimelineCollapsedChanged,
   });
 
-  static const double _headerHeight = 56;
   static const double _timeLabelVerticalPadding = 12;
 
   final List<DateTime> days;
@@ -1029,6 +1007,7 @@ class _CalendarTimeline extends StatelessWidget {
   final int gridMinutes;
   final double hourHeight;
   final bool showHeader;
+  final ValueChanged<DateTime>? onDaySelected;
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
@@ -1044,12 +1023,18 @@ class _CalendarTimeline extends StatelessWidget {
     }
     final startMinutes = startHour * 60;
     final endMinutes = endHour * 60;
-    final safeHourHeight = hourHeight.clamp(
-      generalTimeGridHourHeightMin.toDouble(),
-      generalTimeGridHourHeightMax.toDouble(),
+    final textFactor = WorkbenchLayoutPolicy.textFactor(
+      MediaQuery.textScalerOf(context).scale(14) / 14,
     );
+    final safeHourHeight =
+        hourHeight.clamp(
+          generalTimeGridHourHeightMin.toDouble(),
+          generalTimeGridHourHeightMax.toDouble(),
+        ) *
+        textFactor;
+    final labelPadding = _timeLabelVerticalPadding * textFactor;
     final gridHeight = math.max(1, endHour - startHour) * safeHourHeight;
-    final contentHeight = gridHeight + _timeLabelVerticalPadding * 2;
+    final contentHeight = gridHeight + labelPadding * 2;
     final minuteHeight = safeHourHeight / 60;
     final occurrenceIndex = _TimelineOccurrenceIndex.build(occurrences, days);
     final allDayLayout = _AllDayTimelineLayout.build(
@@ -1061,232 +1046,228 @@ class _CalendarTimeline extends StatelessWidget {
     final canCollapseAllDay = allDayCount > 1;
     final isAllDayCollapsed = canCollapseAllDay && allDayTimelineCollapsed;
     final motion = SkedMotionPolicy.of(context);
-    final allDayTransitionDuration = motion.animationsEnabled
-        ? motion.effects(SkedMotionSpeed.standard)
-        : Duration.zero;
-    final allDaySizeTransitionDuration = motion.spatialAnimationsEnabled
-        ? allDayTransitionDuration
-        : Duration.zero;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final metrics = _TimelineMetrics.fromWidth(
-          constraints.maxWidth,
+          math.max(constraints.maxWidth, (64 + days.length * 96) * textFactor),
           dayCount: days.length,
+          timeColumnWidth: 64 * textFactor,
         );
 
-        return SizedBox(
-          width: metrics.totalWidth,
-          child: Column(
-            children: [
-              if (showHeader)
-                SizedBox(
-                  height: _headerHeight,
-                  child: Row(
-                    children: [
-                      _MonthRail(date: selectedDate),
-                      for (final day in days)
-                        _DayHeader(
-                          date: day,
-                          width: metrics.dayWidth,
-                          selected: false,
-                          onTap: null,
+        return _CalendarHorizontalViewport(
+          viewportWidth: constraints.maxWidth,
+          contentWidth: metrics.totalWidth,
+          child: SizedBox(
+            width: metrics.totalWidth,
+            child: Column(
+              children: [
+                if (showHeader)
+                  SizedBox(
+                    height:
+                        (WorkbenchChromeMetrics.of(context).desktop ? 60 : 68) *
+                        textFactor,
+                    child: Row(
+                      children: [
+                        _MonthRail(
+                          date: selectedDate,
+                          width: metrics.timeColumnWidth,
                         ),
-                    ],
+                        for (final day in days)
+                          _DayHeader(
+                            date: day,
+                            width: metrics.dayWidth,
+                            selected: _sameDay(day, selectedDate),
+                            onTap: onDaySelected == null
+                                ? null
+                                : () => onDaySelected!(day),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              if (hasAllDayOccurrences)
-                AnimatedSize(
-                  key: const ValueKey('general-all-day-transition'),
-                  alignment: Alignment.topCenter,
-                  duration: allDaySizeTransitionDuration,
-                  curve: isAllDayCollapsed
-                      ? motion.scheme.exitCurve
-                      : motion.scheme.enterCurve,
-                  clipBehavior: Clip.hardEdge,
-                  child: AnimatedSwitcher(
-                    duration: allDayTransitionDuration,
-                    reverseDuration: allDayTransitionDuration,
-                    switchInCurve: motion.scheme.enterCurve,
-                    switchOutCurve: motion.scheme.exitCurve,
-                    layoutBuilder: (currentChild, previousChildren) {
-                      return Stack(
-                        alignment: Alignment.topCenter,
-                        clipBehavior: Clip.none,
-                        children: [
-                          for (final previousChild in previousChildren)
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                ignoring: true,
-                                child: ExcludeSemantics(child: previousChild),
-                              ),
-                            ),
-                          ?currentChild,
-                        ],
-                      );
-                    },
-                    transitionBuilder: (child, animation) {
-                      final curved = CurvedAnimation(
-                        parent: animation,
-                        curve: motion.scheme.enterCurve,
-                        reverseCurve: motion.scheme.exitCurve,
-                      );
-                      final faded = FadeTransition(
-                        opacity: curved,
-                        child: child,
-                      );
-                      if (motion.reduceMotion) return faded;
-                      return ScaleTransition(
-                        scale: Tween<double>(
-                          begin: 0.98,
-                          end: 1,
-                        ).animate(curved),
-                        child: faded,
-                      );
-                    },
-                    child: SizedBox(
-                      key: ValueKey(
-                        isAllDayCollapsed
-                            ? 'general-all-day-collapsed-state'
-                            : 'general-all-day-expanded-state',
+                if (hasAllDayOccurrences)
+                  SkedAnimatedSize(
+                    key: const ValueKey('general-all-day-transition'),
+                    alignment: Alignment.topCenter,
+                    duration: motion.spatialAnimationsEnabled
+                        ? motion.effects(SkedMotionSpeed.standard)
+                        : Duration.zero,
+                    child: _AllDayTimeline(
+                      timeColumnWidth: metrics.timeColumnWidth,
+                      dayWidth: metrics.dayWidth,
+                      dayCount: days.length,
+                      layout: allDayLayout,
+                      label: l10n.allDay,
+                      maxHeight: math.min(
+                        240 * textFactor,
+                        constraints.maxHeight * .38,
                       ),
-                      height: allDayLayout.heightFor(
-                        context,
-                        collapsed: isAllDayCollapsed,
-                      ),
-                      child: _AllDayTimeline(
-                        timeColumnWidth: metrics.timeColumnWidth,
-                        dayWidth: metrics.dayWidth,
-                        dayCount: days.length,
-                        layout: allDayLayout,
-                        label: l10n.allDay,
-                        collapsed: isAllDayCollapsed,
-                        canCollapse: canCollapseAllDay,
-                        onToggleCollapsed: canCollapseAllDay
-                            ? () => onAllDayTimelineCollapsedChanged(
-                                !isAllDayCollapsed,
-                              )
-                            : null,
-                        onOccurrenceTap: onOccurrenceTap,
-                        onMoreOccurrencesTap: onMoreOccurrencesTap,
-                        onCollapsedGroupTap: (group) =>
-                            onAllDayCollapsedGroupTap(
-                              group.occurrences,
-                              days[group.dayIndex],
-                            ),
+                      collapsed: isAllDayCollapsed,
+                      canCollapse: canCollapseAllDay,
+                      onToggleCollapsed: canCollapseAllDay
+                          ? () => onAllDayTimelineCollapsedChanged(
+                              !isAllDayCollapsed,
+                            )
+                          : null,
+                      onOccurrenceTap: onOccurrenceTap,
+                      onCollapsedGroupTap: (group) => onAllDayCollapsedGroupTap(
+                        group.occurrences,
+                        days[group.dayIndex],
                       ),
                     ),
                   ),
-                ),
-              if (hasAllDayOccurrences)
-                const Divider(height: 1)
-              else if (showHeader)
-                const Divider(height: 1)
-              else
-                Container(
-                  height: 1,
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  margin: EdgeInsetsDirectional.only(
-                    start: metrics.timeColumnWidth,
+                if (hasAllDayOccurrences)
+                  const Divider(height: 1)
+                else if (showHeader)
+                  const Divider(height: 1)
+                else
+                  Container(
+                    height: 1,
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    margin: EdgeInsetsDirectional.only(
+                      start: metrics.timeColumnWidth,
+                    ),
                   ),
-                ),
-              Expanded(
-                child: _TimelineVerticalScrollViewport(
-                  hourHeight: safeHourHeight,
-                  topOffset: _timeLabelVerticalPadding,
-                  child: SizedBox(
-                    height: contentHeight,
-                    child: Stack(
-                      key: const ValueKey('general-timeline-grid'),
-                      children: [
-                        _GridBackground(
-                          timeColumnWidth: metrics.timeColumnWidth,
-                          dayWidth: metrics.dayWidth,
-                          dayCount: days.length,
-                          startHour: startHour,
-                          endHour: endHour,
-                          gridMinutes: gridMinutes,
-                          hourHeight: safeHourHeight,
-                          topOffset: _timeLabelVerticalPadding,
-                        ),
-                        for (var index = 0; index < days.length; index++)
-                          PositionedDirectional(
-                            start:
-                                metrics.timeColumnWidth +
-                                index * metrics.dayWidth,
-                            top: _timeLabelVerticalPadding,
-                            width: metrics.dayWidth,
-                            height: gridHeight,
-                            child: GestureDetector(
-                              key: ValueKey(
-                                'general-timeline-empty-slot-${_dateKey(days[index])}',
-                              ),
-                              behavior: HitTestBehavior.translucent,
-                              onLongPressStart: onEmptySlotTap == null
-                                  ? null
-                                  : (details) {
-                                      final minutes =
-                                          _snapMinutes(
-                                                startMinutes +
-                                                    (details.localPosition.dy /
-                                                            minuteHeight)
-                                                        .round(),
-                                                gridMinutes,
-                                              )
-                                              .clamp(
-                                                startMinutes,
-                                                endMinutes - 15,
-                                              )
-                                              .toInt();
-                                      final day = days[index];
-                                      onEmptySlotTap!(
-                                        DateTime(
-                                          day.year,
-                                          day.month,
-                                          day.day,
-                                          minutes ~/ 60,
-                                          minutes % 60,
-                                        ),
-                                      );
-                                    },
-                            ),
+                Expanded(
+                  child: _TimelineVerticalScrollViewport(
+                    key: PageStorageKey(
+                      'timeline-position-${days.length}-${_dateKey(days.first)}',
+                    ),
+                    hourHeight: safeHourHeight,
+                    topOffset: labelPadding,
+                    child: SizedBox(
+                      height: contentHeight,
+                      child: Stack(
+                        key: const ValueKey('general-timeline-grid'),
+                        children: [
+                          _GridBackground(
+                            timeColumnWidth: metrics.timeColumnWidth,
+                            dayWidth: metrics.dayWidth,
+                            dayCount: days.length,
+                            startHour: startHour,
+                            endHour: endHour,
+                            gridMinutes: gridMinutes,
+                            hourHeight: safeHourHeight,
+                            topOffset: labelPadding,
                           ),
-                        for (var index = 0; index < days.length; index++)
-                          ..._timedOccurrenceCards(
-                            context: context,
-                            day: days[index],
-                            start:
-                                metrics.timeColumnWidth +
-                                index * metrics.dayWidth,
-                            width: metrics.dayWidth,
-                            startMinutes: startMinutes,
-                            endMinutes: endMinutes,
-                            minuteHeight: minuteHeight,
-                            topOffset: _timeLabelVerticalPadding,
-                            dayOccurrences: occurrenceIndex.timedFor(
-                              days[index],
-                            ),
-                          ),
-                        for (var index = 0; index < days.length; index++)
-                          if (_sameDay(days[index], DateTime.now()) &&
-                              _nowMinutes() >= startMinutes &&
-                              _nowMinutes() <= endMinutes)
+                          for (var index = 0; index < days.length; index++)
                             PositionedDirectional(
                               start:
                                   metrics.timeColumnWidth +
                                   index * metrics.dayWidth,
-                              top:
-                                  _timeLabelVerticalPadding +
-                                  (_nowMinutes() - startMinutes) * minuteHeight,
+                              top: labelPadding,
                               width: metrics.dayWidth,
-                              child: const _NowLine(),
+                              height: gridHeight,
+                              child: GestureDetector(
+                                key: ValueKey(
+                                  'general-timeline-empty-slot-${_dateKey(days[index])}',
+                                ),
+                                behavior: HitTestBehavior.translucent,
+                                onDoubleTapDown:
+                                    !WorkbenchLayoutPolicy.pointerLayout(
+                                          context,
+                                        ) ||
+                                        onEmptySlotTap == null
+                                    ? null
+                                    : (details) {
+                                        final minutes =
+                                            _snapMinutes(
+                                                  startMinutes +
+                                                      (details
+                                                                  .localPosition
+                                                                  .dy /
+                                                              minuteHeight)
+                                                          .round(),
+                                                  gridMinutes,
+                                                )
+                                                .clamp(
+                                                  startMinutes,
+                                                  endMinutes - 15,
+                                                )
+                                                .toInt();
+                                        onEmptySlotTap!(
+                                          DateTime(
+                                            days[index].year,
+                                            days[index].month,
+                                            days[index].day,
+                                            minutes ~/ 60,
+                                            minutes % 60,
+                                          ),
+                                        );
+                                      },
+                                onLongPressStart:
+                                    onEmptySlotTap == null ||
+                                        !context
+                                            .read<TimetableProvider>()
+                                            .enableLongPressAddEvent
+                                    ? null
+                                    : (details) {
+                                        final minutes =
+                                            _snapMinutes(
+                                                  startMinutes +
+                                                      (details
+                                                                  .localPosition
+                                                                  .dy /
+                                                              minuteHeight)
+                                                          .round(),
+                                                  gridMinutes,
+                                                )
+                                                .clamp(
+                                                  startMinutes,
+                                                  endMinutes - 15,
+                                                )
+                                                .toInt();
+                                        final day = days[index];
+                                        onEmptySlotTap!(
+                                          DateTime(
+                                            day.year,
+                                            day.month,
+                                            day.day,
+                                            minutes ~/ 60,
+                                            minutes % 60,
+                                          ),
+                                        );
+                                      },
+                              ),
                             ),
-                      ],
+                          for (var index = 0; index < days.length; index++)
+                            ..._timedOccurrenceCards(
+                              context: context,
+                              day: days[index],
+                              start:
+                                  metrics.timeColumnWidth +
+                                  index * metrics.dayWidth,
+                              width: metrics.dayWidth,
+                              startMinutes: startMinutes,
+                              endMinutes: endMinutes,
+                              minuteHeight: minuteHeight,
+                              topOffset: labelPadding,
+                              dayOccurrences: occurrenceIndex.timedFor(
+                                days[index],
+                              ),
+                            ),
+                          for (var index = 0; index < days.length; index++)
+                            if (_sameDay(days[index], DateTime.now()) &&
+                                _nowMinutes() >= startMinutes &&
+                                _nowMinutes() <= endMinutes)
+                              PositionedDirectional(
+                                start:
+                                    metrics.timeColumnWidth +
+                                    index * metrics.dayWidth,
+                                top:
+                                    labelPadding +
+                                    (_nowMinutes() - startMinutes) *
+                                        minuteHeight,
+                                width: metrics.dayWidth,
+                                child: const _NowLine(),
+                              ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1332,61 +1313,85 @@ class _CalendarTimeline extends StatelessWidget {
         ),
       );
     }
-    final layouts = _layoutTimedOccurrenceSegments(
-      _collapseCrowdedTimedOccurrenceSegments(segments),
-    );
-    for (final layout in layouts) {
-      final segmentHeight =
-          (layout.endMinutes - layout.startMinutes) * minuteHeight;
-      if (segmentHeight <= 0) {
-        continue;
+    final groups = layoutTimelineEventColumns([
+      for (final segment in segments)
+        TimelineEventSpan(
+          segment.occurrence,
+          segment.startMinutes,
+          segment.endMinutes,
+        ),
+    ]);
+    final chrome = WorkbenchChromeMetrics.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    const gap = 2.0;
+    const inset = 2.0;
+    for (final group in groups) {
+      final budget = TimelineColumnBudget.resolve(
+        width: width - inset * 2,
+        columns: group.columnCount,
+        textScale: textScale,
+        desktop: chrome.desktop,
+      );
+      final hidden = group.events
+          .where((e) => e.column >= budget.visibleColumns)
+          .toList();
+      for (final event in group.events.where(
+        (e) => e.column < budget.visibleColumns,
+      )) {
+        final span = event.span;
+        final segmentHeight = (span.end - span.start) * minuteHeight;
+        final verticalInset = math.min(1.5, segmentHeight / 4);
+        final cardHeight = segmentHeight - verticalInset * 2;
+        yield PositionedDirectional(
+          start: start + inset + event.column * (budget.columnWidth + gap),
+          top:
+              topOffset +
+              (span.start - startMinutes) * minuteHeight +
+              verticalInset,
+          width: budget.columnWidth,
+          height: cardHeight,
+          child: _OccurrenceCard(
+            occurrence: span.value,
+            dense: cardHeight < 52 * textScale,
+            narrow: budget.columnWidth < 64 * textScale,
+            compactStrip: cardHeight < 18 * textScale,
+            overlapping: group.columnCount > 1,
+            onTap: () => onOccurrenceTap(span.value),
+          ),
+        );
       }
-      final verticalInset = math.min(2.0, segmentHeight / 4);
-      // Keep the visual card inside its actual time segment. In particular,
-      // do not impose a pixel minimum that could overlap an adjacent event.
-      final cardHeight = segmentHeight - verticalInset * 2;
-      final compactStrip = cardHeight < 24;
-      const laneGap = 2.0;
-      final horizontalInset = width < 52 ? 2.0 : 4.0;
-      final availableWidth = math.max(1.0, width - horizontalInset * 2);
-      final laneWidth = math.max(
-        1.0,
-        (availableWidth - laneGap * (layout.laneCount - 1)) / layout.laneCount,
-      );
-      final laneLeftOffset = layout.lane * (laneWidth + laneGap);
-      yield PositionedDirectional(
-        start: start + horizontalInset + laneLeftOffset,
-        top:
-            topOffset +
-            (layout.startMinutes - startMinutes) * minuteHeight +
-            verticalInset,
-        width: laneWidth,
-        height: cardHeight,
-        child: layout.isMore
-            ? _MoreOccurrencesCard(
-                occurrence: layout.occurrence,
-                count: layout.moreCount,
-                dense: cardHeight < 56 || laneWidth < 44,
-                narrow: laneWidth < 44,
-                compactStrip: compactStrip,
-                overlapping: layout.laneCount > 1,
-                onTap: () => onMoreOccurrencesTap(layout.moreOccurrences!),
-              )
-            : _OccurrenceCard(
-                occurrence: layout.occurrence,
-                dense: cardHeight < 56 || laneWidth < 44,
-                narrow: laneWidth < 44,
-                compactStrip: compactStrip,
-                overlapping: layout.laneCount > 1,
-                onTap: () => onOccurrenceTap(layout.occurrence),
-              ),
-      );
+      if (hidden.isNotEmpty) {
+        final first = hidden.first.span;
+        final lastMinute = hidden.fold(
+          first.end,
+          (end, e) => math.max(end, e.span.end),
+        );
+        final badgeHeight = math.min(
+          (chrome.desktop ? 28.0 : 48.0) * textScale,
+          (lastMinute - first.start) * minuteHeight,
+        );
+        yield PositionedDirectional(
+          start: start + width - inset - budget.overflowWidth,
+          top: topOffset + (first.start - startMinutes) * minuteHeight + 1,
+          width: budget.overflowWidth,
+          height: math.max(1, badgeHeight - 2),
+          child: _MoreOccurrencesCard(
+            occurrence: first.value,
+            count: hidden.length,
+            compactStrip: badgeHeight < 18 * textScale,
+            onTap: () => onMoreOccurrencesTap([
+              for (final event in group.events) event.span.value,
+            ]),
+          ),
+        );
+      }
     }
   }
 }
 
 class _TimelineVerticalScrollViewport extends StatefulWidget {
   const _TimelineVerticalScrollViewport({
+    super.key,
     required this.hourHeight,
     required this.topOffset,
     required this.child,
@@ -1446,7 +1451,9 @@ class _TimelineVerticalScrollViewportState
     return SingleChildScrollView(
       key: const ValueKey('general-timeline-scroll-view'),
       controller: _controller,
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: EdgeInsets.only(
+        bottom: WorkbenchLayoutPolicy.pointerLayout(context) ? 16 : 88,
+      ),
       child: widget.child,
     );
   }
@@ -1456,21 +1463,19 @@ class _AllDayTimelineLayout {
   const _AllDayTimelineLayout({
     required this.segments,
     required this.visibleSegments,
-    required this.overflowGroups,
     required this.collapsedGroups,
     required this.visibleLaneCount,
+    required this.laneCount,
   });
-
-  static const int maxVisibleLanes = 3;
-  static const double verticalPadding = 6;
+  static const int maxVisibleLanes = 2;
+  static const double verticalPadding = 4;
   static const double laneGap = 3;
-
   final List<_AllDaySegment> segments;
   final List<_AllDaySegment> visibleSegments;
-  final List<_AllDayOverflowGroup> overflowGroups;
   final List<_AllDayCollapsedGroup> collapsedGroups;
   final int visibleLaneCount;
-
+  final int laneCount;
+  int get hiddenCount => segments.length - visibleSegments.length;
   factory _AllDayTimelineLayout.build({
     required List<GeneralEventOccurrence> occurrences,
     required List<DateTime> days,
@@ -1478,63 +1483,44 @@ class _AllDayTimelineLayout {
     final segments = _layoutAllDaySegments(
       _allDaySegmentsForDays(occurrences, days),
     );
-    final laneCount = segments.fold<int>(
+    final lanes = segments.fold<int>(
       0,
       (count, segment) => math.max(count, segment.lane + 1),
     );
-    final visibleLaneCount = math.min(laneCount, maxVisibleLanes);
-    final visibleSegments = [
-      for (final segment in segments)
-        if (segment.lane < maxVisibleLanes) segment,
-    ];
-    final overflowGroups = _groupAllDayOverflowSegments([
-      for (final segment in segments)
-        if (segment.lane >= maxVisibleLanes) segment,
-    ]);
-    final collapsedGroups = _groupAllDayCollapsedSegments(segments);
     return _AllDayTimelineLayout(
       segments: List.unmodifiable(segments),
-      visibleSegments: List.unmodifiable(visibleSegments),
-      overflowGroups: List.unmodifiable(overflowGroups),
-      collapsedGroups: List.unmodifiable(collapsedGroups),
-      visibleLaneCount: visibleLaneCount,
+      visibleSegments: List.unmodifiable(
+        segments.where((s) => s.lane < maxVisibleLanes),
+      ),
+      collapsedGroups: List.unmodifiable(
+        _groupAllDayCollapsedSegments(segments),
+      ),
+      visibleLaneCount: math.min(lanes, maxVisibleLanes),
+      laneCount: lanes,
     );
   }
-
   double laneHeightFor(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall;
-    final scaledFontSize = MediaQuery.textScalerOf(context)
-        .scale(style?.fontSize ?? 11);
-    return (scaledFontSize * (style?.height ?? 1.15) + 16).clamp(36, 52);
-  }
-
-  double heightFor(BuildContext context, {bool collapsed = false}) {
-    if (collapsed) {
-      return math.max(48, verticalPadding * 2 + laneHeightFor(context));
-    }
-    final rowCount = visibleLaneCount + (overflowGroups.isEmpty ? 0 : 1);
-    if (rowCount == 0) {
-      return 0;
-    }
+    final text = MediaQuery.textScalerOf(context).scale(12);
     return math.max(
-      48,
-      verticalPadding * 2 +
-          rowCount * laneHeightFor(context) +
-          (rowCount - 1) * laneGap,
+      WorkbenchChromeMetrics.of(context).desktop ? 28 : 48,
+      text * 1.2 + 8,
     );
   }
-}
 
-class _AllDayOverflowGroup {
-  const _AllDayOverflowGroup({
-    required this.startIndex,
-    required this.endIndex,
-    required this.occurrences,
-  });
-
-  final int startIndex;
-  final int endIndex;
-  final List<GeneralEventOccurrence> occurrences;
+  double heightFor(
+    BuildContext context, {
+    bool collapsed = false,
+    bool expanded = false,
+  }) {
+    final rows = collapsed ? 1 : (expanded ? laneCount : visibleLaneCount);
+    if (rows == 0) return 0;
+    return math.max(
+      WorkbenchChromeMetrics.of(context).iconTarget,
+      verticalPadding * 2 +
+          rows * laneHeightFor(context) +
+          (rows - 1) * laneGap,
+    );
+  }
 }
 
 class _AllDayCollapsedGroup {
@@ -1647,51 +1633,6 @@ List<_AllDaySegment> _layoutAllDaySegments(List<_AllDaySegment> segments) {
   return laidOut;
 }
 
-List<_AllDayOverflowGroup> _groupAllDayOverflowSegments(
-  List<_AllDaySegment> segments,
-) {
-  if (segments.isEmpty) {
-    return const [];
-  }
-  final sorted = [...segments]
-    ..sort((a, b) {
-      final start = a.startIndex.compareTo(b.startIndex);
-      if (start != 0) return start;
-      return a.endIndex.compareTo(b.endIndex);
-    });
-  final groups = <_AllDayOverflowGroup>[];
-  var start = sorted.first.startIndex;
-  var end = sorted.first.endIndex;
-  var occurrences = <GeneralEventOccurrence>[sorted.first.occurrence];
-  for (final segment in sorted.skip(1)) {
-    // Merge only intervals that overlap or touch. This keeps a more chip
-    // within the actual occupied date range and avoids a week-wide bar.
-    if (segment.startIndex <= end + 1) {
-      end = math.max(end, segment.endIndex);
-      occurrences.add(segment.occurrence);
-      continue;
-    }
-    groups.add(
-      _AllDayOverflowGroup(
-        startIndex: start,
-        endIndex: end,
-        occurrences: List.unmodifiable(occurrences),
-      ),
-    );
-    start = segment.startIndex;
-    end = segment.endIndex;
-    occurrences = <GeneralEventOccurrence>[segment.occurrence];
-  }
-  groups.add(
-    _AllDayOverflowGroup(
-      startIndex: start,
-      endIndex: end,
-      occurrences: List.unmodifiable(occurrences),
-    ),
-  );
-  return groups;
-}
-
 List<_AllDayCollapsedGroup> _groupAllDayCollapsedSegments(
   List<_AllDaySegment> segments,
 ) {
@@ -1767,15 +1708,18 @@ class _TimelineMetrics {
     required this.dayWidth,
   });
 
-  static const monthRailWidth = 52.0;
+  static const monthRailWidth = 64.0;
 
   final double totalWidth;
   final double timeColumnWidth;
   final double dayWidth;
 
-  factory _TimelineMetrics.fromWidth(double width, {required int dayCount}) {
+  factory _TimelineMetrics.fromWidth(
+    double width, {
+    required int dayCount,
+    double timeColumnWidth = 64,
+  }) {
     final safeWidth = width.isFinite && width > 0 ? width : 360.0;
-    const timeColumnWidth = monthRailWidth;
     final availableDaysWidth = math.max(safeWidth - timeColumnWidth, 0.0);
     final effectiveDayCount = math.max(dayCount, 1);
     return _TimelineMetrics(
@@ -1787,14 +1731,18 @@ class _TimelineMetrics {
 }
 
 class _MonthRail extends StatelessWidget {
-  const _MonthRail({required this.date});
+  const _MonthRail({
+    required this.date,
+    this.width = _TimelineMetrics.monthRailWidth,
+  });
+  final double width;
 
   final DateTime date;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: _TimelineMetrics.monthRailWidth,
+      width: width,
       child: Center(
         child: Text(
           formatMonthLabel(
@@ -1813,177 +1761,14 @@ class _MonthRail extends StatelessWidget {
 }
 
 class _TimedOccurrenceSegment {
-  _TimedOccurrenceSegment({
+  const _TimedOccurrenceSegment({
     required this.occurrence,
     required this.startMinutes,
     required this.endMinutes,
-  }) : moreOccurrences = null;
-
-  _TimedOccurrenceSegment.more({
-    required List<GeneralEventOccurrence> occurrences,
-    required this.startMinutes,
-    required this.endMinutes,
-  }) : occurrence = occurrences.first,
-       moreOccurrences = List.unmodifiable(occurrences);
-
+  });
   final GeneralEventOccurrence occurrence;
-  final List<GeneralEventOccurrence>? moreOccurrences;
   final int startMinutes;
   final int endMinutes;
-  int lane = 0;
-  int laneCount = 1;
-
-  bool get isMore => moreOccurrences != null;
-
-  int get moreCount =>
-      moreOccurrences == null ? 0 : moreOccurrences!.length - 1;
-}
-
-List<_TimedOccurrenceSegment> _collapseCrowdedTimedOccurrenceSegments(
-  List<_TimedOccurrenceSegment> segments,
-) {
-  if (segments.length < 3) {
-    return segments;
-  }
-
-  final sorted = [...segments]..sort(_compareTimedOccurrenceSegments);
-  final groups = <List<_TimedOccurrenceSegment>>[];
-  var currentGroup = <_TimedOccurrenceSegment>[];
-  var currentGroupEnd = -1;
-  for (final segment in sorted) {
-    if (currentGroup.isEmpty || segment.startMinutes < currentGroupEnd) {
-      currentGroup.add(segment);
-      currentGroupEnd = math.max(currentGroupEnd, segment.endMinutes);
-    } else {
-      groups.add(currentGroup);
-      currentGroup = [segment];
-      currentGroupEnd = segment.endMinutes;
-    }
-  }
-  if (currentGroup.isNotEmpty) {
-    groups.add(currentGroup);
-  }
-
-  final collapsed = <_TimedOccurrenceSegment>[];
-  for (final group in groups) {
-    if (group.length < 3 || _maxConcurrentTimedSegments(group) < 3) {
-      collapsed.addAll(group);
-      continue;
-    }
-
-    final primary = _primaryTimedOccurrenceSegment(group);
-    final hidden =
-        group.where((segment) => !identical(segment, primary)).toList()
-          ..sort(_compareTimedOccurrenceSegments);
-    collapsed
-      ..add(primary)
-      ..add(
-        _TimedOccurrenceSegment.more(
-          occurrences: [
-            primary.occurrence,
-            for (final segment in hidden) segment.occurrence,
-          ],
-          startMinutes: primary.startMinutes,
-          endMinutes: primary.endMinutes,
-        ),
-      );
-  }
-  return collapsed;
-}
-
-int _maxConcurrentTimedSegments(List<_TimedOccurrenceSegment> segments) {
-  final points = <int>[];
-  for (final segment in segments) {
-    points
-      ..add(segment.startMinutes * 2 + 1)
-      ..add(segment.endMinutes * 2);
-  }
-  points.sort();
-
-  var active = 0;
-  var maxActive = 0;
-  for (final point in points) {
-    active += point.isOdd ? 1 : -1;
-    maxActive = math.max(maxActive, active);
-  }
-  return maxActive;
-}
-
-_TimedOccurrenceSegment _primaryTimedOccurrenceSegment(
-  List<_TimedOccurrenceSegment> segments,
-) {
-  final sorted = [...segments]
-    ..sort((a, b) {
-      final durationCompare = (b.endMinutes - b.startMinutes).compareTo(
-        a.endMinutes - a.startMinutes,
-      );
-      if (durationCompare != 0) return durationCompare;
-      return _compareTimedOccurrenceSegments(a, b);
-    });
-  return sorted.first;
-}
-
-List<_TimedOccurrenceSegment> _layoutTimedOccurrenceSegments(
-  List<_TimedOccurrenceSegment> segments,
-) {
-  if (segments.isEmpty) {
-    return segments;
-  }
-  final sorted = [...segments]..sort(_compareTimedOccurrenceSegments);
-
-  final groups = <List<_TimedOccurrenceSegment>>[];
-  var currentGroup = <_TimedOccurrenceSegment>[];
-  var currentGroupEnd = -1;
-  for (final segment in sorted) {
-    if (currentGroup.isEmpty || segment.startMinutes < currentGroupEnd) {
-      currentGroup.add(segment);
-      currentGroupEnd = math.max(currentGroupEnd, segment.endMinutes);
-    } else {
-      groups.add(currentGroup);
-      currentGroup = [segment];
-      currentGroupEnd = segment.endMinutes;
-    }
-  }
-  if (currentGroup.isNotEmpty) {
-    groups.add(currentGroup);
-  }
-
-  for (final group in groups) {
-    final laneEnds = <int>[];
-    for (final segment in group) {
-      var lane = laneEnds.indexWhere((end) => end <= segment.startMinutes);
-      if (lane < 0) {
-        lane = laneEnds.length;
-        laneEnds.add(segment.endMinutes);
-      } else {
-        laneEnds[lane] = segment.endMinutes;
-      }
-      segment.lane = lane;
-    }
-    for (final segment in group) {
-      segment.laneCount = laneEnds.length;
-    }
-  }
-
-  return sorted;
-}
-
-int _compareTimedOccurrenceSegments(
-  _TimedOccurrenceSegment a,
-  _TimedOccurrenceSegment b,
-) {
-  final startCompare = a.startMinutes.compareTo(b.startMinutes);
-  if (startCompare != 0) return startCompare;
-  final endCompare = a.endMinutes.compareTo(b.endMinutes);
-  if (endCompare != 0) return endCompare;
-  if (a.isMore != b.isMore) {
-    return a.isMore ? 1 : -1;
-  }
-  final titleCompare = a.occurrence.event.title.compareTo(
-    b.occurrence.event.title,
-  );
-  if (titleCompare != 0) return titleCompare;
-  return a.occurrence.event.id.compareTo(b.occurrence.event.id);
 }
 
 class _DayHeader extends StatelessWidget {
@@ -1993,74 +1778,65 @@ class _DayHeader extends StatelessWidget {
     required this.selected,
     this.onTap,
   });
-
   final DateTime date;
   final double width;
   final bool selected;
   final VoidCallback? onTap;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isToday = _sameDay(date, DateTime.now());
-    final background = selected
-        ? colorScheme.primary.withValues(alpha: 0.20)
-        : Colors.transparent;
-    final foreground = selected
-        ? colorScheme.primary
-        : isToday
-        ? colorScheme.primary
-        : colorScheme.onSurface;
+    final colors = theme.colorScheme;
+    final today = _sameDay(date, DateTime.now());
     return SizedBox(
       key: ValueKey('general-week-day-header-${_dateKey(date)}'),
       width: width,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: MaterialLocalizations.of(context).formatFullDate(date),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(8),
-              border: isToday && !selected
-                  ? Border.all(
-                      color: colorScheme.primary.withValues(alpha: 0.52),
-                    )
-                  : null,
-            ),
+        excludeSemantics: true,
+        child: Material(
+          color: selected
+              ? colors.surfaceContainerHigh.withValues(alpha: .65)
+              : colors.surface,
+          child: InkWell(
+            onTap: onTap,
             child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _weekdayLabel(context, date),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: foreground,
-                        fontWeight: selected || isToday
-                            ? FontWeight.w700
-                            : FontWeight.w600,
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _weekdayLabel(context, date),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: today ? colors.primary : null,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
                       date.day.toString(),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: foreground,
-                        fontWeight: selected || isToday
+                        fontSize: 18,
+                        fontWeight: selected || today
                             ? FontWeight.w700
                             : FontWeight.w500,
+                        color: today ? colors.onPrimary : colors.onSurface,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -2087,4 +1863,49 @@ class _NowLine extends StatelessWidget {
       ],
     );
   }
+}
+
+/// One horizontal offset for the date header, all-day lanes and timed grid.
+/// The child stays mounted when overflow starts or stops during a resize.
+class _CalendarHorizontalViewport extends StatefulWidget {
+  const _CalendarHorizontalViewport({
+    required this.viewportWidth,
+    required this.contentWidth,
+    required this.child,
+  });
+  final double viewportWidth, contentWidth;
+  final Widget child;
+  @override
+  State<_CalendarHorizontalViewport> createState() =>
+      _CalendarHorizontalViewportState();
+}
+
+class _CalendarHorizontalViewportState
+    extends State<_CalendarHorizontalViewport> {
+  final _controller = ScrollController();
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final overflow = widget.contentWidth > widget.viewportWidth + 0.5;
+      return Scrollbar(
+        controller: _controller,
+        thumbVisibility: overflow,
+        notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+        child: SingleChildScrollView(
+          controller: _controller,
+          scrollDirection: Axis.horizontal,
+          physics: overflow
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: SizedBox(height: constraints.maxHeight, child: widget.child),
+        ),
+      );
+    },
+  );
 }

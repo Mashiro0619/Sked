@@ -35,7 +35,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   bool _isClearingRoutesForRecovery = false;
   bool _hasShownRecoveryBanner = false;
   bool _settingsPageOpen = false;
-  AppMode? _firstLaunchPendingMode;
+  Set<AppMode>? _firstLaunchPendingMode;
   TimetableProvider? _lastProvider;
   bool? _lastObservedCanWrite;
 
@@ -228,17 +228,20 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
   Future<void> _completeFirstLaunch(
     TimetableProvider provider,
-    AppMode mode,
+    AppMode? selection,
   ) async {
+    final mode = selection ?? AppMode.student;
+    final enabled = selection == null ? AppMode.values.toSet() : {selection};
     if (_firstLaunchPendingMode != null || !provider.canWrite) {
       return;
     }
-    final hideWorkspaceNavigation = MediaQuery.sizeOf(context).width < 600;
-    setState(() => _firstLaunchPendingMode = mode);
+    const hideWorkspaceNavigation = false;
+    setState(() => _firstLaunchPendingMode = enabled);
     try {
       await provider.completeFirstLaunch(
         mode,
         hideWorkspaceNavigation: hideWorkspaceNavigation,
+        enabledWorkspaces: enabled,
       );
     } catch (error, stackTrace) {
       debugPrint('First launch completion failed: $error\n$stackTrace');
@@ -751,6 +754,7 @@ class _DataRecoveryScreen extends StatelessWidget {
 class _AppHomeSnapshot {
   const _AppHomeSnapshot({
     required this.isLoaded,
+    required this.workspaceKey,
     required this.isStudentMode,
     required this.hasAcceptedCurrentPrivacyPolicy,
     required this.showFirstLaunchOnboarding,
@@ -764,6 +768,9 @@ class _AppHomeSnapshot {
   factory _AppHomeSnapshot.from(TimetableProvider provider) {
     return _AppHomeSnapshot(
       isLoaded: provider.isLoaded,
+      workspaceKey: provider.enabledWorkspaces
+          .map((mode) => mode.value)
+          .join(','),
       isStudentMode: provider.isStudentMode,
       hasAcceptedCurrentPrivacyPolicy: provider.hasAcceptedCurrentPrivacyPolicy,
       showFirstLaunchOnboarding: _shouldShowFirstLaunchOnboarding(provider),
@@ -777,6 +784,7 @@ class _AppHomeSnapshot {
   }
 
   final bool isLoaded;
+  final String workspaceKey;
   final bool isStudentMode;
   final bool hasAcceptedCurrentPrivacyPolicy;
   final bool showFirstLaunchOnboarding;
@@ -790,6 +798,7 @@ class _AppHomeSnapshot {
   bool operator ==(Object other) {
     return other is _AppHomeSnapshot &&
         other.isLoaded == isLoaded &&
+        other.workspaceKey == workspaceKey &&
         other.isStudentMode == isStudentMode &&
         other.hasAcceptedCurrentPrivacyPolicy ==
             hasAcceptedCurrentPrivacyPolicy &&
@@ -805,6 +814,7 @@ class _AppHomeSnapshot {
   @override
   int get hashCode => Object.hash(
     isLoaded,
+    workspaceKey,
     isStudentMode,
     hasAcceptedCurrentPrivacyPolicy,
     showFirstLaunchOnboarding,
@@ -1006,8 +1016,8 @@ class _FirstLaunchOnboardingScreen extends StatelessWidget {
     required this.onViewPrivacyPolicy,
   });
 
-  final AppMode? pendingMode;
-  final ValueChanged<AppMode> onStartWithMode;
+  final Set<AppMode>? pendingMode;
+  final ValueChanged<AppMode?> onStartWithMode;
   final VoidCallback onViewPrivacyPolicy;
 
   @override
@@ -1086,8 +1096,8 @@ class _FirstLaunchModeSelection extends StatelessWidget {
   final bool canStart;
   final bool useHorizontalLayout;
   final bool isCompactHeight;
-  final AppMode? pendingMode;
-  final ValueChanged<AppMode> onStartWithMode;
+  final Set<AppMode>? pendingMode;
+  final ValueChanged<AppMode?> onStartWithMode;
   final VoidCallback onViewPrivacyPolicy;
 
   @override
@@ -1123,10 +1133,12 @@ class _FirstLaunchModeSelection extends StatelessWidget {
                   child: _FirstLaunchModeCard(
                     key: const ValueKey('first-launch-student-card'),
                     icon: Icons.school_outlined,
-                    title: l10n.studentTimetable,
+                    title: l10n.workspaceOnlyStudent,
                     description: l10n.firstLaunchStudentDesc,
                     isEnabled: canStart,
-                    isPending: pendingMode == AppMode.student,
+                    isPending:
+                        pendingMode?.length == 1 &&
+                        pendingMode!.contains(AppMode.student),
                     onTap: () => onStartWithMode(AppMode.student),
                   ),
                 ),
@@ -1135,10 +1147,12 @@ class _FirstLaunchModeSelection extends StatelessWidget {
                   child: _FirstLaunchModeCard(
                     key: const ValueKey('first-launch-general-card'),
                     icon: Icons.calendar_month_outlined,
-                    title: l10n.generalSchedule,
+                    title: l10n.workspaceOnlyGeneral,
                     description: l10n.firstLaunchGeneralDesc,
                     isEnabled: canStart,
-                    isPending: pendingMode == AppMode.general,
+                    isPending:
+                        pendingMode?.length == 1 &&
+                        pendingMode!.contains(AppMode.general),
                     onTap: () => onStartWithMode(AppMode.general),
                   ),
                 ),
@@ -1152,24 +1166,38 @@ class _FirstLaunchModeSelection extends StatelessWidget {
               _FirstLaunchModeCard(
                 key: const ValueKey('first-launch-student-card'),
                 icon: Icons.school_outlined,
-                title: l10n.studentTimetable,
+                title: l10n.workspaceOnlyStudent,
                 description: l10n.firstLaunchStudentDesc,
                 isEnabled: canStart,
-                isPending: pendingMode == AppMode.student,
+                isPending:
+                    pendingMode?.length == 1 &&
+                    pendingMode!.contains(AppMode.student),
                 onTap: () => onStartWithMode(AppMode.student),
               ),
               const SizedBox(height: 12),
               _FirstLaunchModeCard(
                 key: const ValueKey('first-launch-general-card'),
                 icon: Icons.calendar_month_outlined,
-                title: l10n.generalSchedule,
+                title: l10n.workspaceOnlyGeneral,
                 description: l10n.firstLaunchGeneralDesc,
                 isEnabled: canStart,
-                isPending: pendingMode == AppMode.general,
+                isPending:
+                    pendingMode?.length == 1 &&
+                    pendingMode!.contains(AppMode.general),
                 onTap: () => onStartWithMode(AppMode.general),
               ),
             ],
           ),
+        const SizedBox(height: 12),
+        _FirstLaunchModeCard(
+          key: const ValueKey('first-launch-both-card'),
+          icon: Icons.dashboard_outlined,
+          title: l10n.workspaceBoth,
+          description: l10n.workspaceEnableHint,
+          isEnabled: canStart,
+          isPending: pendingMode?.length == 2,
+          onTap: () => onStartWithMode(null),
+        ),
         SizedBox(height: isCompactHeight ? 16 : 20),
         _FirstLaunchPrivacyConsent(
           beforeText: l10n.firstLaunchPrivacyConsentBefore,

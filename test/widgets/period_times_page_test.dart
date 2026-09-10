@@ -199,7 +199,7 @@ PeriodTimeSet _storedDefaultPeriodTimeSet(_MemoryTimetableStorage storage) {
 }
 
 void main() {
-  testWidgets('uses a compact two-column editor on wide tablets', (
+  testWidgets('uses readable chronological table rows on wide tablets', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -237,7 +237,7 @@ void main() {
   });
 
   testWidgets(
-    'switches between single and two columns at the wide breakpoint',
+    'keeps consecutive periods in chronological rows at both sides of the breakpoint',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(839, 760);
@@ -262,7 +262,13 @@ void main() {
       final wideGridWidth = tester
           .getSize(find.byKey(const ValueKey('period-times-editor-grid')))
           .width;
-      expect(wideCardWidth, lessThan(wideGridWidth));
+      expect(wideCardWidth, closeTo(wideGridWidth, 0.01));
+      final first = tester.getRect(find.byKey(const ValueKey('period-card-1')));
+      final second = tester.getRect(
+        find.byKey(const ValueKey('period-card-2')),
+      );
+      expect(second.top, greaterThanOrEqualTo(first.bottom));
+      expect(first.left, closeTo(second.left, 0.01));
       expect(
         wideCardWidth,
         closeTo(

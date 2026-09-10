@@ -868,8 +868,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyPolicyTitle => '隐私政策';
 
   @override
-  String get privacyPolicyEntryDesc =>
-      '了解应用如何处理本地存储、学校站点配置、文件导入导出、课表文本 / HTML 解析和外部链接。';
+  String get privacyPolicyEntryDesc => '了解本地数据、导入导出、可选网络请求与外部链接的处理方式。';
 
   @override
   String privacyPolicyAcceptedVersionLabel(Object version) {
@@ -1200,11 +1199,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get schoolWebImportSuccess => '网页课表已导入';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API 配置';
+  String get schoolImportParserSettingsTitle => '课表解析 API';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      '配置课表解析及其他 AI 功能使用的 OpenAI 兼容接口。';
+      '配置课表导入使用的 OpenAI 兼容接口；这不是对话助手配置。';
 
   @override
   String get schoolImportParserSourceTitle => '解析来源';
@@ -2074,7 +2073,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hideHomeWorkspaceNavigation => '隐藏主界面工作区导航';
 
   @override
-  String get hideHomeWorkspaceNavigationDesc => '隐藏底部栏、导航轨或侧边栏；隐藏后可在设置中切换工作区。';
+  String get hideHomeWorkspaceNavigationDesc => '隐藏工作区导航；仍可通过主界面的工作区菜单切换。';
 
   @override
   String get generalDateLabelFormat => '日期显示格式';
@@ -2588,7 +2587,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android 无法提供数学意义上的绝对精准。设备关机、系统时间修改、系统崩溃或厂商固件后台限制仍可能导致投递延迟。';
+      '提醒受系统权限与后台运行限制影响；关机、时间变更或系统限制可能导致延迟。';
 
   @override
   String get notificationSettingsEnabledSummary => '已启用';
@@ -2705,6 +2704,122 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationPlatformUnsupported => '当前平台不提供原生通知。';
+
+  @override
+  String get workspaceFeatures => '功能管理';
+
+  @override
+  String get workspaceBoth => '课表与日程';
+
+  @override
+  String get workspaceOnlyStudent => '仅课表';
+
+  @override
+  String get workspaceOnlyGeneral => '仅日程';
+
+  @override
+  String get workspaceDisableTitle => '停用此工作区？';
+
+  @override
+  String get workspaceDisableMessage => '数据与配置会保留。相关功能和提醒将停止，可随时在此重新启用。';
+
+  @override
+  String get workspaceEnableHint => '只启用你需要的功能，至少保留一个。';
+
+  @override
+  String get workspaceLastRequired => '至少需要保留一个工作区。';
+
+  @override
+  String get workspaceReminderCleanupFailed => '工作区已停用，但提醒清理未完成，请重试通知恢复。';
+
+  @override
+  String get settingsSearch => '搜索设置';
+
+  @override
+  String get settingsNoResults => '没有匹配的设置';
+
+  @override
+  String get settingsDataPrivacy => '数据与隐私';
+
+  @override
+  String get workspacePreferences => '显示与交互';
+
+  @override
+  String get workspaceManage => '管理';
+
+  @override
+  String get selectedDayAgenda => '当天安排';
+
+  @override
+  String get notificationTroubleshooting => '权限与排障';
+
+  @override
+  String get settingsConnection => '连接信息';
+
+  @override
+  String get settingsAdvanced => '高级';
+
+  @override
+  String get unsavedChangesMessage => '还有未保存的更改，要放弃并离开吗？';
+
+  @override
+  String get backupWorkspaceSelection => '完整备份包含数据和工作区启用选择。';
+
+  @override
+  String get assistantLayoutPreview => 'AI · 布局预览';
+
+  @override
+  String get assistantSelectionContext => '使用当前选中项目作为上下文';
+
+  @override
+  String get assistantPreviewDescription => '在这里对话并处理当前工作区。此预览仅演示布局，尚未接入 AI。';
+
+  @override
+  String get assistantDraftLabel => '消息草稿';
+
+  @override
+  String get assistantPreviewNoSend => '仅布局预览，不会发送消息或修改数据。';
+
+  @override
+  String get resizePanel => '调整面板宽度';
+
+  @override
+  String get minimizeWindow => '最小化';
+
+  @override
+  String get maximizeWindow => '最大化';
+
+  @override
+  String get restoreWindow => '还原窗口';
+
+  @override
+  String get closeWindow => '关闭窗口';
+
+  @override
+  String get courseSystemReminder => '系统提醒';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return '跟随默认（$reminder）';
+  }
+
+  @override
+  String get courseReminderMasterOff => '通知总开关已关闭。仍可保存此课程的提醒设置。';
+
+  @override
+  String get courseReminderDefaultOff => '尚未设置课程默认提醒。可为此课程自定义，或前往通知设置配置默认值。';
+
+  @override
+  String get courseReminderDeliveryHint => '此设置随课程保存；能否送达仍取决于系统通知权限及后台限制。';
+
+  @override
+  String get courseReminderPermissionUnknown => '尚未确认系统通知状态。请在通知设置中检查权限。';
+
+  @override
+  String get courseReminderMinutesLabel => '课前提醒分钟数';
+
+  @override
+  String get exportAction => '导出';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3569,8 +3684,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get privacyPolicyTitle => '隱私政策';
 
   @override
-  String get privacyPolicyEntryDesc =>
-      '了解應用如何處理本機儲存、學校站點設定、檔案匯入匯出、課表文字 / HTML 解析和外部連結。';
+  String get privacyPolicyEntryDesc => '了解本機資料、匯入匯出、選用網路請求與外部連結的處理方式。';
 
   @override
   String privacyPolicyAcceptedVersionLabel(Object version) {
@@ -3901,11 +4015,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get schoolWebImportSuccess => '網頁課表已匯入';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API 設定';
+  String get schoolImportParserSettingsTitle => '課表解析 API';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      '設定課表解析及其他 AI 功能使用的 OpenAI 相容介面。';
+      '設定課表匯入使用的 OpenAI 相容介面；這不是對話助理設定。';
 
   @override
   String get schoolImportParserSourceTitle => '解析來源';
@@ -4775,7 +4889,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get hideHomeWorkspaceNavigation => '隱藏主介面工作區導覽';
 
   @override
-  String get hideHomeWorkspaceNavigationDesc => '隱藏底部列、導覽軌或側邊欄；隱藏後可在設定中切換工作區。';
+  String get hideHomeWorkspaceNavigationDesc => '隱藏工作區導覽；仍可透過主畫面的工作區選單切換。';
 
   @override
   String get generalDateLabelFormat => '日期顯示格式';
@@ -5290,7 +5404,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android 無法提供數學意義上的絕對精準。裝置關機、系統時間修改、系統崩潰或廠商韌體背景限制仍可能導致投遞延遲。';
+      '提醒受系統權限與背景執行限制影響；關機、時間變更或系統限制可能導致延遲。';
 
   @override
   String get notificationSettingsEnabledSummary => '已啟用';
@@ -5409,4 +5523,120 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get notificationPlatformUnsupported => '目前平台不提供原生通知。';
+
+  @override
+  String get workspaceFeatures => '功能管理';
+
+  @override
+  String get workspaceBoth => '課表與日程';
+
+  @override
+  String get workspaceOnlyStudent => '僅課表';
+
+  @override
+  String get workspaceOnlyGeneral => '僅日程';
+
+  @override
+  String get workspaceDisableTitle => '停用此工作區？';
+
+  @override
+  String get workspaceDisableMessage => '資料與設定會保留。相關功能和提醒將停止，可隨時在此重新啟用。';
+
+  @override
+  String get workspaceEnableHint => '只啟用你需要的功能，至少保留一個。';
+
+  @override
+  String get workspaceLastRequired => '至少需要保留一個工作區。';
+
+  @override
+  String get workspaceReminderCleanupFailed => '工作區已停用，但提醒清理未完成，請重試通知復原。';
+
+  @override
+  String get settingsSearch => '搜尋設定';
+
+  @override
+  String get settingsNoResults => '沒有符合的設定';
+
+  @override
+  String get settingsDataPrivacy => '資料與隱私';
+
+  @override
+  String get workspacePreferences => '顯示與互動';
+
+  @override
+  String get workspaceManage => '管理';
+
+  @override
+  String get selectedDayAgenda => '當日安排';
+
+  @override
+  String get notificationTroubleshooting => '權限與疑難排解';
+
+  @override
+  String get settingsConnection => '連線資訊';
+
+  @override
+  String get settingsAdvanced => '進階';
+
+  @override
+  String get unsavedChangesMessage => '還有未儲存的變更，要放棄並離開嗎？';
+
+  @override
+  String get backupWorkspaceSelection => '完整備份包含資料和工作區啟用選擇。';
+
+  @override
+  String get assistantLayoutPreview => 'AI · 版面預覽';
+
+  @override
+  String get assistantSelectionContext => '使用目前選取項目作為情境';
+
+  @override
+  String get assistantPreviewDescription => '在這裡對話並處理目前工作區。此預覽僅示範版面，尚未接入 AI。';
+
+  @override
+  String get assistantDraftLabel => '訊息草稿';
+
+  @override
+  String get assistantPreviewNoSend => '僅版面預覽，不會傳送訊息或修改資料。';
+
+  @override
+  String get resizePanel => '調整面板寬度';
+
+  @override
+  String get minimizeWindow => '最小化';
+
+  @override
+  String get maximizeWindow => '最大化';
+
+  @override
+  String get restoreWindow => '還原視窗';
+
+  @override
+  String get closeWindow => '關閉視窗';
+
+  @override
+  String get courseSystemReminder => '系統提醒';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return '跟隨預設（$reminder）';
+  }
+
+  @override
+  String get courseReminderMasterOff => '通知總開關已關閉，仍可儲存此課程的提醒設定。';
+
+  @override
+  String get courseReminderDefaultOff => '尚未設定課程預設提醒。可為此課程自訂，或前往通知設定配置預設值。';
+
+  @override
+  String get courseReminderDeliveryHint => '此設定隨課程儲存；能否送達仍取決於系統通知權限及背景限制。';
+
+  @override
+  String get courseReminderPermissionUnknown => '尚未確認系統通知狀態。請在通知設定中檢查權限。';
+
+  @override
+  String get courseReminderMinutesLabel => '課前提醒分鐘數';
+
+  @override
+  String get exportAction => '匯出';
 }

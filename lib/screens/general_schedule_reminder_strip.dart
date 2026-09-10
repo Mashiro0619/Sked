@@ -38,12 +38,16 @@ class _ReminderStrip extends StatefulWidget {
     required this.filter,
     required this.active,
     required this.onOccurrenceTap,
+    required this.pane,
+    this.listMode = false,
   });
 
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final bool active;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
+  final WorkspacePaneController pane;
+  final bool listMode;
 
   @override
   State<_ReminderStrip> createState() => _ReminderStripState();
@@ -52,6 +56,7 @@ class _ReminderStrip extends StatefulWidget {
 class _ReminderStripState extends State<_ReminderStrip>
     with WidgetsBindingObserver {
   Timer? _refreshTimer;
+  bool _listOpen = false;
   DateTime Function() _now = DateTime.now;
   GeneralReminderTimerFactory _createTimer = _createGeneralReminderTimer;
   bool _isForeground = true;
@@ -156,55 +161,70 @@ class _ReminderStripState extends State<_ReminderStrip>
       now: now,
       occurrenceFilter: reminderFilter,
     );
-    final upcoming = items
-        .where((item) => item.status == GeneralReminderStatus.upcoming)
-        .take(3)
-        .toList();
-    final inProgress = items
-        .where((item) => item.status == GeneralReminderStatus.inProgress)
-        .take(3)
-        .toList();
-    final overdue = items
-        .where((item) => item.status == GeneralReminderStatus.overdue)
-        .take(3)
-        .toList();
-    if (upcoming.isEmpty && inProgress.isEmpty && overdue.isEmpty) {
-      return const SizedBox(height: 4);
+    final l = AppLocalizations.of(context);
+    if (!widget.listMode) {
+      return IconButton(
+        key: const ValueKey('general-reminders-action'),
+        tooltip: l.reminder,
+        onPressed: !widget.active || _listOpen
+            ? null
+            : () async {
+                setState(() => _listOpen = true);
+                try {
+                  await widget.pane.show<void>(
+                    (context) => _ReminderStrip(
+                      provider: widget.provider,
+                      filter: widget.filter,
+                      active: true,
+                      pane: widget.pane,
+                      listMode: true,
+                      onOccurrenceTap: widget.onOccurrenceTap,
+                    ),
+                  );
+                } finally {
+                  if (mounted) setState(() => _listOpen = false);
+                }
+              },
+        icon: Badge(
+          isLabelVisible: items.isNotEmpty,
+          label: Text('${items.length}'),
+          child: const Icon(Icons.notifications_outlined),
+        ),
+      );
     }
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    return SizedBox(
-      height: 54,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    return AppSheetScaffold(
+      key: const ValueKey('general-reminders-list'),
+      title: Text(l.reminder),
+      child: Column(
         children: [
-          for (final item in upcoming)
-            _GeneralReminderItemPill(
-              item: item,
-              statusLabel: l10n.reminderUpcoming,
-              color: theme.colorScheme.primary,
-              onTap: () => widget.onOccurrenceTap(item.occurrence),
-              onDismiss: () =>
-                  widget.provider.dismissGeneralReminder(item.occurrence),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(l.noUpcomingEvents),
             ),
-          for (final item in inProgress)
-            _GeneralReminderItemPill(
-              item: item,
-              statusLabel: l10n.reminderInProgress,
-              color: theme.colorScheme.tertiary,
+          for (final item in items)
+            ListTile(
+              title: Text(item.occurrence.event.title),
+              subtitle: Text(
+                '${switch (item.status) {
+                  GeneralReminderStatus.upcoming => l.reminderUpcoming,
+                  GeneralReminderStatus.inProgress => l.reminderInProgress,
+                  GeneralReminderStatus.overdue => l.reminderOverdue,
+                }} · ${intl.DateFormat.MMMd(l.localeName).add_Hm().format(item.occurrence.start)}',
+              ),
               onTap: () => widget.onOccurrenceTap(item.occurrence),
-              onDismiss: () =>
-                  widget.provider.dismissGeneralReminder(item.occurrence),
-            ),
-          for (final item in overdue)
-            _GeneralReminderItemPill(
-              item: item,
-              statusLabel: l10n.reminderOverdue,
-              color: theme.colorScheme.error,
-              onTap: () => widget.onOccurrenceTap(item.occurrence),
-              onDismiss: () =>
-                  widget.provider.dismissGeneralReminder(item.occurrence),
+              trailing: IconButton(
+                tooltip: l.markReminderHandled,
+                icon: const Icon(Icons.check_circle_outline),
+                onPressed: () => unawaited(
+                  runUiCommandWithFeedback(
+                    context: context,
+                    debugLabel: 'Dismiss reminder',
+                    command: () =>
+                        widget.provider.dismissGeneralReminder(item.occurrence),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -219,75 +239,4 @@ Duration _delayUntilNextMinute(DateTime now) {
     microseconds: now.microsecond,
   );
   return const Duration(minutes: 1) - elapsedInMinute;
-}
-
-class _GeneralReminderItemPill extends StatelessWidget {
-  const _GeneralReminderItemPill({
-    required this.item,
-    required this.statusLabel,
-    required this.color,
-    required this.onTap,
-    required this.onDismiss,
-  });
-
-  final GeneralReminderItem item;
-  final String statusLabel;
-  final Color color;
-  final VoidCallback onTap;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Semantics(
-      button: true,
-      label: '${item.occurrence.event.title}, $statusLabel',
-      child: Container(
-        width: 210,
-        margin: const EdgeInsets.only(right: 8),
-        decoration: BoxDecoration(
-          color: color.withAlpha(24),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withAlpha(96)),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsetsDirectional.only(start: 12, end: 2),
-            child: Row(
-              children: [
-                Icon(
-                  item.status == GeneralReminderStatus.upcoming
-                      ? Icons.notifications_active_outlined
-                      : item.status == GeneralReminderStatus.inProgress
-                      ? Icons.play_circle_outline
-                      : Icons.pending_actions_outlined,
-                  size: 16,
-                  color: color,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '$statusLabel - ${item.occurrence.event.title}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: color),
-                  ),
-                ),
-                IconButton(
-                  tooltip: l10n.markReminderHandled,
-                  iconSize: 18,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onDismiss,
-                  icon: const Icon(Icons.check_circle_outline),
-                  color: color,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

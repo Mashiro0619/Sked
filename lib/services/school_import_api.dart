@@ -357,9 +357,14 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   Future<List<String>> fetchCustomModels({
     required String baseUrl,
     required String apiKey,
+    Future<void>? abortTrigger,
   }) async {
     try {
-      return await _fetchCustomModels(baseUrl: baseUrl, apiKey: apiKey);
+      return await _fetchCustomModels(
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        abortTrigger: abortTrigger,
+      );
     } on FormatException catch (error, stackTrace) {
       Error.throwWithStackTrace(
         FormatException(_safeRequestError(error.message, apiKey)),
@@ -371,6 +376,7 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
   Future<List<String>> _fetchCustomModels({
     required String baseUrl,
     required String apiKey,
+    Future<void>? abortTrigger,
   }) async {
     final normalizedBaseUrl = baseUrl.trim();
     final normalizedApiKey = apiKey.trim();
@@ -386,6 +392,9 @@ Populate timetable with the extracted timetable object. Keep ok=true. Fill meta.
       final uri = _buildOpenAiModelsUri(normalizedBaseUrl);
       _validateApiKey(normalizedApiKey);
       final requestHandle = _AbortableRequestHandle('GET', uri);
+      if (abortTrigger != null) {
+        unawaited(abortTrigger.then((_) => requestHandle.abort()));
+      }
       requestHandle.request
         ..followRedirects = false
         ..headers.addAll({

@@ -1,4 +1,8 @@
+import '../widgets/desktop_window_host.dart';
+
 import 'dart:async';
+
+import '../widgets/adaptive_navigation_scope.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
@@ -6,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
+import '../models/app_mode.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/agenda_notification_runtime_store.dart';
 import '../services/agenda_coordinator.dart';
@@ -24,8 +29,10 @@ class NotificationSettingsPage extends StatefulWidget {
     this.notificationService,
     this.agendaCoordinator,
     this.productivityBridge,
+    this.troubleshooting = false,
   });
 
+  final bool troubleshooting;
   final AgendaNotificationService? notificationService;
   final AgendaCoordinator? agendaCoordinator;
   final AndroidProductivityBridge? productivityBridge;
@@ -332,7 +339,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             icon: Icons.notifications_active_outlined,
             value: provider.notificationsEnabled,
             title: l10n.notificationSettingsEnabled,
-            subtitle: l10n.notificationSettingsEnabledHint,
+            subtitle: provider.isWorkspaceEnabled(AppMode.student)
+                ? l10n.notificationSettingsEnabledHint
+                : null,
             onChanged: uiCommandBusy
                 ? null
                 : (value) =>
@@ -350,29 +359,31 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   : l10n.notificationCoverageRenewable,
             ),
           SettingsSectionHeader(title: l10n.notificationDefaultsSection),
-          _buildReminderDropdown(
-            key: const ValueKey('notification-course-default-reminder'),
-            label: l10n.notificationCourseDefaultReminder,
-            icon: Icons.school_outlined,
-            value: provider.courseDefaultReminderMinutesBefore,
-            l10n: l10n,
-            onChanged: (minutes) => _updateSetting(
-              'Update course default reminder',
-              () => provider.updateCourseDefaultReminder(minutes),
+          if (provider.isWorkspaceEnabled(AppMode.student))
+            _buildReminderDropdown(
+              key: const ValueKey('notification-course-default-reminder'),
+              label: l10n.notificationCourseDefaultReminder,
+              icon: Icons.school_outlined,
+              value: provider.courseDefaultReminderMinutesBefore,
+              l10n: l10n,
+              onChanged: (minutes) => _updateSetting(
+                'Update course default reminder',
+                () => provider.updateCourseDefaultReminder(minutes),
+              ),
             ),
-          ),
           const SizedBox(height: 12),
-          _buildReminderDropdown(
-            key: const ValueKey('notification-general-default-reminder'),
-            label: l10n.notificationGeneralDefaultReminder,
-            icon: Icons.event_outlined,
-            value: provider.generalDefaultReminderMinutesBefore,
-            l10n: l10n,
-            onChanged: (minutes) => _updateSetting(
-              'Update general default reminder',
-              () => provider.updateGeneralDefaultReminder(minutes),
+          if (provider.isWorkspaceEnabled(AppMode.general))
+            _buildReminderDropdown(
+              key: const ValueKey('notification-general-default-reminder'),
+              label: l10n.notificationGeneralDefaultReminder,
+              icon: Icons.event_outlined,
+              value: provider.generalDefaultReminderMinutesBefore,
+              l10n: l10n,
+              onChanged: (minutes) => _updateSetting(
+                'Update general default reminder',
+                () => provider.updateGeneralDefaultReminder(minutes),
+              ),
             ),
-          ),
           SettingsSectionHeader(title: l10n.notificationPermission),
           SettingsConnectedTile(
             key: const ValueKey('notification-permission'),
@@ -497,10 +508,56 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   ),
           ),
         ];
+        final permissionStart = children.indexWhere(
+          (child) =>
+              child is SettingsSectionHeader &&
+              child.title == l10n.notificationPermission,
+        );
+        final pageChildren = widget.troubleshooting
+            ? children.sublist(permissionStart, children.length - 1)
+            : <Widget>[
+                ...children.take(permissionStart),
+                children.last,
+                SettingsConnectedTile(
+                  key: const ValueKey('notification-troubleshooting'),
+                  title: l10n.notificationTroubleshooting,
+                  subtitle: [
+                    permissionSubtitle,
+                    if (!kIsWeb &&
+                        defaultTargetPlatform == TargetPlatform.android)
+                      exactAlarmSubtitle,
+                  ].join('\n'),
+                  leading: const Icon(Icons.health_and_safety_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ChangeNotifierProvider<TimetableProvider>.value(
+                            value: provider,
+                            child: NotificationSettingsPage(
+                              troubleshooting: true,
+                              notificationService: _notificationService,
+                              agendaCoordinator: _agendaCoordinator,
+                              productivityBridge: _productivityBridge,
+                            ),
+                          ),
+                    ),
+                  ),
+                ),
+              ];
         return PopScope<void>(
           canPop: !uiCommandBusy,
           child: Scaffold(
-            appBar: AppBar(title: Text(l10n.notificationSettingsSection)),
+            appBar: WorkbenchAppBar(
+              automaticallyImplyLeading:
+                  widget.troubleshooting ||
+                  !AdaptiveNavigationScope.isWide(context),
+              title: Text(
+                widget.troubleshooting
+                    ? l10n.notificationTroubleshooting
+                    : l10n.notificationSettingsSection,
+              ),
+            ),
             body: Column(
               children: [
                 UiCommandBusyIndicator(
@@ -515,7 +572,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                       child: ResponsiveSettingsSingleColumnBody(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: children,
+                          children: pageChildren,
                         ),
                       ),
                     ),

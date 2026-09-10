@@ -1237,11 +1237,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schoolWebImportSuccess => '웹 시간표를 가져왔습니다';
 
   @override
-  String get schoolImportParserSettingsTitle => 'AI API configuration';
+  String get schoolImportParserSettingsTitle => '시간표 분석 API';
 
   @override
   String get schoolImportParserSettingsDesc =>
-      'Configure the OpenAI-compatible API used by timetable parsing and other AI features.';
+      '시간표 가져오기에 사용할 OpenAI 호환 API를 설정합니다. 대화형 도우미 설정이 아닙니다.';
 
   @override
   String get schoolImportParserSourceTitle => '파서 소스';
@@ -2135,7 +2135,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get hideHomeWorkspaceNavigationDesc =>
-      'Hides the bottom bar, navigation rail, or sidebar. Switch workspaces from Settings.';
+      '작업 공간 탐색을 숨깁니다. 기본 화면의 작업 공간 메뉴에서 전환할 수 있습니다.';
 
   @override
   String get generalDateLabelFormat => 'Date label format';
@@ -2689,7 +2689,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get notificationPrecisionLimitations =>
-      'Android cannot provide mathematical absolute precision. Shutdowns, system time changes, crashes, and vendor firmware restrictions can still delay delivery.';
+      '알림은 시스템 권한과 백그라운드 실행에 영향을 받습니다. 전원 종료, 시간 변경 또는 시스템 제한으로 지연될 수 있습니다.';
 
   @override
   String get notificationSettingsEnabledSummary => 'Enabled';
@@ -2816,4 +2816,129 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get notificationPlatformUnsupported =>
       'This platform does not provide native notifications.';
+
+  @override
+  String get workspaceFeatures => '기능 관리';
+
+  @override
+  String get workspaceBoth => '시간표 및 일정';
+
+  @override
+  String get workspaceOnlyStudent => '시간표만';
+
+  @override
+  String get workspaceOnlyGeneral => '일정만';
+
+  @override
+  String get workspaceDisableTitle => '이 작업 공간을 비활성화할까요?';
+
+  @override
+  String get workspaceDisableMessage =>
+      '데이터와 설정은 유지됩니다. 여기서 다시 활성화할 때까지 관련 기능과 알림이 중지됩니다.';
+
+  @override
+  String get workspaceEnableHint => '사용할 기능을 선택하세요. 하나 이상은 활성화해야 합니다.';
+
+  @override
+  String get workspaceLastRequired => '하나 이상의 작업 공간을 활성화해야 합니다.';
+
+  @override
+  String get workspaceReminderCleanupFailed =>
+      '작업 공간은 비활성화되었지만 알림 정리가 완료되지 않았습니다. 알림 복구를 다시 시도하세요.';
+
+  @override
+  String get settingsSearch => '설정 검색';
+
+  @override
+  String get settingsNoResults => '일치하는 설정 없음';
+
+  @override
+  String get settingsDataPrivacy => '데이터 및 개인정보';
+
+  @override
+  String get workspacePreferences => '표시 및 조작';
+
+  @override
+  String get workspaceManage => '관리';
+
+  @override
+  String get selectedDayAgenda => '선택한 날짜의 일정';
+
+  @override
+  String get notificationTroubleshooting => '권한 및 문제 해결';
+
+  @override
+  String get settingsConnection => '연결';
+
+  @override
+  String get settingsAdvanced => '고급';
+
+  @override
+  String get unsavedChangesMessage => '저장하지 않은 변경사항이 있습니다. 버리고 나갈까요?';
+
+  @override
+  String get backupWorkspaceSelection => '전체 백업에는 데이터와 활성화된 작업 공간 설정이 포함됩니다.';
+
+  @override
+  String get assistantLayoutPreview => 'AI · Layout preview';
+
+  @override
+  String get assistantSelectionContext =>
+      'Uses the current selection as context';
+
+  @override
+  String get assistantPreviewDescription =>
+      'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.';
+
+  @override
+  String get assistantDraftLabel => 'Message draft';
+
+  @override
+  String get assistantPreviewNoSend =>
+      'Layout preview only. Nothing will be sent or changed.';
+
+  @override
+  String get resizePanel => 'Resize panel';
+
+  @override
+  String get minimizeWindow => 'Minimize';
+
+  @override
+  String get maximizeWindow => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get closeWindow => 'Close window';
+
+  @override
+  String get courseSystemReminder => 'System reminder';
+
+  @override
+  String courseReminderInherit(String reminder) {
+    return 'Use default ($reminder)';
+  }
+
+  @override
+  String get courseReminderMasterOff =>
+      'System reminders are off in notification settings. This course preference can still be saved.';
+
+  @override
+  String get courseReminderDefaultOff =>
+      'No default course reminder is set. Choose a custom reminder here or set a default in notification settings.';
+
+  @override
+  String get courseReminderDeliveryHint =>
+      'This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.';
+
+  @override
+  String get courseReminderPermissionUnknown =>
+      'System notification status has not been checked. Review notification settings before relying on reminders.';
+
+  @override
+  String get courseReminderMinutesLabel => 'Minutes before class';
+
+  @override
+  String get exportAction => 'Export';
 }

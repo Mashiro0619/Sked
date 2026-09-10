@@ -40,19 +40,19 @@ void main() {
     }
 
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await pump(839);
+    await pump(787);
     expect(
       find.byKey(const ValueKey('responsive-settings-single-column')),
       findsOneWidget,
     );
 
-    await pump(840);
+    await pump(788);
     expect(
       find.byKey(const ValueKey('responsive-settings-two-column')),
       findsOneWidget,
     );
 
-    await pump(840, textScale: 1.31);
+    await pump(788, textScale: 1.31);
     expect(
       find.byKey(const ValueKey('responsive-settings-single-column')),
       findsOneWidget,

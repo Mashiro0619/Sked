@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../models/timetable_models.dart';
+import '../models/workspace_availability.dart';
 import 'general_occurrence_service.dart';
 
 /// The time range and visibility policy requested from an [AgendaSource].
@@ -236,7 +237,20 @@ class AgendaProjectionService {
     final byId = <String, AgendaOccurrence>{};
     for (final source in registry.sources) {
       for (final occurrence in source.occurrences(data, query)) {
-        final normalized = occurrence.normalized();
+        if (!data.allowsAgendaSource(occurrence.sourceType)) continue;
+        final boundary =
+            data.workspaceReminderNotBefore[workspaceForAgendaSource(
+              occurrence.sourceType,
+            )];
+        final normalized = occurrence.normalized().copyWith(
+          reminders: occurrence.reminders
+              .where(
+                (reminder) =>
+                    boundary == null ||
+                    !reminder.fireAt(occurrence.start).isBefore(boundary),
+              )
+              .toList(),
+        );
         if (!normalized.includeInAgenda ||
             normalized.stableId.isEmpty ||
             !normalized.hasValidRange) {
@@ -362,6 +376,7 @@ class StudentAgendaSource implements AgendaSource {
     AppData data,
     AgendaProjectionQuery query,
   ) sync* {
+    if (!data.isWorkspaceEnabled(AppMode.student)) return;
     final timetables = data.studentMode.timetables;
     final timetable = _selectTimetable(
       timetables,
@@ -528,6 +543,7 @@ class GeneralAgendaSource implements AgendaSource {
     AppData data,
     AgendaProjectionQuery query,
   ) sync* {
+    if (!data.isWorkspaceEnabled(AppMode.general)) return;
     final occurrences = _occurrenceService.occurrencesForRange(
       data.generalMode,
       startInclusive: query.startInclusive,

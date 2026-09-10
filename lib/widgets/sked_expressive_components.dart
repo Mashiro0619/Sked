@@ -2,6 +2,10 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'desktop_window_host.dart';
+import 'workspace_frame.dart';
+import '../services/desktop_window_bridge.dart';
+
 import '../theme/sked_expressive_theme.dart';
 import 'sked_spring_builder.dart';
 
@@ -303,105 +307,134 @@ class SkedWorkspaceToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final shape = skedShapeSchemeOf(context).toolbar;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 520;
-        // Toolbars own the full width of their surface.  A loose Flexible
-        // lets a title slot shrink to its intrinsic width when there are no
-        // sibling actions, which leaves dynamically sized navigation rows
-        // floating away from the trailing edge (most visible when the global
-        // workspace navigation is hidden).  Keep the slot expanded so its
-        // caller can align controls against the actual toolbar bounds.
-        final titleBlock = Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DefaultTextStyle.merge(
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: colors.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-                child: title,
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
+    final layout = WorkspaceCanvasScope.maybeOf(context);
+    final captionClearance =
+        DesktopWindowBridge.instance.available &&
+            !(layout?.dockedDetail == true ||
+                layout?.supporting == true ||
+                layout?.dockedAssistant == true)
+        ? 138.0
+        : 0.0;
+    return Padding(
+      padding: EdgeInsetsDirectional.only(end: captionClearance),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          // Toolbars own the full width of their surface.  A loose Flexible
+          // lets a title slot shrink to its intrinsic width when there are no
+          // sibling actions, which leaves dynamically sized navigation rows
+          // floating away from the trailing edge (most visible when the global
+          // workspace navigation is hidden).  Keep the slot expanded so its
+          // caller can align controls against the actual toolbar bounds.
+          final titleBlock = Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 DefaultTextStyle.merge(
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: subtitle!,
+                  child: title,
                 ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  DefaultTextStyle.merge(
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                    child: subtitle!,
+                  ),
+                ],
               ],
-            ],
-          ),
-        );
-        final actionWrap = Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 4,
-            runSpacing: 4,
-            children: actions,
-          ),
-        );
-        final header = compact
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (leading != null) ...[
-                        leading!,
-                        const SizedBox(width: 8),
+            ),
+          );
+          final actionWrap = Align(
+            widthFactor: 1,
+            alignment: AlignmentDirectional.centerEnd,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 4,
+              runSpacing: 4,
+              children: actions,
+            ),
+          );
+          final header = compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (leading != null) ...[
+                          leading!,
+                          const SizedBox(width: 8),
+                        ],
+                        titleBlock,
                       ],
-                      titleBlock,
+                    ),
+                    if (actions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      actionWrap,
+                    ],
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (leading != null) ...[
+                      leading!,
+                      const SizedBox(width: 8),
+                    ],
+                    titleBlock,
+                    if (actions.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      // Measure actions at their content width instead of
+                      // reserving half of the toolbar for a single button.
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: math.max(
+                            0,
+                            (constraints.maxWidth -
+                                    padding
+                                        .resolve(Directionality.of(context))
+                                        .horizontal) *
+                                0.4,
+                          ),
+                        ),
+                        child: actionWrap,
+                      ),
+                    ],
+                  ],
+                );
+
+          return Semantics(
+            container: true,
+            child: Material(
+              color: colors.surfaceContainerLow,
+              shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
+              child: DesktopDragRegion(
+                child: Padding(
+                  padding: padding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      header,
+                      if (navigation != null) ...[
+                        SizedBox(height: navigationSpacing),
+                        navigation!,
+                      ],
                     ],
                   ),
-                  if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    actionWrap,
-                  ],
-                ],
-              )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (leading != null) ...[leading!, const SizedBox(width: 8)],
-                  titleBlock,
-                  if (actions.isNotEmpty) ...[
-                    const SizedBox(width: 12),
-                    Flexible(child: actionWrap),
-                  ],
-                ],
-              );
-
-        return Semantics(
-          container: true,
-          child: Material(
-            color: colors.surfaceContainerLow,
-            shape: shape,
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: padding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  header,
-                  if (navigation != null) ...[
-                    SizedBox(height: navigationSpacing),
-                    navigation!,
-                  ],
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

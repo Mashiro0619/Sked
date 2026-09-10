@@ -47,6 +47,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateCourseDefaultReminder(int? minutesBefore) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _settings.updateCourseDefaultReminder(_appData, minutesBefore);
     if (identical(next, _appData)) return;
     _appData = next;
@@ -54,6 +55,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateGeneralDefaultReminder(int? minutesBefore) async {
+    requireWorkspaceEnabled(AppMode.general);
     final next = _settings.updateGeneralDefaultReminder(
       _appData,
       minutesBefore,
@@ -110,41 +112,49 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateCloseCoursePopupOnOutsideTap(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateCloseCoursePopupOnOutsideTap(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updatePreserveTimetableGaps(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updatePreserveTimetableGaps(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateShowPastEndedCourses(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateShowPastEndedCourses(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateShowFutureCourses(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateShowFutureCourses(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateShowTimetableGridLines(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateShowTimetableGridLines(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateShowAddCourseFab(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateShowAddCourseFab(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateEnableLongPressAddCourse(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateEnableLongPressAddCourse(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateStudentToolbarNavigationOrder(List<String> order) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _settings.updateStudentToolbarNavigationOrder(_appData, order);
     if (identical(next, _appData)) return;
     _appData = next;
@@ -155,6 +165,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     String id,
     bool visible,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _settings.updateStudentToolbarNavigationVisibility(
       _appData,
       id,
@@ -168,6 +179,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   Future<void> updateStudentToolbarNavigationHiddenIds(
     List<String> hiddenIds,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _settings.updateStudentToolbarNavigationHiddenIds(
       _appData,
       hiddenIds,
@@ -178,6 +190,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateStudentToolbarHiddenItemsBehavior(String behavior) async {
+    requireWorkspaceEnabled(AppMode.student);
     final next = _settings.updateStudentToolbarHiddenItemsBehavior(
       _appData,
       behavior,
@@ -188,16 +201,19 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateFitDaySelectorToWidth(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateFitDaySelectorToWidth(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateFitWeekColumnsToWidth(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateFitWeekColumnsToWidth(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateEnableWeekSwipeNavigation(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateEnableWeekSwipeNavigation(_appData, value);
     await _saveAndNotify();
   }
@@ -207,27 +223,59 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> updateThemeMode(String themeMode) async {
-    _appData = _settings.updateThemeMode(_appData, themeMode);
+  AppData themeDataFor(AppMode mode) {
+    requireWorkspaceEnabled(mode);
+    return _appData.copyWith(activeMode: mode);
+  }
+
+  AppData _editTheme(AppMode? workspace, AppData Function(AppData) edit) {
+    final target = workspace ?? _appData.activeMode;
+    requireWorkspaceEnabled(target);
+    return edit(_appData.copyWith(activeMode: target))
+        .copyWith(activeMode: _appData.activeMode);
+  }
+
+  Future<void> updateThemeMode(String themeMode, {AppMode? workspace}) async {
+    _appData = _editTheme(
+      workspace,
+      (data) => _settings.updateThemeMode(data, themeMode),
+    );
     await _saveAndNotify();
   }
 
-  Future<void> updateThemeSeedColorValue(int colorValue) async {
-    _appData = _settings.updateThemeSeedColorValue(_appData, colorValue);
+  Future<void> updateThemeSeedColorValue(
+    int colorValue, {
+    AppMode? workspace,
+  }) async {
+    _appData = _editTheme(
+      workspace,
+      (data) => _settings.updateThemeSeedColorValue(data, colorValue),
+    );
     await _saveAndNotify();
   }
 
-  Future<void> updateThemeColorMode(String mode) async {
-    _appData = _settings.updateThemeColorMode(_appData, mode);
+  Future<void> updateThemeColorMode(String mode, {AppMode? workspace}) async {
+    _appData = _editTheme(
+      workspace,
+      (data) => _settings.updateThemeColorMode(data, mode),
+    );
     await _saveAndNotify();
   }
 
-  Future<void> updateColorfulUiColorValue(String key, int colorValue) async {
-    _appData = _settings.updateColorfulUiColorValue(_appData, key, colorValue);
+  Future<void> updateColorfulUiColorValue(
+    String key,
+    int colorValue, {
+    AppMode? workspace,
+  }) async {
+    _appData = _editTheme(
+      workspace,
+      (data) => _settings.updateColorfulUiColorValue(data, key, colorValue),
+    );
     await _saveAndNotify();
   }
 
   Future<void> updateColorfulCourseTextColorMode(String mode) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateColorfulCourseTextColorMode(_appData, mode);
     await _saveAndNotify();
   }
@@ -236,6 +284,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     required String mode,
     required int customColorValue,
   }) async {
+    requireWorkspaceEnabled(AppMode.student);
     final currentColor =
         _appData.studentMode.colorfulUiColorValues[colorfulCourseTextColorKey];
     final colorIsCurrent =
@@ -262,6 +311,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     String courseName,
     int colorValue,
   ) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateCourseNameColorValue(
       _appData,
       courseName,
@@ -271,6 +321,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateCustomSchoolImportBaseUrl(String value) async {
+    requireWorkspaceEnabled(AppMode.student);
     final normalized = value.trim();
     if (_appData.aiApiSettings.customBaseUrl == normalized) {
       return;
@@ -282,10 +333,12 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateCustomSchoolImportApiKey(String value) async {
+    requireWorkspaceEnabled(AppMode.student);
     await _persistCustomSchoolImportApiKey(value);
   }
 
   Future<void> updateCustomSchoolImportModel(String value) async {
+    requireWorkspaceEnabled(AppMode.student);
     final normalized = value.trim();
     if (_appData.aiApiSettings.customModel == normalized) {
       return;
@@ -297,6 +350,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateCustomSchoolImportPrompt(String value) async {
+    requireWorkspaceEnabled(AppMode.student);
     final normalized = value.trim();
     if (_appData.aiApiSettings.customPrompt == normalized) {
       return;
@@ -312,6 +366,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     required String model,
     required String prompt,
   }) async {
+    requireWorkspaceEnabled(AppMode.student);
     final normalizedBaseUrl = baseUrl.trim();
     final normalizedModel = model.trim();
     final normalizedPrompt = prompt.trim();
@@ -332,6 +387,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateLiveCourseOutlineColorValue(int colorValue) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateLiveCourseOutlineColorValue(
       _appData,
       colorValue,
@@ -340,11 +396,13 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   }
 
   Future<void> updateLiveCourseOutlineEnabled(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateLiveCourseOutlineEnabled(_appData, value);
     await _saveAndNotify();
   }
 
   Future<void> updateLiveCourseOutlineFollowTheme(bool value) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateLiveCourseOutlineFollowTheme(_appData, value);
     await _saveAndNotify();
   }
@@ -357,6 +415,7 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
     required String mode,
     required double width,
   }) async {
+    requireWorkspaceEnabled(AppMode.student);
     _appData = _settings.updateLiveCourseOutlineSettings(
       _appData,
       enabled: enabled,

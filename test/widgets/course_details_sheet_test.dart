@@ -90,6 +90,67 @@ Future<TimetableProvider> _createProvider({
 }
 
 void main() {
+  testWidgets(
+    'details and conflict order follow their owning timetable, not active selection',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      await provider.saveCourse(_course(id: 'course-c', name: 'Course C'));
+      final original = provider.activeTimetable;
+      await provider.setDisplayedCourseForConflict(
+        buildConflictKeyForCourses(original.id, 1, original.courses),
+        'course-c',
+      );
+      await provider.addTimetable(
+        original.config.copyWith(name: 'Other table'),
+      );
+      await provider.saveCourse(
+        _course(id: 'course-a', name: 'Unrelated duplicate ID'),
+      );
+      var missingCount = 0;
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: CourseDetailsSheet(
+                timetableId: original.id,
+                courseId: 'course-a',
+                weekday: 1,
+                conflictKey: null,
+                isFullConflict: true,
+                onEdit: () {},
+                onMissing: () => missingCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Course A'), findsOneWidget);
+      expect(find.text('Unrelated duplicate ID'), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('Course C')).dy,
+        lessThan(tester.getTopLeft(find.text('Course B')).dy),
+      );
+      await provider.saveCourse(
+        _course(id: 'course-a', name: 'Updated original'),
+        timetableId: original.id,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Updated original'), findsOneWidget);
+      expect(missingCount, 0);
+      await provider.deleteTimetable(original.id);
+      await tester.pumpAndSettle();
+      expect(missingCount, 1);
+      expect(find.text('Unrelated duplicate ID'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('conflict course cards fit compact phone width', (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -108,6 +169,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CourseDetailsSheet(
+              timetableId: provider.activeTimetable.id,
               courseId: 'course-a',
               weekday: 1,
               conflictKey: null,
@@ -142,6 +204,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CourseDetailsSheet(
+              timetableId: provider.activeTimetable.id,
               courseId: 'course-a',
               weekday: 1,
               conflictKey: null,
@@ -203,6 +266,7 @@ void main() {
                         context: context,
                         enableDrag: false,
                         builder: (sheetContext) => CourseDetailsSheet(
+                          timetableId: provider.activeTimetable.id,
                           courseId: 'course-a',
                           weekday: 1,
                           conflictKey: null,
@@ -286,6 +350,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CourseDetailsSheet(
+              timetableId: provider.activeTimetable.id,
               courseId: 'course-a',
               weekday: 1,
               conflictKey: null,
@@ -343,6 +408,7 @@ void main() {
               refreshHost = setState;
               return Scaffold(
                 body: CourseDetailsSheet(
+                  timetableId: provider.activeTimetable.id,
                   courseId: 'missing-course',
                   weekday: 1,
                   conflictKey: null,

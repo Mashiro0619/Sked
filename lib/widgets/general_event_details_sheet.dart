@@ -7,6 +7,7 @@ import '../models/timetable_models.dart';
 import '../utils/general_schedule_colors.dart';
 import 'expressive_dialog.dart';
 import 'ui_command.dart';
+import 'workbench_chrome_metrics.dart';
 
 class GeneralEventDetailsSheet extends StatefulWidget {
   const GeneralEventDetailsSheet({
@@ -362,7 +363,7 @@ class _EventIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
-      dimension: 48,
+      dimension: WorkbenchChromeMetrics.of(context).iconTarget,
       child: IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
@@ -385,7 +386,9 @@ class _EventActionBar extends StatelessWidget {
       child: Material(
         key: const ValueKey('general-event-action-bar'),
         color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(
+          WorkbenchChromeMetrics.of(context).desktop ? 6 : 16,
+        ),
         clipBehavior: Clip.antiAlias,
         child: Row(mainAxisSize: MainAxisSize.min, children: children),
       ),
