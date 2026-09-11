@@ -1700,27 +1700,48 @@ class _EmptyTimetableToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final metrics = WorkbenchChromeMetrics.of(context);
+    const padding = EdgeInsetsDirectional.fromSTEB(12, 6, 6, 6);
     return SkedWorkspaceToolbar(
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 6, 6),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-          if (context.watch<TimetableProvider>().hideHomeWorkspaceNavigation)
-            const WorkspaceModeMenu(),
-          if (showSettingsAction)
-            SizedBox.square(
-              dimension: 48,
-              child: IconButton(
-                key: const ValueKey('empty-timetable-settings-button'),
-                focusNode: settingsFocusNode,
-                onPressed: onOpenSettings,
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: l10n.settings,
+      padding: padding,
+      title: SizedBox(
+        height: metrics.desktop
+            ? metrics.toolbarHeight - padding.vertical
+            : null,
+        child: Row(
+          children: [
+            Expanded(
+              // An expanded paragraph would hit-test the blank toolbar space
+              // and prevent the drag region behind it from receiving gestures.
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                heightFactor: 1,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: metrics.desktop
+                      ? Theme.of(context).textTheme.titleMedium
+                      : null,
+                ),
               ),
             ),
-        ],
+            if (context.watch<TimetableProvider>().hideHomeWorkspaceNavigation)
+              const WorkspaceModeMenu(),
+            if (showSettingsAction)
+              SizedBox.square(
+                dimension: metrics.desktop ? metrics.iconTarget : 48,
+                child: IconButton(
+                  key: const ValueKey('empty-timetable-settings-button'),
+                  focusNode: settingsFocusNode,
+                  style: metrics.desktop ? metrics.iconStyle : null,
+                  onPressed: onOpenSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: l10n.settings,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

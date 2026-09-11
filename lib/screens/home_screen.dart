@@ -301,11 +301,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (showSettingsHere)
+                        // Desktop chrome needs a drag surface even when the
+                        // resource panel owns the settings action.
+                        if (desktop || showSettingsHere)
                           _EmptyTimetableToolbar(
                             key: const ValueKey('student-workspace-toolbar'),
                             title: l10n.appTitle,
-                            showSettingsAction: true,
+                            showSettingsAction: showSettingsHere,
                             settingsFocusNode: widget.settingsFocusNode,
                             onOpenSettings: settingsAction,
                           ),
