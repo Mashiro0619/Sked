@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Vælg uge",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Vælg måned",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Gælder datonavigation på computere og mindre skærme.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Vælg datointerval",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Tilpasset",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Vælg startdato",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Vælg slutdato",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Vælg 1–14 dage, inklusive start- og slutdato.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Tilpasset · {days, plural, =1{1 dag} other{{days} dage}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

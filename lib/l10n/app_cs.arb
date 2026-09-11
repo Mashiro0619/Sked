@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Vybrat týden",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Vybrat měsíc",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Platí pro navigaci podle data na počítačích i menších obrazovkách.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Vybrat rozsah dat",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Vlastní",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Vyberte počáteční datum",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Vyberte koncové datum",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Vyberte 1 až 14 dní včetně obou krajních dat.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Vlastní · {days, plural, =1{1 den} few{{days} dny} other{{days} dní}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

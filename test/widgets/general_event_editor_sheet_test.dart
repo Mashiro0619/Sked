@@ -1,3 +1,4 @@
+import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
@@ -598,6 +599,44 @@ void main() {
     expect(results.single?.delete, isTrue);
   });
 
+  testWidgets(
+    'end-date picker confirms the date without persisting the event draft',
+    (tester) async {
+      final saved = <GeneralEvent>[];
+      await tester.pumpWidget(
+        _localizedApp(
+          GeneralEventEditorSheet(
+            calendars: const [
+              GeneralSchedule(id: 'work', name: 'Work', events: []),
+            ],
+            activeCalendarId: 'work',
+            initialEvent: GeneralEvent(
+              id: 'event',
+              calendarId: 'work',
+              title: 'Meeting',
+              startDateTimeIso: '2026-05-25T09:00:00.000',
+              endDateTimeIso: '2026-05-25T10:00:00.000',
+            ),
+            onSave: (event) async => saved.add(event),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final end = find.byTooltip('Pick date').last;
+      await tester.ensureVisible(end);
+      await tester.tap(end);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('sked-date-2026-05-27')));
+      await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2026-05-27'), findsOneWidget);
+      expect(find.textContaining('2026-05-25'), findsOneWidget);
+      expect(saved, isEmpty);
+      expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('date picker ignores rapid duplicate taps', (tester) async {
     await tester.pumpWidget(
       _localizedApp(
@@ -616,17 +655,17 @@ void main() {
     await tester.tap(pickDateButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(find.byType(SkedDatePicker), findsOneWidget);
 
     await tester.tap(
       find.descendant(
-        of: find.byType(DatePickerDialog),
+        of: find.byType(SkedDatePicker),
         matching: find.widgetWithText(TextButton, 'Cancel'),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(find.byType(SkedDatePicker), findsNothing);
   });
 
   testWidgets(
@@ -703,7 +742,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(
           find.descendant(
-            of: find.byType(DatePickerDialog),
+            of: find.byType(SkedDatePicker),
             matching: find.widgetWithText(TextButton, l10n.cancel),
           ),
         );
@@ -789,7 +828,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(
         find.descendant(
-          of: find.byType(DatePickerDialog),
+          of: find.byType(SkedDatePicker),
           matching: find.widgetWithText(TextButton, l10n.cancel),
         ),
       );
@@ -839,9 +878,7 @@ void main() {
     await tester.tap(endDateButton);
     await tester.pumpAndSettle();
 
-    final calendar = tester.widget<CalendarDatePicker>(
-      find.byType(CalendarDatePicker),
-    );
+    final calendar = tester.widget<SkedDatePicker>(find.byType(SkedDatePicker));
     expect(calendar.firstDate, DateTime(2026, 5, 25));
   });
 
@@ -1052,15 +1089,16 @@ void main() {
     await tester.ensureVisible(endDateButton);
     await tester.tap(endDateButton);
     await tester.pumpAndSettle();
-    final datePicker = tester.widget<CalendarDatePicker>(
-      find.byType(CalendarDatePicker),
+    await tester.tap(find.byKey(const ValueKey('sked-date-input-toggle')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('sked-date-input')),
+      '08/31/2026',
     );
-    datePicker.onDateChanged(DateTime(2026, 8, 31));
-    await tester.pump();
     await tester.tap(
       find.descendant(
-        of: find.byType(DatePickerDialog),
-        matching: find.widgetWithText(TextButton, 'OK'),
+        of: find.byType(SkedDatePicker),
+        matching: find.byKey(const ValueKey('sked-date-confirm')),
       ),
     );
     await tester.pumpAndSettle();

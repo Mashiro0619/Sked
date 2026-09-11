@@ -7,6 +7,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_date_picker.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -504,9 +506,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                                 showTime: !_isAllDay,
                                 onPickDate: (_pickerOpen || _hasPopped)
                                     ? null
-                                    : () async {
+                                    : (anchorContext) async {
                                         final picked = await _runPicker(
-                                          () => _pickDate(context, _startDate),
+                                          () => _pickDate(
+                                            context,
+                                            _startDate,
+                                            anchorContext: anchorContext,
+                                          ),
                                         );
                                         if (!mounted || picked == null) {
                                           return;
@@ -544,9 +550,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                                 showTime: !_isAllDay,
                                 onPickDate: (_pickerOpen || _hasPopped)
                                     ? null
-                                    : () async {
+                                    : (anchorContext) async {
                                         final picked = await _runPicker(
-                                          () => _pickDate(context, _endDate),
+                                          () => _pickDate(
+                                            context,
+                                            _endDate,
+                                            anchorContext: anchorContext,
+                                          ),
                                         );
                                         if (!mounted || picked == null) {
                                           return;
@@ -1063,7 +1073,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
     );
   }
 
-  Future<void> _pickUntilDate() async {
+  Future<void> _pickUntilDate(BuildContext anchorContext) async {
     if (_blocked) return;
     setState(() => _pickerOpen = true);
     _dismissActiveInputFocus();
@@ -1072,6 +1082,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
         context,
         _untilDate ?? addCalendarDays(widget.firstDate, 90),
         firstDate: widget.firstDate,
+        anchorContext: anchorContext,
       );
       if (mounted && picked != null) {
         setState(() => _untilDate = picked);
@@ -1247,7 +1258,7 @@ class _DateTimeRow extends StatelessWidget {
   final DateTime date;
   final TimeOfDay time;
   final bool showTime;
-  final VoidCallback? onPickDate;
+  final ValueChanged<BuildContext>? onPickDate;
   final VoidCallback? onPickTime;
 
   @override
@@ -1263,11 +1274,15 @@ class _DateTimeRow extends StatelessWidget {
       tapTargetSize: MaterialTapTargetSize.padded,
     );
     final actionButtons = [
-      IconButton(
-        tooltip: l10n.pickDate,
-        onPressed: onPickDate,
-        style: actionStyle,
-        icon: const Icon(Icons.calendar_today_outlined),
+      Builder(
+        builder: (anchorContext) => IconButton(
+          tooltip: l10n.pickDate,
+          onPressed: onPickDate == null
+              ? null
+              : () => onPickDate!(anchorContext),
+          style: actionStyle,
+          icon: const Icon(Icons.calendar_today_outlined),
+        ),
       ),
       if (showTime)
         IconButton(
@@ -1475,7 +1490,7 @@ class _RepeatOptions extends StatelessWidget {
   final TextEditingController repeatCountController;
   final ValueChanged<int> onIntervalChanged;
   final ValueChanged<GeneralEventRecurrenceUnit> onUnitChanged;
-  final VoidCallback? onPickUntil;
+  final ValueChanged<BuildContext>? onPickUntil;
   final VoidCallback onClearUntil;
 
   @override
@@ -1484,12 +1499,18 @@ class _RepeatOptions extends StatelessWidget {
     final endDateButton = Row(
       children: [
         Expanded(
-          child: FilledButton.tonalIcon(
-            onPressed: onPickUntil,
-            icon: const Icon(Icons.event_repeat_outlined),
-            label: Text(
-              untilDate == null ? l10n.recurrenceEndDate : _fmtDate(untilDate!),
-              overflow: TextOverflow.ellipsis,
+          child: Builder(
+            builder: (anchorContext) => FilledButton.tonalIcon(
+              onPressed: onPickUntil == null
+                  ? null
+                  : () => onPickUntil!(anchorContext),
+              icon: const Icon(Icons.event_repeat_outlined),
+              label: Text(
+                untilDate == null
+                    ? l10n.recurrenceEndDate
+                    : _fmtDate(untilDate!),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ),
@@ -1905,6 +1926,7 @@ Future<DateTime?> _pickDate(
   BuildContext context,
   DateTime initialDate, {
   DateTime? firstDate,
+  BuildContext? anchorContext,
 }) {
   final supportedFirstDate = DateTime(1970);
   final lastDate = DateTime(2100);
@@ -1919,8 +1941,10 @@ Future<DateTime?> _pickDate(
       : initialDate.isAfter(lastDate)
       ? lastDate
       : initialDate;
-  return showDatePicker(
+  return showSkedDatePicker(
     context: context,
+    workspace: AppMode.general,
+    anchorContext: anchorContext,
     initialDate: boundedInitialDate,
     firstDate: boundedFirstDate,
     lastDate: lastDate,

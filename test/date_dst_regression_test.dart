@@ -6,6 +6,7 @@ import 'package:sked/services/general_calendar_service.dart';
 import 'package:sked/services/general_calendar_ics_service.dart';
 import 'package:sked/services/import_export_service.dart';
 import 'package:sked/screens/home_screen.dart';
+import 'package:sked/utils/date_selection.dart';
 
 void main() {
   final zone = Platform.environment['SKED_DST_TEST_ZONE'];
@@ -41,6 +42,54 @@ void main() {
       );
       expect(calendarDaysBetween(scenario.fallBefore, scenario.fallAfter), 2);
     });
+
+    test(
+      'date picker week and month ranges stay on civil midnight boundaries',
+      () {
+        for (final date in [
+          scenario.springBefore,
+          scenario.springAfter,
+          scenario.fallBefore,
+          scenario.fallAfter,
+        ]) {
+          final week = dateSelectionRange(date, DateSelectionUnit.week);
+          expect(week.start.hour, 0);
+          expect(week.end.hour, 0);
+          expect(week.start.weekday, DateTime.monday);
+          expect(week.end.weekday, DateTime.sunday);
+          expect(calendarDaysBetween(week.start, week.end), 6);
+          final next = shiftDateMonth(date, 1);
+          expect(next.hour, 0);
+          final month = dateSelectionRange(date, DateSelectionUnit.month);
+          expect(month.start.hour, 0);
+          expect(month.end.hour, 0);
+          expect(month.end.day, DateTime(date.year, date.month + 1, 0).day);
+        }
+      },
+    );
+
+    test(
+      'custom ranges retain inclusive length across timezone transitions',
+      () {
+        for (final before in [scenario.springBefore, scenario.fallBefore]) {
+          for (final length in [1, 5, 7, 14]) {
+            final range = GeneralDateRange(
+              before,
+              addCalendarDays(before, length - 1),
+            );
+            expect(range.dayCount, length);
+            expect(range.start.hour, 0);
+            expect(range.end.hour, 0);
+            expect(range.endExclusive, addCalendarDays(range.start, length));
+            final shifted = range.shifted(length)!;
+            expect(shifted.start, range.endExclusive);
+            expect(shifted.dayCount, length);
+            expect(shifted.shifted(-length), range);
+            expect(GeneralDateRange.fromJson(range.toJson()), range);
+          }
+        }
+      },
+    );
 
     test('semester weeks remain correct across the spring transition', () {
       final config = TimetableConfig(

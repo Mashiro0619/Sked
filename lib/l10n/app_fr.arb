@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Choisir une semaine",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Choisir un mois",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "S’applique à la navigation par date sur ordinateur et sur petit écran.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Choisir une période",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Personnalisé",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Choisissez la date de début",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Choisissez la date de fin",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Sélectionnez 1 à 14 jours, dates de début et de fin incluses.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Personnalisé · {days, plural, =1{1 jour} other{{days} jours}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

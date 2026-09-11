@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Selectează săptămâna",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Selectează luna",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Se aplică navigării după dată pe desktop și pe ecrane mai mici.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Alege intervalul de date",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Personalizat",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Alege data de început",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Alege data de sfârșit",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Selectează între 1 și 14 zile, inclusiv ambele capete.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Personalizat · {days, plural, =1{1 zi} other{{days} zile}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

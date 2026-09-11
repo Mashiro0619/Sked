@@ -2995,4 +2995,41 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Vybrat týden';
+
+  @override
+  String get datePickerSelectMonth => 'Vybrat měsíc';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Platí pro navigaci podle data na počítačích i menších obrazovkách.';
+
+  @override
+  String get dateRangeTitle => 'Vybrat rozsah dat';
+
+  @override
+  String get dateRangeCustom => 'Vlastní';
+
+  @override
+  String get dateRangeChooseStart => 'Vyberte počáteční datum';
+
+  @override
+  String get dateRangeChooseEnd => 'Vyberte koncové datum';
+
+  @override
+  String get dateRangeLimit => 'Vyberte 1 až 14 dní včetně obou krajních dat.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dní',
+      few: '$days dny',
+      one: '1 den',
+    );
+    return 'Vlastní · $_temp0';
+  }
 }

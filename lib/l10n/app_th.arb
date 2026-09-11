@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "เลือกสัปดาห์",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "เลือกเดือน",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "ใช้กับการนำทางวันที่บนเดสก์ท็อปและหน้าจอขนาดเล็ก",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "เลือกช่วงวันที่",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "กำหนดเอง",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "เลือกวันที่เริ่มต้น",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "เลือกวันที่สิ้นสุด",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "เลือก 1–14 วัน โดยรวมวันเริ่มต้นและวันสิ้นสุด",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "กำหนดเอง · {days} วัน",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

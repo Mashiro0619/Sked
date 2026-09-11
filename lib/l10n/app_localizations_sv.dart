@@ -2990,4 +2990,41 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Välj vecka';
+
+  @override
+  String get datePickerSelectMonth => 'Välj månad';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Gäller datumnavigering på datorer och mindre skärmar.';
+
+  @override
+  String get dateRangeTitle => 'Välj datumintervall';
+
+  @override
+  String get dateRangeCustom => 'Anpassat';
+
+  @override
+  String get dateRangeChooseStart => 'Välj startdatum';
+
+  @override
+  String get dateRangeChooseEnd => 'Välj slutdatum';
+
+  @override
+  String get dateRangeLimit =>
+      'Välj 1–14 dagar, inklusive start- och slutdatum.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dagar',
+      one: '1 dag',
+    );
+    return 'Anpassat · $_temp0';
+  }
 }

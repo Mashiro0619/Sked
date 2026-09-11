@@ -3008,4 +3008,35 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Hét kiválasztása';
+
+  @override
+  String get datePickerSelectMonth => 'Hónap kiválasztása';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Az asztali és kisebb képernyők dátumnavigációjára is vonatkozik.';
+
+  @override
+  String get dateRangeTitle => 'Dátumtartomány kiválasztása';
+
+  @override
+  String get dateRangeCustom => 'Egyéni';
+
+  @override
+  String get dateRangeChooseStart => 'Válassza ki a kezdőnapot';
+
+  @override
+  String get dateRangeChooseEnd => 'Válassza ki a zárónapot';
+
+  @override
+  String get dateRangeLimit =>
+      'Válasszon 1–14 napot, a kezdő- és zárónapot is beleértve.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return 'Egyéni · $days nap';
+  }
 }

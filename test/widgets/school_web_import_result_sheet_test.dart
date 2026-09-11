@@ -1,3 +1,4 @@
+import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
@@ -596,18 +597,29 @@ void main() {
     await tester.tap(startDateTile, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(find.byType(SkedDatePicker), findsOneWidget);
 
     await tester.tap(
       find.descendant(
-        of: find.byType(DatePickerDialog),
+        of: find.byType(SkedDatePicker),
         matching: find.widgetWithText(TextButton, l10n.cancel),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(find.byType(SkedDatePicker), findsNothing);
     expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+    final before = provider.appData.toJson();
+    await tester.tap(startDateTile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sked-date-2026-05-27')));
+    await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: startDateTile, matching: find.text('2026-05-27')),
+      findsOneWidget,
+    );
+    expect(provider.appData.toJson(), before);
   });
 
   testWidgets(

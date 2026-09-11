@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Izberi teden",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Izberi mesec",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Velja za datumsko navigacijo na namizju in manjših zaslonih.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Izberi datumski obseg",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Po meri",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Izberi začetni datum",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Izberi končni datum",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Izberi od 1 do 14 dni, vključno z obema datumoma.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Po meri · {days, plural, =1{1 dan} two{{days} dneva} other{{days} dni}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

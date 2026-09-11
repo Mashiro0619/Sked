@@ -96,6 +96,37 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   String? _corruptAppBackupRestoreJournalArtifact;
 
   final Map<AppMode, Set<Future<bool> Function()>> _workspaceExitGuards = {};
+  (GeneralDateRange?, String?)? _visibleGeneralNavigation;
+  bool _generalNavigationPending = false;
+  int _generalDateFocusRevision = 0;
+
+  /// UI-only intent: explicit date jumps reveal their column; range paging
+  /// leaves the user's horizontal/time viewport where it was.
+  int get generalDateFocusRevision => _generalDateFocusRevision;
+  Object _dataSessionToken = Object();
+
+  /// Invalidates UI selection sessions when a complete data replacement is
+  /// reserved, including a restore that keeps the same workspace enabled.
+  Object get dataSessionToken => _dataSessionToken;
+
+  Future<void> _commitGeneralNavigation(
+    GeneralScheduleData Function(GeneralScheduleData) change, {
+    bool Function()? isCurrent,
+    bool revealFocus = true,
+  });
+  AppData get _visibleAppData => _visibleGeneralNavigation == null
+      ? _appData
+      : _appData.copyWith(generalMode: _visibleGeneralMode);
+
+  GeneralScheduleData get _visibleGeneralMode {
+    final previous = _visibleGeneralNavigation;
+    return previous == null
+        ? _appData.generalMode
+        : _appData.generalMode.copyWith(
+            customDateRange: previous.$1,
+            selectedDateIso: previous.$2,
+          );
+  }
 
   VoidCallback registerWorkspaceExitGuard(
     AppMode mode,
@@ -183,6 +214,7 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
       _startDeferredUiStateSave();
     }
     _appBackupRestoreReservationCount += 1;
+    _dataSessionToken = Object();
     return Object();
   }
 
@@ -507,7 +539,7 @@ class TimetableProvider extends _TimetableProviderBase
   /// The latest in-memory application snapshot. Consumers that need a
   /// platform projection should prefer [committedData] so failed writes are
   /// never exposed as durable state.
-  AppData get appData => _appData;
+  AppData get appData => _visibleAppData;
   bool get hasTimetables => _appData.studentMode.timetables.isNotEmpty;
   bool get hasPeriodTimeSets => _appData.studentMode.periodTimeSets.isNotEmpty;
   List<TimetableData> get timetables => _appData.studentMode.timetables;
@@ -699,7 +731,98 @@ class TimetableProvider extends _TimetableProviderBase
   bool get isGeneralMode => activeMode == AppMode.general;
   bool get isStudentMode => activeMode == AppMode.student;
   StudentModeData get studentMode => _appData.studentMode;
-  GeneralScheduleData get generalMode => _appData.generalMode;
+  GeneralScheduleData get generalMode => _visibleGeneralMode;
+
+  @override
+  Future<void> _commitGeneralNavigation(
+    GeneralScheduleData Function(GeneralScheduleData) change, {
+    bool Function()? isCurrent,
+    bool revealFocus = true,
+  }) async {
+    final sessionToken = dataSessionToken;
+    final resumeBoundary = _appData.workspaceReminderNotBefore[AppMode.general];
+    void validateSession() {
+      _ensureAppBackupRestoreMutationAllowed();
+      requireWorkspaceEnabled(AppMode.general);
+      if (_isDisposed ||
+          _dataClearReserved ||
+          !identical(sessionToken, dataSessionToken) ||
+          isCurrent?.call() == false ||
+          resumeBoundary !=
+              _appData.workspaceReminderNotBefore[AppMode.general]) {
+        throw StateError('Date navigation session is no longer active.');
+      }
+    }
+
+    validateSession();
+    while (_modeSwitchInFlight != null) {
+      try {
+        await _modeSwitchInFlight;
+      } catch (_) {
+        /* The initiating caller owns failure. */
+      }
+    }
+    validateSession();
+    Future<void> commit() async {
+      await flushPendingUiStateSaves();
+      await _workspaceMutationLock(() async {
+        validateSession();
+        final previous = _appData.generalMode;
+        final next = change(previous);
+        if (next.customDateRange == previous.customDateRange &&
+            next.selectedDateIso == previous.selectedDateIso) {
+          if (revealFocus) {
+            _generalDateFocusRevision++;
+            notifyListeners();
+          }
+          return;
+        }
+        final barrier = Completer<void>();
+        _modeSwitchBarrier = barrier;
+        _visibleGeneralNavigation = (
+          previous.customDateRange,
+          previous.selectedDateIso,
+        );
+        _appData = _appData.copyWith(generalMode: next);
+        try {
+          await _saveAndNotify(
+            notify: false,
+            allowDuringModeSwitch: true,
+            rollbackOnFailure: false,
+            emitCommit: false,
+          );
+          if (revealFocus) _generalDateFocusRevision++;
+        } catch (_) {
+          _restoreAppDataAfterPersistenceFailure(
+            _appData.copyWith(
+              generalMode: _appData.generalMode.copyWith(
+                customDateRange: previous.customDateRange,
+                selectedDateIso: previous.selectedDateIso,
+              ),
+            ),
+          );
+          rethrow;
+        } finally {
+          _visibleGeneralNavigation = null;
+          if (identical(_modeSwitchBarrier, barrier)) {
+            _modeSwitchBarrier = null;
+            barrier.complete();
+          }
+          if (!_isDisposed) notifyListeners();
+        }
+      });
+    }
+
+    _generalNavigationPending = true;
+    final operation = commit();
+    _modeSwitchInFlight = operation;
+    try {
+      await operation;
+    } finally {
+      _generalNavigationPending = false;
+      if (identical(_modeSwitchInFlight, operation)) _modeSwitchInFlight = null;
+    }
+  }
 
   Future<void> switchMode(AppMode mode) async {
     // Serialize direct callers as well as the shell's navigation command. A

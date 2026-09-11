@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "週を選択",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "月を選択",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "デスクトップと小さい画面の日付ナビゲーションに適用します。",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "期間を選択",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "カスタム",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "開始日を選択してください",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "終了日を選択してください",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "開始日と終了日を含めて1～14日を選択してください。",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "カスタム · {days}日",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

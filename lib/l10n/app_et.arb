@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Vali nädal",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Vali kuu",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Kehtib kuupäevade navigeerimisele arvutis ja väiksematel ekraanidel.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Vali kuupäevavahemik",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Kohandatud",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Vali alguskuupäev",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Vali lõppkuupäev",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Vali 1–14 päeva, mõlemad lõppkuupäevad kaasa arvatud.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Kohandatud · {days, plural, =1{1 päev} other{{days} päeva}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

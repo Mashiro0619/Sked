@@ -13,6 +13,7 @@ import 'general_event.dart';
 import 'general_event_occurrence.dart';
 import 'general_schedule.dart';
 import 'general_schedule_data.dart';
+import 'general_date_range.dart';
 import 'notification_settings.dart';
 import 'student_mode_data.dart';
 import 'timetable_data.dart';
@@ -1423,8 +1424,11 @@ void _validateStorageGeneralMode(Map<String, dynamic> json) {
     return;
   }
   final currentSchemaVersion = schemaVersion!;
-  final validateCurrentSemantics =
-      currentSchemaVersion == generalScheduleSchemaVersion;
+  // v5 adds viewport state; keep v4's strict semantic checks.
+  final validateCurrentSemantics = currentSchemaVersion >= 4;
+  if (generalMode['customDateRange'] != null) {
+    GeneralDateRange.fromJson(generalMode['customDateRange']);
+  }
   _validateStorageGeneralSettings(
     generalMode,
     validateCurrentSemantics: validateCurrentSemantics,

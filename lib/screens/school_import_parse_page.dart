@@ -8,6 +8,8 @@ import 'dart:async';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:material_ui/material_ui.dart';
 
+import '../widgets/sked_date_picker.dart';
+
 import '../l10n/app_locale.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
@@ -122,6 +124,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   String _selectedPeriodTimeSetId = '';
   bool _importBundledPeriodTimeSet = false;
   bool _pickerOpen = false;
+  final _startDateAnchor = GlobalKey();
 
   bool get _canEdit =>
       _isDone &&
@@ -534,8 +537,10 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
         ? lastDate
         : current;
     final picked = await _runPicker(
-      () => showDatePicker(
+      () => showSkedDatePicker(
         context: context,
+        workspace: AppMode.student,
+        anchorContext: _startDateAnchor.currentContext,
         firstDate: firstDate,
         lastDate: lastDate,
         initialDate: initialDate,
@@ -913,12 +918,17 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                     final inline =
                         constraints.maxWidth >= 600 &&
                         MediaQuery.textScalerOf(context).scale(1) <= 1.3;
-                    final date = _ParseImportActionRow(
-                      key: const ValueKey('school-import-parse-start-date'),
-                      title: l10n.semesterStartDate,
-                      subtitle: _formatDate(_startDate ?? timetable.startDate),
-                      icon: Icons.calendar_today_outlined,
-                      onTap: _pickStartDate,
+                    final date = KeyedSubtree(
+                      key: _startDateAnchor,
+                      child: _ParseImportActionRow(
+                        key: const ValueKey('school-import-parse-start-date'),
+                        title: l10n.semesterStartDate,
+                        subtitle: _formatDate(
+                          _startDate ?? timetable.startDate,
+                        ),
+                        icon: Icons.calendar_today_outlined,
+                        onTap: _pickStartDate,
+                      ),
                     );
                     final weeks = weeksController == null
                         ? const SizedBox.shrink()

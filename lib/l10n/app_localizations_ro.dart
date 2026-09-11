@@ -3007,4 +3007,41 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Selectează săptămâna';
+
+  @override
+  String get datePickerSelectMonth => 'Selectează luna';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Se aplică navigării după dată pe desktop și pe ecrane mai mici.';
+
+  @override
+  String get dateRangeTitle => 'Alege intervalul de date';
+
+  @override
+  String get dateRangeCustom => 'Personalizat';
+
+  @override
+  String get dateRangeChooseStart => 'Alege data de început';
+
+  @override
+  String get dateRangeChooseEnd => 'Alege data de sfârșit';
+
+  @override
+  String get dateRangeLimit =>
+      'Selectează între 1 și 14 zile, inclusiv ambele capete.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days zile',
+      one: '1 zi',
+    );
+    return 'Personalizat · $_temp0';
+  }
 }

@@ -3013,4 +3013,41 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Seleccionar semana';
+
+  @override
+  String get datePickerSelectMonth => 'Seleccionar mes';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Se aplica a la navegación por fechas en escritorio y pantallas pequeñas.';
+
+  @override
+  String get dateRangeTitle => 'Elegir intervalo de fechas';
+
+  @override
+  String get dateRangeCustom => 'Personalizado';
+
+  @override
+  String get dateRangeChooseStart => 'Elige la fecha de inicio';
+
+  @override
+  String get dateRangeChooseEnd => 'Elige la fecha de fin';
+
+  @override
+  String get dateRangeLimit =>
+      'Selecciona entre 1 y 14 días, incluyendo ambos extremos.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days días',
+      one: '1 día',
+    );
+    return 'Personalizado · $_temp0';
+  }
 }

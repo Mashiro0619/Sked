@@ -2996,4 +2996,42 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Izberi teden';
+
+  @override
+  String get datePickerSelectMonth => 'Izberi mesec';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Velja za datumsko navigacijo na namizju in manjših zaslonih.';
+
+  @override
+  String get dateRangeTitle => 'Izberi datumski obseg';
+
+  @override
+  String get dateRangeCustom => 'Po meri';
+
+  @override
+  String get dateRangeChooseStart => 'Izberi začetni datum';
+
+  @override
+  String get dateRangeChooseEnd => 'Izberi končni datum';
+
+  @override
+  String get dateRangeLimit =>
+      'Izberi od 1 do 14 dni, vključno z obema datumoma.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dni',
+      two: '$days dneva',
+      one: '1 dan',
+    );
+    return 'Po meri · $_temp0';
+  }
 }

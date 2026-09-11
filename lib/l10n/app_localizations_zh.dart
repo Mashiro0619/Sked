@@ -2820,6 +2820,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exportAction => '导出';
+
+  @override
+  String get datePickerSelectWeek => '选择周';
+
+  @override
+  String get datePickerSelectMonth => '选择月份';
+
+  @override
+  String get generalDateLabelFormatDescription => '适用于桌面和窄屏的日期导航。';
+
+  @override
+  String get dateRangeTitle => '选择日期范围';
+
+  @override
+  String get dateRangeCustom => '自定义';
+
+  @override
+  String get dateRangeChooseStart => '请选择开始日期';
+
+  @override
+  String get dateRangeChooseEnd => '请选择结束日期';
+
+  @override
+  String get dateRangeLimit => '请选择 1–14 天（含首尾日期）。';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return '自定义 · $days天';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5639,4 +5668,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get exportAction => '匯出';
+
+  @override
+  String get datePickerSelectWeek => '選擇週';
+
+  @override
+  String get datePickerSelectMonth => '選擇月份';
+
+  @override
+  String get generalDateLabelFormatDescription => '適用於桌面和窄螢幕的日期導覽。';
+
+  @override
+  String get dateRangeTitle => '選擇日期範圍';
+
+  @override
+  String get dateRangeCustom => '自訂';
+
+  @override
+  String get dateRangeChooseStart => '請選擇開始日期';
+
+  @override
+  String get dateRangeChooseEnd => '請選擇結束日期';
+
+  @override
+  String get dateRangeLimit => '請選擇 1–14 天（含首尾日期）。';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return '自訂 · $days天';
+  }
 }

@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Επιλογή εβδομάδας",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Επιλογή μήνα",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Ισχύει για την πλοήγηση ημερομηνιών σε υπολογιστές και μικρότερες οθόνες.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Επιλογή εύρους ημερομηνιών",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Προσαρμοσμένο",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Επιλέξτε ημερομηνία έναρξης",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Επιλέξτε ημερομηνία λήξης",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Επιλέξτε 1–14 ημέρες, μαζί με την αρχική και την τελική.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Προσαρμοσμένο · {days, plural, =1{1 ημέρα} other{{days} ημέρες}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

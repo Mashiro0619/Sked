@@ -128,6 +128,7 @@ class GeneralCalendarService {
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
       selectedDateIso: selectedDateIso,
+      customDateRange: data.customDateRange,
       defaultView: data.defaultView,
       viewSwitchBehavior: data.viewSwitchBehavior,
       toolbarWidthPolicy: data.toolbarWidthPolicy,

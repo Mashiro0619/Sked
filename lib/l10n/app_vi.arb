@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Chọn tuần",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Chọn tháng",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Áp dụng cho điều hướng ngày trên máy tính và màn hình nhỏ.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Chọn khoảng ngày",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Tùy chỉnh",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Chọn ngày bắt đầu",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Chọn ngày kết thúc",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Chọn từ 1 đến 14 ngày, bao gồm cả hai ngày đầu và cuối.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Tùy chỉnh · {days} ngày",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

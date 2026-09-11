@@ -2,6 +2,8 @@ import '../widgets/expressive_motion.dart';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'sked_date_picker.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/school_import_models.dart';
 import '../models/timetable_models.dart';
@@ -40,6 +42,7 @@ class _SchoolWebImportResultSheetState
   bool _replaceConfirmationOpen = false;
   bool _hasPopped = false;
   bool _pickerOpen = false;
+  final _startDateAnchor = GlobalKey();
 
   bool get _hasBundledPeriodTimeSet =>
       widget.response.timetable.periodTimeSet.periodTimes.isNotEmpty;
@@ -232,14 +235,17 @@ class _SchoolWebImportResultSheetState
               ),
               const SizedBox(height: 12),
               _ImportFormSummary(
-                date: _CompactActionRow(
-                  key: const ValueKey('school-import-start-date-tile'),
-                  title: Text(l10n.semesterStartDate),
-                  subtitle: Text(_formatDate(_startDate)),
-                  leadingIcon: Icons.calendar_today_outlined,
-                  trailingIcon: Icons.chevron_right,
-                  enabled: !_blocked,
-                  onTap: _blocked ? null : _pickStartDate,
+                date: KeyedSubtree(
+                  key: _startDateAnchor,
+                  child: _CompactActionRow(
+                    key: const ValueKey('school-import-start-date-tile'),
+                    title: Text(l10n.semesterStartDate),
+                    subtitle: Text(_formatDate(_startDate)),
+                    leadingIcon: Icons.calendar_today_outlined,
+                    trailingIcon: Icons.chevron_right,
+                    enabled: !_blocked,
+                    onTap: _blocked ? null : _pickStartDate,
+                  ),
                 ),
                 courseCount: l10n.schoolWebImportCourseCount(
                   timetable.courses.length,
@@ -327,8 +333,10 @@ class _SchoolWebImportResultSheetState
         ? lastDate
         : _startDate;
     final picked = await _runPicker(
-      () => showDatePicker(
+      () => showSkedDatePicker(
         context: context,
+        workspace: AppMode.student,
+        anchorContext: _startDateAnchor.currentContext,
         firstDate: firstDate,
         lastDate: lastDate,
         initialDate: boundedInitialDate,

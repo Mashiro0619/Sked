@@ -2,6 +2,8 @@ import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../utils/calendar_timeline_layout.dart';
 import '../widgets/workbench_resource_widgets.dart';
+import '../widgets/sked_date_picker.dart';
+import '../utils/date_selection.dart';
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -43,6 +45,8 @@ part 'general_schedule_timeline_components.dart';
 part 'general_schedule_calendar_manager.dart';
 part 'general_schedule_month_view.dart';
 
+const generalViewCustom = 'custom';
+
 class GeneralScheduleHomeScreen extends StatefulWidget {
   const GeneralScheduleHomeScreen({
     super.key,
@@ -72,8 +76,38 @@ class GeneralScheduleHomeScreen extends StatefulWidget {
 
 class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   final _pane = WorkspacePaneController();
+  var _calendarViewport = _CalendarViewportSession();
+  SkedDateRangeController? _rangeController;
+  GeneralDateRange? _rememberedCustomRange;
+  Object? _rangeDataSession;
+  DateTime? _rangeResumeBoundary;
+  bool _navigationBusy = false;
+  bool get _dateNavigationBusy =>
+      _navigationBusy || (_rangeController?.saving ?? false);
+
+  void _rangeSessionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _observeRangeSession(TimetableProvider provider) {
+    final boundary =
+        provider.appData.workspaceReminderNotBefore[AppMode.general];
+    if (!identical(_rangeDataSession, provider.dataSessionToken) ||
+        boundary != _rangeResumeBoundary) {
+      _rangeController?.dispose();
+      _rangeController = null;
+      _calendarViewport = _CalendarViewportSession();
+      _rememberedCustomRange = null;
+      _rangeDataSession = provider.dataSessionToken;
+      _rangeResumeBoundary = boundary;
+    }
+    _rememberedCustomRange =
+        provider.customGeneralDateRange ?? _rememberedCustomRange;
+  }
+
   @override
   void dispose() {
+    _rangeController?.dispose();
     _pane.dispose();
     super.dispose();
   }
@@ -81,6 +115,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   String? _view;
   bool _initializedView = false;
   bool _datePickerOpen = false;
+  DateTime? _resourceBrowsedMonth;
+  DateTime? _resourceSelectedDate;
+  int _resourceNavigationRevision = 0;
   bool _editorSheetOpen = false;
   bool _detailsSheetOpen = false;
   bool _moreOccurrencesSheetOpen = false;
@@ -103,7 +140,33 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     if (!_initializedView) {
       _view = context.read<TimetableProvider>().generalDefaultView;
       _initializedView = true;
+      _resumeCustomFocus();
     }
+  }
+
+  @override
+  void didUpdateWidget(GeneralScheduleHomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.active && widget.active) _resumeCustomFocus();
+  }
+
+  void _resumeCustomFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !widget.active ||
+          !widget.interactive ||
+          _dateNavigationBusy ||
+          _datePickerOpen) {
+        return;
+      }
+      final provider = context.read<TimetableProvider>();
+      final range = provider.customGeneralDateRange;
+      if ((_view ?? provider.generalDefaultView) == generalViewWeek &&
+          range != null &&
+          !range.contains(provider.selectedGeneralDate)) {
+        unawaited(_changeView(provider, generalViewCustom));
+      }
+    });
   }
 
   @override
@@ -113,8 +176,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       _GeneralHomeSnapshot.from,
     );
     final provider = context.read<TimetableProvider>();
+    _observeRangeSession(provider);
     final selectedDate = snapshot.selectedDate;
-    final view = normalizeGeneralView(_view ?? snapshot.defaultView);
+    final baseView = normalizeGeneralView(_view ?? snapshot.defaultView);
+    final view = baseView == generalViewWeek && snapshot.customDateRange != null
+        ? generalViewCustom
+        : baseView;
     final dateNavigationDirection =
         _dateNavigationTarget != null &&
             _calendarDateKey(_dateNavigationTarget!) ==
@@ -210,13 +277,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     moreButtonKey: _toolbarMoreButtonKey,
                     selectedDate: selectedDate,
                     dateNavigationDirection: dateNavigationDirection,
-                    interactive: widget.interactive,
+                    interactive: widget.interactive && !_dateNavigationBusy,
                     viewSwitchBehavior: snapshot.viewSwitchBehavior,
-                    onViewChanged: (nextView) => setState(() {
-                      _view = nextView;
-                      _dateNavigationTarget = null;
-                      _dateNavigationDirection = 0;
-                    }),
+                    onViewChanged: (nextView) =>
+                        unawaited(_changeView(provider, nextView)),
                     onStep: (direction) =>
                         unawaited(_stepDate(provider, direction)),
                     onToday: () => unawaited(_goToToday(provider)),
@@ -229,6 +293,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               ? (DateTime date) => _selectDate(provider, date)
               : (DateTime _) async {};
           final pagerActive =
+              !_dateNavigationBusy &&
               widget.active &&
               widget.interactive &&
               !_pagerDateCommitInProgress;
@@ -265,7 +330,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     scale: false,
                     child: ExpressiveSwitcher(
                       child: KeyedSubtree(
-                        key: ValueKey(view),
+                        key: ValueKey(baseView),
                         child: switch (view) {
                           generalViewDay => _DayCalendarView(
                             date: selectedDate,
@@ -329,6 +394,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                 _openDetails(context, provider, occurrence),
                           ),
                           _ => _WeekCalendarView(
+                            viewport: _calendarViewport,
+                            customRange: snapshot.customDateRange,
+                            onRangePageSettled: (range) =>
+                                unawaited(_moveRange(provider, range)),
                             date: selectedDate,
                             provider: provider,
                             filter: filter,
@@ -407,6 +476,134 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     return _wrapStandalone(body);
   }
 
+  GeneralDateRange _effectiveRange(TimetableProvider provider) {
+    if (provider.customGeneralDateRange case final range?) return range;
+    var first = startOfWeekMonday(provider.selectedGeneralDate);
+    if (first.isBefore(GeneralDateRange.firstDate)) {
+      first = GeneralDateRange.firstDate;
+    }
+    final last = addCalendarDays(first, 6);
+    return GeneralDateRange(
+      first,
+      last.isAfter(GeneralDateRange.lastDate)
+          ? GeneralDateRange.lastDate
+          : last,
+    );
+  }
+
+  SkedDateRangeController _rangeSession(TimetableProvider provider) {
+    _observeRangeSession(provider);
+    final range = _effectiveRange(provider);
+    final dataSession = provider.dataSessionToken;
+    final ownerRoute = ModalRoute.of(context);
+    final resumeBoundary =
+        provider.appData.workspaceReminderNotBefore[AppMode.general];
+    bool isCurrent() =>
+        mounted &&
+        (ownerRoute?.isActive ?? true) &&
+        provider.isWorkspaceEnabled(AppMode.general) &&
+        identical(dataSession, provider.dataSessionToken) &&
+        resumeBoundary ==
+            provider.appData.workspaceReminderNotBefore[AppMode.general];
+    final session = _rangeController ??= (SkedDateRangeController(
+      initialRange: range,
+      isSessionCurrent: isCurrent,
+      onApply: (next) async {
+        if (!mounted) throw StateError('Date range owner is gone.');
+        await provider.setGeneralDateRange(next, isCurrent: isCurrent);
+        if (isCurrent()) {
+          setState(() {
+            _view = generalViewWeek;
+            _resourceBrowsedMonth = provider.selectedGeneralDate;
+            _resourceNavigationRevision++;
+            _pagerSyncRevision++;
+          });
+        }
+      },
+    )..addListener(_rangeSessionChanged));
+    session.sync(range);
+    return session;
+  }
+
+  bool _canStepRange(TimetableProvider provider, int direction) {
+    final range = provider.customGeneralDateRange;
+    return (_view ?? provider.generalDefaultView) != generalViewWeek ||
+        range == null ||
+        range.shifted(range.dayCount * direction) != null;
+  }
+
+  Future<void> _moveRange(
+    TimetableProvider provider,
+    GeneralDateRange range,
+  ) async {
+    if (_dateNavigationBusy) return;
+    final old = provider.customGeneralDateRange;
+    if (old == null) return;
+    final offset = calendarDaysBetween(
+      old.start,
+      provider.selectedGeneralDate,
+    ).clamp(0, old.dayCount - 1);
+    setState(() => _navigationBusy = true);
+    try {
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Move date range',
+        command: () => provider.setGeneralDateRange(
+          range,
+          focusedDate: addCalendarDays(range.start, offset),
+          revealFocus: false,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _navigationBusy = false;
+          _pagerSyncRevision++;
+        });
+      }
+    }
+  }
+
+  Future<void> _changeView(TimetableProvider provider, String view) async {
+    if (_dateNavigationBusy) return;
+    final savedRange =
+        provider.customGeneralDateRange ?? _rememberedCustomRange;
+    if (view == generalViewCustom && savedRange == null) {
+      await _pickDate(context, provider, forceRange: true);
+      return;
+    }
+    final needsSave =
+        (view == generalViewWeek && provider.customGeneralDateRange != null) ||
+        (view == generalViewCustom &&
+            (provider.customGeneralDateRange == null ||
+                !savedRange!.contains(provider.selectedGeneralDate)));
+    if (needsSave) {
+      setState(() => _navigationBusy = true);
+      try {
+        final saved = await runUiCommandWithFeedback(
+          context: context,
+          debugLabel: 'Change calendar view',
+          command: () => view == generalViewWeek
+              ? provider.clearGeneralDateRange()
+              : provider.setGeneralDateRange(
+                  savedRange!.containing(provider.selectedGeneralDate),
+                  focusedDate: provider.selectedGeneralDate,
+                ),
+        );
+        if (!saved || !mounted) return;
+      } finally {
+        if (mounted) setState(() => _navigationBusy = false);
+      }
+    }
+    if (!mounted) return;
+    _rangeController?.cancel();
+    setState(() {
+      _view = view == generalViewCustom ? generalViewWeek : view;
+      _dateNavigationTarget = null;
+      _dateNavigationDirection = 0;
+    });
+  }
+
   Future<void> _jumpCalendarMonth(
     TimetableProvider provider,
     int offset,
@@ -421,6 +618,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   }
 
   Future<void> _stepDate(TimetableProvider provider, int direction) async {
+    if (_dateNavigationBusy) return;
+    final range = provider.customGeneralDateRange;
+    if ((_view ?? provider.generalDefaultView) == generalViewWeek &&
+        range != null) {
+      final next = range.shifted(direction * range.dayCount);
+      if (next != null) await _moveRange(provider, next);
+      return;
+    }
     final view = _view ?? provider.generalDefaultView;
     if (view == generalViewMonth) {
       return _jumpCalendarMonth(provider, direction);
@@ -433,13 +638,20 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   }
 
   Future<void> _goToToday(TimetableProvider provider) async {
-    await _selectDate(provider, _visibleGeneralDate(provider, DateTime.now()));
+    if (_dateNavigationBusy) return;
+    final date = _visibleGeneralDate(provider, DateTime.now());
+    setState(() {
+      _resourceBrowsedMonth = date;
+      _resourceNavigationRevision++;
+    });
+    await _selectDate(provider, date);
   }
 
   Future<void> _selectDate(
     TimetableProvider provider,
     DateTime requestedDate,
   ) async {
+    if (_dateNavigationBusy) return;
     final current = normalizeDateOnly(
       _dateNavigationTarget ?? provider.selectedGeneralDate,
     );
@@ -451,7 +663,23 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       direction: requestedDirection < 0 ? -1 : 1,
     );
     final direction = next.compareTo(current).sign;
-    if (direction == 0) return;
+    if (direction == 0) {
+      if (provider.customGeneralDateRange != null &&
+          (_view ?? provider.generalDefaultView) == generalViewWeek) {
+        await runUiCommandWithFeedback(
+          context: context,
+          debugLabel: 'Reveal calendar date',
+          command: () => provider.setSelectedGeneralDate(next),
+        );
+      }
+      if (mounted) {
+        setState(() {
+          _resourceBrowsedMonth = next;
+          _resourceNavigationRevision++;
+        });
+      }
+      return;
+    }
     if (_detailsSheetOpen && !_editorSheetOpen) {
       await _pane.close();
       if (!mounted) return;
@@ -468,8 +696,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       _dateNavigationDirection = direction;
     }
     try {
-      await provider.setSelectedGeneralDate(next);
+      if (provider.customGeneralDateRange != null) {
+        setState(() => _navigationBusy = true);
+        await runUiCommandWithFeedback(
+          context: context,
+          debugLabel: 'Navigate calendar date',
+          command: () => provider.setSelectedGeneralDate(
+            next,
+            moveCustomRange:
+                (_view ?? provider.generalDefaultView) == generalViewWeek,
+          ),
+        );
+      } else {
+        await provider.setSelectedGeneralDate(next);
+      }
     } finally {
+      if (mounted && _navigationBusy) setState(() => _navigationBusy = false);
       if (navigationGeneration == _dateNavigationGeneration) {
         if (!mounted) {
           _dateNavigationTarget = null;
@@ -506,7 +748,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         context: context,
         debugLabel: 'Persist general schedule pager date',
         command: () async {
-          await provider.setSelectedGeneralDate(next);
+          await provider.setSelectedGeneralDate(
+            next,
+            moveCustomRange:
+                (_view ?? provider.generalDefaultView) == generalViewWeek,
+          );
           await provider.flushPendingUiStateSaves();
         },
       );
@@ -550,8 +796,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     int direction = 1,
   }) {
     final normalized = normalizeDateOnly(date);
-    if (provider.generalShowWeekends || normalized.weekday <= DateTime.friday) {
+    if (((_view ?? provider.generalDefaultView) == generalViewWeek &&
+            provider.customGeneralDateRange != null) ||
+        provider.generalShowWeekends ||
+        normalized.weekday <= DateTime.friday) {
       return normalized;
+    }
+    final unit = _dateUnitForView(_view ?? provider.generalDefaultView);
+    if (unit != DateSelectionUnit.day) {
+      final range = dateSelectionRange(normalized, unit);
+      return selectableDateInUnit(
+        preferred: normalized,
+        unit: unit,
+        firstDate: range.start,
+        lastDate: range.end,
+        selectableDayPredicate: (day) => day.weekday <= DateTime.friday,
+      )!;
     }
     return addCalendarDays(
       normalized,
@@ -565,27 +825,36 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final provider = context.watch<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
     final date = normalizeDateOnly(provider.selectedGeneralDate);
+    if (!DateUtils.isSameDay(date, _resourceSelectedDate)) {
+      _resourceSelectedDate = date;
+      _resourceBrowsedMonth = date;
+    }
 
     final selectedView = _view ?? provider.generalDefaultView;
+    final customRange = selectedView == generalViewWeek
+        ? provider.customGeneralDateRange
+        : null;
     final rangeStart = selectedView == generalViewWeek
-        ? startOfWeekMonday(date)
+        ? customRange?.start ?? startOfWeekMonday(date)
         : selectedView == generalViewMonth
         ? DateTime(date.year, date.month)
         : date;
     final rangeEnd = selectedView == generalViewWeek
-        ? addCalendarDays(rangeStart, 6)
+        ? customRange?.end ?? addCalendarDays(rangeStart, 6)
         : selectedView == generalViewMonth
         ? DateTime(date.year, date.month + 1, 0)
         : date;
     final framed = WorkspaceFrame(
       controller: _pane,
       minimumCanvas: (_view ?? provider.generalDefaultView) == generalViewWeek
-          ? 800
+          ? math
+                .min(800, math.max(600, 64 + (customRange?.dayCount ?? 7) * 96))
+                .toDouble()
           : 600,
       contextSnapshot: WorkspaceContextSnapshot(
         enabledWorkspaces: provider.enabledWorkspaces,
         mode: AppMode.general,
-        view: _view ?? provider.generalDefaultView,
+        view: customRange != null ? generalViewCustom : selectedView,
         resourceId: provider.activeGeneralScheduleOrNull?.id,
         date: rangeStart,
         endDate: rangeEnd,
@@ -639,16 +908,44 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         ],
         children: [
           if (WorkbenchChromeMetrics.of(context).desktop)
-            WorkbenchMonthNavigator(
-              date: date,
-              onDate: (day) => _selectDate(provider, day),
-              onMonth: (delta) => _jumpCalendarMonth(provider, delta),
-              onToday: () => _goToToday(provider),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: SkedDatePicker(
+                key: const ValueKey('general-resource-date-picker'),
+                embedded: true,
+                rangeController: selectedView == generalViewWeek
+                    ? _rangeSession(provider)
+                    : null,
+                initialDate: date,
+                firstDate: DateTime(1970),
+                lastDate: DateTime(2100),
+                browsedMonth: _resourceBrowsedMonth,
+                onBrowsedMonthChanged: (month) => _resourceBrowsedMonth = month,
+                navigationRevision: _resourceNavigationRevision,
+                selectionUnit: selectedView == generalViewWeek
+                    ? DateSelectionUnit.week
+                    : DateSelectionUnit.day,
+                commitMode: DatePickerCommitMode.immediate,
+                selectableDayPredicate: (day) =>
+                    widget.interactive &&
+                    (selectedView == generalViewWeek ||
+                        provider.generalShowWeekends ||
+                        day.weekday <= DateTime.friday),
+                onSelected: (day) => unawaited(_selectDate(provider, day)),
+              ),
             )
           else
             ListTile(
               leading: const Icon(Icons.calendar_month_outlined),
-              title: Text(_formatDate(date)),
+              title: Text(
+                formatDateSelection(
+                  date,
+                  _dateUnitForView(selectedView),
+                  customRange: customRange,
+                  locale: l10n.localeName,
+                  format: provider.generalDateLabelFormat,
+                ),
+              ),
               onTap: () => _pickDate(context, provider),
             ),
           for (final calendar in provider.generalSchedules)
@@ -688,12 +985,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   ) {
     final l = AppLocalizations.of(context);
     final date = snapshot.selectedDate;
-    final start = date.subtract(Duration(days: date.weekday - 1));
-    final label = view == generalViewMonth
-        ? intl.DateFormat.yMMMM(l.localeName).format(date)
-        : view == generalViewDay
-        ? intl.DateFormat.yMMMMd(l.localeName).format(date)
-        : '${intl.DateFormat.MMMd(l.localeName).format(start)} – ${intl.DateFormat.yMMMd(l.localeName).format(start.add(const Duration(days: 6)))}';
+    final label = formatDateSelection(
+      date,
+      _dateUnitForView(view),
+      locale: l.localeName,
+      format: snapshot.dateLabelFormat,
+      customRange: view == generalViewCustom ? snapshot.customDateRange : null,
+    );
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
     return WorkbenchCommandBar(
       key: const ValueKey('general-workspace-toolbar'),
@@ -709,33 +1007,60 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         IconButton(
           key: const ValueKey('general-previous-period'),
           tooltip: MaterialLocalizations.of(context).previousPageTooltip,
-          onPressed: widget.interactive ? () => _stepDate(provider, -1) : null,
+          onPressed:
+              widget.interactive &&
+                  !_dateNavigationBusy &&
+                  _canStepRange(provider, -1)
+              ? () => _stepDate(provider, -1)
+              : null,
           icon: const Icon(Icons.chevron_left),
         ),
         IconButton(
           key: const ValueKey('general-next-period'),
           tooltip: MaterialLocalizations.of(context).nextPageTooltip,
-          onPressed: widget.interactive ? () => _stepDate(provider, 1) : null,
+          onPressed:
+              widget.interactive &&
+                  !_dateNavigationBusy &&
+                  _canStepRange(provider, 1)
+              ? () => _stepDate(provider, 1)
+              : null,
           icon: const Icon(Icons.chevron_right),
         ),
         TextButton(
           key: const ValueKey('general-today'),
-          onPressed: widget.interactive ? () => _goToToday(provider) : null,
+          onPressed: widget.interactive && !_dateNavigationBusy
+              ? () => _goToToday(provider)
+              : null,
           child: Text(l.today),
         ),
-        TextButton(
-          key: const ValueKey('general-date-picker'),
-          onPressed: _datePickerOpen
-              ? null
-              : () => _pickDate(context, provider),
-          child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+        Builder(
+          builder: (anchorContext) => Tooltip(
+            message:
+                '${_datePickerTitle(l, _dateUnitForView(view))}: ${_accessibleDateNavigationLabel(date, view, context)}',
+            child: TextButton(
+              key: const ValueKey('general-date-picker'),
+              onPressed:
+                  _datePickerOpen || _dateNavigationBusy || !widget.interactive
+                  ? null
+                  : () => _pickDate(
+                      context,
+                      provider,
+                      anchorContext: anchorContext,
+                    ),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ),
         ),
       ],
       actions: [
         PopupMenuButton<String>(
           key: const ValueKey('general-view-switcher'),
           tooltip: l.defaultView,
-          onSelected: (value) => setState(() => _view = value),
+          enabled: widget.interactive && !_dateNavigationBusy,
+          onSelected: (value) => unawaited(_changeView(provider, value)),
           itemBuilder: (_) => [
             for (final option in _generalViewOptions(l))
               CheckedPopupMenuItem(
@@ -748,7 +1073,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               children: [
-                Text(_generalViewLabel(l, view)),
+                Text(
+                  _generalViewLabel(
+                    l,
+                    view,
+                    customDays: provider.customGeneralDateRange?.dayCount,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 const Icon(Icons.expand_more, size: 16),
               ],
@@ -854,21 +1185,41 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
 
   Future<void> _pickDate(
     BuildContext context,
-    TimetableProvider provider,
-  ) async {
-    if (_datePickerOpen || !widget.interactive) {
+    TimetableProvider provider, {
+    BuildContext? anchorContext,
+    bool forceRange = false,
+  }) async {
+    if (_datePickerOpen || _dateNavigationBusy || !widget.interactive) {
       return;
     }
     _setUiBusyFlag(() => _datePickerOpen = true);
     final firstDate = DateTime(1970);
     final lastDate = DateTime(2100);
     try {
+      if (forceRange ||
+          (_view ?? provider.generalDefaultView) == generalViewWeek) {
+        final session = _rangeSession(provider);
+        await showSkedDateRangePicker(
+          context: context,
+          anchorContext: anchorContext,
+          initialRange: session.applied,
+          controller: session,
+          workspace: AppMode.general,
+          dateLabelFormat: provider.generalDateLabelFormat,
+        );
+        return;
+      }
       final initialDate = _visibleGeneralDate(
         provider,
         _clampDate(provider.selectedGeneralDate, firstDate, lastDate),
       );
-      final picked = await showDatePicker(
+      final picked = await showSkedDatePicker(
         context: context,
+        anchorContext: anchorContext,
+        workspace: AppMode.general,
+        dateLabelFormat: provider.generalDateLabelFormat,
+        selectionUnit: _dateUnitForView(_view ?? provider.generalDefaultView),
+        commitMode: DatePickerCommitMode.immediate,
         initialDate: initialDate,
         firstDate: firstDate,
         lastDate: lastDate,
@@ -876,7 +1227,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ? null
             : (date) => date.weekday <= DateTime.friday,
       );
-      if (!mounted || picked == null) {
+      if (!mounted ||
+          !provider.isWorkspaceEnabled(AppMode.general) ||
+          picked == null) {
         return;
       }
       await _selectDate(provider, picked);
@@ -1376,7 +1729,16 @@ class _GeneralToolbarLayout extends StatelessWidget {
                             ),
                           );
                         } else {
-                          onViewChanged(_nextGeneralView(view));
+                          onViewChanged(
+                            _nextGeneralView(
+                              view,
+                              hasCustomRange:
+                                  context
+                                      .read<TimetableProvider>()
+                                      .customGeneralDateRange !=
+                                  null,
+                            ),
+                          );
                         }
                     }
                   },
@@ -1670,9 +2032,23 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final currentViewLabel = _generalViewLabel(l10n, view);
-    final nextView = _nextGeneralView(view);
-    final nextViewLabel = _generalViewLabel(l10n, nextView);
+    final customRange = context.select<TimetableProvider, GeneralDateRange?>(
+      (p) => p.customGeneralDateRange,
+    );
+    final currentViewLabel = _generalViewLabel(
+      l10n,
+      view,
+      customDays: customRange?.dayCount,
+    );
+    final nextView = _nextGeneralView(
+      view,
+      hasCustomRange: customRange != null,
+    );
+    final nextViewLabel = _generalViewLabel(
+      l10n,
+      nextView,
+      customDays: customRange?.dayCount,
+    );
     final selector = includeView
         ? _GeneralViewSwitcher(
             key: viewSwitcherKey,
@@ -1702,7 +2078,8 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
       view,
       context,
     );
-    final fullDateLabel = '${l10n.pickDate}: $accessibleDateLabel';
+    final fullDateLabel =
+        '${view == generalViewCustom ? '$currentViewLabel, ' : ''}${_datePickerTitle(l10n, _dateUnitForView(view))}: $accessibleDateLabel';
     final dateInteractive = interactive && onPickDate != null;
     final dateButton = SizedBox(
       width: labelWidth,
@@ -1739,12 +2116,25 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
                 distance: 16,
                 child: Directionality(
                   textDirection: TextDirection.ltr,
-                  child: Text(
-                    dateLabel,
-                    key: ValueKey('general-date-label-$dateLabel'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (view == generalViewCustom)
+                        Text(
+                          currentViewLabel,
+                          key: const ValueKey('general-custom-range-label'),
+                          style: Theme.of(context).textTheme.labelSmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      Text(
+                        dateLabel,
+                        key: ValueKey('general-date-label-$dateLabel'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1762,7 +2152,12 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
           IconButton(
             key: const ValueKey('general-previous-period'),
             tooltip: MaterialLocalizations.of(context).previousPageTooltip,
-            onPressed: interactive ? () => onStep(-1) : null,
+            onPressed:
+                interactive &&
+                    (view != generalViewCustom ||
+                        customRange?.shifted(-(customRange.dayCount)) != null)
+                ? () => onStep(-1)
+                : null,
             icon: const Icon(Icons.chevron_left),
           ),
         if (includeDate) Expanded(child: dateButton),
@@ -1777,7 +2172,12 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
           IconButton(
             key: const ValueKey('general-next-period'),
             tooltip: MaterialLocalizations.of(context).nextPageTooltip,
-            onPressed: interactive ? () => onStep(1) : null,
+            onPressed:
+                interactive &&
+                    (view != generalViewCustom ||
+                        customRange?.shifted(customRange.dayCount) != null)
+                ? () => onStep(1)
+                : null,
             icon: const Icon(Icons.chevron_right),
           ),
         if (includeDate && includeView) const SizedBox(width: 4),
@@ -1836,7 +2236,16 @@ class _GeneralViewSwitcher extends StatelessWidget {
         message: tooltip,
         child: IconButton(
           onPressed: enabled
-              ? () => onViewChanged(_nextGeneralView(view))
+              ? () => onViewChanged(
+                  _nextGeneralView(
+                    view,
+                    hasCustomRange:
+                        context
+                            .read<TimetableProvider>()
+                            .customGeneralDateRange !=
+                        null,
+                  ),
+                )
               : null,
           icon: AnimatedSwitcher(
             duration: SkedMotionPolicy.of(context)
@@ -1921,6 +2330,11 @@ class _GeneralViewOption {
 
 List<_GeneralViewOption> _generalViewOptions(AppLocalizations l10n) => [
   _GeneralViewOption(generalViewWeek, l10n.viewWeek, Icons.view_week_outlined),
+  _GeneralViewOption(
+    generalViewCustom,
+    l10n.dateRangeCustom,
+    Icons.date_range_outlined,
+  ),
   _GeneralViewOption(generalViewDay, l10n.viewDay, Icons.view_day_outlined),
   _GeneralViewOption(generalViewList, l10n.viewList, Icons.list_alt_outlined),
   _GeneralViewOption(
@@ -1939,27 +2353,33 @@ IconData _generalViewIcon(String view) {
   };
 }
 
-String _generalViewLabel(AppLocalizations l10n, String view) {
+String _generalViewLabel(
+  AppLocalizations l10n,
+  String view, {
+  int? customDays,
+}) {
   return switch (view) {
     generalViewDay => l10n.viewDay,
     generalViewList => l10n.viewList,
     generalViewMonth => l10n.viewMonth,
+    generalViewCustom => l10n.dateRangeCustomDays(customDays ?? 7),
     _ => l10n.viewWeek,
   };
 }
 
-String _nextGeneralView(String view) {
+String _nextGeneralView(String view, {bool hasCustomRange = false}) {
   return switch (view) {
-    generalViewWeek => generalViewDay,
+    generalViewWeek || generalViewCustom => generalViewDay,
     generalViewDay => generalViewList,
     generalViewList => generalViewMonth,
-    _ => generalViewWeek,
+    _ => hasCustomRange ? generalViewCustom : generalViewWeek,
   };
 }
 
 class _GeneralHomeSnapshot {
   const _GeneralHomeSnapshot({
     required this.selectedDate,
+    required this.customDateRange,
     required this.defaultView,
     required this.viewSwitchBehavior,
     required this.dateLabelFormat,
@@ -1985,6 +2405,7 @@ class _GeneralHomeSnapshot {
     final data = provider.generalMode;
     return _GeneralHomeSnapshot(
       selectedDate: data.selectedDate,
+      customDateRange: data.customDateRange,
       defaultView: data.defaultView,
       viewSwitchBehavior: data.viewSwitchBehavior,
       toolbarWidthPolicy: data.toolbarWidthPolicy,
@@ -2008,6 +2429,7 @@ class _GeneralHomeSnapshot {
   }
 
   final DateTime selectedDate;
+  final GeneralDateRange? customDateRange;
   final String defaultView;
   final String viewSwitchBehavior;
   final String toolbarWidthPolicy;
@@ -2035,6 +2457,7 @@ class _GeneralHomeSnapshot {
         other.defaultView == defaultView &&
         other.viewSwitchBehavior == viewSwitchBehavior &&
         other.toolbarWidthPolicy == toolbarWidthPolicy &&
+        other.customDateRange == customDateRange &&
         other.dateLabelFormat == dateLabelFormat &&
         other.enableLongPressAddEvent == enableLongPressAddEvent &&
         other.allDayTimelineCollapsed == allDayTimelineCollapsed &&
@@ -2065,6 +2488,7 @@ class _GeneralHomeSnapshot {
     selectedDate.month,
     selectedDate.day,
     defaultView,
+    customDateRange,
     viewSwitchBehavior,
     toolbarWidthPolicy,
     dateLabelFormat,
@@ -2213,6 +2637,9 @@ String _dateNavigationLabelForWidth(
     view,
     format: format,
     localeName: Localizations.localeOf(context).toLanguageTag(),
+    customRange: view == generalViewCustom
+        ? context.read<TimetableProvider>().customGeneralDateRange
+        : null,
   );
   for (final candidate in candidates) {
     final painter = TextPainter(
@@ -2228,122 +2655,42 @@ String _dateNavigationLabelForWidth(
   return candidates.last;
 }
 
+DateSelectionUnit _dateUnitForView(String view) => switch (view) {
+  generalViewWeek || generalViewCustom => DateSelectionUnit.week,
+  generalViewMonth => DateSelectionUnit.month,
+  _ => DateSelectionUnit.day,
+};
+
+String _datePickerTitle(AppLocalizations l, DateSelectionUnit unit) =>
+    switch (unit) {
+      DateSelectionUnit.week => l.dateRangeTitle,
+      DateSelectionUnit.month => l.datePickerSelectMonth,
+      DateSelectionUnit.day => l.pickDate,
+    };
+
 List<String> _dateNavigationCandidates(
   DateTime date,
   String view, {
   required String format,
   required String localeName,
-}) {
-  if (format == generalDateLabelFormatLocalized) {
-    return _localizedDateNavigationCandidates(date, view, localeName);
-  }
-  final year = date.year;
-  final shortYear = _shortYear(year);
-  final separator = format == generalDateLabelFormatIso ? '-' : '/';
-  final month = format == generalDateLabelFormatIso
-      ? date.month.toString().padLeft(2, '0')
-      : date.month.toString();
-  final day = format == generalDateLabelFormatIso
-      ? date.day.toString().padLeft(2, '0')
-      : date.day.toString();
-  String datePart(DateTime value, {bool short = false}) {
-    final y = short ? _shortYear(value.year) : value.year.toString();
-    final m = format == generalDateLabelFormatIso
-        ? value.month.toString().padLeft(2, '0')
-        : value.month.toString();
-    final d = format == generalDateLabelFormatIso
-        ? value.day.toString().padLeft(2, '0')
-        : value.day.toString();
-    return '$y$separator$m$separator$d';
-  }
-
-  if (view == generalViewMonth) {
-    final fullMonth = format == generalDateLabelFormatIso
-        ? '$year$separator$month'
-        : '$year$separator${date.month}';
-    final shortMonth = format == generalDateLabelFormatIso
-        ? '$shortYear$separator$month'
-        : '$shortYear$separator${date.month}';
-    return [fullMonth, shortMonth, '${date.month}'];
-  }
-  if (view != generalViewWeek) {
-    return [
-      datePart(date),
-      datePart(date, short: true),
-      '$month$separator$day',
-    ];
-  }
-
-  final start = startOfWeekMonday(date);
-  final end = addCalendarDays(start, 6);
-  String monthDayPart(DateTime value) {
-    final month = format == generalDateLabelFormatIso
-        ? value.month.toString().padLeft(2, '0')
-        : value.month.toString();
-    final day = format == generalDateLabelFormatIso
-        ? value.day.toString().padLeft(2, '0')
-        : value.day.toString();
-    return '$month$separator$day';
-  }
-
-  if (start.year != end.year) {
-    return [
-      '${datePart(start)}\u2013${datePart(end)}',
-      '${datePart(start, short: true)}\u2013${datePart(end, short: true)}',
-      '${monthDayPart(start)}\u2013${monthDayPart(end)}',
-      '${start.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}\u2013${monthDayPart(end)}',
-    ];
-  }
-  if (start.month != end.month) {
-    return [
-      '${datePart(start)}\u2013${datePart(end)}',
-      '${datePart(start)}\u2013${monthDayPart(end)}',
-      '${datePart(start, short: true)}\u2013${monthDayPart(end)}',
-      '${monthDayPart(start)}\u2013${monthDayPart(end)}',
-      '${start.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}\u2013${monthDayPart(end)}',
-    ];
-  }
-  return [
-    '${datePart(start)}\u2013${datePart(end)}',
-    '${datePart(start)}\u2013${monthDayPart(end)}',
-    '${datePart(start)}\u2013${end.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}',
-    '${datePart(start, short: true)}\u2013${end.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}',
-    '${monthDayPart(start)}\u2013${end.day.toString().padLeft(format == generalDateLabelFormatIso ? 2 : 1, '0')}',
-  ];
-}
-
-List<String> _localizedDateNavigationCandidates(
-  DateTime date,
-  String view,
-  String localeName,
-) {
-  final locale = localeName.replaceAll('_', '-');
-  final fullDate = intl.DateFormat.yMd(locale).format(date);
-  final shortDate = intl.DateFormat.Md(locale).format(date);
-  final fullMonth = intl.DateFormat.yMMM(locale).format(date);
-  final shortMonth = intl.DateFormat.MMM(locale).format(date);
-  if (view == generalViewMonth) {
-    return [fullMonth, shortMonth, date.month.toString()];
-  }
-  if (view != generalViewWeek) {
-    return [fullDate, shortDate, shortDate];
-  }
-  final start = startOfWeekMonday(date);
-  final end = addCalendarDays(start, 6);
-  final startFull = intl.DateFormat.yMd(locale).format(start);
-  final endFull = intl.DateFormat.yMd(locale).format(end);
-  final startShort = intl.DateFormat.Md(locale).format(start);
-  final endShort = intl.DateFormat.Md(locale).format(end);
-  final candidates = <String>['$startFull\u2013$endFull'];
-  if (start.year == end.year) {
-    candidates.add('$startFull\u2013$endShort');
-  }
-  candidates.add('$startShort\u2013$endShort');
-  candidates.add('${start.day}\u2013$endShort');
-  return candidates;
-}
-
-String _shortYear(int year) => (year % 100).toString().padLeft(2, '0');
+  GeneralDateRange? customRange,
+}) => [
+  formatDateSelection(
+    date,
+    _dateUnitForView(view),
+    locale: localeName,
+    format: format,
+    customRange: customRange,
+  ),
+  formatDateSelection(
+    date,
+    _dateUnitForView(view),
+    locale: localeName,
+    format: format,
+    customRange: customRange,
+    compact: true,
+  ),
+];
 
 String _accessibleDateNavigationLabel(
   DateTime date,
@@ -2354,11 +2701,14 @@ String _accessibleDateNavigationLabel(
   if (view == generalViewMonth) {
     return localizations.formatMonthYear(date);
   }
-  if (view != generalViewWeek) {
+  if (view != generalViewWeek && view != generalViewCustom) {
     return localizations.formatFullDate(date);
   }
-  final start = startOfWeekMonday(date);
-  final end = addCalendarDays(start, 6);
+  final range = view == generalViewCustom
+      ? context.read<TimetableProvider>().customGeneralDateRange
+      : null;
+  final start = range?.start ?? startOfWeekMonday(date);
+  final end = range?.end ?? addCalendarDays(start, 6);
   return '${localizations.formatFullDate(start)} - '
       '${localizations.formatFullDate(end)}';
 }

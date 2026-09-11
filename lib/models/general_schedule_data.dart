@@ -4,6 +4,7 @@ import '../utils/time_utils.dart';
 import 'general_event.dart';
 import 'general_event_occurrence.dart';
 import 'general_schedule.dart';
+import 'general_date_range.dart';
 
 const generalViewWeek = 'week';
 const generalViewDay = 'day';
@@ -22,7 +23,7 @@ const generalTimeGridHourHeightDefault = 72;
 const generalTimeGridHourHeightMin = 36;
 const generalTimeGridHourHeightMax = 120;
 const generalTimeGridHourHeightStep = 4;
-const generalScheduleSchemaVersion = 4;
+const generalScheduleSchemaVersion = 5;
 
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
   if (value is! Map) {
@@ -251,6 +252,7 @@ class GeneralScheduleData {
     required this.activeScheduleId,
     required this.schedules,
     this.selectedDateIso,
+    this.customDateRange,
     this.defaultView = generalViewWeek,
     this.viewSwitchBehavior = generalViewSwitchBehaviorCycle,
     this.toolbarWidthPolicy = generalToolbarWidthPolicyContent,
@@ -278,6 +280,7 @@ class GeneralScheduleData {
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
   final String? selectedDateIso;
+  final GeneralDateRange? customDateRange;
   final String defaultView;
   final String viewSwitchBehavior;
   final String toolbarWidthPolicy;
@@ -322,7 +325,7 @@ class GeneralScheduleData {
   DateTime get selectedDate {
     final parsed = tryParseStrictIsoDate(selectedDateIso);
     return parsed == null
-        ? normalizeDateOnly(DateTime.now())
+        ? customDateRange?.start ?? normalizeDateOnly(DateTime.now())
         : normalizeDateOnly(parsed);
   }
 
@@ -331,6 +334,7 @@ class GeneralScheduleData {
     'activeScheduleId': activeScheduleId,
     'schedules': schedules.map((s) => s.toJson()).toList(),
     if (selectedDateIso != null) 'selectedDateIso': selectedDateIso,
+    if (customDateRange != null) 'customDateRange': customDateRange!.toJson(),
     'defaultView': normalizeGeneralView(defaultView),
     'viewSwitchBehavior': normalizeGeneralViewSwitchBehavior(
       viewSwitchBehavior,
@@ -446,6 +450,9 @@ class GeneralScheduleData {
       selectedDateIso: _normalizeDateIso(
         _nullableStringValue(json['selectedDateIso']),
       ),
+      customDateRange: json['customDateRange'] == null
+          ? null
+          : GeneralDateRange.fromJson(json['customDateRange']),
       defaultView: normalizeGeneralView(
         _nullableStringValue(json['defaultView']),
       ),
@@ -501,6 +508,7 @@ class GeneralScheduleData {
     String? activeScheduleId,
     List<GeneralSchedule>? schedules,
     Object? selectedDateIso = _keepNullable,
+    Object? customDateRange = _keepNullable,
     String? defaultView,
     String? viewSwitchBehavior,
     String? toolbarWidthPolicy,
@@ -530,6 +538,9 @@ class GeneralScheduleData {
       selectedDateIso: identical(selectedDateIso, _keepNullable)
           ? this.selectedDateIso
           : selectedDateIso as String?,
+      customDateRange: identical(customDateRange, _keepNullable)
+          ? this.customDateRange
+          : customDateRange as GeneralDateRange?,
       defaultView: normalizeGeneralView(defaultView ?? this.defaultView),
       viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
         viewSwitchBehavior ?? this.viewSwitchBehavior,
@@ -690,7 +701,9 @@ class GeneralScheduleData {
     return GeneralScheduleData(
       activeScheduleId: activeId,
       schedules: normalizedSchedules,
-      selectedDateIso: selectedDateIso ?? _dateIso(DateTime.now()),
+      selectedDateIso:
+          selectedDateIso ?? _dateIso(customDateRange?.start ?? DateTime.now()),
+      customDateRange: customDateRange,
       defaultView: normalizeGeneralView(defaultView),
       viewSwitchBehavior: normalizeGeneralViewSwitchBehavior(
         viewSwitchBehavior,

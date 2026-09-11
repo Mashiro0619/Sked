@@ -215,6 +215,13 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             },
                           ),
                         ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                          child: Text(
+                            l10n.generalDateLabelFormatDescription,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
                         SettingsSectionHeader(
                           title: l10n.generalScheduleDisplaySection,
                         ),

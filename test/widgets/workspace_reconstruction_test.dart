@@ -135,12 +135,23 @@ void main() {
         find.byKey(const ValueKey('general-resource-previous-month')),
       );
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 1, 28));
+      expect(p.selectedGeneralDate, DateTime(2026, 2, 28));
+      final navigator = find.byKey(
+        const ValueKey('general-resource-date-picker'),
+      );
+      expect(
+        find.descendant(of: navigator, matching: find.text('January 2026')),
+        findsOneWidget,
+      );
       await tester.tap(
         find.byKey(const ValueKey('general-resource-next-month')),
       );
       await tester.pumpAndSettle();
       expect(p.selectedGeneralDate, DateTime(2026, 2, 28));
+      expect(
+        find.descendant(of: navigator, matching: find.text('February 2026')),
+        findsOneWidget,
+      );
       await tester.tap(find.byKey(const ValueKey('general-day-agenda-toggle')));
       await tester.pumpAndSettle();
       expect(find.textContaining('Selected day'), findsOneWidget);
@@ -291,7 +302,7 @@ void main() {
   );
 
   testWidgets(
-    'resource month navigation clamps dates and keeps the canvas mounted',
+    'resource month browsing does not navigate until a range is completed',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1440, 900);
@@ -308,6 +319,13 @@ void main() {
         find.byKey(const ValueKey('general-resource-next-month')),
       );
       await tester.pumpAndSettle();
+      expect(p.selectedGeneralDate, DateTime(2028, 1, 31));
+      await tester.tap(find.byKey(const ValueKey('sked-date-2028-02-29')));
+      await tester.pumpAndSettle();
+      expect(p.selectedGeneralDate, DateTime(2028, 1, 31));
+      await tester.tap(find.byKey(const ValueKey('sked-date-2028-02-29')));
+      await tester.pumpAndSettle();
+      expect(p.customGeneralDateRange!.dayCount, 1);
       expect(p.selectedGeneralDate, DateTime(2028, 2, 29));
       expect(
         tester.element(find.byKey(const ValueKey('workspace-canvas'))),

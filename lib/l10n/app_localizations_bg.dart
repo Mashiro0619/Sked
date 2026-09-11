@@ -3015,4 +3015,41 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Избор на седмица';
+
+  @override
+  String get datePickerSelectMonth => 'Избор на месец';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Важи за навигацията по дати на компютри и малки екрани.';
+
+  @override
+  String get dateRangeTitle => 'Избор на период';
+
+  @override
+  String get dateRangeCustom => 'По избор';
+
+  @override
+  String get dateRangeChooseStart => 'Изберете начална дата';
+
+  @override
+  String get dateRangeChooseEnd => 'Изберете крайна дата';
+
+  @override
+  String get dateRangeLimit =>
+      'Изберете от 1 до 14 дни, включително началната и крайната дата.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дни',
+      one: '1 ден',
+    );
+    return 'По избор · $_temp0';
+  }
 }

@@ -2992,4 +2992,34 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'सप्ताह चुनें';
+
+  @override
+  String get datePickerSelectMonth => 'महीना चुनें';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'डेस्कटॉप और छोटी स्क्रीन पर तारीख नेविगेशन पर लागू होता है।';
+
+  @override
+  String get dateRangeTitle => 'तारीख सीमा चुनें';
+
+  @override
+  String get dateRangeCustom => 'कस्टम';
+
+  @override
+  String get dateRangeChooseStart => 'शुरुआत की तारीख चुनें';
+
+  @override
+  String get dateRangeChooseEnd => 'समाप्ति की तारीख चुनें';
+
+  @override
+  String get dateRangeLimit => 'शुरुआत और समाप्ति सहित 1–14 दिन चुनें।';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return 'कस्टम · $days दिन';
+  }
 }

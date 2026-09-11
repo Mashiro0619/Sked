@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Выберите неделю",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Выберите месяц",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Применяется к навигации по датам на компьютерах и небольших экранах.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Выберите диапазон дат",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Произвольный",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Выберите начальную дату",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Выберите конечную дату",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Выберите от 1 до 14 дней, включая обе граничные даты.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Произвольный · {days, plural, =1{1 день} few{{days} дня} other{{days} дней}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -250,6 +250,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     final weeksController = TextEditingController(
       text: initialConfig.totalWeeks.toString(),
     );
+    final startDateAnchor = GlobalKey();
     var selectedStartDate = initialConfig.startDate;
     var selectedPeriodTimeSetId = initialConfig.periodTimeSetId;
     var startDatePickerOpen = false;
@@ -408,6 +409,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                               ],
                             ),
                             form: TimetableInformationForm(
+                              startDateAnchorKey: startDateAnchor,
                               nameController: nameController,
                               weeksController: weeksController,
                               startDateLabel: formatDate(selectedStartDate),
@@ -478,8 +480,11 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                         () => startDatePickerOpen = true,
                                       );
                                       try {
-                                        final picked = await showDatePicker(
+                                        final picked = await showSkedDatePicker(
                                           context: context,
+                                          workspace: AppMode.student,
+                                          anchorContext:
+                                              startDateAnchor.currentContext,
                                           firstDate: firstDate,
                                           lastDate: lastDate,
                                           initialDate: boundedInitialDate,

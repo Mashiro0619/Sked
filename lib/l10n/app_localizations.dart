@@ -5381,6 +5381,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export'**
   String get exportAction;
+
+  /// No description provided for @datePickerSelectWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Select week'**
+  String get datePickerSelectWeek;
+
+  /// No description provided for @datePickerSelectMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Select month'**
+  String get datePickerSelectMonth;
+
+  /// No description provided for @generalDateLabelFormatDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to date navigation on desktop and smaller screens.'**
+  String get generalDateLabelFormatDescription;
+
+  /// No description provided for @dateRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose date range'**
+  String get dateRangeTitle;
+
+  /// No description provided for @dateRangeCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get dateRangeCustom;
+
+  /// No description provided for @dateRangeChooseStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the start date'**
+  String get dateRangeChooseStart;
+
+  /// No description provided for @dateRangeChooseEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the end date'**
+  String get dateRangeChooseEnd;
+
+  /// No description provided for @dateRangeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Select between 1 and 14 days, including both endpoints.'**
+  String get dateRangeLimit;
+
+  /// No description provided for @dateRangeCustomDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom · {days, plural, =1{1 day} other{{days} days}}'**
+  String dateRangeCustomDays(int days);
 }
 
 class _AppLocalizationsDelegate

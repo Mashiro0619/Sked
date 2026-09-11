@@ -15,9 +15,20 @@ typedef _AllDayCollapsedGroupTap = void Function(
   DateTime day,
 );
 
+/// Kept by the home task, independent of page indices, range length and view.
+class _CalendarViewportSession {
+  double horizontalOffset = 0;
+  double topMinutes = 0;
+  double leadingInset = 0;
+  int focusRevision = -1;
+}
+
 class _WeekCalendarView extends StatefulWidget {
   const _WeekCalendarView({
     required this.date,
+    required this.customRange,
+    required this.onRangePageSettled,
+    required this.viewport,
     required this.provider,
     required this.filter,
     required this.active,
@@ -33,6 +44,9 @@ class _WeekCalendarView extends StatefulWidget {
   });
 
   final DateTime date;
+  final GeneralDateRange? customRange;
+  final ValueChanged<GeneralDateRange> onRangePageSettled;
+  final _CalendarViewportSession viewport;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
   final bool active;
@@ -51,7 +65,37 @@ class _WeekCalendarView extends StatefulWidget {
 }
 
 class _WeekCalendarViewState extends State<_WeekCalendarView> {
-  late final DateTime _baseWeekStart;
+  late DateTime _baseWeekStart;
+  late int _rangeDays;
+  int _rangePageCount = 1;
+  static const _rangePageRadius = 64;
+  int get _originPage =>
+      widget.customRange == null ? _generalTimelineInitialPage : 0;
+  DateTime get _targetStart =>
+      widget.customRange?.start ??
+      startOfWeekMonday(_visibleDayForDate(widget.date));
+  void _resetOrigin() {
+    _rangeDays = widget.customRange?.dayCount ?? 7;
+    final start = _targetStart;
+    if (widget.customRange == null) {
+      _baseWeekStart = start;
+      return;
+    }
+    // A bounded paging window avoids multi-million-pixel offsets and floating
+    // point extent errors during resize. Rebase near its ends, never truncate
+    // the actual selected range or expose dates outside the supported bounds.
+    final before =
+        (calendarDaysBetween(GeneralDateRange.firstDate, start) ~/ _rangeDays)
+            .clamp(0, _rangePageRadius);
+    final after =
+        ((calendarDaysBetween(start, GeneralDateRange.lastDate) + 1) ~/
+                    _rangeDays -
+                1)
+            .clamp(0, _rangePageRadius);
+    _baseWeekStart = addCalendarDays(start, -before * _rangeDays);
+    _rangePageCount = before + 1 + after;
+  }
+
   late final PageController _controller;
   // Provider-synchronized page. PageView may be fractional or on a different
   // provisional page while the user is dragging.
@@ -63,8 +107,8 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
   @override
   void initState() {
     super.initState();
-    _baseWeekStart = startOfWeekMonday(_visibleDayForDate(widget.date));
-    _settledPage = _generalTimelineInitialPage;
+    _resetOrigin();
+    _settledPage = _pageForWeek(_targetStart);
     _controller = PageController(
       initialPage: _settledPage,
       onAttach: (_) {
@@ -79,14 +123,27 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
   void didUpdateWidget(covariant _WeekCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active) _syncVisibleSelectedDate();
-    if (_sameDay(oldWidget.date, widget.date) &&
+    final targetIndex = _pageForWeek(_targetStart);
+    final range = widget.customRange;
+    final changedOrigin =
+        oldWidget.customRange?.dayCount != range?.dayCount ||
+        (range != null &&
+            (calendarDaysBetween(_baseWeekStart, _targetStart) % _rangeDays !=
+                    0 ||
+                targetIndex < 0 ||
+                targetIndex >= _rangePageCount ||
+                (targetIndex == 0 && range.shifted(-range.dayCount) != null) ||
+                (targetIndex == _rangePageCount - 1 &&
+                    range.shifted(range.dayCount) != null)));
+    if (changedOrigin) _resetOrigin();
+    if (!changedOrigin &&
+        oldWidget.customRange == widget.customRange &&
+        _sameDay(oldWidget.date, widget.date) &&
         oldWidget.syncRevision == widget.syncRevision) {
       return;
     }
-    final targetPage = _pageForWeek(
-      startOfWeekMonday(_visibleDayForDate(widget.date)),
-    );
-    if (targetPage != _settledPage) {
+    final targetPage = _pageForWeek(_targetStart);
+    if (changedOrigin || targetPage != _settledPage) {
       _schedulePageJump(targetPage);
     }
   }
@@ -121,16 +178,17 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 
   int _pageForWeek(DateTime weekStart) {
     final deltaDays = calendarDaysBetween(_baseWeekStart, weekStart);
-    return _generalTimelineInitialPage + deltaDays ~/ 7;
+    return _originPage + deltaDays ~/ _rangeDays;
   }
 
   DateTime _weekStartForPage(int page) {
-    final deltaWeeks = page - _generalTimelineInitialPage;
-    return addCalendarDays(_baseWeekStart, deltaWeeks * 7);
+    final deltaRanges = page - _originPage;
+    return addCalendarDays(_baseWeekStart, deltaRanges * _rangeDays);
   }
 
   bool _isVisibleDay(DateTime date) {
-    return widget.provider.generalShowWeekends ||
+    return widget.customRange != null ||
+        widget.provider.generalShowWeekends ||
         date.weekday <= DateTime.friday;
   }
 
@@ -156,7 +214,10 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 
   int _selectedWeekdayOffset() {
     final selected = _visibleDayForDate(widget.date);
-    return calendarDaysBetween(startOfWeekMonday(selected), selected);
+    return calendarDaysBetween(
+      widget.customRange?.start ?? startOfWeekMonday(selected),
+      selected,
+    ).clamp(0, _rangeDays - 1);
   }
 
   void _handlePageSettled(ScrollEndNotification notification) {
@@ -180,7 +241,13 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
     }
     if (!widget.active) return;
     final nextDate = _weekStartForPage(settledPage);
-    widget.onPageSettled(addCalendarDays(nextDate, _selectedWeekdayOffset()));
+    if (widget.customRange != null) {
+      widget.onRangePageSettled(
+        GeneralDateRange(nextDate, addCalendarDays(nextDate, _rangeDays - 1)),
+      );
+    } else {
+      widget.onPageSettled(addCalendarDays(nextDate, _selectedWeekdayOffset()));
+    }
   }
 
   @override
@@ -204,13 +271,15 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
             child: PageView.builder(
               key: _generalWeekPagerKey,
               controller: _controller,
+              itemCount: widget.customRange == null ? null : _rangePageCount,
               physics:
                   widget.active &&
                       constraints.maxWidth >=
                           (64 +
-                                  (widget.provider.generalShowWeekends
-                                          ? 7
-                                          : 5) *
+                                  (widget.customRange?.dayCount ??
+                                          (widget.provider.generalShowWeekends
+                                              ? 7
+                                              : 5)) *
                                       96) *
                               WorkbenchLayoutPolicy.textFactor(
                                 MediaQuery.textScalerOf(context).scale(14) / 14,
@@ -221,6 +290,10 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
                 final weekStart = _weekStartForPage(index);
                 return _WeekTimelinePage(
                   weekStart: weekStart,
+                  customDayCount: widget.customRange?.dayCount,
+                  viewport: widget.viewport,
+                  viewportActive:
+                      widget.active && index == _pageForWeek(_targetStart),
                   selectedDate: addCalendarDays(
                     weekStart,
                     _selectedWeekdayOffset(),
@@ -246,6 +319,9 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
 class _WeekTimelinePage extends StatelessWidget {
   const _WeekTimelinePage({
     required this.weekStart,
+    this.customDayCount,
+    required this.viewport,
+    required this.viewportActive,
     required this.selectedDate,
     required this.onDaySelected,
     required this.provider,
@@ -259,6 +335,9 @@ class _WeekTimelinePage extends StatelessWidget {
   });
 
   final DateTime weekStart;
+  final int? customDayCount;
+  final _CalendarViewportSession viewport;
+  final bool viewportActive;
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDaySelected;
   final TimetableProvider provider;
@@ -272,15 +351,19 @@ class _WeekTimelinePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = _visibleWeekDays(weekStart, provider.generalShowWeekends);
+    final days = customDayCount == null
+        ? _visibleWeekDays(weekStart, provider.generalShowWeekends)
+        : List.generate(customDayCount!, (i) => addCalendarDays(weekStart, i));
     final occurrences = provider.generalOccurrencesForQuery(
       filter.toQuery(
         startInclusive: weekStart,
-        endExclusive: addCalendarDays(weekStart, 7),
+        endExclusive: addCalendarDays(weekStart, customDayCount ?? 7),
       ),
     );
     return _CalendarTimeline(
       days: days,
+      viewport: viewport,
+      viewportActive: viewportActive,
       selectedDate: selectedDate,
       occurrences: occurrences,
       startHour: provider.generalDayStartHour,
@@ -981,6 +1064,8 @@ class _DayPickerItem extends StatelessWidget {
 class _CalendarTimeline extends StatelessWidget {
   const _CalendarTimeline({
     required this.days,
+    this.viewport,
+    this.viewportActive = true,
     required this.selectedDate,
     required this.occurrences,
     required this.startHour,
@@ -999,6 +1084,8 @@ class _CalendarTimeline extends StatelessWidget {
 
   static const double _timeLabelVerticalPadding = 12;
 
+  final _CalendarViewportSession? viewport;
+  final bool viewportActive;
   final List<DateTime> days;
   final DateTime selectedDate;
   final List<GeneralEventOccurrence> occurrences;
@@ -1058,6 +1145,14 @@ class _CalendarTimeline extends StatelessWidget {
         return _CalendarHorizontalViewport(
           viewportWidth: constraints.maxWidth,
           contentWidth: metrics.totalWidth,
+          viewport: viewport,
+          active: viewportActive,
+          focusRevision: context.select<TimetableProvider, int>(
+            (p) => p.generalDateFocusRevision,
+          ),
+          selectedDay: days.indexWhere((day) => _sameDay(day, selectedDate)),
+          dayWidth: metrics.dayWidth,
+          railWidth: metrics.timeColumnWidth,
           child: SizedBox(
             width: metrics.totalWidth,
             child: Column(
@@ -1067,21 +1162,30 @@ class _CalendarTimeline extends StatelessWidget {
                     height:
                         (WorkbenchChromeMetrics.of(context).desktop ? 60 : 68) *
                         textFactor,
-                    child: Row(
+                    child: Stack(
+                      fit: StackFit.expand,
                       children: [
-                        _MonthRail(
-                          date: selectedDate,
-                          width: metrics.timeColumnWidth,
+                        Row(
+                          children: [
+                            SizedBox(width: metrics.timeColumnWidth),
+                            for (final day in days)
+                              _DayHeader(
+                                date: day,
+                                width: metrics.dayWidth,
+                                selected: _sameDay(day, selectedDate),
+                                onTap: onDaySelected == null
+                                    ? null
+                                    : () => onDaySelected!(day),
+                              ),
+                          ],
                         ),
-                        for (final day in days)
-                          _DayHeader(
-                            date: day,
-                            width: metrics.dayWidth,
-                            selected: _sameDay(day, selectedDate),
-                            onTap: onDaySelected == null
-                                ? null
-                                : () => onDaySelected!(day),
+                        _PinnedTimelineRail(
+                          width: metrics.timeColumnWidth,
+                          child: _MonthRail(
+                            date: selectedDate,
+                            width: metrics.timeColumnWidth,
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -1131,10 +1235,14 @@ class _CalendarTimeline extends StatelessWidget {
                 Expanded(
                   child: _TimelineVerticalScrollViewport(
                     key: PageStorageKey(
-                      'timeline-position-${days.length}-${_dateKey(days.first)}',
+                      showHeader
+                          ? 'general-week-timeline-position'
+                          : 'timeline-position-${days.length}-${_dateKey(days.first)}',
                     ),
                     hourHeight: safeHourHeight,
                     topOffset: labelPadding,
+                    viewport: viewport,
+                    active: viewportActive,
                     child: SizedBox(
                       height: contentHeight,
                       child: Stack(
@@ -1261,6 +1369,15 @@ class _CalendarTimeline extends StatelessWidget {
                                 width: metrics.dayWidth,
                                 child: const _NowLine(),
                               ),
+                          _PinnedTimelineRail(
+                            width: metrics.timeColumnWidth,
+                            child: _TimelineTimeRuler(
+                              startHour: startHour,
+                              endHour: endHour,
+                              hourHeight: safeHourHeight,
+                              topOffset: labelPadding,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1394,12 +1511,16 @@ class _TimelineVerticalScrollViewport extends StatefulWidget {
     super.key,
     required this.hourHeight,
     required this.topOffset,
+    this.viewport,
+    this.active = true,
     required this.child,
   });
 
   final double hourHeight;
   final double topOffset;
   final Widget child;
+  final _CalendarViewportSession? viewport;
+  final bool active;
 
   @override
   State<_TimelineVerticalScrollViewport> createState() =>
@@ -1408,12 +1529,54 @@ class _TimelineVerticalScrollViewport extends StatefulWidget {
 
 class _TimelineVerticalScrollViewportState
     extends State<_TimelineVerticalScrollViewport> {
-  final ScrollController _controller = ScrollController();
+  late final ScrollController _controller;
   int _anchorGeneration = 0;
+  double get _sessionOffset =>
+      (widget.viewport?.leadingInset ?? 0) +
+      (widget.viewport?.topMinutes ?? 0) * widget.hourHeight / 60;
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController(
+      initialScrollOffset: _sessionOffset,
+      keepScrollOffset: widget.viewport == null,
+    )..addListener(_rememberPosition);
+  }
+
+  void _rememberPosition() {
+    final session = widget.viewport;
+    if (!widget.active || session == null || !_controller.hasClients) return;
+    session.leadingInset = math.min(_controller.offset, widget.topOffset);
+    session.topMinutes = math.max(
+      0,
+      (_controller.offset - widget.topOffset) * 60 / widget.hourHeight,
+    );
+  }
+
+  void _restoreSession() {
+    final target = _sessionOffset;
+    final generation = ++_anchorGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          generation != _anchorGeneration ||
+          !_controller.hasClients) {
+        return;
+      }
+      final position = _controller.position;
+      _controller.jumpTo(
+        target.clamp(position.minScrollExtent, position.maxScrollExtent),
+      );
+    });
+  }
 
   @override
   void didUpdateWidget(covariant _TimelineVerticalScrollViewport oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewport != widget.viewport ||
+        (widget.viewport != null && !oldWidget.active && widget.active)) {
+      _restoreSession();
+      return;
+    }
     if (oldWidget.hourHeight == widget.hourHeight || !_controller.hasClients) {
       return;
     }
@@ -1865,15 +2028,79 @@ class _NowLine extends StatelessWidget {
   }
 }
 
+/// Provides the existing horizontal controller without rebuilding the canvas on
+/// scroll. Only the three pinned rail surfaces listen to the offset.
+class _TimelineHorizontalScope extends InheritedWidget {
+  const _TimelineHorizontalScope({
+    required this.controller,
+    required super.child,
+  });
+  final ScrollController controller;
+  static ScrollController of(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_TimelineHorizontalScope>()!
+      .controller;
+  @override
+  bool updateShouldNotify(_TimelineHorizontalScope oldWidget) =>
+      controller != oldWidget.controller;
+}
+
+class _PinnedTimelineRail extends StatelessWidget {
+  const _PinnedTimelineRail({required this.width, required this.child});
+  final double width;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final controller = _TimelineHorizontalScope.of(context);
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final colors = Theme.of(context).colorScheme;
+    return PositionedDirectional(
+      start: 0,
+      top: 0,
+      bottom: 0,
+      width: width,
+      child: AnimatedBuilder(
+        animation: controller,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: BorderDirectional(
+              end: BorderSide(
+                color: colors.outlineVariant.withValues(alpha: .42),
+              ),
+            ),
+          ),
+          child: child,
+        ),
+        builder: (context, child) => Transform.translate(
+          offset: Offset(
+            (controller.hasClients ? controller.offset : 0) * (rtl ? -1 : 1),
+            0,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 /// One horizontal offset for the date header, all-day lanes and timed grid.
 /// The child stays mounted when overflow starts or stops during a resize.
 class _CalendarHorizontalViewport extends StatefulWidget {
   const _CalendarHorizontalViewport({
     required this.viewportWidth,
     required this.contentWidth,
+    required this.railWidth,
+    required this.dayWidth,
+    required this.selectedDay,
+    required this.focusRevision,
+    required this.active,
+    this.viewport,
     required this.child,
   });
-  final double viewportWidth, contentWidth;
+  final double viewportWidth, contentWidth, railWidth, dayWidth;
+  final int selectedDay, focusRevision;
+  final bool active;
+  final _CalendarViewportSession? viewport;
   final Widget child;
   @override
   State<_CalendarHorizontalViewport> createState() =>
@@ -1882,9 +2109,77 @@ class _CalendarHorizontalViewport extends StatefulWidget {
 
 class _CalendarHorizontalViewportState
     extends State<_CalendarHorizontalViewport> {
-  final _controller = ScrollController();
+  late final ScrollController _controller;
+  int _revealGeneration = 0;
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController(
+      initialScrollOffset: widget.viewport?.horizontalOffset ?? 0,
+      keepScrollOffset: widget.viewport == null,
+    )..addListener(_rememberOffset);
+    _scheduleReveal();
+  }
+
+  void _rememberOffset() {
+    if (widget.active && _controller.hasClients) {
+      widget.viewport?.horizontalOffset = _controller.offset;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_CalendarHorizontalViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final replaced = oldWidget.viewport != widget.viewport;
+    if (replaced ||
+        (widget.active &&
+            (!oldWidget.active ||
+                oldWidget.focusRevision != widget.focusRevision))) {
+      _scheduleReveal(resetOffset: replaced || !oldWidget.active);
+    }
+  }
+
+  void _scheduleReveal({bool resetOffset = false}) {
+    final generation = ++_revealGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          generation != _revealGeneration ||
+          !widget.active ||
+          !_controller.hasClients ||
+          !_controller.position.hasContentDimensions) {
+        return;
+      }
+      final position = _controller.position;
+      if (resetOffset && widget.viewport != null) {
+        _controller.jumpTo(
+          widget.viewport!.horizontalOffset.clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          ),
+        );
+      }
+      if (widget.selectedDay < 0 ||
+          widget.viewport?.focusRevision == widget.focusRevision) {
+        return;
+      }
+      final left = widget.railWidth + widget.selectedDay * widget.dayWidth;
+      final right = left + widget.dayWidth;
+      var target = _controller.offset;
+      if (left < target + widget.railWidth) {
+        target = left - widget.railWidth;
+      } else if (right > target + widget.viewportWidth) {
+        target = right - widget.viewportWidth;
+      }
+      target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
+      if ((target - _controller.offset).abs() > .01) _controller.jumpTo(target);
+      widget.viewport?.focusRevision = widget.focusRevision;
+      _rememberOffset();
+    });
+  }
+
   @override
   void dispose() {
+    _revealGeneration++;
     _controller.dispose();
     super.dispose();
   }
@@ -1892,18 +2187,21 @@ class _CalendarHorizontalViewportState
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final overflow = widget.contentWidth > widget.viewportWidth + 0.5;
-      return Scrollbar(
+      final overflow = widget.contentWidth > widget.viewportWidth + .5;
+      return _TimelineHorizontalScope(
         controller: _controller,
-        thumbVisibility: overflow,
-        notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
-        child: SingleChildScrollView(
+        child: Scrollbar(
           controller: _controller,
-          scrollDirection: Axis.horizontal,
-          physics: overflow
-              ? const ClampingScrollPhysics()
-              : const NeverScrollableScrollPhysics(),
-          child: SizedBox(height: constraints.maxHeight, child: widget.child),
+          thumbVisibility: overflow,
+          notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+          child: SingleChildScrollView(
+            controller: _controller,
+            scrollDirection: Axis.horizontal,
+            physics: overflow
+                ? const ClampingScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
+            child: SizedBox(height: constraints.maxHeight, child: widget.child),
+          ),
         ),
       );
     },

@@ -2941,4 +2941,33 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => '주 선택';
+
+  @override
+  String get datePickerSelectMonth => '월 선택';
+
+  @override
+  String get generalDateLabelFormatDescription => '데스크톱과 작은 화면의 날짜 탐색에 적용됩니다.';
+
+  @override
+  String get dateRangeTitle => '날짜 범위 선택';
+
+  @override
+  String get dateRangeCustom => '사용자 지정';
+
+  @override
+  String get dateRangeChooseStart => '시작 날짜를 선택하세요';
+
+  @override
+  String get dateRangeChooseEnd => '종료 날짜를 선택하세요';
+
+  @override
+  String get dateRangeLimit => '시작일과 종료일을 포함하여 1~14일을 선택하세요.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return '사용자 지정 · $days일';
+  }
 }

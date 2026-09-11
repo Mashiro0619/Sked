@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Избор на седмица",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Избор на месец",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Важи за навигацията по дати на компютри и малки екрани.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Избор на период",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "По избор",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Изберете начална дата",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Изберете крайна дата",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Изберете от 1 до 14 дни, включително началната и крайната дата.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "По избор · {days, plural, =1{1 ден} other{{days} дни}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

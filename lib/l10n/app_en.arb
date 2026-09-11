@@ -2106,5 +2106,29 @@
   "courseReminderMinutesLabel": "Minutes before class",
   "@courseReminderMinutesLabel": {},
   "exportAction": "Export",
-  "@exportAction": {}
+  "@exportAction": {},
+  "datePickerSelectWeek": "Select week",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Select month",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Applies to date navigation on desktop and smaller screens.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Choose date range",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Custom",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Choose the start date",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Choose the end date",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Select between 1 and 14 days, including both endpoints.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Custom · {days, plural, =1{1 day} other{{days} days}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "주 선택",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "월 선택",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "데스크톱과 작은 화면의 날짜 탐색에 적용됩니다.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "날짜 범위 선택",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "사용자 지정",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "시작 날짜를 선택하세요",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "종료 날짜를 선택하세요",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "시작일과 종료일을 포함하여 1~14일을 선택하세요.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "사용자 지정 · {days}일",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

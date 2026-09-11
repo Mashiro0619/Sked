@@ -2989,4 +2989,41 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Vali nädal';
+
+  @override
+  String get datePickerSelectMonth => 'Vali kuu';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Kehtib kuupäevade navigeerimisele arvutis ja väiksematel ekraanidel.';
+
+  @override
+  String get dateRangeTitle => 'Vali kuupäevavahemik';
+
+  @override
+  String get dateRangeCustom => 'Kohandatud';
+
+  @override
+  String get dateRangeChooseStart => 'Vali alguskuupäev';
+
+  @override
+  String get dateRangeChooseEnd => 'Vali lõppkuupäev';
+
+  @override
+  String get dateRangeLimit =>
+      'Vali 1–14 päeva, mõlemad lõppkuupäevad kaasa arvatud.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days päeva',
+      one: '1 päev',
+    );
+    return 'Kohandatud · $_temp0';
+  }
 }

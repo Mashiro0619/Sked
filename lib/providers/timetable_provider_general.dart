@@ -42,7 +42,45 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   String get generalToolbarHiddenItemsBehavior =>
       _appData.generalMode.toolbarHiddenItemsBehavior;
 
-  DateTime get selectedGeneralDate => _appData.generalMode.selectedDate;
+  DateTime get selectedGeneralDate => _visibleGeneralMode.selectedDate;
+  GeneralDateRange? get customGeneralDateRange =>
+      _visibleGeneralMode.customDateRange;
+
+  Future<void> setGeneralDateRange(
+    GeneralDateRange range, {
+    DateTime? focusedDate,
+    bool Function()? isCurrent,
+    bool revealFocus = true,
+  }) => _commitGeneralNavigation(
+    (data) {
+      final focus = focusedDate ?? data.selectedDate;
+      return data.copyWith(
+        customDateRange: range,
+        selectedDateIso: (range.contains(focus) ? focus : range.start)
+            .toIso8601String()
+            .split('T')
+            .first,
+      );
+    },
+    isCurrent: isCurrent,
+    revealFocus: revealFocus,
+  );
+
+  Future<void> clearGeneralDateRange() => _commitGeneralNavigation((data) {
+    final date = data.selectedDate;
+    // Clearing a custom weekend range returns to its natural week, not the
+    // following Monday when the preset hides weekends.
+    final focus = !data.showWeekends && date.weekday > DateTime.friday
+        ? DateTime(
+            date.year,
+            date.month,
+            date.day - date.weekday + DateTime.friday,
+          )
+        : date;
+    return _calendarService
+        .setSelectedDate(data, focus)
+        .copyWith(customDateRange: null);
+  });
 
   Future<void> switchGeneralSchedule(String scheduleId) async {
     requireWorkspaceEnabled(AppMode.general);
@@ -122,8 +160,24 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
-  Future<void> setSelectedGeneralDate(DateTime date) async {
+  Future<void> setSelectedGeneralDate(
+    DateTime date, {
+    bool moveCustomRange = true,
+  }) async {
     requireWorkspaceEnabled(AppMode.general);
+    if (_generalNavigationPending ||
+        _appData.generalMode.customDateRange != null) {
+      await _commitGeneralNavigation(
+        (data) => _calendarService
+            .setSelectedDate(data, date)
+            .copyWith(
+              customDateRange: moveCustomRange
+                  ? data.customDateRange?.containing(date)
+                  : data.customDateRange,
+            ),
+      );
+      return;
+    }
     final next = _calendarService.setSelectedDate(_appData.generalMode, date);
     if (identical(next, _appData.generalMode) ||
         _sameGeneralDate(
@@ -134,6 +188,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     }
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
+    _generalDateFocusRevision++;
     notifyListeners();
     _scheduleUiStateSave();
   }

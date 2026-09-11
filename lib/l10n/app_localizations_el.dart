@@ -3018,4 +3018,41 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Επιλογή εβδομάδας';
+
+  @override
+  String get datePickerSelectMonth => 'Επιλογή μήνα';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Ισχύει για την πλοήγηση ημερομηνιών σε υπολογιστές και μικρότερες οθόνες.';
+
+  @override
+  String get dateRangeTitle => 'Επιλογή εύρους ημερομηνιών';
+
+  @override
+  String get dateRangeCustom => 'Προσαρμοσμένο';
+
+  @override
+  String get dateRangeChooseStart => 'Επιλέξτε ημερομηνία έναρξης';
+
+  @override
+  String get dateRangeChooseEnd => 'Επιλέξτε ημερομηνία λήξης';
+
+  @override
+  String get dateRangeLimit =>
+      'Επιλέξτε 1–14 ημέρες, μαζί με την αρχική και την τελική.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days ημέρες',
+      one: '1 ημέρα',
+    );
+    return 'Προσαρμοσμένο · $_temp0';
+  }
 }

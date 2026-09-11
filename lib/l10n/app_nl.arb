@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Week selecteren",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Maand selecteren",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Geldt voor datumnavigatie op desktops en kleinere schermen.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Datumbereik kiezen",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Aangepast",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Kies de begindatum",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Kies de einddatum",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Selecteer 1–14 dagen, inclusief de begin- en einddatum.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Aangepast · {days, plural, =1{1 dag} other{{days} dagen}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

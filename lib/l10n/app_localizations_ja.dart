@@ -2938,4 +2938,34 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => '週を選択';
+
+  @override
+  String get datePickerSelectMonth => '月を選択';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'デスクトップと小さい画面の日付ナビゲーションに適用します。';
+
+  @override
+  String get dateRangeTitle => '期間を選択';
+
+  @override
+  String get dateRangeCustom => 'カスタム';
+
+  @override
+  String get dateRangeChooseStart => '開始日を選択してください';
+
+  @override
+  String get dateRangeChooseEnd => '終了日を選択してください';
+
+  @override
+  String get dateRangeLimit => '開始日と終了日を含めて1～14日を選択してください。';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return 'カスタム · $days日';
+  }
 }

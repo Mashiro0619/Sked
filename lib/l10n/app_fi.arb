@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "Valitse viikko",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "Valitse kuukausi",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "Koskee päivämääränavigointia tietokoneilla ja pienillä näytöillä.",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "Valitse päivämääräväli",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "Mukautettu",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "Valitse aloituspäivä",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "Valitse lopetuspäivä",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "Valitse 1–14 päivää, alku- ja loppupäivä mukaan lukien.",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "Mukautettu · {days, plural, =1{1 päivä} other{{days} päivää}}",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

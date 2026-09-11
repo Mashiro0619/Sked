@@ -1693,5 +1693,29 @@
   "courseReminderDeliveryHint": "This preference is saved with the course. Delivery depends on system notification permissions and background restrictions.",
   "courseReminderPermissionUnknown": "System notification status has not been checked. Review notification settings before relying on reminders.",
   "courseReminderMinutesLabel": "Minutes before class",
-  "exportAction": "Export"
+  "exportAction": "Export",
+  "datePickerSelectWeek": "सप्ताह चुनें",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "महीना चुनें",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "डेस्कटॉप और छोटी स्क्रीन पर तारीख नेविगेशन पर लागू होता है।",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "तारीख सीमा चुनें",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "कस्टम",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "शुरुआत की तारीख चुनें",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "समाप्ति की तारीख चुनें",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "शुरुआत और समाप्ति सहित 1–14 दिन चुनें।",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "कस्टम · {days} दिन",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -1,5 +1,7 @@
 # Miscellaneous
 /.scratch/
+# Local Windows shell caches from an unexpanded environment path
+/%SystemDrive%/
 # Local Android/device inspection captures (UI dumps and screenshots)
 /.tmp_*
 *.class

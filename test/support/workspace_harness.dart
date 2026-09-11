@@ -99,6 +99,7 @@ Future<TimetableProvider> workspaceProvider({
   AppMode mode = AppMode.student,
   String locale = 'en',
   WorkspaceMemoryStorage? storage,
+  Future<void> Function(Future<void> Function())? workspaceMutationLock,
 }) async {
   final sample = DeveloperSampleDataService.append(
     current: buildInitialAppData(buildDefaultPeriodTimes(), localeCode: locale),
@@ -114,7 +115,7 @@ Future<TimetableProvider> workspaceProvider({
     secretStore: _Secrets(),
     schoolSiteService: SchoolSiteService(store: _Sites()),
     backupRestoreJournal: _Journal(),
-    workspaceMutationLock: (action) => action(),
+    workspaceMutationLock: workspaceMutationLock ?? (action) => action(),
     privacyService: _Privacy(),
     systemLocaleCodeResolver: () => locale,
     uiStateSaveDelay: Duration.zero,

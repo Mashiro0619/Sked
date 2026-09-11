@@ -3009,4 +3009,42 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Выберите неделю';
+
+  @override
+  String get datePickerSelectMonth => 'Выберите месяц';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Применяется к навигации по датам на компьютерах и небольших экранах.';
+
+  @override
+  String get dateRangeTitle => 'Выберите диапазон дат';
+
+  @override
+  String get dateRangeCustom => 'Произвольный';
+
+  @override
+  String get dateRangeChooseStart => 'Выберите начальную дату';
+
+  @override
+  String get dateRangeChooseEnd => 'Выберите конечную дату';
+
+  @override
+  String get dateRangeLimit =>
+      'Выберите от 1 до 14 дней, включая обе граничные даты.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дней',
+      few: '$days дня',
+      one: '1 день',
+    );
+    return 'Произвольный · $_temp0';
+  }
 }

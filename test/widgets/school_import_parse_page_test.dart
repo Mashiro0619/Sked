@@ -11,6 +11,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/screens/school_import_parse_page.dart';
 import 'package:sked/services/school_import_api.dart';
+import 'package:sked/widgets/sked_date_picker.dart';
 
 class _MemoryTimetableStorage implements TimetableStorage {
   _MemoryTimetableStorage(this.data);
@@ -186,6 +187,59 @@ Future<List<SchoolImportParseOutcome?>> _pumpDirectPage(
 }
 
 void main() {
+  testWidgets(
+    'parsed semester date changes only after picker confirmation and stays in the import draft',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final controller = StreamController<SchoolImportStreamEvent>();
+      addTearDown(controller.close);
+      final results = await _pumpDirectPage(tester, controller, provider);
+      controller.add(ParseDone(response: _response()));
+      await tester.pumpAndSettle();
+      final before = provider.appData.toJson();
+      final date = find.byKey(const ValueKey('school-import-parse-start-date'));
+      await tester.ensureVisible(date);
+      await tester.tap(date);
+      await tester.pumpAndSettle();
+      final picker = tester.widget<SkedDatePicker>(find.byType(SkedDatePicker));
+      expect(picker.firstDate, DateTime(2020));
+      expect(picker.lastDate, DateTime(2035));
+      await tester.tap(find.byKey(const ValueKey('sked-date-2026-05-27')));
+      await tester.tap(find.byKey(const ValueKey('sked-date-cancel')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: date, matching: find.text('2026-05-25')),
+        findsOneWidget,
+      );
+      await tester.tap(date);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('sked-date-2026-05-27')));
+      await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: date, matching: find.text('2026-05-27')),
+        findsOneWidget,
+      );
+      expect(provider.appData.toJson(), before);
+      final l = AppLocalizations.of(
+        tester.element(find.byType(SchoolImportParsePage)),
+      );
+      await tester.tap(
+        find.widgetWithText(FilledButton, l.importAsNewTimetable),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        results.single!.response.timetable.startDate,
+        DateTime(2026, 5, 27),
+      );
+      expect(provider.appData.toJson(), before);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('shows structured result before continuing import', (
     tester,
   ) async {

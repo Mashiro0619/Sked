@@ -2996,4 +2996,41 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Valitse viikko';
+
+  @override
+  String get datePickerSelectMonth => 'Valitse kuukausi';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Koskee päivämääränavigointia tietokoneilla ja pienillä näytöillä.';
+
+  @override
+  String get dateRangeTitle => 'Valitse päivämääräväli';
+
+  @override
+  String get dateRangeCustom => 'Mukautettu';
+
+  @override
+  String get dateRangeChooseStart => 'Valitse aloituspäivä';
+
+  @override
+  String get dateRangeChooseEnd => 'Valitse lopetuspäivä';
+
+  @override
+  String get dateRangeLimit =>
+      'Valitse 1–14 päivää, alku- ja loppupäivä mukaan lukien.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days päivää',
+      one: '1 päivä',
+    );
+    return 'Mukautettu · $_temp0';
+  }
 }

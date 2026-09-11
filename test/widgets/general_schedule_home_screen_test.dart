@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_date_picker.dart';
+
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -630,8 +632,8 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('general-date-title-button')));
     await tester.pumpAndSettle();
-    expect(find.byType(DatePickerDialog), findsOneWidget);
-    Navigator.of(tester.element(find.byType(DatePickerDialog))).pop();
+    expect(find.byType(SkedDatePicker), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sked-date-picker-close')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('general-view-switcher')));
@@ -918,8 +920,8 @@ void main() {
         greaterThan(320),
       );
       for (final (date, label) in [
-        (DateTime(2026, 6, 16), '2026/6/15–2026/6/21'),
-        (DateTime(2026, 9, 2), '2026/8/31–2026/9/6'),
+        (DateTime(2026, 6, 16), '2026/6/15–21'),
+        (DateTime(2026, 9, 2), '2026/8/31–9/6'),
         (DateTime(2027, 1, 1), '2026/12/28–2027/1/3'),
       ]) {
         await provider.setSelectedGeneralDate(date);
@@ -1011,13 +1013,13 @@ void main() {
       showSettingsAction: false,
     );
 
-    expect(_visibleDateNavigationLabel(tester), '2026/7/13\u20132026/7/19');
+    expect(_visibleDateNavigationLabel(tester), '2026/7/13\u201319');
 
     await provider.updateGeneralDisplaySettings(
       dateLabelFormat: generalDateLabelFormatIso,
     );
     await tester.pumpAndSettle();
-    expect(_visibleDateNavigationLabel(tester), '2026-07-13\u20132026-07-19');
+    expect(_visibleDateNavigationLabel(tester), '2026-07-13\u201319');
 
     final switcher = find.byKey(const ValueKey('general-view-switcher'));
     await tester.tap(switcher);
@@ -3787,7 +3789,7 @@ void main() {
     await tester.tap(titleButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(find.byType(SkedDatePicker), findsOneWidget);
     expect(provider.selectedGeneralDate.year, 2026);
     expect(provider.selectedGeneralDate.month, 6);
     expect(provider.selectedGeneralDate.day, 16);
@@ -4660,8 +4662,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Pick date').last);
     await tester.pumpAndSettle();
-    expect(find.byType(DatePickerDialog), findsOneWidget);
-    Navigator.of(tester.element(find.byType(DatePickerDialog))).pop();
+    expect(find.byType(SkedDatePicker), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sked-date-picker-close')));
     await tester.pumpAndSettle();
 
     await tester.tap(more);
@@ -4672,7 +4674,7 @@ void main() {
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(find.byType(SkedDatePicker), findsNothing);
 
     await provider.updateGeneralToolbarNavigationVisibility('more', false);
     await tester.pumpAndSettle();

@@ -11,6 +11,7 @@ export 'app_mode.dart';
 export 'general_event.dart';
 export 'general_schedule.dart';
 export 'general_schedule_data.dart';
+export 'general_date_range.dart';
 export 'general_event_occurrence.dart';
 export '../utils/constants.dart';
 export '../utils/localized_names.dart';

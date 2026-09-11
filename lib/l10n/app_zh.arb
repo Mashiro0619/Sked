@@ -2090,5 +2090,29 @@
   "courseReminderDeliveryHint": "此设置随课程保存；能否送达仍取决于系统通知权限及后台限制。",
   "courseReminderPermissionUnknown": "尚未确认系统通知状态。请在通知设置中检查权限。",
   "courseReminderMinutesLabel": "课前提醒分钟数",
-  "exportAction": "导出"
+  "exportAction": "导出",
+  "datePickerSelectWeek": "选择周",
+  "@datePickerSelectWeek": {},
+  "datePickerSelectMonth": "选择月份",
+  "@datePickerSelectMonth": {},
+  "generalDateLabelFormatDescription": "适用于桌面和窄屏的日期导航。",
+  "@generalDateLabelFormatDescription": {},
+  "dateRangeTitle": "选择日期范围",
+  "@dateRangeTitle": {},
+  "dateRangeCustom": "自定义",
+  "@dateRangeCustom": {},
+  "dateRangeChooseStart": "请选择开始日期",
+  "@dateRangeChooseStart": {},
+  "dateRangeChooseEnd": "请选择结束日期",
+  "@dateRangeChooseEnd": {},
+  "dateRangeLimit": "请选择 1–14 天（含首尾日期）。",
+  "@dateRangeLimit": {},
+  "dateRangeCustomDays": "自定义 · {days}天",
+  "@dateRangeCustomDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

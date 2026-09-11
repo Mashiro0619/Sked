@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/models/app_backup.dart';
+import 'package:sked/models/app_data.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/services/general_occurrence_service.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 
 import '../benchmark/src/benchmark_fixtures.dart';
+import '../benchmark/src/benchmark_runner.dart';
 import '../benchmark/src/performance_suite.dart';
 
 void main() {
@@ -96,4 +99,39 @@ void main() {
 
     expect(actual, expectedPerformanceFixtureChecksums);
   });
+  test(
+    'v5 fixture change affects only the general schema tag, not workload data',
+    () {
+      String asV4(String source) {
+        expect(RegExp('"schemaVersion":5').allMatches(source), hasLength(1));
+        return source.replaceFirst('"schemaVersion":5', '"schemaVersion":4');
+      }
+
+      expect(
+        checksumString(asV4(fixtures.appData.encode())),
+        'fnv1a64-utf16le:8c67108b3c250c39',
+      );
+      expect(
+        checksumString(
+          asV4(
+            AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+          ),
+        ),
+        'fnv1a64-utf16le:e36d066bc8da45bf',
+      );
+      expect(
+        checksumString(
+          asV4(encodeAppBackup(fixtures.appData, fixtures.schoolSites)),
+        ),
+        'fnv1a64-utf16le:e1b21719137bb127',
+      );
+      final decoded = decodeAppBackup(fixtures.appBackupSnapshot);
+      final checksum = StableChecksum()
+        ..addBool(decoded.includesSchoolSites)
+        ..addString(
+          asV4(encodeAppBackup(decoded.appData, decoded.schoolSites)),
+        );
+      expect(checksum.finish(), 'fnv1a64-utf16le:7401c4a42a54dc73');
+    },
+  );
 }

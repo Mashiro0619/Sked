@@ -2980,4 +2980,34 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'เลือกสัปดาห์';
+
+  @override
+  String get datePickerSelectMonth => 'เลือกเดือน';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'ใช้กับการนำทางวันที่บนเดสก์ท็อปและหน้าจอขนาดเล็ก';
+
+  @override
+  String get dateRangeTitle => 'เลือกช่วงวันที่';
+
+  @override
+  String get dateRangeCustom => 'กำหนดเอง';
+
+  @override
+  String get dateRangeChooseStart => 'เลือกวันที่เริ่มต้น';
+
+  @override
+  String get dateRangeChooseEnd => 'เลือกวันที่สิ้นสุด';
+
+  @override
+  String get dateRangeLimit => 'เลือก 1–14 วัน โดยรวมวันเริ่มต้นและวันสิ้นสุด';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return 'กำหนดเอง · $days วัน';
+  }
 }

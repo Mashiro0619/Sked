@@ -16,11 +16,13 @@ class TimetableInformationForm extends StatelessWidget {
     required this.onPickPeriodTimeSet,
     this.nameValidator,
     this.weeksInputFormatters,
+    this.startDateAnchorKey,
   });
 
   final TextEditingController nameController;
   final TextEditingController weeksController;
   final String startDateLabel;
+  final Key? startDateAnchorKey;
   final String periodTimeSetSummary;
   final bool enabled;
   final VoidCallback? onPickStartDate;
@@ -63,6 +65,7 @@ class TimetableInformationForm extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _TimetableInformationTile(
+          key: startDateAnchorKey,
           title: l10n.semesterStartDate,
           summary: startDateLabel,
           leadingIcon: Icons.calendar_month_outlined,
@@ -134,6 +137,7 @@ class TimetableInformationDialogSurface extends StatelessWidget {
 
 class _TimetableInformationTile extends StatelessWidget {
   const _TimetableInformationTile({
+    super.key,
     required this.title,
     required this.summary,
     required this.leadingIcon,

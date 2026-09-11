@@ -109,7 +109,9 @@ mixin _TimetableProviderImportExport on _TimetableProviderBase {
     if (!siteResult.canWrite) {
       throw SchoolSiteRecoveryException(siteResult);
     }
-    return encodeAppBackup(_appData, siteResult.sites);
+    // Pending range/focus writes are deliberately unpublished. A backup made
+    // while they are in flight must not resurrect a navigation that later fails.
+    return encodeAppBackup(_visibleAppData, siteResult.sites);
   }
 
   String exportSelectedTimetablesJson(List<String> timetableIds) {

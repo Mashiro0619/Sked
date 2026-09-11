@@ -2999,4 +2999,41 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Wybierz tydzień';
+
+  @override
+  String get datePickerSelectMonth => 'Wybierz miesiąc';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Dotyczy nawigacji według dat na komputerach i mniejszych ekranach.';
+
+  @override
+  String get dateRangeTitle => 'Wybierz zakres dat';
+
+  @override
+  String get dateRangeCustom => 'Niestandardowy';
+
+  @override
+  String get dateRangeChooseStart => 'Wybierz datę początkową';
+
+  @override
+  String get dateRangeChooseEnd => 'Wybierz datę końcową';
+
+  @override
+  String get dateRangeLimit =>
+      'Wybierz od 1 do 14 dni, z obiema datami włącznie.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dni',
+      one: '1 dzień',
+    );
+    return 'Niestandardowy · $_temp0';
+  }
 }

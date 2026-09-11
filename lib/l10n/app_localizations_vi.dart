@@ -2998,4 +2998,35 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Chọn tuần';
+
+  @override
+  String get datePickerSelectMonth => 'Chọn tháng';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Áp dụng cho điều hướng ngày trên máy tính và màn hình nhỏ.';
+
+  @override
+  String get dateRangeTitle => 'Chọn khoảng ngày';
+
+  @override
+  String get dateRangeCustom => 'Tùy chỉnh';
+
+  @override
+  String get dateRangeChooseStart => 'Chọn ngày bắt đầu';
+
+  @override
+  String get dateRangeChooseEnd => 'Chọn ngày kết thúc';
+
+  @override
+  String get dateRangeLimit =>
+      'Chọn từ 1 đến 14 ngày, bao gồm cả hai ngày đầu và cuối.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    return 'Tùy chỉnh · $days ngày';
+  }
 }

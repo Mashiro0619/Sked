@@ -2991,4 +2991,41 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get exportAction => 'Export';
+
+  @override
+  String get datePickerSelectWeek => 'Week selecteren';
+
+  @override
+  String get datePickerSelectMonth => 'Maand selecteren';
+
+  @override
+  String get generalDateLabelFormatDescription =>
+      'Geldt voor datumnavigatie op desktops en kleinere schermen.';
+
+  @override
+  String get dateRangeTitle => 'Datumbereik kiezen';
+
+  @override
+  String get dateRangeCustom => 'Aangepast';
+
+  @override
+  String get dateRangeChooseStart => 'Kies de begindatum';
+
+  @override
+  String get dateRangeChooseEnd => 'Kies de einddatum';
+
+  @override
+  String get dateRangeLimit =>
+      'Selecteer 1–14 dagen, inclusief de begin- en einddatum.';
+
+  @override
+  String dateRangeCustomDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dagen',
+      one: '1 dag',
+    );
+    return 'Aangepast · $_temp0';
+  }
 }
