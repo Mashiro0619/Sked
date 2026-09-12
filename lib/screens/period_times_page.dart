@@ -1,3 +1,4 @@
+import '../widgets/sked_time_picker.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
@@ -356,8 +357,16 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
                 endLabel: l.endTime,
                 endValue: formatMinutes(period.endMinutes),
                 enabled: !_timePickerOpen,
-                onPickStart: () => _pickPeriodTime(index, isStart: true),
-                onPickEnd: () => _pickPeriodTime(index, isStart: false),
+                onPickStart: (anchor) => _pickPeriodTime(
+                  index,
+                  isStart: true,
+                  anchorContext: anchor,
+                ),
+                onPickEnd: (anchor) => _pickPeriodTime(
+                  index,
+                  isStart: false,
+                  anchorContext: anchor,
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -466,8 +475,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
               endLabel: l10n.endTime,
               endValue: formatMinutes(period.endMinutes),
               enabled: !_timePickerOpen,
-              onPickStart: () => _pickPeriodTime(index, isStart: true),
-              onPickEnd: () => _pickPeriodTime(index, isStart: false),
+              onPickStart: (anchor) =>
+                  _pickPeriodTime(index, isStart: true, anchorContext: anchor),
+              onPickEnd: (anchor) =>
+                  _pickPeriodTime(index, isStart: false, anchorContext: anchor),
             ),
             const SizedBox(height: 6),
             Wrap(
@@ -1136,7 +1147,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     );
   }
 
-  Future<void> _pickPeriodTime(int index, {required bool isStart}) async {
+  Future<void> _pickPeriodTime(
+    int index, {
+    required bool isStart,
+    required BuildContext anchorContext,
+  }) async {
     if (_timePickerOpen || index < 0 || index >= _periodTimes.length) {
       return;
     }
@@ -1146,18 +1161,15 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       isStart ? period.startMinutes : period.endMinutes,
     );
     try {
-      final picked = await showTimePicker(
+      final picked = await showSkedTimePicker(
         context: context,
         initialTime: TimeOfDay(
           hour: initialMinutes ~/ 60,
           minute: initialMinutes % 60,
         ),
-        builder: (context, child) {
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-            child: child!,
-          );
-        },
+        anchorContext: anchorContext,
+        workspace: AppMode.student,
+        alwaysUse24HourFormat: true,
       );
       if (!mounted ||
           picked == null ||
@@ -1199,8 +1211,8 @@ class _PeriodTimeRange extends StatelessWidget {
   final String endLabel;
   final String endValue;
   final bool enabled;
-  final VoidCallback? onPickStart;
-  final VoidCallback? onPickEnd;
+  final ValueChanged<BuildContext>? onPickStart;
+  final ValueChanged<BuildContext>? onPickEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -1314,7 +1326,7 @@ class _PeriodTimeAction extends StatelessWidget {
   final String label;
   final String value;
   final bool enabled;
-  final VoidCallback? onTap;
+  final ValueChanged<BuildContext>? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1326,13 +1338,13 @@ class _PeriodTimeAction extends StatelessWidget {
       excludeSemantics: true,
       label: label,
       value: value,
-      onTap: enabled ? onTap : null,
+      onTap: enabled && onTap != null ? () => onTap!(context) : null,
       child: InkWell(
         customBorder:
             theme.extension<SkedShapeScheme>()?.compact ??
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         excludeFromSemantics: true,
-        onTap: enabled ? onTap : null,
+        onTap: enabled && onTap != null ? () => onTap!(context) : null,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Padding(

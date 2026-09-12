@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_time_picker.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -170,23 +172,20 @@ Future<void> _enterTimePickerValue(
   await tester.tap(action);
   await tester.pumpAndSettle();
 
-  final dialog = find.byType(TimePickerDialog);
+  final dialog = find.byType(SkedTimePicker);
   expect(dialog, findsOneWidget);
   final materialL10n = MaterialLocalizations.of(tester.element(dialog));
-  await tester.tap(find.byTooltip(materialL10n.inputTimeModeButtonLabel));
-  await tester.pumpAndSettle();
 
-  final fields = find.descendant(
-    of: dialog,
-    matching: find.byType(TextFormField),
-  );
+  final fields = find.descendant(of: dialog, matching: find.byType(TextField));
   expect(fields, findsNWidgets(2));
   await tester.enterText(fields.at(0), hour);
   await tester.enterText(fields.at(1), minute);
+  await tester.pump();
+  await tester.ensureVisible(find.byKey(const ValueKey('sked-time-confirm')));
   await tester.tap(
     find.descendant(
       of: dialog,
-      matching: find.widgetWithText(TextButton, materialL10n.okButtonLabel),
+      matching: find.widgetWithText(FilledButton, materialL10n.okButtonLabel),
     ),
   );
   await tester.pumpAndSettle();
@@ -524,20 +523,20 @@ void main() {
     await tester.tap(startTimeCell, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.byType(TimePickerDialog), findsOneWidget);
+    expect(find.byType(SkedTimePicker), findsOneWidget);
 
     final l10n = AppLocalizations.of(
-      tester.element(find.byType(TimePickerDialog)),
+      tester.element(find.byType(SkedTimePicker)),
     );
     await tester.tap(
       find.descendant(
-        of: find.byType(TimePickerDialog),
+        of: find.byType(SkedTimePicker),
         matching: find.widgetWithText(TextButton, l10n.cancel),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(TimePickerDialog), findsNothing);
+    expect(find.byType(SkedTimePicker), findsNothing);
     expect(find.byType(PeriodTimesPage), findsOneWidget);
   });
 

@@ -302,7 +302,7 @@ void main() {
   );
 
   testWidgets(
-    'resource month browsing does not navigate until a range is completed',
+    'resource month browsing stays transient and a single date click navigates',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1440, 900);
@@ -322,10 +322,7 @@ void main() {
       expect(p.selectedGeneralDate, DateTime(2028, 1, 31));
       await tester.tap(find.byKey(const ValueKey('sked-date-2028-02-29')));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2028, 1, 31));
-      await tester.tap(find.byKey(const ValueKey('sked-date-2028-02-29')));
-      await tester.pumpAndSettle();
-      expect(p.customGeneralDateRange!.dayCount, 1);
+      expect(p.customGeneralDateRange, isNull);
       expect(p.selectedGeneralDate, DateTime(2028, 2, 29));
       expect(
         tester.element(find.byKey(const ValueKey('workspace-canvas'))),

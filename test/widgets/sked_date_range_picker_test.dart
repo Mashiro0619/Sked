@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import 'dart:async';
 import 'dart:ui' show Tristate;
 
@@ -92,7 +94,8 @@ void main() {
       await _tap(t, 'sked-date-2026-09-09');
       expect(results, isEmpty);
       expect(writes, isEmpty);
-      expect(find.text('Choose the end date'), findsOneWidget);
+      expect(find.text('Choose the end date'), findsNothing);
+      expect(_key('sked-date-range-summary'), findsNothing);
       await _tap(
         t,
         'sked-date-2026-09-${(8 + days).toString().padLeft(2, '0')}',
@@ -432,6 +435,258 @@ void main() {
       expect(
         results.single,
         DateTimeRange(start: DateTime(2026, 9, 9), end: DateTime(2026, 9, 15)),
+      );
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+  testWidgets(
+    'hover previews without extra controls and dismissal clears only the pending range',
+    (t) async {
+      _size(t, const Size(1440, 1100));
+      final results = <DateTimeRange?>[], writes = <GeneralDateRange>[];
+      final c = SkedDateRangeController(
+        initialRange: GeneralDateRange(
+          DateTime(2026, 9, 1),
+          DateTime(2026, 9, 7),
+        ),
+        onApply: (r) async {
+          writes.add(r);
+        },
+      );
+      addTearDown(c.dispose);
+      await _open(t, results, controller: c);
+      await _tap(t, 'sked-date-2026-09-09');
+      final gridBefore = t.getRect(_key('sked-date-2026-09-09'));
+      for (final key in [
+        'sked-date-range-phase',
+        'sked-date-range-summary',
+        'sked-date-range-day-count',
+        'sked-date-range-edit-start',
+        'sked-date-range-edit-end',
+        'sked-date-range-restart',
+      ]) {
+        expect(_key(key), findsNothing);
+      }
+      final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(
+        location: t.getCenter(_key('sked-date-2026-09-09')),
+      );
+      await mouse.moveTo(t.getCenter(_key('sked-date-2026-09-13')));
+      await t.pump();
+      expect(
+        c.previewRange,
+        GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
+      );
+      expect(writes, isEmpty);
+      expect(results, isEmpty);
+      expect(t.getRect(_key('sked-date-2026-09-09')), gridBefore);
+      await mouse.moveTo(t.getCenter(_key('sked-date-2026-09-23')));
+      await t.pump();
+      expect(t.getRect(_key('sked-date-2026-09-09')), gridBefore);
+      expect(writes, isEmpty);
+      await mouse.removePointer();
+      await _tap(t, 'sked-date-picker-close');
+      await t.tap(_key('open-range'));
+      await t.pumpAndSettle();
+      expect(c.start, isNull);
+      expect(c.applied.dayCount, 7);
+      await _tap(t, 'sked-date-2026-09-12');
+      await _tap(t, 'sked-date-2026-09-12');
+      expect(writes.single.dayCount, 1);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets('mouse release commits one range without a trailing date tap', (
+    t,
+  ) async {
+    _size(t, const Size(1440, 1100));
+    final results = <DateTimeRange?>[], writes = <GeneralDateRange>[];
+    await _open(
+      t,
+      results,
+      save: (r) async {
+        writes.add(r);
+      },
+    );
+    final gesture = await t.startGesture(
+      t.getCenter(_key('sked-date-2026-09-13')),
+      kind: PointerDeviceKind.mouse,
+    );
+    await gesture.moveTo(t.getCenter(_key('sked-date-2026-09-09')));
+    await t.pump();
+    expect(writes, isEmpty);
+    await gesture.up();
+    await t.pumpAndSettle();
+    expect(writes, [
+      GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
+    ]);
+    expect(results, [
+      DateTimeRange(start: DateTime(2026, 9, 9), end: DateTime(2026, 9, 13)),
+    ]);
+    expect(t.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  testWidgets(
+    'pointer cancel, leaving the grid and overlong drag keep the applied range',
+    (t) async {
+      _size(t, const Size(1440, 1100));
+      final results = <DateTimeRange?>[], writes = <GeneralDateRange>[];
+      await _open(
+        t,
+        results,
+        save: (r) async {
+          writes.add(r);
+        },
+      );
+      for (final action in ['cancel', 'outside', 'overlong']) {
+        final gesture = await t.startGesture(
+          t.getCenter(_key('sked-date-2026-09-09')),
+          kind: PointerDeviceKind.mouse,
+        );
+        await gesture.moveTo(t.getCenter(_key('sked-date-2026-09-13')));
+        await t.pump();
+        if (action == 'cancel') {
+          await gesture.cancel();
+        } else {
+          await gesture.moveTo(
+            action == 'outside'
+                ? const Offset(1430, 1090)
+                : t.getCenter(_key('sked-date-2026-09-23')),
+          );
+          await t.pump();
+          await gesture.up();
+        }
+        await t.pumpAndSettle();
+        expect(writes, isEmpty, reason: action);
+        expect(results, isEmpty);
+        expect(find.byType(SkedDatePicker), findsOneWidget);
+      }
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'manual input edits either endpoint without additional range controls',
+    (t) async {
+      _size(t, const Size(1440, 1100));
+      final results = <DateTimeRange?>[];
+      await _open(
+        t,
+        results,
+        initial: GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
+      );
+      await _tap(t, 'sked-date-input-toggle');
+      await t.enterText(_key('sked-date-end-input'), '09/08/2026');
+      await _tap(t, 'sked-date-confirm');
+      expect(results, isEmpty);
+      expect(
+        find.text(
+          MaterialLocalizations.of(t.element(_key('sked-date-input')))
+              .invalidDateRangeLabel,
+        ),
+        findsWidgets,
+      );
+      await t.enterText(_key('sked-date-end-input'), '09/15/2026');
+      await _tap(t, 'sked-date-confirm');
+      expect(
+        results.single,
+        DateTimeRange(start: DateTime(2026, 9, 9), end: DateTime(2026, 9, 15)),
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+  testWidgets(
+    'manual entry after the first date focuses an empty end instead of reusing an earlier end',
+    (t) async {
+      _size(t, const Size(1440, 900));
+      final results = <DateTimeRange?>[];
+      await _open(t, results);
+      await _tap(t, 'sked-date-2026-09-09');
+      await _tap(t, 'sked-date-input-toggle');
+      final end = t.widget<TextField>(_key('sked-date-end-input'));
+      expect(end.controller!.text, isEmpty);
+      expect(end.focusNode!.hasFocus, isTrue);
+      await t.enterText(_key('sked-date-end-input'), '09/13/2026');
+      await _tap(t, 'sked-date-confirm');
+      expect(
+        results.single,
+        DateTimeRange(start: DateTime(2026, 9, 9), end: DateTime(2026, 9, 13)),
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'failed range retains both candidate dates in the existing manual input',
+    (t) async {
+      _size(t, const Size(1440, 900));
+      final c = SkedDateRangeController(
+        initialRange: GeneralDateRange(
+          DateTime(2026, 9, 1),
+          DateTime(2026, 9, 7),
+        ),
+        onApply: (_) async {
+          throw StateError('disk busy');
+        },
+      );
+      addTearDown(c.dispose);
+      final failed = GeneralDateRange(
+        DateTime(2026, 9, 9),
+        DateTime(2026, 9, 13),
+      );
+      expect(await c.apply(failed), isFalse);
+      await _open(t, <DateTimeRange?>[], controller: c);
+      await _tap(t, 'sked-date-input-toggle');
+      final m = MaterialLocalizations.of(t.element(_key('sked-date-input')));
+      expect(
+        t.widget<TextField>(_key('sked-date-input')).controller!.text,
+        m.formatCompactDate(failed.start),
+      );
+      expect(
+        t.widget<TextField>(_key('sked-date-end-input')).controller!.text,
+        m.formatCompactDate(failed.end),
+      );
+      expect(
+        t.widget<TextField>(_key('sked-date-end-input')).focusNode!.hasFocus,
+        isTrue,
+      );
+      expect(c.applied.start, DateTime(2026, 9, 1));
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+  testWidgets(
+    'compact range picker keeps its grid fixed through a rejected range and retryable save',
+    (t) async {
+      _size(t, const Size(1440, 900));
+      final results = <DateTimeRange?>[];
+      var fail = true;
+      await _open(
+        t,
+        results,
+        save: (_) async {
+          if (fail) throw StateError('disk busy');
+        },
+      );
+      expect(t.getSize(find.byType(SkedDatePicker)).height, lessThan(380));
+      final gridRect = t.getRect(_key('sked-date-2026-09-09'));
+      final pickerRect = t.getRect(find.byType(SkedDatePicker));
+      await _tap(t, 'sked-date-2026-09-09');
+      await _tap(t, 'sked-date-2026-09-23');
+      expect(_key('sked-date-range-error'), findsOneWidget);
+      expect(t.getRect(_key('sked-date-2026-09-09')), gridRect);
+      expect(t.getRect(find.byType(SkedDatePicker)), pickerRect);
+      await _tap(t, 'sked-date-2026-09-13');
+      expect(_key('sked-date-range-retry'), findsOneWidget);
+      expect(t.getRect(_key('sked-date-2026-09-09')), gridRect);
+      expect(t.getRect(find.byType(SkedDatePicker)), pickerRect);
+      fail = false;
+      await _tap(t, 'sked-date-range-retry');
+      expect(
+        results.single,
+        DateTimeRange(start: DateTime(2026, 9, 9), end: DateTime(2026, 9, 13)),
       );
       expect(t.takeException(), isNull);
     },

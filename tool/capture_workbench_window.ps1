@@ -1,10 +1,13 @@
 param(
   [Parameter(Mandatory=$true)][int]$ProcessId,
-  [ValidateSet('resize','capture','maximize','restore','snap','minimize','close-request','drag')][string]$Action = 'capture',
+  [ValidateSet('resize','capture','maximize','restore','snap','minimize','close-request','drag','range-drag','wheel')][string]$Action = 'capture',
   [double]$WidthDp = 1440,
   [double]$HeightDp = 900,
   [double]$PointXDp = 0,
   [double]$PointYDp = 0,
+  [double]$EndPointXDp = 0,
+  [double]$EndPointYDp = 0,
+  [int]$WheelDelta = -120,
   [Parameter(Mandatory=$true)][double]$CaptionHeightDp,
   [Parameter(Mandatory=$true)][double]$CaptionButtonWidthDp,
   [string]$OutputPath
@@ -27,7 +30,9 @@ public static class SkedWindowCapture {
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int mode);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out Point p);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int key);
   [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(Point p);
   [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h, uint flags);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
@@ -62,21 +67,39 @@ $p = New-Object SkedWindowCapture+Point
 [void][SkedWindowCapture]::GetClientRect($handle,[ref]$c)
 [void][SkedWindowCapture]::ClientToScreen($handle,[ref]$p)
 $movedX = 0; $movedY = 0
-if ($Action -eq 'drag') {
+if ($Action -in @('drag', 'range-drag', 'wheel')) {
+  if (([SkedWindowCapture]::GetAsyncKeyState(1) -band 0x8000) -ne 0) { throw 'The primary mouse button is already down; refusing to interfere with another gesture.' }
   if ([SkedWindowCapture]::GetForegroundWindow() -ne $handle) { throw 'Native pointer validation requires the test window to own foreground focus.' }
-  if ($PointXDp -le 0 -or $PointYDp -le 0) { throw 'Drag requires a verified empty toolbar point.' }
+  if ($PointXDp -le 0 -or $PointYDp -le 0) { throw 'Pointer validation requires a verified point inside the test window.' }
   $from = New-Object SkedWindowCapture+Point
   $from.X = $p.X + [int]($PointXDp*$scale); $from.Y = $p.Y + [int]($PointYDp*$scale)
-  if ([SkedWindowCapture]::GetAncestor([SkedWindowCapture]::WindowFromPoint($from),2) -ne $handle) { throw 'Drag point is outside the test window.' }
-  [void][SkedWindowCapture]::SetCursorPos($from.X,$from.Y)
-  [SkedWindowCapture]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
+  if ([SkedWindowCapture]::GetAncestor([SkedWindowCapture]::WindowFromPoint($from),2) -ne $handle) { throw 'Pointer point is outside the test window.' }
+  $to = New-Object SkedWindowCapture+Point
+  $to.X = $from.X + 80; $to.Y = $from.Y + 40
+  if ($Action -eq 'range-drag') {
+    if ($EndPointXDp -le 0 -or $EndPointYDp -le 0) { throw 'Range drag requires an end point.' }
+    $to.X = $p.X + [int]($EndPointXDp*$scale); $to.Y = $p.Y + [int]($EndPointYDp*$scale)
+    if ([SkedWindowCapture]::GetAncestor([SkedWindowCapture]::WindowFromPoint($to),2) -ne $handle) { throw 'Range end point is outside the test window.' }
+  }
+  $savedCursor = New-Object SkedWindowCapture+Point
+  [void][SkedWindowCapture]::GetCursorPos([ref]$savedCursor)
   try {
-    Start-Sleep -Milliseconds 100
-    for ($step=1; $step -le 8; $step++) {
-      [void][SkedWindowCapture]::SetCursorPos($from.X+$step*10,$from.Y+$step*5)
-      Start-Sleep -Milliseconds 70
+    [void][SkedWindowCapture]::SetCursorPos($from.X,$from.Y)
+    if ($Action -eq 'wheel') {
+      $bits = [BitConverter]::ToUInt32([BitConverter]::GetBytes([int]$WheelDelta),0)
+      [SkedWindowCapture]::mouse_event(0x0800,0,0,$bits,[UIntPtr]::Zero)
+      Start-Sleep -Milliseconds 400
+    } else {
+      [SkedWindowCapture]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
+      try {
+        Start-Sleep -Milliseconds 100
+        for ($step=1; $step -le 8; $step++) {
+          [void][SkedWindowCapture]::SetCursorPos([int]($from.X+($to.X-$from.X)*$step/8),[int]($from.Y+($to.Y-$from.Y)*$step/8))
+          Start-Sleep -Milliseconds 70
+        }
+      } finally { [SkedWindowCapture]::mouse_event(4,0,0,0,[UIntPtr]::Zero) }
     }
-  } finally { [SkedWindowCapture]::mouse_event(4,0,0,0,[UIntPtr]::Zero) }
+  } finally { [void][SkedWindowCapture]::SetCursorPos($savedCursor.X,$savedCursor.Y) }
   Start-Sleep -Milliseconds 250
   $moved = New-Object SkedWindowCapture+Rect
   [void][SkedWindowCapture]::GetWindowRect($handle,[ref]$moved)

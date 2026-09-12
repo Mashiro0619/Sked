@@ -1,3 +1,5 @@
+import 'sked_time_picker.dart';
+
 import 'dart:convert';
 
 import 'editor_exit_guard.dart';
@@ -532,9 +534,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                                       },
                                 onPickTime: (_pickerOpen || _hasPopped)
                                     ? null
-                                    : () async {
+                                    : (anchorContext) async {
                                         final picked = await _runPicker(
-                                          () => _pickTime(context, _startTime),
+                                          () => _pickTime(
+                                            context,
+                                            _startTime,
+                                            anchorContext,
+                                          ),
                                         );
                                         if (!mounted || picked == null) {
                                           return;
@@ -565,9 +571,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                                       },
                                 onPickTime: (_pickerOpen || _hasPopped)
                                     ? null
-                                    : () async {
+                                    : (anchorContext) async {
                                         final picked = await _runPicker(
-                                          () => _pickTime(context, _endTime),
+                                          () => _pickTime(
+                                            context,
+                                            _endTime,
+                                            anchorContext,
+                                          ),
                                         );
                                         if (!mounted || picked == null) {
                                           return;
@@ -1259,7 +1269,7 @@ class _DateTimeRow extends StatelessWidget {
   final TimeOfDay time;
   final bool showTime;
   final ValueChanged<BuildContext>? onPickDate;
-  final VoidCallback? onPickTime;
+  final ValueChanged<BuildContext>? onPickTime;
 
   @override
   Widget build(BuildContext context) {
@@ -1285,11 +1295,13 @@ class _DateTimeRow extends StatelessWidget {
         ),
       ),
       if (showTime)
-        IconButton(
-          tooltip: l10n.pickTime,
-          onPressed: onPickTime,
-          style: actionStyle,
-          icon: const Icon(Icons.access_time),
+        Builder(
+          builder: (anchor) => IconButton(
+            tooltip: l10n.pickTime,
+            onPressed: onPickTime == null ? null : () => onPickTime!(anchor),
+            style: actionStyle,
+            icon: const Icon(Icons.access_time),
+          ),
         ),
     ];
 
@@ -1951,8 +1963,17 @@ Future<DateTime?> _pickDate(
   );
 }
 
-Future<TimeOfDay?> _pickTime(BuildContext context, TimeOfDay initialTime) {
-  return showTimePicker(context: context, initialTime: initialTime);
+Future<TimeOfDay?> _pickTime(
+  BuildContext context,
+  TimeOfDay initialTime,
+  BuildContext anchorContext,
+) {
+  return showSkedTimePicker(
+    context: context,
+    initialTime: initialTime,
+    anchorContext: anchorContext,
+    workspace: AppMode.general,
+  );
 }
 
 void _dismissActiveInputFocus() {

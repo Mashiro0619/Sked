@@ -58,10 +58,8 @@ void main() {
       expect(picker.commitMode, DatePickerCommitMode.immediate);
       await tester.tap(_in(_popup, 'sked-date-2026-09-09'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
-      await tester.tap(_in(_popup, 'sked-date-2026-09-09'));
-      await tester.pumpAndSettle();
-      expect(p.customGeneralDateRange!.dayCount, 1);
+      expect(_popup, findsNothing);
+      expect(p.customGeneralDateRange, isNull);
       expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
       final l = AppLocalizations.of(
         tester.element(_key('general-date-picker')),
@@ -148,11 +146,9 @@ void main() {
       expect(tester.element(_key('workspace-canvas')), same(canvas));
       await tester.tap(_in(_sidebar, 'sked-date-2026-10-13'));
       await tester.pumpAndSettle();
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
-      await tester.tap(_in(_sidebar, 'sked-date-2026-10-19'));
-      await tester.pumpAndSettle();
       expect(p.selectedGeneralDate, DateTime(2026, 10, 13));
-      for (final day in ['13', '14', '15', '16', '17', '18', '19']) {
+      expect(p.customGeneralDateRange, isNull);
+      for (final day in ['12', '13', '14', '15', '16', '17', '18']) {
         expect(
           tester
               .getSemantics(_in(_sidebar, 'sked-date-2026-10-$day'))
@@ -171,8 +167,6 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(_key('general-date-picker'));
-      await tester.pumpAndSettle();
-      await tester.tap(_in(_popup, 'sked-date-2026-10-06'));
       await tester.pumpAndSettle();
       await tester.tap(_in(_popup, 'sked-date-2026-10-06'));
       await tester.pumpAndSettle();
@@ -195,7 +189,10 @@ void main() {
       await p.updateGeneralDisplaySettings(showWeekends: false);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
-      await tester.tap(_key('general-date-picker'));
+      final workspaceL10n = AppLocalizations.of(
+        tester.element(_key('general-date-picker')),
+      );
+      await _view(tester, workspaceL10n.dateRangeCustom);
       await tester.pumpAndSettle();
       final saturday = tester.getSemantics(_in(_popup, 'sked-date-2026-09-12'));
       expect(saturday.flagsCollection.isEnabled, Tristate.isTrue);

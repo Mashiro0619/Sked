@@ -85,8 +85,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   bool get _dateNavigationBusy =>
       _navigationBusy || (_rangeController?.saving ?? false);
 
+  bool _lastRangeSaving = false;
   void _rangeSessionChanged() {
-    if (mounted) setState(() {});
+    // Hover and drag previews rebuild the picker, not the event canvas.
+    final saving = _rangeController?.saving ?? false;
+    if (mounted && saving != _lastRangeSaving) {
+      setState(() => _lastRangeSaving = saving);
+    }
   }
 
   void _observeRangeSession(TimetableProvider provider) {
@@ -96,6 +101,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         boundary != _rangeResumeBoundary) {
       _rangeController?.dispose();
       _rangeController = null;
+      _lastRangeSaving = false;
       _calendarViewport = _CalendarViewportSession();
       _rememberedCustomRange = null;
       _rangeDataSession = provider.dataSessionToken;
@@ -564,12 +570,21 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     }
   }
 
-  Future<void> _changeView(TimetableProvider provider, String view) async {
+  Future<void> _changeView(
+    TimetableProvider provider,
+    String view, {
+    BuildContext? anchorContext,
+  }) async {
     if (_dateNavigationBusy) return;
     final savedRange =
         provider.customGeneralDateRange ?? _rememberedCustomRange;
     if (view == generalViewCustom && savedRange == null) {
-      await _pickDate(context, provider, forceRange: true);
+      await _pickDate(
+        context,
+        provider,
+        forceRange: true,
+        anchorContext: anchorContext,
+      );
       return;
     }
     final needsSave =
@@ -913,8 +928,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               child: SkedDatePicker(
                 key: const ValueKey('general-resource-date-picker'),
                 embedded: true,
-                rangeController: selectedView == generalViewWeek
-                    ? _rangeSession(provider)
+                rangeController: _rangeSession(provider),
+                rangeInteraction: widget.interactive
+                    ? DateRangeInteraction.dragOnly
+                    : DateRangeInteraction.none,
+                displayRange: selectedView == generalViewWeek
+                    ? customRange
                     : null,
                 initialDate: date,
                 firstDate: DateTime(1970),
@@ -1056,33 +1075,37 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         ),
       ],
       actions: [
-        PopupMenuButton<String>(
-          key: const ValueKey('general-view-switcher'),
-          tooltip: l.defaultView,
-          enabled: widget.interactive && !_dateNavigationBusy,
-          onSelected: (value) => unawaited(_changeView(provider, value)),
-          itemBuilder: (_) => [
-            for (final option in _generalViewOptions(l))
-              CheckedPopupMenuItem(
-                value: option.value,
-                checked: option.value == view,
-                child: Text(option.label),
-              ),
-          ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              children: [
-                Text(
-                  _generalViewLabel(
-                    l,
-                    view,
-                    customDays: provider.customGeneralDateRange?.dayCount,
-                  ),
+        Builder(
+          builder: (viewAnchor) => PopupMenuButton<String>(
+            key: const ValueKey('general-view-switcher'),
+            tooltip: l.defaultView,
+            enabled: widget.interactive && !_dateNavigationBusy,
+            onSelected: (value) => unawaited(
+              _changeView(provider, value, anchorContext: viewAnchor),
+            ),
+            itemBuilder: (_) => [
+              for (final option in _generalViewOptions(l))
+                CheckedPopupMenuItem(
+                  value: option.value,
+                  checked: option.value == view,
+                  child: Text(option.label),
                 ),
-                const SizedBox(width: 6),
-                const Icon(Icons.expand_more, size: 16),
-              ],
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  Text(
+                    _generalViewLabel(
+                      l,
+                      view,
+                      customDays: provider.customGeneralDateRange?.dayCount,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.expand_more, size: 16),
+                ],
+              ),
             ),
           ),
         ),
@@ -1197,7 +1220,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final lastDate = DateTime(2100);
     try {
       if (forceRange ||
-          (_view ?? provider.generalDefaultView) == generalViewWeek) {
+          ((_view ?? provider.generalDefaultView) == generalViewWeek &&
+              provider.customGeneralDateRange != null)) {
         final session = _rangeSession(provider);
         await showSkedDateRangePicker(
           context: context,

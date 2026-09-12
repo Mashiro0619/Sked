@@ -1,3 +1,4 @@
+import 'package:sked/widgets/sked_time_picker.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -756,7 +757,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(
           find.descendant(
-            of: find.byType(TimePickerDialog),
+            of: find.byType(SkedTimePicker),
             matching: find.widgetWithText(TextButton, l10n.cancel),
           ),
         );

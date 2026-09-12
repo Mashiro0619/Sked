@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/gestures.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
-import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/app_mode.dart';
@@ -12,15 +12,18 @@ import '../models/general_date_range.dart';
 import 'sked_date_range_controller.dart';
 import '../models/general_schedule_data.dart'
     show generalDateLabelFormatLocalized;
-import '../providers/timetable_provider.dart';
 import '../utils/date_selection.dart';
 import '../utils/calendar_date_utils.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_picker_task.dart';
 
 export '../utils/date_selection.dart' show DateSelectionUnit;
 export 'sked_date_range_controller.dart';
 
 enum DatePickerCommitMode { immediate, confirm }
+
+/// Range presentation is independent of ordinary date activation.
+enum DateRangeInteraction { none, dragOnly, full }
 
 enum _CalendarPage { days, months, years, input }
 
@@ -104,294 +107,43 @@ Future<T?> _showDateTask<T>({
   final first = normalizeDateOnly(firstDate),
       last = normalizeDateOnly(lastDate);
   if (last.isBefore(first)) throw ArgumentError('Invalid date picker bounds.');
-  final parent = ModalRoute.of(context);
-  final focus =
-      _anchorFocus(anchorContext) ?? FocusManager.instance.primaryFocus;
-  final provider = Provider.of<TimetableProvider?>(context, listen: false);
-  if (workspace != null && provider?.isWorkspaceEnabled(workspace) == false) {
-    return null;
-  }
-  final dataSession = provider?.dataSessionToken;
-  final resumeBoundary =
-      provider?.appData.workspaceReminderNotBefore[workspace];
-  bool sessionAvailable() =>
-      identical(dataSession, provider?.dataSessionToken) &&
-      resumeBoundary == provider?.appData.workspaceReminderNotBefore[workspace];
-  final desktop = WorkbenchChromeMetrics.of(context).desktop;
-  final navigator = Navigator.of(context, rootNavigator: true);
-  final themes = InheritedTheme.capture(from: context, to: navigator.context);
-  final route = RawDialogRoute<T>(
-    settings: const RouteSettings(name: 'sked-date-picker'),
-    barrierDismissible: true,
-    barrierColor: desktop ? Colors.transparent : Colors.black54,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    transitionDuration: const Duration(milliseconds: 120),
-    traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
-    pageBuilder: (routeContext, animation, secondaryAnimation) => themes.wrap(
-      _DatePickerHost<T>(
-        rangeController: rangeController,
-        ownerContext: context,
-        isSessionCurrent: sessionAvailable,
-        ownerRoute: parent,
-        anchorContext: anchorContext,
-        provider: provider,
-        workspace: workspace,
-        initialDate: clampPickerDate(initialDate, first, last),
-        firstDate: first,
-        lastDate: last,
-        selectionUnit: selectionUnit,
-        dateLabelFormat: dateLabelFormat,
-        commitMode: commitMode,
-        selectableDayPredicate: selectableDayPredicate,
-      ),
-    ),
-  );
-  final result = await navigator.push(route);
-  if (context.mounted &&
-      sessionAvailable() &&
-      (parent?.isActive ?? true) &&
-      (workspace == null || provider?.isWorkspaceEnabled(workspace) != false)) {
-    unawaited(
-      route.completed.then((_) {
-        if (context.mounted &&
-            sessionAvailable() &&
-            (parent?.isActive ?? true) &&
-            focus?.context?.mounted == true &&
-            focus!.canRequestFocus) {
-          focus.requestFocus();
-        }
-      }),
-    );
-    return result;
-  }
-  return null;
-}
-
-FocusNode? _anchorFocus(BuildContext? anchor) {
-  if (anchor == null || !anchor.mounted) return null;
-  final outer = Focus.maybeOf(anchor, createDependency: false);
-  FocusNode? result;
-  void visit(Element element) {
-    if (result != null) return;
-    final node = Focus.maybeOf(element, createDependency: false);
-    if (node != null && !identical(node, outer) && node.canRequestFocus) {
-      result = node;
-    } else {
-      element.visitChildElements(visit);
-    }
-  }
-
-  anchor.visitChildElements(visit);
-  return result;
-}
-
-class _DatePickerHost<T> extends StatefulWidget {
-  const _DatePickerHost({
-    this.rangeController,
-    required this.ownerContext,
-    required this.isSessionCurrent,
-    required this.ownerRoute,
-    required this.anchorContext,
-    required this.provider,
-    required this.workspace,
-    required this.initialDate,
-    required this.firstDate,
-    required this.lastDate,
-    required this.selectionUnit,
-    required this.commitMode,
-    required this.dateLabelFormat,
-    required this.selectableDayPredicate,
-  });
-  final SkedDateRangeController? rangeController;
-  final BuildContext ownerContext;
-  final bool Function() isSessionCurrent;
-  final ModalRoute<dynamic>? ownerRoute;
-  final BuildContext? anchorContext;
-  final TimetableProvider? provider;
-  final AppMode? workspace;
-  final DateTime initialDate, firstDate, lastDate;
-  final DateSelectionUnit selectionUnit;
-  final String dateLabelFormat;
-  final DatePickerCommitMode commitMode;
-  final SelectableDayPredicate? selectableDayPredicate;
-  @override
-  State<_DatePickerHost<T>> createState() => _DatePickerHostState<T>();
-}
-
-class _DatePickerHostState<T> extends State<_DatePickerHost<T>> {
-  bool _finished = false;
-  bool get _ownerAvailable =>
-      widget.ownerContext.mounted &&
-      widget.isSessionCurrent() &&
-      (widget.ownerRoute?.isActive ?? true) &&
-      (widget.workspace == null ||
-          widget.provider?.isWorkspaceEnabled(widget.workspace!) != false);
-  @override
-  void initState() {
-    super.initState();
-    widget.provider?.addListener(_checkOwner);
-    final owner = widget.ownerRoute;
-    if (owner != null) {
-      // A home route can outlive hundreds of picker sessions. Do not retain
-      // each disposed picker until that route eventually completes.
-      final host = WeakReference(this);
-      unawaited(
-        owner.completed.then((_) {
-          final state = host.target;
-          if (state?.mounted == true) state!._finish(null);
-        }),
-      );
-    }
-  }
-
-  void _checkOwner() {
-    if (!_ownerAvailable && !_finished) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_ownerAvailable) _finish(null);
-      });
-    }
-  }
-
-  void _finish(T? value) {
-    if (!mounted || _finished) return;
-    _finished = true;
-    final route = ModalRoute.of(context)!;
-    final result = _ownerAvailable ? value : null;
-    if (route.isCurrent) {
-      Navigator.of(context).pop(result);
-    } else if (route.isActive) {
-      route.navigator?.removeRoute(route, result);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.provider?.removeListener(_checkOwner);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final media = MediaQuery.of(context);
+  return showSkedPickerTask<T>(
+    context: context,
+    routeName: 'sked-date-picker',
+    surfaceKey: const ValueKey('sked-date-picker-surface'),
+    anchorContext: anchorContext,
+    workspace: workspace,
+    preferredSize: (context) {
       final metrics = WorkbenchChromeMetrics.of(context);
       final cell = math.max(
         metrics.desktop ? 32.0 : 48.0,
         18 * metrics.textScale + 12,
       );
-      final top =
-          media.padding.top + (metrics.desktop ? metrics.toolbarHeight : 0);
-      final bottom = math.max(media.padding.bottom, media.viewInsets.bottom);
-      final availableHeight = math.max(
-        0.0,
-        constraints.maxHeight - top - bottom,
-      );
-      final fullscreen =
-          (!metrics.desktop && constraints.maxWidth < 600) ||
-          availableHeight < cell * 8 + 80;
-      final margin = fullscreen ? 0.0 : 8.0;
-      final bounds = Rect.fromLTRB(
-        media.padding.left + margin,
-        top + margin,
-        constraints.maxWidth - media.padding.right - margin,
-        math.max(top + margin, constraints.maxHeight - bottom - margin),
-      );
-      Rect? anchor;
-      final anchorContext = widget.anchorContext;
-      if (metrics.desktop && !fullscreen && anchorContext?.mounted == true) {
-        final render = anchorContext!.findRenderObject();
-        if (render is RenderBox && render.attached && render.hasSize) {
-          final rect = render.localToGlobal(Offset.zero) & render.size;
-          if (rect.overlaps(Offset.zero & media.size)) anchor = rect;
-        }
-      }
-      return CustomSingleChildLayout(
-        delegate: _DatePickerPosition(
-          bounds: bounds,
-          anchor: anchor,
-          fullscreen: fullscreen,
-          width: math.min(
-            bounds.width,
-            math.max(metrics.desktop ? 320.0 : 360.0, cell * 7 + 24),
-          ),
-        ),
-        child: Material(
-          key: const ValueKey('sked-date-picker-surface'),
-          color: Theme.of(context).colorScheme.surface,
-          elevation: fullscreen ? 0 : 8,
-          clipBehavior: Clip.antiAlias,
-          borderRadius: BorderRadius.circular(fullscreen ? 0 : 12),
-          child: SkedDatePicker(
-            key: const ValueKey('sked-date-picker-content'),
-            initialDate: widget.initialDate,
-            isSessionCurrent: () => _ownerAvailable,
-            firstDate: widget.firstDate,
-            lastDate: widget.lastDate,
-            selectionUnit: widget.selectionUnit,
-            dateLabelFormat: widget.dateLabelFormat,
-            commitMode: widget.commitMode,
-            selectableDayPredicate: widget.selectableDayPredicate,
-            onSelected: (date) => _finish(date as T),
-            rangeController: widget.rangeController,
-            onRangeSelected: (range) =>
-                _finish(DateTimeRange(start: range.start, end: range.end) as T),
-            onCancel: () => _finish(null),
-          ),
-        ),
+      return Size(
+        math.max(metrics.desktop ? 320.0 : 360.0, cell * 7 + 24),
+        cell * 8 + 80,
       );
     },
+    builder: (context, finish, isCurrent) => SkedDatePicker(
+      key: const ValueKey('sked-date-picker-content'),
+      initialDate: clampPickerDate(initialDate, first, last),
+      firstDate: first,
+      lastDate: last,
+      isSessionCurrent: isCurrent,
+      selectionUnit: selectionUnit,
+      dateLabelFormat: dateLabelFormat,
+      commitMode: commitMode,
+      selectableDayPredicate: selectableDayPredicate,
+      onSelected: (date) => finish(date as T),
+      rangeController: rangeController,
+      rangeInteraction: rangeController == null
+          ? DateRangeInteraction.none
+          : DateRangeInteraction.full,
+      onRangeSelected: (range) =>
+          finish(DateTimeRange(start: range.start, end: range.end) as T),
+      onCancel: () => finish(null),
+    ),
   );
-}
-
-class _DatePickerPosition extends SingleChildLayoutDelegate {
-  const _DatePickerPosition({
-    required this.bounds,
-    required this.anchor,
-    required this.width,
-    required this.fullscreen,
-  });
-  final Rect bounds;
-  final Rect? anchor;
-  final double width;
-  final bool fullscreen;
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      BoxConstraints(
-        minWidth: fullscreen ? bounds.width : width,
-        maxWidth: fullscreen ? bounds.width : width,
-        minHeight: fullscreen ? bounds.height : 0,
-        maxHeight: bounds.height,
-      );
-  @override
-  Offset getPositionForChild(Size size, Size childSize) {
-    if (fullscreen) return bounds.topLeft;
-    var x = bounds.center.dx - childSize.width / 2;
-    var y = bounds.center.dy - childSize.height / 2;
-    if (anchor != null) {
-      x = anchor!.left;
-      y = anchor!.bottom + 6;
-      if (y + childSize.height > bounds.bottom) {
-        y = anchor!.top - childSize.height - 6;
-      }
-    }
-    return Offset(
-      x.clamp(
-        bounds.left,
-        math.max(bounds.left, bounds.right - childSize.width),
-      ),
-      y.clamp(
-        bounds.top,
-        math.max(bounds.top, bounds.bottom - childSize.height),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRelayout(_DatePickerPosition oldDelegate) =>
-      bounds != oldDelegate.bounds ||
-      anchor != oldDelegate.anchor ||
-      width != oldDelegate.width ||
-      fullscreen != oldDelegate.fullscreen;
 }
 
 /// Shared calendar content for the inline navigator and every popup.
@@ -412,13 +164,20 @@ class SkedDatePicker extends StatefulWidget {
     this.onBrowsedMonthChanged,
     this.navigationRevision = 0,
     this.rangeController,
+    this.rangeInteraction = DateRangeInteraction.none,
+    this.displayRange,
     this.onRangeSelected,
     this.isSessionCurrent,
     this.currentDate,
     this.dateLabelFormat = generalDateLabelFormatLocalized,
-  });
+  }) : assert(
+         rangeInteraction == DateRangeInteraction.none ||
+             rangeController != null,
+       );
   final DateTime initialDate, firstDate, lastDate;
   final SkedDateRangeController? rangeController;
+  final DateRangeInteraction rangeInteraction;
+  final GeneralDateRange? displayRange;
   final ValueChanged<GeneralDateRange>? onRangeSelected;
   final bool Function()? isSessionCurrent;
   final DateTime? currentDate;
@@ -441,9 +200,19 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   late _CalendarPage _page;
   final _gridFocus = FocusNode(debugLabel: 'Date calendar grid');
   final _inputFocus = FocusNode(debugLabel: 'Date input');
+  final _endInputFocus = FocusNode(debugLabel: 'Range end input');
   final _input = TextEditingController();
   final _endInput = TextEditingController();
-  bool get _rangeMode => widget.rangeController != null;
+  bool get _rangeMode => widget.rangeInteraction == DateRangeInteraction.full;
+  bool get _rangeGestures =>
+      widget.rangeInteraction != DateRangeInteraction.none &&
+      widget.rangeController != null;
+  final _dayGridKey = GlobalKey();
+  double _gridCellHeight = 0;
+  DateTime? _dragOrigin;
+  Rect? _dragBounds;
+  bool _ownsDrag = false;
+  bool _suppressClick = false;
   bool get _savingRange => widget.rangeController?.saving ?? false;
   void _rangeChanged() {
     if (mounted) setState(() {});
@@ -504,6 +273,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   void dispose() {
     _gridFocus.dispose();
     _inputFocus.dispose();
+    _endInputFocus.dispose();
     widget.rangeController?.removeListener(_rangeChanged);
     _input.dispose();
     _endInput.dispose();
@@ -517,6 +287,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
 
   void _choose(DateTime value, {bool strict = false}) {
     if (_submitted ||
+        _suppressClick ||
         _savingRange ||
         widget.isSessionCurrent?.call() == false) {
       return;
@@ -543,7 +314,6 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     final session = widget.rangeController!;
     setState(() {
       _focused = value;
-      _browse(value);
     });
     if (await session.select(value) && mounted) {
       widget.onRangeSelected?.call(session.applied);
@@ -555,6 +325,125 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     if (await session.retry() && mounted) {
       widget.onRangeSelected?.call(session.applied);
     }
+  }
+
+  Rect? get _gridRect {
+    final box = _dayGridKey.currentContext?.findRenderObject();
+    return box is RenderBox && box.attached && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+  }
+
+  DateTime? _dateAt(Offset global) {
+    final rect = _gridRect;
+    if (rect == null || !rect.contains(global) || _gridCellHeight <= 0) {
+      return null;
+    }
+    final hits = HitTestResult();
+    WidgetsBinding.instance.hitTestInView(
+      hits,
+      global,
+      View.of(context).viewId,
+    );
+    final box = _dayGridKey.currentContext?.findRenderObject();
+    if (!hits.path.any((entry) => identical(entry.target, box))) return null;
+    final local = global - rect.topLeft;
+    final row = (local.dy / _gridCellHeight).floor() - 1;
+    if (row < 0 || row >= 6) return null;
+    var col = (local.dx / rect.width * 7).floor().clamp(0, 6);
+    if (Directionality.of(context) == TextDirection.rtl) col = 6 - col;
+    final day = addCalendarDays(
+      startOfCalendarWeek(_month, firstWeekday: DateTime.monday),
+      row * 7 + col,
+    );
+    return day.isBefore(widget.firstDate) || day.isAfter(widget.lastDate)
+        ? null
+        : day;
+  }
+
+  void _startDrag(DragStartDetails details) {
+    if (_dragOrigin == null ||
+        _savingRange ||
+        widget.isSessionCurrent?.call() == false) {
+      return;
+    }
+    widget.rangeController!.beginDrag(_dragOrigin!);
+    _ownsDrag = widget.rangeController!.dragging;
+    _suppressClick = _ownsDrag;
+  }
+
+  void _updateDrag(DragUpdateDetails details) {
+    if (!_ownsDrag) return;
+    if (_gridRect != _dragBounds) {
+      _cancelDrag();
+      return;
+    }
+    widget.rangeController!.preview(_dateAt(details.globalPosition));
+  }
+
+  void _releaseClickSuppression() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _suppressClick = false;
+    });
+  }
+
+  void _cancelDrag() {
+    if (_ownsDrag) widget.rangeController?.cancelDrag();
+    _ownsDrag = false;
+    _dragOrigin = null;
+    _releaseClickSuppression();
+  }
+
+  Future<void> _endDrag() async {
+    if (!_ownsDrag) return;
+    _ownsDrag = false;
+    _dragOrigin = null;
+    _releaseClickSuppression();
+    final session = widget.rangeController!;
+    if (await session.endDrag() && mounted) {
+      widget.onRangeSelected?.call(session.applied);
+    }
+  }
+
+  Widget _interactiveDayGrid(BuildContext context, double height) {
+    _gridCellHeight = height;
+    final grid = SizedBox(key: _dayGridKey, child: _dayGrid(context, height));
+    if (!_rangeGestures) return grid;
+    return MouseRegion(
+      onHover: (event) {
+        if (_rangeMode && !widget.rangeController!.dragging) {
+          widget.rangeController!.preview(_dateAt(event.position));
+        }
+      },
+      onExit: (_) {
+        if (!widget.rangeController!.dragging) {
+          widget.rangeController!.preview(null);
+        }
+      },
+      child: Listener(
+        // An accepted pan may end even for PointerCancelEvent. Cancel the
+        // transaction before the recognizer's end callback can publish it.
+        onPointerCancel: (_) => _cancelDrag(),
+        onPointerUp: (event) {
+          if (_ownsDrag) {
+            widget.rangeController!.preview(_dateAt(event.position));
+          }
+        },
+        child: GestureDetector(
+          supportedDevices: const {PointerDeviceKind.mouse},
+          dragStartBehavior: DragStartBehavior.down,
+          onPanDown: (details) {
+            _dragOrigin = _dateAt(details.globalPosition);
+            _dragBounds = _gridRect;
+          },
+          onPanStart: _startDrag,
+          onPanUpdate: _updateDrag,
+          onPanEnd: (_) => unawaited(_endDrag()),
+          onPanCancel: _cancelDrag,
+          child: grid,
+        ),
+      ),
+    );
   }
 
   void _submit() {
@@ -572,15 +461,23 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       final material = MaterialLocalizations.of(context);
       final range = widget.rangeController;
       _input.text = material.formatCompactDate(
-        range?.start ?? range?.applied.start ?? _selected,
+        range?.start ?? range?.editingRange.start ?? _selected,
       );
-      _endInput.text = material.formatCompactDate(
-        range?.candidate?.end ?? range?.applied.end ?? _selected,
-      );
+      final pendingEnd =
+          range != null &&
+          range.start != null &&
+          range.candidate == null &&
+          range.editingEndpoint == null;
+      _endInput.text = pendingEnd
+          ? ''
+          : material.formatCompactDate(range?.editingRange.end ?? _selected);
       _inputError = null;
       _page = _CalendarPage.input;
     });
-    _inputFocus.requestFocus();
+    (_rangeMode && widget.rangeController!.selectingEnd
+            ? _endInputFocus
+            : _inputFocus)
+        .requestFocus();
   }
 
   void _acceptInput() {
@@ -736,6 +633,9 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       _focused = clampPickerDate(next, widget.firstDate, widget.lastDate);
       _browse(_focused);
     });
+    if (_rangeMode && _page == _CalendarPage.days) {
+      widget.rangeController!.preview(_focused);
+    }
     return KeyEventResult.handled;
   }
 
@@ -819,11 +719,28 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                title,
-                                style: theme.textTheme.titleSmall,
+                              child: Semantics(
+                                hint: _rangeMode
+                                    ? (widget.rangeController!.selectingEnd
+                                          ? l.dateRangeChooseEnd
+                                          : l.dateRangeChooseStart)
+                                    : null,
+                                child: _headerLabel(
+                                  context,
+                                  title,
+                                  feedback: true,
+                                ),
                               ),
                             ),
+                            if (_rangeGestures &&
+                                widget.rangeController!.saveFailed)
+                              IconButton(
+                                key: const ValueKey('sked-date-range-retry'),
+                                tooltip: l.retrySave,
+                                style: metrics.iconStyle,
+                                onPressed: () => unawaited(_retryRange()),
+                                icon: const Icon(Icons.refresh),
+                              ),
                             IconButton(
                               key: const ValueKey('sked-date-picker-close'),
                               tooltip: material.closeButtonLabel,
@@ -851,7 +768,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                     }
                                   },
                                   child: switch (_page) {
-                                    _CalendarPage.days => _dayGrid(
+                                    _CalendarPage.days => _interactiveDayGrid(
                                       context,
                                       cellHeight,
                                     ),
@@ -869,7 +786,6 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                 ),
                         ),
                       ),
-                      if (_rangeMode) _rangeStatus(context),
                       if (!widget.embedded) ...[
                         const SizedBox(height: 8),
                         if (!_rangeMode)
@@ -964,7 +880,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     Widget field(bool end) => TextField(
       key: ValueKey(end ? 'sked-date-end-input' : 'sked-date-input'),
       controller: end ? _endInput : _input,
-      focusNode: end ? null : _inputFocus,
+      focusNode: end ? _endInputFocus : _inputFocus,
       enabled: !_savingRange,
       keyboardType: TextInputType.datetime,
       textInputAction: _rangeMode && !end
@@ -1009,58 +925,43 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     );
   }
 
-  Widget _rangeStatus(BuildContext context) {
+  /// Normal selection is conveyed by the calendar highlight, not a second
+  /// control panel. Errors and saves use the existing header without moving
+  /// cells underneath the pointer.
+  String? _rangeFeedback(BuildContext context) {
+    if (!_rangeGestures) return null;
     final session = widget.rangeController!;
-    final l = AppLocalizations.of(context),
-        m = MaterialLocalizations.of(context);
-    final inputMode = _page == _CalendarPage.input;
-    if (inputMode &&
-        !session.saving &&
-        !session.saveFailed &&
-        !session.tooLong) {
-      return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
+    if (session.saving) return l.savingChanges;
+    if (session.saveFailed) return l.saveFailedRetry;
+    if (session.tooLong) return l.dateRangeLimit;
+    if (session.invalidOrder) {
+      return MaterialLocalizations.of(context).invalidDateRangeLabel;
     }
-    final start = session.start ?? session.applied.start;
-    final end =
-        session.candidate?.end ??
-        (session.start == null ? session.applied.end : null);
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (!inputMode || session.saving)
-            Text(
-              session.saving
-                  ? l.savingChanges
-                  : session.selectingEnd
-                  ? l.dateRangeChooseEnd
-                  : l.dateRangeChooseStart,
-              key: const ValueKey('sked-date-range-phase'),
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
-          if (!inputMode) const SizedBox(height: 4),
-          if (!inputMode)
-            Text(
-              '${m.dateRangeStartLabel}: ${m.formatCompactDate(start)}\n${m.dateRangeEndLabel}: ${end == null ? '—' : m.formatCompactDate(end)}',
-              key: const ValueKey('sked-date-range-summary'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          if (session.tooLong || session.saveFailed)
-            Text(
-              session.tooLong ? l.dateRangeLimit : l.saveFailedRetry,
-              key: const ValueKey('sked-date-range-error'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          if (session.saving) const LinearProgressIndicator(),
-          if (session.saveFailed)
-            TextButton(
-              key: const ValueKey('sked-date-range-retry'),
-              onPressed: session.saving ? null : () => unawaited(_retryRange()),
-              child: Text(l.retrySave),
-            ),
-        ],
+    return null;
+  }
+
+  Widget _headerLabel(
+    BuildContext context,
+    String label, {
+    bool feedback = false,
+  }) {
+    final message = feedback ? _rangeFeedback(context) : null;
+    final failed = message != null && !_savingRange;
+    return Semantics(
+      liveRegion: message != null,
+      child: Tooltip(
+        message: message ?? label,
+        excludeFromSemantics: true,
+        child: Text(
+          message ?? label,
+          key: failed ? const ValueKey('sked-date-range-error') : null,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: failed ? Theme.of(context).colorScheme.error : null,
+          ),
+        ),
       ),
     );
   }
@@ -1069,6 +970,9 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     final l = AppLocalizations.of(context),
         material = MaterialLocalizations.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
+    final feedback = widget.embedded ? _rangeFeedback(context) : null;
+    final retry =
+        feedback != null && widget.rangeController?.saveFailed == true;
     final label = _page == _CalendarPage.days
         ? DateFormat.yMMMM(l.localeName).format(_month)
         : _page == _CalendarPage.months
@@ -1078,7 +982,9 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       children: [
         Expanded(
           child: TextButton(
-            key: const ValueKey('sked-date-month-year'),
+            key: ValueKey(
+              retry ? 'sked-date-range-retry' : 'sked-date-month-year',
+            ),
             style: TextButton.styleFrom(
               alignment: AlignmentDirectional.centerStart,
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1087,30 +993,38 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   ? MaterialTapTargetSize.shrinkWrap
                   : MaterialTapTargetSize.padded,
             ),
-            onPressed: () {
-              setState(
-                () => _page = _page == _CalendarPage.days
-                    ? _CalendarPage.months
-                    : _page == _CalendarPage.months
-                    ? _CalendarPage.years
-                    : _CalendarPage.days,
-              );
-            },
+            onPressed: _savingRange
+                ? null
+                : retry
+                ? () => unawaited(_retryRange())
+                : () {
+                    setState(
+                      () => _page = _page == _CalendarPage.days
+                          ? _CalendarPage.months
+                          : _page == _CalendarPage.months
+                          ? _CalendarPage.years
+                          : _CalendarPage.days,
+                    );
+                  },
             child: Tooltip(
-              message: _page == _CalendarPage.days
-                  ? l.datePickerSelectMonth
-                  : _page == _CalendarPage.months
-                  ? material.selectYearSemanticsLabel
-                  : material.calendarModeButtonLabel,
+              message: retry
+                  ? l.retrySave
+                  : feedback ??
+                        (_page == _CalendarPage.days
+                            ? l.datePickerSelectMonth
+                            : _page == _CalendarPage.months
+                            ? material.selectYearSemanticsLabel
+                            : material.calendarModeButtonLabel),
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: _headerLabel(
+                      context,
                       label,
-                      style: Theme.of(context).textTheme.titleSmall,
+                      feedback: widget.embedded,
                     ),
                   ),
-                  const Icon(Icons.arrow_drop_down, size: 18),
+                  Icon(retry ? Icons.refresh : Icons.arrow_drop_down, size: 18),
                 ],
               ),
             ),
@@ -1150,9 +1064,17 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     final theme = Theme.of(context), c = theme.colorScheme;
     final start = startOfCalendarWeek(_month, firstWeekday: DateTime.monday);
     final range = dateSelectionRange(_selected, widget.selectionUnit);
-    final week = !_rangeMode && widget.selectionUnit == DateSelectionUnit.week;
-    final selectedRange = widget.rangeController?.highlighted;
-    final pendingStart = widget.rangeController?.start;
+    final dragPreview = widget.rangeController?.dragging == true;
+    final selectedRange = _rangeMode
+        ? widget.rangeController?.highlighted
+        : dragPreview
+        ? widget.rangeController?.previewRange
+        : widget.displayRange;
+    final pendingStart = _rangeMode || dragPreview
+        ? widget.rangeController?.start
+        : null;
+    final paintRange = _rangeMode || dragPreview || selectedRange != null;
+    final week = !paintRange && widget.selectionUnit == DateSelectionUnit.week;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1208,7 +1130,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                             final focused =
                                 _hasFocus && DateUtils.isSameDay(day, _focused);
                             final allowed = !_savingRange && _allowed(day);
-                            final inRange = _rangeMode
+                            final inRange = paintRange
                                 ? selectedRange?.contains(day) == true ||
                                       DateUtils.isSameDay(day, pendingStart)
                                 : week
@@ -1223,17 +1145,17 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                   DateSelectionUnit.week,
                                   locale: l.localeName,
                                 ),
-                              if (_rangeMode &&
+                              if (paintRange &&
                                   inRange &&
                                   selectedRange != null)
                                 '${material.formatFullDate(selectedRange.start)} – ${material.formatFullDate(selectedRange.end)}',
-                              if (_rangeMode &&
+                              if (paintRange &&
                                   DateUtils.isSameDay(
                                     day,
                                     selectedRange?.start ?? pendingStart,
                                   ))
                                 material.dateRangeStartLabel,
-                              if (_rangeMode &&
+                              if (paintRange &&
                                   DateUtils.isSameDay(day, selectedRange?.end))
                                 material.dateRangeEndLabel,
                             ].join(', ');
@@ -1262,12 +1184,12 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       color:
-                                          (_rangeMode
+                                          (paintRange
                                               ? inRange
                                               : selected && !week)
                                           ? c.secondaryContainer
                                           : null,
-                                      borderRadius: _rangeMode
+                                      borderRadius: paintRange
                                           ? BorderRadius.horizontal(
                                               left: Radius.circular(
                                                 col == 0 ||
@@ -1293,7 +1215,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                                             )
                                           : BorderRadius.circular(5),
                                       border:
-                                          (_rangeMode
+                                          (paintRange
                                                   ? DateUtils.isSameDay(
                                                           day,
                                                           pendingStart ??

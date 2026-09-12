@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_time_picker.dart';
+
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -255,7 +257,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(startTime);
     await tester.pumpAndSettle();
-    expect(find.byType(TimePickerDialog), findsOneWidget);
+    expect(find.byType(SkedTimePicker), findsOneWidget);
     await tester.tap(find.text('Cancel').last);
     await tester.pumpAndSettle();
 
@@ -263,7 +265,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(endTime);
     await tester.pumpAndSettle();
-    expect(find.byType(TimePickerDialog), findsOneWidget);
+    expect(find.byType(SkedTimePicker), findsOneWidget);
     await tester.tap(find.text('Cancel').last);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

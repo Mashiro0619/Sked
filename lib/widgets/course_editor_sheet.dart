@@ -1,3 +1,5 @@
+import 'sked_time_picker.dart';
+
 import 'dart:convert';
 
 import 'editor_exit_guard.dart';
@@ -337,8 +339,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           endLabel: l10n.endTime,
           endValue: _formatTimeOfDay(_endTime),
           enabled: !_blocked,
-          onPickStart: _blocked ? null : () => _pickTime(isStart: true),
-          onPickEnd: _blocked ? null : () => _pickTime(isStart: false),
+          onPickStart: _blocked
+              ? null
+              : (anchor) => _pickTime(isStart: true, anchorContext: anchor),
+          onPickEnd: _blocked
+              ? null
+              : (anchor) => _pickTime(isStart: false, anchorContext: anchor),
         ),
         const SizedBox(height: 8),
         _SelectionTile(
@@ -602,7 +608,10 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     }
   }
 
-  Future<void> _pickTime({required bool isStart}) async {
+  Future<void> _pickTime({
+    required bool isStart,
+    required BuildContext anchorContext,
+  }) async {
     if (_blocked) {
       return;
     }
@@ -610,15 +619,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     _dismissActiveInputFocus();
     try {
       final initialTime = isStart ? _startTime : _endTime;
-      final picked = await showTimePicker(
+      final picked = await showSkedTimePicker(
         context: context,
         initialTime: initialTime,
-        builder: (context, child) {
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-            child: child!,
-          );
-        },
+        anchorContext: anchorContext,
+        workspace: AppMode.student,
+        alwaysUse24HourFormat: true,
       );
       if (!mounted || picked == null) {
         return;
@@ -1343,8 +1349,8 @@ class _CourseTimeRange extends StatelessWidget {
   final String endLabel;
   final String endValue;
   final bool enabled;
-  final VoidCallback? onPickStart;
-  final VoidCallback? onPickEnd;
+  final ValueChanged<BuildContext>? onPickStart;
+  final ValueChanged<BuildContext>? onPickEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -1470,7 +1476,7 @@ class _CourseTimeAction extends StatelessWidget {
   final String label;
   final String value;
   final bool enabled;
-  final VoidCallback? onTap;
+  final ValueChanged<BuildContext>? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1482,7 +1488,9 @@ class _CourseTimeAction extends StatelessWidget {
     final secondaryColor = enabled
         ? colors.onSurfaceVariant
         : colors.onSurface.withValues(alpha: 0.38);
-    final effectiveOnTap = enabled ? onTap : null;
+    final VoidCallback? effectiveOnTap = enabled && onTap != null
+        ? () => onTap!(context)
+        : null;
     final interactionShape = skedShapeSchemeOf(context).compact;
 
     return Semantics(

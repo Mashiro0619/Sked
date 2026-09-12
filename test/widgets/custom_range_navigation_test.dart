@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -257,14 +259,15 @@ void main() {
   );
 
   testWidgets(
-    'sidebar and popup share the unfinished range across browsing, collapse, resize and category toggle',
+    'sidebar navigation preserves the shared session across collapse, resize and category toggle',
     (t) async {
       _size(t, const Size(1440, 900));
       final (p, _) = await _setup();
       await _pump(t, p);
       await _tap(t, _in(_sidebar, 'sked-date-2026-09-09'));
       final controller = t.widget<SkedDatePicker>(_sidebar).rangeController!;
-      expect(controller.start, DateTime(2026, 9, 9));
+      expect(controller.start, isNull);
+      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
       expect(p.customGeneralDateRange, isNull);
       await _tap(t, _key('resource-calendar-range-calendar'));
       await p.updateHomeWorkspaceNavigationCollapsed(true);
@@ -278,14 +281,15 @@ void main() {
         t.widget<SkedDatePicker>(_sidebar).rangeController,
         same(controller),
       );
-      await _tap(t, _key('general-date-picker'));
+      await _view(t, 'custom');
       expect(
         t.widget<SkedDatePicker>(_popup).rangeController,
         same(controller),
       );
+      await _tap(t, _in(_popup, 'sked-date-2026-09-09'));
       await _tap(t, _in(_popup, 'sked-date-2026-09-13'));
       expect(p.customGeneralDateRange, _five);
-      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+      expect(p.selectedGeneralDate, DateTime(2026, 9, 9));
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -297,7 +301,7 @@ void main() {
     _size(t, const Size(1440, 900));
     final (p, storage) = await _setup();
     await _pump(t, p);
-    await _tap(t, _key('general-date-picker'));
+    await _view(t, 'custom');
     await _tap(t, _in(_popup, 'sked-date-2026-09-09'));
     final before = storage.writes;
     storage.gate = Completer<void>();
@@ -656,6 +660,143 @@ void main() {
       expect(p.customGeneralDateRange!.start, focus);
       expect(p.customGeneralDateRange!.dayCount, 5);
       expect(_header(focus), findsOneWidget);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+  for (final rtl in [false, true]) {
+    testWidgets('sidebar drag previews locally and commits once, RTL=$rtl', (
+      t,
+    ) async {
+      _size(t, const Size(1440, 1000));
+      final (p, storage) = await _setup();
+      await t.pumpWidget(
+        WorkspaceHarness(
+          provider: p,
+          home: Directionality(
+            textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+            child: const GeneralScheduleHomeScreen(),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      final before = storage.writes;
+      final pager = t.widget(_key('general-week-pager'));
+      final start = t.getCenter(_in(_sidebar, 'sked-date-2026-09-09'));
+      final end = t.getCenter(_in(_sidebar, 'sked-date-2026-09-13'));
+      final mouse = await t.startGesture(start, kind: PointerDeviceKind.mouse);
+      await mouse.moveTo(end);
+      await t.pump();
+      final controller = t.widget<SkedDatePicker>(_sidebar).rangeController!;
+      expect(controller.previewRange, _five);
+      expect(storage.writes, before);
+      expect(p.customGeneralDateRange, isNull);
+      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+      expect(
+        t.widget(_key('general-week-pager')),
+        same(pager),
+        reason: 'Preview must not rebuild the event canvas.',
+      );
+      await mouse.up();
+      await t.pumpAndSettle();
+      expect(p.customGeneralDateRange, _five);
+      expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
+      expect(storage.writes, before + 1);
+      expect(t.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
+
+  testWidgets(
+    'custom sidebar clicks keep length while focusing inside or navigating outside',
+    (t) async {
+      _size(t, const Size(1440, 1000));
+      final (p, _) = await _setup(range: _five);
+      await _pump(t, p);
+      await _tap(t, _in(_sidebar, 'sked-date-2026-09-12'));
+      expect(p.customGeneralDateRange, _five);
+      expect(p.selectedGeneralDate, DateTime(2026, 9, 12));
+      await _tap(t, _in(_sidebar, 'sked-date-2026-09-22'));
+      expect(
+        p.customGeneralDateRange,
+        GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 26)),
+      );
+      expect(p.selectedGeneralDate, DateTime(2026, 9, 22));
+      expect(t.widget<SkedDatePicker>(_sidebar).rangeController!.start, isNull);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'sidebar drag in day view can select hidden weekends without changing visibility preferences',
+    (t) async {
+      _size(t, const Size(1440, 1000));
+      final (p, _) = await _setup();
+      await _pump(t, p);
+      await _view(t, generalViewDay);
+      final gesture = await t.startGesture(
+        t.getCenter(_in(_sidebar, 'sked-date-2026-09-12')),
+        kind: PointerDeviceKind.mouse,
+      );
+      await gesture.moveTo(t.getCenter(_in(_sidebar, 'sked-date-2026-09-13')));
+      await t.pump();
+      await gesture.up();
+      await t.pumpAndSettle();
+      expect(
+        p.customGeneralDateRange,
+        GeneralDateRange(DateTime(2026, 9, 12), DateTime(2026, 9, 13)),
+      );
+      expect(_key('general-week-pager'), findsOneWidget);
+      expect(p.generalShowWeekends, isFalse);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+  testWidgets(
+    'sidebar ends at its calendar grid with no hints or extra range action',
+    (t) async {
+      _size(t, const Size(1440, 1000));
+      final (p, _) = await _setup(range: _five);
+      await _pump(t, p);
+      expect(_key('general-resource-adjust-range'), findsNothing);
+      expect(_key('sked-date-drag-status'), findsNothing);
+      expect(find.text('单击跳转日期，拖动选择 1–14 天。'), findsNothing);
+      final lastDay = _in(_sidebar, 'sked-date-2026-10-11');
+      expect(
+        t.getRect(_sidebar).bottom,
+        closeTo(t.getRect(lastDay).bottom, .01),
+      );
+      await _tap(t, _key('general-date-picker'));
+      expect(_popup, findsOneWidget);
+      expect(_key('sked-date-range-summary'), findsNothing);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'failed sidebar drag retries from the month header without an extra panel',
+    (t) async {
+      _size(t, const Size(1440, 1000));
+      final (p, storage) = await _setup();
+      await _pump(t, p);
+      final before = t.getRect(_sidebar);
+      storage.saveError = StateError('disk busy');
+      final drag = await t.startGesture(
+        t.getCenter(_in(_sidebar, 'sked-date-2026-09-09')),
+        kind: PointerDeviceKind.mouse,
+      );
+      await drag.moveTo(t.getCenter(_in(_sidebar, 'sked-date-2026-09-13')));
+      await t.pump();
+      await drag.up();
+      await t.pumpAndSettle();
+      expect(p.customGeneralDateRange, isNull);
+      expect(_in(_sidebar, 'sked-date-range-retry'), findsOneWidget);
+      expect(_key('sked-date-drag-status'), findsNothing);
+      expect(t.getRect(_sidebar), before);
+      await _tap(t, _in(_sidebar, 'sked-date-range-retry'));
+      expect(p.customGeneralDateRange, _five);
+      expect(_in(_sidebar, 'sked-date-range-retry'), findsNothing);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
