@@ -312,3 +312,22 @@ dart run tool/coverage_gate.dart --base-ref HEAD
 - Windows 隔离构建中的三个常规视觉套件均通过：日期／时间 158 张、工作台 70 张、设置／导入流程 120 张，共 348 张截图。已抽查截图同款顶栏／当天安排、循环边界、Windows 窄窗与 2 倍字号、手机大字号、设置和导入页；手机／平板为 Windows 上的布局模拟，不是移动设备实机结果。
 - 额外启用原生指针检查时，测试窗口未获得前台焦点，安全校验在发送指针输入前停止；该次检查未通过，不计入常规视觉套件的通过结果。鼠标拖动、滚轮、触控板事件及后台滚动隔离已有组件回归；操作系统级拖拽与真实触控板手感仍需前台实机补验。未关闭用户应用，也未绕过前台保护。
 - 证据：.scratch/surface-wheel-full-final.log、surface-wheel-analyze-final.log、surface-wheel-coverage-final.log、surface-wheel-date-visual.log、surface-wheel-workbench-visual.log、surface-wheel-pages-visual.log；原生检查限制见 surface-wheel-native-input.log。截图清单位于 .scratch/surface-wheel-visual/{date,workbench,pages}/manifest.json，并排预览为 .scratch/surface-wheel-visual/preview.png。
+
+
+### 2026-09-12：精简课表周数快捷跳转
+
+- 新增 SkedWeekPicker / showSkedWeekPicker，复用自适应选择器宿主和内容层背景。桌面约 320 dp、5 列，18 周为 4 行；触屏保留 48 dp 命中尺寸，大字号自动减列，长学期最多显示 6 行并内部滚动。
+- 顶部只保留原有标题和关闭按钮；普通数字无常驻填色和边框，选中／键盘焦点及本周小圆点保留。完整周日期只进入悬停和无障碍说明，学期前后不把首末周误标为本周。不增加确认、输入、日期摘要或循环滚动。
+- 标题和“更多”菜单使用仍挂载的触发控件作为锚点；选择后直接跳周，同周选择不重做导航。保留今天／长按、前后周与日／周视图。方向键按网格移动，Home／End 到首末周，PageUp／PageDown 按可见行移动，Enter／Space 激活，Escape／关闭／弹层外点击取消。
+- 共用 showSkedPickerTask 新增可选 isSessionCurrent 回调；检测到失效后不能恢复旧会话。周弹窗还检查课表 ID、学期起点与周数、外部导航和工作区，导航动画结束前复查，避免数据替换或切换课表后应用旧周数。窗口重排保留焦点及浏览位置。
+- 跳周仍仅调用现有运行时 selectedWeek 更新；打开、滚动、悬停、键盘移动、取消及跳转本身都不新增存储写入。复用已有本地化文案，不修改数据结构或依赖。
+
+
+#### 跳周选择器验证结果
+
+- 静态分析无问题；8 个改动 Dart 文件格式检查无变化，git diff --check 通过。六组针对性回归 230 项通过。
+- flutter test --no-pub --coverage --concurrency=2 完整运行：2425 项通过，1 项命名时区 DST 专用测试按预设跳过。覆盖率门禁通过：总行覆盖率 90.6338%，变更行 97.9532%。
+- 已覆盖 1／18／100 周、当前周实际日期与跨年边界、键盘／RTL／无障碍、焦点恢复、大字号和短窗口，以及课表切换、学期配置修改、外部导航、工作区切换／禁用、完整数据替换与父页面关闭。导航动画运行中同样拒绝失效结果。
+- Windows 隔离构建的周选择器视觉回归通过：9 组布局、47 张截图，含中／英／德文、宽窄窗口、明暗主题、大字号、手机／平板模拟和“更多”入口。已检查桌面 18 周紧凑网格、100 周定位及手机大字号。移动布局为 Windows 上的模拟，不是手机／平板实机结论。
+- 首次视觉运行的截图与操作断言完成，但测试退出时未提前清理平台模拟变量，触发框架核查；已修复测试清理并完整复跑通过，没有修改生产行为来绕过验证。
+- 证据：.scratch/week-picker-focused.log、week-picker-full.log、week-picker-analyze-final.log、week-picker-coverage.log、week-picker-visual-final.log；截图清单为 .scratch/week-picker-visual/manifest.json，预览为同目录 preview.png。未新增依赖或修改存储结构，未自动提交或推送。

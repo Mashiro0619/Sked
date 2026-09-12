@@ -1,3 +1,5 @@
+import '../widgets/sked_week_picker.dart';
+
 import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -437,11 +439,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                             onOpenWeekPicker: _weekPickerOpen
                                 ? null
-                                : () => _showWeekPicker(
+                                : (anchor) => _showWeekPicker(
                                     context,
                                     provider,
-                                    config.totalWeeks,
-                                    realCurrentWeek,
+                                    anchorContext: anchor,
                                   ),
                             onJumpToToday: widget.interactive
                                 ? () => unawaited(
@@ -718,7 +719,18 @@ class _HomeScreenState extends State<HomeScreen> {
     await _animateToWeek(provider, realCurrentWeek);
   }
 
-  Future<void> _animateToWeek(TimetableProvider provider, int week) async {
+  Future<void> _animateToWeek(
+    TimetableProvider provider,
+    int week, {
+    bool Function()? isSessionCurrent,
+  }) async {
+    if (isSessionCurrent?.call() == false) return;
+    var sessionValid = true;
+    void validateSession() {
+      sessionValid = sessionValid && isSessionCurrent?.call() != false;
+    }
+
+    if (isSessionCurrent != null) provider.addListener(validateSession);
     final navigationGeneration = ++_weekNavigationGeneration;
     final originWeek = _weekNavigationTarget ?? provider.selectedWeek;
     final direction = week.compareTo(originWeek).sign;
@@ -746,9 +758,15 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       }
-      if (!mounted || navigationGeneration != _weekNavigationGeneration) return;
+      validateSession();
+      if (!mounted ||
+          !sessionValid ||
+          navigationGeneration != _weekNavigationGeneration) {
+        return;
+      }
       await provider.setSelectedWeek(week);
     } finally {
+      if (isSessionCurrent != null) provider.removeListener(validateSession);
       if (navigationGeneration == _weekNavigationGeneration) {
         _weekNavigationTarget = null;
         if (mounted && _weekNavigationDirection != 0) {

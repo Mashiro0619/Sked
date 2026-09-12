@@ -26,6 +26,7 @@ Future<T?> showSkedPickerTask<T>({
   BuildContext? anchorContext,
   AppMode? workspace,
   Key? surfaceKey,
+  bool Function()? isSessionCurrent,
 }) async {
   final parent = ModalRoute.of(context);
   final focus =
@@ -37,9 +38,18 @@ Future<T?> showSkedPickerTask<T>({
   final dataSession = provider?.dataSessionToken;
   final resumeBoundary =
       provider?.appData.workspaceReminderNotBefore[workspace];
-  bool sessionAvailable() =>
-      identical(dataSession, provider?.dataSessionToken) &&
-      resumeBoundary == provider?.appData.workspaceReminderNotBefore[workspace];
+  var sessionInvalidated = false;
+  bool sessionAvailable() {
+    sessionInvalidated =
+        sessionInvalidated ||
+        !identical(dataSession, provider?.dataSessionToken) ||
+        resumeBoundary !=
+            provider?.appData.workspaceReminderNotBefore[workspace] ||
+        isSessionCurrent?.call() == false;
+    return !sessionInvalidated;
+  }
+
+  if (!sessionAvailable()) return null;
   final desktop = WorkbenchChromeMetrics.of(context).desktop;
   final navigator = Navigator.of(context, rootNavigator: true);
   final themes = InheritedTheme.capture(from: context, to: navigator.context);
@@ -155,11 +165,14 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
   }
 
   void _checkOwner() {
-    if (!_ownerAvailable && !_finished) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_ownerAvailable) _finish(null);
-      });
-    }
+    // Evaluate immediately so a transient invalidation cannot revive this task.
+    // Check again after the owner's widgets have observed the same notification.
+    if (_finished) return;
+    final available = _ownerAvailable;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && (!available || !_ownerAvailable)) _finish(null);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   void _finish(T? value) {

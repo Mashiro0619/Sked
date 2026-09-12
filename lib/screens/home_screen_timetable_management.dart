@@ -57,142 +57,72 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
 
   Future<void> _showWeekPicker(
     BuildContext context,
-    TimetableProvider provider,
-    int totalWeeks,
-    int realCurrentWeek,
-  ) async {
-    if (_weekPickerOpen || !mounted) {
+    TimetableProvider provider, {
+    BuildContext? anchorContext,
+  }) async {
+    if (_weekPickerOpen ||
+        !mounted ||
+        !widget.active ||
+        !widget.interactive ||
+        _weekNavigationTarget != null ||
+        _weekPageScrolling) {
       return;
     }
+    final timetable = provider.activeTimetableOrNull;
+    if (timetable == null || !provider.isWorkspaceEnabled(AppMode.student)) {
+      return;
+    }
+    final config = timetable.config;
+    final selectedWeek = provider.selectedWeek;
+    final dataSession = provider.dataSessionToken;
+    final activeMode = provider.activeMode;
+    final resumeBoundary =
+        provider.appData.workspaceReminderNotBefore[AppMode.student];
+    final navigationGeneration = _weekNavigationGeneration;
+    var selectionReturned = false;
+    bool ownerCurrent() {
+      final current = provider.activeTimetableOrNull;
+      return mounted &&
+          context.mounted &&
+          widget.active &&
+          widget.interactive &&
+          identical(provider.dataSessionToken, dataSession) &&
+          provider.isWorkspaceEnabled(AppMode.student) &&
+          provider.activeMode == activeMode &&
+          provider.appData.workspaceReminderNotBefore[AppMode.student] ==
+              resumeBoundary &&
+          current?.id == timetable.id &&
+          current?.config.startDate == config.startDate &&
+          current?.config.totalWeeks == config.totalWeeks;
+    }
+
+    bool selectionCurrent() =>
+        ownerCurrent() &&
+        provider.selectedWeek == selectedWeek &&
+        navigationGeneration == _weekNavigationGeneration &&
+        _weekNavigationTarget == null;
     _setWeekPickerOpen(true);
     try {
-      final week = await showExpressiveDialog<int>(
+      final week = await showSkedWeekPicker(
         context: context,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          final theme = Theme.of(context);
-          final mediaQuery = MediaQuery.of(context);
-          final dialogWidth = math.min(mediaQuery.size.width - 32, 360.0);
-          const spacing = 10.0;
-          const chipHeight = 48.0;
-          final maxGridHeight = mediaQuery.size.height * 0.5;
-          var popped = false;
-          void popWith(int value) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(context).pop(value);
-          }
-
-          return AlertDialog(
-            title: Text(l10n.jumpToWeek),
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            content: SizedBox(
-              width: dialogWidth,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final availableWidth = constraints.maxWidth;
-                  final crossAxisCount = availableWidth >= 280 ? 4 : 3;
-                  final chipWidth =
-                      (availableWidth - ((crossAxisCount - 1) * spacing)) /
-                      crossAxisCount;
-                  final rowCount = (totalWeeks / crossAxisCount).ceil();
-                  final fullGridHeight =
-                      (rowCount * chipHeight) + ((rowCount - 1) * spacing);
-                  final visibleRows = math.max(
-                    1,
-                    math.min(
-                      rowCount,
-                      ((maxGridHeight + spacing) / (chipHeight + spacing))
-                          .floor(),
-                    ),
-                  );
-                  final gridHeight = rowCount <= visibleRows
-                      ? fullGridHeight
-                      : (visibleRows * chipHeight) +
-                            ((visibleRows - 1) * spacing);
-                  return ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: gridHeight),
-                    child: SingleChildScrollView(
-                      child: Wrap(
-                        spacing: spacing,
-                        runSpacing: spacing,
-                        children: [
-                          for (var index = 0; index < totalWeeks; index++)
-                            Builder(
-                              builder: (context) {
-                                final weekNumber = index + 1;
-                                final isSelected =
-                                    weekNumber == provider.selectedWeek;
-                                final isRealCurrentWeek =
-                                    weekNumber == realCurrentWeek;
-                                final backgroundColor = isSelected
-                                    ? theme.colorScheme.primary.withValues(
-                                        alpha: 0.12,
-                                      )
-                                    : isRealCurrentWeek
-                                    ? theme.colorScheme.surfaceContainerHighest
-                                    : theme.colorScheme.surface;
-                                return Semantics(
-                                  key: ValueKey(
-                                    'student-week-option-$weekNumber',
-                                  ),
-                                  button: true,
-                                  selected: isSelected,
-                                  label: l10n.weekLabel(weekNumber),
-                                  onTap: () => popWith(weekNumber),
-                                  child: ExcludeSemantics(
-                                    child: SizedBox(
-                                      width: chipWidth,
-                                      height: chipHeight,
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          onTap: () => popWith(weekNumber),
-                                          child: Ink(
-                                            decoration: BoxDecoration(
-                                              color: backgroundColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? theme.colorScheme.primary
-                                                    : theme
-                                                          .colorScheme
-                                                          .outlineVariant,
-                                              ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                '$weekNumber',
-                                                style:
-                                                    theme.textTheme.titleMedium,
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        },
+        config: config,
+        selectedWeek: selectedWeek,
+        anchorContext: anchorContext,
+        isSessionCurrent: () =>
+            ownerCurrent() && (selectionReturned || selectionCurrent()),
       );
-
-      if (week != null) {
-        await _animateToWeek(provider, week);
+      final accepted = week != null && selectionCurrent();
+      // Re-enable the trigger before the closing transition restores its focus.
+      // The existing navigation target separately prevents reopening mid-animation.
+      selectionReturned = accepted;
+      _setWeekPickerOpen(false);
+      if (accepted && week != selectedWeek) {
+        await _animateToWeek(
+          provider,
+          week,
+          isSessionCurrent: () =>
+              ownerCurrent() && provider.selectedWeek == selectedWeek,
+        );
       }
     } finally {
       _setWeekPickerOpen(false);

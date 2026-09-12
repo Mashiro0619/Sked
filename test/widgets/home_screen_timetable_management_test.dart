@@ -1,3 +1,7 @@
+import '../support/workspace_harness.dart';
+
+import 'package:sked/widgets/sked_week_picker.dart';
+
 import 'package:sked/widgets/sked_date_picker.dart';
 
 import 'dart:async';
@@ -651,6 +655,216 @@ Rect _emptyTimetableImportMenuRect(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets(
+    'compact week selection and browsing never persist data; selecting the same week is a no-op',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 900);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final storage = _MemoryTimetableStorage(_buildPopulatedStudentData());
+      final provider = TimetableProvider(
+        storage: storage,
+        privacyService: const _NoopPrivacyService(),
+        secretStore: const _NoopSecretStore(),
+      );
+      await provider.load();
+      await provider.setSelectedWeek(5);
+      await _pumpHomeScreenWithProvider(tester, provider);
+      final writes = storage.saveCount;
+      final trigger = find.byKey(const ValueKey('student-week-picker-button'));
+      await tester.tap(trigger);
+      await tester.pumpAndSettle();
+      final before = tester
+          .widget<PageView>(find.byKey(const ValueKey('student-week-pager')))
+          .controller!
+          .page;
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(provider.selectedWeek, 5);
+      expect(storage.saveCount, writes);
+      await tester.tap(find.byKey(const ValueKey('student-week-option-5')));
+      await tester.pumpAndSettle();
+      expect(provider.selectedWeek, 5);
+      expect(
+        tester
+            .widget<PageView>(find.byKey(const ValueKey('student-week-pager')))
+            .controller!
+            .page,
+        before,
+      );
+      await tester.tap(trigger);
+      await tester.pumpAndSettle();
+      final choose = tester
+          .widget<Semantics>(
+            find.byKey(const ValueKey('student-week-option-9')),
+          )
+          .properties
+          .onTap!;
+      choose();
+      choose();
+      await tester.pumpAndSettle();
+      expect(provider.selectedWeek, 9);
+      expect(storage.saveCount, writes);
+      expect(find.byType(SkedWeekPicker), findsNothing);
+      final button = tester.element(trigger);
+      final editableFocus = FocusManager.instance.primaryFocus;
+      expect(editableFocus?.context, isNotNull);
+      var restored = false;
+      button.visitChildElements((element) {
+        if (Focus.maybeOf(element) == editableFocus) restored = true;
+        void visit(Element child) {
+          if (Focus.maybeOf(child) == editableFocus) restored = true;
+          child.visitChildElements(visit);
+        }
+
+        element.visitChildElements(visit);
+      });
+      expect(restored, isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  for (final change in [
+    'switch',
+    'start',
+    'weeks',
+    'navigate',
+    'replace',
+    'disable',
+    'mode',
+  ]) {
+    for (final inAnimation in [false, true]) {
+      testWidgets(
+        'week session is cancelled by $change: navigation running=$inAnimation',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = const Size(1200, 900);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.view.resetPhysicalSize);
+          final provider = await workspaceProvider(
+            storage: WorkspaceMemoryStorage(_buildMultiTimetableStudentData()),
+          );
+          await provider.setSelectedWeek(5);
+          final backup = await provider.exportAppDataJson();
+          await tester.pumpWidget(WorkspaceHarness(provider: provider));
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.byKey(const ValueKey('student-week-picker-button')),
+          );
+          await tester.pumpAndSettle();
+          final staleChoose = tester
+              .widget<Semantics>(
+                find.byKey(const ValueKey('student-week-option-9')),
+              )
+              .properties
+              .onTap!;
+          if (inAnimation) {
+            staleChoose();
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 30));
+            expect(provider.selectedWeek, 5);
+          }
+          switch (change) {
+            case 'switch':
+              await provider.switchTimetable('table-2');
+            case 'start':
+              await provider.updateTimetableConfig(
+                provider.activeTimetable.config.copyWith(
+                  startDate: DateTime(2026, 6, 8),
+                ),
+              );
+            case 'weeks':
+              await provider.updateTimetableConfig(
+                provider.activeTimetable.config.copyWith(totalWeeks: 8),
+              );
+            case 'navigate':
+              await provider.setSelectedWeek(7);
+            case 'replace':
+              await provider.importAppDataJson(
+                backup,
+                mode: AppImportMode.replaceAll,
+              );
+            case 'disable':
+              await provider.setWorkspaceEnabled(AppMode.general, true);
+              await provider.setWorkspaceEnabled(AppMode.student, false);
+            case 'mode':
+              await provider.setWorkspaceEnabled(AppMode.general, true);
+              await provider.switchMode(AppMode.general);
+          }
+          final externalWeek = provider.selectedWeek;
+          if (!inAnimation) staleChoose();
+          await tester.pumpAndSettle();
+          expect(find.byType(SkedWeekPicker), findsNothing);
+          expect(provider.selectedWeek, externalWeek);
+          if (change == 'switch') {
+            expect(provider.activeTimetable.id, 'table-2');
+          }
+          if (change == 'navigate') expect(provider.selectedWeek, 7);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+          provider.dispose();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.windows),
+      );
+    }
+  }
+
+  testWidgets('unrelated settings changes preserve the open week task', (
+    tester,
+  ) async {
+    final provider = await _createProvider();
+    await _pumpHomeScreenWithProvider(tester, provider);
+    await tester.tap(find.byKey(const ValueKey('student-week-picker-button')));
+    await tester.pumpAndSettle();
+    final state = tester.state(find.byType(SkedWeekPicker));
+    await provider.updateShowPastEndedCourses(!provider.showPastEndedCourses);
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(SkedWeekPicker)), same(state));
+    await tester.tap(find.byKey(const ValueKey('sked-week-picker-close')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
+
+  testWidgets(
+    'closing the owner page cancels the week picker without stale navigation',
+    (tester) async {
+      final provider = await _createProvider();
+      await provider.setSelectedWeek(5);
+      await _pumpHomeScreenHostPage(tester, provider);
+      await tester.tap(find.text('Open home host'));
+      await tester.pumpAndSettle();
+      final owner = tester.element(find.byType(HomeScreen));
+      final route = ModalRoute.of(owner)!;
+      final navigator = Navigator.of(owner);
+      await tester.tap(
+        find.byKey(const ValueKey('student-week-picker-button')),
+      );
+      await tester.pumpAndSettle();
+      final staleChoose = tester
+          .widget<Semantics>(
+            find.byKey(const ValueKey('student-week-option-9')),
+          )
+          .properties
+          .onTap!;
+      navigator.removeRoute(route);
+      await tester.pumpAndSettle();
+      staleChoose();
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsNothing);
+      expect(find.byType(SkedWeekPicker), findsNothing);
+      expect(provider.selectedWeek, 5);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+    },
+  );
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   tearDown(() async {
@@ -3187,7 +3401,8 @@ void main() {
     await tester.tap(weekTitle, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(SkedWeekPicker), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('Jump to week'), findsOneWidget);
   });
 
@@ -4078,7 +4293,7 @@ void main() {
     await tester.tap(find.text('Week ${provider.selectedWeek}').last);
     await tester.pumpAndSettle();
     expect(find.text('Jump to week'), findsOneWidget);
-    await tester.tapAt(const Offset(4, 4));
+    await tester.tap(find.byKey(const ValueKey('sked-week-picker-close')));
     await tester.pumpAndSettle();
 
     await tester.tap(more);

@@ -69,7 +69,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final bool showSettings;
   final FocusNode? settingsFocusNode;
   final VoidCallback? onOpenTimetablePicker;
-  final VoidCallback? onOpenWeekPicker;
+  final ValueChanged<BuildContext>? onOpenWeekPicker;
   final VoidCallback? onJumpToToday;
   final ValueChanged<_StudentTimetableView>? onViewChanged;
   final VoidCallback? onOpenSettings;
@@ -110,12 +110,17 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             icon: const Icon(Icons.chevron_right),
           ),
           TextButton(onPressed: onJumpToToday, child: Text(l10n.today)),
-          TextButton(
-            key: const ValueKey('student-week-picker-button'),
-            onPressed: onOpenWeekPicker,
-            child: Text(
-              '${l10n.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
-              style: theme.textTheme.titleMedium,
+          Builder(
+            builder: (anchor) => TextButton(
+              key: const ValueKey('student-week-picker-button'),
+              onPressed: onOpenWeekPicker == null
+                  ? null
+                  : () => onOpenWeekPicker!(anchor),
+              onLongPress: onJumpToToday,
+              child: Text(
+                '${l10n.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
+                style: theme.textTheme.titleMedium,
+              ),
             ),
           ),
         ],
@@ -241,59 +246,65 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       ),
     );
     Widget buildWeekPicker({required double width}) {
-      return Tooltip(
-        message: '${l10n.jumpToWeek}; ${l10n.today}',
-        child: Semantics(
-          key: const ValueKey('student-week-picker-semantics'),
-          button: true,
-          enabled:
-              interactive &&
-              (onOpenWeekPicker != null || onJumpToToday != null),
-          excludeSemantics: true,
-          label: l10n.weekLabel(week),
-          hint: '${l10n.jumpToWeek}; ${l10n.today}',
-          onTap: onOpenWeekPicker,
-          onLongPress: onJumpToToday,
-          onTapHint: l10n.jumpToWeek,
-          onLongPressHint: l10n.today,
-          child: SizedBox(
-            width: width,
-            child: TextButton(
-              key: const ValueKey('student-week-picker-button'),
-              onPressed: interactive ? onOpenWeekPicker : null,
-              onLongPress: interactive ? onJumpToToday : null,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                shape: controlShape,
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final showIcon =
-                      !preferWeekPickerWithoutIcon &&
-                      constraints.maxWidth >= measuredWeekWidth + 34;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (showIcon) ...[
-                        const Icon(Icons.calendar_month_outlined, size: 18),
-                        const SizedBox(width: 4),
-                      ],
-                      Flexible(
-                        child: SkedDirectionalTransition(
-                          trigger: week,
-                          direction: weekNavigationDirection,
-                          distance: 12,
-                          child: Text(
-                            l10n.weekLabel(week),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+      return Builder(
+        builder: (anchor) => Tooltip(
+          message: '${l10n.jumpToWeek}; ${l10n.today}',
+          child: Semantics(
+            key: const ValueKey('student-week-picker-semantics'),
+            button: true,
+            enabled:
+                interactive &&
+                (onOpenWeekPicker != null || onJumpToToday != null),
+            excludeSemantics: true,
+            label: l10n.weekLabel(week),
+            hint: '${l10n.jumpToWeek}; ${l10n.today}',
+            onTap: interactive && onOpenWeekPicker != null
+                ? () => onOpenWeekPicker!(anchor)
+                : null,
+            onLongPress: onJumpToToday,
+            onTapHint: l10n.jumpToWeek,
+            onLongPressHint: l10n.today,
+            child: SizedBox(
+              width: width,
+              child: TextButton(
+                key: const ValueKey('student-week-picker-button'),
+                onPressed: interactive && onOpenWeekPicker != null
+                    ? () => onOpenWeekPicker!(anchor)
+                    : null,
+                onLongPress: interactive ? onJumpToToday : null,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  shape: controlShape,
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showIcon =
+                        !preferWeekPickerWithoutIcon &&
+                        constraints.maxWidth >= measuredWeekWidth + 34;
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (showIcon) ...[
+                          const Icon(Icons.calendar_month_outlined, size: 18),
+                          const SizedBox(width: 4),
+                        ],
+                        Flexible(
+                          child: SkedDirectionalTransition(
+                            trigger: week,
+                            direction: weekNavigationDirection,
+                            distance: 12,
+                            child: Text(
+                              l10n.weekLabel(week),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -338,45 +349,47 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       'view': viewToggle,
       if (showSettings) 'settings': settingsAction,
       if (canShowMore)
-        'more': SkedPopupMenuButton<String>(
-          key: const ValueKey('student-toolbar-more-button'),
-          icon: const Icon(Icons.more_horiz),
-          tooltip: l10n.more,
-          enabled: interactive,
-          onSelected: (id) {
-            switch (id) {
-              case 'timetable':
-                onOpenTimetablePicker?.call();
-              case 'week':
-                onOpenWeekPicker?.call();
-              case 'today':
-                onJumpToToday?.call();
-              case 'view':
-                onViewChanged?.call(
-                  viewMode == _StudentTimetableView.day
-                      ? _StudentTimetableView.week
-                      : _StudentTimetableView.day,
-                );
-            }
-          },
-          itemBuilder: (context) => [
-            for (final id in order)
-              if (hidden.contains(id) && id != 'settings')
+        'more': Builder(
+          builder: (anchor) => SkedPopupMenuButton<String>(
+            key: const ValueKey('student-toolbar-more-button'),
+            icon: const Icon(Icons.more_horiz),
+            tooltip: l10n.more,
+            enabled: interactive,
+            onSelected: (id) {
+              switch (id) {
+                case 'timetable':
+                  onOpenTimetablePicker?.call();
+                case 'week':
+                  onOpenWeekPicker?.call(anchor);
+                case 'today':
+                  onJumpToToday?.call();
+                case 'view':
+                  onViewChanged?.call(
+                    viewMode == _StudentTimetableView.day
+                        ? _StudentTimetableView.week
+                        : _StudentTimetableView.day,
+                  );
+              }
+            },
+            itemBuilder: (context) => [
+              for (final id in order)
+                if (hidden.contains(id) && id != 'settings')
+                  SkedPopupMenuItem<String>(
+                    value: id,
+                    child: Text(switch (id) {
+                      'timetable' => l10n.timetable,
+                      'week' => l10n.weekLabel(week),
+                      'view' => l10n.toolbarNavigationView,
+                      _ => id,
+                    }),
+                  ),
+              if (hidden.contains('week') && onJumpToToday != null)
                 SkedPopupMenuItem<String>(
-                  value: id,
-                  child: Text(switch (id) {
-                    'timetable' => l10n.timetable,
-                    'week' => l10n.weekLabel(week),
-                    'view' => l10n.toolbarNavigationView,
-                    _ => id,
-                  }),
+                  value: 'today',
+                  child: Text(l10n.today),
                 ),
-            if (hidden.contains('week') && onJumpToToday != null)
-              SkedPopupMenuItem<String>(
-                value: 'today',
-                child: Text(l10n.today),
-              ),
-          ],
+            ],
+          ),
         ),
     };
     final orderedIds = <String>[];
