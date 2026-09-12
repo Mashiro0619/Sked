@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/period_time_set_manager.dart';

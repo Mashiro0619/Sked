@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import 'package:sked/widgets/sked_time_picker.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:material_ui/material_ui.dart';
@@ -86,7 +88,94 @@ void _expectInputFocusDismissed(WidgetTester tester, FocusNode previousFocus) {
   expect(tester.testTextInput.isVisible, isFalse);
 }
 
+Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
+  final wheel = find.byKey(const ValueKey('sked-time-minute-wheel'));
+  final extent = tester.widget<ListWheelScrollView>(wheel).itemExtent;
+  await tester.sendEventToBinding(
+    PointerScrollEvent(
+      kind: PointerDeviceKind.mouse,
+      position: tester.getCenter(wheel),
+      scrollDelta: Offset(0, rows * extent),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets(
+    'event minute wraps independently in 12-hour mode and remains an editor draft',
+    (tester) async {
+      _setTestViewport(tester, const Size(1000, 900));
+      addTearDown(() => _resetTestViewport(tester));
+      final saved = <GeneralEvent>[];
+      await tester.pumpWidget(
+        _localizedApp(
+          GeneralEventEditorSheet(
+            calendars: const [
+              GeneralSchedule(id: 'work', name: 'Work', events: []),
+            ],
+            activeCalendarId: 'work',
+            initialEvent: GeneralEvent(
+              id: 'loop',
+              calendarId: 'work',
+              title: 'Loop event',
+              startDateTimeIso: '2026-09-12T13:59:00.000',
+              endDateTimeIso: '2026-09-12T14:59:00.000',
+            ),
+            onSave: (event) async {
+              saved.add(event);
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final start = find.byTooltip('Pick time').first;
+      await tester.ensureVisible(start);
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+      await _scrollTimeMinute(tester, 1);
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('sked-time-hour-input')),
+            )
+            .controller!
+            .text,
+        '01',
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('sked-time-minute-input')),
+            )
+            .controller!
+            .text,
+        '00',
+      );
+      expect(
+        tester
+            .widget<ChoiceChip>(find.byKey(const ValueKey('sked-time-pm')))
+            .selected,
+        isTrue,
+      );
+      expect(saved, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('sked-time-confirm')));
+      await tester.pumpAndSettle();
+      expect(saved, isEmpty);
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(saved, hasLength(1));
+      expect(DateTime.parse(saved.single.startDateTimeIso).hour, 13);
+      expect(DateTime.parse(saved.single.startDateTimeIso).minute, 0);
+      expect(DateTime.parse(saved.single.endDateTimeIso).hour, 14);
+      expect(DateTime.parse(saved.single.endDateTimeIso).minute, 59);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets('lays out on narrow screens', (tester) async {
     _setTestViewport(tester, const Size(320, 640));
     addTearDown(() => _resetTestViewport(tester));

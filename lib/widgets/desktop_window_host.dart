@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -107,8 +109,9 @@ class DesktopWindowHost extends StatelessWidget {
       data: theme.copyWith(
         appBarTheme: theme.appBarTheme.copyWith(
           toolbarHeight: metrics.toolbarHeight,
-          backgroundColor: colors.surfaceContainerLow,
+          backgroundColor: SkedSurfaceRole.frame.resolve(colors),
           scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
           shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
         ),
       ),
@@ -137,7 +140,7 @@ class DesktopWindowHost extends StatelessWidget {
                         width: metrics.captionWidth,
                         height: metrics.toolbarHeight,
                         child: Material(
-                          color: colors.surfaceContainerLow,
+                          color: SkedSurfaceRole.frame.resolve(colors),
                           child: Directionality(
                             textDirection: TextDirection.ltr,
                             child: Row(
@@ -265,8 +268,8 @@ class WorkbenchCommandBar extends StatelessWidget {
         ],
       ],
     );
-    return Material(
-      color: colors.surfaceContainerLow,
+    return SkedSurface(
+      role: SkedSurfaceRole.frame,
       shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
       child: SizedBox(
         height: m.toolbarHeight,

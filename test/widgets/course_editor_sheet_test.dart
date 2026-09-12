@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import 'package:sked/widgets/sked_time_picker.dart';
 
 import 'dart:async';
@@ -57,7 +59,92 @@ Future<void> _pumpEditorHost(
   await tester.pumpAndSettle();
 }
 
+Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
+  final wheel = find.byKey(const ValueKey('sked-time-minute-wheel'));
+  final extent = tester.widget<ListWheelScrollView>(wheel).itemExtent;
+  await tester.sendEventToBinding(
+    PointerScrollEvent(
+      kind: PointerDeviceKind.mouse,
+      position: tester.getCenter(wheel),
+      scrollDelta: Offset(0, rows * extent),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets(
+    'cyclic time changes stay in the course draft until confirmation and save',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 900);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final saved = <CourseItem>[];
+      await _pumpEditorHost(
+        tester,
+        onSave: (course) async {
+          saved.add(course);
+        },
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Course name'),
+        'Cyclic course',
+      );
+      final start = find.byKey(const ValueKey('course-start-time-action'));
+      await tester.ensureVisible(start);
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+      await _scrollTimeMinute(tester, -1);
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('sked-time-hour-input')),
+            )
+            .controller!
+            .text,
+        '08',
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('sked-time-minute-input')),
+            )
+            .controller!
+            .text,
+        '59',
+      );
+      await tester.tap(find.byKey(const ValueKey('sked-time-cancel')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: start, matching: find.text('08:00')),
+        findsOneWidget,
+      );
+      final end = find.byKey(const ValueKey('course-end-time-action'));
+      await tester.ensureVisible(end);
+      await tester.tap(end);
+      await tester.pumpAndSettle();
+      await _scrollTimeMinute(tester, 1);
+      expect(saved, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('sked-time-confirm')));
+      await tester.pumpAndSettle();
+      expect(saved, isEmpty);
+      expect(
+        find.descendant(of: end, matching: find.text('09:41')),
+        findsOneWidget,
+      );
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(saved, hasLength(1));
+      expect(saved.single.startMinutes, 480);
+      expect(saved.single.endMinutes, 581);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets('real course sheet offsets title from its top edge', (
     tester,
   ) async {

@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_motion.dart';
@@ -26,7 +28,10 @@ Future<T?> showExpressiveDialog<T>({
     routeSettings: routeSettings,
     animationStyle: animationStyle,
     builder: (_) {
-      final dialog = UiCommandFeedbackHost(builder: builder);
+      final dialog = SkedSurfaceScope(
+        role: SkedSurfaceRole.content,
+        child: UiCommandFeedbackHost(builder: builder),
+      );
       return transitionAnchor == null
           ? dialog
           : KeyedSubtree(key: transitionAnchor, child: dialog);

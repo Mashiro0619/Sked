@@ -786,10 +786,9 @@ class _EditorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final shape = skedShapeSchemeOf(context).field;
     return Material(
-      color: colors.surfaceContainerLow,
+      color: Colors.transparent,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
@@ -803,8 +802,8 @@ class _EditorSection extends StatelessWidget {
         childrenPadding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
         shape: shape,
         collapsedShape: shape,
-        backgroundColor: colors.surfaceContainerLow,
-        collapsedBackgroundColor: colors.surfaceContainerLow,
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
         children: [child],
       ),
     );

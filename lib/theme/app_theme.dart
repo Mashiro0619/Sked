@@ -1,3 +1,5 @@
+import 'sked_surface.dart';
+
 import 'package:cupertino_ui/cupertino_ui.dart'
     show CupertinoPageTransitionsBuilder;
 import 'package:material_ui/material_ui.dart';
@@ -55,7 +57,7 @@ ThemeData buildAppTheme({
       ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
       : shapes.control;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
-  final menuSurface = colorScheme.surfaceContainer;
+  final menuSurface = SkedSurfaceRole.content.resolve(colorScheme);
   final menuOutline = colorScheme.outlineVariant.withValues(alpha: 0.72);
   final menuShape = shapes.menu.copyWith(side: BorderSide(color: menuOutline));
   final menuOverlayColor = WidgetStateProperty.resolveWith<Color?>((states) {
@@ -101,12 +103,10 @@ ThemeData buildAppTheme({
       toolbarHeight: desktop ? 48 : null,
       centerTitle: false,
       elevation: 0,
-      scrolledUnderElevation: 1,
-      backgroundColor: desktop
-          ? colorScheme.surfaceContainerLow
-          : colorScheme.surface,
+      scrolledUnderElevation: 0,
+      backgroundColor: SkedSurfaceRole.frame.resolve(colorScheme),
       foregroundColor: colorScheme.onSurface,
-      surfaceTintColor: colorScheme.surfaceTint,
+      surfaceTintColor: Colors.transparent,
       titleTextStyle: textTheme.titleLarge?.copyWith(
         color: colorScheme.onSurface,
         fontWeight: FontWeight.w700,
@@ -118,7 +118,7 @@ ThemeData buildAppTheme({
       margin: EdgeInsets.zero,
       elevation: 0,
       color: colorScheme.surfaceContainerLow,
-      surfaceTintColor: colorScheme.surfaceTint,
+      surfaceTintColor: Colors.transparent,
       shape: shapes.card,
     ),
     listTileTheme: ListTileThemeData(
@@ -172,7 +172,8 @@ ThemeData buildAppTheme({
     navigationBarTheme: NavigationBarThemeData(
       height: 76,
       elevation: 0,
-      backgroundColor: colorScheme.surfaceContainer,
+      backgroundColor: SkedSurfaceRole.frame.resolve(colorScheme),
+      surfaceTintColor: Colors.transparent,
       indicatorColor: selectedSurface,
       indicatorShape: shapes.selectionIndicator,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -189,8 +190,16 @@ ThemeData buildAppTheme({
         );
       }),
     ),
+    drawerTheme: DrawerThemeData(
+      backgroundColor: SkedSurfaceRole.frame.resolve(colorScheme),
+      surfaceTintColor: Colors.transparent,
+    ),
+    navigationDrawerTheme: NavigationDrawerThemeData(
+      backgroundColor: SkedSurfaceRole.frame.resolve(colorScheme),
+      surfaceTintColor: Colors.transparent,
+    ),
     navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: SkedSurfaceRole.frame.resolve(colorScheme),
       indicatorColor: selectedSurface,
       selectedIconTheme: IconThemeData(color: colorScheme.primary),
       unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
@@ -213,7 +222,7 @@ ThemeData buildAppTheme({
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: colorScheme.surface,
       modalBackgroundColor: colorScheme.surface,
-      surfaceTintColor: colorScheme.surfaceTint,
+      surfaceTintColor: Colors.transparent,
       showDragHandle: true,
       constraints: const BoxConstraints(minWidth: 280),
       dragHandleColor: colorScheme.outlineVariant,
@@ -221,7 +230,7 @@ ThemeData buildAppTheme({
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: colorScheme.surface,
-      surfaceTintColor: colorScheme.surfaceTint,
+      surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: shapes.dialog,
       titleTextStyle: textTheme.headlineSmall?.copyWith(

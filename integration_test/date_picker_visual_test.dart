@@ -1,3 +1,5 @@
+import 'package:sked/widgets/workspace_frame.dart';
+
 import 'package:flutter/gestures.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_time_picker.dart';
@@ -268,6 +270,21 @@ void main() {
           );
           expect(p.selectedGeneralDate, DateTime(2026, 9, 10));
           await capture('custom-five-days');
+          if (platform == TargetPlatform.windows) {
+            await p.updateHomeWorkspaceNavigationCollapsed(true);
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.byKey(const ValueKey('general-day-agenda-toggle')),
+            );
+            await tester.pumpAndSettle();
+            await capture('custom-agenda-continuous');
+            await tester
+                .widget<WorkspaceFrame>(find.byType(WorkspaceFrame))
+                .controller
+                .close();
+            await p.updateHomeWorkspaceNavigationCollapsed(false);
+            await tester.pumpAndSettle();
+          }
           await tester.ensureVisible(button);
           await tester.tap(button);
           await tester.pumpAndSettle();
@@ -409,9 +426,11 @@ void main() {
             await tester.pumpAndSettle();
             final minuteList = find.descendant(
               of: find.byKey(const ValueKey('sked-time-minutes')),
-              matching: find.byType(ListView),
+              matching: find.byType(ListWheelScrollView),
             );
-            final controller = tester.widget<ListView>(minuteList).controller!;
+            final controller = tester
+                .widget<ListWheelScrollView>(minuteList)
+                .controller!;
             final before = controller.offset;
             final background = tester
                 .stateList<ScrollableState>(
@@ -446,7 +465,7 @@ void main() {
           }
           final minutes = find.descendant(
             of: find.byKey(const ValueKey('sked-time-minutes')),
-            matching: find.byType(ListView),
+            matching: find.byType(ListWheelScrollView),
           );
           final minuteInput = find.byKey(
             const ValueKey('sked-time-minute-input'),
@@ -465,7 +484,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(
             tester.widget<TextField>(minuteInput).controller!.text,
-            beforeMinute,
+            isNot(beforeMinute),
           );
           await tester.enterText(
             find.byKey(const ValueKey('sked-time-hour-input')),
@@ -474,6 +493,22 @@ void main() {
           await tester.enterText(minuteInput, '17');
           await tester.pumpAndSettle();
           await capture('time-input-selected');
+          await tester.enterText(minuteInput, '59');
+          await tester.pumpAndSettle();
+          await capture('time-loop-boundary');
+          await tester.sendEventToBinding(
+            PointerScrollEvent(
+              kind: PointerDeviceKind.mouse,
+              position: tester.getCenter(minutes),
+              scrollDelta: Offset(
+                0,
+                tester.widget<ListWheelScrollView>(minutes).itemExtent,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.widget<TextField>(minuteInput).controller!.text, '00');
+          await capture('time-loop-wrapped');
           await tester.ensureVisible(
             find.byKey(const ValueKey('sked-time-confirm')),
           );

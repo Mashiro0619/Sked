@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -385,7 +387,7 @@ class _EventActionBar extends StatelessWidget {
       alignment: AlignmentDirectional.centerEnd,
       child: Material(
         key: const ValueKey('general-event-action-bar'),
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        color: SkedSurface.colorOf(context),
         borderRadius: BorderRadius.circular(
           WorkbenchChromeMetrics.of(context).desktop ? 6 : 16,
         ),

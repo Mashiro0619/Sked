@@ -370,7 +370,7 @@ class _PrimaryInfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(

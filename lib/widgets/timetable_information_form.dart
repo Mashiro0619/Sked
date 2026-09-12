@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -105,8 +107,7 @@ class TimetableInformationDialogSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
+    return SkedSurface(
       elevation: embedded ? 0 : 6,
       borderRadius: BorderRadius.circular(embedded ? 0 : 28),
       child: ConstrainedBox(

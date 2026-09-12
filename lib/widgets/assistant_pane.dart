@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -84,9 +86,7 @@ class AssistantPreviewPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
+    return SkedSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

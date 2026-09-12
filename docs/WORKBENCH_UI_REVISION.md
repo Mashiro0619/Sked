@@ -292,3 +292,23 @@ dart run tool/coverage_gate.dart --base-ref HEAD
 - 覆盖率门禁通过：总行覆盖率 90.5215%，变更行 97.7992%；覆盖数据来自首次全量覆盖率运行，最终完整复跑未开启覆盖采集。
 - 隔离工作目录中的 Windows 视觉集成测试通过，生成 136 张、9 组布局截图；已检查紧凑范围弹层和桌面／大字号模拟触控时间列表。手机和平板样式为 Windows 上的模拟布局，不作为移动设备实机结论；本次未完成操作系统级指针实机验证。
 - 证据：`.scratch/picker-compact-full-verified.log`、`picker-compact-analyze.log`、`picker-compact-regression.log`、`picker-compact-notification-recheck.log`、`picker-compact-coverage.log`、`picker-compact-visual.log`；截图清单为 `.scratch/picker-compact-visual/manifest.json`，并排预览为同目录 `pickers-preview.png`。
+
+
+### 2026-09-12：全应用连续背景与循环时间滚轮
+
+- 两层结构性表面由 SkedSurface / SkedSurfaceScope 统一继承：内容为 surface，导航、完整顶栏及停靠面板为 surfaceContainerLow。修复原生窗口按钮前的预留空白、右侧关闭栏与正文／操作区的拼色；预留空间仍可拖动窗口，正常控件保留命中优先级。
+- 停靠编辑器及其内部路由继承框架层，窄屏覆盖式任务、独立弹窗及选择器回到内容层。切换只更新主题默认背景，不替换任务状态，不修改 ColorScheme 或用户颜色。主题 AppBar 取消滚动叠色，结构性表面取消 tint，模态遮罩与阴影保留。
+- 同步检查日程与课表导航、设置侧栏／列表、课程与日程分组和详情、节次管理、课表信息及导入摘要。普通分组去除重复底色；选中、冲突／错误提示、输入框、按钮、首次启动的可选工作区卡片仍保留各自控件与状态语义。
+- 时间选择器改为 Flutter 原生 looping delegate 的双向循环滚轮，保留全部 60 分钟、五行视口、直接输入和确认／取消。滚动停止并吸附中心后才更新对应字段；分钟与小时独立循环，绝不自动进位或切换上午／下午。不再显示滚动条或逐行卡片。
+- 鼠标滚轮、触控板、拖动、可见项点击、上下方向键与五项分页都支持循环；Home／End 定位逻辑首末值。输入定位选最近的等值位置，非法输入仍显示原文，旧惯性／旧回调不能覆盖新草稿。拖动与吸附期间禁用确认，取消始终有效；减弱动态效果取消程序定位动画，无障碍仅暴露有限值与增减动作。
+- 复用现有文案和本地化格式，不新增文案键、依赖或存储结构。此前“滚动仅浏览”的时间列表规则由本节替代；日期范围交互保持不变。
+
+
+#### 本轮验证结果
+
+- 最终静态分析无问题；31 个改动 Dart 文件格式化，后续无格式差异；git diff --check 通过。
+- 完整测试在最终代码上以 flutter test --no-pub --coverage --concurrency=2 运行：2391 项通过、1 项命名时区 DST 测试按预设跳过。三处真实时间入口已验证取消、草稿边界、分钟循环及确认后仅保存一次。
+- 覆盖率门禁通过：总行覆盖率 90.5811%，变更行覆盖率 98.7500%；不修改依赖、数据模型或 Provider 的持久化逻辑。
+- Windows 隔离构建中的三个常规视觉套件均通过：日期／时间 158 张、工作台 70 张、设置／导入流程 120 张，共 348 张截图。已抽查截图同款顶栏／当天安排、循环边界、Windows 窄窗与 2 倍字号、手机大字号、设置和导入页；手机／平板为 Windows 上的布局模拟，不是移动设备实机结果。
+- 额外启用原生指针检查时，测试窗口未获得前台焦点，安全校验在发送指针输入前停止；该次检查未通过，不计入常规视觉套件的通过结果。鼠标拖动、滚轮、触控板事件及后台滚动隔离已有组件回归；操作系统级拖拽与真实触控板手感仍需前台实机补验。未关闭用户应用，也未绕过前台保护。
+- 证据：.scratch/surface-wheel-full-final.log、surface-wheel-analyze-final.log、surface-wheel-coverage-final.log、surface-wheel-date-visual.log、surface-wheel-workbench-visual.log、surface-wheel-pages-visual.log；原生检查限制见 surface-wheel-native-input.log。截图清单位于 .scratch/surface-wheel-visual/{date,workbench,pages}/manifest.json，并排预览为 .scratch/surface-wheel-visual/preview.png。

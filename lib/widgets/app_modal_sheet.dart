@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_motion.dart';
@@ -41,7 +43,10 @@ Future<T?> showAppModalSheet<T>({
     clipBehavior: Clip.antiAlias,
     sheetAnimationStyle: SkedMotionPolicy.of(context)
         .routeStyle(AppMotion.sheetAnimationStyle),
-    builder: (_) => UiCommandFeedbackHost(builder: builder),
+    builder: (_) => SkedSurface(
+      role: SkedSurfaceRole.content,
+      child: UiCommandFeedbackHost(builder: builder),
+    ),
   );
 }
 

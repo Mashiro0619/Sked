@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -139,7 +141,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
     final header = SizedBox(
       height: m.toolbarHeight,
       child: Material(
-        color: colors.surfaceContainerLow,
+        color: SkedSurfaceRole.frame.resolve(colors),
         shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
         child: DesktopDragRegion(
           child: Padding(
@@ -287,9 +289,9 @@ class WorkspaceResourcePanel extends StatelessWidget {
                     onTap: enabled ? onSettings : null,
                   ),
           );
-    return Material(
+    return SkedSurface(
       key: const ValueKey('workspace-resource-panel'),
-      color: colors.surfaceContainerLow,
+      role: SkedSurfaceRole.frame,
       child: LayoutBuilder(
         builder: (context, c) {
           if (c.maxHeight < m.toolbarHeight + 200 * m.textScale) {

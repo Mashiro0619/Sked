@@ -40,8 +40,8 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           builder: (_) => Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
-              child: Material(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              child: SkedSurface(
+                role: SkedSurfaceRole.content,
                 shape: skedShapeSchemeOf(context).dialog,
                 clipBehavior: Clip.antiAlias,
                 child: panel,

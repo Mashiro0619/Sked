@@ -83,7 +83,7 @@ void main() {
       ];
       final minutes = find.descendant(
         of: find.byKey(const ValueKey('sked-time-minutes')),
-        matching: find.byType(ListView),
+        matching: find.byType(ListWheelScrollView),
       );
       await t.sendEventToBinding(
         PointerScrollEvent(

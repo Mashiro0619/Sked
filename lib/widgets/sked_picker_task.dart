@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -217,13 +219,16 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
           fullscreen: fullscreen,
           width: math.min(bounds.width, preferred.width),
         ),
-        child: Material(
+        child: SkedSurface(
           key: widget.surfaceKey,
-          color: Theme.of(context).colorScheme.surface,
+          role: SkedSurfaceRole.content,
           elevation: fullscreen ? 0 : 8,
           clipBehavior: Clip.antiAlias,
           borderRadius: BorderRadius.circular(fullscreen ? 0 : 12),
-          child: widget.builder(context, _finish, () => _ownerAvailable),
+          child: Builder(
+            builder: (context) =>
+                widget.builder(context, _finish, () => _ownerAvailable),
+          ),
         ),
       );
     },

@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:provider/provider.dart';
@@ -67,8 +69,7 @@ class WorkspacePaneController extends ChangeNotifier {
       });
       final route = navigator.push<T>(
         MaterialPageRoute<T>(
-          builder: (context) => Material(
-            color: Theme.of(context).colorScheme.surface,
+          builder: (context) => SkedSurface(
             child: WorkspaceTaskScope(
               child: UiCommandFeedbackHost(builder: builder),
             ),
@@ -300,9 +301,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           // Native controls occupy this row, not a second application title bar.
           final pointer = WorkbenchLayoutPolicy.pointerLayout(context);
           final resizeExtent = pointer ? 9.0 : 48.0;
+          final metrics = WorkbenchChromeMetrics.of(context);
           final captionInset = DesktopWindowBridge.instance.available
-              ? WorkbenchChromeMetrics.of(context).toolbarHeight
+              ? metrics.toolbarHeight
               : 0.0;
+          final captionWidth = metrics.captionWidth;
           Future<void> dismiss() async {
             if (assistantVisible && (!detailVisible || _assistantLast)) {
               await _setAssistantOpen(false);
@@ -393,14 +396,16 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                         ),
                       ),
                       if (captionInset > 0 &&
-                          assistantSpace + detailSpace > 138)
+                          assistantSpace + detailSpace > captionWidth)
                         PositionedDirectional(
-                          end: 138,
+                          end: captionWidth,
                           top: 0,
-                          width: assistantSpace + detailSpace - 138,
+                          width: assistantSpace + detailSpace - captionWidth,
                           height: captionInset,
-                          child: const DesktopDragRegion(
-                            child: SizedBox.expand(),
+                          child: const SkedSurface(
+                            key: ValueKey('workspace-caption-fill'),
+                            role: SkedSurfaceRole.frame,
+                            child: DesktopDragRegion(child: SizedBox.expand()),
                           ),
                         ),
                       if (policy.supporting)
@@ -426,6 +431,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 _assistantLast = false;
                               },
                               child: _PaneSurface(
+                                role: policy.dockedDetail
+                                    ? SkedSurfaceRole.frame
+                                    : SkedSurfaceRole.content,
                                 child: Column(
                                   children: [
                                     Align(
@@ -486,6 +494,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 _assistantLast = true;
                               },
                               child: _PaneSurface(
+                                role: policy.dockedAssistant
+                                    ? SkedSurfaceRole.frame
+                                    : SkedSurfaceRole.content,
                                 child: !previewEnabled
                                     ? const SizedBox.shrink()
                                     : AssistantPreviewPane(
@@ -550,8 +561,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
 }
 
 class _PaneSurface extends StatelessWidget {
-  const _PaneSurface({required this.child});
+  const _PaneSurface({required this.child, this.role = SkedSurfaceRole.frame});
   final Widget child;
+  final SkedSurfaceRole role;
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
@@ -559,7 +571,7 @@ class _PaneSurface extends StatelessWidget {
         start: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
     ),
-    child: Material(color: Theme.of(context).colorScheme.surface, child: child),
+    child: SkedSurface(role: role, child: child),
   );
 }
 

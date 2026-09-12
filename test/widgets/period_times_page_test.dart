@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import 'package:sked/widgets/sked_time_picker.dart';
 
 import 'dart:async';
@@ -180,7 +182,7 @@ Future<void> _enterTimePickerValue(
   expect(fields, findsNWidgets(2));
   await tester.enterText(fields.at(0), hour);
   await tester.enterText(fields.at(1), minute);
-  await tester.pump();
+  await tester.pumpAndSettle();
   await tester.ensureVisible(find.byKey(const ValueKey('sked-time-confirm')));
   await tester.tap(
     find.descendant(
@@ -197,7 +199,47 @@ PeriodTimeSet _storedDefaultPeriodTimeSet(_MemoryTimetableStorage storage) {
   );
 }
 
+Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
+  final wheel = find.byKey(const ValueKey('sked-time-minute-wheel'));
+  final extent = tester.widget<ListWheelScrollView>(wheel).itemExtent;
+  await tester.sendEventToBinding(
+    PointerScrollEvent(
+      kind: PointerDeviceKind.mouse,
+      position: tester.getCenter(wheel),
+      scrollDelta: Offset(0, rows * extent),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets(
+    'wheel draft is not persisted before confirmation and duplicate confirm saves once',
+    (tester) async {
+      final storage = _MemoryTimetableStorage(_initialData());
+      final provider = await _createProvider(storage: storage);
+      await _pumpPeriodTimesPage(tester, provider);
+      final end = find.byKey(const ValueKey('period-end-time-action')).first;
+      await tester.ensureVisible(end);
+      await tester.tap(end);
+      await tester.pumpAndSettle();
+      await _scrollTimeMinute(tester, 1);
+      expect(storage.saveCount, 0);
+      final confirm = tester
+          .widget<FilledButton>(find.byKey(const ValueKey('sked-time-confirm')))
+          .onPressed!;
+      confirm();
+      confirm();
+      await tester.pumpAndSettle();
+      expect(storage.saveCount, 1);
+      expect(
+        _storedDefaultPeriodTimeSet(storage).periodTimes.first.endMinutes,
+        526,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('uses readable chronological table rows on wide tablets', (
     tester,
   ) async {

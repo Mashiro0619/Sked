@@ -504,7 +504,7 @@ class _ImportFormSummary extends StatelessWidget {
               );
 
         return Material(
-          color: colors.surfaceContainerLow,
+          color: Colors.transparent,
           shape: shape,
           clipBehavior: Clip.antiAlias,
           child: Column(

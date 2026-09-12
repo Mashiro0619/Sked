@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'desktop_window_host.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -211,7 +213,12 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                               ),
                             ),
                           ),
-                          Expanded(child: _navigation(sidebar: true)),
+                          Expanded(
+                            child: SkedSurface(
+                              role: SkedSurfaceRole.frame,
+                              child: _navigation(sidebar: true),
+                            ),
+                          ),
                         ],
                       ),
                     ),

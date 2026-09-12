@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
@@ -337,9 +339,7 @@ class SettingsConnectedGroup extends StatelessWidget {
               ),
             ),
           Material(
-            color: WorkbenchChromeMetrics.of(context).desktop
-                ? Colors.transparent
-                : colors.surfaceContainerLow,
+            color: Colors.transparent,
             shape: WorkbenchChromeMetrics.of(context).desktop
                 ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
                 : shapes.container,
@@ -568,7 +568,7 @@ class SettingsListTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           decoration: ShapeDecoration(
-            color: colors.surfaceContainerLow,
+            color: SkedSurface.colorOf(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -751,7 +751,7 @@ class SettingsSwitchTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: Ink(
               decoration: ShapeDecoration(
-                color: colors.surfaceContainerLow,
+                color: SkedSurface.colorOf(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -1230,7 +1230,6 @@ class _SettingsToolbarNavigationEditorState
   }
 
   Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
-    final colors = Theme.of(context).colorScheme;
     final shape = skedShapeSchemeOf(context).container;
     final motion = SkedMotionPolicy.of(context);
     return AnimatedBuilder(
@@ -1248,7 +1247,7 @@ class _SettingsToolbarNavigationEditorState
           child: Transform.scale(
             scale: scale,
             child: Material(
-              color: colors.surfaceContainerLow,
+              color: SkedSurface.colorOf(context),
               shape: shape,
               clipBehavior: Clip.antiAlias,
               elevation: elevation,
@@ -1267,7 +1266,7 @@ class _SettingsToolbarNavigationEditorState
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Material(
-        color: colors.surfaceContainerLow,
+        color: SkedSurface.colorOf(context),
         shape: shape,
         clipBehavior: Clip.antiAlias,
         // This list is shrink-wrapped and cannot scroll independently. The
@@ -1427,7 +1426,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Ink(
         decoration: ShapeDecoration(
-          color: colors.surfaceContainerLow,
+          color: SkedSurface.colorOf(context),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),

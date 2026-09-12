@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../utils/calendar_timeline_layout.dart';
@@ -1155,8 +1157,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       startInclusive: date,
       endExclusive: addCalendarDays(date, 1),
     );
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
+    return SkedSurface(
+      key: const ValueKey('general-selected-day-agenda'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

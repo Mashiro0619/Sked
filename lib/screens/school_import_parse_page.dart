@@ -818,8 +818,6 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
   }
 
   Widget _buildDoneState(BuildContext context, AppLocalizations l10n) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final response = _response!;
     final timetable = response.timetable;
     final periodCount = timetable.periodTimeSet.periodTimes.length;
@@ -830,7 +828,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: colors.surfaceContainerLow,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -951,7 +949,7 @@ class _SchoolImportParsePageState extends State<SchoolImportParsePage>
                 ),
                 const SizedBox(height: 12),
                 Material(
-                  color: colors.surfaceContainerLow,
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                   clipBehavior: Clip.antiAlias,
                   child: Column(

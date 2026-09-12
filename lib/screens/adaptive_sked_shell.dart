@@ -1,3 +1,5 @@
+import '../theme/sked_surface.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -863,7 +865,7 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
       ],
     );
     return Material(
-      color: colors.surfaceContainer,
+      color: SkedSurfaceRole.frame.resolve(colors),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1210,8 +1212,8 @@ class _WorkspaceRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
+    return SkedSurface(
+      role: SkedSurfaceRole.frame,
       child: Stack(
         children: [
           SafeArea(

@@ -422,7 +422,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
 
     return Material(
-      color: colors.surfaceContainerLow,
+      color: Colors.transparent,
       shape: cardShape,
       clipBehavior: Clip.antiAlias,
       child: Padding(
