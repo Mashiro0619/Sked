@@ -1975,6 +1975,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Potrivește săptămâna pe ecran';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Afișează întreaga săptămână în aspectele compacte. Dezactivează pentru derulare orizontală. Intervalele personalizate de peste 7 zile rămân derulabile.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

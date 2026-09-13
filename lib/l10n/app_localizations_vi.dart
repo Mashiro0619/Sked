@@ -1966,6 +1966,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Vừa tuần với màn hình';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Hiển thị cả tuần trong bố cục nhỏ gọn. Tắt để cuộn ngang. Phạm vi tùy chỉnh trên 7 ngày vẫn cuộn ngang.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

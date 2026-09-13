@@ -17,6 +17,15 @@ class WorkbenchChromeMetrics {
     TargetPlatform.linux => true,
     _ => false,
   };
+
+  /// Compact touch tasks include a phone in landscape and a narrow tablet
+  /// window. A narrow desktop window retains pointer-oriented behavior.
+  static bool compactTouch(BuildContext context, {double? width}) {
+    final size = MediaQuery.sizeOf(context);
+    return !isDesktop(Theme.of(context).platform) &&
+        ((width ?? size.width) < 600 || size.shortestSide < 600);
+  }
+
   factory WorkbenchChromeMetrics.of(BuildContext context) =>
       WorkbenchChromeMetrics(
         desktop: isDesktop(Theme.of(context).platform),

@@ -229,144 +229,186 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
           ),
         },
         child: FocusTraversalGroup(
-          child: SingleChildScrollView(
-            key: const ValueKey('sked-time-picker-scroll'),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  m.timePickerDialHelpText,
-                  style: Theme.of(context).textTheme.titleMedium,
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              // An exceptionally short window may not fit even the footer.
+              // Retain one tree (and draft) while allowing that fallback to scroll.
+              primary: false,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: constraints.maxHeight.isFinite
+                      ? math.max(
+                          constraints.maxHeight,
+                          metrics.iconTarget + 100,
+                        )
+                      : double.infinity,
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: field(true)),
-                    const SizedBox(
-                      width: 12,
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text(':', textAlign: TextAlign.center),
-                      ),
-                    ),
-                    Expanded(child: field(false)),
-                  ],
-                ),
-                if (_value == null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        m.invalidTimeLabel,
-                        key: const ValueKey('sked-time-error'),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Flexible(
+                        child: SingleChildScrollView(
+                          key: const ValueKey('sked-time-picker-scroll'),
+                          primary: false,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                m.timePickerDialHelpText,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: field(true)),
+                                  const SizedBox(
+                                    width: 12,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        ':',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(child: field(false)),
+                                ],
+                              ),
+                              if (_value == null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Semantics(
+                                    liveRegion: true,
+                                    child: Text(
+                                      m.invalidTimeLabel,
+                                      key: const ValueKey('sked-time-error'),
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (!_use24!)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      for (final pm in [false, true])
+                                        ChoiceChip(
+                                          key: ValueKey(
+                                            pm
+                                                ? 'sked-time-pm'
+                                                : 'sked-time-am',
+                                          ),
+                                          label: Text(
+                                            pm
+                                                ? m.postMeridiemAbbreviation
+                                                : m.anteMeridiemAbbreviation,
+                                          ),
+                                          selected: _pm == pm,
+                                          onSelected: (_) {
+                                            if (_current) {
+                                              setState(() {
+                                                _pm = pm;
+                                                // Period selection never changes the displayed hour.
+                                                _hour =
+                                                    _hour % 12 + (pm ? 12 : 0);
+                                              });
+                                            }
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _TimeValueWheel(
+                                      key: _hourWheel,
+                                      label: m.timePickerHourLabel,
+                                      id: 'hour',
+                                      first: _use24! ? 0 : 1,
+                                      last: _use24! ? 23 : 12,
+                                      value: _lastDisplayHour,
+                                      inputRevision: _hourInputRevision,
+                                      onActivityChanged: (moving) {
+                                        if (hourRevision ==
+                                            _hourInputRevision) {
+                                          _activityChanged(true, moving);
+                                        }
+                                      },
+                                      rowHeight: rowHeight,
+                                      onSelected: (value) {
+                                        if (hourRevision ==
+                                            _hourInputRevision) {
+                                          _select(true, value);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _TimeValueWheel(
+                                      key: _minuteWheel,
+                                      label: m.timePickerMinuteLabel,
+                                      id: 'minute',
+                                      first: 0,
+                                      last: 59,
+                                      value: _minute,
+                                      inputRevision: _minuteInputRevision,
+                                      onActivityChanged: (moving) {
+                                        if (minuteRevision ==
+                                            _minuteInputRevision) {
+                                          _activityChanged(false, moving);
+                                        }
+                                      },
+                                      rowHeight: rowHeight,
+                                      onSelected: (value) {
+                                        if (minuteRevision ==
+                                            _minuteInputRevision) {
+                                          _select(false, value);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (!_use24!)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        for (final pm in [false, true])
-                          ChoiceChip(
-                            key: ValueKey(pm ? 'sked-time-pm' : 'sked-time-am'),
-                            label: Text(
-                              pm
-                                  ? m.postMeridiemAbbreviation
-                                  : m.anteMeridiemAbbreviation,
-                            ),
-                            selected: _pm == pm,
-                            onSelected: (_) {
-                              if (_current) {
-                                setState(() {
-                                  _pm = pm;
-                                  // Period selection never changes the displayed hour.
-                                  _hour = _hour % 12 + (pm ? 12 : 0);
-                                });
-                              }
-                            },
+                      const SizedBox(height: 12),
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 8,
+                        children: [
+                          TextButton(
+                            key: const ValueKey('sked-time-cancel'),
+                            onPressed: _cancel,
+                            child: Text(m.cancelButtonLabel),
                           ),
-                      ],
-                    ),
+                          FilledButton(
+                            key: const ValueKey('sked-time-confirm'),
+                            onPressed: _value != null && _current && _settled
+                                ? _submit
+                                : null,
+                            child: Text(m.okButtonLabel),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TimeValueWheel(
-                        key: _hourWheel,
-                        label: m.timePickerHourLabel,
-                        id: 'hour',
-                        first: _use24! ? 0 : 1,
-                        last: _use24! ? 23 : 12,
-                        value: _lastDisplayHour,
-                        inputRevision: _hourInputRevision,
-                        onActivityChanged: (moving) {
-                          if (hourRevision == _hourInputRevision) {
-                            _activityChanged(true, moving);
-                          }
-                        },
-                        rowHeight: rowHeight,
-                        onSelected: (value) {
-                          if (hourRevision == _hourInputRevision) {
-                            _select(true, value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _TimeValueWheel(
-                        key: _minuteWheel,
-                        label: m.timePickerMinuteLabel,
-                        id: 'minute',
-                        first: 0,
-                        last: 59,
-                        value: _minute,
-                        inputRevision: _minuteInputRevision,
-                        onActivityChanged: (moving) {
-                          if (minuteRevision == _minuteInputRevision) {
-                            _activityChanged(false, moving);
-                          }
-                        },
-                        rowHeight: rowHeight,
-                        onSelected: (value) {
-                          if (minuteRevision == _minuteInputRevision) {
-                            _select(false, value);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 8,
-                  children: [
-                    TextButton(
-                      key: const ValueKey('sked-time-cancel'),
-                      onPressed: _cancel,
-                      child: Text(m.cancelButtonLabel),
-                    ),
-                    FilledButton(
-                      key: const ValueKey('sked-time-confirm'),
-                      onPressed: _value != null && _current && _settled
-                          ? _submit
-                          : null,
-                      child: Text(m.okButtonLabel),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),

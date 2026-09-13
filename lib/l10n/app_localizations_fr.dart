@@ -1989,6 +1989,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Adapter la semaine à l’écran';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Affiche toute la semaine dans les mises en page compactes. Désactivez pour défiler horizontalement. Les plages personnalisées de plus de 7 jours restent défilantes.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

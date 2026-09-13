@@ -469,10 +469,36 @@ class _TimelineTimeRuler extends StatelessWidget {
   });
   final int startHour, endHour;
   final double hourHeight, topOffset;
+
+  static TextStyle? _labelStyle(BuildContext context) =>
+      Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+      );
+
+  static double measuredWidth(BuildContext context) {
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    );
+    var width = 0.0;
+    // Measure every possible label, including the end-of-day tick, rather than
+    // reserving a fixed 64 dp gutter or clipping localized/scaled text.
+    for (var hour = 0; hour <= 24; hour++) {
+      painter.text = TextSpan(
+        text: '${hour.toString().padLeft(2, '0')}:00',
+        style: _labelStyle(context),
+      );
+      painter.layout();
+      width = math.max(width, painter.width);
+    }
+    painter.dispose();
+    return (width + 12).ceilToDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final timeLabelColor = theme.colorScheme.onSurfaceVariant;
     return Stack(
       children: [
         for (var hour = startHour; hour <= endHour; hour++)
@@ -498,10 +524,9 @@ class _TimelineTimeRuler extends StatelessWidget {
                 child: Text(
                   '${hour.toString().padLeft(2, '0')}:00',
                   textAlign: TextAlign.right,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: timeLabelColor,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: _labelStyle(context),
                 ),
               ),
             ),
@@ -610,6 +635,10 @@ class _OccurrenceCard extends StatelessWidget {
                         detailLines: occurrence.event.location.isEmpty ? 1 : 2,
                         textDirection: Directionality.of(context),
                         narrow: narrow,
+                        narrowLineLimit:
+                            WorkbenchChromeMetrics.compactTouch(context)
+                            ? 3
+                            : 10,
                       );
                       final titleWidget = Text(
                         titleText,
@@ -742,13 +771,16 @@ class _TimelineOccurrenceTitleLayout {
     required bool narrow,
     TextScaler textScaler = TextScaler.noScaling,
     int detailLines = 1,
+    int narrowLineLimit = 10,
   }) {
     final safeWidth = maxWidth.isFinite && maxWidth > 0 ? maxWidth : 1.0;
     final safeHeight = maxHeight.isFinite && maxHeight > 0 ? maxHeight : 28.0;
     final fontSize = style?.fontSize ?? 12.0;
     final lineHeight = textScaler.scale(fontSize) * (style?.height ?? 1.15);
     final possibleLines = math.max(1, (safeHeight / lineHeight).floor());
-    final cappedPossibleLines = possibleLines.clamp(1, narrow ? 10 : 5).toInt();
+    final cappedPossibleLines = possibleLines
+        .clamp(1, narrow ? narrowLineLimit : 5)
+        .toInt();
 
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),

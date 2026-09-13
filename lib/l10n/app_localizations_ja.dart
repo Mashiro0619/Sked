@@ -1917,6 +1917,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => '週表示を画面に合わせる';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'コンパクトなレイアウトで週全体を表示します。オフにすると横スクロールになります。7日を超えるカスタム範囲は引き続き横スクロールできます。';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

@@ -1950,6 +1950,13 @@ class AppLocalizationsTh extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'ปรับมุมมองสัปดาห์ให้พอดีหน้าจอ';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'แสดงทั้งสัปดาห์ในรูปแบบกะทัดรัด ปิดเพื่อเลื่อนแนวนอน ช่วงวันที่กำหนดเองที่เกิน 7 วันยังคงเลื่อนแนวนอนได้';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

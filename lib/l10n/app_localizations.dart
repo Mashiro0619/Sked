@@ -3610,6 +3610,18 @@ abstract class AppLocalizations {
   /// **'Overdue'**
   String get reminderOverdue;
 
+  /// No description provided for @generalFitWeekColumnsToWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit week view to screen'**
+  String get generalFitWeekColumnsToWidth;
+
+  /// No description provided for @generalFitWeekColumnsToWidthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the whole week in compact layouts. Turn off for horizontal scrolling. Custom ranges over 7 days still scroll.'**
+  String get generalFitWeekColumnsToWidthHint;
+
   /// No description provided for @showWeekends.
   ///
   /// In en, this message translates to:

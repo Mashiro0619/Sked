@@ -1963,6 +1963,13 @@ class AppLocalizationsCs extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Přizpůsobit týden obrazovce';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Zobrazí celý týden v kompaktním rozložení. Vypnutím povolíte vodorovné posouvání. Vlastní rozsahy nad 7 dní se posouvají i nadále.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

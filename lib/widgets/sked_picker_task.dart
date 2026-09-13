@@ -3,6 +3,7 @@ import '../theme/sked_surface.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -201,15 +202,19 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       final preferred = widget.preferredSize(context);
       final top =
           media.padding.top + (metrics.desktop ? metrics.toolbarHeight : 0);
-      final bottom = math.max(media.padding.bottom, media.viewInsets.bottom);
-      final availableHeight = math.max(
-        0.0,
-        constraints.maxHeight - top - bottom,
+      final bottomSheet = WorkbenchChromeMetrics.compactTouch(
+        context,
+        width: constraints.maxWidth,
       );
-      final fullscreen =
-          (!metrics.desktop && constraints.maxWidth < 600) ||
-          availableHeight < preferred.height;
-      final margin = fullscreen ? 0.0 : 8.0;
+      // A bottom task paints its own navigation-bar safe area. With an IME it
+      // ends above the keyboard instead; never reserve the same inset twice.
+      final safeBottom = bottomSheet && media.viewInsets.bottom == 0
+          ? media.viewPadding.bottom
+          : 0.0;
+      final bottom = bottomSheet
+          ? media.viewInsets.bottom
+          : math.max(media.padding.bottom, media.viewInsets.bottom);
+      final margin = bottomSheet ? 0.0 : 8.0;
       final bounds = Rect.fromLTRB(
         media.padding.left + margin,
         top + margin,
@@ -218,7 +223,7 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       );
       Rect? anchor;
       final anchorContext = widget.anchorContext;
-      if (metrics.desktop && !fullscreen && anchorContext?.mounted == true) {
+      if (metrics.desktop && anchorContext?.mounted == true) {
         final render = anchorContext!.findRenderObject();
         if (render is RenderBox && render.attached && render.hasSize) {
           final rect = render.localToGlobal(Offset.zero) & render.size;
@@ -229,18 +234,38 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
         delegate: _PickerTaskPosition(
           bounds: bounds,
           anchor: anchor,
-          fullscreen: fullscreen,
+          bottomSheet: bottomSheet,
           width: math.min(bounds.width, preferred.width),
         ),
-        child: SkedSurface(
-          key: widget.surfaceKey,
-          role: SkedSurfaceRole.content,
-          elevation: fullscreen ? 0 : 8,
-          clipBehavior: Clip.antiAlias,
-          borderRadius: BorderRadius.circular(fullscreen ? 0 : 12),
-          child: Builder(
-            builder: (context) =>
-                widget.builder(context, _finish, () => _ownerAvailable),
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            systemNavigationBarColor: Theme.of(context).colorScheme.surface,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarIconBrightness:
+                Theme.of(context).brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
+            systemNavigationBarContrastEnforced: false,
+          ),
+          child: SkedSurface(
+            key: widget.surfaceKey,
+            role: SkedSurfaceRole.content,
+            elevation: 8,
+            clipBehavior: Clip.antiAlias,
+            borderRadius: bottomSheet
+                ? const BorderRadius.vertical(top: Radius.circular(16))
+                : BorderRadius.circular(12),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: safeBottom),
+              child: MediaQuery.removePadding(
+                context: context,
+                removeBottom: true,
+                child: Builder(
+                  builder: (context) =>
+                      widget.builder(context, _finish, () => _ownerAvailable),
+                ),
+              ),
+            ),
           ),
         ),
       );
@@ -253,23 +278,25 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
     required this.bounds,
     required this.anchor,
     required this.width,
-    required this.fullscreen,
+    required this.bottomSheet,
   });
   final Rect bounds;
   final Rect? anchor;
   final double width;
-  final bool fullscreen;
+  final bool bottomSheet;
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints(
-        minWidth: fullscreen ? bounds.width : width,
-        maxWidth: fullscreen ? bounds.width : width,
-        minHeight: fullscreen ? bounds.height : 0,
+        minWidth: bottomSheet ? bounds.width : width,
+        maxWidth: bottomSheet ? bounds.width : width,
+        minHeight: 0,
         maxHeight: bounds.height,
       );
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    if (fullscreen) return bounds.topLeft;
+    if (bottomSheet) {
+      return Offset(bounds.left, bounds.bottom - childSize.height);
+    }
     var x = bounds.center.dx - childSize.width / 2;
     var y = bounds.center.dy - childSize.height / 2;
     if (anchor != null) {
@@ -296,5 +323,5 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
       bounds != oldDelegate.bounds ||
       anchor != oldDelegate.anchor ||
       width != oldDelegate.width ||
-      fullscreen != oldDelegate.fullscreen;
+      bottomSheet != oldDelegate.bottomSheet;
 }

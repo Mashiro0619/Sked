@@ -1966,6 +1966,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Sovita viikkonäkymä näytölle';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Näytä koko viikko tiiviissä asettelussa. Poista käytöstä vierittääksesi vaakasuunnassa. Yli 7 päivän mukautetut jaksot ovat edelleen vieritettäviä.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

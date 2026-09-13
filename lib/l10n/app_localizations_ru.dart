@@ -1977,6 +1977,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Вместить неделю на экране';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Показывать всю неделю в компактном режиме. Отключите для горизонтальной прокрутки. Произвольные диапазоны свыше 7 дней по-прежнему прокручиваются.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

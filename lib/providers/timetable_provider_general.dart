@@ -19,6 +19,8 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   String get generalToolbarWidthPolicy =>
       _appData.generalMode.toolbarWidthPolicy;
   String get generalDateLabelFormat => _appData.generalMode.dateLabelFormat;
+  bool get generalFitWeekColumnsToWidth =>
+      _appData.generalMode.fitWeekColumnsToWidth;
   bool get generalShowWeekends => _appData.generalMode.showWeekends;
   bool get generalShowLunarCalendar => _appData.generalMode.showLunarCalendar;
   int get generalDayStartHour => _appData.generalMode.dayStartHour;
@@ -198,6 +200,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     String? viewSwitchBehavior,
     String? toolbarWidthPolicy,
     String? dateLabelFormat,
+    bool? fitWeekColumnsToWidth,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -221,6 +224,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
         viewSwitchBehavior: viewSwitchBehavior,
         toolbarWidthPolicy: toolbarWidthPolicy,
         dateLabelFormat: dateLabelFormat,
+        fitWeekColumnsToWidth: fitWeekColumnsToWidth,
         showWeekends: showWeekends,
         showLunarCalendar: showLunarCalendar,
         dayStartHour: dayStartHour,

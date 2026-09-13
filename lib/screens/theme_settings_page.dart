@@ -1,5 +1,6 @@
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/workbench_form_row.dart';
 
 import 'dart:async';
@@ -172,43 +173,63 @@ class _AppearanceChoiceField extends StatelessWidget {
     required this.selected,
     required this.onSelectionChanged,
     this.choiceListKey,
+    this.enabled = true,
+    this.workspace,
   });
   final List<_SegmentOption> segments;
   final Set<String> selected;
   final ValueChanged<Set<String>> onSelectionChanged;
   final Key? choiceListKey;
+  final bool enabled;
+  final AppMode? workspace;
   @override
   Widget build(BuildContext context) => Align(
     alignment: AlignmentDirectional.centerStart,
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 320),
-      child: DropdownButtonFormField<String>(
-        key: choiceListKey,
-        initialValue: selected.first,
-        isExpanded: true,
-        itemHeight: null,
-        decoration: InputDecoration(
-          isDense: WorkbenchChromeMetrics.of(context).desktop,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 10,
-          ),
-        ),
-        items: [
-          for (final option in segments)
-            DropdownMenuItem(
-              value: option.value,
-              child: Text(
-                option.label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+      child: WorkbenchChromeMetrics.compactTouch(context)
+          ? SkedDropdownMenu<String>(
+              key: choiceListKey,
+              initialSelection: selected.first,
+              enabled: enabled,
+              workspace: workspace,
+              sessionKey: workspace,
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final option in segments)
+                  DropdownMenuEntry(value: option.value, label: option.label),
+              ],
+              onSelected: (value) {
+                if (value != null) onSelectionChanged({value});
+              },
+            )
+          : DropdownButtonFormField<String>(
+              key: choiceListKey,
+              initialValue: selected.first,
+              isExpanded: true,
+              itemHeight: null,
+              decoration: InputDecoration(
+                isDense: WorkbenchChromeMetrics.of(context).desktop,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
+              items: [
+                for (final option in segments)
+                  DropdownMenuItem(
+                    value: option.value,
+                    child: Text(
+                      option.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) onSelectionChanged({value});
+              },
             ),
-        ],
-        onChanged: (value) {
-          if (value != null) onSelectionChanged({value});
-        },
-      ),
     ),
   );
 }
@@ -302,6 +323,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           WorkbenchFormRow(
                             label: l10n.settingsSectionWorkspace,
                             child: _AppearanceChoiceField(
+                              enabled: !uiCommandBusy,
+                              workspace: provider.activeMode,
                               key: const ValueKey('theme-workspace-target'),
                               choiceListKey: const ValueKey(
                                 'theme-workspace-mode-choice-list',
@@ -329,6 +352,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         WorkbenchFormRow(
                           label: l10n.theme,
                           child: _AppearanceChoiceField(
+                            enabled: !uiCommandBusy,
+                            workspace: provider.activeMode,
                             key: const ValueKey('theme-brightness-choice'),
                             choiceListKey: const ValueKey(
                               'theme-brightness-mode-choice-list',
@@ -363,6 +388,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         WorkbenchFormRow(
                           label: l10n.themeColor,
                           child: _AppearanceChoiceField(
+                            enabled: !uiCommandBusy,
+                            workspace: provider.activeMode,
                             key: const ValueKey('theme-color-choice'),
                             choiceListKey: const ValueKey(
                               'theme-color-mode-choice-list',

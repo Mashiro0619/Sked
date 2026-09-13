@@ -1961,6 +1961,14 @@ class AppLocalizationsNl extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth =>
+      'Weekweergave aan scherm aanpassen';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Toon de hele week in compacte lay-outs. Schakel uit om horizontaal te scrollen. Aangepaste perioden van meer dan 7 dagen blijven scrollbaar.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

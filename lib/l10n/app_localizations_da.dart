@@ -1957,6 +1957,13 @@ class AppLocalizationsDa extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Tilpas ugevisning til skærmen';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Vis hele ugen i kompakte layouts. Slå fra for vandret rulning. Selvvalgte intervaller over 7 dage ruller stadig.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

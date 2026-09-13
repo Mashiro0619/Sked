@@ -1956,6 +1956,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Fit week view to screen';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Show the whole week in compact layouts. Turn off for horizontal scrolling. Custom ranges over 7 days still scroll.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

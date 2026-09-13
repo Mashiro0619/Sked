@@ -40,6 +40,7 @@ class _ReminderStrip extends StatefulWidget {
     required this.onOccurrenceTap,
     required this.pane,
     this.listMode = false,
+    this.actionBuilder,
   });
 
   final TimetableProvider provider;
@@ -48,6 +49,7 @@ class _ReminderStrip extends StatefulWidget {
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final WorkspacePaneController pane;
   final bool listMode;
+  final Widget Function(BuildContext, int, VoidCallback?)? actionBuilder;
 
   @override
   State<_ReminderStrip> createState() => _ReminderStripState();
@@ -163,28 +165,32 @@ class _ReminderStripState extends State<_ReminderStrip>
     );
     final l = AppLocalizations.of(context);
     if (!widget.listMode) {
+      final VoidCallback? openReminders = !widget.active || _listOpen
+          ? null
+          : () async {
+              setState(() => _listOpen = true);
+              try {
+                await widget.pane.show<void>(
+                  (context) => _ReminderStrip(
+                    provider: widget.provider,
+                    filter: widget.filter,
+                    active: true,
+                    pane: widget.pane,
+                    listMode: true,
+                    onOccurrenceTap: widget.onOccurrenceTap,
+                  ),
+                );
+              } finally {
+                if (mounted) setState(() => _listOpen = false);
+              }
+            };
+      if (widget.actionBuilder case final builder?) {
+        return builder(context, items.length, openReminders);
+      }
       return IconButton(
         key: const ValueKey('general-reminders-action'),
         tooltip: l.reminder,
-        onPressed: !widget.active || _listOpen
-            ? null
-            : () async {
-                setState(() => _listOpen = true);
-                try {
-                  await widget.pane.show<void>(
-                    (context) => _ReminderStrip(
-                      provider: widget.provider,
-                      filter: widget.filter,
-                      active: true,
-                      pane: widget.pane,
-                      listMode: true,
-                      onOccurrenceTap: widget.onOccurrenceTap,
-                    ),
-                  );
-                } finally {
-                  if (mounted) setState(() => _listOpen = false);
-                }
-              },
+        onPressed: openReminders,
         icon: Badge(
           isLabelVisible: items.isNotEmpty,
           label: Text('${items.length}'),

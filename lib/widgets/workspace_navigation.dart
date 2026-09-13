@@ -9,6 +9,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../l10n/app_localizations.dart';
 import 'ui_command.dart';
+import 'sked_popup_menu.dart';
 import 'app_layout_tokens.dart';
 import 'workbench_chrome_metrics.dart';
 import 'desktop_window_host.dart';
@@ -41,7 +42,7 @@ class WorkspaceNavigationScope extends InheritedWidget {
       onSelect != oldWidget.onSelect;
 }
 
-void _selectWorkspace(BuildContext context, AppMode mode) {
+void selectWorkspace(BuildContext context, AppMode mode) {
   final navigation = WorkspaceNavigationScope.maybeOf(context);
   if (navigation != null) {
     if (navigation.enabled) navigation.onSelect(mode);
@@ -64,11 +65,45 @@ class WorkspaceModeMenu extends StatelessWidget {
     final provider = context.watch<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
     if (!provider.hasMultipleWorkspaces) return const SizedBox.shrink();
+    if (WorkbenchChromeMetrics.compactTouch(context)) {
+      return SkedPopupMenuButton<AppMode>(
+        tooltip: l10n.settingsSectionWorkspace,
+        icon: const Icon(Icons.swap_horiz),
+        enabled: WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true,
+        onSelected: (mode) {
+          if (context.mounted && provider.isWorkspaceEnabled(mode)) {
+            selectWorkspace(context, mode);
+          }
+        },
+        itemBuilder: (_) => [
+          for (final mode in provider.enabledWorkspaces)
+            SkedPopupMenuItem<AppMode>(
+              value: mode,
+              child: Row(
+                children: [
+                  Icon(
+                    provider.activeMode == mode ? Icons.check : null,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      mode == AppMode.student
+                          ? l10n.studentTimetable
+                          : l10n.generalSchedule,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
     return PopupMenuButton<AppMode>(
       tooltip: l10n.settingsSectionWorkspace,
       icon: const Icon(Icons.swap_horiz),
       enabled: WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true,
-      onSelected: (mode) => _selectWorkspace(context, mode),
+      onSelected: (mode) => selectWorkspace(context, mode),
       itemBuilder: (_) => [
         for (final mode in provider.enabledWorkspaces)
           CheckedPopupMenuItem(
@@ -194,7 +229,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
                         ? l.studentTimetable
                         : l.generalSchedule,
                     onPressed: enabled
-                        ? () => _selectWorkspace(context, mode)
+                        ? () => selectWorkspace(context, mode)
                         : null,
                     icon: Icon(
                       mode == AppMode.student
@@ -227,7 +262,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     onTap: enabled
-                        ? () => _selectWorkspace(context, mode)
+                        ? () => selectWorkspace(context, mode)
                         : null,
                   ),
           ),

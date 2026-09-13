@@ -40,16 +40,15 @@ class WorkspaceTaskDismissIntent extends Intent {
 class WorkspacePaneController extends ChangeNotifier {
   final navigatorKey = GlobalKey<NavigatorState>();
   final focusScope = FocusScopeNode(debugLabel: 'Workspace inspector');
-  int _depth = 0;
-  final Map<Object, String?> _selections = {};
-  final Map<Object, bool> _dismissible = {};
-  bool get dismissOnCanvasTap => _dismissible.values.lastOrNull ?? false;
-  String? get selectedId =>
-      _selections.isEmpty ? null : _selections.values.last;
+  final List<_WorkspaceTaskRoute> _tasks = [];
   bool _closing = false;
   final _disposedSignal = Completer<void>();
   bool _disposed = false;
-  bool get isOpen => _depth > 0;
+  bool get isOpen => _tasks.isNotEmpty;
+  bool get hasPaneTasks => _tasks.any((task) => !task.modal);
+  bool get hasModalTasks => _tasks.any((task) => task.modal);
+  bool get dismissOnCanvasTap => _tasks.lastOrNull?.dismissible ?? false;
+  String? get selectedId => _tasks.lastOrNull?.selectionId;
 
   Future<T?> show<T>(
     WidgetBuilder builder, {
@@ -58,41 +57,71 @@ class WorkspacePaneController extends ChangeNotifier {
   }) async {
     final navigator = navigatorKey.currentState;
     if (navigator == null || _disposed) return null;
-    final token = Object();
-    _selections[token] = selectionId;
-    _dismissible[token] = dismissOnCanvasTap;
-    _depth++;
-    notifyListeners();
-    try {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_disposed && isOpen) focusScope.requestFocus();
-      });
-      final route = navigator.push<T>(
-        MaterialPageRoute<T>(
-          builder: (context) => SkedSurface(
-            child: WorkspaceTaskScope(
-              child: UiCommandFeedbackHost(builder: builder),
-            ),
+    return _showRoute<T>(
+      navigator,
+      MaterialPageRoute<T>(
+        builder: (context) => SkedSurface(
+          child: WorkspaceTaskScope(
+            child: UiCommandFeedbackHost(builder: builder),
           ),
         ),
-      );
+      ),
+      modal: false,
+      selectionId: selectionId,
+      dismissible: dismissOnCanvasTap,
+    );
+  }
+
+  /// Tracks a phone task without mounting the desktop inspector behind it.
+  /// The route is constructed by the adaptive sheet host, before it is pushed.
+  Future<T?> showModal<T>(
+    NavigatorState navigator,
+    Route<T> route, {
+    String? selectionId,
+    bool dismissible = true,
+  }) => _showRoute<T>(
+    navigator,
+    route,
+    modal: true,
+    selectionId: selectionId,
+    dismissible: dismissible,
+  );
+
+  Future<T?> _showRoute<T>(
+    NavigatorState navigator,
+    Route<T> route, {
+    required bool modal,
+    required String? selectionId,
+    required bool dismissible,
+  }) async {
+    if (_disposed || !navigator.mounted) return null;
+    final task = _WorkspaceTaskRoute(route, modal, selectionId, dismissible);
+    _tasks.add(task);
+    notifyListeners();
+    try {
+      if (!modal) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_disposed && hasPaneTasks) focusScope.requestFocus();
+        });
+      }
       return await Future.any<T?>([
-        route,
+        navigator.push<T>(route),
         _disposedSignal.future.then((_) => null),
       ]);
     } finally {
-      _selections.remove(token);
-      _dismissible.remove(token);
-      _depth--;
+      _tasks.remove(task);
       if (!_disposed) notifyListeners();
     }
   }
 
   Future<void> close() async {
     if (_closing) return;
+    // Never pop a picker or confirmation stacked above the requested task.
+    final route = _tasks.lastOrNull?.route;
+    if (route == null || !route.isCurrent) return;
     _closing = true;
     try {
-      await navigatorKey.currentState?.maybePop();
+      await route.navigator?.maybePop();
     } finally {
       _closing = false;
     }
@@ -101,10 +130,33 @@ class WorkspacePaneController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    final modalRoutes = [
+      for (final task in _tasks)
+        if (task.modal) task.route,
+    ];
     _disposedSignal.complete();
+    // Disposal may occur while Navigator is building. Retire only our routes,
+    // not another task or a selector which happens to be current at that time.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final route in modalRoutes) {
+        if (route.isActive) route.navigator?.removeRoute(route);
+      }
+    });
     focusScope.dispose();
     super.dispose();
   }
+}
+
+class _WorkspaceTaskRoute {
+  const _WorkspaceTaskRoute(
+    this.route,
+    this.modal,
+    this.selectionId,
+    this.dismissible,
+  );
+  final Route<dynamic> route;
+  final bool modal, dismissible;
+  final String? selectionId;
 }
 
 typedef WorkspaceLayout = WorkbenchLayoutPolicy;
@@ -228,11 +280,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   }
 
   void _detailChanged() {
-    if (widget.controller.isOpen &&
+    if (widget.controller.hasPaneTasks &&
         (!_wasDetailOpen || widget.controller.selectedId != _selection)) {
       _assistantLast = false;
     }
-    _wasDetailOpen = widget.controller.isOpen;
+    _wasDetailOpen = widget.controller.hasPaneTasks;
     _selection = widget.controller.selectedId;
   }
 
@@ -273,7 +325,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final policy = WorkspaceLayout.resolve(
             constraints.maxWidth,
             MediaQuery.textScalerOf(context).scale(14) / 14,
-            detailOpen: controller.isOpen,
+            detailOpen: controller.hasPaneTasks,
             hasSupporting: widget.supporting != null,
             assistantOpen: assistantOpen,
             pointer: WorkbenchLayoutPolicy.pointerLayout(context),
@@ -284,11 +336,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 widget.resourcesCollapsed || constraints.maxHeight < 480,
           );
           final assistantOverlay = assistantOpen && !policy.dockedAssistant;
-          final detailOverlay = controller.isOpen && !policy.dockedDetail;
+          final detailOverlay = controller.hasPaneTasks && !policy.dockedDetail;
           final assistantVisible =
               assistantOpen && (!detailOverlay || _assistantLast);
           final detailVisible =
-              controller.isOpen && (!assistantOverlay || !_assistantLast);
+              controller.hasPaneTasks && (!assistantOverlay || !_assistantLast);
           final obscured =
               (assistantOverlay && assistantVisible) ||
               (detailOverlay && detailVisible);
@@ -320,7 +372,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             interactive: _developerUi?.busy != true,
             onToggle: () => unawaited(_setAssistantOpen(!_assistant.isOpen)),
             child: PopScope(
-              canPop: !active || (!controller.isOpen && !assistantOpen),
+              canPop: !active || (!controller.hasPaneTasks && !assistantOpen),
               onPopInvokedWithResult: (didPop, _) {
                 if (!didPop && active) unawaited(dismiss());
               },
@@ -379,7 +431,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                         behavior: HitTestBehavior.translucent,
                                         onTap:
                                             active &&
-                                                controller.isOpen &&
+                                                controller.hasPaneTasks &&
                                                 controller.dismissOnCanvasTap
                                             ? () =>
                                                   unawaited(controller.close())

@@ -23,6 +23,7 @@ import '../providers/timetable_provider.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
+import '../widgets/assistant_pane.dart';
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/adaptive_collection_scaffold.dart';
 import '../widgets/editor_exit_guard.dart';
@@ -216,52 +217,65 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
+          final compactTouch = WorkbenchChromeMetrics.compactTouch(
+            context,
+            width: width,
+          );
           final toolbar = WorkbenchChromeMetrics.of(context).desktop
               ? _desktopToolbar(context, provider, snapshot, view)
               : SkedWorkspaceToolbar(
                   key: const ValueKey('general-workspace-toolbar'),
-                  actions: [
-                    _ReminderStrip(
-                      provider: provider,
-                      filter: filter,
-                      active: widget.active,
-                      pane: _pane,
-                      onOccurrenceTap: (item) =>
-                          _openDetails(context, provider, item),
-                    ),
-                    if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
-                    if (view != generalViewList)
-                      IconButton(
-                        key: const ValueKey('general-day-agenda-toggle'),
-                        tooltip: l10n.selectedDayAgenda,
-                        onPressed: widget.interactive
-                            ? () => _pane.show<void>(_buildSelectedDayAgenda)
-                            : null,
-                        icon: const Icon(Icons.view_agenda_outlined),
-                      ),
-                    const AssistantPaneToggle(),
-                    if (width >= 600 &&
-                        snapshot.showAddEventFab &&
-                        widget.active &&
-                        widget.interactive &&
-                        !_editorSheetOpen)
-                      Tooltip(
-                        message: l10n.addEvent,
-                        child: width >= 1000
-                            ? FilledButton.icon(
-                                onPressed: () => _openEditor(context, provider),
-                                icon: const Icon(Icons.add),
-                                label: Text(l10n.addEvent),
-                              )
-                            : IconButton.filled(
-                                onPressed: () => _openEditor(context, provider),
-                                icon: const Icon(Icons.add),
-                              ),
-                      ),
-                  ],
+                  actions: compactTouch
+                      ? const []
+                      : [
+                          _ReminderStrip(
+                            provider: provider,
+                            filter: filter,
+                            active: widget.active,
+                            pane: _pane,
+                            onOccurrenceTap: (item) =>
+                                _openDetails(context, provider, item),
+                          ),
+                          if (needsWorkspaceMenu(context))
+                            const WorkspaceModeMenu(),
+                          if (view != generalViewList)
+                            IconButton(
+                              key: const ValueKey('general-day-agenda-toggle'),
+                              tooltip: l10n.selectedDayAgenda,
+                              onPressed: widget.interactive
+                                  ? () => _pane.show<void>(
+                                      _buildSelectedDayAgenda,
+                                    )
+                                  : null,
+                              icon: const Icon(Icons.view_agenda_outlined),
+                            ),
+                          const AssistantPaneToggle(),
+                          if (width >= 600 &&
+                              snapshot.showAddEventFab &&
+                              widget.active &&
+                              widget.interactive &&
+                              !_editorSheetOpen)
+                            Tooltip(
+                              message: l10n.addEvent,
+                              child: width >= 1000
+                                  ? FilledButton.icon(
+                                      onPressed: () =>
+                                          _openEditor(context, provider),
+                                      icon: const Icon(Icons.add),
+                                      label: Text(l10n.addEvent),
+                                    )
+                                  : IconButton.filled(
+                                      onPressed: () =>
+                                          _openEditor(context, provider),
+                                      icon: const Icon(Icons.add),
+                                    ),
+                            ),
+                        ],
                   padding: EdgeInsets.symmetric(
                     horizontal: constraints.maxWidth < 360 ? 8 : 12,
-                    vertical: constraints.maxHeight < 600 ? 6 : 8,
+                    vertical: compactTouch
+                        ? 4
+                        : (constraints.maxHeight < 600 ? 6 : 8),
                   ),
                   title: _GeneralToolbarLayout(
                     categoryLabel: categoryLabel,
@@ -283,6 +297,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     hiddenNavigationIds: snapshot.hiddenToolbarNavigationIds,
                     hiddenItemsBehavior: snapshot.toolbarHiddenItemsBehavior,
                     moreButtonKey: _toolbarMoreButtonKey,
+                    compactMoreButton: compactTouch
+                        ? _compactMoreButton(
+                            context,
+                            provider,
+                            snapshot,
+                            filter,
+                            view,
+                          )
+                        : null,
                     selectedDate: selectedDate,
                     dateNavigationDirection: dateNavigationDirection,
                     interactive: widget.interactive && !_dateNavigationBusy,
@@ -998,6 +1021,167 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     return Scaffold(key: widget.scaffoldKey, body: framed);
   }
 
+  Widget _compactMoreButton(
+    BuildContext context,
+    TimetableProvider provider,
+    _GeneralHomeSnapshot snapshot,
+    _GeneralOccurrenceFilter filter,
+    String view,
+  ) {
+    final l = AppLocalizations.of(context);
+    final navigation = WorkspaceNavigationScope.maybeOf(context);
+    final showWorkspaceMenu = needsWorkspaceMenu(context);
+    final assistant = AssistantPaneScope.of(context);
+    final hidden = snapshot.hiddenToolbarNavigationIds;
+    // The adaptive menu is not the user-configurable hidden-shortcut menu.
+    // Always retain secondary tasks, but only restore hidden shortcuts when
+    // the user chose More and did not explicitly hide that overflow entry.
+    final revealHidden =
+        snapshot.toolbarHiddenItemsBehavior == toolbarHiddenItemsBehaviorMore &&
+        !hidden.contains('more');
+    final canNavigate = widget.interactive && !_dateNavigationBusy;
+    return _ReminderStrip(
+      provider: provider,
+      filter: filter,
+      active: widget.active && widget.interactive,
+      pane: _pane,
+      onOccurrenceTap: (item) => _openDetails(context, provider, item),
+      actionBuilder: (context, count, openReminders) => KeyedSubtree(
+        key: const ValueKey('general-toolbar-more-button'),
+        child: SkedPopupMenuButton<String>(
+          key: _toolbarMoreButtonKey,
+          tooltip: l.more,
+          enabled: widget.interactive,
+          icon: Badge(
+            isLabelVisible: count > 0,
+            label: Text('$count', semanticsLabel: '${l.reminder}: $count'),
+            child: const Icon(Icons.more_horiz),
+          ),
+          onSelected: (id) {
+            if (!mounted || !widget.interactive) return;
+            switch (id) {
+              case 'reminders':
+                openReminders?.call();
+              case 'agenda':
+                unawaited(_pane.show<void>(_buildSelectedDayAgenda));
+              case 'category':
+                unawaited(_openCalendarManager(context, provider));
+              case 'preferences':
+                unawaited(openWorkspacePreferences(context, AppMode.general));
+              case 'today':
+                unawaited(_goToToday(provider));
+              case 'date':
+                unawaited(
+                  _pickDate(
+                    context,
+                    provider,
+                    anchorContext: _toolbarMoreButtonKey.currentContext,
+                  ),
+                );
+              case 'view':
+                if (snapshot.viewSwitchBehavior ==
+                    generalViewSwitchBehaviorMenu) {
+                  unawaited(
+                    _showGeneralViewSelectionMenu(
+                      context: context,
+                      anchorContext:
+                          _toolbarMoreButtonKey.currentContext ?? context,
+                      view: view,
+                      interactive: canNavigate,
+                      onViewChanged: (value) =>
+                          unawaited(_changeView(provider, value)),
+                    ),
+                  );
+                } else {
+                  unawaited(
+                    _changeView(
+                      provider,
+                      _nextGeneralView(
+                        view,
+                        hasCustomRange: provider.customGeneralDateRange != null,
+                      ),
+                    ),
+                  );
+                }
+              case 'assistant':
+                if (assistant?.enabled == true && assistant!.interactive) {
+                  (assistant.onToggle ?? assistant.controller.toggle)();
+                }
+              case 'student':
+                selectWorkspace(context, AppMode.student);
+              case 'general':
+                selectWorkspace(context, AppMode.general);
+            }
+          },
+          itemBuilder: (_) => [
+            SkedPopupMenuItem<String>(
+              key: const ValueKey('general-reminders-action'),
+              value: 'reminders',
+              enabled: openReminders != null,
+              child: Text(count == 0 ? l.reminder : '${l.reminder} · $count'),
+            ),
+            if (view != generalViewList)
+              SkedPopupMenuItem<String>(
+                key: const ValueKey('general-day-agenda-toggle'),
+                value: 'agenda',
+                child: Text(l.selectedDayAgenda),
+              ),
+            if (!hidden.contains('date') || revealHidden)
+              SkedPopupMenuItem<String>(
+                value: 'today',
+                enabled: canNavigate,
+                child: Text(l.today),
+              ),
+            for (final id in snapshot.toolbarNavigationOrder)
+              if (revealHidden &&
+                  hidden.contains(id) &&
+                  (id == 'date' || id == 'view'))
+                SkedPopupMenuItem<String>(
+                  value: id,
+                  enabled: canNavigate && (id != 'date' || !_datePickerOpen),
+                  child: Text(
+                    id == 'date' ? l.pickDate : l.toolbarNavigationView,
+                  ),
+                ),
+            const SkedPopupMenuDivider<String>(),
+            SkedPopupMenuItem<String>(
+              key: const ValueKey('general-calendar-manager-action'),
+              value: 'category',
+              enabled: !_calendarManagerOpen,
+              child: Text(l.calendars),
+            ),
+            SkedPopupMenuItem<String>(
+              key: const ValueKey('workspace-actions-general'),
+              value: 'preferences',
+              enabled: navigation?.enabled ?? true,
+              child: Text(l.workspacePreferences),
+            ),
+            if (showWorkspaceMenu)
+              for (final mode in provider.enabledWorkspaces)
+                CheckedPopupMenuItem<String>(
+                  key: ValueKey('general-more-workspace-${mode.value}'),
+                  value: mode.value,
+                  checked: provider.activeMode == mode,
+                  enabled: navigation?.enabled ?? true,
+                  child: Text(
+                    mode == AppMode.student
+                        ? l.studentTimetable
+                        : l.generalSchedule,
+                  ),
+                ),
+            if (assistant?.enabled == true)
+              SkedPopupMenuItem<String>(
+                key: const ValueKey('assistant-toggle'),
+                value: 'assistant',
+                enabled: assistant!.interactive,
+                child: Text(l.assistantLayoutPreview),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _desktopToolbar(
     BuildContext context,
     TimetableProvider provider,
@@ -1239,6 +1423,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         provider,
         _clampDate(provider.selectedGeneralDate, firstDate, lastDate),
       );
+      final touchWeek =
+          WorkbenchChromeMetrics.compactTouch(context) &&
+          (_view ?? provider.generalDefaultView) == generalViewWeek;
       final picked = await showSkedDatePicker(
         context: context,
         anchorContext: anchorContext,
@@ -1246,10 +1433,16 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         dateLabelFormat: provider.generalDateLabelFormat,
         selectionUnit: _dateUnitForView(_view ?? provider.generalDefaultView),
         commitMode: DatePickerCommitMode.immediate,
+        // Taps keep ordinary week navigation; only an intentional drag
+        // publishes a custom range, using the same guarded save session.
+        rangeController: touchWeek ? _rangeSession(provider) : null,
+        rangeInteraction: touchWeek
+            ? DateRangeInteraction.dragOnly
+            : DateRangeInteraction.none,
         initialDate: initialDate,
         firstDate: firstDate,
         lastDate: lastDate,
-        selectableDayPredicate: provider.generalShowWeekends
+        selectableDayPredicate: touchWeek || provider.generalShowWeekends
             ? null
             : (date) => date.weekday <= DateTime.friday,
       );
@@ -1275,10 +1468,24 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     }
     _setUiBusyFlag(() => _editorSheetOpen = true);
     final canDismiss = provider.closeGeneralEventPopupOnOutsideTap;
+    final calendarId = event?.calendarId.isNotEmpty == true
+        ? event!.calendarId
+        : provider.activeGeneralSchedule.id;
     try {
       await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
         workspacePane: _pane,
+        workspace: AppMode.general,
+        isSessionCurrent:
+            (WorkbenchChromeMetrics.compactTouch(context) ||
+                _pane.hasModalTasks)
+            ? () => provider.generalSchedules.any(
+                (calendar) =>
+                    calendar.id == calendarId &&
+                    (event == null ||
+                        calendar.events.any((item) => item.id == event.id)),
+              )
+            : null,
         selectionId: event == null
             ? null
             : _pane.selectedId ?? 'event:${event.id}',
@@ -1289,7 +1496,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           initialEvent: event,
           initialDate: initialDate ?? provider.selectedGeneralDate,
           calendars: provider.generalSchedules,
-          activeCalendarId: provider.activeGeneralSchedule.id,
+          activeCalendarId: calendarId,
           defaultReminderMinutesBefore: event == null
               ? provider.generalDefaultMinutesBefore
               : null,
@@ -1322,6 +1529,16 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
+        workspace: AppMode.general,
+        isSessionCurrent:
+            (WorkbenchChromeMetrics.compactTouch(context) ||
+                _pane.hasModalTasks)
+            ? () => provider.generalSchedules.any(
+                (calendar) => calendar.events.any(
+                  (item) => item.id == occurrence.event.id,
+                ),
+              )
+            : null,
         selectionId: occurrence.occurrenceKey,
         isDismissible: canDismiss,
         enableDrag: false,
@@ -1404,6 +1621,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
+        workspace: AppMode.general,
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         maxWidth: appSheetWidthCompact,
@@ -1471,12 +1689,14 @@ class _GeneralCalendarSelector extends StatelessWidget {
     required this.disabled,
     required this.onPressed,
     required this.showIcon,
+    this.startAligned = false,
   });
 
   final String label;
   final bool disabled;
   final VoidCallback onPressed;
   final bool showIcon;
+  final bool startAligned;
 
   @override
   Widget build(BuildContext context) {
@@ -1508,7 +1728,10 @@ class _GeneralCalendarSelector extends StatelessWidget {
               children: [
                 // Center the label against the whole control.  A leading icon
                 // must not shift the visual center toward the trailing edge.
-                Center(
+                Align(
+                  alignment: startAligned
+                      ? AlignmentDirectional.centerStart
+                      : Alignment.center,
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: showIcon ? 28 : 0,
@@ -1517,7 +1740,9 @@ class _GeneralCalendarSelector extends StatelessWidget {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
+                      textAlign: startAligned
+                          ? TextAlign.start
+                          : TextAlign.center,
                     ),
                   ),
                 ),
@@ -1559,6 +1784,7 @@ class _GeneralToolbarLayout extends StatelessWidget {
     required this.hiddenNavigationIds,
     required this.hiddenItemsBehavior,
     required this.moreButtonKey,
+    this.compactMoreButton,
   });
 
   final String categoryLabel;
@@ -1583,9 +1809,200 @@ class _GeneralToolbarLayout extends StatelessWidget {
   final List<String> hiddenNavigationIds;
   final String hiddenItemsBehavior;
   final GlobalKey moreButtonKey;
+  final Widget? compactMoreButton;
+
+  Widget _compact(BuildContext context) {
+    final m = WorkbenchChromeMetrics.of(context);
+    final hidden = hiddenNavigationIds.toSet()..remove('settings');
+    final order = normalizeToolbarNavigationOrder(
+      navigationOrder,
+      knownIds: generalToolbarNavigationKnownIds,
+      defaultOrder: generalToolbarNavigationDefaultOrder,
+    );
+    final managementIds = [
+      for (final id in order)
+        if ((id == 'category' && !hidden.contains(id)) ||
+            (id == 'settings' && showSettingsAction) ||
+            id == 'more')
+          id,
+      if (!order.contains('more')) 'more',
+    ];
+    final dateIds = [
+      for (final id in order)
+        if ((id == 'date' || id == 'view') && !hidden.contains(id)) id,
+    ];
+    Widget navigation(bool date) => LayoutBuilder(
+      builder: (context, constraints) => _GeneralWorkspaceNavigation(
+        view: view,
+        selectedDate: selectedDate,
+        dateNavigationDirection: dateNavigationDirection,
+        interactive: interactive,
+        dateWidth: constraints.maxWidth,
+        dateLabelFormat: dateLabelFormat,
+        viewSwitchBehavior: viewSwitchBehavior,
+        onViewChanged: onViewChanged,
+        onToday: onToday,
+        onStep: onStep,
+        onPickDate: onPickDate,
+        viewSwitcherKey: date ? null : const ValueKey('general-view-switcher'),
+        includeDate: date,
+        includeView: !date,
+        compactTouch: true,
+      ),
+    );
+    final categorySelector = _GeneralCalendarSelector(
+      label: categoryLabel,
+      disabled: calendarDisabled,
+      onPressed: onOpenCalendar,
+      showIcon: false,
+      startAligned: true,
+    );
+    final actions = <String, Widget>{
+      'category': Expanded(child: categorySelector),
+      'settings': SizedBox.square(
+        dimension: m.iconTarget,
+        child: IconButton(
+          key: const ValueKey('general-settings-button'),
+          focusNode: settingsFocusNode,
+          onPressed: settingsAction,
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: settingsLabel,
+        ),
+      ),
+      'more': SizedBox.square(
+        dimension: m.iconTarget,
+        child: compactMoreButton,
+      ),
+      'date': Expanded(
+        key: const ValueKey('general-date-navigation'),
+        child: navigation(true),
+      ),
+      'view': SizedBox.square(
+        dimension: m.iconTarget,
+        child: navigation(false),
+      ),
+    };
+    Widget row(String name, List<String> ids, String flexibleId) =>
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: m.commandHeight),
+          child: Row(
+            key: ValueKey('general-compact-toolbar-$name-row'),
+            children: [
+              if (!ids.contains(flexibleId)) const Spacer(),
+              for (final id in ids) actions[id]!,
+            ],
+          ),
+        );
+    final content = IconButtonTheme(
+      data: IconButtonThemeData(style: m.iconStyle),
+      child: Column(
+        key: const ValueKey('general-compact-toolbar-rows'),
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          row('management', managementIds, 'category'),
+          if (dateIds.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            row('navigation', dateIds, 'date'),
+          ],
+        ],
+      ),
+    );
+    double textWidth(String label, TextStyle? style) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    final theme = Theme.of(context);
+    final categoryWidth = math.max(
+      48.0,
+      textWidth(categoryLabel, theme.textTheme.labelLarge) + 16,
+    );
+    final compactDate = _dateNavigationCandidates(
+      selectedDate,
+      view,
+      format: dateLabelFormat,
+      localeName: Localizations.localeOf(context).toLanguageTag(),
+      customRange: view == generalViewCustom
+          ? context.read<TimetableProvider>().customGeneralDateRange
+          : null,
+    ).last;
+    final dateWidth = math.max(
+      48.0,
+      textWidth(compactDate, theme.textTheme.titleSmall) +
+          _GeneralToolbarMetrics._dateButtonHorizontalPadding * 2 +
+          2,
+    );
+    final singleIds = [
+      for (final id in order)
+        if (managementIds.contains(id) || dateIds.contains(id)) id,
+      if (!order.contains('more')) 'more',
+    ];
+    final minimumWidth = singleIds.fold<double>(
+      0,
+      (width, id) =>
+          width +
+          switch (id) {
+            'category' => categoryWidth,
+            'date' => dateWidth,
+            _ => m.iconTarget,
+          },
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Compactness is earned by measuring the actual translated/scaled labels,
+        // never by shrinking touch targets or overwriting the saved item order.
+        final singleRow = minimumWidth <= constraints.maxWidth;
+        final single = ConstrainedBox(
+          constraints: BoxConstraints(minHeight: m.commandHeight),
+          child: Row(
+            key: const ValueKey('general-compact-toolbar-single-row'),
+            children: [
+              if (!singleIds.contains('category') &&
+                  !singleIds.contains('date'))
+                const Spacer(),
+              for (final id in singleIds)
+                if (id == 'category')
+                  Expanded(child: categorySelector)
+                else if (id == 'date')
+                  if (singleIds.contains('category'))
+                    SizedBox(width: dateWidth, child: navigation(true))
+                  else
+                    Expanded(child: navigation(true))
+                else
+                  actions[id]!,
+            ],
+          ),
+        );
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: constraints.maxWidth < 264
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: SizedBox(
+            width: math.max(264, constraints.maxWidth),
+            child: singleRow
+                ? IconButtonTheme(
+                    data: IconButtonThemeData(style: m.iconStyle),
+                    child: single,
+                  )
+                : content,
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (compactMoreButton != null) return _compact(context);
     final l10n = AppLocalizations.of(context);
     return SizedBox(
       width: double.infinity,
@@ -2038,6 +2455,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     this.viewSwitcherKey = const ValueKey('general-view-switcher'),
     this.includeDate = true,
     this.includeView = true,
+    this.compactTouch = false,
   });
 
   final String view;
@@ -2054,6 +2472,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
   final Key? viewSwitcherKey;
   final bool includeDate;
   final bool includeView;
+  final bool compactTouch;
 
   @override
   Widget build(BuildContext context) {
@@ -2089,8 +2508,10 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
     final textFactor = WorkbenchLayoutPolicy.textFactor(
       MediaQuery.textScalerOf(context).scale(14) / 14,
     );
-    final showSteps = includeDate && dateWidth >= 192 * textFactor;
-    final showToday = showSteps && dateWidth >= 320 * textFactor;
+    final showSteps =
+        includeDate && !compactTouch && dateWidth >= 192 * textFactor;
+    final showToday =
+        !compactTouch && showSteps && dateWidth >= 320 * textFactor;
     final labelWidth = dateWidth - (showSteps ? 96 : 0) - (showToday ? 48 : 0);
     final dateLabel = _dateNavigationLabelForWidth(
       context,
@@ -2130,6 +2551,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
                 horizontal: _GeneralToolbarMetrics._dateButtonHorizontalPadding,
               ),
               side: BorderSide.none,
+              alignment: compactTouch ? AlignmentDirectional.centerStart : null,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -2144,6 +2566,9 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
                   textDirection: TextDirection.ltr,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: compactTouch
+                        ? CrossAxisAlignment.start
+                        : CrossAxisAlignment.center,
                     children: [
                       if (view == generalViewCustom)
                         Text(
@@ -2416,6 +2841,7 @@ class _GeneralHomeSnapshot {
     required this.activeScheduleId,
     required this.schedules,
     required this.reminderAcknowledgements,
+    required this.fitWeekColumnsToWidth,
     required this.showWeekends,
     required this.showLunarCalendar,
     required this.dayStartHour,
@@ -2442,6 +2868,7 @@ class _GeneralHomeSnapshot {
       activeScheduleId: data.activeScheduleId,
       schedules: data.schedules,
       reminderAcknowledgements: data.reminderAcknowledgements,
+      fitWeekColumnsToWidth: data.fitWeekColumnsToWidth,
       showWeekends: data.showWeekends,
       showLunarCalendar: data.showLunarCalendar,
       dayStartHour: data.dayStartHour,
@@ -2466,6 +2893,7 @@ class _GeneralHomeSnapshot {
   final String activeScheduleId;
   final List<GeneralSchedule> schedules;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
+  final bool fitWeekColumnsToWidth;
   final bool showWeekends;
   final bool showLunarCalendar;
   final int dayStartHour;
@@ -2491,6 +2919,7 @@ class _GeneralHomeSnapshot {
         other.activeScheduleId == activeScheduleId &&
         identical(other.schedules, schedules) &&
         identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
+        other.fitWeekColumnsToWidth == fitWeekColumnsToWidth &&
         other.showWeekends == showWeekends &&
         other.showLunarCalendar == showLunarCalendar &&
         other.dayStartHour == dayStartHour &&
@@ -2524,6 +2953,7 @@ class _GeneralHomeSnapshot {
     activeScheduleId,
     identityHashCode(schedules),
     identityHashCode(reminderAcknowledgements),
+    fitWeekColumnsToWidth,
     showWeekends,
     showLunarCalendar,
     dayStartHour,

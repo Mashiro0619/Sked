@@ -1918,6 +1918,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => '주 보기를 화면에 맞추기';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      '작은 화면에서 한 주 전체를 표시합니다. 끄면 가로로 스크롤합니다. 7일을 초과하는 사용자 지정 범위는 계속 가로로 스크롤됩니다.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

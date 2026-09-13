@@ -77,6 +77,229 @@ Future<void> _tap(WidgetTester t, String key) async {
 }
 
 void main() {
+  for (final endpoints in [
+    (DateTime(2026, 9, 9), DateTime(2026, 9, 13)),
+    (DateTime(2026, 9, 20), DateTime(2026, 9, 7)),
+    (DateTime(2026, 9, 29), DateTime(2026, 10, 4)),
+    (DateTime(2026, 9, 9), DateTime(2026, 9, 9)),
+  ]) {
+    testWidgets(
+      'touch drag selects $endpoints on release without waiting for a long press',
+      (t) async {
+        _size(t, const Size(360, 850));
+        final results = <DateTimeRange?>[];
+        final writes = <GeneralDateRange>[];
+        final initial = GeneralDateRange(
+          DateTime(2026, 9, 1),
+          DateTime(2026, 9, 7),
+        );
+        final controller = SkedDateRangeController(
+          initialRange: initial,
+          onApply: (range) async {
+            writes.add(range);
+          },
+        );
+        addTearDown(controller.dispose);
+        await _open(t, results, controller: controller);
+        String key(DateTime day) =>
+            'sked-date-${day.toIso8601String().split('T').first}';
+        final origin = t.getCenter(_key(key(endpoints.$1)));
+        final gesture = await t.startGesture(
+          origin,
+          kind: PointerDeviceKind.touch,
+        );
+        await gesture.moveBy(const Offset(3, 0));
+        await t.pump();
+        expect(controller.dragging, isFalse);
+        await gesture.moveBy(const Offset(18, 0));
+        await t.pump();
+        await gesture.moveTo(t.getCenter(_key(key(endpoints.$2))));
+        await t.pump();
+        expect(controller.dragging, isTrue);
+        expect(controller.applied, initial);
+        expect(writes, isEmpty);
+        await gesture.up();
+        await t.pumpAndSettle();
+        expect(writes, hasLength(1));
+        expect(
+          writes.single.dayCount,
+          (endpoints.$2.difference(endpoints.$1).inDays).abs() + 1,
+        );
+        expect(results, hasLength(1));
+        expect(find.byType(SkedDatePicker), findsNothing);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  for (final interruption in [
+    'cancel',
+    'outside',
+    'multi',
+    'multi-outside',
+    'resize',
+  ]) {
+    testWidgets(
+      'touch drag $interruption never saves and leaves two-tap selection usable',
+      (t) async {
+        _size(t, const Size(360, 850));
+        final results = <DateTimeRange?>[];
+        final writes = <GeneralDateRange>[];
+        await _open(
+          t,
+          results,
+          save: (range) async {
+            writes.add(range);
+          },
+        );
+        final gesture = await t.startGesture(
+          t.getCenter(_key('sked-date-2026-09-09')),
+          pointer: 31,
+          kind: PointerDeviceKind.touch,
+        );
+        await gesture.moveBy(const Offset(25, 0));
+        await gesture.moveTo(t.getCenter(_key('sked-date-2026-09-13')));
+        await t.pump();
+        switch (interruption) {
+          case 'cancel':
+            await gesture.cancel();
+          case 'outside':
+            await gesture.moveTo(const Offset(4, 20));
+            await gesture.up();
+          case 'multi':
+          case 'multi-outside':
+            final second = await t.startGesture(
+              interruption == 'multi'
+                  ? t.getCenter(_key('sked-date-2026-09-10'))
+                  : t.getTopLeft(_key('sked-date-picker-surface')) +
+                        const Offset(28, 30),
+              pointer: 32,
+              kind: PointerDeviceKind.touch,
+            );
+            await t.pump();
+            await gesture.up();
+            await second.up();
+          case 'resize':
+            t.view.physicalSize = const Size(412, 850);
+            await t.pump();
+            await gesture.up();
+        }
+        await t.pumpAndSettle();
+        expect(writes, isEmpty);
+        expect(results, isEmpty);
+        await _tap(t, 'sked-date-2026-09-09');
+        await _tap(t, 'sked-date-2026-09-10');
+        expect(writes, hasLength(1));
+        expect(writes.single.dayCount, 2);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  testWidgets(
+    'touch drag over limit rejects and failed save retries exactly once',
+    (t) async {
+      _size(t, const Size(360, 850));
+      final results = <DateTimeRange?>[];
+      var writes = 0;
+      final gate = Completer<void>();
+      final initial = GeneralDateRange(
+        DateTime(2026, 9, 1),
+        DateTime(2026, 9, 7),
+      );
+      final controller = SkedDateRangeController(
+        initialRange: initial,
+        onApply: (_) async {
+          writes++;
+          if (writes == 1) {
+            await gate.future;
+            throw StateError('retry drag');
+          }
+        },
+      );
+      addTearDown(controller.dispose);
+      await _open(t, results, controller: controller);
+      Future<void> drag(String end) async {
+        final gesture = await t.startGesture(
+          t.getCenter(_key('sked-date-2026-09-01')),
+        );
+        await gesture.moveBy(const Offset(25, 0));
+        await gesture.moveTo(t.getCenter(_key(end)));
+        await gesture.up();
+        await t.pump();
+      }
+
+      await drag('sked-date-2026-09-15');
+      expect(writes, 0);
+      await drag('sked-date-2026-09-14');
+      expect(writes, 1);
+      expect(controller.saving, isTrue);
+      expect(controller.applied, initial);
+      await drag('sked-date-2026-09-10');
+      expect(writes, 1);
+      gate.complete();
+      await t.pumpAndSettle();
+      expect(controller.saveFailed, isTrue);
+      expect(controller.applied, initial);
+      await _tap(t, 'sked-date-range-retry');
+      expect(writes, 2);
+      expect(results, hasLength(1));
+      expect(controller.applied.dayCount, 14);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'weekday-space scrolls short calendar, valid cells instead drag a range',
+    (t) async {
+      _size(t, const Size(360, 340));
+      final results = <DateTimeRange?>[];
+      final writes = <GeneralDateRange>[];
+      await _open(
+        t,
+        results,
+        save: (r) async {
+          writes.add(r);
+        },
+      );
+      final scroll = t
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: _key('sked-date-picker-scroll'),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      final first = t.getRect(_key('sked-date-2026-09-01'));
+      await t.dragFrom(
+        Offset(first.center.dx, first.top - 24),
+        const Offset(0, -75),
+      );
+      await t.pumpAndSettle();
+      expect(scroll.pixels, greaterThan(0));
+      expect(writes, isEmpty);
+      scroll.jumpTo(0);
+      await t.pumpAndSettle();
+      final gesture = await t.startGesture(
+        t.getCenter(_key('sked-date-2026-09-01')),
+      );
+      await gesture.moveBy(const Offset(25, 0));
+      await gesture.moveTo(t.getCenter(_key('sked-date-2026-09-03')));
+      await t.pump();
+      expect(scroll.pixels, 0);
+      await gesture.up();
+      await t.pumpAndSettle();
+      expect(writes.single.dayCount, 3);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
   for (final days in [1, 5, 7, 14]) {
     testWidgets('two clicks apply an inclusive $days day range once', (
       t,

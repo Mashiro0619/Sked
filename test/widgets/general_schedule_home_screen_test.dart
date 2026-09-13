@@ -880,7 +880,27 @@ void main() {
             .evaluate()
             .isNotEmpty) {
           expect(date.top, greaterThanOrEqualTo(calendar.bottom));
-          expect(date.width, greaterThanOrEqualTo(200));
+          if (find
+              .byKey(const ValueKey('general-compact-toolbar-navigation-row'))
+              .evaluate()
+              .isNotEmpty) {
+            final navigation = tester.getRect(
+              find.byKey(const ValueKey('general-date-navigation')),
+            );
+            // Phone navigation uses the whole date slot; previous/next now
+            // belong to swiping or the picker, not two extra toolbar buttons.
+            expect(date.width, closeTo(navigation.width, 1));
+            expect(
+              find.byKey(const ValueKey('general-previous-period')),
+              findsNothing,
+            );
+            expect(
+              find.byKey(const ValueKey('general-next-period')),
+              findsNothing,
+            );
+          } else {
+            expect(date.width, greaterThanOrEqualTo(200));
+          }
         } else {
           expect(date.center.dy, closeTo(calendar.center.dy, 1));
         }
@@ -2049,7 +2069,12 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     final labelBox = tester.getRect(find.text('Jul').first);
-    expect(labelBox.center.dx, closeTo(32, 1));
+    final firstDay = tester.getRect(
+      find.byKey(
+        const ValueKey('general-week-day-header-2026-07-20T00:00:00.000'),
+      ),
+    );
+    expect(labelBox.center.dx, closeTo(firstDay.left / 2, 1));
   });
 
   testWidgets('week view keeps the final time label inside the grid', (
@@ -4630,7 +4655,7 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('general-toolbar-more-button')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('general-settings-button')),
@@ -4680,7 +4705,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('general-toolbar-more-button')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('general-calendar-selector')),
@@ -4688,6 +4713,14 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('general-settings-button')),
+      findsOneWidget,
+    );
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    expect(find.text('Pick date'), findsNothing);
+    expect(find.text('View switcher'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('general-reminders-action')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);

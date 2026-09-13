@@ -274,16 +274,16 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
               itemCount: widget.customRange == null ? null : _rangePageCount,
               physics:
                   widget.active &&
-                      constraints.maxWidth >=
-                          (64 +
-                                  (widget.customRange?.dayCount ??
-                                          (widget.provider.generalShowWeekends
-                                              ? 7
-                                              : 5)) *
-                                      96) *
-                              WorkbenchLayoutPolicy.textFactor(
-                                MediaQuery.textScalerOf(context).scale(14) / 14,
-                              )
+                      _TimelineMetrics.forViewport(
+                            context,
+                            constraints.maxWidth,
+                            dayCount:
+                                widget.customRange?.dayCount ??
+                                (widget.provider.generalShowWeekends ? 7 : 5),
+                            fitWeekColumnsToWidth:
+                                widget.provider.generalFitWeekColumnsToWidth,
+                          ).totalWidth <=
+                          constraints.maxWidth + .5
                   ? const PageScrollPhysics()
                   : const NeverScrollableScrollPhysics(),
               itemBuilder: (context, index) {
@@ -371,6 +371,7 @@ class _WeekTimelinePage extends StatelessWidget {
       gridMinutes: provider.generalTimeGridMinutes,
       hourHeight: provider.generalTimeGridHourHeight.toDouble(),
       showHeader: true,
+      fitWeekColumnsToWidth: provider.generalFitWeekColumnsToWidth,
       onDaySelected: onDaySelected,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
@@ -1073,6 +1074,7 @@ class _CalendarTimeline extends StatelessWidget {
     required this.gridMinutes,
     required this.hourHeight,
     required this.showHeader,
+    this.fitWeekColumnsToWidth = false,
     this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -1094,6 +1096,7 @@ class _CalendarTimeline extends StatelessWidget {
   final int gridMinutes;
   final double hourHeight;
   final bool showHeader;
+  final bool fitWeekColumnsToWidth;
   final ValueChanged<DateTime>? onDaySelected;
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
@@ -1136,254 +1139,287 @@ class _CalendarTimeline extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final metrics = _TimelineMetrics.fromWidth(
-          math.max(constraints.maxWidth, (64 + days.length * 96) * textFactor),
+        final metrics = _TimelineMetrics.forViewport(
+          context,
+          constraints.maxWidth,
           dayCount: days.length,
-          timeColumnWidth: 64 * textFactor,
+          fitWeekColumnsToWidth: fitWeekColumnsToWidth,
         );
 
-        return _CalendarHorizontalViewport(
-          viewportWidth: constraints.maxWidth,
-          contentWidth: metrics.totalWidth,
-          viewport: viewport,
-          active: viewportActive,
-          focusRevision: context.select<TimetableProvider, int>(
-            (p) => p.generalDateFocusRevision,
-          ),
-          selectedDay: days.indexWhere((day) => _sameDay(day, selectedDate)),
-          dayWidth: metrics.dayWidth,
-          railWidth: metrics.timeColumnWidth,
+        final compactTouch = WorkbenchChromeMetrics.compactTouch(
+          context,
+          width: constraints.maxWidth,
+        );
+        final headerHeight = !showHeader
+            ? 0.0
+            : compactTouch
+            ? _DayHeader.measuredHeight(context, metrics.dayWidth)
+            : (WorkbenchChromeMetrics.of(context).desktop ? 60 : 68) *
+                  textFactor;
+        final allDayBudget = hasAllDayOccurrences
+            ? math.max(
+                allDayLayout.laneHeightFor(context),
+                math.min(240 * textFactor, constraints.maxHeight * .38),
+              )
+            : 0.0;
+        final minimumHeight = headerHeight + allDayBudget + 1 + 96;
+        final short = compactTouch && constraints.maxHeight < minimumHeight;
+        // In very short landscape layouts, fixed date/all-day chrome must not
+        // overflow or leave a zero-height time viewport. Let that chrome scroll
+        // out of the way; the inner timeline keeps its minute-based position.
+        return SingleChildScrollView(
+          key: const ValueKey('general-timeline-height-scroll'),
+          primary: false,
+          physics: short
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
           child: SizedBox(
-            width: metrics.totalWidth,
-            child: Column(
-              children: [
-                if (showHeader)
-                  SizedBox(
-                    height:
-                        (WorkbenchChromeMetrics.of(context).desktop ? 60 : 68) *
-                        textFactor,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Row(
+            height: short ? minimumHeight : constraints.maxHeight,
+            child: _CalendarHorizontalViewport(
+              viewportWidth: constraints.maxWidth,
+              contentWidth: metrics.totalWidth,
+              viewport: viewport,
+              active: viewportActive,
+              focusRevision: context.select<TimetableProvider, int>(
+                (p) => p.generalDateFocusRevision,
+              ),
+              selectedDay: days.indexWhere(
+                (day) => _sameDay(day, selectedDate),
+              ),
+              dayWidth: metrics.dayWidth,
+              railWidth: metrics.timeColumnWidth,
+              child: SizedBox(
+                width: metrics.totalWidth,
+                child: Column(
+                  children: [
+                    if (showHeader)
+                      SizedBox(
+                        height: headerHeight,
+                        child: Stack(
+                          fit: StackFit.expand,
                           children: [
-                            SizedBox(width: metrics.timeColumnWidth),
-                            for (final day in days)
-                              _DayHeader(
-                                date: day,
-                                width: metrics.dayWidth,
-                                selected: _sameDay(day, selectedDate),
-                                onTap: onDaySelected == null
-                                    ? null
-                                    : () => onDaySelected!(day),
+                            Row(
+                              children: [
+                                SizedBox(width: metrics.timeColumnWidth),
+                                for (final day in days)
+                                  _DayHeader(
+                                    date: day,
+                                    width: metrics.dayWidth,
+                                    selected: _sameDay(day, selectedDate),
+                                    onTap: onDaySelected == null
+                                        ? null
+                                        : () => onDaySelected!(day),
+                                  ),
+                              ],
+                            ),
+                            _PinnedTimelineRail(
+                              width: metrics.timeColumnWidth,
+                              child: _MonthRail(
+                                date: selectedDate,
+                                width: metrics.timeColumnWidth,
                               ),
+                            ),
                           ],
                         ),
-                        _PinnedTimelineRail(
-                          width: metrics.timeColumnWidth,
-                          child: _MonthRail(
-                            date: selectedDate,
-                            width: metrics.timeColumnWidth,
+                      ),
+                    if (hasAllDayOccurrences)
+                      SkedAnimatedSize(
+                        key: const ValueKey('general-all-day-transition'),
+                        alignment: Alignment.topCenter,
+                        duration: motion.spatialAnimationsEnabled
+                            ? motion.effects(SkedMotionSpeed.standard)
+                            : Duration.zero,
+                        child: _AllDayTimeline(
+                          timeColumnWidth: metrics.timeColumnWidth,
+                          dayWidth: metrics.dayWidth,
+                          dayCount: days.length,
+                          layout: allDayLayout,
+                          label: l10n.allDay,
+                          maxHeight: math.min(
+                            240 * textFactor,
+                            constraints.maxHeight * .38,
+                          ),
+                          collapsed: isAllDayCollapsed,
+                          canCollapse: canCollapseAllDay,
+                          onToggleCollapsed: canCollapseAllDay
+                              ? () => onAllDayTimelineCollapsedChanged(
+                                  !isAllDayCollapsed,
+                                )
+                              : null,
+                          onOccurrenceTap: onOccurrenceTap,
+                          onCollapsedGroupTap: (group) =>
+                              onAllDayCollapsedGroupTap(
+                                group.occurrences,
+                                days[group.dayIndex],
+                              ),
+                        ),
+                      ),
+                    if (hasAllDayOccurrences)
+                      const Divider(height: 1)
+                    else if (showHeader)
+                      const Divider(height: 1)
+                    else
+                      Container(
+                        height: 1,
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                        margin: EdgeInsetsDirectional.only(
+                          start: metrics.timeColumnWidth,
+                        ),
+                      ),
+                    Expanded(
+                      child: _TimelineVerticalScrollViewport(
+                        key: PageStorageKey(
+                          showHeader
+                              ? 'general-week-timeline-position'
+                              : 'timeline-position-${days.length}-${_dateKey(days.first)}',
+                        ),
+                        hourHeight: safeHourHeight,
+                        topOffset: labelPadding,
+                        viewport: viewport,
+                        active: viewportActive,
+                        child: SizedBox(
+                          height: contentHeight,
+                          child: Stack(
+                            key: const ValueKey('general-timeline-grid'),
+                            children: [
+                              _GridBackground(
+                                timeColumnWidth: metrics.timeColumnWidth,
+                                dayWidth: metrics.dayWidth,
+                                dayCount: days.length,
+                                startHour: startHour,
+                                endHour: endHour,
+                                gridMinutes: gridMinutes,
+                                hourHeight: safeHourHeight,
+                                topOffset: labelPadding,
+                              ),
+                              for (var index = 0; index < days.length; index++)
+                                PositionedDirectional(
+                                  start:
+                                      metrics.timeColumnWidth +
+                                      index * metrics.dayWidth,
+                                  top: labelPadding,
+                                  width: metrics.dayWidth,
+                                  height: gridHeight,
+                                  child: GestureDetector(
+                                    key: ValueKey(
+                                      'general-timeline-empty-slot-${_dateKey(days[index])}',
+                                    ),
+                                    behavior: HitTestBehavior.translucent,
+                                    onDoubleTapDown:
+                                        !WorkbenchLayoutPolicy.pointerLayout(
+                                              context,
+                                            ) ||
+                                            onEmptySlotTap == null
+                                        ? null
+                                        : (details) {
+                                            final minutes =
+                                                _snapMinutes(
+                                                      startMinutes +
+                                                          (details
+                                                                      .localPosition
+                                                                      .dy /
+                                                                  minuteHeight)
+                                                              .round(),
+                                                      gridMinutes,
+                                                    )
+                                                    .clamp(
+                                                      startMinutes,
+                                                      endMinutes - 15,
+                                                    )
+                                                    .toInt();
+                                            onEmptySlotTap!(
+                                              DateTime(
+                                                days[index].year,
+                                                days[index].month,
+                                                days[index].day,
+                                                minutes ~/ 60,
+                                                minutes % 60,
+                                              ),
+                                            );
+                                          },
+                                    onLongPressStart:
+                                        onEmptySlotTap == null ||
+                                            !context
+                                                .read<TimetableProvider>()
+                                                .enableLongPressAddEvent
+                                        ? null
+                                        : (details) {
+                                            final minutes =
+                                                _snapMinutes(
+                                                      startMinutes +
+                                                          (details
+                                                                      .localPosition
+                                                                      .dy /
+                                                                  minuteHeight)
+                                                              .round(),
+                                                      gridMinutes,
+                                                    )
+                                                    .clamp(
+                                                      startMinutes,
+                                                      endMinutes - 15,
+                                                    )
+                                                    .toInt();
+                                            final day = days[index];
+                                            onEmptySlotTap!(
+                                              DateTime(
+                                                day.year,
+                                                day.month,
+                                                day.day,
+                                                minutes ~/ 60,
+                                                minutes % 60,
+                                              ),
+                                            );
+                                          },
+                                  ),
+                                ),
+                              for (var index = 0; index < days.length; index++)
+                                ..._timedOccurrenceCards(
+                                  context: context,
+                                  day: days[index],
+                                  start:
+                                      metrics.timeColumnWidth +
+                                      index * metrics.dayWidth,
+                                  width: metrics.dayWidth,
+                                  startMinutes: startMinutes,
+                                  endMinutes: endMinutes,
+                                  minuteHeight: minuteHeight,
+                                  topOffset: labelPadding,
+                                  dayOccurrences: occurrenceIndex.timedFor(
+                                    days[index],
+                                  ),
+                                ),
+                              for (var index = 0; index < days.length; index++)
+                                if (_sameDay(days[index], DateTime.now()) &&
+                                    _nowMinutes() >= startMinutes &&
+                                    _nowMinutes() <= endMinutes)
+                                  PositionedDirectional(
+                                    start:
+                                        metrics.timeColumnWidth +
+                                        index * metrics.dayWidth,
+                                    top:
+                                        labelPadding +
+                                        (_nowMinutes() - startMinutes) *
+                                            minuteHeight,
+                                    width: metrics.dayWidth,
+                                    child: const _NowLine(),
+                                  ),
+                              _PinnedTimelineRail(
+                                width: metrics.timeColumnWidth,
+                                child: _TimelineTimeRuler(
+                                  startHour: startHour,
+                                  endHour: endHour,
+                                  hourHeight: safeHourHeight,
+                                  topOffset: labelPadding,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                if (hasAllDayOccurrences)
-                  SkedAnimatedSize(
-                    key: const ValueKey('general-all-day-transition'),
-                    alignment: Alignment.topCenter,
-                    duration: motion.spatialAnimationsEnabled
-                        ? motion.effects(SkedMotionSpeed.standard)
-                        : Duration.zero,
-                    child: _AllDayTimeline(
-                      timeColumnWidth: metrics.timeColumnWidth,
-                      dayWidth: metrics.dayWidth,
-                      dayCount: days.length,
-                      layout: allDayLayout,
-                      label: l10n.allDay,
-                      maxHeight: math.min(
-                        240 * textFactor,
-                        constraints.maxHeight * .38,
-                      ),
-                      collapsed: isAllDayCollapsed,
-                      canCollapse: canCollapseAllDay,
-                      onToggleCollapsed: canCollapseAllDay
-                          ? () => onAllDayTimelineCollapsedChanged(
-                              !isAllDayCollapsed,
-                            )
-                          : null,
-                      onOccurrenceTap: onOccurrenceTap,
-                      onCollapsedGroupTap: (group) => onAllDayCollapsedGroupTap(
-                        group.occurrences,
-                        days[group.dayIndex],
                       ),
                     ),
-                  ),
-                if (hasAllDayOccurrences)
-                  const Divider(height: 1)
-                else if (showHeader)
-                  const Divider(height: 1)
-                else
-                  Container(
-                    height: 1,
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                    margin: EdgeInsetsDirectional.only(
-                      start: metrics.timeColumnWidth,
-                    ),
-                  ),
-                Expanded(
-                  child: _TimelineVerticalScrollViewport(
-                    key: PageStorageKey(
-                      showHeader
-                          ? 'general-week-timeline-position'
-                          : 'timeline-position-${days.length}-${_dateKey(days.first)}',
-                    ),
-                    hourHeight: safeHourHeight,
-                    topOffset: labelPadding,
-                    viewport: viewport,
-                    active: viewportActive,
-                    child: SizedBox(
-                      height: contentHeight,
-                      child: Stack(
-                        key: const ValueKey('general-timeline-grid'),
-                        children: [
-                          _GridBackground(
-                            timeColumnWidth: metrics.timeColumnWidth,
-                            dayWidth: metrics.dayWidth,
-                            dayCount: days.length,
-                            startHour: startHour,
-                            endHour: endHour,
-                            gridMinutes: gridMinutes,
-                            hourHeight: safeHourHeight,
-                            topOffset: labelPadding,
-                          ),
-                          for (var index = 0; index < days.length; index++)
-                            PositionedDirectional(
-                              start:
-                                  metrics.timeColumnWidth +
-                                  index * metrics.dayWidth,
-                              top: labelPadding,
-                              width: metrics.dayWidth,
-                              height: gridHeight,
-                              child: GestureDetector(
-                                key: ValueKey(
-                                  'general-timeline-empty-slot-${_dateKey(days[index])}',
-                                ),
-                                behavior: HitTestBehavior.translucent,
-                                onDoubleTapDown:
-                                    !WorkbenchLayoutPolicy.pointerLayout(
-                                          context,
-                                        ) ||
-                                        onEmptySlotTap == null
-                                    ? null
-                                    : (details) {
-                                        final minutes =
-                                            _snapMinutes(
-                                                  startMinutes +
-                                                      (details
-                                                                  .localPosition
-                                                                  .dy /
-                                                              minuteHeight)
-                                                          .round(),
-                                                  gridMinutes,
-                                                )
-                                                .clamp(
-                                                  startMinutes,
-                                                  endMinutes - 15,
-                                                )
-                                                .toInt();
-                                        onEmptySlotTap!(
-                                          DateTime(
-                                            days[index].year,
-                                            days[index].month,
-                                            days[index].day,
-                                            minutes ~/ 60,
-                                            minutes % 60,
-                                          ),
-                                        );
-                                      },
-                                onLongPressStart:
-                                    onEmptySlotTap == null ||
-                                        !context
-                                            .read<TimetableProvider>()
-                                            .enableLongPressAddEvent
-                                    ? null
-                                    : (details) {
-                                        final minutes =
-                                            _snapMinutes(
-                                                  startMinutes +
-                                                      (details
-                                                                  .localPosition
-                                                                  .dy /
-                                                              minuteHeight)
-                                                          .round(),
-                                                  gridMinutes,
-                                                )
-                                                .clamp(
-                                                  startMinutes,
-                                                  endMinutes - 15,
-                                                )
-                                                .toInt();
-                                        final day = days[index];
-                                        onEmptySlotTap!(
-                                          DateTime(
-                                            day.year,
-                                            day.month,
-                                            day.day,
-                                            minutes ~/ 60,
-                                            minutes % 60,
-                                          ),
-                                        );
-                                      },
-                              ),
-                            ),
-                          for (var index = 0; index < days.length; index++)
-                            ..._timedOccurrenceCards(
-                              context: context,
-                              day: days[index],
-                              start:
-                                  metrics.timeColumnWidth +
-                                  index * metrics.dayWidth,
-                              width: metrics.dayWidth,
-                              startMinutes: startMinutes,
-                              endMinutes: endMinutes,
-                              minuteHeight: minuteHeight,
-                              topOffset: labelPadding,
-                              dayOccurrences: occurrenceIndex.timedFor(
-                                days[index],
-                              ),
-                            ),
-                          for (var index = 0; index < days.length; index++)
-                            if (_sameDay(days[index], DateTime.now()) &&
-                                _nowMinutes() >= startMinutes &&
-                                _nowMinutes() <= endMinutes)
-                              PositionedDirectional(
-                                start:
-                                    metrics.timeColumnWidth +
-                                    index * metrics.dayWidth,
-                                top:
-                                    labelPadding +
-                                    (_nowMinutes() - startMinutes) *
-                                        minuteHeight,
-                                width: metrics.dayWidth,
-                                child: const _NowLine(),
-                              ),
-                          _PinnedTimelineRail(
-                            width: metrics.timeColumnWidth,
-                            child: _TimelineTimeRuler(
-                              startHour: startHour,
-                              endHour: endHour,
-                              hourHeight: safeHourHeight,
-                              topOffset: labelPadding,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -1877,6 +1913,27 @@ class _TimelineMetrics {
   final double timeColumnWidth;
   final double dayWidth;
 
+  factory _TimelineMetrics.forViewport(
+    BuildContext context,
+    double width, {
+    required int dayCount,
+    bool fitWeekColumnsToWidth = false,
+  }) {
+    final scale = WorkbenchLayoutPolicy.textFactor(
+      MediaQuery.textScalerOf(context).scale(14) / 14,
+    );
+    final compact = WorkbenchChromeMetrics.compactTouch(context, width: width);
+    final rail = compact
+        ? _TimelineTimeRuler.measuredWidth(context)
+        : 64 * scale;
+    final fit = compact && fitWeekColumnsToWidth && dayCount <= 7;
+    return _TimelineMetrics.fromWidth(
+      fit ? width : math.max(width, rail + dayCount * 96 * scale),
+      dayCount: dayCount,
+      timeColumnWidth: rail,
+    );
+  }
+
   factory _TimelineMetrics.fromWidth(
     double width, {
     required int dayCount,
@@ -1945,11 +2002,36 @@ class _DayHeader extends StatelessWidget {
   final double width;
   final bool selected;
   final VoidCallback? onTap;
+
+  static double measuredHeight(BuildContext context, double width) {
+    final theme = Theme.of(context);
+    final compact = width < 64 * WorkbenchChromeMetrics.of(context).textScale;
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    );
+    var height = 0.0;
+    for (final style in [
+      theme.textTheme.labelSmall,
+      theme.textTheme.titleMedium?.copyWith(fontSize: compact ? 14 : 18),
+    ]) {
+      painter.text = TextSpan(text: '28', style: style);
+      painter.layout();
+      height += painter.height;
+    }
+    painter.dispose();
+    // Scale the text, not an entire fixed-height band. This keeps a short phone
+    // landscape usable at large font sizes without compressing the time grid.
+    return math.max(48, height + 12).ceilToDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final today = _sameDay(date, DateTime.now());
+    final compact = width < 64 * WorkbenchChromeMetrics.of(context).textScale;
     return SizedBox(
       key: ValueKey('general-week-day-header-${_dateKey(date)}'),
       width: width,
@@ -1979,8 +2061,8 @@ class _DayHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 0 : 6,
                       vertical: 1,
                     ),
                     decoration: BoxDecoration(
@@ -1990,8 +2072,9 @@ class _DayHeader extends StatelessWidget {
                     child: Text(
                       date.day.toString(),
                       maxLines: 1,
+                      softWrap: false,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: 18,
+                        fontSize: compact ? 14 : 18,
                         fontWeight: selected || today
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -2131,7 +2214,12 @@ class _CalendarHorizontalViewportState
   void didUpdateWidget(_CalendarHorizontalViewport oldWidget) {
     super.didUpdateWidget(oldWidget);
     final replaced = oldWidget.viewport != widget.viewport;
+    final geometryChanged =
+        oldWidget.contentWidth != widget.contentWidth ||
+        oldWidget.viewportWidth != widget.viewportWidth ||
+        oldWidget.dayWidth != widget.dayWidth;
     if (replaced ||
+        geometryChanged ||
         (widget.active &&
             (!oldWidget.active ||
                 oldWidget.focusRevision != widget.focusRevision))) {
@@ -2158,6 +2246,14 @@ class _CalendarHorizontalViewportState
           ),
         );
       }
+      // Settings/resize may remove horizontal overflow without changing focus.
+      // Clamp that axis only; the vertical viewport owns its time anchor.
+      final clamped = _controller.offset.clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if (clamped != _controller.offset) _controller.jumpTo(clamped);
+      _rememberOffset();
       if (widget.selectedDay < 0 ||
           widget.viewport?.focusRevision == widget.focusRevision) {
         return;
@@ -2195,6 +2291,7 @@ class _CalendarHorizontalViewportState
           thumbVisibility: overflow,
           notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
           child: SingleChildScrollView(
+            key: const ValueKey('general-timeline-horizontal-scroll'),
             controller: _controller,
             scrollDirection: Axis.horizontal,
             physics: overflow

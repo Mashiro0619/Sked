@@ -1,3 +1,5 @@
+import '../widgets/workbench_chrome_metrics.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
@@ -68,6 +70,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey('general-default-view'),
                             initialSelection: provider.generalDefaultView,
                             label: Text(l10n.defaultView),
@@ -109,6 +114,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey('general-view-switch-behavior'),
                             initialSelection:
                                 provider.generalViewSwitchBehavior,
@@ -143,6 +151,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey('general-toolbar-width-policy'),
                             initialSelection:
                                 provider.generalToolbarWidthPolicy,
@@ -184,6 +195,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey('general-date-label-format'),
                             initialSelection: provider.generalDateLabelFormat,
                             label: Text(l10n.generalDateLabelFormat),
@@ -224,6 +238,21 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         ),
                         SettingsSectionHeader(
                           title: l10n.generalScheduleDisplaySection,
+                        ),
+                        SettingsSwitchTile(
+                          key: const ValueKey(
+                            'general-fit-week-columns-setting',
+                          ),
+                          icon: Icons.view_column_outlined,
+                          title: l10n.generalFitWeekColumnsToWidth,
+                          subtitle: l10n.generalFitWeekColumnsToWidthHint,
+                          value: provider.generalFitWeekColumnsToWidth,
+                          onChanged: (value) => _updateSetting(
+                            'Update general week column width mode',
+                            () => provider.updateGeneralDisplaySettings(
+                              fitWeekColumnsToWidth: value,
+                            ),
+                          ),
                         ),
                         SettingsSwitchTile(
                           icon: Icons.weekend_outlined,
@@ -282,6 +311,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<int>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey('general-time-grid'),
                             initialSelection: provider.generalTimeGridMinutes,
                             label: Text(l10n.timeGridDensity),
@@ -349,6 +381,9 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<Object>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey(
                               'general-toolbar-hidden-behavior',
                             ),

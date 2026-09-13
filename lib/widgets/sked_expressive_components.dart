@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'workbench_chrome_metrics.dart';
+
 import 'desktop_window_host.dart';
 import 'workspace_frame.dart';
 import '../services/desktop_window_bridge.dart';
@@ -413,8 +415,21 @@ class SkedWorkspaceToolbar extends StatelessWidget {
           return Semantics(
             container: true,
             child: Material(
-              color: colors.surfaceContainerLow,
-              shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
+              color:
+                  WorkbenchChromeMetrics.compactTouch(
+                    context,
+                    width: constraints.maxWidth,
+                  )
+                  ? colors.surface
+                  : colors.surfaceContainerLow,
+              surfaceTintColor: Colors.transparent,
+              shape:
+                  WorkbenchChromeMetrics.compactTouch(
+                    context,
+                    width: constraints.maxWidth,
+                  )
+                  ? null
+                  : Border(bottom: BorderSide(color: colors.outlineVariant)),
               child: DesktopDragRegion(
                 child: Padding(
                   padding: padding,

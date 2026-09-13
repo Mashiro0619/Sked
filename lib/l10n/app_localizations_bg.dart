@@ -1981,6 +1981,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Седмицата се побира на екрана';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Показва цялата седмица в компактен изглед. Изключете за хоризонтално превъртане. Периодите над 7 дни продължават да се превъртат.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

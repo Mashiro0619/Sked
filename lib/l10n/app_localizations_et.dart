@@ -1960,6 +1960,13 @@ class AppLocalizationsEt extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Mahuta nädal ekraanile';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Kuva kogu nädal kompaktses paigutuses. Lülita välja horisontaalseks kerimiseks. Üle 7 päeva pikkused kohandatud vahemikud jäävad keritavaks.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

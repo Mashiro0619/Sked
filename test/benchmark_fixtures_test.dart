@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/app_backup.dart';
 import 'package:sked/models/app_data.dart';
@@ -100,11 +102,20 @@ void main() {
     expect(actual, expectedPerformanceFixtureChecksums);
   });
   test(
-    'v5 fixture change affects only the general schema tag, not workload data',
+    'v5 and display-default additions do not change fixture workload data',
     () {
       String asV4(String source) {
         expect(RegExp('"schemaVersion":5').allMatches(source), hasLength(1));
-        return source.replaceFirst('"schemaVersion":5', '"schemaVersion":4');
+        final root = jsonDecode(source) as Map<String, dynamic>;
+        final app =
+            (root['data'] == null
+                    ? root
+                    : (root['data'] as Map<String, dynamic>)['appData'])
+                as Map<String, dynamic>;
+        final general = app['generalMode'] as Map<String, dynamic>;
+        expect(general.remove('fitWeekColumnsToWidth'), isTrue);
+        general['schemaVersion'] = 4;
+        return jsonEncode(root);
       }
 
       expect(

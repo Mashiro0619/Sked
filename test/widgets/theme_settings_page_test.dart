@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_dropdown_menu.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -283,19 +285,13 @@ void main() {
         colorModeSelector: 2,
       };
       for (final entry in selectors.entries) {
-        final field = tester.widget<DropdownButton<String>>(
-          find.descendant(
-            of: entry.key,
-            matching: find.byType(DropdownButton<String>),
-          ),
-        );
-        expect(field.items, hasLength(entry.value));
+        final field = tester.widget<SkedDropdownMenu<String>>(entry.key);
+        expect(field.dropdownMenuEntries, hasLength(entry.value));
         expect(tester.getSize(entry.key).height, greaterThanOrEqualTo(48));
         expect(tester.getSize(entry.key).width, lessThanOrEqualTo(320));
-        expect(field.isExpanded, isTrue);
-        for (final item in field.items!) {
-          expect((item.child as Text).data, isNotEmpty);
-          expect((item.child as Text).maxLines, 2);
+        expect(field.expandedInsets, EdgeInsets.zero);
+        for (final item in field.dropdownMenuEntries) {
+          expect(item.label, isNotEmpty);
         }
       }
       final palette = find.byKey(const ValueKey('theme-seed-color-palette'));

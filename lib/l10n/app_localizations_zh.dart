@@ -1864,6 +1864,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reminderOverdue => '已过期';
 
   @override
+  String get generalFitWeekColumnsToWidth => '周视图适应屏幕';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      '紧凑布局中一屏显示整周；关闭后横向滚动。超过 7 天的自定义范围仍横向浏览。';
+
+  @override
   String get showWeekends => '显示周末';
 
   @override
@@ -4707,6 +4714,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get reminderOverdue => '已逾期';
+
+  @override
+  String get generalFitWeekColumnsToWidth => '週視圖適應螢幕';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      '在緊湊版面中一屏顯示整週；關閉後橫向捲動。超過 7 天的自訂範圍仍橫向瀏覽。';
 
   @override
   String get showWeekends => '顯示週末';

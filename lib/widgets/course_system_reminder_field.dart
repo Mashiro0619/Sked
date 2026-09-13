@@ -10,6 +10,7 @@ import '../screens/notification_settings_page.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_dropdown_menu.dart';
 
 /// Course-specific overrides of the system notification default. The controls
 /// only edit the parent draft; permission reads never schedule notifications.
@@ -152,35 +153,62 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<CourseReminderBehavior>(
-          key: const ValueKey('course-reminder-behavior'),
-          initialValue: widget.behavior,
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: l.courseSystemReminder,
-            isDense: WorkbenchChromeMetrics.of(context).desktop,
+        if (WorkbenchChromeMetrics.compactTouch(context))
+          SkedDropdownMenu<CourseReminderBehavior>(
+            key: const ValueKey('course-reminder-behavior'),
+            initialSelection: widget.behavior,
+            label: Text(l.courseSystemReminder),
+            enabled: widget.enabled,
+            workspace: AppMode.student,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              DropdownMenuEntry(
+                value: CourseReminderBehavior.inherit,
+                label: inherited,
+              ),
+              DropdownMenuEntry(
+                value: CourseReminderBehavior.disabled,
+                label: l.notificationReminderOff,
+              ),
+              DropdownMenuEntry(
+                value: CourseReminderBehavior.custom,
+                label: l.recurrenceCustom,
+              ),
+            ],
+            onSelected: (value) {
+              if (value != null) widget.onChanged(value);
+            },
+          )
+        else
+          DropdownButtonFormField<CourseReminderBehavior>(
+            key: const ValueKey('course-reminder-behavior'),
+            initialValue: widget.behavior,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: l.courseSystemReminder,
+              isDense: WorkbenchChromeMetrics.of(context).desktop,
+            ),
+            itemHeight: null,
+            items: [
+              DropdownMenuItem(
+                value: CourseReminderBehavior.inherit,
+                child: Text(inherited),
+              ),
+              DropdownMenuItem(
+                value: CourseReminderBehavior.disabled,
+                child: Text(l.notificationReminderOff),
+              ),
+              DropdownMenuItem(
+                value: CourseReminderBehavior.custom,
+                child: Text(l.recurrenceCustom),
+              ),
+            ],
+            onChanged: !widget.enabled
+                ? null
+                : (value) {
+                    if (value != null) widget.onChanged(value);
+                  },
           ),
-          itemHeight: null,
-          items: [
-            DropdownMenuItem(
-              value: CourseReminderBehavior.inherit,
-              child: Text(inherited),
-            ),
-            DropdownMenuItem(
-              value: CourseReminderBehavior.disabled,
-              child: Text(l.notificationReminderOff),
-            ),
-            DropdownMenuItem(
-              value: CourseReminderBehavior.custom,
-              child: Text(l.recurrenceCustom),
-            ),
-          ],
-          onChanged: !widget.enabled
-              ? null
-              : (value) {
-                  if (value != null) widget.onChanged(value);
-                },
-        ),
         if (widget.behavior == CourseReminderBehavior.custom) ...[
           const SizedBox(height: 12),
           TextField(

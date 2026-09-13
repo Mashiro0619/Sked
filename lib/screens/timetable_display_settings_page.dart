@@ -1,3 +1,5 @@
+import '../widgets/workbench_chrome_metrics.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
@@ -175,6 +177,9 @@ class _TimetableDisplaySettingsPageState
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: SkedDropdownMenu<String>(
+                            enabled:
+                                !WorkbenchChromeMetrics.compactTouch(context) ||
+                                !uiCommandBusy,
                             key: const ValueKey(
                               'timetable-toolbar-hidden-behavior',
                             ),

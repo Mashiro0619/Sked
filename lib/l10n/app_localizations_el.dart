@@ -1985,6 +1985,13 @@ class AppLocalizationsEl extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Προσαρμογή εβδομάδας στην οθόνη';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Εμφάνιση ολόκληρης της εβδομάδας σε συμπαγείς διατάξεις. Απενεργοποιήστε για οριζόντια κύλιση. Τα προσαρμοσμένα εύρη άνω των 7 ημερών εξακολουθούν να κυλίονται.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

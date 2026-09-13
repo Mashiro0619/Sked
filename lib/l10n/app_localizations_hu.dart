@@ -1977,6 +1977,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Heti nézet képernyőhöz igazítása';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'A teljes hét megjelenítése kompakt elrendezésben. Kikapcsolva vízszintesen görgethető. A 7 napnál hosszabb egyéni tartományok továbbra is görgethetők.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

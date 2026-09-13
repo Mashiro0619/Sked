@@ -9,6 +9,9 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+
+import '../support/workspace_harness.dart';
+
 import 'package:sked/screens/general_display_settings_page.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/settings_list.dart';
@@ -124,6 +127,34 @@ Future<void> _toggleSwitch(WidgetTester tester, String title) async {
 }
 
 void main() {
+  testWidgets(
+    'general fit toggle defaults on, persists independently and reports failure',
+    (tester) async {
+      final storage = WorkspaceMemoryStorage(
+        buildInitialAppData(buildDefaultPeriodTimes())
+            .copyWith(activeMode: AppMode.general),
+      );
+      final provider = await workspaceProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpPage(tester, provider);
+      expect(provider.generalFitWeekColumnsToWidth, isTrue);
+      final studentFit = provider.appData.studentMode.fitWeekColumnsToWidth;
+      await _toggleSwitch(tester, 'Fit week view to screen');
+      expect(provider.generalFitWeekColumnsToWidth, isFalse);
+      expect(storage.data.generalMode.fitWeekColumnsToWidth, isFalse);
+      expect(provider.appData.studentMode.fitWeekColumnsToWidth, studentFit);
+      storage.saveError = StateError('phone setting save failed');
+      await _toggleSwitch(tester, 'Fit week view to screen');
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        storage.data.generalMode.fitWeekColumnsToWidth,
+        isFalse,
+        reason: 'Failed writes must not appear in persisted data',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('caps wide content and consumes Android navigation inset once', (
     tester,
   ) async {
@@ -325,6 +356,8 @@ void main() {
       );
       final toggle = find.descendant(of: tile, matching: find.byType(Switch));
       expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
 
       await tester.tap(toggle);
       await tester.pump();

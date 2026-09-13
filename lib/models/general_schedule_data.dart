@@ -257,6 +257,7 @@ class GeneralScheduleData {
     this.viewSwitchBehavior = generalViewSwitchBehaviorCycle,
     this.toolbarWidthPolicy = generalToolbarWidthPolicyContent,
     this.dateLabelFormat = generalDateLabelFormatSlash,
+    this.fitWeekColumnsToWidth = true,
     this.showWeekends = true,
     this.showLunarCalendar = true,
     this.dayStartHour = 6,
@@ -285,6 +286,7 @@ class GeneralScheduleData {
   final String viewSwitchBehavior;
   final String toolbarWidthPolicy;
   final String dateLabelFormat;
+  final bool fitWeekColumnsToWidth;
   final bool showWeekends;
   final bool showLunarCalendar;
   final int dayStartHour;
@@ -343,6 +345,7 @@ class GeneralScheduleData {
       toolbarWidthPolicy,
     ),
     'dateLabelFormat': normalizeGeneralDateLabelFormat(dateLabelFormat),
+    'fitWeekColumnsToWidth': fitWeekColumnsToWidth,
     'showWeekends': showWeekends,
     'showLunarCalendar': showLunarCalendar,
     'dayStartHour': dayStartHour,
@@ -411,6 +414,8 @@ class GeneralScheduleData {
         viewSwitchBehavior: viewSwitchBehavior,
         toolbarWidthPolicy: toolbarWidthPolicy,
         dateLabelFormat: dateLabelFormat,
+        fitWeekColumnsToWidth:
+            _boolValue(json['fitWeekColumnsToWidth']) ?? true,
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
         allDayTimelineCollapsed: allDayTimelineCollapsed,
@@ -459,6 +464,7 @@ class GeneralScheduleData {
       viewSwitchBehavior: viewSwitchBehavior,
       toolbarWidthPolicy: toolbarWidthPolicy,
       dateLabelFormat: dateLabelFormat,
+      fitWeekColumnsToWidth: _boolValue(json['fitWeekColumnsToWidth']) ?? true,
       showWeekends: _boolValue(json['showWeekends']) ?? true,
       showLunarCalendar: _boolValue(json['showLunarCalendar']) ?? true,
       dayStartHour: (_intValue(json['dayStartHour']) ?? 6).clamp(0, 23).toInt(),
@@ -513,6 +519,7 @@ class GeneralScheduleData {
     String? viewSwitchBehavior,
     String? toolbarWidthPolicy,
     String? dateLabelFormat,
+    bool? fitWeekColumnsToWidth,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -551,6 +558,8 @@ class GeneralScheduleData {
       dateLabelFormat: normalizeGeneralDateLabelFormat(
         dateLabelFormat ?? this.dateLabelFormat,
       ),
+      fitWeekColumnsToWidth:
+          fitWeekColumnsToWidth ?? this.fitWeekColumnsToWidth,
       showWeekends: showWeekends ?? this.showWeekends,
       showLunarCalendar: showLunarCalendar ?? this.showLunarCalendar,
       dayStartHour: dayStartHour ?? this.dayStartHour,
@@ -712,6 +721,7 @@ class GeneralScheduleData {
         toolbarWidthPolicy,
       ),
       dateLabelFormat: normalizeGeneralDateLabelFormat(dateLabelFormat),
+      fitWeekColumnsToWidth: fitWeekColumnsToWidth,
       showWeekends: showWeekends,
       showLunarCalendar: showLunarCalendar,
       dayStartHour: start,

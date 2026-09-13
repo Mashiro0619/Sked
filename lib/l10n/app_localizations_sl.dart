@@ -1965,6 +1965,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Prilagodi teden zaslonu';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Prikaži celoten teden v strnjenih postavitvah. Izklopi za vodoravno pomikanje. Obsegi po meri nad 7 dni ostanejo pomični.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

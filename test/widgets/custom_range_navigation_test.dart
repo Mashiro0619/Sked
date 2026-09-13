@@ -402,7 +402,6 @@ void main() {
         final scroll = t.widget<SingleChildScrollView>(grid);
         final overflow = scroll.controller!.position.maxScrollExtent > 0;
         final rulerPosition = t.getTopLeft(find.text('07:00'));
-        final rulerOffsetX = rulerPosition.dx - t.getTopLeft(grid).dx;
         final allDayPosition = t.getTopLeft(_key('general-all-day-toggle'));
         final pager = t.widget<PageView>(_key('general-week-pager'));
         if (overflow) {
@@ -422,9 +421,23 @@ void main() {
         }
         t.view.physicalSize = const Size(800, 1100);
         await t.pumpAndSettle();
+        // A phone measures the gutter; a wide tablet retains its original
+        // width. In both layouts the labels stay six pixels inside that gutter.
+        final currentScroll = t.widget<SingleChildScrollView>(grid);
+        final contentWidth = t
+            .getSize(find.byWidget(currentScroll.child!))
+            .width;
+        final dayWidth = t.getSize(_header(range.start)).width;
+        final railWidth = contentWidth - 14 * dayWidth;
         expect(
-          t.getTopLeft(find.text('07:00')).dx - t.getTopLeft(grid).dx,
-          closeTo(rulerOffsetX, 0.001),
+          t.getTopLeft(grid).dx +
+              railWidth -
+              t.getTopRight(find.text('07:00')).dx,
+          closeTo(6, 0.001),
+        );
+        expect(
+          currentScroll.controller!.offset,
+          lessThanOrEqualTo(currentScroll.controller!.position.maxScrollExtent),
         );
         expect(p.customGeneralDateRange, range);
         expect(t.takeException(), isNull);

@@ -1962,6 +1962,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth =>
+      'सप्ताह दृश्य को स्क्रीन में फ़िट करें';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'कॉम्पैक्ट लेआउट में पूरा सप्ताह दिखाएँ। क्षैतिज स्क्रॉलिंग के लिए बंद करें। 7 दिनों से अधिक की कस्टम अवधियों में स्क्रॉलिंग जारी रहती है।';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

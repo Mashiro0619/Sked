@@ -1962,6 +1962,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get reminderOverdue => 'Overdue';
 
   @override
+  String get generalFitWeekColumnsToWidth => 'Anpassa veckovyn till skärmen';
+
+  @override
+  String get generalFitWeekColumnsToWidthHint =>
+      'Visa hela veckan i kompakta layouter. Stäng av för horisontell rullning. Anpassade intervall över 7 dagar går fortfarande att rulla.';
+
+  @override
   String get showWeekends => 'Show weekends';
 
   @override

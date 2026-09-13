@@ -1,6 +1,14 @@
 import '../theme/sked_surface.dart';
 
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
+
+import '../models/app_mode.dart';
+import '../providers/timetable_provider.dart';
+import 'workbench_chrome_metrics.dart';
 
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
@@ -22,32 +30,187 @@ Future<T?> showAppModalSheet<T>({
   RouteSettings? routeSettings,
   WorkspacePaneController? workspacePane,
   String? selectionId,
-}) {
-  if (workspacePane != null) {
+  AppMode? workspace,
+  bool Function()? isSessionCurrent,
+}) async {
+  final compact = WorkbenchChromeMetrics.compactTouch(context);
+  // An editor opened from a phone details task must stay above that modal
+  // even if the window was widened while the details were open.
+  final bottomTask = compact || workspacePane?.hasModalTasks == true;
+  final provider = Provider.of<TimetableProvider?>(context, listen: false);
+  final ownerRoute = ModalRoute.of(context);
+  final dataSession = provider?.dataSessionToken;
+  final boundary = provider?.appData.workspaceReminderNotBefore[workspace];
+  final focus = FocusManager.instance.primaryFocus;
+  var invalidated = false;
+  bool isCurrent() {
+    invalidated =
+        invalidated ||
+        !context.mounted ||
+        !(ownerRoute?.isActive ?? true) ||
+        !identical(dataSession, provider?.dataSessionToken) ||
+        boundary != provider?.appData.workspaceReminderNotBefore[workspace] ||
+        (workspace != null &&
+            provider?.isWorkspaceEnabled(workspace) == false) ||
+        isSessionCurrent?.call() == false;
+    return !invalidated;
+  }
+
+  if (!isCurrent()) return null;
+  Widget content(BuildContext sheetContext) => _AppTaskSession(
+    provider: provider,
+    ownerRoute: ownerRoute,
+    isCurrent: isCurrent,
+    child: Builder(builder: builder),
+  );
+  if (workspacePane != null && !bottomTask) {
     return workspacePane.show<T>(
-      builder,
+      content,
       selectionId: selectionId,
       dismissOnCanvasTap: isDismissible,
     );
   }
-  return showModalBottomSheet<T>(
-    context: context,
+
+  final navigator = Navigator.of(
+    context,
+    rootNavigator: useRootNavigator || workspacePane != null,
+  );
+  final l = MaterialLocalizations.of(context);
+  final route = ModalBottomSheetRoute<T>(
+    capturedThemes: InheritedTheme.capture(
+      from: context,
+      to: navigator.context,
+    ),
+    barrierLabel: l.scrimLabel,
+    barrierOnTapHint: l.scrimOnTapHint(l.bottomSheetLabel),
     isScrollControlled: true,
     isDismissible: isDismissible,
     enableDrag: enableDrag,
     showDragHandle: enableDrag,
-    useRootNavigator: useRootNavigator,
-    useSafeArea: useSafeArea,
-    routeSettings: routeSettings,
+    useSafeArea: bottomTask || useSafeArea,
+    settings: routeSettings,
     constraints: BoxConstraints(maxWidth: maxWidth),
+    modalBarrierColor: Theme.of(context).bottomSheetTheme.modalBarrierColor,
     clipBehavior: Clip.antiAlias,
     sheetAnimationStyle: SkedMotionPolicy.of(context)
         .routeStyle(AppMotion.sheetAnimationStyle),
-    builder: (_) => SkedSurface(
-      role: SkedSurfaceRole.content,
-      child: UiCommandFeedbackHost(builder: builder),
-    ),
+    builder: (sheetContext) {
+      final media = MediaQuery.of(sheetContext);
+      final colors = Theme.of(sheetContext).colorScheme;
+      final task = _AppBottomSheetScope(
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            systemNavigationBarColor: colors.surface,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarIconBrightness:
+                colors.brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
+            systemNavigationBarContrastEnforced: false,
+          ),
+          // Keep IME handling outside the content: fractional editor heights
+          // refer to the actual remaining area, not the obscured whole screen.
+          child: Padding(
+            padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+            child: SkedSurface(
+              key: const ValueKey('app-bottom-task-surface'),
+              role: SkedSurfaceRole.content,
+              child: UiCommandFeedbackHost(builder: content),
+            ),
+          ),
+        ),
+      );
+      return provider == null
+          ? task
+          : ChangeNotifierProvider<TimetableProvider>.value(
+              value: provider,
+              child: task,
+            );
+    },
   );
+  final result = await (workspacePane == null
+      ? navigator.push<T>(route)
+      : workspacePane.showModal<T>(
+          navigator,
+          route,
+          selectionId: selectionId,
+          dismissible: isDismissible,
+        ));
+  unawaited(
+    route.completed.then((_) {
+      if (isCurrent() &&
+          (ownerRoute?.isCurrent ?? true) &&
+          focus?.context?.mounted == true &&
+          focus!.canRequestFocus) {
+        focus.requestFocus();
+      }
+    }),
+  );
+  return isCurrent() ? result : null;
+}
+
+/// A modal route can outlive its home widget or its backing data. Invalidation
+/// retires this exact route; a nested date/time picker observes its owner close.
+class _AppTaskSession extends StatefulWidget {
+  const _AppTaskSession({
+    required this.provider,
+    required this.ownerRoute,
+    required this.isCurrent,
+    required this.child,
+  });
+  final TimetableProvider? provider;
+  final ModalRoute<dynamic>? ownerRoute;
+  final bool Function() isCurrent;
+  final Widget child;
+  @override
+  State<_AppTaskSession> createState() => _AppTaskSessionState();
+}
+
+class _AppTaskSessionState extends State<_AppTaskSession> {
+  bool _retiring = false;
+  @override
+  void initState() {
+    super.initState();
+    widget.provider?.addListener(_check);
+    final weak = WeakReference(this);
+    unawaited(widget.ownerRoute?.completed.then((_) => weak.target?._check()));
+    _check();
+  }
+
+  void _check() {
+    if (!mounted || _retiring || widget.isCurrent()) return;
+    _retiring = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final route = ModalRoute.of(context);
+      if (route?.isActive == true) route!.navigator?.removeRoute(route);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  void dispose() {
+    widget.provider?.removeListener(_check);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _check();
+    return ExcludeFocus(
+      excluding: _retiring,
+      child: AbsorbPointer(absorbing: _retiring, child: widget.child),
+    );
+  }
+}
+
+class _AppBottomSheetScope extends InheritedWidget {
+  const _AppBottomSheetScope({required super.child});
+  static bool contains(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_AppBottomSheetScope>() !=
+      null;
+  @override
+  bool updateShouldNotify(_AppBottomSheetScope oldWidget) => false;
 }
 
 class AppSheetScaffold extends StatelessWidget {
@@ -84,6 +247,8 @@ class AppSheetScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
     final inTaskPane = WorkspaceTaskScope.contains(context);
+    final keyboardHandled =
+        inTaskPane || _AppBottomSheetScope.contains(context);
     final body = SafeArea(
       top: false,
       child: Column(
@@ -129,7 +294,7 @@ class AppSheetScaffold extends StatelessWidget {
                   16,
                   8,
                   16,
-                  (inTaskPane ? 0 : viewInsets.bottom) + 16,
+                  (keyboardHandled ? 0 : viewInsets.bottom) + 16,
                 ),
             child:
                 footer ?? _AppSheetActions(leading: leading, actions: actions),

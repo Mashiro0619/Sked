@@ -3815,7 +3815,7 @@ void main() {
     });
 
     testWidgets(
-      'general week view preserves readable days through horizontal scrolling',
+      'general week opt-out uses wide days with horizontal scrolling',
       (tester) async {
         await tester.binding.setSurfaceSize(const Size(390, 844));
         addTearDown(() async {
@@ -3831,6 +3831,7 @@ void main() {
                 activeScheduleId: 'cal1',
                 schedules: [calendar],
                 selectedDateIso: '2026-05-18',
+                fitWeekColumnsToWidth: false,
               ),
             ),
           ),

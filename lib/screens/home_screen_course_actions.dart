@@ -17,9 +17,36 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     _setCourseDetailsOpen(true);
     try {
       final canDismiss = provider.closeCoursePopupOnOutsideTap;
+      final mobile = WorkbenchChromeMetrics.compactTouch(context);
+      Future<void> edit(CourseItem course) {
+        final task = _openEditor(
+          context,
+          provider,
+          course: course,
+          timetableId: timetableId,
+        );
+        if (!mobile) return task;
+        // Opening a second bottom route is navigation, not a pending data
+        // mutation. Do not leave an indeterminate spinner in the details below.
+        unawaited(task);
+        return Future<void>.value();
+      }
+
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
+        workspace: AppMode.student,
+        isSessionCurrent:
+            (WorkbenchChromeMetrics.compactTouch(context) ||
+                _pane.hasModalTasks)
+            ? () => provider.timetables.any(
+                (timetable) =>
+                    timetable.id == timetableId &&
+                    timetable.courses.any(
+                      (course) => course.id == info.course.id,
+                    ),
+              )
+            : null,
         selectionId: 'course:${info.course.id}',
         isDismissible: canDismiss,
         enableDrag: false,
@@ -30,12 +57,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
           weekday: info.course.dayOfWeek,
           conflictKey: info.conflictKey,
           isFullConflict: info.isFullConflict,
-          onEdit: () => _openEditor(
-            context,
-            provider,
-            course: info.course,
-            timetableId: timetableId,
-          ),
+          onEdit: () => edit(info.course),
           onMissing: () {
             if (sheetContext.mounted) {
               // Only retire these details, not an editor stacked above them.
@@ -57,14 +79,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
                     Navigator.of(sheetContext).pop();
                   }
                 },
-          onEditConflictCourse: !info.isFullConflict
-              ? null
-              : (course) => _openEditor(
-                  context,
-                  provider,
-                  course: course,
-                  timetableId: timetableId,
-                ),
+          onEditConflictCourse: !info.isFullConflict ? null : edit,
         ),
       );
     } finally {
@@ -96,6 +111,17 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await showAppModalSheet<CourseEditorResult>(
         context: context,
         workspacePane: _pane,
+        workspace: AppMode.student,
+        isSessionCurrent:
+            (WorkbenchChromeMetrics.compactTouch(context) ||
+                _pane.hasModalTasks)
+            ? () => provider.timetables.any(
+                (item) =>
+                    item.id == timetable.id &&
+                    (course == null ||
+                        item.courses.any((value) => value.id == course.id)),
+              )
+            : null,
         selectionId: course == null ? null : 'course:${course.id}',
         isDismissible: canDismiss,
         enableDrag: false,
