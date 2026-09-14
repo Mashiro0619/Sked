@@ -94,7 +94,15 @@ class _WeekGridLayout {
       20 * metrics.textScale + 12,
     );
     final minimumWidth = math.max(rowHeight, 48 * metrics.textScale);
-    final columns = ((width + gap) / (minimumWidth + gap)).floor().clamp(1, 5);
+    final compact = WorkbenchChromeMetrics.compactTouch(context);
+    final fittingColumns = ((width + gap) / (minimumWidth + gap)).floor().clamp(
+      1,
+      compact ? 7 : 5,
+    );
+    // Use phone width without a lonely last item when fewer columns fit the
+    // same number of rows (19 weeks: 5×4 rather than 6×4 with only one at end).
+    final rows = (count / fittingColumns).ceil();
+    final columns = compact ? (count / rows).ceil() : fittingColumns;
     return _WeekGridLayout(columns, rowHeight, (count / columns).ceil());
   }
 }
@@ -230,6 +238,7 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
     final l = AppLocalizations.of(context);
     final m = MaterialLocalizations.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
+    final compact = WorkbenchChromeMetrics.compactTouch(context);
     return Shortcuts(
       shortcuts: const {
         SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
@@ -246,7 +255,9 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
         child: FocusTraversalGroup(
           child: Padding(
             key: const ValueKey('sked-week-picker-content'),
-            padding: const EdgeInsets.all(12),
+            padding: compact
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
+                : const EdgeInsets.all(12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -255,7 +266,13 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                     Expanded(
                       child: Text(
                         l.jumpToWeek,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: compact
+                            ? Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontSize: 18,
+                                height: 1.2,
+                                fontWeight: FontWeight.w600,
+                              )
+                            : Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
                     IconButton(
@@ -267,7 +284,7 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                if (!compact) const SizedBox(height: 8),
                 Flexible(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -393,56 +410,143 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
       child: Tooltip(
         message: '$label · $hint',
         excludeFromSemantics: true,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            canRequestFocus: false,
-            excludeFromSemantics: true,
-            onTap: () => _select(week),
-            borderRadius: BorderRadius.circular(6),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: selected
-                    ? colors.primary.withValues(alpha: .12)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                border: focused ? Border.all(color: colors.primary) : null,
-              ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Text(
-                      '$week',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+        child: WorkbenchChromeMetrics.compactTouch(context)
+            ? _touchWeek(
+                context,
+                week,
+                selected: selected,
+                focused: focused,
+                today: today,
+              )
+            : Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  canRequestFocus: false,
+                  excludeFromSemantics: true,
+                  onTap: () => _select(week),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? colors.primary.withValues(alpha: .12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: focused
+                          ? Border.all(color: colors.primary)
+                          : null,
                     ),
-                  ),
-                  if (today)
-                    Positioned(
-                      bottom: 3,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          key: ValueKey('student-week-current-$week'),
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            shape: BoxShape.circle,
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Text(
+                            '$week',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
                           ),
                         ),
-                      ),
+                        if (today)
+                          Positioned(
+                            bottom: 3,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Container(
+                                key: ValueKey('student-week-current-$week'),
+                                width: 4,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: colors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
+      ),
+    );
+  }
+
+  Widget _touchWeek(
+    BuildContext context,
+    int week, {
+    required bool selected,
+    required bool focused,
+    required bool today,
+  }) {
+    final theme = Theme.of(context), colors = theme.colorScheme;
+    final keyboardFocus =
+        focused &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _select(week),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final diameter = math.min(
+            constraints.maxWidth,
+            constraints.maxHeight - 6,
+          );
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox.square(
+                dimension: diameter,
+                child: DecoratedBox(
+                  key: ValueKey('student-week-touch-marker-$week'),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: selected ? colors.primary : null,
+                    border: keyboardFocus
+                        ? Border.all(
+                            color: selected ? colors.onPrimary : colors.primary,
+                            width: 2,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  '$week',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 18,
+                    height: 1.2,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected ? colors.onPrimary : colors.onSurface,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              if (today)
+                Positioned(
+                  bottom: (constraints.maxHeight - diameter) / 2 + 3,
+                  child: Container(
+                    key: ValueKey('student-week-current-$week'),
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: selected ? colors.onPrimary : colors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

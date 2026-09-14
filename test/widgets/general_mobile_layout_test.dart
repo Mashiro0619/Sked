@@ -124,7 +124,7 @@ void main() {
     for (final scale in [1.0, 1.3, 2.0]) {
       for (final brightness in Brightness.values) {
         testWidgets(
-          'phone $width scale $scale $brightness fits a whole week in two rows',
+          'phone $width scale $scale $brightness fits a whole week below one toolbar row',
           (t) async {
             _size(t, Size(width, 850));
             final storage = _Storage(mobileLayoutData());
@@ -146,22 +146,18 @@ void main() {
               isA<PageScrollPhysics>(),
             );
             final toolbar = _key('general-workspace-toolbar');
-            final rows = t.widget<Column>(_key('general-compact-toolbar-rows'));
-            expect(
-              rows.children.length,
-              3,
-              reason: 'Exactly two rows plus their gap',
-            );
-            final first = t.getRect(
-              _key('general-compact-toolbar-management-row'),
-            );
-            final second = t.getRect(
-              _key('general-compact-toolbar-navigation-row'),
-            );
-            expect(first.bottom, lessThanOrEqualTo(second.top));
-            if (scale == 1) {
-              expect(t.getSize(toolbar).height, lessThanOrEqualTo(112));
+            expect(_key('general-compact-toolbar-rows'), findsNothing);
+            final row = t.getRect(_key('general-compact-toolbar-single-row'));
+            for (final name in [
+              'general-calendar-selector',
+              'general-date-title-button',
+              'general-view-switcher',
+              'general-settings-button',
+              'general-toolbar-more-button',
+            ]) {
+              expect(t.getCenter(_key(name)).dy, closeTo(row.center.dy, 1));
             }
+            expect(t.getSize(toolbar).height, lessThanOrEqualTo(52));
             expect(_key('general-previous-period'), findsNothing);
             expect(_key('general-next-period'), findsNothing);
             expect(_key('general-reminders-action'), findsNothing);
@@ -464,7 +460,7 @@ void main() {
   );
 
   testWidgets(
-    'More badge refreshes and opens a reminder occurrence without a third row',
+    'More badge refreshes and opens a reminder occurrence without an extra toolbar row',
     (t) async {
       _size(t, const Size(393, 852));
       final p = await workspaceProvider(
@@ -553,7 +549,7 @@ void main() {
     toolbarHiddenItemsBehaviorRemove,
   ]) {
     testWidgets(
-      'custom order stays in two semantic rows; hidden shortcut behavior $hiddenBehavior',
+      'custom order stays in one toolbar row; hidden shortcut behavior $hiddenBehavior',
       (t) async {
         _size(t, const Size(320, 850));
         final storage = _Storage(mobileLayoutData());

@@ -105,6 +105,45 @@ void _visible(WidgetTester t, int week) {
 }
 
 void main() {
+  for (final today in [
+    DateTime(2026, 9, 12),
+    DateTime(2026, 9, 6),
+    DateTime(2027, 3),
+  ]) {
+    testWidgets(
+      'mobile current-week marker remains semantic and bounded at $today',
+      (t) async {
+        _size(t, const Size(360, 850));
+        final results = <int?>[];
+        await _open(t, results, selected: 1, today: today);
+        final current = _key('student-week-current-1');
+        if (today == DateTime(2026, 9, 12)) {
+          expect(current, findsOneWidget);
+          final dot = t.widget<Container>(current).decoration! as BoxDecoration;
+          expect(dot.color, Theme.of(t.element(current)).colorScheme.onPrimary);
+          expect(
+            t.widget<Semantics>(_week(1)).properties.value,
+            contains('Today'),
+          );
+        } else {
+          expect(current, findsNothing);
+        }
+        final selected =
+            t
+                    .widget<DecoratedBox>(_key('student-week-touch-marker-1'))
+                    .decoration
+                as BoxDecoration;
+        expect(selected.shape, BoxShape.circle);
+        expect(selected.border, isNull);
+        await t.tap(_week(1));
+        await t.pumpAndSettle();
+        expect(results, [1]);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
   testWidgets(
     'desktop task anchors a four-row grid without date text or ordinary borders',
     (t) async {

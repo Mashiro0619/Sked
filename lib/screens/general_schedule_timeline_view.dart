@@ -987,23 +987,24 @@ class _DayWeekPickerRow extends StatelessWidget {
             fit: StackFit.expand,
             clipBehavior: Clip.hardEdge,
             children: [
-              PositionedDirectional(
-                start: indicatorLeft,
-                top: 0,
-                bottom: 0,
-                width: indicatorWidth,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    key: showIndicatorKey
-                        ? _generalDayPickerSelectionIndicatorKey
-                        : null,
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(4),
+              if (!WorkbenchChromeMetrics.compactTouch(context))
+                PositionedDirectional(
+                  start: indicatorLeft,
+                  top: 0,
+                  bottom: 0,
+                  width: indicatorWidth,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      key: showIndicatorKey
+                          ? _generalDayPickerSelectionIndicatorKey
+                          : null,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ),
-              ),
               Row(
                 children: [
                   for (var index = 0; index < days.length; index++)
@@ -2006,6 +2007,13 @@ class _DayHeader extends StatelessWidget {
   static double measuredHeight(BuildContext context, double width) {
     final theme = Theme.of(context);
     final compact = width < 64 * WorkbenchChromeMetrics.of(context).textScale;
+    if (WorkbenchChromeMetrics.compactTouch(context)) {
+      return SkedCalendarDayLabel.measuredHeight(
+        context,
+        compact: !width.isFinite || width < 140,
+        localeCode: AppLocalizations.of(context).localeName,
+      );
+    }
     final painter = TextPainter(
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
@@ -2031,6 +2039,7 @@ class _DayHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final today = _sameDay(date, DateTime.now());
+    final phone = WorkbenchChromeMetrics.compactTouch(context);
     final compact = width < 64 * WorkbenchChromeMetrics.of(context).textScale;
     return SizedBox(
       key: ValueKey('general-week-day-header-${_dateKey(date)}'),
@@ -2042,49 +2051,57 @@ class _DayHeader extends StatelessWidget {
         onTap: onTap,
         excludeSemantics: true,
         child: Material(
-          color: selected
+          color: selected && !phone
               ? colors.surfaceContainerHigh.withValues(alpha: .65)
               : colors.surface,
           child: InkWell(
             onTap: onTap,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _weekdayLabel(context, date),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colors.onSurfaceVariant,
+            child: phone
+                ? SkedCalendarDayLabel(
+                    date: date,
+                    compact: !width.isFinite || width < 140,
+                    localeCode: AppLocalizations.of(context).localeName,
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _weekdayLabel(context, date),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: compact ? 0 : 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: today ? colors.primary : null,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            date.day.toString(),
+                            maxLines: 1,
+                            softWrap: false,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: compact ? 14 : 18,
+                              fontWeight: selected || today
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: today
+                                  ? colors.onPrimary
+                                  : colors.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 0 : 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: today ? colors.primary : null,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      date.day.toString(),
-                      maxLines: 1,
-                      softWrap: false,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: compact ? 14 : 18,
-                        fontWeight: selected || today
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: today ? colors.onPrimary : colors.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),

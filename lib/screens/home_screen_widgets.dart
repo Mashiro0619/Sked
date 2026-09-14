@@ -409,7 +409,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     return SkedWorkspaceToolbar(
       key: const ValueKey('student-workspace-toolbar'),
       actions: [
-        const AssistantPaneToggle(),
+        if (!WorkbenchChromeMetrics.compactTouch(context) ||
+            AssistantPaneScope.of(context)?.enabled == true)
+          const AssistantPaneToggle(),
         if (onAddCourse != null)
           Tooltip(
             message: l10n.addCourse,
@@ -427,7 +429,11 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       ],
       padding: EdgeInsets.symmetric(
         horizontal: phoneWidth ? 8 : 16,
-        vertical: phoneWidth || compactHeight ? 4 : 8,
+        vertical: WorkbenchChromeMetrics.compactTouch(context)
+            ? 0
+            : phoneWidth || compactHeight
+            ? 4
+            : 8,
       ),
       navigationSpacing: 0,
       title: LayoutBuilder(
@@ -1509,7 +1515,9 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
           ],
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 4),
+              padding: EdgeInsets.only(
+                top: WorkbenchChromeMetrics.compactTouch(context) ? 0 : 4,
+              ),
               child: RepaintBoundary(
                 child: TimetableGrid(
                   key: ValueKey('student-timetable-grid-$pageWeek'),
@@ -1714,7 +1722,13 @@ class _EmptyTimetableToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
-    const padding = EdgeInsetsDirectional.fromSTEB(12, 6, 6, 6);
+    final compactTouch = WorkbenchChromeMetrics.compactTouch(context);
+    final padding = EdgeInsetsDirectional.fromSTEB(
+      12,
+      compactTouch ? 0 : 6,
+      6,
+      compactTouch ? 0 : 6,
+    );
     return SkedWorkspaceToolbar(
       padding: padding,
       title: SizedBox(
