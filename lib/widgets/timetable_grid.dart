@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../models/timetable_models.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'timetable_entry.dart';
+import 'sked_calendar_day_label.dart';
 import 'workspace_frame.dart';
 import 'workbench_chrome_metrics.dart';
 
@@ -330,15 +331,21 @@ class _TimetableGridState extends State<TimetableGrid> {
         // The day header contains two stacked labels. Measure their actual
         // scaled line heights so large accessibility text gets room instead
         // of overflowing the fixed-size inner slot.
-        final headerHeight = math.max(
-          baseHeaderHeight,
-          _scaledDayHeaderHeight(
-            context,
-            compact: metrics.compact,
-            localeCode: widget.localeCode,
-            weekdays: widget.visibleWeekdays,
-          ),
-        );
+        final headerHeight = WorkbenchChromeMetrics.compactTouch(context)
+            ? SkedCalendarDayLabel.measuredHeight(
+                context,
+                compact: metrics.compact,
+                localeCode: widget.localeCode,
+              )
+            : math.max(
+                baseHeaderHeight,
+                _scaledDayHeaderHeight(
+                  context,
+                  compact: metrics.compact,
+                  localeCode: widget.localeCode,
+                  weekdays: widget.visibleWeekdays,
+                ),
+              );
         final availableDaysWidth = math.max(
           constraints.maxWidth - metrics.timeLabelWidth,
           0.0,
@@ -1006,51 +1013,13 @@ class _DayHeader extends StatelessWidget {
   final String localeCode;
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final today = _isSameDate(date, DateTime.now());
     return Semantics(
       label: MaterialLocalizations.of(context).formatFullDate(date),
       excludeSemantics: true,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: compact ? 1 : 4, vertical: 6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              formatWeekdayShortLabel(weekday, localeCode: localeCode),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 3 : 6,
-                vertical: 1,
-              ),
-              decoration: BoxDecoration(
-                color: today ? colors.primary : null,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                date.day.toString(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style:
-                    (compact
-                            ? theme.textTheme.labelLarge
-                            : theme.textTheme.titleMedium)
-                        ?.copyWith(
-                          color: today ? colors.onPrimary : colors.onSurface,
-                          fontWeight: today ? FontWeight.w700 : FontWeight.w500,
-                        ),
-              ),
-            ),
-          ],
-        ),
+      child: SkedCalendarDayLabel(
+        date: date,
+        compact: compact,
+        localeCode: localeCode,
       ),
     );
   }
@@ -2223,8 +2192,4 @@ int _comparePaintPriority(CourseItem a, CourseItem b) {
     return durationCompare;
   }
   return a.id.compareTo(b.id);
-}
-
-bool _isSameDate(DateTime a, DateTime b) {
-  return a.year == b.year && a.month == b.month && a.day == b.day;
 }

@@ -484,3 +484,121 @@ dart run tool/coverage_gate.dart --base-ref HEAD
 - 39 个手写 Dart 文件格式检查、`git diff --check` 通过。`adb devices -l` 仍为空（`.scratch/mobile-calendar-density-adb.log`）；以上为 Windows 模拟布局，不记作 Android 真机验收。
 
 本轮不提交或推送，未新增依赖、存储字段或修改日期交互规则。
+
+## 2026-09-13：手机跳周与业务单日选择器收敛
+
+用户补充的两个入口分别是课表「快捷跳转周数」和日程编辑中的单日选择。它们此前没有使用手机范围月历的紧凑字号与排版，本轮仅统一移动呈现，不改各自的确认／保存契约。
+
+- 手机单日月历复用 18 sp 日期／月份、14 sp 星期、4–6 行月份网格和圆形选中标记。合并重复标题与月份栏、移除底部重复日期摘要；单日不绘制范围连接带，不遗留触摸 Ink 或常驻方形焦点框。
+- 仍保留输入／今天／取消／确定：日期点击或输入在选择器内暂存，确定后才回写编辑草稿；取消不改草稿，编辑保存才持久化。单日入口的 `rangeInteraction` 仍为 `none`，不因复用外观开启范围拖选，也不把业务原有的保存时日期校验改成另一套规则。
+- 手机跳周的标题与数字改为 18 sp，触摸选中用圆形强调；日期范围仍在 Tooltip 与无障碍描述中。去掉额外上下内边距和标题下间距，普通选项透明，键盘操作仍有焦点反馈。
+- 跳周列数按手机可用宽度、字号和总周数分配，最多七列，保持至少 48 dp 点击高度及宽度预算；能减少行数时利用剩余横向空间，同样行数时优先均衡末行。360 dp 普通字号下 18 周为 6×3，19 周仍为 5×4，避免 6×4 的最后一行只剩一项。大字号减列、最多六行后内部滚动，保留焦点和当前选中周可见。
+- 选周仍点击即跳转，当前周点击只关闭；不新增确认按钮、循环或持久化。Windows（含窄窗口）与宽平板原有样式和布局保留；本次不改课表网格、课程卡片、主页布局或存储字段。
+
+### 验证方式
+
+`mobile_secondary_pickers_test` 从真实主页周标题及「主页事件 → 详情 → 编辑 → 日期按钮」进入；覆盖 320／360／393／412 dp、1／1.3／2 倍字号、确认前零写入、取消与重复确认、单日不接受范围拖选、直接输入／模拟 IME、原编辑器工作区守卫、1／18／19／100 周、键盘导航及尺寸变化。已有日期／范围／跳周／底部宿主测试继续回归。
+
+`mobile_secondary_pickers_visual_test` 采集相同实际入口的前后图，覆盖手机、横屏、宽平板与 Windows；检查普通和选中数字的实际字形宽度及确认操作可达性，不能只以字号属性代替渲染验证。
+
+### 最终检查结果
+
+- `flutter analyze --no-pub`：无问题（`.scratch/mobile-secondary-pickers-analyze-final.log`）。
+- 选择器重点回归 **191 项通过**（`.scratch/mobile-secondary-pickers-targeted-final.log`）；随后补充了手机当前周／学期外标记覆盖。最终全量 `flutter test --no-pub --coverage --concurrency=2` **2632 通过、1 项既有命名时区 DST 测试跳过**（`.scratch/mobile-secondary-pickers-full.log`）。
+- 覆盖率门禁 **PASS**：总计 **36864/40655（90.6752%）**，本轮变更 **64/64（100%）**，源文件清单通过；未降低门禁或新增排除（`.scratch/mobile-secondary-pickers-coverage.log`／`.md`）。
+- 真实入口 Windows 集成渲染通过（`.scratch/mobile-secondary-pickers-visual.log`），修改前与修改后各 **21 张**，目录为 `.scratch/mobile-secondary-pickers-before/` 和 `.scratch/mobile-secondary-pickers-after/`；包含大字号、手机横屏、明暗／中英文、模拟 IME、平板和 Windows。
+- Windows 与宽平板的 **4/4 个对照逐像素一致**；手机单日选择已检查只有圆形标记、没有范围连接色带。等比例前后图：`.scratch/mobile-secondary-pickers-comparison/mobile-secondary-pickers-before-after.png`，精确对照记录同目录 `desktop-tablet-pixel-report.json`。
+- 5 个手写 Dart 文件格式检查与 `git diff --check` 通过；`adb devices -l` 为空（`.scratch/mobile-secondary-pickers-adb.log`）。Android 真实触摸、返回手势、键盘和导航栏仍待设备验收，未把模拟渲染算作真机通过。
+
+本轮未提交或推送，未新增依赖、存储字段或修改业务保存规则。
+
+## 2026-09-14：手机首页单行顶栏、日期标签与安全区间距
+
+### 问题与修复
+
+- 手机日程的日期表头不再为普通选中日期铺整格灰色；日视图的灰色滑动指示层同样仅保留在非紧凑触控分支。抽取课表已有的 `SkedCalendarDayLabel` 复用于手机日程，只以主题色徽标标记今天；日期点击、焦点和选中语义不变。徽标恢复必要的水平内边距，不再把两位数字挤在过窄底色中。
+- 检查 320 dp／2 倍字号的实际渲染后发现：原课表标签的省略策略会让两位数整个消失。共享标签为数字预留行高，仅在列确实装不下时局部适配整个日期徽标，保留完整数字与星期对齐；不降低全局字号，不修改课表列宽、卡片或内容策略。回归直接检查字形未被省略及绘制边界，而不只检查是否抛出布局异常。
+- 日程紧凑触控顶栏统一一行，替代此前按内容拆为管理／日期两行的规则。分类、日期、视图、设置与更多按原保存顺序排列；长名称截断，同年日期必要时略去重复年份，完整日期仍在语义／提示和选择器中。隐藏偏好不重写，固定操作仍保持至少 48 dp 点击目标；320–412 dp、1／1.3／2 倍字号无需横滚。极端更窄空间允许整行浏览，不新增第二排。
+- 手机自定义范围不另起一行显示摘要，使用范围图标区别自然周，天数与完整范围继续出现在按钮语义和提示中；1／7／14 天分别回归，保留“自定义七天不等于自然周”的状态和导航规则。普通日、周、月、列表导航及长按今天保持原有行为。
+- 移除两种手机首页顶栏的额外上下内边距；课表同时移除外层 8 dp 顶部留白、工具栏后 4 dp 和网格前 4 dp 空隙。另修复未启用的助手按钮虽渲染为空、仍令操作列表占据一个空行间距的问题。空课表入口同样处理，大字号只按原有文字行高自然增高。
+- **保留系统 SafeArea**：修复的是应用额外间距，不把控件推入状态栏或刘海。紧凑触控包含手机横屏及平板窄窗口；窄 Windows 仍沿用桌面分支。桌面和宽平板日期表头、结构性背景与工具栏布局不变。
+- 版本从 `2.2.0+12` 更新为 **`2.3.0+14`**（构建号 +2），同步更新发布说明；Windows 生成的 Flutter 版本配置已核对。不变更存储版本。
+
+### 验证与证据
+
+- `mobile_home_chrome_test` 覆盖 320／360／393／412 dp × 1／1.3／2 倍字号，断言所有日程控制位于同一行、点击区域不小于 48 dp、没有溢出或额外导航写入；课表／空课表顶栏紧接系统安全区，日期徽标与课表一致，非当天选择不填背景。增加确定性的 25–31 号极窄大字号绘制检查。
+- 更新既有手机布局、主页、日历样式与自定义范围回归，移除旧“两行”断言而保留功能、菜单、排序／隐藏、范围状态和完整日期语义的检查。课表网格原有测试继续运行。
+- 真实主页入口视觉用例 `mobile_home_chrome_visual_test`：前后各 24 张，覆盖上述手机宽度、明暗／中英文／大字号／横屏以及平板、Windows。保存当时同一日期、同一几何条件下的基线与结果，目录为 `.scratch/mobile-home-chrome-before/` 和 `.scratch/mobile-home-chrome-after/`（含清单），日志 `.scratch/mobile-home-chrome-visual-final.log`。
+- 大屏对照 **6/6 逐像素一致**（平板与 Windows 各三场景），记录 `.scratch/mobile-home-chrome-comparison/desktop-tablet-pixel-report.json`。对比图 `mobile-home-before-after.png` 同比例展示两种主页顶部；`mobile-home-large-text-before-after.png` 展示 320 dp／2 倍字号。图像均注明 Windows Flutter 模拟手机布局，不作为 Android 硬件验收。
+
+### 最终检查结果
+
+- `flutter analyze --no-pub`：无问题（`.scratch/mobile-home-chrome-analyze-final.log`）。
+- 手机顶栏、日程主页／布局／月历和课表网格专项 **201 项通过**（`.scratch/mobile-home-chrome-targeted-final.log`）；补充的自定义范围与手机顶栏回归 **42 项通过**（`.scratch/mobile-home-chrome-range-final.log`）。两组包含重叠测试，不合并计数。
+- 最终 `flutter test --no-pub --coverage --concurrency=2`：**2650 通过，1 项既有命名时区 DST 测试跳过**（`.scratch/mobile-home-chrome-full-final.log`）。未把跳过记作通过。
+- 覆盖率门禁 **PASS**：总计 **36893/40694（90.6596%）**，变更 **219/219（100%）**；源文件清单通过，新共享日期标签 **47/47** 已计入覆盖。未修改阈值或排除项；比较包含此前保留的二级选择器改动。日志与报告 `.scratch/mobile-home-chrome-coverage-final.log`／`.md`。
+- 17 个手写 Dart 文件格式检查与 `git diff --check` 通过。版本比对及 Windows 生成配置见 `.scratch/mobile-home-chrome-version.log`，确认构建号从 12 增加到 14。
+
+### Android 真机仍待验
+
+`adb devices -l` 未检测到设备（`.scratch/mobile-home-chrome-adb.log`）。仍须在手机核对真实状态栏／刘海、安全区、超大字体下日期可读性、单行控制触控与横屏切换。保留既有真实范围拖选、系统返回手势、键盘及导航栏待验清单，不把模拟测试记作实机通过。
+
+本轮不新增依赖，不提交或推送，保留此前二级日期／跳周选择器的未提交改动。
+
+## 2026-09-14：收紧手机纵向间距与月份／年份选择层
+
+### 本轮针对的实际问题
+
+用户指出的是系统状态栏、工具栏与日期表头之间的纵向空白，而不是按钮、字号或排序问题。本轮保留单行顶栏的内容与样式，不通过收起设置、改变字体、负边距或压缩点击区域来换空间。
+
+- 手机日期标签上下内边距由 6 dp 改为 4 dp，星期与日期之间仍为 2 dp；高度按当前语言的实际星期文本、日期行高、徽标和内边距共同测量，普通字号目标 48 dp。课表不再叠加旧的 56／64 dp 最低表头，手机日程使用同一测量源。大字号自然增高，原有两位数字防截断策略不变。
+- 系统顶部安全区仍完整保留，只消费一次；工具栏、日期表头和日历内容之间不加入额外 spacer。新增回归分别检查容器边界和真实文字框，扣除字体自然行距与原有徽标适配后断言 2 dp 标签间隔，避免把字体本身的 leading 当成应用空行。
+- 非紧凑触控分支继续使用原来的表头高度、内边距和月份／年份样式；不改变课表列宽、课程卡片、日程导航规则或用户设置。
+
+### 月份／年份层
+
+- 紧凑触控的月份、年份均采用最多四列的 12 项网格；普通平台字体默认四列三行。按最长实际文本和字号减少列数，单元点击区域至少 48 dp，间距 4 dp，文字 18 sp，不缩小字体。测试默认 Ahem 字体较宽，会合理减列；Windows Flutter 的真实字形渲染另外明确断言默认四列。
+- 普通项透明，选中项为包围文字的小胶囊，不再有整格灰块和常驻方框。每个日期选项独立维护按压／悬停反馈，松手、指针取消、滚动抢占、重新排列和切页均不会把旧反馈带到其他项。
+- 焦点轮廓只由键盘导航启用，触摸和鼠标操作清除轮廓而不改变选择语义。上下键根据当前列数移动；重新排列保留逻辑焦点。短窗口自动让当前焦点可见，向前／向后导航都覆盖，已可见时不强制居中滚动。
+- 从日／周／范围月历进入月份／年份，以及主页月份视图直接打开，两条路径统一使用紧凑分支。标题、翻页、关闭、今天、输入与原有取消／确认规则保留；使用原来的弹层会话和内部滚动，输入法／旋转不重建草稿。
+- 公开选择器接口、存储结构和版本 `2.3.0+14` 不变，未新增第三方依赖。
+
+### 验证入口与证据
+
+- `mobile_calendar_spacing_test` 覆盖实际主页的两种工作区、0／24／44 dp 顶部安全区、320／360／393／412 dp 与 1／1.3／2 倍字号；检查默认高度、实际文字间隙、保持不变的 48 dp 工具栏及浏览零写入。
+- 月份／年份回归包含实际日期标题与视图菜单入口、按压／取消／滚动竞争、减列后键盘导航、反向焦点滚动、短窗口与模拟 IME、日期边界、原有确认校验、重复选择、工作区禁用和数据替换。
+- `mobile_calendar_spacing_visual_test` 在 Windows 上从真实主页入口采集手机、中英文、明暗、横屏、平板与 Windows 的前后图；修改前基线目录 `.scratch/mobile-calendar-spacing-before/`，修改后目录 `.scratch/mobile-calendar-spacing-after/`，均含清单。截图模拟手机尺寸、安全区和字体缩放，不包含 Android 系统状态栏真实图标。
+
+### 最终检查结果
+
+- `flutter analyze --no-pub`：无问题，日志 `.scratch/mobile-calendar-spacing-analyze-final.log`。
+- 日期选择器、课表网格、手机顶栏和本轮改动的专项回归 **119 项通过**（`.scratch/mobile-calendar-spacing-targeted.log`）；补充反向焦点滚动后，本轮聚焦 **33 项通过**（`.scratch/mobile-calendar-spacing-focused.log`）。两组重叠，不相加计数。
+- 最终 `flutter test --no-pub --coverage --concurrency=2`：**2683 通过，1 项既有命名时区 DST 测试跳过**，日志 `.scratch/mobile-calendar-spacing-full.log`。跳过需要另设 `SKED_DST_TEST_ZONE`／`TZ`，不计作通过。
+- 覆盖率门禁 **PASS**：总计 **37057/40858（90.6970%）**，变更 **491/498（98.5944%）**，源文件清单通过；未修改阈值或新增排除。比较包含此前保留的未提交修改。日志／报告为 `.scratch/mobile-calendar-spacing-coverage.log` 与 `.md`。
+- 修改前、后各 **48 张**实际入口模拟图采集成功，`SKED_VISUAL_VERIFY=true` 明确验证真实平台字体下手机默认四列三行及弹层高度；日志 `.scratch/mobile-calendar-spacing-before.log` 与 `.scratch/mobile-calendar-spacing-visual.log`。
+- 大屏 **12/12 对照逐像素一致**（Windows、宽平板各六个场景），精确记录为 `.scratch/mobile-calendar-spacing-comparison/desktop-tablet-pixel-report.json`。
+- 已检查等比例的 `mobile-spacing-before-after.png`、`mobile-months-before-after.png`、`mobile-years-before-after.png`，均位于同一 comparison 目录；手机大字号／横屏画面另见 after 清单。图像保留相同安全区，没有把顶部裁切或缩小截图伪装成留白改善。
+- 19 个手写 Dart 文件格式检查和 `git diff --check` 通过；`adb devices -l` 为空，记录在 `.scratch/mobile-calendar-spacing-adb.log`。版本保持 `2.3.0+14`，未提交或推送。
+
+### 实机边界
+
+Android 真机的状态栏／刘海、字体、真实触摸按压及取消、软键盘和系统导航仍需设备验收。不得把 Windows 模拟图、布局测试或截图数量记作手机硬件通过。
+
+保留已有未提交修改；本轮不提交或推送。
+
+## 2026-09-14：手机首页分类名称优先于冗余年份
+
+- 修复“分类已显示省略号，日期却仍占着完整年份”的空间分配。之前只在日期控件自己放不下时缩略日期，分类的完整宽度没有参与这一判断；现在若两者完整显示超出预算，先按省略年份的日期宽度分配，把释放的空间交给分类。
+- 同年日期保留月／日；跨月保留两端月份，月份视图可使用本地化月份名。只有真的不够时才继续使用原有长名称截断与紧凑日期回退。空间充足或分类隐藏时恢复完整年份；跨年范围不省略年份。
+- 日期预算与候选文字匹配使用同一实际字号。完整年份继续保留在按钮提示、无障碍语义和选择器，不写入用户日期格式、排序或隐藏偏好。按钮顺序、单行高度及至少 48 dp 点击区域不变；Windows／宽平板沿用原布局。
+- 新增 `general_toolbar_category_priority_test`：完整分类显示、年份随宽度恢复、日／周／月／列表与自定义范围、跨月／跨年、隐藏分类、长名称、大字号和浏览零写入。现有实际主页视觉测试增加截图场景的真实字形断言，要求 `My calendar` 不被截断且日期为 `9/22–24`。
+
+### 检查结果
+
+- 静态分析无问题（`.scratch/mobile-category-priority-analyze.log`）；相关 **157 项回归通过**（`.scratch/mobile-category-priority-targeted.log`）。最终全量 **2703 通过、1 项既有命名时区 DST 测试跳过**（`.scratch/mobile-category-priority-full.log`）。
+- 覆盖率门禁 **PASS**：总计 **37075/40876（90.7011%）**，变更 **516/523（98.6616%）**，源文件清单通过；未降低阈值，比较包含之前保留的改动（`.scratch/mobile-category-priority-coverage.log`／`.md`）。
+- 实际主页模拟渲染通过，截图场景明确断言 `My calendar` 字形完整可见且日期为 `9/22–24`；48 张结果见 `.scratch/mobile-category-priority-after/`。Windows／宽平板 **12/12 对照逐像素一致**，对照来源为上一轮已验证的 `.scratch/mobile-calendar-spacing-after/`。
+- 对比图 `.scratch/mobile-category-priority-comparison/category-priority-before-after.png`；精确像素报告同目录 `desktop-tablet-pixel-report.json`。图像保持同尺寸裁剪并注明是 Windows Flutter 模拟手机布局，不算 Android 真机验收。
+- 本轮四个手写 Dart 文件格式检查及 `git diff --check` 通过。
+
+版本仍为 `2.3.0+14`，保留此前未提交修改，不提交或推送。Android 真机仍需设备验收。

@@ -678,7 +678,7 @@ void main() {
 
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
     expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
-    expect(_visibleDateNavigationLabel(tester), '2026/8/11');
+    expect(_visibleDateNavigationLabel(tester), '8/11');
     expect(
       find.descendant(
         of: dateButton,
@@ -4215,7 +4215,21 @@ void main() {
     await _pumpGeneralScheduleHomeScreen(tester, provider);
 
     expect(tester.takeException(), isNull);
-    expect(find.textContaining(RegExp(r'^(2026|26)/6$')), findsWidgets);
+    // The compact label yields its year to the long category name, while
+    // the accessible date still identifies the complete month and year.
+    expect(_visibleDateNavigationLabel(tester), 'Jun');
+    final dateSemantics = tester
+        .widget<Semantics>(
+          find
+              .ancestor(
+                of: find.byKey(const ValueKey('general-date-title-button')),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        )
+        .properties
+        .label;
+    expect(dateSemantics, contains('2026'));
     expect(find.textContaining('Recurring project review'), findsWidgets);
   });
 

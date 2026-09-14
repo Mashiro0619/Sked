@@ -638,25 +638,49 @@ void main() {
   );
 
   testWidgets(
-    'touch toolbar visibly distinguishes one, seven and fourteen custom days at large text',
+    'single-row touch toolbar distinguishes custom ranges without a second title line',
     (t) async {
       _size(t, const Size(360, 1000));
-      final (p, _) = await _setup();
+      final (p, storage) = await _setup();
+      final labels = <String>{};
       for (final days in [1, 7, 14]) {
         await p.setGeneralDateRange(
           GeneralDateRange(DateTime(2026, 9, 9), DateTime(2026, 9, 8 + days)),
         );
+        final before = storage.writes;
         await _pump(t, p, scale: 2);
+        final title = _key('general-date-title-button');
+        final texts = find.descendant(of: title, matching: find.byType(Text));
+        expect(texts, findsOneWidget);
+        final label = t.widget<Text>(texts);
+        expect(label.maxLines, 1);
+        labels.add(label.data!);
+        expect(_key('general-custom-range-label'), findsNothing);
+        final semanticLabel = t
+            .widget<Semantics>(
+              find.ancestor(of: title, matching: find.byType(Semantics)).first,
+            )
+            .properties
+            .label!;
+        expect(semanticLabel, contains('自定义 · $days天'));
+        expect(semanticLabel, contains('2026'));
         expect(
           find.descendant(
-            of: _key('general-date-title-button'),
-            matching: find.text('自定义 · $days天'),
+            of: _key('general-view-switcher'),
+            matching: find.byIcon(Icons.date_range_outlined),
           ),
           findsOneWidget,
         );
+        final row = t.getRect(_key('general-compact-toolbar-single-row'));
+        expect(row.height, lessThanOrEqualTo(52));
+        expect(t.getRect(title).center.dy, closeTo(row.center.dy, .1));
         expect(p.customGeneralDateRange!.dayCount, days);
+        // Showing a custom range must not rewrite the saved default view.
+        expect(p.generalDefaultView, generalViewWeek);
+        expect(storage.writes, before);
         expect(t.takeException(), isNull);
       }
+      expect(labels, hasLength(3));
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );

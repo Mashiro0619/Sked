@@ -5,6 +5,7 @@ import '../widgets/workbench_chrome_metrics.dart';
 import '../utils/calendar_timeline_layout.dart';
 import '../widgets/workbench_resource_widgets.dart';
 import '../widgets/sked_date_picker.dart';
+import '../widgets/sked_calendar_day_label.dart';
 import '../utils/date_selection.dart';
 
 import 'dart:async';
@@ -272,9 +273,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                             ),
                         ],
                   padding: EdgeInsets.symmetric(
-                    horizontal: constraints.maxWidth < 360 ? 8 : 12,
+                    horizontal: compactTouch || constraints.maxWidth < 360
+                        ? 8
+                        : 12,
                     vertical: compactTouch
-                        ? 4
+                        ? 0
                         : (constraints.maxHeight < 600 ? 6 : 8),
                   ),
                   title: _GeneralToolbarLayout(
@@ -1858,56 +1861,23 @@ class _GeneralToolbarLayout extends StatelessWidget {
       startAligned: true,
     );
     final actions = <String, Widget>{
-      'category': Expanded(child: categorySelector),
-      'settings': SizedBox.square(
-        dimension: m.iconTarget,
-        child: IconButton(
-          key: const ValueKey('general-settings-button'),
-          focusNode: settingsFocusNode,
-          onPressed: settingsAction,
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: settingsLabel,
-        ),
+      'category': categorySelector,
+      'settings': IconButton(
+        key: const ValueKey('general-settings-button'),
+        focusNode: settingsFocusNode,
+        onPressed: settingsAction,
+        icon: const Icon(Icons.settings_outlined),
+        tooltip: settingsLabel,
       ),
-      'more': SizedBox.square(
-        dimension: m.iconTarget,
-        child: compactMoreButton,
-      ),
-      'date': Expanded(
-        key: const ValueKey('general-date-navigation'),
-        child: navigation(true),
-      ),
-      'view': SizedBox.square(
-        dimension: m.iconTarget,
-        child: navigation(false),
-      ),
+      'more': compactMoreButton!,
+      'date': navigation(true),
+      'view': navigation(false),
     };
-    Widget row(String name, List<String> ids, String flexibleId) =>
-        ConstrainedBox(
-          constraints: BoxConstraints(minHeight: m.commandHeight),
-          child: Row(
-            key: ValueKey('general-compact-toolbar-$name-row'),
-            children: [
-              if (!ids.contains(flexibleId)) const Spacer(),
-              for (final id in ids) actions[id]!,
-            ],
-          ),
-        );
-    final content = IconButtonTheme(
-      data: IconButtonThemeData(style: m.iconStyle),
-      child: Column(
-        key: const ValueKey('general-compact-toolbar-rows'),
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          row('management', managementIds, 'category'),
-          if (dateIds.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            row('navigation', dateIds, 'date'),
-          ],
-        ],
-      ),
-    );
+    final ids = [
+      for (final id in order)
+        if (managementIds.contains(id) || dateIds.contains(id)) id,
+      if (!order.contains('more')) 'more',
+    ];
     double textWidth(String label, TextStyle? style) {
       final painter = TextPainter(
         text: TextSpan(text: label, style: style),
@@ -1921,79 +1891,96 @@ class _GeneralToolbarLayout extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final categoryWidth = math.max(
-      48.0,
-      textWidth(categoryLabel, theme.textTheme.labelLarge) + 16,
-    );
+    final desiredCategoryWidth = math
+        .max(48.0, textWidth(categoryLabel, theme.textTheme.labelLarge) + 16)
+        .ceilToDouble();
+    final localeName = Localizations.localeOf(context).toLanguageTag();
+    final customRange = view == generalViewCustom
+        ? context.read<TimetableProvider>().customGeneralDateRange
+        : null;
     final compactDate = _dateNavigationCandidates(
       selectedDate,
       view,
       format: dateLabelFormat,
-      localeName: Localizations.localeOf(context).toLanguageTag(),
-      customRange: view == generalViewCustom
-          ? context.read<TimetableProvider>().customGeneralDateRange
-          : null,
+      localeName: localeName,
+      customRange: customRange,
     ).last;
-    final dateWidth = math.max(
+    double dateDemand(String label) => math.max(
       48.0,
-      textWidth(compactDate, theme.textTheme.titleSmall) +
+      textWidth(label, theme.textTheme.titleSmall) +
           _GeneralToolbarMetrics._dateButtonHorizontalPadding * 2 +
           2,
     );
-    final singleIds = [
-      for (final id in order)
-        if (managementIds.contains(id) || dateIds.contains(id)) id,
-      if (!order.contains('more')) 'more',
-    ];
-    final minimumWidth = singleIds.fold<double>(
-      0,
-      (width, id) =>
-          width +
-          switch (id) {
-            'category' => categoryWidth,
-            'date' => dateWidth,
-            _ => m.iconTarget,
-          },
+    final desiredDateWidth = dateDemand(compactDate);
+    final yearlessDate = _dateNavigationWithoutYear(
+      selectedDate,
+      view,
+      localeName: localeName,
+      customRange: customRange,
     );
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Compactness is earned by measuring the actual translated/scaled labels,
-        // never by shrinking touch targets or overwriting the saved item order.
-        final singleRow = minimumWidth <= constraints.maxWidth;
-        final single = ConstrainedBox(
-          constraints: BoxConstraints(minHeight: m.commandHeight),
-          child: Row(
-            key: const ValueKey('general-compact-toolbar-single-row'),
-            children: [
-              if (!singleIds.contains('category') &&
-                  !singleIds.contains('date'))
-                const Spacer(),
-              for (final id in singleIds)
-                if (id == 'category')
-                  Expanded(child: categorySelector)
-                else if (id == 'date')
-                  if (singleIds.contains('category'))
-                    SizedBox(width: dateWidth, child: navigation(true))
-                  else
-                    Expanded(child: navigation(true))
-                else
-                  actions[id]!,
-            ],
-          ),
-        );
+        final hasCategory = ids.contains('category');
+        final hasDate = ids.contains('date');
+        final fixedWidth =
+            ids.where((id) => id != 'category' && id != 'date').length *
+            m.iconTarget;
+        final minimumWidth =
+            fixedWidth + (hasCategory ? 48 : 0) + (hasDate ? 48 : 0);
+        final contentWidth = math.max(constraints.maxWidth, minimumWidth);
+        final labelBudget = contentWidth - fixedWidth;
+        // Give up a redundant year before ellipsizing the category, not only
+        // after the date slot itself runs out of room. Keep month/day context
+        // and the existing minimum touch targets when both labels cannot fit.
+        final preferredDateWidth =
+            hasCategory &&
+                yearlessDate != null &&
+                desiredCategoryWidth + desiredDateWidth > labelBudget
+            ? math.min(desiredDateWidth, dateDemand(yearlessDate))
+            : desiredDateWidth;
+        final categoryBudget = hasCategory && hasDate
+            ? math.min(desiredCategoryWidth, math.max(48.0, labelBudget * .45))
+            : 0.0;
+        final dateWidth = !hasDate
+            ? 0.0
+            : hasCategory
+            ? math.min(preferredDateWidth, labelBudget - categoryBudget)
+            : labelBudget;
+        final categoryWidth = hasCategory ? labelBudget - dateWidth : 0.0;
+        // Keep one row on touch layouts. Shorten labels, not touch targets, and
+        // preserve the user's order/visibility without persisting layout choices.
         return SingleChildScrollView(
+          key: const ValueKey('general-compact-toolbar-scroll'),
           scrollDirection: Axis.horizontal,
-          physics: constraints.maxWidth < 264
+          physics: contentWidth > constraints.maxWidth + .5
               ? const ClampingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
           child: SizedBox(
-            width: math.max(264, constraints.maxWidth),
-            child: singleRow
-                ? IconButtonTheme(
-                    data: IconButtonThemeData(style: m.iconStyle),
-                    child: single,
-                  )
-                : content,
+            width: contentWidth,
+            child: IconButtonTheme(
+              data: IconButtonThemeData(style: m.iconStyle),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: m.commandHeight),
+                child: Row(
+                  key: const ValueKey('general-compact-toolbar-single-row'),
+                  children: [
+                    if (!hasCategory && !hasDate) const Spacer(),
+                    for (final id in ids)
+                      SizedBox(
+                        key: id == 'date'
+                            ? const ValueKey('general-date-navigation')
+                            : null,
+                        width: switch (id) {
+                          'category' => categoryWidth,
+                          'date' => dateWidth,
+                          _ => m.iconTarget,
+                        },
+                        child: actions[id]!,
+                      ),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -2519,6 +2506,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
       view,
       labelWidth,
       format: dateLabelFormat,
+      compactToolbar: compactTouch,
     );
     final accessibleDateLabel = _accessibleDateNavigationLabel(
       selectedDate,
@@ -2570,7 +2558,7 @@ class _GeneralWorkspaceNavigation extends StatelessWidget {
                         ? CrossAxisAlignment.start
                         : CrossAxisAlignment.center,
                     children: [
-                      if (view == generalViewCustom)
+                      if (view == generalViewCustom && !compactTouch)
                         Text(
                           currentViewLabel,
                           key: const ValueKey('general-custom-range-label'),
@@ -2659,7 +2647,11 @@ class _GeneralViewSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final icon = _generalViewIcon(view);
+    final icon =
+        view == generalViewCustom &&
+            WorkbenchChromeMetrics.compactTouch(context)
+        ? Icons.date_range_outlined
+        : _generalViewIcon(view);
     final enabled = interactive;
     if (behavior == generalViewSwitchBehaviorMenu) {
       final tooltip = '${l10n.generalViewSwitchMenuTooltip}: $currentLabel';
@@ -3074,15 +3066,43 @@ class _GeneralOccurrenceFilter {
   }
 }
 
+String? _dateNavigationWithoutYear(
+  DateTime date,
+  String view, {
+  required String localeName,
+  GeneralDateRange? customRange,
+}) {
+  final unit = _dateUnitForView(view);
+  final range = customRange == null
+      ? dateSelectionRange(date, unit)
+      : (start: customRange.start, end: customRange.end);
+  final first = range.start, last = range.end;
+  // Cross-year ranges need both years to retain their meaning.
+  if (first.year != last.year) return null;
+  if (unit == DateSelectionUnit.month) {
+    return intl.DateFormat.MMM(localeName).format(first);
+  }
+  final start = intl.DateFormat.Md(localeName).format(first);
+  final end = first.month == last.month
+      ? '${last.day}'
+      : intl.DateFormat.Md(localeName).format(last);
+  return _sameDay(first, last) ? start : '$start–$end';
+}
+
 String _dateNavigationLabelForWidth(
   BuildContext context,
   DateTime date,
   String view,
   double width, {
   required String format,
+  bool compactToolbar = false,
 }) {
+  final theme = Theme.of(context);
   final style =
-      Theme.of(context).textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+      (compactToolbar
+          ? theme.textTheme.titleSmall
+          : theme.textTheme.labelLarge) ??
+      const TextStyle(fontSize: 14);
   final scaler = MediaQuery.textScalerOf(context);
   final maxTextWidth = math.max(
     0.0,
@@ -3097,6 +3117,32 @@ String _dateNavigationLabelForWidth(
         ? context.read<TimetableProvider>().customGeneralDateRange
         : null,
   );
+  if (compactToolbar) {
+    final custom = view == generalViewCustom
+        ? context.read<TimetableProvider>().customGeneralDateRange
+        : null;
+    final range = custom == null
+        ? dateSelectionRange(date, _dateUnitForView(view))
+        : (start: custom.start, end: custom.end);
+    final first = range.start, last = range.end;
+    final yearless = _dateNavigationWithoutYear(
+      date,
+      view,
+      localeName: Localizations.localeOf(context).toLanguageTag(),
+      customRange: custom,
+    );
+    if (yearless != null) candidates.add(yearless);
+    if (_dateUnitForView(view) != DateSelectionUnit.month &&
+        first.year == last.year) {
+      // Full dates remain in the tooltip/semantics and picker. Only the
+      // compact label elides redundant years; saved formatting is unchanged.
+      if (first.month == last.month) {
+        candidates.add(
+          _sameDay(first, last) ? '${first.day}' : '${first.day}–${last.day}',
+        );
+      }
+    }
+  }
   for (final candidate in candidates) {
     final painter = TextPainter(
       text: TextSpan(text: candidate, style: style),
@@ -3104,7 +3150,9 @@ String _dateNavigationLabelForWidth(
       textScaler: scaler,
       maxLines: 1,
     )..layout();
-    if (painter.width <= maxTextWidth) {
+    final fits = painter.width <= maxTextWidth;
+    painter.dispose();
+    if (fits) {
       return candidate;
     }
   }

@@ -27,6 +27,7 @@ import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
+import '../widgets/assistant_pane.dart' show AssistantPaneScope;
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/workspace_navigation.dart';
@@ -284,6 +285,10 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, constraints) {
                 final timetable = snapshot.activeTimetable;
                 final desktop = WorkbenchChromeMetrics.of(context).desktop;
+                final compactTouch = WorkbenchChromeMetrics.compactTouch(
+                  context,
+                  width: constraints.maxWidth,
+                );
                 final horizontalInset = !desktop && constraints.maxWidth < 600
                     ? 8.0
                     : 0.0;
@@ -301,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Padding(
                     padding: EdgeInsets.fromLTRB(
                       horizontalInset,
-                      desktop ? 0 : 8,
+                      desktop || compactTouch ? 0 : 8,
                       horizontalInset,
                       0,
                     ),
@@ -396,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Padding(
                   padding: EdgeInsets.fromLTRB(
                     horizontalInset,
-                    desktop ? 0 : 8,
+                    desktop || compactTouch ? 0 : 8,
                     horizontalInset,
                     0,
                   ),
@@ -454,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : null,
                             onOpenSettings: settingsAction,
                           ),
-                          const SizedBox(height: 4),
+                          if (!compactTouch) const SizedBox(height: 4),
                           Expanded(
                             child: _TimetableWeekPager(
                               controller: _pageController!,

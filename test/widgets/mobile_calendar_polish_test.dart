@@ -469,7 +469,7 @@ void main() {
   for (final width in [320.0, 360.0, 393.0, 412.0]) {
     for (final scale in [1.0, 1.3, 2.0]) {
       testWidgets(
-        'phone $width scale $scale shares canvas top color, has no date arrows and at most two rows',
+        'phone $width scale $scale shares canvas top color, has no date arrows and one toolbar row',
         (t) async {
           size(t, Size(width, 900));
           final storage = CalendarStorage(sample(shortName: true));
@@ -506,10 +506,7 @@ void main() {
             expect(rect.right, lessThanOrEqualTo(width));
             expect(rect.height, greaterThanOrEqualTo(48));
           }
-          expect(
-            t.getSize(toolbar).height,
-            lessThanOrEqualTo(scale == 1 ? 108 : 148),
-          );
+          expect(t.getSize(toolbar).height, lessThanOrEqualTo(52));
           expect(storage.writes, before);
           await openWeek(t);
           expect(key('sked-date-selection-label'), findsNothing);
