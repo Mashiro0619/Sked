@@ -298,6 +298,10 @@ void main() {
         );
         final state = t.state(find.byType(SkedTimePicker));
         expect(t.testTextInput.isVisible, isFalse);
+        if (_key('sked-time-input-toggle').evaluate().isNotEmpty) {
+          await t.tap(_key('sked-time-input-toggle'));
+          await t.pumpAndSettle();
+        }
         await t.enterText(_key('sked-time-hour-input'), '19');
         await t.enterText(_key('sked-time-minute-input'), '');
         t.view.viewInsets = const FakeViewPadding(bottom: 180);

@@ -3050,4 +3050,7 @@ class AppLocalizationsIt extends AppLocalizations {
     );
     return 'Personalizzato · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Seleziona con le rotelle';
 }

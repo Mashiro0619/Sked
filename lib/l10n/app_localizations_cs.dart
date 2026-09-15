@@ -3039,4 +3039,7 @@ class AppLocalizationsCs extends AppLocalizations {
     );
     return 'Vlastní · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Vybrat pomocí koleček';
 }

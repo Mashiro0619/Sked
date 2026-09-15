@@ -3028,4 +3028,7 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return 'Custom · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Use scroll wheels';
 }

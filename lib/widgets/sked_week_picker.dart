@@ -22,13 +22,17 @@ Future<int?> showSkedWeekPicker({
 }) => showSkedPickerTask<int>(
   context: context,
   routeName: 'sked-week-picker',
+  compactPresentation: SkedPickerCompactPresentation.anchored,
   surfaceKey: const ValueKey('sked-week-picker-surface'),
   anchorContext: anchorContext,
   workspace: AppMode.student,
   isSessionCurrent: isSessionCurrent,
   preferredSize: (context) {
     final metrics = WorkbenchChromeMetrics.of(context);
-    final width = metrics.desktop ? 320.0 : 360.0;
+    final width =
+        metrics.desktop || WorkbenchChromeMetrics.compactTouch(context)
+        ? 320.0
+        : 360.0;
     final layout = _WeekGridLayout.resolve(
       context,
       width - 24,
@@ -270,7 +274,7 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                             ? Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontSize: 18,
                                 height: 1.2,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w500,
                               )
                             : Theme.of(context).textTheme.titleMedium,
                       ),

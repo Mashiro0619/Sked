@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "Choisir avec les roulettes",
+  "@timePickerWheelMode": {}
 }

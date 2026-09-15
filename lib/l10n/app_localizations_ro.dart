@@ -3051,4 +3051,7 @@ class AppLocalizationsRo extends AppLocalizations {
     );
     return 'Personalizat · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Selectează cu rotițele';
 }

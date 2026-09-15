@@ -2977,4 +2977,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return '사용자 지정 · $days일';
   }
+
+  @override
+  String get timePickerWheelMode => '휠로 선택';
 }

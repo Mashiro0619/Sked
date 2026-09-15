@@ -3030,4 +3030,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return 'कस्टम · $days दिन';
   }
+
+  @override
+  String get timePickerWheelMode => 'स्क्रॉल व्हील से चुनें';
 }

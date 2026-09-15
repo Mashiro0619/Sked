@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "Kiezen met scrollwielen",
+  "@timePickerWheelMode": {}
 }

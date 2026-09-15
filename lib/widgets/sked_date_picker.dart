@@ -16,6 +16,7 @@ import '../utils/date_selection.dart';
 import '../utils/calendar_date_utils.dart';
 import 'workbench_chrome_metrics.dart';
 import 'sked_picker_task.dart';
+import 'sked_picker_actions.dart';
 
 export '../utils/date_selection.dart' show DateSelectionUnit;
 export 'sked_date_range_controller.dart';
@@ -138,6 +139,12 @@ Future<T?> _showDateTask<T>({
   return showSkedPickerTask<T>(
     context: context,
     routeName: 'sked-date-picker',
+    compactPresentation:
+        selectionUnit == DateSelectionUnit.day &&
+            commitMode == DatePickerCommitMode.confirm &&
+            rangeInteraction == DateRangeInteraction.none
+        ? SkedPickerCompactPresentation.centered
+        : SkedPickerCompactPresentation.bottomSheet,
     surfaceKey: const ValueKey('sked-date-picker-surface'),
     anchorContext: anchorContext,
     workspace: workspace,
@@ -147,8 +154,15 @@ Future<T?> _showDateTask<T>({
         metrics.desktop ? 32.0 : 48.0,
         18 * metrics.textScale + 12,
       );
+      final compactSingle =
+          WorkbenchChromeMetrics.compactTouch(context) &&
+          selectionUnit == DateSelectionUnit.day &&
+          commitMode == DatePickerCommitMode.confirm &&
+          rangeInteraction == DateRangeInteraction.none;
       return Size(
-        math.max(metrics.desktop ? 320.0 : 360.0, cell * 7 + 24),
+        compactSingle
+            ? math.max(360.0, 280 * metrics.textScale)
+            : math.max(metrics.desktop ? 320.0 : 360.0, cell * 7 + 24),
         cell * 8 + 80,
       );
     },
@@ -242,6 +256,11 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
   (_CalendarPage, int, Size, String?)? _choiceLayout;
   bool get _compactCalendar =>
       !widget.embedded && WorkbenchChromeMetrics.compactTouch(context);
+  bool get _compactSingleDate =>
+      _compactCalendar &&
+      widget.selectionUnit == DateSelectionUnit.day &&
+      widget.commitMode == DatePickerCommitMode.confirm &&
+      widget.rangeInteraction == DateRangeInteraction.none;
   DateTime? _dragOrigin;
   Rect? _dragBounds;
   bool _ownsDrag = false;
@@ -852,194 +871,224 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                     },
                   ),
             },
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                key: const ValueKey('sked-date-picker-outer-scroll'),
-                primary: false,
-                child: ConstrainedBox(
-                  // In a short landscape window the IME must not squeeze the input
-                  // between fixed chrome. Keep a useful content budget and let the
-                  // whole task scroll, without reparenting the editor on resize.
-                  constraints: BoxConstraints(
-                    maxHeight: constraints.maxHeight.isFinite
-                        ? math.max(
-                            constraints.maxHeight,
-                            metrics.iconTarget * 3 + 120 * metrics.textScale,
-                          )
-                        : double.infinity,
-                  ),
-                  child: Padding(
-                    padding: widget.embedded
-                        ? EdgeInsets.zero
-                        : compact
-                        ? const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          )
-                        : const EdgeInsets.all(12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (!widget.embedded &&
-                            (!compact || _page == _CalendarPage.input))
-                          Row(
+            child: _compactSingleDate
+                ? _singleDateContent(context, cellHeight, title)
+                : LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      key: const ValueKey('sked-date-picker-outer-scroll'),
+                      primary: false,
+                      child: ConstrainedBox(
+                        // In a short landscape window the IME must not squeeze the input
+                        // between fixed chrome. Keep a useful content budget and let the
+                        // whole task scroll, without reparenting the editor on resize.
+                        constraints: BoxConstraints(
+                          maxHeight: constraints.maxHeight.isFinite
+                              ? math.max(
+                                  constraints.maxHeight,
+                                  metrics.iconTarget * 3 +
+                                      120 * metrics.textScale,
+                                )
+                              : double.infinity,
+                        ),
+                        child: Padding(
+                          padding: widget.embedded
+                              ? EdgeInsets.zero
+                              : compact
+                              ? const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                )
+                              : const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: Semantics(
-                                  hint: _rangeMode
-                                      ? (widget.rangeController!.selectingEnd
-                                            ? l.dateRangeChooseEnd
-                                            : l.dateRangeChooseStart)
-                                      : null,
-                                  child: _headerLabel(
-                                    context,
-                                    title,
-                                    feedback: true,
+                              if (!widget.embedded &&
+                                  (!compact || _page == _CalendarPage.input))
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Semantics(
+                                        hint: _rangeMode
+                                            ? (widget
+                                                      .rangeController!
+                                                      .selectingEnd
+                                                  ? l.dateRangeChooseEnd
+                                                  : l.dateRangeChooseStart)
+                                            : null,
+                                        child: _headerLabel(
+                                          context,
+                                          title,
+                                          feedback: true,
+                                        ),
+                                      ),
+                                    ),
+                                    if (_rangeGestures &&
+                                        widget.rangeController!.saveFailed)
+                                      IconButton(
+                                        key: const ValueKey(
+                                          'sked-date-range-retry',
+                                        ),
+                                        tooltip: l.retrySave,
+                                        style: metrics.iconStyle,
+                                        onPressed: () =>
+                                            unawaited(_retryRange()),
+                                        icon: const Icon(Icons.refresh),
+                                      ),
+                                    if (!_compactSingleDate)
+                                      IconButton(
+                                        key: const ValueKey(
+                                          'sked-date-picker-close',
+                                        ),
+                                        tooltip: material.closeButtonLabel,
+                                        style: metrics.iconStyle,
+                                        onPressed: _savingRange
+                                            ? null
+                                            : widget.onCancel,
+                                        icon: const Icon(Icons.close),
+                                      ),
+                                  ],
+                                ),
+                              if (_page != _CalendarPage.input)
+                                _header(
+                                  context,
+                                  compact: compact,
+                                  title: title,
+                                ),
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: SingleChildScrollView(
+                                  key: const ValueKey(
+                                    'sked-date-picker-scroll',
                                   ),
+                                  child: _page == _CalendarPage.input
+                                      ? _dateInputs(context)
+                                      : Focus(
+                                          key: const ValueKey(
+                                            'sked-date-grid-focus',
+                                          ),
+                                          focusNode: _gridFocus,
+                                          autofocus: !widget.embedded,
+                                          onKeyEvent: _onGridKey,
+                                          onFocusChange: (value) {
+                                            if (mounted) {
+                                              setState(() => _hasFocus = value);
+                                            }
+                                          },
+                                          child: switch (_page) {
+                                            _CalendarPage.days =>
+                                              _interactiveDayGrid(
+                                                context,
+                                                cellHeight,
+                                              ),
+                                            _CalendarPage.months => _monthGrid(
+                                              context,
+                                              cellHeight,
+                                            ),
+                                            _CalendarPage.years => _yearGrid(
+                                              context,
+                                              cellHeight,
+                                            ),
+                                            _CalendarPage.input =>
+                                              const SizedBox.shrink(),
+                                          },
+                                        ),
                                 ),
                               ),
-                              if (_rangeGestures &&
-                                  widget.rangeController!.saveFailed)
-                                IconButton(
-                                  key: const ValueKey('sked-date-range-retry'),
-                                  tooltip: l.retrySave,
-                                  style: metrics.iconStyle,
-                                  onPressed: () => unawaited(_retryRange()),
-                                  icon: const Icon(Icons.refresh),
+                              if (!widget.embedded) ...[
+                                if (!compact) const SizedBox(height: 8),
+                                if (!_rangeMode && !compact)
+                                  Text(
+                                    formatDateSelection(
+                                      _selected,
+                                      widget.selectionUnit,
+                                      locale: l.localeName,
+                                      format: widget.dateLabelFormat,
+                                    ),
+                                    key: const ValueKey(
+                                      'sked-date-selection-label',
+                                    ),
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                if (!compact) const SizedBox(height: 4),
+                                Wrap(
+                                  alignment: WrapAlignment.end,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 4,
+                                  children: [
+                                    IconButton(
+                                      key: const ValueKey(
+                                        'sked-date-input-toggle',
+                                      ),
+                                      style: metrics.iconStyle,
+                                      tooltip: _page == _CalendarPage.input
+                                          ? material.calendarModeButtonLabel
+                                          : material.inputDateModeButtonLabel,
+                                      onPressed: _savingRange
+                                          ? null
+                                          : () {
+                                              if (_page ==
+                                                  _CalendarPage.input) {
+                                                setState(
+                                                  () => _page =
+                                                      _CalendarPage.days,
+                                                );
+                                                _gridFocus.requestFocus();
+                                              } else {
+                                                _showInput();
+                                              }
+                                            },
+                                      icon: Icon(
+                                        _page == _CalendarPage.input
+                                            ? Icons.calendar_month_outlined
+                                            : Icons.edit_calendar_outlined,
+                                      ),
+                                    ),
+                                    if (!_rangeMode ||
+                                        _page != _CalendarPage.input)
+                                      TextButton(
+                                        key: const ValueKey('sked-date-today'),
+                                        onPressed:
+                                            _savingRange ||
+                                                _resolve(
+                                                      _today,
+                                                      widget.selectionUnit,
+                                                    ) ==
+                                                    null
+                                            ? null
+                                            : () => _choose(_today),
+                                        child: Text(l.today),
+                                      ),
+                                    if (_confirmed)
+                                      TextButton(
+                                        key: const ValueKey('sked-date-cancel'),
+                                        onPressed: widget.onCancel,
+                                        child: Text(material.cancelButtonLabel),
+                                      ),
+                                    if (_confirmed ||
+                                        _page == _CalendarPage.input)
+                                      FilledButton(
+                                        key: const ValueKey(
+                                          'sked-date-confirm',
+                                        ),
+                                        onPressed: _savingRange
+                                            ? null
+                                            : _page == _CalendarPage.input
+                                            ? _acceptInput
+                                            : _allowed(_selected)
+                                            ? _submit
+                                            : null,
+                                        child: Text(material.okButtonLabel),
+                                      ),
+                                  ],
                                 ),
-                              IconButton(
-                                key: const ValueKey('sked-date-picker-close'),
-                                tooltip: material.closeButtonLabel,
-                                style: metrics.iconStyle,
-                                onPressed: _savingRange
-                                    ? null
-                                    : widget.onCancel,
-                                icon: const Icon(Icons.close),
-                              ),
+                              ],
                             ],
-                          ),
-                        if (_page != _CalendarPage.input)
-                          _header(context, compact: compact, title: title),
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: SingleChildScrollView(
-                            key: const ValueKey('sked-date-picker-scroll'),
-                            child: _page == _CalendarPage.input
-                                ? _dateInputs(context)
-                                : Focus(
-                                    key: const ValueKey('sked-date-grid-focus'),
-                                    focusNode: _gridFocus,
-                                    autofocus: !widget.embedded,
-                                    onKeyEvent: _onGridKey,
-                                    onFocusChange: (value) {
-                                      if (mounted) {
-                                        setState(() => _hasFocus = value);
-                                      }
-                                    },
-                                    child: switch (_page) {
-                                      _CalendarPage.days => _interactiveDayGrid(
-                                        context,
-                                        cellHeight,
-                                      ),
-                                      _CalendarPage.months => _monthGrid(
-                                        context,
-                                        cellHeight,
-                                      ),
-                                      _CalendarPage.years => _yearGrid(
-                                        context,
-                                        cellHeight,
-                                      ),
-                                      _CalendarPage.input =>
-                                        const SizedBox.shrink(),
-                                    },
-                                  ),
                           ),
                         ),
-                        if (!widget.embedded) ...[
-                          if (!compact) const SizedBox(height: 8),
-                          if (!_rangeMode && !compact)
-                            Text(
-                              formatDateSelection(
-                                _selected,
-                                widget.selectionUnit,
-                                locale: l.localeName,
-                                format: widget.dateLabelFormat,
-                              ),
-                              key: const ValueKey('sked-date-selection-label'),
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          if (!compact) const SizedBox(height: 4),
-                          Wrap(
-                            alignment: WrapAlignment.end,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 4,
-                            children: [
-                              IconButton(
-                                key: const ValueKey('sked-date-input-toggle'),
-                                style: metrics.iconStyle,
-                                tooltip: _page == _CalendarPage.input
-                                    ? material.calendarModeButtonLabel
-                                    : material.inputDateModeButtonLabel,
-                                onPressed: _savingRange
-                                    ? null
-                                    : () {
-                                        if (_page == _CalendarPage.input) {
-                                          setState(
-                                            () => _page = _CalendarPage.days,
-                                          );
-                                          _gridFocus.requestFocus();
-                                        } else {
-                                          _showInput();
-                                        }
-                                      },
-                                icon: Icon(
-                                  _page == _CalendarPage.input
-                                      ? Icons.calendar_month_outlined
-                                      : Icons.edit_calendar_outlined,
-                                ),
-                              ),
-                              if (!_rangeMode || _page != _CalendarPage.input)
-                                TextButton(
-                                  key: const ValueKey('sked-date-today'),
-                                  onPressed:
-                                      _savingRange ||
-                                          _resolve(
-                                                _today,
-                                                widget.selectionUnit,
-                                              ) ==
-                                              null
-                                      ? null
-                                      : () => _choose(_today),
-                                  child: Text(l.today),
-                                ),
-                              if (_confirmed)
-                                TextButton(
-                                  key: const ValueKey('sked-date-cancel'),
-                                  onPressed: widget.onCancel,
-                                  child: Text(material.cancelButtonLabel),
-                                ),
-                              if (_confirmed || _page == _CalendarPage.input)
-                                FilledButton(
-                                  key: const ValueKey('sked-date-confirm'),
-                                  onPressed: _savingRange
-                                      ? null
-                                      : _page == _CalendarPage.input
-                                      ? _acceptInput
-                                      : _allowed(_selected)
-                                      ? _submit
-                                      : null,
-                                  child: Text(material.okButtonLabel),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
           ),
         ),
       ),
@@ -1169,6 +1218,141 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     );
   }
 
+  Widget _singleDateContent(
+    BuildContext context,
+    double cellHeight,
+    String title,
+  ) {
+    final metrics = WorkbenchChromeMetrics.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        key: const ValueKey('sked-date-picker-outer-scroll'),
+        primary: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: constraints.maxHeight.isFinite
+                ? math.max(constraints.maxHeight, metrics.iconTarget * 2 + 80)
+                : double.infinity,
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: constraints.maxWidth < 336 ? 0 : 12,
+              vertical: 8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    key: const ValueKey('sked-date-picker-scroll'),
+                    primary: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_page == _CalendarPage.input) ...[
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _headerLabel(context, title),
+                          ),
+                          _dateInputs(context),
+                        ] else ...[
+                          _header(context, compact: true, title: title),
+                          Focus(
+                            key: const ValueKey('sked-date-grid-focus'),
+                            focusNode: _gridFocus,
+                            autofocus: true,
+                            onKeyEvent: _onGridKey,
+                            onFocusChange: (value) {
+                              if (mounted) setState(() => _hasFocus = value);
+                            },
+                            child: switch (_page) {
+                              _CalendarPage.days => _interactiveDayGrid(
+                                context,
+                                cellHeight,
+                              ),
+                              _CalendarPage.months => _monthGrid(
+                                context,
+                                cellHeight,
+                              ),
+                              _CalendarPage.years => _yearGrid(
+                                context,
+                                cellHeight,
+                              ),
+                              _CalendarPage.input => const SizedBox.shrink(),
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                _singleDateFooter(context),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _singleDateFooter(BuildContext context) {
+    final material = MaterialLocalizations.of(context);
+    final l = AppLocalizations.of(context);
+    final metrics = WorkbenchChromeMetrics.of(context);
+    return SkedPickerActions(
+      leading: [
+        IconButton(
+          key: const ValueKey('sked-date-input-toggle'),
+          style: metrics.iconStyle,
+          tooltip: _page == _CalendarPage.input
+              ? material.calendarModeButtonLabel
+              : material.inputDateModeButtonLabel,
+          onPressed: () {
+            if (_page == _CalendarPage.input) {
+              setState(() => _page = _CalendarPage.days);
+              _gridFocus.requestFocus();
+            } else {
+              _showInput();
+            }
+          },
+          icon: Icon(
+            _page == _CalendarPage.input
+                ? Icons.calendar_month_outlined
+                : Icons.edit_calendar_outlined,
+          ),
+        ),
+        TextButton(
+          key: const ValueKey('sked-date-today'),
+          onPressed: _resolve(_today, widget.selectionUnit) == null
+              ? null
+              : () {
+                  _choose(_today);
+                  if (_page == _CalendarPage.input) {
+                    _input.text = material.formatCompactDate(_selected);
+                  }
+                },
+          child: Text(l.today),
+        ),
+      ],
+      trailing: [
+        TextButton(
+          key: const ValueKey('sked-date-cancel'),
+          onPressed: widget.onCancel,
+          child: Text(material.cancelButtonLabel),
+        ),
+        FilledButton(
+          key: const ValueKey('sked-date-confirm'),
+          onPressed: _page == _CalendarPage.input
+              ? _acceptInput
+              : _allowed(_selected)
+              ? _submit
+              : null,
+          child: Text(material.okButtonLabel),
+        ),
+      ],
+    );
+  }
+
   Widget _header(BuildContext context, {bool compact = false, String? title}) {
     final l = AppLocalizations.of(context),
         material = MaterialLocalizations.of(context);
@@ -1275,7 +1459,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
             onPressed: !_savingRange && _canStep(1) ? () => _step(1) : null,
             icon: const Icon(Icons.chevron_right),
           ),
-          if (compact)
+          if (compact && !_compactSingleDate)
             IconButton(
               key: const ValueKey('sked-date-picker-close'),
               tooltip: material.closeButtonLabel,

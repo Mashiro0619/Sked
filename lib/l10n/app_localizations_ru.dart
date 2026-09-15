@@ -3054,4 +3054,7 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return 'Произвольный · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Выбрать прокруткой';
 }

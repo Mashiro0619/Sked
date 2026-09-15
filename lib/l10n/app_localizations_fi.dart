@@ -3040,4 +3040,7 @@ class AppLocalizationsFi extends AppLocalizations {
     );
     return 'Mukautettu · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Valitse vierityspyörillä';
 }

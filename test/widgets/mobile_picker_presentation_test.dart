@@ -94,15 +94,18 @@ Future<void> _open(
   await t.pumpAndSettle();
 }
 
-String _close(String kind) =>
-    kind == 'time' ? 'sked-time-cancel' : 'sked-$kind-picker-close';
+String _close(String kind) => switch (kind) {
+  'time' => 'sked-time-cancel',
+  'date' => 'sked-date-cancel',
+  _ => 'sked-week-picker-close',
+};
 
 void main() {
   for (final width in [320.0, 360.0, 393.0, 412.0]) {
     for (final scale in [1.0, 1.3, 2.0]) {
       for (final kind in ['date', 'time', 'week']) {
         testWidgets(
-          '$kind phone $width scale $scale is content-height and paints its bottom inset',
+          '$kind phone $width scale $scale uses bounded task-specific presentation',
           (t) async {
             _size(t, Size(width, 900));
             final p = await workspaceProvider();
@@ -121,13 +124,22 @@ void main() {
             );
             final surface = _key('sked-$kind-picker-surface');
             final rect = t.getRect(surface);
-            expect(rect.left, 0);
-            expect(rect.right, width);
-            expect(rect.bottom, 900);
+            final margin = width <= 336 ? 8.0 : 12.0;
+            expect(rect.left, greaterThanOrEqualTo(margin));
+            expect(rect.right, lessThanOrEqualTo(width - margin));
+            expect(rect.bottom, lessThanOrEqualTo(900 - 24 - margin));
+            expect(rect.top, greaterThanOrEqualTo(24 + margin));
+            if (kind == 'week') {
+              expect(rect.top, t.getRect(_key('open-picker')).bottom + 6);
+            } else {
+              expect(rect.center, Offset(width / 2, 450));
+            }
+            final barrier = t.widget<ModalBarrier>(
+              find.byType(ModalBarrier).last,
+            );
             expect(
-              rect.top,
-              greaterThan(100),
-              reason: 'Small pickers must not become fullscreen',
+              barrier.color,
+              kind == 'week' ? null : const Color(0x3D000000),
             );
             final systemStyle = t
                 .widget<AnnotatedRegion<SystemUiOverlayStyle>>(
@@ -141,16 +153,10 @@ void main() {
                       .first,
                 )
                 .value;
-            final theme = Theme.of(t.element(surface));
             expect(
               systemStyle.systemNavigationBarColor,
-              theme.colorScheme.surface,
-            );
-            expect(
-              systemStyle.systemNavigationBarIconBrightness,
-              brightness == Brightness.dark
-                  ? Brightness.light
-                  : Brightness.dark,
+              isNull,
+              reason: 'Floating tasks do not paint a bottom navigation strip',
             );
             final close = _key(_close(kind));
             expect(close.hitTestable(), findsOneWidget);
@@ -162,7 +168,7 @@ void main() {
               );
               expect(
                 t.getSize(_key('sked-time-minute-wheel')).height,
-                closeTo(wheel.itemExtent * 5, .01),
+                closeTo(wheel.itemExtent * 3, .01),
               );
             }
             await t.tap(close);
@@ -177,7 +183,7 @@ void main() {
   }
 
   testWidgets(
-    'single-week sheet occupies only one grid row, external cancel restores focus',
+    'single-week popover occupies only one grid row, external cancel restores focus',
     (t) async {
       _size(t, const Size(393, 852));
       final p = await workspaceProvider();
@@ -187,7 +193,7 @@ void main() {
       addTearDown(focus.dispose);
       await _open(t, p, 'week', results, weeks: 1, triggerFocus: focus);
       expect(t.getSize(_key('sked-week-picker-surface')).height, lessThan(200));
-      await t.tapAt(const Offset(200, 220));
+      await t.tapAt(const Offset(200, 700));
       await t.pumpAndSettle();
       expect(results, [null]);
       expect(focus.hasFocus, isTrue);
@@ -204,13 +210,18 @@ void main() {
       final results = <Object?>[];
       await _open(t, p, 'time', results, scale: 1.3);
       final state = t.state(find.byType(SkedTimePicker));
+      await t.tap(_key('sked-time-input-toggle'));
+      await t.pumpAndSettle();
       await t.enterText(_key('sked-time-hour-input'), '19');
       await t.enterText(_key('sked-time-minute-input'), '');
       t.view.viewInsets = const FakeViewPadding(bottom: 320);
       t.view.padding = const FakeViewPadding(top: 24);
       await t.pumpAndSettle();
       expect(t.state(find.byType(SkedTimePicker)), same(state));
-      expect(t.getRect(_key('sked-time-picker-surface')).bottom, 532);
+      expect(
+        t.getRect(_key('sked-time-picker-surface')).bottom,
+        lessThanOrEqualTo(520),
+      );
       expect(_key('sked-time-cancel').hitTestable(), findsOneWidget);
       expect(_key('sked-time-confirm').hitTestable(), findsOneWidget);
       expect(
@@ -245,7 +256,7 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
-  testWidgets('wheel drag selects without dismissing its bottom task', (
+  testWidgets('wheel drag selects without dismissing its centered task', (
     t,
   ) async {
     _size(t, const Size(360, 800));
@@ -258,12 +269,9 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(SkedTimePicker), findsOneWidget);
     expect(results, isEmpty);
+    expect(t.widget<Semantics>(_key('sked-time-hours')).properties.value, '23');
     expect(
-      t.widget<TextField>(_key('sked-time-hour-input')).controller!.text,
-      '23',
-    );
-    expect(
-      t.widget<TextField>(_key('sked-time-minute-input')).controller!.text,
+      t.widget<Semantics>(_key('sked-time-minutes')).properties.value,
       isNot('59'),
     );
     await t.sendEventToBinding(
@@ -282,9 +290,7 @@ void main() {
 
   for (final kind in ['date', 'time', 'week']) {
     for (final replaceData in [false, true]) {
-      testWidgets('$kind bottom task invalidates on replace=$replaceData', (
-        t,
-      ) async {
+      testWidgets('$kind task invalidates on replace=$replaceData', (t) async {
         _size(t, const Size(360, 800));
         final p = await workspaceProvider();
         addTearDown(p.dispose);

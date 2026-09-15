@@ -3062,4 +3062,7 @@ class AppLocalizationsEl extends AppLocalizations {
     );
     return 'Προσαρμοσμένο · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Επιλογή με τροχούς κύλισης';
 }

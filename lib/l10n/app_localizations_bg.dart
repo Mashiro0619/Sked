@@ -3059,4 +3059,7 @@ class AppLocalizationsBg extends AppLocalizations {
     );
     return 'По избор · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Избор с колелца';
 }

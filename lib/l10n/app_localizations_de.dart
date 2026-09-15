@@ -3054,4 +3054,7 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return 'Benutzerdefiniert · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Mit Auswahlrädern wählen';
 }

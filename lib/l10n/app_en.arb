@@ -2134,5 +2134,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "Use scroll wheels",
+  "@timePickerWheelMode": {}
 }

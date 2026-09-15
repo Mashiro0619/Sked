@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "ホイールで選択",
+  "@timePickerWheelMode": {}
 }

@@ -2118,5 +2118,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "切换为滚轮选择",
+  "@timePickerWheelMode": {}
 }

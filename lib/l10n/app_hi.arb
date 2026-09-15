@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "स्क्रॉल व्हील से चुनें",
+  "@timePickerWheelMode": {}
 }

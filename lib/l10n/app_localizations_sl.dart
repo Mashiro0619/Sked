@@ -3041,4 +3041,7 @@ class AppLocalizationsSl extends AppLocalizations {
     );
     return 'Po meri · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Izberi z drsnimi kolesci';
 }

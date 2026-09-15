@@ -11,8 +11,10 @@ import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../models/app_mode.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'sked_picker_task.dart';
+import 'sked_picker_actions.dart';
 import 'workbench_chrome_metrics.dart';
 
 Future<TimeOfDay?> showSkedTimePicker({
@@ -27,13 +29,19 @@ Future<TimeOfDay?> showSkedTimePicker({
   return showSkedPickerTask<TimeOfDay>(
     context: context,
     routeName: 'sked-time-picker',
+    compactPresentation: SkedPickerCompactPresentation.centered,
     surfaceKey: const ValueKey('sked-time-picker-surface'),
     anchorContext: anchorContext,
     workspace: workspace,
     preferredSize: (context) {
       final metrics = WorkbenchChromeMetrics.of(context);
       return Size(
-        math.max(metrics.desktop ? 320.0 : 360.0, 220 * metrics.textScale),
+        math.max(
+          metrics.desktop || WorkbenchChromeMetrics.compactTouch(context)
+              ? 320.0
+              : 360.0,
+          220 * metrics.textScale,
+        ),
         metrics.iconTarget * 5 + 180 * metrics.textScale,
       );
     },
@@ -77,15 +85,21 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
   late bool _pm = _hour >= 12;
   bool? _use24;
   bool _finished = false;
+  bool _inputMode = false;
+  bool get _compact => WorkbenchChromeMetrics.compactTouch(context);
+  bool get _wheelsVisible => !_compact || !_inputMode;
   int _hourInputRevision = 0, _minuteInputRevision = 0;
   bool _hourMoving = false, _minuteMoving = false;
   final _hourWheel = GlobalKey<_TimeValueWheelState>();
   final _minuteWheel = GlobalKey<_TimeValueWheelState>();
+  // A resized-away wheel may still be mounted during this build. Its old
+  // activity must not disable the input-only draft after it is disposed.
   bool get _settled =>
-      !_hourMoving &&
-      !_minuteMoving &&
-      _hourWheel.currentState?.isMoving != true &&
-      _minuteWheel.currentState?.isMoving != true;
+      !_wheelsVisible ||
+      (!_hourMoving &&
+          !_minuteMoving &&
+          _hourWheel.currentState?.isMoving != true &&
+          _minuteWheel.currentState?.isMoving != true);
   int get _lastDisplayHour =>
       _use24 == true ? _hour : (_hour % 12 == 0 ? 12 : _hour % 12);
   bool get _current => !_finished && (widget.isSessionCurrent?.call() ?? true);
@@ -111,6 +125,9 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_wheelsVisible) {
+      _hourMoving = _minuteMoving = false;
+    }
     final format = MaterialLocalizations.of(context).timeOfDayFormat(
       alwaysUse24HourFormat:
           widget.alwaysUse24HourFormat ??
@@ -142,12 +159,12 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
         final h = _displayHour;
         if (h != null) _hour = _use24! ? h : h % 12 + (_pm ? 12 : 0);
         _hourInputRevision++;
-        _hourMoving = true;
+        _hourMoving = _wheelsVisible;
       } else {
         final m = _displayMinute;
         if (m != null) _minute = m;
         _minuteInputRevision++;
-        _minuteMoving = true;
+        _minuteMoving = _wheelsVisible;
       }
     });
   }
@@ -165,7 +182,7 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
   }
 
   void _activityChanged(bool hour, bool moving) {
-    if (!_current) return;
+    if (!_current || !_wheelsVisible) return;
     setState(() {
       if (hour) {
         _hourMoving = moving;
@@ -173,6 +190,22 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
         _minuteMoving = moving;
       }
     });
+  }
+
+  void _toggleInput() {
+    if (!_current || !_settled || _value == null) return;
+    setState(() => _inputMode = !_inputMode);
+    if (_inputMode) {
+      _hourFocus.requestFocus();
+    } else {
+      _hourFocus.unfocus();
+      _minuteFocus.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_inputMode && _current) {
+          _hourWheel.currentState?.requestFocus();
+        }
+      });
+    }
   }
 
   void _submit() {
@@ -215,6 +248,7 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
       onChanged: (_) => _changed(hour),
       onSubmitted: (_) => hour ? _minuteFocus.requestFocus() : _submit(),
     );
+    if (_compact) return _buildCompact(context, field, rowHeight);
     return Shortcuts(
       shortcuts: const {
         SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
@@ -415,6 +449,279 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
       ),
     );
   }
+
+  Widget _buildCompact(
+    BuildContext context,
+    Widget Function(bool) field,
+    double rowHeight,
+  ) {
+    final material = MaterialLocalizations.of(context);
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final metrics = WorkbenchChromeMetrics.of(context);
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+      },
+      child: Actions(
+        actions: {
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (_) {
+              _cancel();
+              return null;
+            },
+          ),
+        },
+        child: FocusTraversalGroup(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The body scrolls before the footer. Only exceptionally short
+              // windows need the outer scroll; neither path replaces the draft.
+              return SingleChildScrollView(
+                primary: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: constraints.maxHeight.isFinite
+                        ? math.max(
+                            constraints.maxHeight,
+                            metrics.iconTarget * 2 + 72,
+                          )
+                        : double.infinity,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Flexible(
+                          child: SingleChildScrollView(
+                            key: const ValueKey('sked-time-picker-scroll'),
+                            primary: false,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  material.timePickerDialHelpText,
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 12),
+                                if (_inputMode)
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: field(true)),
+                                      const SizedBox(
+                                        width: 16,
+                                        child: Padding(
+                                          padding: EdgeInsets.only(top: 14),
+                                          child: Text(
+                                            ':',
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(child: field(false)),
+                                    ],
+                                  )
+                                else ...[
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          material.timePickerHourLabel,
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.labelMedium,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Text(
+                                          material.timePickerMinuteLabel,
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.labelMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Positioned(
+                                        left: 0,
+                                        right: 0,
+                                        child: IgnorePointer(
+                                          child: Container(
+                                            key: const ValueKey(
+                                              'sked-time-center-band',
+                                            ),
+                                            height: rowHeight,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: .10),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _compactWheel(
+                                              context,
+                                              true,
+                                              rowHeight,
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 16,
+                                            child: Text(
+                                              ':',
+                                              textAlign: TextAlign.center,
+                                              style: theme.textTheme.titleLarge,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: _compactWheel(
+                                              context,
+                                              false,
+                                              rowHeight,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                if (_value == null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Semantics(
+                                      liveRegion: true,
+                                      child: Text(
+                                        material.invalidTimeLabel,
+                                        key: const ValueKey('sked-time-error'),
+                                        style: TextStyle(
+                                          color: theme.colorScheme.error,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (!_use24!)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        for (final pm in [false, true])
+                                          ChoiceChip(
+                                            key: ValueKey(
+                                              pm
+                                                  ? 'sked-time-pm'
+                                                  : 'sked-time-am',
+                                            ),
+                                            label: Text(
+                                              pm
+                                                  ? material
+                                                        .postMeridiemAbbreviation
+                                                  : material
+                                                        .anteMeridiemAbbreviation,
+                                            ),
+                                            selected: _pm == pm,
+                                            onSelected: (_) {
+                                              if (_current) {
+                                                setState(() {
+                                                  _pm = pm;
+                                                  _hour =
+                                                      _hour % 12 +
+                                                      (pm ? 12 : 0);
+                                                });
+                                              }
+                                            },
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SkedPickerActions(
+                          leading: [
+                            IconButton(
+                              key: const ValueKey('sked-time-input-toggle'),
+                              style: metrics.iconStyle,
+                              tooltip: _inputMode
+                                  ? l.timePickerWheelMode
+                                  : material.inputTimeModeButtonLabel,
+                              onPressed: _current && _settled && _value != null
+                                  ? _toggleInput
+                                  : null,
+                              icon: Icon(
+                                _inputMode
+                                    ? Icons.view_day_outlined
+                                    : Icons.keyboard_outlined,
+                              ),
+                            ),
+                          ],
+                          trailing: [
+                            TextButton(
+                              key: const ValueKey('sked-time-cancel'),
+                              onPressed: _cancel,
+                              child: Text(material.cancelButtonLabel),
+                            ),
+                            FilledButton(
+                              key: const ValueKey('sked-time-confirm'),
+                              onPressed: _value != null && _current && _settled
+                                  ? _submit
+                                  : null,
+                              child: Text(material.okButtonLabel),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _compactWheel(BuildContext context, bool hour, double rowHeight) {
+    final revision = hour ? _hourInputRevision : _minuteInputRevision;
+    bool currentRevision() =>
+        revision == (hour ? _hourInputRevision : _minuteInputRevision);
+    final material = MaterialLocalizations.of(context);
+    return _TimeValueWheel(
+      key: hour ? _hourWheel : _minuteWheel,
+      label: hour
+          ? material.timePickerHourLabel
+          : material.timePickerMinuteLabel,
+      id: hour ? 'hour' : 'minute',
+      first: hour && !_use24! ? 1 : 0,
+      last: hour ? (_use24! ? 23 : 12) : 59,
+      value: hour ? _lastDisplayHour : _minute,
+      inputRevision: revision,
+      rowHeight: rowHeight,
+      visibleRows: 3,
+      framed: false,
+      onActivityChanged: (moving) {
+        if (currentRevision()) _activityChanged(hour, moving);
+      },
+      onSelected: (value) {
+        if (currentRevision()) _select(hour, value);
+      },
+    );
+  }
 }
 
 enum _WheelOrigin { input, gesture, selection }
@@ -431,7 +738,11 @@ class _TimeValueWheel extends StatefulWidget {
     required this.rowHeight,
     required this.onSelected,
     required this.onActivityChanged,
+    this.visibleRows = 5,
+    this.framed = true,
   });
+  final int visibleRows;
+  final bool framed;
   final String label, id;
   final int first, last, value, inputRevision;
   final double rowHeight;
@@ -442,7 +753,8 @@ class _TimeValueWheel extends StatefulWidget {
 }
 
 class _TimeValueWheelState extends State<_TimeValueWheel> {
-  static const _visibleRows = 5;
+  int get _visibleRows => widget.visibleRows;
+  void requestFocus() => _focus.requestFocus();
   late final _scroll = FixedExtentScrollController(
     initialItem: widget.value - widget.first,
   );
@@ -485,6 +797,7 @@ class _TimeValueWheelState extends State<_TimeValueWheel> {
     super.didUpdateWidget(oldWidget);
     final geometryChanged =
         widget.rowHeight != oldWidget.rowHeight ||
+        widget.visibleRows != oldWidget.visibleRows ||
         widget.first != oldWidget.first ||
         widget.last != oldWidget.last;
     if (geometryChanged || widget.inputRevision != oldWidget.inputRevision) {
@@ -660,16 +973,22 @@ class _TimeValueWheelState extends State<_TimeValueWheel> {
           },
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: SkedSurface.colorOf(context),
+              color: widget.framed ? SkedSurface.colorOf(context) : null,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _focused
-                    ? colors.primary
-                    : colors.outlineVariant.withValues(alpha: .45),
-              ),
+              border: widget.framed
+                  ? Border.all(
+                      color: _focused
+                          ? colors.primary
+                          : colors.outlineVariant.withValues(alpha: .45),
+                    )
+                  : _focused &&
+                        FocusManager.instance.highlightMode ==
+                            FocusHighlightMode.traditional
+                  ? Border.all(color: colors.primary)
+                  : null,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(1),
+              padding: EdgeInsets.all(widget.framed ? 1 : 0),
               child: SizedBox(
                 height: widget.rowHeight * _visibleRows,
                 child: ClipRRect(
@@ -677,19 +996,20 @@ class _TimeValueWheelState extends State<_TimeValueWheel> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Center(
-                        child: IgnorePointer(
-                          child: Container(
-                            key: ValueKey('sked-time-${widget.id}-center'),
-                            height: widget.rowHeight,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            decoration: BoxDecoration(
-                              color: colors.primary.withValues(alpha: .10),
-                              borderRadius: BorderRadius.circular(6),
+                      if (widget.framed)
+                        Center(
+                          child: IgnorePointer(
+                            child: Container(
+                              key: ValueKey('sked-time-${widget.id}-center'),
+                              height: widget.rowHeight,
+                              margin: const EdgeInsets.symmetric(horizontal: 6),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: .10),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
                           ),
                         ),
-                      ),
                       Listener(
                         onPointerDown: (_) {
                           _pointerDown = true;

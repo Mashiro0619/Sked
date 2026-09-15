@@ -3046,4 +3046,7 @@ class AppLocalizationsHu extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return 'Egyéni · $days nap';
   }
+
+  @override
+  String get timePickerWheelMode => 'Kiválasztás görgetőkerekekkel';
 }

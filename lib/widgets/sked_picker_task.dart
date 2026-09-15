@@ -11,6 +11,10 @@ import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import 'workbench_chrome_metrics.dart';
 
+/// Only compact touch windows opt into a task-specific presentation.
+/// Desktop anchoring and wide-tablet dialogs retain their existing behavior.
+enum SkedPickerCompactPresentation { bottomSheet, centered, anchored }
+
 typedef SkedPickerTaskBuilder<T> = Widget Function(
   BuildContext context,
   ValueChanged<T?> finish,
@@ -28,6 +32,8 @@ Future<T?> showSkedPickerTask<T>({
   AppMode? workspace,
   Key? surfaceKey,
   bool Function()? isSessionCurrent,
+  SkedPickerCompactPresentation compactPresentation =
+      SkedPickerCompactPresentation.bottomSheet,
 }) async {
   final parent = ModalRoute.of(context);
   final focus =
@@ -51,13 +57,12 @@ Future<T?> showSkedPickerTask<T>({
   }
 
   if (!sessionAvailable()) return null;
-  final desktop = WorkbenchChromeMetrics.of(context).desktop;
   final navigator = Navigator.of(context, rootNavigator: true);
   final themes = InheritedTheme.capture(from: context, to: navigator.context);
-  final route = RawDialogRoute<T>(
+  final route = _PickerTaskRoute<T>(
+    compactPresentation: compactPresentation,
     settings: RouteSettings(name: routeName),
     barrierDismissible: true,
-    barrierColor: desktop ? Colors.transparent : Colors.black54,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     transitionDuration: const Duration(milliseconds: 120),
     traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
@@ -65,6 +70,7 @@ Future<T?> showSkedPickerTask<T>({
       _PickerTaskHost<T>(
         builder: builder,
         preferredSize: preferredSize,
+        compactPresentation: compactPresentation,
         surfaceKey: surfaceKey,
         ownerContext: context,
         isSessionCurrent: sessionAvailable,
@@ -96,6 +102,33 @@ Future<T?> showSkedPickerTask<T>({
   return null;
 }
 
+/// The barrier follows the same window policy as the content without replacing
+/// the route on resize. Navigator rebuilds it when MediaQuery/Theme changes.
+class _PickerTaskRoute<T> extends RawDialogRoute<T> {
+  _PickerTaskRoute({
+    required this.compactPresentation,
+    required super.settings,
+    required super.barrierDismissible,
+    required super.barrierLabel,
+    required super.transitionDuration,
+    required super.traversalEdgeBehavior,
+    required super.pageBuilder,
+  });
+  final SkedPickerCompactPresentation compactPresentation;
+
+  @override
+  Color get barrierColor {
+    final context = navigator!.context;
+    if (WorkbenchChromeMetrics.of(context).desktop) return Colors.transparent;
+    if (!WorkbenchChromeMetrics.compactTouch(context)) return Colors.black54;
+    return switch (compactPresentation) {
+      SkedPickerCompactPresentation.bottomSheet => Colors.black54,
+      SkedPickerCompactPresentation.centered => const Color(0x3D000000),
+      SkedPickerCompactPresentation.anchored => Colors.transparent,
+    };
+  }
+}
+
 FocusNode? _anchorFocus(BuildContext? anchor) {
   if (anchor == null || !anchor.mounted) return null;
   final outer = Focus.maybeOf(anchor, createDependency: false);
@@ -118,6 +151,7 @@ class _PickerTaskHost<T> extends StatefulWidget {
   const _PickerTaskHost({
     required this.builder,
     required this.preferredSize,
+    required this.compactPresentation,
     required this.surfaceKey,
     required this.ownerContext,
     required this.isSessionCurrent,
@@ -128,6 +162,7 @@ class _PickerTaskHost<T> extends StatefulWidget {
   });
   final SkedPickerTaskBuilder<T> builder;
   final Size Function(BuildContext) preferredSize;
+  final SkedPickerCompactPresentation compactPresentation;
   final Key? surfaceKey;
   final BuildContext ownerContext;
   final bool Function() isSessionCurrent;
@@ -202,10 +237,15 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       final preferred = widget.preferredSize(context);
       final top =
           media.padding.top + (metrics.desktop ? metrics.toolbarHeight : 0);
-      final bottomSheet = WorkbenchChromeMetrics.compactTouch(
+      final compact = WorkbenchChromeMetrics.compactTouch(
         context,
         width: constraints.maxWidth,
       );
+      final presentation = widget.compactPresentation;
+      final bottomSheet =
+          compact && presentation == SkedPickerCompactPresentation.bottomSheet;
+      final compactAnchor =
+          compact && presentation == SkedPickerCompactPresentation.anchored;
       // A bottom task paints its own navigation-bar safe area. With an IME it
       // ends above the keyboard instead; never reserve the same inset twice.
       final safeBottom = bottomSheet && media.viewInsets.bottom == 0
@@ -214,7 +254,11 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       final bottom = bottomSheet
           ? media.viewInsets.bottom
           : math.max(media.padding.bottom, media.viewInsets.bottom);
-      final margin = bottomSheet ? 0.0 : 8.0;
+      final margin = bottomSheet
+          ? 0.0
+          : compact && constraints.maxWidth > 336
+          ? 12.0
+          : 8.0;
       final bounds = Rect.fromLTRB(
         media.padding.left + margin,
         top + margin,
@@ -223,11 +267,21 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       );
       Rect? anchor;
       final anchorContext = widget.anchorContext;
-      if (metrics.desktop && anchorContext?.mounted == true) {
+      if ((metrics.desktop || compactAnchor) &&
+          anchorContext?.mounted == true) {
         final render = anchorContext!.findRenderObject();
         if (render is RenderBox && render.attached && render.hasSize) {
           final rect = render.localToGlobal(Offset.zero) & render.size;
           if (rect.overlaps(Offset.zero & media.size)) anchor = rect;
+          if (compactAnchor &&
+              (!rect.overlaps(bounds) ||
+                  math.max(
+                        rect.top - bounds.top - 6,
+                        bounds.bottom - rect.bottom - 6,
+                      ) <
+                      metrics.iconTarget + 48)) {
+            anchor = null;
+          }
         }
       }
       return CustomSingleChildLayout(
@@ -235,18 +289,23 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
           bounds: bounds,
           anchor: anchor,
           bottomSheet: bottomSheet,
+          constrainToAnchor: compactAnchor,
           width: math.min(bounds.width, preferred.width),
         ),
         child: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle(
-            systemNavigationBarColor: Theme.of(context).colorScheme.surface,
-            systemNavigationBarDividerColor: Colors.transparent,
-            systemNavigationBarIconBrightness:
-                Theme.of(context).brightness == Brightness.dark
-                ? Brightness.light
-                : Brightness.dark,
-            systemNavigationBarContrastEnforced: false,
-          ),
+          value: compact && !bottomSheet
+              ? const SystemUiOverlayStyle()
+              : SystemUiOverlayStyle(
+                  systemNavigationBarColor: Theme.of(context)
+                      .colorScheme
+                      .surface,
+                  systemNavigationBarDividerColor: Colors.transparent,
+                  systemNavigationBarIconBrightness:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Brightness.light
+                      : Brightness.dark,
+                  systemNavigationBarContrastEnforced: false,
+                ),
           child: SkedSurface(
             key: widget.surfaceKey,
             role: SkedSurfaceRole.content,
@@ -254,7 +313,9 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
             clipBehavior: Clip.antiAlias,
             borderRadius: bottomSheet
                 ? const BorderRadius.vertical(top: Radius.circular(16))
-                : BorderRadius.circular(12),
+                : BorderRadius.circular(
+                    compact ? (compactAnchor ? 16 : 24) : 12,
+                  ),
             child: Padding(
               padding: EdgeInsets.only(bottom: safeBottom),
               child: MediaQuery.removePadding(
@@ -279,18 +340,26 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
     required this.anchor,
     required this.width,
     required this.bottomSheet,
+    required this.constrainToAnchor,
   });
   final Rect bounds;
   final Rect? anchor;
   final double width;
-  final bool bottomSheet;
+  final bool bottomSheet, constrainToAnchor;
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints(
         minWidth: bottomSheet ? bounds.width : width,
         maxWidth: bottomSheet ? bounds.width : width,
         minHeight: 0,
-        maxHeight: bounds.height,
+        maxHeight: constrainToAnchor && anchor != null
+            ? math
+                  .max(
+                    anchor!.top - bounds.top - 6,
+                    bounds.bottom - anchor!.bottom - 6,
+                  )
+                  .clamp(0, bounds.height)
+            : bounds.height,
       );
   @override
   Offset getPositionForChild(Size size, Size childSize) {
@@ -323,5 +392,6 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
       bounds != oldDelegate.bounds ||
       anchor != oldDelegate.anchor ||
       width != oldDelegate.width ||
-      bottomSheet != oldDelegate.bottomSheet;
+      bottomSheet != oldDelegate.bottomSheet ||
+      constrainToAnchor != oldDelegate.constrainToAnchor;
 }

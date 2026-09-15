@@ -3043,4 +3043,7 @@ class AppLocalizationsPl extends AppLocalizations {
     );
     return 'Niestandardowy · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Wybierz za pomocą pokręteł';
 }

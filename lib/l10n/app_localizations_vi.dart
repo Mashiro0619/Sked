@@ -3036,4 +3036,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return 'Tùy chỉnh · $days ngày';
   }
+
+  @override
+  String get timePickerWheelMode => 'Chọn bằng bánh xe cuộn';
 }

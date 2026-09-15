@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "Izberi z drsnimi kolesci",
+  "@timePickerWheelMode": {}
 }

@@ -3034,4 +3034,7 @@ class AppLocalizationsSv extends AppLocalizations {
     );
     return 'Anpassat · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Välj med rullhjul';
 }

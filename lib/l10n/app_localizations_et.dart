@@ -3033,4 +3033,7 @@ class AppLocalizationsEt extends AppLocalizations {
     );
     return 'Kohandatud · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Vali kerimisratastega';
 }

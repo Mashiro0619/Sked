@@ -9,6 +9,7 @@ import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_week_picker.dart';
+import 'package:sked/widgets/sked_time_picker.dart';
 
 import '../support/mobile_layout_data.dart';
 import '../support/workspace_harness.dart';
@@ -121,9 +122,15 @@ void main() {
           final before = storage.writes;
           await tap(t, key('student-week-picker-button'));
           final surface = t.getRect(key('sked-week-picker-surface'));
-          expect(surface.left, 0);
-          expect(surface.right, width);
-          expect(surface.top, greaterThan(100));
+          expect(surface.left, greaterThanOrEqualTo(width <= 336 ? 8 : 12));
+          expect(
+            surface.right,
+            lessThanOrEqualTo(width - (width <= 336 ? 8 : 12)),
+          );
+          expect(
+            surface.top,
+            t.getRect(key('student-week-picker-button')).bottom + 6,
+          );
           expect(key('sked-week-picker-close').hitTestable(), findsOneWidget);
           final number = t.widget<Text>(
             find.descendant(of: week(2), matching: find.text('2')),
@@ -154,6 +161,7 @@ void main() {
           expect(picker.rangeController, isNull);
           expect(picker.commitMode, DatePickerCommitMode.confirm);
           expect(key('sked-date-compact-header'), findsOneWidget);
+          expect(key('sked-date-picker-close'), findsNothing);
           expect(key('sked-date-selection-label'), findsNothing);
           expect(
             find.descendant(
@@ -180,7 +188,6 @@ void main() {
             lessThan(scale == 1 ? 410 : 660),
           );
           for (final value in [
-            'sked-date-picker-close',
             'sked-date-cancel',
             'sked-date-confirm',
             'sked-date-input-toggle',
@@ -309,9 +316,9 @@ void main() {
             grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
         expect(layout.crossAxisCount, switch (count) {
           1 => 1,
-          18 => 6,
+          18 => 5,
           19 => 5,
-          _ => 6,
+          _ => 5,
         });
         final selected = p.selectedWeek;
         final rect = t.getRect(week(selected));
@@ -339,4 +346,105 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
+  testWidgets(
+    'real editor time modes cancel cleanly and confirm only into the existing draft',
+    (t) async {
+      size(t, const Size(393, 852));
+      final (_, storage) = await home(t);
+      await editEvent(t);
+      final editor = find.byType(GeneralEventEditorSheet);
+      final editorState = t.state(editor);
+      final before = storage.writes;
+      final l = AppLocalizations.of(t.element(editor));
+      Future<void> openTime() => tap(
+        t,
+        find.descendant(of: editor, matching: find.byTooltip(l.pickTime)).first,
+      );
+      await openTime();
+      final pickerState = t.state(find.byType(SkedTimePicker));
+      expect(
+        t.getRect(key('sked-time-picker-surface')).bottom,
+        lessThan(852 - 24),
+      );
+      expect(
+        t.widget<Semantics>(key('sked-time-hours')).properties.value,
+        '08',
+      );
+      await tap(t, key('sked-time-input-toggle'));
+      await t.enterText(key('sked-time-hour-input'), '09');
+      await t.enterText(key('sked-time-minute-input'), '17');
+      await t.pumpAndSettle();
+      await tap(t, key('sked-time-input-toggle'));
+      expect(t.state(find.byType(SkedTimePicker)), same(pickerState));
+      expect(storage.writes, before);
+      await tap(t, key('sked-time-cancel'));
+      expect(t.state(editor), same(editorState));
+      await openTime();
+      expect(
+        t.widget<Semantics>(key('sked-time-hours')).properties.value,
+        '08',
+      );
+      expect(
+        t.widget<Semantics>(key('sked-time-minutes')).properties.value,
+        '10',
+      );
+      await tap(t, key('sked-time-input-toggle'));
+      await t.enterText(key('sked-time-hour-input'), '09');
+      await t.enterText(key('sked-time-minute-input'), '17');
+      await t.pumpAndSettle();
+      await tap(t, key('sked-time-confirm'));
+      expect(t.state(editor), same(editorState));
+      expect(storage.writes, before);
+      await openTime();
+      expect(
+        t.widget<Semantics>(key('sked-time-hours')).properties.value,
+        '09',
+      );
+      expect(
+        t.widget<Semantics>(key('sked-time-minutes')).properties.value,
+        '17',
+      );
+      await tap(t, key('sked-time-cancel'));
+      expect(storage.writes, before);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'single-date card retains today, month/year navigation, input and cancellation',
+    (t) async {
+      size(t, const Size(393, 852));
+      final (_, storage) = await home(t);
+      await editEvent(t);
+      final before = storage.writes;
+      await pickDate(t);
+      final state = t.state(find.byType(SkedDatePicker));
+      await tap(t, key('sked-date-month-year'));
+      expect(key('sked-date-month-2026-9'), findsOneWidget);
+      await tap(t, key('sked-date-month-year'));
+      expect(
+        find.byWidgetPredicate(
+          (w) => w.key == const ValueKey('sked-date-year-2026'),
+        ),
+        findsOneWidget,
+      );
+      await tap(t, key('sked-date-year-2026'));
+      await tap(t, key('sked-date-month-2026-9'));
+      expect(day(22), findsOneWidget);
+      await tap(t, key('sked-date-today'));
+      expect(t.state(find.byType(SkedDatePicker)), same(state));
+      expect(storage.writes, before);
+      expect(key('sked-date-picker-close'), findsNothing);
+      await tap(t, key('sked-date-input-toggle'));
+      await tap(t, key('sked-date-input-toggle'));
+      await tap(t, key('sked-date-cancel'));
+      await pickDate(t);
+      expect(marker(t, 'sked-date-touch-marker-2026-09-21').color, isNotNull);
+      expect(storage.writes, before);
+      await tap(t, key('sked-date-cancel'));
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 }

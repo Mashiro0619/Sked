@@ -1723,5 +1723,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "Mit Auswahlrädern wählen",
+  "@timePickerWheelMode": {}
 }

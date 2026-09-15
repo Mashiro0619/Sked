@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "휠로 선택",
+  "@timePickerWheelMode": {}
 }

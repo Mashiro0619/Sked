@@ -1721,5 +1721,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "Επιλογή με τροχούς κύλισης",
+  "@timePickerWheelMode": {}
 }

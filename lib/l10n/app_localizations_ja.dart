@@ -2975,4 +2975,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return 'カスタム · $days日';
   }
+
+  @override
+  String get timePickerWheelMode => 'ホイールで選択';
 }

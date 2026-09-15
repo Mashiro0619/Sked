@@ -5447,6 +5447,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom · {days, plural, =1{1 day} other{{days} days}}'**
   String dateRangeCustomDays(int days);
+
+  /// No description provided for @timePickerWheelMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Use scroll wheels'**
+  String get timePickerWheelMode;
 }
 
 class _AppLocalizationsDelegate

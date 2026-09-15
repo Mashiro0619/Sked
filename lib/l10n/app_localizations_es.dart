@@ -3057,4 +3057,7 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return 'Personalizado · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Seleccionar con ruedas';
 }

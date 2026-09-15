@@ -286,6 +286,7 @@ void main() {
         );
         expect(tester.takeException(), isNull);
       }
+      expect(_key('sked-date-confirm').hitTestable(), findsOneWidget);
       await tester.tap(_key('sked-date-confirm'));
       await tester.pumpAndSettle();
       expect(results, [DateTime(2026, 9, 18)]);
@@ -354,6 +355,7 @@ void main() {
       await tester.enterText(_key('sked-date-input'), '09/18/2026');
       await tester.ensureVisible(_key('sked-date-confirm'));
       await tester.pumpAndSettle();
+      expect(_key('sked-date-confirm').hitTestable(), findsOneWidget);
       await tester.tap(_key('sked-date-confirm'));
       await tester.pumpAndSettle();
       expect(results, [DateTime(2026, 9, 18)]);

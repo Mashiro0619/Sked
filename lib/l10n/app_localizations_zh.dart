@@ -2856,6 +2856,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return '自定义 · $days天';
   }
+
+  @override
+  String get timePickerWheelMode => '切换为滚轮选择';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5711,4 +5714,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String dateRangeCustomDays(int days) {
     return '自訂 · $days天';
   }
+
+  @override
+  String get timePickerWheelMode => '切換為滾輪選擇';
 }

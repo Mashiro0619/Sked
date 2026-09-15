@@ -3017,4 +3017,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String dateRangeCustomDays(int days) {
     return 'กำหนดเอง · $days วัน';
   }
+
+  @override
+  String get timePickerWheelMode => 'เลือกด้วยวงล้อเลื่อน';
 }

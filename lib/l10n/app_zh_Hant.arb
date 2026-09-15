@@ -2120,5 +2120,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "timePickerWheelMode": "切換為滾輪選擇",
+  "@timePickerWheelMode": {}
 }

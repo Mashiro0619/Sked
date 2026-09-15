@@ -3064,4 +3064,7 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return 'Personnalisé · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Choisir avec les roulettes';
 }

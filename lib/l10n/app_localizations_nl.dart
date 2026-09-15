@@ -3036,4 +3036,7 @@ class AppLocalizationsNl extends AppLocalizations {
     );
     return 'Aangepast · $_temp0';
   }
+
+  @override
+  String get timePickerWheelMode => 'Kiezen met scrollwielen';
 }
