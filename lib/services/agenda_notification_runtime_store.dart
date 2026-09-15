@@ -4,6 +4,9 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'agenda_runtime_mutation_lock.dart';
+import 'agenda_notification_registration.dart';
+
+export 'agenda_notification_registration.dart';
 
 /// A notification action captured by the platform while the Flutter UI was
 /// not running. The queue is runtime-only and is never included in AppData or
@@ -332,6 +335,8 @@ class AgendaNotificationDiagnostics {
     this.hasCapacityOverflow = false,
     this.retainedPendingCount = 0,
     this.lateRecoveryCount = 0,
+    this.registrationDecisions = const [],
+    this.duplicatePendingRemoved = 0,
     required this.plan,
     this.origin = AgendaNotificationReconcileOrigin.foreground,
     this.nextRenewalAt,
@@ -355,6 +360,8 @@ class AgendaNotificationDiagnostics {
   final bool hasCapacityOverflow;
   final int retainedPendingCount;
   final int lateRecoveryCount;
+  final List<AgendaNotificationRegistrationDiagnostic> registrationDecisions;
+  final int duplicatePendingRemoved;
   final List<AgendaNotificationDiagnosticPlanItem> plan;
   final DateTime? nextRenewalAt;
   final int? platformPendingCount;
@@ -366,7 +373,21 @@ class AgendaNotificationDiagnostics {
     int pendingCount,
     int activeCount,
     DateTime sampledAt,
-  ) => AgendaNotificationDiagnostics(
+  ) => copyWithRegistrationDecisions(
+    registrationDecisions,
+    duplicatePendingRemoved,
+    pendingCount: pendingCount,
+    activeCount: activeCount,
+    sampledAt: sampledAt,
+  );
+
+  AgendaNotificationDiagnostics copyWithRegistrationDecisions(
+    List<AgendaNotificationRegistrationDiagnostic> decisions,
+    int duplicates, {
+    int? pendingCount,
+    int? activeCount,
+    DateTime? sampledAt,
+  }) => AgendaNotificationDiagnostics(
     recordedAt: recordedAt,
     mode: mode,
     origin: origin,
@@ -381,11 +402,13 @@ class AgendaNotificationDiagnostics {
     hasCapacityOverflow: hasCapacityOverflow,
     retainedPendingCount: retainedPendingCount,
     lateRecoveryCount: lateRecoveryCount,
+    registrationDecisions: List.unmodifiable(decisions.take(maxPlanItems)),
+    duplicatePendingRemoved: duplicates,
     plan: plan,
     nextRenewalAt: nextRenewalAt,
-    platformPendingCount: pendingCount,
-    platformActiveCount: activeCount,
-    platformSampledAt: sampledAt,
+    platformPendingCount: pendingCount ?? platformPendingCount,
+    platformActiveCount: activeCount ?? platformActiveCount,
+    platformSampledAt: sampledAt ?? platformSampledAt,
     error: error,
   );
 
@@ -405,6 +428,10 @@ class AgendaNotificationDiagnostics {
     'hasCapacityOverflow': hasCapacityOverflow,
     'retainedPendingCount': retainedPendingCount,
     'lateRecoveryCount': lateRecoveryCount,
+    'registrationDecisions': registrationDecisions
+        .map((item) => item.toJson())
+        .toList(),
+    'duplicatePendingRemoved': duplicatePendingRemoved,
     'plan': plan.map((item) => item.toJson()).toList(growable: false),
     if (nextRenewalAt != null)
       'nextRenewalAt': nextRenewalAt!.toIso8601String(),
@@ -487,6 +514,21 @@ class AgendaNotificationDiagnostics {
     }
     if (rawPlan.length > maxPlanItems) return null;
 
+    final rawDecisions = value['registrationDecisions'] ?? const [];
+    final duplicates = _decodeNonNegativeInt(
+      value['duplicatePendingRemoved'] ?? 0,
+    );
+    if (rawDecisions is! List ||
+        rawDecisions.length > maxPlanItems ||
+        duplicates == null) {
+      return null;
+    }
+    final decisions = <AgendaNotificationRegistrationDiagnostic>[];
+    for (final raw in rawDecisions) {
+      final decision = AgendaNotificationRegistrationDiagnostic.tryDecode(raw);
+      if (decision == null) return null;
+      decisions.add(decision);
+    }
     final rawError = value['error'];
     if (rawError != null &&
         (rawError is! String || rawError.length > maxErrorLength)) {
@@ -509,6 +551,8 @@ class AgendaNotificationDiagnostics {
       hasCapacityOverflow: value['hasCapacityOverflow'] as bool,
       retainedPendingCount: retainedPendingCount,
       lateRecoveryCount: lateRecoveryCount,
+      registrationDecisions: List.unmodifiable(decisions),
+      duplicatePendingRemoved: duplicates,
       plan: List.unmodifiable(plan),
       nextRenewalAt: nextRenewalAt,
       platformPendingCount: platformPendingCount,
@@ -711,6 +755,28 @@ abstract interface class AgendaNotificationFencedRuntimeStore {
   );
 }
 
+/// Optional durable evidence of registration, independent of pending/active
+/// notifications and runtime cleanup. All methods are fenced; callers hold the
+/// existing runtime mutation lock across the read/claim/platform/accept cycle.
+abstract interface class AgendaNotificationRegistrationStore {
+  Future<AgendaNotificationRegistrationSnapshot> readRegistrationSnapshot(
+    AgendaNotificationProjectionFence fence, {
+    required DateTime now,
+  });
+  Future<bool> initializeRegistrationEpoch(
+    DateTime at,
+    AgendaNotificationProjectionFence fence,
+  );
+  Future<bool> writeRegistration(
+    AgendaNotificationRegistration registration,
+    AgendaNotificationProjectionFence fence,
+  );
+  Future<bool> writeSnoozeReceipt(
+    AgendaNotificationSnoozeReceipt receipt,
+    AgendaNotificationProjectionFence fence,
+  );
+}
+
 /// Raised when the platform reports that a runtime-only preference write did
 /// not reach durable storage. Runtime actions must not be treated as accepted
 /// when this happens, otherwise a notification can disappear without its
@@ -735,7 +801,8 @@ class MemoryAgendaNotificationRuntimeStore
         AgendaNotificationBackgroundRequestIndex,
         AgendaNotificationDiagnosticsStore,
         AgendaNotificationProjectionFenceStore,
-        AgendaNotificationFencedRuntimeStore {
+        AgendaNotificationFencedRuntimeStore,
+        AgendaNotificationRegistrationStore {
   MemoryAgendaNotificationRuntimeStore({DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 
@@ -747,6 +814,11 @@ class MemoryAgendaNotificationRuntimeStore
       {};
   final Map<int, Map<String, AgendaNotificationBackgroundRequest>>
   _backgroundRequestsByGeneration = {};
+  final Map<int, Map<String, AgendaNotificationRegistration>> _registrations =
+      {};
+  final Map<int, Map<String, AgendaNotificationSnoozeReceipt>> _snoozeReceipts =
+      {};
+  final Map<int, DateTime> _registrationEpochs = {};
   AgendaNotificationDiagnostics? diagnostics;
   AgendaNotificationProjectionFence projectionFence =
       AgendaNotificationProjectionFence.initial;
@@ -1082,6 +1154,76 @@ class MemoryAgendaNotificationRuntimeStore
     _backgroundRequestsFor(fence.generation)[request.key] = request;
   }
 
+  @override
+  Future<AgendaNotificationRegistrationSnapshot> readRegistrationSnapshot(
+    AgendaNotificationProjectionFence fence, {
+    required DateTime now,
+  }) async {
+    if (fence.blocked || !projectionFence.matches(fence)) {
+      return const AgendaNotificationRegistrationSnapshot();
+    }
+    _registrations.removeWhere(
+      (generation, _) => generation != fence.generation,
+    );
+    _snoozeReceipts.removeWhere(
+      (generation, _) => generation != fence.generation,
+    );
+    _registrationEpochs.removeWhere(
+      (generation, _) => generation != fence.generation,
+    );
+    final records = _registrations.putIfAbsent(fence.generation, () => {});
+    final actions = _snoozeReceipts.putIfAbsent(fence.generation, () => {});
+    records.removeWhere((_, record) => now.isAfter(record.expiresAt));
+    actions.removeWhere((_, receipt) => now.isAfter(receipt.expiresAt));
+    return AgendaNotificationRegistrationSnapshot(
+      initializedAt: _registrationEpochs[fence.generation],
+      records: Map.unmodifiable(records),
+      snoozeReceipts: Map.unmodifiable(actions),
+    );
+  }
+
+  @override
+  Future<bool> initializeRegistrationEpoch(
+    DateTime at,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked || !projectionFence.matches(fence)) return false;
+    _registrationEpochs.putIfAbsent(fence.generation, () => at.toUtc());
+    return true;
+  }
+
+  @override
+  Future<bool> writeRegistration(
+    AgendaNotificationRegistration registration,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked || !projectionFence.matches(fence)) return false;
+    final valid = AgendaNotificationRegistration.tryDecode(
+      registration.toJson(),
+    );
+    if (valid == null) {
+      throw const FormatException('Invalid notification registration');
+    }
+    _registrations.putIfAbsent(fence.generation, () => {})[valid.identity] =
+        valid;
+    return true;
+  }
+
+  @override
+  Future<bool> writeSnoozeReceipt(
+    AgendaNotificationSnoozeReceipt receipt,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    if (fence.blocked || !projectionFence.matches(fence)) return false;
+    final valid = AgendaNotificationSnoozeReceipt.tryDecode(receipt.toJson());
+    if (valid == null) throw const FormatException('Invalid snooze receipt');
+    _snoozeReceipts.putIfAbsent(
+      fence.generation,
+      () => {},
+    )[valid.actionIdentity] = valid;
+    return true;
+  }
+
   Map<String, DateTime> _snoozesFor(int generation) =>
       _snoozesByGeneration.putIfAbsent(generation, () => {});
 
@@ -1126,7 +1268,8 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         AgendaNotificationBackgroundRequestIndex,
         AgendaNotificationDiagnosticsStore,
         AgendaNotificationProjectionFenceStore,
-        AgendaNotificationFencedRuntimeStore {
+        AgendaNotificationFencedRuntimeStore,
+        AgendaNotificationRegistrationStore {
   SharedPreferencesAgendaNotificationRuntimeStore({
     Future<SharedPreferences> Function()? preferencesProvider,
     DateTime Function()? clock,
@@ -1141,6 +1284,9 @@ class SharedPreferencesAgendaNotificationRuntimeStore
        _stringListWriter = stringListWriter ?? _writeStringList,
        _keyRemover = keyRemover ?? _removeKey;
 
+  // Intentionally outside runtimeGenerationKeyPrefix: clearRuntime must not
+  // erase evidence of an already submitted reminder. Data clear changes fence.
+  static const registrationKeyPrefix = 'sked.notification.registration.v1.';
   static const snoozeKey = 'sked.notification.runtime.snoozes';
   static const handledKey = 'sked.notification.runtime.handled';
   static const actionsKey = 'sked.notification.runtime.actions';
@@ -1870,6 +2016,150 @@ class SharedPreferencesAgendaNotificationRuntimeStore
         }
       }
     });
+  }
+
+  String _registrationPrefix(AgendaNotificationProjectionFence fence) =>
+      '${registrationKeyPrefix}g${fence.generation}.';
+  String _registrationKey(
+    AgendaNotificationRegistration registration,
+    AgendaNotificationProjectionFence fence,
+  ) =>
+      '${_registrationPrefix(fence)}entry.${sha256.convert(utf8.encode(registration.identity))}';
+
+  @override
+  Future<AgendaNotificationRegistrationSnapshot> readRegistrationSnapshot(
+    AgendaNotificationProjectionFence fence, {
+    required DateTime now,
+  }) async {
+    var result = const AgendaNotificationRegistrationSnapshot();
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final prefix = _registrationPrefix(fence);
+      final epochKey = '${prefix}epoch';
+      final rawEpoch = preferences.getString(epochKey);
+      final epoch = rawEpoch == null
+          ? null
+          : DateTime.tryParse(rawEpoch)?.toUtc();
+      if (rawEpoch != null && epoch == null) {
+        throw AgendaNotificationRuntimeStorageException(epochKey);
+      }
+      final records = <String, AgendaNotificationRegistration>{};
+      final actions = <String, AgendaNotificationSnoozeReceipt>{};
+      for (final key in preferences.getKeys()) {
+        if (!key.startsWith(registrationKeyPrefix)) continue;
+        if (!key.startsWith(prefix)) {
+          await _remove(key);
+          continue;
+        }
+        if (key == epochKey) continue;
+        final raw = preferences.getString(key);
+        Object? value;
+        try {
+          value = raw == null ? null : jsonDecode(raw);
+        } on FormatException {
+          throw AgendaNotificationRuntimeStorageException(key);
+        }
+        if (key.startsWith('${prefix}entry.')) {
+          final record = AgendaNotificationRegistration.tryDecode(value);
+          if (record == null || _registrationKey(record, fence) != key) {
+            throw AgendaNotificationRuntimeStorageException(key);
+          }
+          if (now.isAfter(record.expiresAt)) {
+            await _remove(key);
+          } else {
+            records[record.identity] = record;
+          }
+        } else if (key.startsWith('${prefix}action.')) {
+          final receipt = AgendaNotificationSnoozeReceipt.tryDecode(value);
+          if (receipt == null ||
+              key != '${prefix}action.${receipt.actionIdentity}') {
+            throw AgendaNotificationRuntimeStorageException(key);
+          }
+          if (now.isAfter(receipt.expiresAt)) {
+            await _remove(key);
+          } else {
+            actions[receipt.actionIdentity] = receipt;
+          }
+        } else {
+          throw AgendaNotificationRuntimeStorageException(key);
+        }
+      }
+      result = AgendaNotificationRegistrationSnapshot(
+        initializedAt: epoch,
+        records: Map.unmodifiable(records),
+        snoozeReceipts: Map.unmodifiable(actions),
+      );
+    });
+    return result;
+  }
+
+  @override
+  Future<bool> initializeRegistrationEpoch(
+    DateTime at,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    var saved = false;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      final key = '${_registrationPrefix(fence)}epoch';
+      if (!preferences.containsKey(key)) {
+        await _set(key, at.toUtc().toIso8601String());
+      }
+      saved = true;
+    });
+    return saved;
+  }
+
+  @override
+  Future<bool> writeRegistration(
+    AgendaNotificationRegistration registration,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final valid = AgendaNotificationRegistration.tryDecode(
+      registration.toJson(),
+    );
+    if (valid == null) {
+      throw const FormatException('Invalid notification registration');
+    }
+    return _writeRegistrationValue(
+      _registrationKey(valid, fence),
+      valid.toJson(),
+      fence,
+    );
+  }
+
+  @override
+  Future<bool> writeSnoozeReceipt(
+    AgendaNotificationSnoozeReceipt receipt,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final valid = AgendaNotificationSnoozeReceipt.tryDecode(receipt.toJson());
+    if (valid == null) throw const FormatException('Invalid snooze receipt');
+    return _writeRegistrationValue(
+      '${_registrationPrefix(fence)}action.${valid.actionIdentity}',
+      valid.toJson(),
+      fence,
+    );
+  }
+
+  Future<bool> _writeRegistrationValue(
+    String key,
+    Map<String, Object?> value,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    var saved = false;
+    await _enqueueMutation(() async {
+      final preferences = await _preferences;
+      await _reload(preferences);
+      if (!_isCurrentWritableFence(preferences, fence)) return;
+      await _set(key, jsonEncode(value));
+      saved = true;
+    });
+    return saved;
   }
 
   Future<void> _enqueueMutation(Future<void> Function() mutation) {

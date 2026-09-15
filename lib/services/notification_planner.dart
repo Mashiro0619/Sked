@@ -260,7 +260,7 @@ class NotificationReconciler {
     final toSchedule = <NotificationPlanItem>[];
     for (final item in desiredByKey.values) {
       final existing = existingFireTimes[item.key];
-      if (existing == null || existing != item.fireAt) {
+      if (existing == null || !existing.isAtSameMomentAs(item.fireAt)) {
         toSchedule.add(item);
       }
     }

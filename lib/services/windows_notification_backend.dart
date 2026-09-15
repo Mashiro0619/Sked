@@ -107,3 +107,29 @@ class FlutterAgendaWindowsNotificationBackend
   @override
   Future<void> cancelAll() => _plugin.cancelAll();
 }
+
+/// Native Windows cancellation removes only the first scheduled toast with a
+/// matching tag. Never append a replacement until every copy is gone. This
+/// operates on one proven-owned id, not on the entire app queue.
+Future<int> cancelWindowsNotificationCopies(
+  AgendaWindowsNotificationBackend backend,
+  int id,
+) async {
+  int count(List<PendingNotificationRequest> requests) =>
+      requests.where((item) => item.id == id).length;
+  var remaining = count(await backend.pendingNotificationRequests());
+  final initial = remaining;
+  if (remaining == 0) {
+    await backend.cancel(id: id);
+    return 0;
+  }
+  while (remaining > 0) {
+    await backend.cancel(id: id);
+    final after = count(await backend.pendingNotificationRequests());
+    if (after >= remaining) {
+      throw StateError('Windows notification cancellation made no progress');
+    }
+    remaining = after;
+  }
+  return initial;
+}

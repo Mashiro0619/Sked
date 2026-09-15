@@ -264,6 +264,10 @@ class _FakeWindowsNotificationsPlatform
         notificationDetails: notificationDetails,
       ),
     );
+    pendingRequests = [
+      ...pendingRequests,
+      PendingNotificationRequest(id, null, null, null),
+    ];
   }
 
   @override
@@ -278,7 +282,11 @@ class _FakeWindowsNotificationsPlatform
   }
 
   @override
-  Future<void> cancel({required int id}) async => cancelledIds.add(id);
+  Future<void> cancel({required int id}) async {
+    cancelledIds.add(id);
+    final index = pendingRequests.indexWhere((item) => item.id == id);
+    if (index >= 0) pendingRequests = [...pendingRequests]..removeAt(index);
+  }
 
   @override
   Future<void> cancelAll() async {
@@ -3406,10 +3414,16 @@ void main() {
       ),
     );
     final gateway = MemoryAgendaNotificationGateway();
+    final runtime = MemoryAgendaNotificationRuntimeStore();
+    await runtime.initializeRegistrationEpoch(
+      anchor.subtract(const Duration(minutes: 2)),
+      AgendaNotificationProjectionFence.initial,
+    );
     final service = AgendaNotificationService(
       enabled: true,
       projection: projection,
       gateway: gateway,
+      runtimeStore: runtime,
       now: () => anchor,
     );
 

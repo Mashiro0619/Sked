@@ -94,6 +94,38 @@ void agendaNotificationBackgroundAction(NotificationResponse response) async {
   }
 }
 
+Future<DateTime?> _fixedSnoozeFireAt(
+  AgendaNotificationRuntimeStore runtime,
+  AgendaNotificationProjectionFence fence,
+  AgendaNotificationPayload payload,
+  DateTime current,
+) async {
+  if (runtime is! AgendaNotificationRegistrationStore) {
+    return current.add(const Duration(minutes: 10));
+  }
+  final store = runtime as AgendaNotificationRegistrationStore;
+  final snapshot = await store.readRegistrationSnapshot(fence, now: current);
+  final actionIdentity = sha256
+      .convert(
+        utf8.encode(
+          jsonEncode([
+            payload.key,
+            payload.occurrenceRevision,
+            payload.fireAt.toUtc().microsecondsSinceEpoch,
+          ]),
+        ),
+      )
+      .toString();
+  final existing = snapshot.snoozeReceipts[actionIdentity];
+  if (existing != null) return existing.fireAt.toLocal();
+  final receipt = AgendaNotificationSnoozeReceipt(
+    actionIdentity: actionIdentity,
+    fireAt: current.add(const Duration(minutes: 10)),
+  );
+  if (!await store.writeSnoozeReceipt(receipt, fence)) return null;
+  return receipt.fireAt;
+}
+
 Future<void> _persistBackgroundNotificationAction(
   AgendaNotificationPayload decoded,
   String payload,
@@ -109,7 +141,7 @@ Future<void> _persistBackgroundNotificationAction(
     }
     switch (actionId) {
       case 'snooze_10m':
-        final fireAt = DateTime.now().add(const Duration(minutes: 10));
+        final current = DateTime.now();
         final request = await store.readBackgroundRequestForRuntimeFence(
           decoded.key,
           runtimeFence,
@@ -130,6 +162,13 @@ Future<void> _persistBackgroundNotificationAction(
         }
         final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
         if (runtimeKey == null) return;
+        final fireAt = await _fixedSnoozeFireAt(
+          store,
+          runtimeFence,
+          decoded,
+          current,
+        );
+        if (fireAt == null || !fireAt.isAfter(current)) return;
         await store.setSnoozeForRuntimeFence(runtimeKey, fireAt, runtimeFence);
         if (request != null &&
             scheduledPayload != null &&
@@ -138,6 +177,8 @@ Future<void> _persistBackgroundNotificationAction(
               request: request,
               payload: scheduledPayload,
               fireAt: fireAt,
+              registrationStore: store,
+              registrationFence: runtimeFence,
               isRuntimeFenceCurrent: () =>
                   store.isRuntimeFenceCurrent(runtimeFence),
               saveRequest: (updatedRequest) =>
@@ -191,12 +232,24 @@ Future<bool> _scheduleBackgroundSnooze({
   required AgendaNotificationBackgroundRequest request,
   required AgendaNotificationPayload payload,
   required DateTime fireAt,
+  required AgendaNotificationRegistrationStore registrationStore,
+  required AgendaNotificationProjectionFence registrationFence,
   required Future<bool> Function() isRuntimeFenceCurrent,
   required Future<void> Function(AgendaNotificationBackgroundRequest request)
   saveRequest,
 }) async {
+  AgendaNotificationRegistration? claim;
   try {
     if (!await isRuntimeFenceCurrent()) return false;
+    final snapshot = await registrationStore.readRegistrationSnapshot(
+      registrationFence,
+      now: DateTime.now(),
+    );
+    final prior = snapshot.forReminder(request.key, fireAt);
+    if (prior != null &&
+        prior.state != AgendaNotificationRegistrationState.rejected) {
+      return true;
+    }
     tz_data.initializeTimeZones();
     try {
       final info = await FlutterTimezone.getLocalTimezone();
@@ -262,6 +315,18 @@ Future<bool> _scheduleBackgroundSnooze({
     updatedPayload = payload
         .copyWith(fireAt: fireAt, scheduleExact: true)
         .encode();
+    claim = AgendaNotificationRegistration(
+      key: request.key,
+      originalFireAt: fireAt,
+      fireAt: fireAt,
+      recordedAt: DateTime.now(),
+      notificationId: request.notificationId,
+      state: AgendaNotificationRegistrationState.pending,
+      kind: AgendaNotificationRegistrationKind.snooze,
+    );
+    if (!await registrationStore.writeRegistration(claim, registrationFence)) {
+      return false;
+    }
     await withAgendaRuntimeMutationLock(
       () => plugin.zonedSchedule(
         id: request.notificationId,
@@ -284,6 +349,10 @@ Future<bool> _scheduleBackgroundSnooze({
       );
       return false;
     }
+    await registrationStore.writeRegistration(
+      claim.copyWith(state: AgendaNotificationRegistrationState.accepted),
+      registrationFence,
+    );
     await saveRequest(
       request.copyWith(payload: updatedPayload, fireAt: fireAt),
     );
@@ -300,6 +369,18 @@ Future<bool> _scheduleBackgroundSnooze({
     }
     return true;
   } catch (error, stackTrace) {
+    if (claim != null &&
+        error is PlatformException &&
+        error.code == _exactAlarmPermissionErrorCode) {
+      try {
+        await registrationStore.writeRegistration(
+          claim.copyWith(state: AgendaNotificationRegistrationState.rejected),
+          registrationFence,
+        );
+      } catch (_) {
+        /* Keep ambiguous evidence if recording rejection failed. */
+      }
+    }
     debugPrint(
       'Scheduling background notification snooze failed: '
       '$error\n$stackTrace',
@@ -356,6 +437,21 @@ abstract interface class AgendaNotificationMetadataGateway {
 /// that slot. Production gateways can probe a free id while preserving the
 /// preferred id for normal updates. Consumers that persist a background
 /// snooze request should use this value after [schedule] completes.
+/// Preparation resolves collision-safe ids before a durable registration claim.
+abstract interface class AgendaNotificationSchedulePreparationGateway {
+  Future<int> prepareSchedule(AgendaNotificationRequest request);
+}
+
+/// Only use this for failures known to occur before the native schedule call.
+class AgendaNotificationNotSubmitted implements Exception {
+  const AgendaNotificationNotSubmitted(this.cause);
+  final Object cause;
+}
+
+abstract interface class AgendaNotificationQueueDiagnosticsGateway {
+  int get duplicatePendingRemoved;
+}
+
 abstract interface class AgendaNotificationScheduleIdGateway {
   int? get lastScheduledNotificationId;
 }
@@ -428,6 +524,7 @@ class AgendaNotificationMetadata {
     required this.id,
     this.exact = false,
     this.hasStableTag = false,
+    this.pendingCopies = 1,
   });
 
   final DateTime fireAt;
@@ -435,6 +532,7 @@ class AgendaNotificationMetadata {
   final int id;
   final bool exact;
   final bool hasStableTag;
+  final int pendingCopies;
 }
 
 /// The request passed to a platform notification implementation.
@@ -892,6 +990,8 @@ class FlutterAgendaNotificationGateway
         AgendaNotificationGateway,
         AgendaNotificationMetadataGateway,
         AgendaNotificationScheduleIdGateway,
+        AgendaNotificationSchedulePreparationGateway,
+        AgendaNotificationQueueDiagnosticsGateway,
         AgendaNotificationPlatformDiagnosticsGateway,
         AgendaNotificationOwnershipGateway,
         AgendaNotificationIdCancellationGateway,
@@ -918,6 +1018,11 @@ class FlutterAgendaNotificationGateway
   final AgendaWindowsNotificationBackend? _windowsBackend;
   final AgendaNotificationRuntimeStore? _runtimeStore;
   final AgendaNotificationTestIdAllocator _developerTestIdAllocator;
+  @override
+  int get duplicatePendingRemoved => _duplicatePendingRemoved;
+  int _duplicatePendingRemoved = 0;
+  final Map<String, AgendaNotificationRegistration> _persistedRegistrations =
+      {};
   bool _initialized = false;
   bool _launchDetailsConsumed = false;
   Future<void>? _launchDetailsRead;
@@ -984,12 +1089,51 @@ class FlutterAgendaNotificationGateway
       : _plugin.getActiveNotifications();
 
   Future<void> _cancelPlatformNotification(int id, {String? tag}) =>
-      _isWindows ? _windows.cancel(id: id) : _plugin.cancel(id: id, tag: tag);
+      _isWindows ? _cancelWindowsCopies(id) : _plugin.cancel(id: id, tag: tag);
+
+  Future<void> _cancelWindowsCopies(int id) async {
+    final count = await cancelWindowsNotificationCopies(_windows, id);
+    _duplicatePendingRemoved += math.max(0, count - 1);
+  }
+
+  @override
+  Future<int> prepareSchedule(AgendaNotificationRequest request) =>
+      withAgendaRuntimeMutationLock(() async {
+        await _ensureNotificationIdCache();
+        final id = _notificationIdForRequest(request);
+        _managedNotificationIds[request.key] = id;
+        _sessionManagedNotificationIds[request.key] = id;
+        _occupiedNotificationIds.add(id);
+        _sessionAllocatedNotificationIds.add(id);
+        return id;
+      });
 
   Future<void> _restorePersistedOwnership() async {
     if (!_isWindows ||
         _runtimeStore is! AgendaNotificationBackgroundRequestIndex) {
       return;
+    }
+    if (_runtimeStore is AgendaNotificationRegistrationStore &&
+        _runtimeStore is AgendaNotificationProjectionFenceStore) {
+      final fence =
+          await (_runtimeStore as AgendaNotificationProjectionFenceStore)
+              .readProjectionFence();
+      final snapshot =
+          await (_runtimeStore as AgendaNotificationRegistrationStore)
+              .readRegistrationSnapshot(fence, now: DateTime.now());
+      final records = snapshot.records.values.toList()
+        ..sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
+      for (final record in records) {
+        final id = record.notificationId;
+        if (id == null ||
+            record.state == AgendaNotificationRegistrationState.rejected) {
+          continue;
+        }
+        _persistedRegistrations[record.key] = record;
+        _managedNotificationIds[record.key] = id;
+        _sessionManagedNotificationIds[record.key] = id;
+        _occupiedNotificationIds.add(id);
+      }
     }
     final index = _runtimeStore as AgendaNotificationBackgroundRequestIndex;
     for (final key in await index.backgroundRequestKeys()) {
@@ -1223,8 +1367,16 @@ class FlutterAgendaNotificationGateway
           if (decoded != null) result[decoded.key] = decoded.fireAt;
         }
         if (_isWindows) {
+          final ids = requests.map((item) => item.id).toSet();
           for (final entry in _persistedManagedRequests.entries) {
-            result.putIfAbsent(entry.key, () => entry.value.fireAt);
+            if (ids.contains(entry.value.notificationId)) {
+              result.putIfAbsent(entry.key, () => entry.value.fireAt);
+            }
+          }
+          for (final entry in _persistedRegistrations.entries) {
+            if (ids.contains(entry.value.notificationId)) {
+              result.putIfAbsent(entry.key, () => entry.value.fireAt);
+            }
           }
         }
         return result;
@@ -1245,10 +1397,18 @@ class FlutterAgendaNotificationGateway
             id: request.id,
             exact: decoded.scheduleExact,
             hasStableTag: decoded.hasStableTag,
+            pendingCopies: requests
+                .where((item) => item.id == request.id)
+                .length,
           );
         }
         if (_isWindows) {
+          final copies = <int, int>{};
+          for (final request in requests) {
+            copies.update(request.id, (n) => n + 1, ifAbsent: () => 1);
+          }
           for (final entry in _persistedManagedRequests.entries) {
+            if (!copies.containsKey(entry.value.notificationId)) continue;
             final decoded = AgendaNotificationPayload.tryDecode(
               entry.value.payload,
             );
@@ -1260,6 +1420,23 @@ class FlutterAgendaNotificationGateway
                 id: entry.value.notificationId,
                 exact: decoded?.scheduleExact ?? true,
                 hasStableTag: decoded?.hasStableTag ?? false,
+                pendingCopies: copies[entry.value.notificationId]!,
+              ),
+            );
+          }
+          for (final entry in _persistedRegistrations.entries) {
+            final record = entry.value;
+            final count = copies[record.notificationId];
+            if (count == null) continue;
+            result.putIfAbsent(
+              entry.key,
+              () => AgendaNotificationMetadata(
+                fireAt: record.fireAt,
+                fingerprint: '',
+                id: record.notificationId!,
+                exact: true,
+                hasStableTag: true,
+                pendingCopies: count,
               ),
             );
           }
@@ -1290,7 +1467,11 @@ class FlutterAgendaNotificationGateway
       // Windows exposes pending requests without payloads and its native
       // adapter adds a new ScheduledToastNotification rather than updating
       // one by logical key. Remove the old schedule before replacing it.
-      await _windows.cancel(id: notificationId);
+      try {
+        await _cancelWindowsCopies(notificationId);
+      } catch (error) {
+        throw AgendaNotificationNotSubmitted(error);
+      }
     }
     final sourceLabel = request.sourceLabel ?? request.occurrence.sourceType;
     final channelId =
@@ -1631,6 +1812,7 @@ class FlutterAgendaNotificationGateway
     _managedNotificationIds.clear();
     _activeManagedNotificationIds.clear();
     _persistedManagedRequests.clear();
+    _persistedRegistrations.clear();
     // Keep mappings allocated during this process even when Android's
     // scheduled-notification preference has not caught up yet. This closes a
     // small async gap in which a same-key update could otherwise allocate a
@@ -1986,6 +2168,19 @@ class AgendaNotificationService extends ChangeNotifier {
   Set<String> _handledOccurrenceIds = const {};
   bool _runtimeClearing = false;
   AgendaNotificationDiagnostics? _latestDiagnostics;
+  final List<AgendaNotificationRegistrationDiagnostic> _registrationDecisions =
+      [];
+  int _queueDuplicatesAtStart = 0;
+  bool _registrationUncertain = false;
+  AgendaNotificationRegistrationStore? get _registrationStore =>
+      _runtimeStore is AgendaNotificationRegistrationStore
+      ? _runtimeStore as AgendaNotificationRegistrationStore
+      : null;
+  int get _queueDuplicates =>
+      gateway is AgendaNotificationQueueDiagnosticsGateway
+      ? (gateway as AgendaNotificationQueueDiagnosticsGateway)
+            .duplicatePendingRemoved
+      : 0;
   void Function(String? payload)? _onPayload;
   FutureOr<void> Function(String? payload, String? actionId)? _onAction;
   AgendaNotificationStatus _status = const AgendaNotificationStatus(
@@ -2430,6 +2625,10 @@ class AgendaNotificationService extends ChangeNotifier {
     FutureOr<void> Function(String? payload, String? actionId)? onAction,
   }) async {
     final current = (anchor ?? now()).toLocal();
+    projectionFence ??= await readProjectionFence();
+    _registrationDecisions.clear();
+    _registrationUncertain = false;
+    _queueDuplicatesAtStart = _queueDuplicates;
     final committed = committedDataReader?.call();
     if (committed != null && !data.sameWorkspaceAvailability(committed)) {
       data = committed;
@@ -2438,6 +2637,16 @@ class AgendaNotificationService extends ChangeNotifier {
       _lastData = data;
       await initialize(onPayload: onPayload, onAction: onAction);
       if (!(await _allowsProjectionFence(projectionFence))) return;
+      // Establish known history even while notifications/permissions are off.
+      // Otherwise enabling seconds after a due time would look like an upgrade
+      // with unknown history and incorrectly suppress the first valid catch-up.
+      if (_registrationStore != null &&
+          !await _registrationStore!.initializeRegistrationEpoch(
+            current,
+            projectionFence,
+          )) {
+        return;
+      }
       await _cancelDisabledWorkspaceNotifications(data, projectionFence);
       // Actions selected by a background isolate are persisted until the
       // provider snapshot is available. Consume them before building this
@@ -2542,15 +2751,38 @@ class AgendaNotificationService extends ChangeNotifier {
         now: current,
         horizon: coverageScope.endExclusive.difference(current),
       );
+      final existing = await gateway.pendingPlan();
+      final metadata = gateway is AgendaNotificationMetadataGateway
+          ? await (gateway as AgendaNotificationMetadataGateway)
+                .pendingMetadata()
+          : const <String, AgendaNotificationMetadata>{};
+      final registrations = await _prepareRegistrations(
+        occurrences,
+        existing,
+        metadata,
+        current,
+        projectionFence,
+      );
+      if (!(await _allowsProjectionFence(projectionFence))) return;
       final lateRecovery = _lateReminderCompensations(
         occurrences,
         now: current,
+        existing: existing,
+        registrations: registrations,
       );
       final runtimePlan = await _applyRuntimeState(occurrences, [
         ...boundedPlan.items,
         ...lateRecovery,
       ], now: current);
-      final existing = await gateway.pendingPlan();
+      final validReminderKeys = <String>{
+        for (final occurrence in occurrences)
+          for (final reminder in occurrence.reminders)
+            buildNotificationPlanKey(
+              occurrence.sourceType,
+              occurrence.stableId,
+              reminder.normalized().minutesBefore,
+            ),
+      };
       final ownedKeys = <String>{
         ...existing.keys,
         if (gateway is AgendaNotificationOwnershipGateway)
@@ -2560,11 +2792,10 @@ class AgendaNotificationService extends ChangeNotifier {
           ...(await (_runtimeStore as AgendaNotificationBackgroundRequestIndex)
               .backgroundRequestKeys()),
       };
-      final rawRetainedPendingKeys = _retainedPendingKeys(
-        existing,
-        now: current,
-        mode: mode,
-      );
+      final rawRetainedPendingKeys = {
+        ..._retainedPendingKeys(existing, now: current, mode: mode),
+        ..._registeredDueKeys(occurrences, existing, registrations, current),
+      };
       final blockedChannelIds = await _blockedNotificationChannelIds(
         runtimePlan,
       );
@@ -2590,10 +2821,6 @@ class AgendaNotificationService extends ChangeNotifier {
       var desired = selected.items;
       final channelBlocked = blockedChannelIds.isNotEmpty;
       await _backgroundRequestStore?.pruneBackgroundRequests(now: current);
-      final metadata = gateway is AgendaNotificationMetadataGateway
-          ? await (gateway as AgendaNotificationMetadataGateway)
-                .pendingMetadata()
-          : const <String, AgendaNotificationMetadata>{};
       final existingForDiff = <String, DateTime>{
         for (final entry in existing.entries)
           entry.key: metadata[entry.key]?.fireAt ?? entry.value,
@@ -2608,7 +2835,7 @@ class AgendaNotificationService extends ChangeNotifier {
         // owned by Sked through its stable Android tag. Include those active
         // keys when an authoritative data commit removes the occurrence.
         keysToCancel.addAll(
-          ownedKeys.where((key) => !desired.any((item) => item.key == key)),
+          ownedKeys.where((key) => !validReminderKeys.contains(key)),
         );
       }
 
@@ -2692,7 +2919,7 @@ class AgendaNotificationService extends ChangeNotifier {
         keysToCancel = <String>{...diff.toCancel, ...preCancelledKeys};
         if (mode == AgendaNotificationReconcileMode.authoritative) {
           keysToCancel.addAll(
-            ownedKeys.where((key) => !desired.any((item) => item.key == key)),
+            ownedKeys.where((key) => !validReminderKeys.contains(key)),
           );
         }
         keysToCancel.removeAll(preCancelledKeys);
@@ -2703,7 +2930,7 @@ class AgendaNotificationService extends ChangeNotifier {
       for (final item in desired) {
         final prior = metadata[item.key];
         if (prior != null &&
-            prior.fireAt == item.fireAt &&
+            prior.fireAt.isAtSameMomentAs(item.fireAt) &&
             (prior.fingerprint !=
                     _notificationFingerprintForItem(
                       item,
@@ -2713,7 +2940,8 @@ class AgendaNotificationService extends ChangeNotifier {
                       ),
                     ) ||
                 prior.exact != exactAllowed ||
-                !prior.hasStableTag)) {
+                !prior.hasStableTag ||
+                prior.pendingCopies > 1)) {
           changedKeys.add(item.key);
         }
       }
@@ -2778,7 +3006,14 @@ class AgendaNotificationService extends ChangeNotifier {
         }
         final request = _requestFor(item, data, exact: true);
         try {
-          await gateway.schedule(request, exact: true);
+          final submitted = await _scheduleWithRegistration(
+            request,
+            item,
+            registrations,
+            current,
+            projectionFence,
+          );
+          if (!submitted) continue;
         } catch (error) {
           // Android can revoke exact-alarm or notification access between the
           // capability read above and the actual AlarmManager call. Re-read
@@ -2851,7 +3086,7 @@ class AgendaNotificationService extends ChangeNotifier {
         for (final key in retainedPendingKeys)
           if (existing[key] != null) existing[key]!,
       ];
-      final coverage = channelBlocked
+      final coverage = channelBlocked || _registrationUncertain
           ? AgendaNotificationCoverage.blocked
           : selected.hasCapacityOverflow
           ? AgendaNotificationCoverage.capacityLimited
@@ -2885,6 +3120,9 @@ class AgendaNotificationService extends ChangeNotifier {
           mode: mode,
           nextRenewalAt: nextRenewalAt,
           lateRecoveryCount: lateRecoveryCount,
+          lastError: _registrationUncertain
+              ? 'Notification registration result is unknown; replay was suppressed.'
+              : null,
         ),
       );
       await _recordDiagnostics(
@@ -2892,7 +3130,7 @@ class AgendaNotificationService extends ChangeNotifier {
           recordedAt: current,
           mode: mode,
           origin: origin,
-          result: channelBlocked
+          result: channelBlocked || _registrationUncertain
               ? AgendaNotificationDiagnosticResult.blocked
               : AgendaNotificationDiagnosticResult.success,
           notificationsEnabled: notificationsEnabled,
@@ -2908,6 +3146,8 @@ class AgendaNotificationService extends ChangeNotifier {
           nextRenewalAt: nextRenewalAt,
           error: channelBlocked
               ? 'A notification channel is blocked in system settings.'
+              : _registrationUncertain
+              ? 'Notification registration result is unknown; replay was suppressed.'
               : null,
         ),
         projectionFence: projectionFence,
@@ -3359,6 +3599,10 @@ class AgendaNotificationService extends ChangeNotifier {
     AgendaNotificationDiagnostics diagnostics, {
     AgendaNotificationProjectionFence? projectionFence,
   }) async {
+    diagnostics = diagnostics.copyWithRegistrationDecisions(
+      _registrationDecisions,
+      math.max(0, _queueDuplicates - _queueDuplicatesAtStart),
+    );
     // Diagnostics are runtime-only, but a late background pass must not
     // recreate them after a foreground data clear.  Check the same fence used
     // for the platform plan immediately before and after persistence.
@@ -3522,49 +3766,337 @@ class AgendaNotificationService extends ChangeNotifier {
     _snoozedUntil = snoozes;
   }
 
-  /// Covers the small race where a projection begins just after a reminder's
-  /// intended instant.  The pure planner correctly excludes past times; this
-  /// service-level recovery turns only a just-missed, still-active occurrence
-  /// into a near-immediate delivery.  Older reminders are never replayed.
-  List<NotificationPlanItem> _lateReminderCompensations(
-    Iterable<AgendaOccurrence> occurrences, {
-    required DateTime now,
-  }) {
-    final earliestFireAt = now.subtract(_lateReminderGrace);
-    final deliveryAt = now.add(_lateReminderDeliveryDelay);
-    final byKey = <String, NotificationPlanItem>{};
+  void _recordRegistrationDecision(
+    String key,
+    DateTime original,
+    String reason, [
+    AgendaNotificationRegistration? record,
+  ]) {
+    if (reason == 'suppressed_uncertain_registration' ||
+        reason == 'platform_result_uncertain') {
+      _registrationUncertain = true;
+    }
+    if (_registrationDecisions.length >=
+        AgendaNotificationDiagnostics.maxPlanItems) {
+      return;
+    }
+    _registrationDecisions.add(
+      AgendaNotificationRegistrationDiagnostic(
+        key: key,
+        originalFireAt: original,
+        reason: reason,
+        fireAt: record?.fireAt,
+        state: record?.state,
+        notificationId: record?.notificationId,
+      ),
+    );
+  }
+
+  Future<AgendaNotificationRegistrationSnapshot?> _prepareRegistrations(
+    List<AgendaOccurrence> occurrences,
+    Map<String, DateTime> existing,
+    Map<String, AgendaNotificationMetadata> metadata,
+    DateTime current,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final store = _registrationStore;
+    if (store == null) return null;
+    var snapshot = await store.readRegistrationSnapshot(fence, now: current);
+    // Adopt platform/legacy ownership as positive evidence. The historical
+    // cutoff only applies to identities with no evidence, never to this data.
+    // No copy or title fingerprint participates in registration identity.
     for (final occurrence in occurrences) {
-      if (!occurrence.hasValidRange || !occurrence.end.isAfter(deliveryAt)) {
-        continue;
-      }
-      if (_handledOccurrenceIds.contains(_runtimeOccurrenceId(occurrence))) {
-        continue;
-      }
-      for (final rawReminder in occurrence.reminders) {
-        final reminder = rawReminder.normalized();
-        final originalFireAt = reminder.fireAt(occurrence.start);
-        if (!originalFireAt.isBefore(now) ||
-            originalFireAt.isBefore(earliestFireAt)) {
-          continue;
-        }
+      for (final raw in occurrence.reminders) {
+        final reminder = raw.normalized();
+        final original = reminder.fireAt(occurrence.start);
         final key = buildNotificationPlanKey(
           occurrence.sourceType,
           occurrence.stableId,
           reminder.minutesBefore,
         );
-        byKey.putIfAbsent(
+        final prior = snapshot.forReminder(key, original);
+        if (prior != null) {
+          if (prior.state != AgendaNotificationRegistrationState.accepted &&
+              existing[key]?.isAtSameMomentAs(prior.fireAt) == true) {
+            final accepted = prior.copyWith(
+              state: AgendaNotificationRegistrationState.accepted,
+              notificationId: metadata[key]?.id,
+            );
+            await store.writeRegistration(accepted, fence);
+          }
+          continue;
+        }
+        final background = await _backgroundRequestStore?.readBackgroundRequest(
           key,
-          () => NotificationPlanItem(
-            key: key,
-            occurrence: occurrence,
-            reminder: reminder,
-            fireAt: deliveryAt,
-            priority: NotificationPlanPriority.lateRecovery,
-          ),
+        );
+        final payload = AgendaNotificationPayload.tryDecode(
+          background?.payload,
+        );
+        final matchingBackground =
+            background != null &&
+            payload?.occurrenceRevision == agendaOccurrenceRevision(occurrence);
+        final platformAt = existing[key];
+        final matchingPlatform = platformAt?.isAtSameMomentAs(original) == true;
+        if (!matchingBackground && !matchingPlatform) continue;
+        final at = matchingBackground ? background.fireAt : platformAt!;
+        final registration = AgendaNotificationRegistration(
+          key: key,
+          originalFireAt: original,
+          fireAt: at,
+          recordedAt: current,
+          state: AgendaNotificationRegistrationState.accepted,
+          kind:
+              at.isAfter(original) &&
+                  at.difference(original) <=
+                      _lateReminderGrace + _lateReminderDeliveryDelay
+              ? AgendaNotificationRegistrationKind.lateRecovery
+              : AgendaNotificationRegistrationKind.normal,
+          notificationId: metadata[key]?.id ?? background?.notificationId,
+        );
+        if (!await store.writeRegistration(registration, fence)) {
+          return snapshot;
+        }
+        _recordRegistrationDecision(
+          key,
+          original,
+          'adopted_existing_registration',
+          registration,
         );
       }
     }
-    return List.unmodifiable(byKey.values);
+    snapshot = await store.readRegistrationSnapshot(fence, now: current);
+    return snapshot;
+  }
+
+  Set<String> _registeredDueKeys(
+    List<AgendaOccurrence> occurrences,
+    Map<String, DateTime> existing,
+    AgendaNotificationRegistrationSnapshot? snapshot,
+    DateTime current,
+  ) {
+    final result = <String>{};
+    if (snapshot == null) return result;
+    for (final occurrence in occurrences) {
+      for (final raw in occurrence.reminders) {
+        final reminder = raw.normalized();
+        final key = buildNotificationPlanKey(
+          occurrence.sourceType,
+          occurrence.stableId,
+          reminder.minutesBefore,
+        );
+        final at = existing[key];
+        if (at == null ||
+            at.isAfter(current) ||
+            at.isBefore(current.subtract(_recoveryPendingGrace))) {
+          continue;
+        }
+        final record = snapshot.forReminder(
+          key,
+          reminder.fireAt(occurrence.start),
+        );
+        if (_snoozedUntil[_runtimeOccurrenceId(occurrence)]?.isAfter(current) ==
+            true) {
+          continue;
+        }
+        if (record != null &&
+            record.kind == AgendaNotificationRegistrationKind.lateRecovery &&
+            record.state != AgendaNotificationRegistrationState.rejected &&
+            record.fireAt.isAtSameMomentAs(at)) {
+          result.add(key);
+        }
+      }
+    }
+    return result;
+  }
+
+  /// A missing pending item is not proof of a missed notification: normal
+  /// delivery removes it. Retain a first pending catch-up at its fixed time;
+  /// otherwise only a never-submitted identity may get one recovery attempt.
+  List<NotificationPlanItem> _lateReminderCompensations(
+    Iterable<AgendaOccurrence> occurrences, {
+    required DateTime now,
+    required Map<String, DateTime> existing,
+    required AgendaNotificationRegistrationSnapshot? registrations,
+  }) {
+    final result = <String, NotificationPlanItem>{};
+    for (final occurrence in occurrences) {
+      if (!occurrence.hasValidRange ||
+          _handledOccurrenceIds.contains(_runtimeOccurrenceId(occurrence))) {
+        continue;
+      }
+      for (final raw in occurrence.reminders) {
+        final reminder = raw.normalized();
+        final original = reminder.fireAt(occurrence.start);
+        if (!original.isBefore(now)) continue;
+        final key = buildNotificationPlanKey(
+          occurrence.sourceType,
+          occurrence.stableId,
+          reminder.minutesBefore,
+        );
+        final record = registrations?.forReminder(key, original);
+        DateTime? at;
+        if (record != null &&
+            record.state != AgendaNotificationRegistrationState.rejected) {
+          if (record.kind == AgendaNotificationRegistrationKind.lateRecovery &&
+              record.fireAt.isAfter(now) &&
+              existing[key]?.isAtSameMomentAs(record.fireAt) == true) {
+            at = existing[key];
+            _recordRegistrationDecision(
+              key,
+              original,
+              'retained_first_catch_up',
+              record,
+            );
+          } else {
+            if (!original.isBefore(now.subtract(_lateReminderGrace))) {
+              _recordRegistrationDecision(
+                key,
+                original,
+                record.state == AgendaNotificationRegistrationState.pending
+                    ? 'suppressed_uncertain_registration'
+                    : 'suppressed_registered',
+                record,
+              );
+            }
+            continue;
+          }
+        } else {
+          if (original.isBefore(now.subtract(_lateReminderGrace))) continue;
+          final epoch = registrations?.initializedAt;
+          if (epoch == null || original.isBefore(epoch)) {
+            _recordRegistrationDecision(
+              key,
+              original,
+              registrations == null
+                  ? 'suppressed_no_durable_store'
+                  : 'suppressed_unknown_history',
+            );
+            continue;
+          }
+          if (existing.containsKey(key)) {
+            _recordRegistrationDecision(
+              key,
+              original,
+              'suppressed_existing_platform_request',
+            );
+            continue;
+          }
+          at = now.add(_lateReminderDeliveryDelay);
+        }
+        if (at == null || !occurrence.end.isAfter(at)) continue;
+        result[key] = NotificationPlanItem(
+          key: key,
+          occurrence: occurrence,
+          reminder: reminder,
+          fireAt: at,
+          priority: NotificationPlanPriority.lateRecovery,
+        );
+      }
+    }
+    return List.unmodifiable(result.values);
+  }
+
+  Future<bool> _scheduleWithRegistration(
+    AgendaNotificationRequest request,
+    NotificationPlanItem item,
+    AgendaNotificationRegistrationSnapshot? snapshot,
+    DateTime current,
+    AgendaNotificationProjectionFence fence,
+  ) async {
+    final store = _registrationStore;
+    final snooze = item.priority == NotificationPlanPriority.userSnooze;
+    final original = snooze
+        ? item.fireAt
+        : item.reminder.fireAt(item.occurrence.start);
+    final prior = snapshot?.forReminder(item.key, original);
+    // Before its requested instant, a genuinely missing future snooze can be
+    // repaired just like a normal alarm. A past catch-up cannot be replayed.
+    final protected = !original.isAfter(current);
+    if (protected &&
+        prior != null &&
+        prior.state != AgendaNotificationRegistrationState.rejected) {
+      _recordRegistrationDecision(
+        item.key,
+        original,
+        prior.state == AgendaNotificationRegistrationState.pending
+            ? 'suppressed_uncertain_registration'
+            : 'suppressed_registered',
+        prior,
+      );
+      return false;
+    }
+    final id = gateway is AgendaNotificationSchedulePreparationGateway
+        ? await (gateway as AgendaNotificationSchedulePreparationGateway)
+              .prepareSchedule(request)
+        : request.id;
+    var record = AgendaNotificationRegistration(
+      key: item.key,
+      originalFireAt: original,
+      fireAt: item.fireAt,
+      recordedAt: current,
+      notificationId: id,
+      state: AgendaNotificationRegistrationState.pending,
+      kind: snooze
+          ? AgendaNotificationRegistrationKind.snooze
+          : item.priority == NotificationPlanPriority.lateRecovery
+          ? AgendaNotificationRegistrationKind.lateRecovery
+          : AgendaNotificationRegistrationKind.normal,
+    );
+    if (store != null && !await store.writeRegistration(record, fence)) {
+      return false;
+    }
+    _recordRegistrationDecision(
+      item.key,
+      original,
+      'registration_pending',
+      record,
+    );
+    try {
+      await gateway.schedule(request, exact: true);
+    } catch (error) {
+      if (error is AgendaNotificationNotSubmitted ||
+          (error is PlatformException &&
+              error.code == _exactAlarmPermissionErrorCode)) {
+        record =
+            prior != null &&
+                prior.state != AgendaNotificationRegistrationState.rejected
+            ? prior
+            : record.copyWith(
+                state: AgendaNotificationRegistrationState.rejected,
+              );
+        await store?.writeRegistration(record, fence);
+        _recordRegistrationDecision(
+          item.key,
+          original,
+          'proven_not_submitted',
+          record,
+        );
+      } else {
+        _recordRegistrationDecision(
+          item.key,
+          original,
+          'platform_result_uncertain',
+          record,
+        );
+      }
+      rethrow;
+    }
+    record = record.copyWith(
+      state: AgendaNotificationRegistrationState.accepted,
+      notificationId: gateway is AgendaNotificationScheduleIdGateway
+          ? (gateway as AgendaNotificationScheduleIdGateway)
+                .lastScheduledNotificationId
+          : id,
+    );
+    // A stale fence after the platform call must reach the caller's cleanup.
+    if (store != null) await store.writeRegistration(record, fence);
+    _recordRegistrationDecision(
+      item.key,
+      original,
+      'platform_accepted_display_unknown',
+      record,
+    );
+    return true;
   }
 
   void _handleTap(String? payload) {
@@ -3625,19 +4157,33 @@ class AgendaNotificationService extends ChangeNotifier {
       // Do not let its old key/fingerprint mutate a newly projected item.
       return false;
     }
+    await _ensureRuntimeState();
+    final fence = await readProjectionFence();
+    if (fence.blocked) return false;
     var accepted = true;
     switch (actionId) {
       case 'snooze_10m':
         final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
         if (runtimeKey == null) return false;
-        final existing = _snoozedUntil[runtimeKey];
-        if (existing != null && existing.isAfter(now())) {
-          await _notifyActionCallback(payload, actionId);
-          return true;
+        final current = now();
+        if (_registrationStore == null &&
+            _snoozedUntil[runtimeKey]?.isAfter(current) == true) {
+          return _notifyActionCallback(payload, actionId);
         }
-        final fireAt = now().add(const Duration(minutes: 10));
-        _snoozedUntil = {..._snoozedUntil, runtimeKey: fireAt};
+        final fireAt = await _fixedSnoozeFireAt(
+          _runtimeStore,
+          fence,
+          decoded,
+          current,
+        );
+        if (fireAt == null) return false;
+        // A repeated callback from an old card must not create a fresh snooze
+        // after the first one expired. A newly fired snooze has its own payload.
+        if (!fireAt.isAfter(current)) {
+          return _notifyActionCallback(payload, actionId);
+        }
         await _runtimeStore.setSnooze(runtimeKey, fireAt);
+        _snoozedUntil = {..._snoozedUntil, runtimeKey: fireAt};
         break;
       case 'handled':
         final runtimeKey = _runtimeOverrideKeyForPayload(decoded);
