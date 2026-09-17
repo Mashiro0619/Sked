@@ -239,16 +239,18 @@ class _ChromeScrimClipper extends CustomClipper<Path> {
       oldClipper.captionWidth != captionWidth;
 }
 
-/// Desktop commands do not inherit the mobile ordering/hiding preference. Small
-/// windows scroll commands instead of losing date navigation or adding a title row.
+/// Desktop commands do not inherit mobile ordering/hiding preferences. Calendar
+/// callers supply a compact row when native-caption clearance leaves little room.
 class WorkbenchCommandBar extends StatelessWidget {
   const WorkbenchCommandBar({
     super.key,
     required this.navigation,
     this.actions = const [],
+    this.compactBuilder,
   });
   final List<Widget> navigation;
   final List<Widget> actions;
+  final WidgetBuilder? compactBuilder;
   @override
   Widget build(BuildContext context) {
     final m = WorkbenchChromeMetrics.of(context);
@@ -294,6 +296,10 @@ class WorkbenchCommandBar extends StatelessWidget {
                 ),
                 child: LayoutBuilder(
                   builder: (context, c) {
+                    if (compactBuilder != null &&
+                        c.maxWidth < 700 * m.textScale) {
+                      return compactBuilder!(context);
+                    }
                     if (c.maxWidth < 700) {
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,

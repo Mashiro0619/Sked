@@ -2,6 +2,7 @@ import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/workbench_compact_calendar_bar.dart';
 import '../utils/calendar_timeline_layout.dart';
 import '../widgets/workbench_resource_widgets.dart';
 import '../widgets/sked_date_picker.dart';
@@ -1185,6 +1186,172 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     );
   }
 
+  Widget _desktopCompactToolbar(
+    BuildContext context,
+    TimetableProvider provider,
+    _GeneralHomeSnapshot snapshot,
+    String view,
+    String label,
+  ) {
+    final l = AppLocalizations.of(context);
+    final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
+    final assistant = AssistantPaneScope.of(context);
+    final canNavigate = widget.interactive && !_dateNavigationBusy;
+    return _ReminderStrip(
+      provider: provider,
+      filter: const _GeneralOccurrenceFilter(query: '', colorValue: null),
+      active: widget.active && widget.interactive,
+      pane: _pane,
+      onOccurrenceTap: (item) => _openDetails(context, provider, item),
+      actionBuilder: (context, count, openReminders) => WorkbenchCompactCalendarBar(
+        id: 'general',
+        enabled: widget.interactive,
+        moreFocusNode: widget.showSettingsAction && !resources
+            ? widget.settingsFocusNode
+            : null,
+        badgeCount: count,
+        date: WorkbenchOverflowAction(
+          id: 'general-date-picker',
+          label: label,
+          tooltip:
+              '${_datePickerTitle(l, _dateUnitForView(view))}: ${_accessibleDateNavigationLabel(snapshot.selectedDate, view, context)}',
+          icon: _generalViewIcon(view),
+          onSelected: canNavigate && !_datePickerOpen
+              ? (anchor) => unawaited(
+                  _pickDate(context, provider, anchorContext: anchor),
+                )
+              : null,
+        ),
+        shortDateLabel: formatDateSelection(
+          snapshot.selectedDate,
+          _dateUnitForView(view),
+          locale: l.localeName,
+          format: snapshot.dateLabelFormat,
+          compact: true,
+          customRange: view == generalViewCustom
+              ? snapshot.customDateRange
+              : null,
+        ),
+        previous: WorkbenchOverflowAction(
+          id: 'general-previous-period',
+          label: MaterialLocalizations.of(context).previousPageTooltip,
+          icon: Icons.chevron_left,
+          onSelected: canNavigate && _canStepRange(provider, -1)
+              ? (_) => unawaited(_stepDate(provider, -1))
+              : null,
+        ),
+        next: WorkbenchOverflowAction(
+          id: 'general-next-period',
+          label: MaterialLocalizations.of(context).nextPageTooltip,
+          icon: Icons.chevron_right,
+          onSelected: canNavigate && _canStepRange(provider, 1)
+              ? (_) => unawaited(_stepDate(provider, 1))
+              : null,
+        ),
+        today: WorkbenchOverflowAction(
+          id: 'general-today',
+          label: l.today,
+          icon: Icons.today,
+          onSelected: canNavigate
+              ? (_) => unawaited(_goToToday(provider))
+              : null,
+        ),
+        actions: [
+          WorkbenchOverflowAction(
+            id: 'general-add-event',
+            label: l.addEvent,
+            icon: Icons.add,
+            dividerBefore: true,
+            onSelected: widget.interactive && !_editorSheetOpen
+                ? (_) => unawaited(_openEditor(context, provider))
+                : null,
+          ),
+          if (!resources)
+            WorkbenchOverflowAction(
+              id: 'general-calendar-selector',
+              label: l.calendars,
+              icon: Icons.view_sidebar_outlined,
+              onSelected: (_) =>
+                  unawaited(_openCalendarManager(context, provider)),
+            ),
+          for (final option in _generalViewOptions(l))
+            WorkbenchOverflowAction(
+              id: 'general-view-choice-${option.value}',
+              label: '${l.generalViewSwitchMenuTooltip} · ${option.label}',
+              icon: option.icon,
+              selected: option.value == view,
+              onSelected: canNavigate
+                  ? (anchor) => unawaited(
+                      _changeView(
+                        provider,
+                        option.value,
+                        anchorContext: anchor,
+                      ),
+                    )
+                  : null,
+            ),
+          WorkbenchOverflowAction(
+            id: 'general-reminders-action',
+            label: count == 0 ? l.reminder : '${l.reminder} · $count',
+            icon: Icons.notifications_outlined,
+            dividerBefore: true,
+            onSelected: openReminders == null ? null : (_) => openReminders(),
+          ),
+          if (view != generalViewList)
+            WorkbenchOverflowAction(
+              id: 'general-day-agenda-toggle',
+              label: l.selectedDayAgenda,
+              icon: Icons.view_agenda_outlined,
+              onSelected: (_) =>
+                  unawaited(_pane.show<void>(_buildSelectedDayAgenda)),
+            ),
+          WorkbenchOverflowAction(
+            id: 'workspace-actions-general',
+            label: l.workspacePreferences,
+            icon: Icons.tune,
+            dividerBefore: true,
+            onSelected: (_) =>
+                unawaited(openWorkspacePreferences(context, AppMode.general)),
+          ),
+          if (assistant?.enabled == true)
+            WorkbenchOverflowAction(
+              id: 'assistant-toggle',
+              label: l.assistantLayoutPreview,
+              icon: Icons.chat_bubble_outline,
+              onSelected: assistant!.interactive
+                  ? (_) => (assistant.onToggle ?? assistant.controller.toggle)()
+                  : null,
+            ),
+          if (widget.showSettingsAction && !resources)
+            WorkbenchOverflowAction(
+              id: 'general-settings-button',
+              label: l.settings,
+              icon: Icons.settings_outlined,
+              onSelected: widget.settingsEnabled
+                  ? (_) =>
+                        (widget.settingsAction ??
+                        () => _openSettingsPage(context, provider))()
+                  : null,
+            ),
+          if (needsWorkspaceMenu(context))
+            for (final mode in provider.enabledWorkspaces)
+              WorkbenchOverflowAction(
+                id: 'workspace-menu-${mode.value}',
+                label: mode == AppMode.student
+                    ? l.studentTimetable
+                    : l.generalSchedule,
+                icon: mode == AppMode.student
+                    ? Icons.school_outlined
+                    : Icons.event_note_outlined,
+                selected: provider.activeMode == mode,
+                dividerBefore: mode == provider.enabledWorkspaces.first,
+                onSelected: (_) => selectWorkspace(context, mode),
+              ),
+        ],
+      ),
+    );
+  }
+
   Widget _desktopToolbar(
     BuildContext context,
     TimetableProvider provider,
@@ -1203,6 +1370,8 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
     return WorkbenchCommandBar(
       key: const ValueKey('general-workspace-toolbar'),
+      compactBuilder: (context) =>
+          _desktopCompactToolbar(context, provider, snapshot, view, label),
       navigation: [
         if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
         if (!resources)

@@ -86,6 +86,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       final last = addCalendarDays(first, 6);
       return WorkbenchCommandBar(
         key: const ValueKey('student-workspace-toolbar'),
+        compactBuilder: (context) => _desktopCompact(context, first, last),
         navigation: [
           if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
           if (WorkspaceCanvasScope.maybeOf(context)?.resources != true)
@@ -109,7 +110,11 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 : null,
             icon: const Icon(Icons.chevron_right),
           ),
-          TextButton(onPressed: onJumpToToday, child: Text(l10n.today)),
+          TextButton(
+            key: const ValueKey('student-today'),
+            onPressed: onJumpToToday,
+            child: Text(l10n.today),
+          ),
           Builder(
             builder: (anchor) => TextButton(
               key: const ValueKey('student-week-picker-button'),
@@ -543,6 +548,118 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _desktopCompact(BuildContext context, DateTime first, DateTime last) {
+    final l = AppLocalizations.of(context);
+    final p = context.watch<TimetableProvider>();
+    final assistant = AssistantPaneScope.of(context);
+    final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
+    return WorkbenchCompactCalendarBar(
+      id: 'student',
+      enabled: interactive,
+      moreFocusNode: showSettings ? settingsFocusNode : null,
+      date: WorkbenchOverflowAction(
+        id: 'student-week-picker-button',
+        label:
+            '${l.weekLabel(week)} · ${first.month}/${first.day} – ${last.month}/${last.day}',
+        icon: Icons.date_range_outlined,
+        onSelected: onOpenWeekPicker,
+      ),
+      shortDateLabel: l.weekLabel(week),
+      onDateLongPress: onJumpToToday,
+      previous: WorkbenchOverflowAction(
+        id: 'student-previous-week',
+        label: MaterialLocalizations.of(context).previousPageTooltip,
+        icon: Icons.chevron_left,
+        onSelected: week > 1 && onStep != null ? (_) => onStep!(-1) : null,
+      ),
+      next: WorkbenchOverflowAction(
+        id: 'student-next-week',
+        label: MaterialLocalizations.of(context).nextPageTooltip,
+        icon: Icons.chevron_right,
+        onSelected: week < timetable.config.totalWeeks && onStep != null
+            ? (_) => onStep!(1)
+            : null,
+      ),
+      today: WorkbenchOverflowAction(
+        id: 'student-today',
+        label: l.today,
+        icon: Icons.today,
+        onSelected: onJumpToToday == null ? null : (_) => onJumpToToday!(),
+      ),
+      actions: [
+        WorkbenchOverflowAction(
+          id: 'student-add-course',
+          label: l.addCourse,
+          icon: Icons.add,
+          dividerBefore: true,
+          onSelected: onAddCourse == null ? null : (_) => onAddCourse!(),
+        ),
+        if (!resources)
+          WorkbenchOverflowAction(
+            id: 'student-timetable-picker-button',
+            label: l.timetable,
+            icon: Icons.view_sidebar_outlined,
+            onSelected: onOpenTimetablePicker == null
+                ? null
+                : (_) => onOpenTimetablePicker!(),
+          ),
+        for (final mode in _StudentTimetableView.values)
+          WorkbenchOverflowAction(
+            id: 'student-view-choice-${mode.name}',
+            label:
+                '${l.generalViewSwitchMenuTooltip} · ${mode == _StudentTimetableView.week ? l.viewWeek : l.viewDay}',
+            icon: mode == _StudentTimetableView.week
+                ? Icons.view_week_outlined
+                : Icons.view_day_outlined,
+            selected: mode == viewMode,
+            onSelected: onViewChanged == null
+                ? null
+                : (_) => onViewChanged!(mode),
+          ),
+        WorkbenchOverflowAction(
+          id: 'workspace-actions-student',
+          label: l.workspacePreferences,
+          icon: Icons.tune,
+          dividerBefore: true,
+          onSelected: (_) =>
+              unawaited(openWorkspacePreferences(context, AppMode.student)),
+        ),
+        if (assistant?.enabled == true)
+          WorkbenchOverflowAction(
+            id: 'assistant-toggle',
+            label: l.assistantLayoutPreview,
+            icon: Icons.chat_bubble_outline,
+            onSelected: assistant!.interactive
+                ? (_) => (assistant.onToggle ?? assistant.controller.toggle)()
+                : null,
+          ),
+        if (showSettings)
+          WorkbenchOverflowAction(
+            id: 'student-settings-button',
+            label: l.settings,
+            icon: Icons.settings_outlined,
+            onSelected: onOpenSettings == null
+                ? null
+                : (_) => onOpenSettings!(),
+          ),
+        if (needsWorkspaceMenu(context))
+          for (final mode in p.enabledWorkspaces)
+            WorkbenchOverflowAction(
+              id: 'workspace-menu-${mode.value}',
+              label: mode == AppMode.student
+                  ? l.studentTimetable
+                  : l.generalSchedule,
+              icon: mode == AppMode.student
+                  ? Icons.school_outlined
+                  : Icons.event_note_outlined,
+              selected: p.activeMode == mode,
+              dividerBefore: mode == p.enabledWorkspaces.first,
+              onSelected: (_) => selectWorkspace(context, mode),
+            ),
+      ],
     );
   }
 }

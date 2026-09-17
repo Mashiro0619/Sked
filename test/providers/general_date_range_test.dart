@@ -178,16 +178,14 @@ void main() {
   });
 
   test(
-    'a removed owner cannot commit after waiting for the runtime lock',
+    'a removed owner cannot commit after waiting for a deferred UI save',
     () async {
       final gate = Completer<void>(), entered = Completer<void>();
-      final (storage, p) = await _setup(
-        lock: (action) async {
-          if (!entered.isCompleted) entered.complete();
-          await gate.future;
-          await action();
-        },
-      );
+      final (storage, p) = await _setup();
+      storage.gate = gate;
+      storage.entered = entered;
+      await p.setSelectedGeneralDate(DateTime(2026, 9, 7));
+      await entered.future;
       addTearDown(p.dispose);
       var current = true;
       final before = p.generalMode, writes = storage.writes;
@@ -208,13 +206,11 @@ void main() {
 
   test('backup restore reserves a new data session before a queued navigation can write', () async {
     final gate = Completer<void>(), entered = Completer<void>();
-    final (storage, p) = await _setup(
-      lock: (action) async {
-        if (!entered.isCompleted) entered.complete();
-        await gate.future;
-        await action();
-      },
-    );
+    final (storage, p) = await _setup();
+    storage.gate = gate;
+    storage.entered = entered;
+    await p.setSelectedGeneralDate(DateTime(2026, 9, 7));
+    await entered.future;
     addTearDown(p.dispose);
     final backup = await p.exportAppDataJson();
     final oldToken = p.dataSessionToken;
@@ -228,7 +224,7 @@ void main() {
     await entered.future;
     final restore = p.importAppDataJson(backup, mode: AppImportMode.replaceAll);
     // The journal lease is asynchronous; the reservation itself must still
-    // reject a navigation that was waiting on the runtime lock.
+    // reject a navigation that was waiting for an older UI write.
     await Future<void>.delayed(Duration.zero);
     expect(p.dataSessionToken, isNot(same(oldToken)));
     gate.complete();

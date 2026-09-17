@@ -947,14 +947,14 @@ void main() {
       final navigationBar = tester.getRect(
         find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
       );
-      expect(
-        tester
-            .widget<NavigationBar>(
-              find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
-            )
-            .height,
-        80,
-      );
+      final contentHeight = tester
+          .widget<NavigationBar>(
+            find.byKey(const ValueKey('adaptive-shell-navigation-bar')),
+          )
+          .height!;
+      // Ahem's wide English glyphs wrap; only actual label wrapping may grow
+      // the compact bar, rather than multiplying its height by text scale.
+      expect(contentHeight, greaterThanOrEqualTo(64));
       for (final (destinationKey, labelText) in const [
         ('adaptive-shell-student-destination', 'Student timetable'),
         ('adaptive-shell-general-destination', 'General schedule'),
@@ -967,9 +967,13 @@ void main() {
             MediaQuery.textScalerOf(tester.element(label)).scale(16) / 16;
         expect(label, findsOneWidget);
         expect(effectiveTextScale, lessThanOrEqualTo(1.3));
+        expect(
+          tester.getRect(label).bottom,
+          lessThanOrEqualTo(navigationBar.bottom),
+        );
       }
       expect(indicator.animation.value, 1);
-      expect(navigationBar.height, 80);
+      expect(navigationBar.height, contentHeight);
       expect(navigationBar.bottom, closeTo(568, 0.01));
       expect(tester.takeException(), isNull);
     },
@@ -1006,8 +1010,11 @@ void main() {
     expect(timetableGridFinder, findsOneWidget);
     final timetableGridRect = tester.getRect(timetableGridFinder);
 
-    expect(tester.widget<NavigationBar>(navigationFinder).height, 80);
-    expect(navigationRect.height, closeTo(104, 0.01));
+    final contentHeight = tester
+        .widget<NavigationBar>(navigationFinder)
+        .height!;
+    expect(contentHeight, greaterThanOrEqualTo(64));
+    expect(navigationRect.height, closeTo(contentHeight + 24, 0.01));
     expect(navigationRect.bottom, closeTo(844, 0.01));
     expect(pagerRect.bottom, closeTo(navigationRect.top, 0.01));
     expect(timetableGridRect.bottom, closeTo(navigationRect.top, 0.01));

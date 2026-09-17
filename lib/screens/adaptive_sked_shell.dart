@@ -1,6 +1,7 @@
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
@@ -830,38 +831,90 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: _buildNavigation);
+
+  Widget _buildNavigation(BuildContext context, BoxConstraints constraints) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final motion = SkedMotionPolicy.of(context);
     final navigationAnimationDuration = motion.spatialAnimationsEnabled
         ? motion.effects(SkedMotionSpeed.standard)
         : Duration.zero;
+    // The system gesture area belongs below the destination targets, not inside
+    // their centering math. A normal single-line destination needs only 64 dp.
+    // Keep Material's label scaling policy and grow only for genuine wrapping,
+    // rather than shrinking a translation or scaling the entire bar with text.
+    final theme = Theme.of(context);
+    final labelStyles = WidgetStateProperty.resolveWith<TextStyle>((states) {
+      // Material supplies bodyMedium as DefaultTextStyle. Resolve that merge
+      // here too: a partial theme label style must measure exactly as it paints.
+      final base =
+          theme.textTheme.bodyMedium ??
+          const TextStyle(fontSize: 14, height: 20 / 14);
+      return base.merge(
+        theme.navigationBarTheme.labelTextStyle?.resolve(states) ??
+            theme.textTheme.labelMedium,
+      );
+    });
+    final textScaler = MediaQuery.textScalerOf(context)
+        .clamp(maxScaleFactor: 1.3);
+    final labelWidth = math.max(
+      1.0,
+      (constraints.maxWidth - MediaQuery.paddingOf(context).horizontal) / 2 -
+          16,
+    );
+    var labelHeight = 0.0;
+    for (final label in [l10n.studentTimetable, l10n.generalSchedule]) {
+      for (final states in [
+        <WidgetState>{},
+        {WidgetState.selected},
+      ]) {
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: labelStyles.resolve(states)),
+          textDirection: Directionality.of(context),
+          textScaler: textScaler,
+        )..layout(maxWidth: labelWidth);
+        labelHeight = math.max(labelHeight, painter.height);
+        painter.dispose();
+      }
+    }
+    final contentHeight = math.max(
+      64.0,
+      (32 + 4 + labelHeight + 2).ceilToDouble(),
+    );
     final navigationBar = NavigationBar(
       key: const ValueKey('adaptive-shell-navigation-bar'),
-      // Keep the Material 3 navigation component at a stable content height.
-      // NavigationBar already clamps destination label scaling internally; the
-      // shell must not grow the bar linearly with the system text scale.
-      height: 80,
+      height: contentHeight,
+      labelTextStyle: labelStyles,
+      labelPadding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
       animationDuration: navigationAnimationDuration,
       selectedIndex: selectedIndex,
       onDestinationSelected: busy || !enabled ? null : onDestinationSelected,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       destinations: [
-        NavigationDestination(
-          key: const ValueKey('adaptive-shell-student-destination'),
-          icon: const Icon(Icons.school_outlined),
-          selectedIcon: const Icon(Icons.school),
-          label: l10n.studentTimetable,
-          enabled: enabled && !busy,
-        ),
-        NavigationDestination(
-          key: const ValueKey('adaptive-shell-general-destination'),
-          icon: const Icon(Icons.event_note_outlined),
-          selectedIcon: const Icon(Icons.event_note),
-          label: l10n.generalSchedule,
-          enabled: enabled && !busy,
-        ),
+        for (final destination in [
+          NavigationDestination(
+            key: const ValueKey('adaptive-shell-student-destination'),
+            icon: const Icon(Icons.school_outlined),
+            selectedIcon: const Icon(Icons.school),
+            label: l10n.studentTimetable,
+            enabled: enabled && !busy,
+          ),
+          NavigationDestination(
+            key: const ValueKey('adaptive-shell-general-destination'),
+            icon: const Icon(Icons.event_note_outlined),
+            selectedIcon: const Icon(Icons.event_note),
+            label: l10n.generalSchedule,
+            enabled: enabled && !busy,
+          ),
+        ])
+          // NavigationDestination leaves Text.textAlign unspecified. Center
+          // each wrapped line, not just its full-width paragraph box.
+          DefaultTextStyle.merge(
+            textAlign: TextAlign.center,
+            child: destination,
+          ),
       ],
     );
     return Material(

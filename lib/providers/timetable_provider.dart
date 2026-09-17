@@ -765,52 +765,54 @@ class TimetableProvider extends _TimetableProviderBase
     validateSession();
     Future<void> commit() async {
       await flushPendingUiStateSaves();
-      await _workspaceMutationLock(() async {
-        validateSession();
-        final previous = _appData.generalMode;
-        final next = change(previous);
-        if (next.customDateRange == previous.customDateRange &&
-            next.selectedDateIso == previous.selectedDateIso) {
-          if (revealFocus) {
-            _generalDateFocusRevision++;
-            notifyListeners();
-          }
-          return;
+      // Navigation changes no reminder source or availability. It is already
+      // serialized with provider mode/availability transactions below, and the
+      // repository preserves write ordering. Do not make it wait for native
+      // notification projection or SharedPreferences reconciliation.
+      validateSession();
+      final previous = _appData.generalMode;
+      final next = change(previous);
+      if (next.customDateRange == previous.customDateRange &&
+          next.selectedDateIso == previous.selectedDateIso) {
+        if (revealFocus) {
+          _generalDateFocusRevision++;
+          notifyListeners();
         }
-        final barrier = Completer<void>();
-        _modeSwitchBarrier = barrier;
-        _visibleGeneralNavigation = (
-          previous.customDateRange,
-          previous.selectedDateIso,
+        return;
+      }
+      final barrier = Completer<void>();
+      _modeSwitchBarrier = barrier;
+      _visibleGeneralNavigation = (
+        previous.customDateRange,
+        previous.selectedDateIso,
+      );
+      _appData = _appData.copyWith(generalMode: next);
+      try {
+        await _saveAndNotify(
+          notify: false,
+          allowDuringModeSwitch: true,
+          rollbackOnFailure: false,
+          emitCommit: false,
         );
-        _appData = _appData.copyWith(generalMode: next);
-        try {
-          await _saveAndNotify(
-            notify: false,
-            allowDuringModeSwitch: true,
-            rollbackOnFailure: false,
-            emitCommit: false,
-          );
-          if (revealFocus) _generalDateFocusRevision++;
-        } catch (_) {
-          _restoreAppDataAfterPersistenceFailure(
-            _appData.copyWith(
-              generalMode: _appData.generalMode.copyWith(
-                customDateRange: previous.customDateRange,
-                selectedDateIso: previous.selectedDateIso,
-              ),
+        if (revealFocus) _generalDateFocusRevision++;
+      } catch (_) {
+        _restoreAppDataAfterPersistenceFailure(
+          _appData.copyWith(
+            generalMode: _appData.generalMode.copyWith(
+              customDateRange: previous.customDateRange,
+              selectedDateIso: previous.selectedDateIso,
             ),
-          );
-          rethrow;
-        } finally {
-          _visibleGeneralNavigation = null;
-          if (identical(_modeSwitchBarrier, barrier)) {
-            _modeSwitchBarrier = null;
-            barrier.complete();
-          }
-          if (!_isDisposed) notifyListeners();
+          ),
+        );
+        rethrow;
+      } finally {
+        _visibleGeneralNavigation = null;
+        if (identical(_modeSwitchBarrier, barrier)) {
+          _modeSwitchBarrier = null;
+          barrier.complete();
         }
-      });
+        if (!_isDisposed) notifyListeners();
+      }
     }
 
     _generalNavigationPending = true;

@@ -99,7 +99,11 @@ class WorkspaceModeMenu extends StatelessWidget {
         ],
       );
     }
+    final metrics = WorkbenchChromeMetrics.of(context);
     return PopupMenuButton<AppMode>(
+      style: metrics.desktop ? metrics.iconStyle : null,
+      padding: EdgeInsets.all(metrics.desktop ? 6 : 8),
+      iconSize: metrics.desktop ? 18 : null,
       tooltip: l10n.settingsSectionWorkspace,
       icon: const Icon(Icons.swap_horiz),
       enabled: WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true,
@@ -182,6 +186,9 @@ class WorkspaceResourcePanel extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
+              mainAxisAlignment: collapsed
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
               children: [
                 IconButton(
                   key: const ValueKey('workspace-resource-collapse'),

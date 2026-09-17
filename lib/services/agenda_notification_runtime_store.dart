@@ -1590,8 +1590,11 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       final preferences = await _preferences;
       await _reload(preferences);
       if (!_isCurrentWritableFence(preferences, fence)) return;
-      final values = Map<String, DateTime>.from(await readSnoozes())
-        ..remove(key);
+      // This mutation owns the queue. Public reads may enqueue stale-entry
+      // cleanup, which would wait behind this same operation forever.
+      final values = Map<String, DateTime>.from(
+        await _readSnoozesForFence(preferences, fence),
+      )..remove(key);
       await _writeSnoozes(values, fence);
     });
   }
@@ -1631,10 +1634,19 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       final preferences = await _preferences;
       await _reload(preferences);
       if (!_isCurrentWritableFence(preferences, fence)) return;
-      final values = {...await readHandledOccurrenceIds()}
-        ..remove(occurrenceId);
+      final values = {
+        ...await _readHandledOccurrenceIdsForFence(
+          preferences,
+          fence,
+          persistCleanup: false,
+        ),
+      }..remove(occurrenceId);
       final records = await _readHandledRecords(fence)
         ..remove(occurrenceId);
+      final now = _clock();
+      for (final id in values) {
+        records[id] ??= now;
+      }
       await _writeHandledState(_limitHandledIds(values, records), fence);
     });
   }
@@ -1696,9 +1708,10 @@ class SharedPreferencesAgendaNotificationRuntimeStore
       final preferences = await _preferences;
       await _reload(preferences);
       if (!_isCurrentWritableFence(preferences, fence)) return;
-      final values = (await readPendingActions())
-          .where((item) => item.id != id)
-          .toList();
+      final values = (await _readPendingActionsForFence(
+        preferences,
+        fence,
+      )).where((item) => item.id != id).toList();
       await _writePendingActions(values, fence);
     });
   }
@@ -2162,31 +2175,19 @@ class SharedPreferencesAgendaNotificationRuntimeStore
     return saved;
   }
 
-  Future<void> _enqueueMutation(Future<void> Function() mutation) {
-    final operation = _mutationTail.then<void>(
-      (_) => _runMutationWithLock(mutation),
-      onError: (_, _) => _runMutationWithLock(mutation),
-    );
-    _mutationTail = operation.then<void>((_) {}, onError: (_, _) {});
-    return operation;
-  }
-
-  var _mutationLockHeld = false;
-
-  Future<void> _runMutationWithLock(Future<void> Function() mutation) async {
-    if (_mutationLockHeld) {
-      await mutation();
-      return;
-    }
-    await withAgendaRuntimeMutationLock(() async {
-      _mutationLockHeld = true;
-      try {
-        await mutation();
-      } finally {
-        _mutationLockHeld = false;
-      }
-    });
-  }
+  Future<void> _enqueueMutation(Future<void> Function() mutation) =>
+      withAgendaRuntimeMutationLock(() {
+        // Always acquire the cross-engine lock before reserving this instance's
+        // queue. Otherwise an outside writer can reserve the tail while waiting
+        // for a reconcile that owns the global lock and needs this same store.
+        // The local tail still serializes concurrent work in a reentrant zone.
+        final operation = _mutationTail.then<void>(
+          (_) => mutation(),
+          onError: (_, _) => mutation(),
+        );
+        _mutationTail = operation.then<void>((_) {}, onError: (_, _) {});
+        return operation;
+      });
 
   Future<void> _writeSnoozes(
     Map<String, DateTime> values,

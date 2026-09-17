@@ -646,3 +646,116 @@ Windows、宽平板、主页日期／月份导航及关闭选择器后的原编�
 **Android 真机：待验收。** 本轮重新执行 `adb devices -l`，列表仍为空。上述图像使用 Windows Flutter 的实际字体和真实主页／详情／编辑入口，但 Android 平台、尺寸、安全区及 IME 遮挡由测试模拟；真实系统键盘、状态栏／刘海／导航栏、触摸惯性与返回交互须连接设备后验证，不标记为真机通过。320 dp、双倍字号日历保持七列和原文字大小，列间距较紧是明确保留的宽度约束，不宣称每格达到 48 dp 宽。
 
 版本仍为 `2.3.0+14`，未提交或推送。
+
+## 2026-09-16：紧凑底栏与日历导航卡住修复
+
+### 现象与已证实的原因
+
+- 截图中日历下沿的灰色横条是横向滚动条，不能据此认定正在加载；日期和视图按钮变灰则是导航事务的 busy 状态。仅凭静态截图不能断言“全屏无法点击”的每次发生都源于同一处问题。
+- 纯日期／范围切换原先借用了通知运行时互斥锁。通知对账等待时，“自定义 → 周”无法完成持久化事务；后续工作区切换又可能等待该事务，扩大禁用范围。
+- 通知存储另有两种可复现的死锁：外部写入与持锁对账的锁顺序反转，以及删除操作读取到过期／旧记录后把清理排到自己后面再等待自身。已分别增加失败回归并修复，不以关闭通知或超时假成功代替。
+
+### 实现与保留项
+
+1. 手机工作区底栏常规内容高由 **80 dp 改为 64 dp**，系统底部安全区只计算一次，不计入图标＋标签组合的居中区域。官方 NavigationBar 的点击、语义和动画保持；平板／桌面导航轨道不改。
+2. 标签按实际继承后的字体、行高、可用宽度和原有最高 1.3 倍缩放测量。仅真正换行时增高，不压缩字体或裁切长标签；每一行文字也居中，而不是只居中一个内部文字仍靠左的整宽容器。
+3. 日期／范围导航保留 Provider 串行事务、仓库写入顺序、持久化成功后原子发布、失败回滚和旧数据会话失效；只移除无关的通知互斥等待。工作区真正启停仍保留通知隔离。
+4. 通知存储统一先取得跨引擎锁、再占用实例队列。已进入队列的删除操作用不另行排队的代际读取，将过期清理和旧记录迁移合入本次写入。并发写入不丢失，失败不毒化后续队列；此前单次补发、持久化登记、防重与代际保护不变。
+
+### 自动回归与验收结果
+
+新增 **35 项单元／Widget 回归**：
+
+| 测试 | 覆盖 |
+| --- | --- |
+| `mobile_workspace_navigation_bar_test`（25 项） | 320／360／393／412 dp、1／1.3／2 倍字、中英文；另含 280 dp 长标签；图文组合居中、换行对齐、48 dp 触点、一个底部 inset、无裁切 |
+| `general_navigation_contention_test`（2 项） | 注入真实通知锁，从隐藏全部分类的手机主页点“自定义 → 周”；持锁期间可打开日期选择器及往返工作区；真实保存失败恢复控件、显示反馈并允许一次明确重试 |
+| `general_navigation_runtime_lock_test`（1 项） | 通知一直持锁时，连续接受清除范围和工作区切换仍可完成 |
+| `notification_runtime_lock_order_test`（7 项） | 外部写与持锁者交错、同锁域多写、失败恢复、过期稍后／已处理／动作与旧格式已处理记录的删除 |
+
+既有范围导航测试改为在真实的延后 UI 写入边界上验证会话失效，不再假设纯日期导航必须等待通知锁。既有底栏安全区测试允许实际长标签换行增高，而中文常规高度仍严格断言 64 dp。
+
+| 检查 | 结果 |
+| --- | --- |
+| 相关通知、导航、布局回归 | **236 项通过**；随后完整套件覆盖最终文字对齐修复 |
+| `flutter analyze --no-pub` | **通过，无问题** |
+| `flutter test --no-pub --coverage --concurrency=2 --reporter expanded` | **2792 项通过，1 项既有 DST 条件跳过**；没有新增跳过项 |
+| 覆盖率门禁（HEAD → 工作区） | **PASS**；整体 **37802/41627（90.8113%）**，门槛 81.7600%；改动行 **72/74（97.2973%）**，门槛 90%；源文件清单通过，没有降低规则 |
+| Windows 实际 Flutter 渲染 | 最终 **24 场景通过**，覆盖两工作区、日程自定义／周、窄手机／大字／明暗、平板及桌面；构建仅有既有第三方 CMake 警告 |
+| 格式与补丁检查 | 本轮 10 个手写 Dart 文件格式检查 **0 变更**；`git diff --check` 通过 |
+
+最终手机正常场景为 **64 dp 内容＋24 dp 模拟安全区＝88 dp**；320 dp 英文双倍系统字号下长标签实际换行，内容高为 **90 dp**，这是保留可读性的回退，不承诺所有语言／字号都强制压到 64 dp。
+
+逐张检查最终概览及底栏裁图，尤其复核实际字体的换行对齐。四个日程大屏保留场景中，平板自定义／周两张逐像素一致；Windows 自定义／周两张各有一个像素差异，没有把它们标为完全一致。旧视觉入口未明确切到学生工作区，旧清单中八张 student 文件实际是日程场景，已从前后像素比较中排除；最终入口显式进入学生模式并断言，24 张最终场景命名与内容一致。
+
+复现命令：
+
+```powershell
+flutter test --no-pub test/widgets/general_navigation_contention_test.dart test/widgets/mobile_workspace_navigation_bar_test.dart test/providers/general_navigation_runtime_lock_test.dart test/services/notification_runtime_lock_order_test.dart
+flutter test integration_test/mobile_navigation_repair_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/mobile-navigation-after
+dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/mobile-navigation-coverage.md
+```
+
+本机证据位于忽略目录，不进入发布包：
+
+- 最终截图／清单：`.scratch/mobile-navigation-after/`。
+- 等比例前后对照：`.scratch/mobile-navigation-comparison/bottom-bar-before-after.png`。
+- 底栏／全部场景概览：`.scratch/mobile-navigation-comparison/{phone-bars-contact-sheet,all-scenes-contact-sheet}.png`。
+- 像素和高度报告：`.scratch/mobile-navigation-comparison/visual-report.json`。
+- 分析／完整测试／门禁：`.scratch/mobile-navigation-{analyze,full,coverage}.log`、`.scratch/mobile-navigation-coverage.md`。
+- 锁回归的修复前结果：`.scratch/mobile-navigation-lock-before.log`、`.scratch/mobile-navigation-cleanup-before.log`。
+
+**设备边界：** 2026-09-16 再次执行 `adb devices -l`，仍无连接设备（`.scratch/mobile-navigation-adb.log`）。上述手机场景是 Windows Flutter 模拟 Android 几何和主题，不是 Android 真机通过。需在实际手机验证运行中的通知对账、恢复／冷启动、“自定义 → 周”、日期按钮、底部工作区往返及系统手势区；若仍出现全屏卡住，须按发生时的日志继续定位，不能把静态截图的全部卡顿都归因于这两类死锁。
+
+版本保持 `2.3.0+14`，未改备份格式或依赖，未操作生产用户数据，未提交／推送。
+
+## 2026-09-17：Windows 窄窗口顶栏与资源折叠按钮
+
+本轮接续前面的手机底栏／通知锁修复，处理 Windows 截图中新报告的顶栏截断和资源栏折叠按钮偏移。版本仍为 `2.3.0+14`，不增加依赖或备份字段，没有提交或推送。
+
+### 原因与实现
+
+- **窄栏不是单纯文字溢出。** 原桌面命令栏预留最小化／最大化／关闭区域后，把剩余命令整体放入横向滚动区域；默认滚动位置会显示半个“今天”，周数／日期及右侧操作可能在可视范围之外。改为按扣除窗口按钮后的实际宽度选择紧凑布局，不靠提高最小窗口宽度或缩小字体规避。
+- **日期／周数优先。** 宽度足够时保留完整标题、前后切换和今天；不足时用现有短标签，再不足时使用带完整提示与语义标签的日期图标。只显示能完整容纳的按钮，移出的前后／今天、视图、课表／分类、添加、提醒、日议程、辅助栏、设置和工作区切换集中到“更多”。桌面菜单独立于手机隐藏／排序偏好。
+- **原操作路径不变。** 更多命令复用现有回调和启用条件；自定义→周仍须持久化成功才发布，失败恢复控件并可明确重试。从更多开启日期范围选择时使用关闭菜单后仍有效的按钮锚点。编辑器已绑定的课表不会因顶栏改换入口而改变。
+- **折叠按钮居中。** 原 56 dp 紧凑资源栏中，标题行的按钮从 8 dp 起排，而下方按钮随整列拉伸居中，普通字号下两者中心相差约 4 dp。现在紧凑标题行水平居中；展开时保持标题左对齐。文字放大后仍以实际资源栏中心为准，不写死平移值。桌面工作区菜单图标的大小、内边距也明确使用指针控件尺寸。
+- **窗口控制区与菜单生命周期。** 标题栏空白仍可拖动，窗口按钮预留及最大化命中几何不改。更多菜单显式请求键盘焦点，可按 Esc 关闭；大字号／矮窗口时在标题栏下限高滚动，不被原生窗口按钮盖住。窗口或字号变化只撤销旧菜单路由，下一次打开重新计算尺寸，不关闭编辑器或日期选择器草稿；缓存有效渲染盒，避免跨断点对 inactive 元素调用 `findRenderObject`。
+
+### 自动回归
+
+新增 **77 项 Widget 测试**：
+
+- `windows_compact_toolbar_test`：330／400／520／660／800 dp × 1／1.3／2 倍字 × 中英文 × 两工作区，共 60 项；验证按钮和文本完整落在窗口控制区之前、日期／周数及更多可点击，没有横向滚动裁切。另含 3 项字号下的折叠图标共线及展开／折叠往返、1 项桌面工作区菜单图标中心，共 **64 项**。
+- `windows_compact_toolbar_actions_test`：**13 项**；从窄窗口 Windows 主页操作周选择、前后导航、视图、添加、课表／分类、设置、工作区切换、提醒、日议程；覆盖自定义→周失败重试、失效锚点、Esc、窗口按钮与原生拖动调用，以及 320／500 dp 高、双倍字号菜单滚动到底部仍可选择工作区。
+- 既有 `workbench_review_regression_test` 的三项跨课表编辑／删除测试改为通过可见的“更多→课表”入口操作；保留原有草稿 State、绑定目标和持久化断言，没有删除或放宽业务断言。相关回归合计 **27 项通过**。
+
+| 最终检查 | 结果 |
+| --- | --- |
+| `flutter analyze --no-pub` | **无问题** |
+| `flutter test --no-pub --coverage --concurrency=2 --reporter expanded` | **2869 项通过，1 项既有 DST 条件跳过**；没有新增跳过项 |
+| 覆盖率门禁，HEAD→工作区 | **PASS**；整体 **38098/41949（90.8198%）**，门槛 81.7600%；改动行 **380/397（95.7179%）**，门槛 90%；源文件清单通过，没有修改排除规则 |
+| 实际 Windows Flutter 渲染 | **34 场景通过**：10 组宽度／字号／语言／主题下的两工作区，共 20 张主界面＋14 张更多菜单；每次打开和关闭均有实际命中、控件状态及菜单边界断言 |
+| 格式与补丁 | 当前合并工作区 20 个手写 Dart 文件格式检查 0 变更；`git diff --check` 通过 |
+
+完整套件及门禁覆盖当前全部未提交修改，包含前面的手机底栏／通知死锁修复，不把此数字误写为只有 Windows 改动的覆盖率。
+
+### 视觉与原生边界
+
+修复前同夹具采集 20 张，最终采集 34 张，检查全部概览和关键原图。20 个可比主界面的标题栏以下区域中，**18 张逐像素一致**；另两张学生课表的大字场景分别有 26 和 18 个像素差异，没有把它们标为完全一致。正常宽度的桌面顶栏仅资源折叠图标位置变化；没有修改日历画布或事件排布。
+
+本机证据位于忽略目录，不随发布打包：
+
+- 原始前后截图：`.scratch/windows-toolbar-before/`、`.scratch/windows-toolbar-after/`，各自含 `manifest.json`。
+- 窄栏前后对照：`.scratch/windows-toolbar-comparison/windows-toolbar-before-after.png`。
+- 折叠图标放大对照：`.scratch/windows-toolbar-comparison/resource-toggle-before-after.png`。
+- 34 场景概览与像素报告：`.scratch/windows-toolbar-comparison/windows-toolbar-contact-sheet.png`、`pixel-report.json`。
+- 最终分析／全量／门禁日志：`.scratch/windows-toolbar-{analyze,full,coverage}-verified.log`；覆盖率报告 `.scratch/windows-toolbar-coverage-verified.md`。
+- 最终渲染日志：`.scratch/windows-toolbar-visual-verified.log`。Windows 构建仅有第三方插件既有 CMake 警告。
+
+```powershell
+flutter test --no-pub test/widgets/windows_compact_toolbar_test.dart test/widgets/windows_compact_toolbar_actions_test.dart test/widgets/workbench_review_regression_test.dart
+flutter test integration_test/windows_compact_toolbar_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/windows-toolbar-after
+dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/windows-toolbar-coverage-verified.md
+```
+
+截图由实际 Windows Flutter 渲染且已初始化原生窗口桥，但它截取的是 Flutter 表面，不证明操作系统级非客户区命中、跨显示器 DPI 或贴靠操作已完成人工验收。Widget 测试确认点击／拖动转发及布局边界；真实 Windows 手动缩放、窗口拖动／贴靠仍应在安装版复核。Android 相关布局与通知回归已纳入完整套件，本轮未将 Windows 渲染或测试替身算作 Android 真机验证。

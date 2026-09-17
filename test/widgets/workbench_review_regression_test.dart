@@ -17,6 +17,20 @@ void _viewport(WidgetTester tester, Size size) {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+Future<void> _openTimetablePicker(WidgetTester tester) async {
+  final picker = find.byKey(const ValueKey('student-timetable-picker-button'));
+  if (picker.evaluate().isEmpty) {
+    final more = find.byKey(const ValueKey('student-desktop-toolbar-more'));
+    expect(more.hitTestable(), findsOneWidget);
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(picker);
+  expect(picker.hitTestable(), findsOneWidget);
+  await tester.tap(picker);
+  await tester.pumpAndSettle();
+}
+
 Future<AppLocalizations> _openOutline(WidgetTester tester) async {
   final card = find.byKey(const ValueKey('theme-outline-settings-card'));
   await tester.ensureVisible(card);
@@ -87,12 +101,7 @@ void main() {
         'Draft for original',
       );
       final editorState = tester.state(editor);
-      final picker = find.byKey(
-        const ValueKey('student-timetable-picker-button'),
-      );
-      expect(picker.hitTestable(), findsOneWidget);
-      await tester.tap(picker);
-      await tester.pumpAndSettle();
+      await _openTimetablePicker(tester);
       await tester.tap(find.text(other.config.name));
       await tester.pumpAndSettle();
       expect(p.activeTimetable.id, other.id);
@@ -143,10 +152,7 @@ void main() {
             'Updated original course',
           );
         }
-        await tester.tap(
-          find.byKey(const ValueKey('student-timetable-picker-button')),
-        );
-        await tester.pumpAndSettle();
+        await _openTimetablePicker(tester);
         await tester.tap(find.text(other.config.name));
         await tester.pumpAndSettle();
         expect(p.activeTimetable.id, other.id);
