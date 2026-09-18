@@ -80,6 +80,7 @@ Future<void> _more(WidgetTester t, AppMode mode) async {
 
 Future<void> _choose(WidgetTester t, String id) async {
   await t.ensureVisible(_key(id));
+  await t.pumpAndSettle();
   await t.tap(_key(id));
   await t.pumpAndSettle();
 }
@@ -192,8 +193,12 @@ void main() {
       expect(storage.data.generalMode.customDateRange, isNull);
       expect(storage.writes, writes + 1);
       await _more(t, AppMode.general);
-      await _choose(t, 'workspace-actions-general');
+      expect(_key('workspace-actions-general'), findsNothing);
+      await _choose(t, 'general-settings-button');
+      await _choose(t, 'settings-general-display');
       expect(find.byType(GeneralDisplaySettingsPage), findsOneWidget);
+      await t.tap(find.byType(BackButton).hitTestable().first);
+      await t.pumpAndSettle();
       await t.tap(find.byType(BackButton).hitTestable().first);
       await t.pumpAndSettle();
       expect(_key('general-date-picker').hitTestable(), findsOneWidget);
@@ -340,7 +345,7 @@ void main() {
   }
 
   testWidgets(
-    'compact Student resource and preference commands use the existing task routes',
+    'compact Student resources stay in More and display preferences use Settings',
     (t) async {
       await _start(t, AppMode.student);
       await _more(t, AppMode.student);
@@ -348,8 +353,12 @@ void main() {
       expect(find.byType(PopupMenuItem<WorkbenchOverflowAction>), findsNothing);
       await _escape(t);
       await _more(t, AppMode.student);
-      await _choose(t, 'workspace-actions-student');
+      expect(_key('workspace-actions-student'), findsNothing);
+      await _choose(t, 'student-settings-button');
+      await _choose(t, 'settings-student-display');
       expect(find.byType(TimetableDisplaySettingsPage), findsOneWidget);
+      await t.tap(find.byType(BackButton).hitTestable().first);
+      await t.pumpAndSettle();
       await t.tap(find.byType(BackButton).hitTestable().first);
       await t.pumpAndSettle();
       expect(_key('student-week-picker-button').hitTestable(), findsOneWidget);

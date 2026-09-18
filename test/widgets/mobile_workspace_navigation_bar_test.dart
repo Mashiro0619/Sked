@@ -10,7 +10,7 @@ void main() {
     for (final scale in [1.0, 1.3, 2.0]) {
       for (final language in ['zh', 'en']) {
         testWidgets(
-          'phone bar $width / $scale / $language is compact and centers the visible group above the safe area',
+          'phone bar $width / $scale / $language keeps its touch layout compact and shifts the unpillled icon above the safe area',
           (t) async {
             t.view.devicePixelRatio = 1;
             t.view.physicalSize = Size(width, 850);
@@ -66,6 +66,17 @@ void main() {
               expect(target.height, greaterThanOrEqualTo(48));
               expect(group.top, greaterThanOrEqualTo(target.top));
               expect(group.bottom, lessThanOrEqualTo(target.bottom));
+              expect(
+                t.widget<NavigationBar>(bar).indicatorColor,
+                Colors.transparent,
+              );
+              final icon = find
+                  .descendant(of: destination, matching: find.byType(Icon))
+                  .first;
+              expect(
+                t.getCenter(icon).dy,
+                closeTo(t.getCenter(indicator).dy + 4, .01),
+              );
               final paragraph = t.renderObject<RenderParagraph>(label);
               expect(paragraph.didExceedMaxLines, isFalse);
               expect(paragraph.textAlign, TextAlign.center);

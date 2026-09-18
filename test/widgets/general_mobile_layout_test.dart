@@ -403,6 +403,7 @@ void main() {
             ),
       );
       await t.ensureVisible(more.first);
+      await t.pumpAndSettle();
       await t.tap(more.first);
       await t.pumpAndSettle();
       for (var i = 0; i < 4; i++) {
@@ -437,7 +438,7 @@ void main() {
       expect(_key('general-reminders-action').hitTestable(), findsOneWidget);
       expect(_key('general-day-agenda-toggle'), findsOneWidget);
       expect(_key('general-calendar-manager-action'), findsOneWidget);
-      expect(_key('workspace-actions-general'), findsOneWidget);
+      expect(_key('workspace-actions-general'), findsNothing);
       await t.tap(_key('general-reminders-action'));
       await t.pumpAndSettle();
       expect(_key('general-reminders-list'), findsOneWidget);
@@ -520,29 +521,40 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
-  testWidgets('More preferences and today remain actionable', (t) async {
-    _size(t, const Size(393, 900));
-    final p = await workspaceProvider(
-      storage: _Storage(mobileLayoutData()),
-      locale: 'zh',
-    );
-    addTearDown(p.dispose);
-    await _home(t, p);
-    await _more(t);
-    await t.tap(_key('workspace-actions-general'));
-    await t.pumpAndSettle();
-    expect(find.byType(GeneralDisplaySettingsPage), findsOneWidget);
-    Navigator.of(t.element(find.byType(GeneralDisplaySettingsPage))).pop();
-    await t.pumpAndSettle();
-    await _more(t);
-    final today = find.byWidgetPredicate(
-      (w) => w is SkedPopupMenuItem<String> && w.value == 'today',
-    );
-    await t.tap(today);
-    await t.pumpAndSettle();
-    expect(p.selectedGeneralDate, DateUtils.dateOnly(DateTime.now()));
-    expect(t.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+  testWidgets(
+    'display preferences live in Settings while More keeps today actionable',
+    (t) async {
+      _size(t, const Size(393, 900));
+      final p = await workspaceProvider(
+        storage: _Storage(mobileLayoutData()),
+        locale: 'zh',
+      );
+      addTearDown(p.dispose);
+      await _home(t, p);
+      expect(_key('workspace-actions-general'), findsNothing);
+      await t.tap(_key('general-settings-button'));
+      await t.pumpAndSettle();
+      await t.ensureVisible(_key('settings-general-display'));
+      await t.pumpAndSettle();
+      await t.tap(_key('settings-general-display'));
+      await t.pumpAndSettle();
+      expect(find.byType(GeneralDisplaySettingsPage), findsOneWidget);
+      Navigator.of(t.element(find.byType(GeneralDisplaySettingsPage))).pop();
+      await t.pumpAndSettle();
+      await t.tap(find.byType(BackButton).hitTestable().first);
+      await t.pumpAndSettle();
+      await _more(t);
+      expect(_key('workspace-actions-general'), findsNothing);
+      final today = find.byWidgetPredicate(
+        (w) => w is SkedPopupMenuItem<String> && w.value == 'today',
+      );
+      await t.tap(today);
+      await t.pumpAndSettle();
+      expect(p.selectedGeneralDate, DateUtils.dateOnly(DateTime.now()));
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   for (final hiddenBehavior in [
     toolbarHiddenItemsBehaviorMore,

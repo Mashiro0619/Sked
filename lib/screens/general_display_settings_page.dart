@@ -1,6 +1,7 @@
 import '../widgets/workbench_chrome_metrics.dart';
 
 import '../widgets/desktop_window_host.dart';
+import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 
 import 'dart:async';
@@ -8,12 +9,12 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
-import '../l10n/app_locale.dart' as app_locale;
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
 
 class GeneralDisplaySettingsPage extends StatefulWidget {
@@ -41,9 +42,11 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
     final l10n = AppLocalizations.of(context);
     return Consumer<TimetableProvider>(
       builder: (context, provider, child) {
-        final localeCode = app_locale.normalizeLocaleCode(provider.localeCode);
         return Scaffold(
-          appBar: WorkbenchAppBar(title: Text(l10n.generalDisplaySettings)),
+          appBar: WorkbenchAppBar(
+            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+            title: Text(l10n.generalDisplaySettings),
+          ),
           body: Column(
             children: [
               UiCommandBusyIndicator(
@@ -67,48 +70,11 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSectionHeader(
                           title: l10n.generalDefaultViewSection,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<String>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey('general-default-view'),
-                            initialSelection: provider.generalDefaultView,
-                            label: Text(l10n.defaultView),
-                            leadingIcon: const Icon(
-                              Icons.space_dashboard_outlined,
-                            ),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry<String>(
-                                value: generalViewWeek,
-                                label: l10n.viewWeek,
-                              ),
-                              DropdownMenuEntry<String>(
-                                value: generalViewDay,
-                                label: l10n.viewDay,
-                              ),
-                              DropdownMenuEntry(
-                                value: generalViewList,
-                                label: l10n.viewList,
-                              ),
-                              DropdownMenuEntry(
-                                value: generalViewMonth,
-                                label: l10n.viewMonth,
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                _updateSetting(
-                                  'Update general default view',
-                                  () => provider.updateGeneralDisplaySettings(
-                                    defaultView: value,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                        generalDefaultViewSetting(
+                          provider,
+                          l10n,
+                          _updateSetting,
+                          enabled: !uiCommandBusy,
                         ),
                         const SizedBox(height: 12),
                         Padding(
@@ -239,44 +205,12 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSectionHeader(
                           title: l10n.generalScheduleDisplaySection,
                         ),
-                        SettingsSwitchTile(
-                          key: const ValueKey(
-                            'general-fit-week-columns-setting',
-                          ),
-                          icon: Icons.view_column_outlined,
-                          title: l10n.generalFitWeekColumnsToWidth,
-                          subtitle: l10n.generalFitWeekColumnsToWidthHint,
-                          value: provider.generalFitWeekColumnsToWidth,
-                          onChanged: (value) => _updateSetting(
-                            'Update general week column width mode',
-                            () => provider.updateGeneralDisplaySettings(
-                              fitWeekColumnsToWidth: value,
-                            ),
-                          ),
+                        ...generalCalendarDisplaySettings(
+                          provider,
+                          l10n,
+                          _updateSetting,
+                          enabled: !uiCommandBusy,
                         ),
-                        SettingsSwitchTile(
-                          icon: Icons.weekend_outlined,
-                          title: l10n.showWeekends,
-                          value: provider.generalShowWeekends,
-                          onChanged: (value) => _updateSetting(
-                            'Update weekend visibility',
-                            () => provider.updateGeneralDisplaySettings(
-                              showWeekends: value,
-                            ),
-                          ),
-                        ),
-                        if (localeCode == 'zh' || localeCode == 'zh-Hant')
-                          SettingsSwitchTile(
-                            icon: Icons.brightness_2_outlined,
-                            title: l10n.showLunarCalendar,
-                            value: provider.generalShowLunarCalendar,
-                            onChanged: (value) => _updateSetting(
-                              'Update lunar calendar visibility',
-                              () => provider.updateGeneralDisplaySettings(
-                                showLunarCalendar: value,
-                              ),
-                            ),
-                          ),
                         SettingsSectionHeader(
                           title: l10n.generalTimeGridSection,
                         ),

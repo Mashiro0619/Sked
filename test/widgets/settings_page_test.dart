@@ -577,22 +577,33 @@ void main() {
   });
 
   testWidgets(
-    'settings root has six categories rather than workspace controls',
+    'settings root exposes grouped workspace controls without category intermediaries',
     (tester) async {
       final p = await _createProvider(_buildStudentData());
       await _pumpSettingsPage(tester, p);
       for (final key in [
         'appearance',
         'notifications',
-        'language',
+        'student',
+        'general',
         'data',
         'features',
         'about',
       ]) {
-        expect(find.byKey(ValueKey('settings-category-$key')), findsOneWidget);
+        expect(find.byKey(ValueKey('settings-overview-$key')), findsOneWidget);
       }
-      expect(find.text('Timetable display and interaction'), findsNothing);
-      expect(find.text('Category import & export'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('settings-student-display')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('settings-general-transfer')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('notification-settings-enabled')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -637,24 +648,26 @@ void main() {
     for (final key in [
       'appearance',
       'notifications',
-      'language',
+      'student',
+      'general',
       'data',
       'features',
       'about',
     ]) {
-      expect(find.byKey(ValueKey('settings-category-$key')), findsOneWidget);
+      expect(find.byKey(ValueKey('settings-overview-$key')), findsOneWidget);
     }
     await p.switchMode(AppMode.student);
     await tester.pumpAndSettle();
     for (final key in [
       'appearance',
       'notifications',
-      'language',
+      'student',
+      'general',
       'data',
       'features',
       'about',
     ]) {
-      expect(find.byKey(ValueKey('settings-category-$key')), findsOneWidget);
+      expect(find.byKey(ValueKey('settings-overview-$key')), findsOneWidget);
     }
   });
 
@@ -663,9 +676,7 @@ void main() {
   ) async {
     final p = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, p);
-    await tester.tap(
-      find.byKey(const ValueKey('settings-category-appearance')),
-    );
+    await tester.tap(find.byKey(const ValueKey('settings-appearance-details')));
     await tester.pumpAndSettle();
     expect(find.byType(ThemeSettingsPage), findsOneWidget);
     expect(p.activeMode, AppMode.general);
@@ -697,14 +708,21 @@ void main() {
       final p = await _createProvider(data, storage: storage);
       await _pumpSettingsPage(tester, p);
       await tester.tap(
-        find.byKey(const ValueKey('settings-category-appearance')),
+        find.byKey(const ValueKey('settings-appearance-details')),
       );
       await tester.pumpAndSettle();
-      final state = tester.state(find.byType(ThemeSettingsPage));
+      final state = tester.state(
+        find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
+      );
       expect(find.byKey(const ValueKey('settings-search')), findsNothing);
       await p.switchMode(AppMode.general);
       await tester.pumpAndSettle();
-      expect(tester.state(find.byType(ThemeSettingsPage)), same(state));
+      expect(
+        tester.state(
+          find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
+        ),
+        same(state),
+      );
       expect(find.byKey(const ValueKey('settings-search')), findsNothing);
       expect(storage.saveCount, 1);
     },
@@ -791,7 +809,7 @@ void main() {
   );
 
   testWidgets(
-    'compact category navigation remains reachable at 2x text scale',
+    'compact overview keeps lower groups reachable at 2x text scale',
     (tester) async {
       _setTestViewport(tester, const Size(320, 568));
       addTearDown(() => _resetTestViewport(tester));
@@ -801,51 +819,54 @@ void main() {
         p,
         textScaler: const TextScaler.linear(2),
       );
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('settings-category-about')),
-        160,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
+      final update = find.byKey(const ValueKey('settings-check-for-updates'));
+      await tester.ensureVisible(update);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('settings-category-about')));
-      await tester.pumpAndSettle();
+      expect(update.hitTestable(), findsOneWidget);
       expect(find.text('Check for updates'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('compact settings starts with categories and no open editor', (
-    tester,
-  ) async {
-    for (final width in [320.0, 360.0, 600.0, 744.0]) {
-      _setTestViewport(tester, Size(width, 900));
-      final p = await _createProvider(_buildStudentData());
-      await _pumpSettingsPage(tester, p);
-      for (final key in [
-        'appearance',
-        'notifications',
-        'language',
-        'data',
-        'features',
-        'about',
-      ]) {
-        expect(find.byKey(ValueKey('settings-category-$key')), findsOneWidget);
+  testWidgets(
+    'compact settings starts with inline controls and no advanced route',
+    (tester) async {
+      for (final width in [320.0, 360.0, 600.0, 744.0]) {
+        _setTestViewport(tester, Size(width, 900));
+        final p = await _createProvider(_buildStudentData());
+        await _pumpSettingsPage(tester, p);
+        for (final key in [
+          'appearance',
+          'notifications',
+          'student',
+          'general',
+          'data',
+          'features',
+          'about',
+        ]) {
+          expect(
+            find.byKey(ValueKey('settings-overview-$key')),
+            findsOneWidget,
+          );
+        }
+        expect(
+          find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
+          findsNothing,
+        );
+        expect(
+          find.byWidgetPredicate((w) => w is ThemeSettingsPage && w.embedded),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        p.dispose();
       }
-      expect(find.byType(ThemeSettingsPage), findsNothing);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-      p.dispose();
-    }
-    _resetTestViewport(tester);
-  });
+      _resetTestViewport(tester);
+    },
+  );
 
   testWidgets(
-    'large text turns the settings split view back into page navigation',
+    'large text removes the index but keeps the same editable overview',
     (tester) async {
       _setTestViewport(tester, const Size(1000, 900));
       addTearDown(() => _resetTestViewport(tester));
@@ -855,29 +876,44 @@ void main() {
         p,
         textScaler: const TextScaler.linear(2),
       );
-      expect(find.byType(ThemeSettingsPage), findsNothing);
+      expect(
+        find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate((w) => w is ThemeSettingsPage && w.embedded),
+        findsOneWidget,
+      );
       for (final key in [
         'appearance',
         'notifications',
-        'language',
+        'student',
+        'general',
         'data',
         'features',
         'about',
       ]) {
-        expect(find.byKey(ValueKey('settings-category-$key')), findsOneWidget);
+        expect(find.byKey(ValueKey('settings-overview-$key')), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'settings opens its content pane at the measured 745dp form budget',
+    'settings adds its group index at the measured 745dp form budget',
     (tester) async {
       _setTestViewport(tester, const Size(744, 1000));
       addTearDown(() => _resetTestViewport(tester));
       final p = await _createProvider(_buildStudentData());
       await _pumpSettingsPage(tester, p);
-      expect(find.byType(ThemeSettingsPage), findsNothing);
+      expect(
+        find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate((w) => w is ThemeSettingsPage && w.embedded),
+        findsOneWidget,
+      );
       _setTestViewport(tester, const Size(745, 1000));
       await tester.pumpAndSettle();
       expect(find.byType(ThemeSettingsPage), findsOneWidget);
@@ -888,14 +924,54 @@ void main() {
     },
   );
 
+  testWidgets('advanced links use chevrons while inline switches do not', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(360, 900));
+    addTearDown(() => _resetTestViewport(tester));
+    final p = await _createProvider(_buildStudentData());
+    await _pumpSettingsPage(tester, p);
+    for (final id in [
+      'settings-appearance-details',
+      'settings-student-display',
+      'settings-general-display',
+      'settings-language',
+      'settings-notifications',
+      'settings-workspace-features',
+      'settings-data-privacy',
+      'settings-about',
+    ]) {
+      expect(
+        find.descendant(
+          of: find.byKey(ValueKey(id)),
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
+    }
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('notification-settings-enabled')),
+        matching: find.byIcon(Icons.chevron_right),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets(
-    'category links use forward navigation chevrons on compact screens',
+    'period set chooser uses a dialog indicator, not a page chevron',
     (tester) async {
-      _setTestViewport(tester, const Size(360, 900));
-      addTearDown(() => _resetTestViewport(tester));
       final p = await _createProvider(_buildStudentData());
       await _pumpSettingsPage(tester, p);
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(6));
+      final entry = find.byKey(const ValueKey('settings-period-times'));
+      expect(
+        find.descendant(of: entry, matching: find.byIcon(Icons.unfold_more)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: entry, matching: find.byIcon(Icons.chevron_right)),
+        findsNothing,
+      );
     },
   );
 
@@ -1013,7 +1089,7 @@ void main() {
   ) async {
     final p = await _createProvider(_buildStudentData());
     await _pumpSettingsPage(tester, p);
-    final entry = find.byKey(const ValueKey('settings-category-appearance'));
+    final entry = find.byKey(const ValueKey('settings-appearance-details'));
     await tester.tap(entry);
     await tester.tap(entry, warnIfMissed: false);
     await tester.pumpAndSettle();

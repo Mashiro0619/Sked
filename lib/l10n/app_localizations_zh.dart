@@ -2859,6 +2859,40 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get timePickerWheelMode => '切换为滚轮选择';
+
+  @override
+  String get courseReminderUseDefault => '沿用默认';
+
+  @override
+  String get courseReminderInvalidMinutes => '请输入大于或等于 0 的整数分钟。';
+
+  @override
+  String get generalCustomColumnWidth => '自定义视图列宽';
+
+  @override
+  String get generalCustomColumnWidthAuto => '自动';
+
+  @override
+  String get generalCustomColumnWidthManual => '手动最小列宽';
+
+  @override
+  String get generalCustomColumnWidthMinimum => '每列最小宽度';
+
+  @override
+  String get generalCustomColumnWidthHint =>
+      '所有日期使用相同的最小列宽。空间充足时等宽铺满，不足时横向滚动；仅影响自定义视图。';
+
+  @override
+  String get settingsAppearanceLanguage => '外观与语言';
+
+  @override
+  String get settingsAppearanceDetails => '详细配色与轮廓';
+
+  @override
+  String get monthNoEvents => '当天没有日程';
+
+  @override
+  String get settingsOverview => '常用设置';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5717,4 +5751,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get timePickerWheelMode => '切換為滾輪選擇';
+
+  @override
+  String get courseReminderUseDefault => '沿用預設';
+
+  @override
+  String get courseReminderInvalidMinutes => '請輸入大於或等於 0 的整數分鐘。';
+
+  @override
+  String get generalCustomColumnWidth => '自訂檢視欄寬';
+
+  @override
+  String get generalCustomColumnWidthAuto => '自動';
+
+  @override
+  String get generalCustomColumnWidthManual => '手動最小欄寬';
+
+  @override
+  String get generalCustomColumnWidthMinimum => '每欄最小寬度';
+
+  @override
+  String get generalCustomColumnWidthHint =>
+      '所有日期使用相同的最小欄寬。空間充足時等寬填滿，不足時橫向捲動；僅影響自訂檢視。';
+
+  @override
+  String get settingsAppearanceLanguage => '外觀與語言';
+
+  @override
+  String get settingsAppearanceDetails => '詳細配色與外框';
+
+  @override
+  String get monthNoEvents => '當天沒有行程';
+
+  @override
+  String get settingsOverview => '常用設定';
 }

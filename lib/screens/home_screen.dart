@@ -5,7 +5,6 @@ import '../theme/sked_surface.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/workbench_compact_calendar_bar.dart';
-import '../widgets/period_time_set_manager.dart';
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -121,6 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _timetableItemDialogOpen = false;
   bool _timetableSwitchInProgress = false;
   bool _settingsPageOpen = false;
+  bool _periodTimeSetPickerOpen = false;
   bool _fileImportInProgress = false;
   bool _textImportPageOpen = false;
   bool _schoolWebImportPageOpen = false;
@@ -529,6 +529,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _selectPeriodTimeSet(TimetableProvider provider) async {
+    if (_periodTimeSetPickerOpen || _courseEditorOpen || !widget.interactive) {
+      return;
+    }
+    _periodTimeSetPickerOpen = true;
+    try {
+      await selectTimetablePeriodTimeSet(context, provider: provider);
+    } finally {
+      _periodTimeSetPickerOpen = false;
+    }
+  }
+
   Widget _wrapStandalone(Widget workspace) {
     final framed = Consumer<TimetableProvider>(
       builder: (context, preferences, _) => WorkspaceFrame(
@@ -572,11 +584,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   tooltip: l10n.more,
                   icon: const Icon(Icons.more_horiz),
                   onSelected: (value) => value == 'periods'
-                      ? Navigator.of(context, rootNavigator: true).push<void>(
-                          MaterialPageRoute(
-                            builder: (_) => const PeriodTimeSetManagerPage(),
-                          ),
-                        )
+                      ? _selectPeriodTimeSet(provider)
                       : openWorkspaceTransfer(
                           context,
                           AppMode.student,

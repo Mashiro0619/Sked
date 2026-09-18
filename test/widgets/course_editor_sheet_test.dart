@@ -74,6 +74,129 @@ Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
 
 void main() {
   testWidgets(
+    'collapsed reminder overrides survive editing without opening More',
+    (tester) async {
+      for (final setting in [
+        const CourseReminderSettings(),
+        const CourseReminderSettings(behavior: CourseReminderBehavior.disabled),
+        const CourseReminderSettings(
+          behavior: CourseReminderBehavior.custom,
+          minutesBefore: 25,
+        ),
+      ]) {
+        CourseItem? saved;
+        final initial = CourseItem(
+          id: 'reminder-edit',
+          name: 'Retained reminder',
+          teacher: '',
+          location: '',
+          dayOfWeek: 1,
+          semesterWeeks: const [1],
+          periods: const [1],
+          startMinutes: 480,
+          endMinutes: 525,
+          timeRange: '08:00-08:45',
+          credit: 0,
+          remarks: '',
+          customFields: const {},
+          reminderSettings: setting,
+        );
+        await _pumpEditorHost(
+          tester,
+          initialCourse: initial,
+          onSave: (course) async => saved = course,
+        );
+        expect(
+          find.byKey(const ValueKey('course-reminder-behavior')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('course-open-notifications')),
+          findsNothing,
+        );
+        final more = find.widgetWithText(ExpansionTile, 'More');
+        expect(tester.widget<ExpansionTile>(more).initiallyExpanded, isFalse);
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await tester.pumpAndSettle();
+        expect(saved?.reminderSettings, setting);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'invalid hidden reminder expands More and focuses the error instead of saving a default',
+    (tester) async {
+      CourseItem? saved;
+      final initial = CourseItem(
+        id: 'reminder-validation',
+        name: 'Validated reminder',
+        teacher: '',
+        location: '',
+        dayOfWeek: 1,
+        semesterWeeks: const [1],
+        periods: const [1],
+        startMinutes: 480,
+        endMinutes: 525,
+        timeRange: '08:00-08:45',
+        credit: 0,
+        remarks: '',
+        customFields: const {},
+        reminderSettings: const CourseReminderSettings(
+          behavior: CourseReminderBehavior.custom,
+          minutesBefore: 5,
+        ),
+      );
+      await _pumpEditorHost(
+        tester,
+        initialCourse: initial,
+        onSave: (course) async => saved = course,
+      );
+      final minutes = find.byKey(
+        const ValueKey('course-reminder-custom-minutes'),
+      );
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.ensureVisible(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      for (final invalid in ['', '-1', '1.5', 'oops']) {
+        await tester.ensureVisible(minutes);
+        await tester.enterText(minutes, invalid);
+        await tester.ensureVisible(find.text('More'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('More'));
+        await tester.pumpAndSettle();
+        expect(minutes, findsNothing);
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+        expect(saved, isNull);
+        expect(minutes, findsOneWidget);
+        expect(
+          find.text('Enter a whole number of minutes, zero or greater.'),
+          findsOneWidget,
+        );
+        expect(tester.widget<TextField>(minutes).focusNode!.hasFocus, isTrue);
+      }
+      await tester.enterText(minutes, '0');
+      await tester.ensureVisible(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(
+        saved?.reminderSettings,
+        const CourseReminderSettings(
+          behavior: CourseReminderBehavior.custom,
+          minutesBefore: 0,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'cyclic time changes stay in the course draft until confirmation and save',
     (tester) async {
       tester.view.devicePixelRatio = 1;
@@ -638,6 +761,10 @@ void main() {
       'Reminder course',
     );
 
+    await tester.ensureVisible(find.text('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
     final section = find.byKey(const ValueKey('course-reminder-section'));
     expect(section, findsOneWidget);
     await tester.ensureVisible(section);

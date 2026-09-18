@@ -518,7 +518,7 @@ void main() {
         expect(_globalSettingsAction(), findsOneWidget);
         expect(
           find.byKey(const ValueKey('workspace-actions-student')),
-          findsOneWidget,
+          findsNothing,
         );
       }
       expect(p.hasMultipleWorkspaces, isTrue);
@@ -539,7 +539,7 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('workspace-actions-general')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(tester.takeException(), isNull);
     },

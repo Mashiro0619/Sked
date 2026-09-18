@@ -5453,6 +5453,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use scroll wheels'**
   String get timePickerWheelMode;
+
+  /// No description provided for @courseReminderUseDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use default'**
+  String get courseReminderUseDefault;
+
+  /// No description provided for @courseReminderInvalidMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole number of minutes, zero or greater.'**
+  String get courseReminderInvalidMinutes;
+
+  /// No description provided for @generalCustomColumnWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom view column width'**
+  String get generalCustomColumnWidth;
+
+  /// No description provided for @generalCustomColumnWidthAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get generalCustomColumnWidthAuto;
+
+  /// No description provided for @generalCustomColumnWidthManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum width'**
+  String get generalCustomColumnWidthManual;
+
+  /// No description provided for @generalCustomColumnWidthMinimum.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum width per day'**
+  String get generalCustomColumnWidthMinimum;
+
+  /// No description provided for @generalCustomColumnWidthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.'**
+  String get generalCustomColumnWidthHint;
+
+  /// No description provided for @settingsAppearanceLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance & language'**
+  String get settingsAppearanceLanguage;
+
+  /// No description provided for @settingsAppearanceDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Colors & outlines'**
+  String get settingsAppearanceDetails;
+
+  /// No description provided for @monthNoEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No events on this day'**
+  String get monthNoEvents;
+
+  /// No description provided for @settingsOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get settingsOverview;
 }
 
 class _AppLocalizationsDelegate

@@ -10,10 +10,56 @@ import '../screens/period_times_page.dart';
 import 'expressive_dialog.dart';
 import 'ui_command.dart';
 
+/// Selects for the timetable that opened the chooser, not whichever timetable
+/// happens to become active before confirmation. Editing/creating sets remains
+/// available even when the workspace has no timetable yet.
+Future<void> selectTimetablePeriodTimeSet(
+  BuildContext context, {
+  required TimetableProvider provider,
+}) async {
+  if (!provider.isWorkspaceEnabled(AppMode.student)) return;
+  final timetableId = provider.activeTimetableOrNull?.id;
+  final dataSession = provider.dataSessionToken;
+  var committing = false;
+  final unregister = provider.registerWorkspaceExitGuard(
+    AppMode.student,
+    () async => !committing,
+  );
+  try {
+    await showPeriodTimeSetPickerDialog(
+      context,
+      provider: provider,
+      selectedPeriodTimeSetId: provider.activePeriodTimeSetOrNull?.id ?? '',
+      commitSelection: (selectedId) async {
+        if (!context.mounted ||
+            !identical(dataSession, provider.dataSessionToken) ||
+            !provider.isWorkspaceEnabled(AppMode.student) ||
+            timetableId == null ||
+            !provider.timetables.any((table) => table.id == timetableId) ||
+            provider.periodTimeSetForId(selectedId) == null) {
+          return;
+        }
+        committing = true;
+        try {
+          await provider.assignPeriodTimeSetToTimetable(
+            timetableId,
+            selectedId,
+          );
+        } finally {
+          committing = false;
+        }
+      },
+    );
+  } finally {
+    unregister();
+  }
+}
+
 Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
   required TimetableProvider provider,
   required String selectedPeriodTimeSetId,
+  Future<void> Function(String id)? commitSelection,
 }) {
   return showExpressiveDialog<String>(
     context: context,
@@ -94,7 +140,21 @@ Future<String?> showPeriodTimeSetPickerDialog(
                 ),
               );
             },
-            onSelect: popOnce,
+            onSelect: (id) {
+              if (commitSelection == null) {
+                popOnce(id);
+                return;
+              }
+              unawaited(
+                runBusy(
+                  debugLabel: 'Assign period time set',
+                  action: () async {
+                    await commitSelection(id);
+                    if (dialogContext.mounted) popOnce(id);
+                  },
+                ),
+              );
+            },
             onCancel: popOnce,
           );
         },

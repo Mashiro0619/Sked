@@ -58,10 +58,23 @@ void main() {
         p.appData.generalMode.hiddenToolbarNavigationIds,
         containsAll(['date', 'view']),
       );
-      await tester.tap(find.byKey(const ValueKey('workspace-actions-general')));
+      expect(
+        find.byKey(const ValueKey('workspace-actions-general')),
+        findsNothing,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('workspace-resource-settings')),
+      );
+      await tester.pumpAndSettle();
+      final display = find.byKey(const ValueKey('settings-general-display'));
+      await tester.ensureVisible(display);
+      await tester.pumpAndSettle();
+      await tester.tap(display);
       await tester.pumpAndSettle();
       expect(find.byType(GeneralDisplaySettingsPage), findsOneWidget);
       expect(find.byType(PopupMenuItem<String>), findsNothing);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(GeneralScheduleHomeScreen), findsOneWidget);

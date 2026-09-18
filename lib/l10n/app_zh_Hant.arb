@@ -2122,5 +2122,27 @@
     }
   },
   "timePickerWheelMode": "切換為滾輪選擇",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "courseReminderUseDefault": "沿用預設",
+  "@courseReminderUseDefault": {},
+  "courseReminderInvalidMinutes": "請輸入大於或等於 0 的整數分鐘。",
+  "@courseReminderInvalidMinutes": {},
+  "generalCustomColumnWidth": "自訂檢視欄寬",
+  "@generalCustomColumnWidth": {},
+  "generalCustomColumnWidthAuto": "自動",
+  "@generalCustomColumnWidthAuto": {},
+  "generalCustomColumnWidthManual": "手動最小欄寬",
+  "@generalCustomColumnWidthManual": {},
+  "generalCustomColumnWidthMinimum": "每欄最小寬度",
+  "@generalCustomColumnWidthMinimum": {},
+  "generalCustomColumnWidthHint": "所有日期使用相同的最小欄寬。空間充足時等寬填滿，不足時橫向捲動；僅影響自訂檢視。",
+  "@generalCustomColumnWidthHint": {},
+  "settingsAppearanceLanguage": "外觀與語言",
+  "@settingsAppearanceLanguage": {},
+  "settingsAppearanceDetails": "詳細配色與外框",
+  "@settingsAppearanceDetails": {},
+  "monthNoEvents": "當天沒有行程",
+  "@monthNoEvents": {},
+  "settingsOverview": "常用設定",
+  "@settingsOverview": {}
 }

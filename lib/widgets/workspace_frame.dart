@@ -1,4 +1,5 @@
 import '../theme/sked_surface.dart';
+import '../theme/sked_expressive_theme.dart';
 
 import 'dart:async';
 
@@ -17,6 +18,7 @@ import '../models/workspace_context_snapshot.dart';
 import '../services/desktop_window_bridge.dart';
 import 'desktop_window_host.dart';
 import 'workbench_chrome_metrics.dart';
+import 'app_layout_tokens.dart';
 
 export 'assistant_pane.dart' show AssistantPaneToggle, aiLayoutPreviewEnabled;
 export 'workbench_layout_policy.dart';
@@ -358,6 +360,17 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               ? metrics.toolbarHeight
               : 0.0;
           final captionWidth = metrics.captionWidth;
+          final motion = SkedMotionPolicy.of(context);
+          // A window resize or newly docked task can shrink the budget mid-
+          // animation. Never borrow its required space for a closing sidebar.
+          final resourceBudget =
+              (constraints.maxWidth -
+                      widget.minimumCanvas *
+                          WorkbenchLayoutPolicy.textFactor(metrics.textScale) -
+                      detailSpace -
+                      assistantSpace -
+                      1)
+                  .clamp(0.0, constraints.maxWidth);
           Future<void> dismiss() async {
             if (assistantVisible && (!detailVisible || _assistantLast)) {
               await _setAssistantOpen(false);
@@ -397,10 +410,19 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SizedBox(
-                              width: policy.resources
-                                  ? policy.resourceWidth
-                                  : 0,
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(end: policy.resourceWidth),
+                              duration: motion.spatialAnimationsEnabled
+                                  ? motion.effects(SkedMotionSpeed.standard)
+                                  : Duration.zero,
+                              curve: motion.scheme.standardCurve,
+                              builder: (context, width, child) => SizedBox(
+                                key: const ValueKey('workspace-resource-width'),
+                                width: policy.resources
+                                    ? width.clamp(0.0, resourceBudget)
+                                    : 0,
+                                child: ClipRect(child: child),
+                              ),
                               child: Offstage(
                                 offstage: !policy.resources,
                                 child: ExcludeFocus(
@@ -488,14 +510,26 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                     : SkedSurfaceRole.content,
                                 child: Column(
                                   children: [
-                                    Align(
-                                      alignment: AlignmentDirectional.centerEnd,
-                                      child: IconButton(
-                                        tooltip: MaterialLocalizations.of(
-                                          context,
-                                        ).closeButtonTooltip,
-                                        icon: const Icon(Icons.close),
-                                        onPressed: controller.close,
+                                    Padding(
+                                      key: const ValueKey(
+                                        'workspace-inspector-header',
+                                      ),
+                                      padding: const EdgeInsets.all(
+                                        AppSpacing.sm,
+                                      ),
+                                      child: Align(
+                                        alignment:
+                                            AlignmentDirectional.centerEnd,
+                                        child: IconButton(
+                                          key: const ValueKey(
+                                            'workspace-inspector-close',
+                                          ),
+                                          tooltip: MaterialLocalizations.of(
+                                            context,
+                                          ).closeButtonTooltip,
+                                          icon: const Icon(Icons.close),
+                                          onPressed: controller.close,
+                                        ),
                                       ),
                                     ),
                                     Expanded(

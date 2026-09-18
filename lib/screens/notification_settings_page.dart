@@ -30,9 +30,13 @@ class NotificationSettingsPage extends StatefulWidget {
     this.agendaCoordinator,
     this.productivityBridge,
     this.troubleshooting = false,
+    this.embedded = false,
+    this.onOpenTroubleshooting,
   });
 
   final bool troubleshooting;
+  final bool embedded;
+  final VoidCallback? onOpenTroubleshooting;
   final AgendaNotificationService? notificationService;
   final AgendaCoordinator? agendaCoordinator;
   final AndroidProductivityBridge? productivityBridge;
@@ -82,6 +86,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
     _notificationService =
         _agendaCoordinator?.notificationService ??
         widget.notificationService ??
+        context.read<AgendaNotificationService?>() ??
         AgendaNotificationService();
     _notificationServiceResolved = true;
     _notificationService.addListener(_onNotificationStatusChanged);
@@ -339,7 +344,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             icon: Icons.notifications_active_outlined,
             value: provider.notificationsEnabled,
             title: l10n.notificationSettingsEnabled,
-            subtitle: provider.isWorkspaceEnabled(AppMode.student)
+            subtitle:
+                !widget.embedded && provider.isWorkspaceEnabled(AppMode.student)
                 ? l10n.notificationSettingsEnabledHint
                 : null,
             onChanged: uiCommandBusy
@@ -514,7 +520,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
               child.title == l10n.notificationPermission,
         );
         final pageChildren = widget.troubleshooting
-            ? children.sublist(permissionStart, children.length - 1)
+            ? children.sublist(permissionStart)
             : <Widget>[
                 ...children.take(permissionStart),
                 children.last,
@@ -523,35 +529,76 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                   title: l10n.notificationTroubleshooting,
                   subtitle: [
                     permissionSubtitle,
-                    if (!kIsWeb &&
+                    if (_notificationService.isSupported &&
+                        !kIsWeb &&
                         defaultTargetPlatform == TargetPlatform.android)
                       exactAlarmSubtitle,
                   ].join('\n'),
                   leading: const Icon(Icons.health_and_safety_outlined),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ChangeNotifierProvider<TimetableProvider>.value(
-                            value: provider,
-                            child: NotificationSettingsPage(
-                              troubleshooting: true,
-                              notificationService: _notificationService,
-                              agendaCoordinator: _agendaCoordinator,
-                              productivityBridge: _productivityBridge,
+                  onTap: uiCommandBusy
+                      ? null
+                      : widget.onOpenTroubleshooting ??
+                            () => Navigator.of(context).push<void>(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ChangeNotifierProvider<
+                                      TimetableProvider
+                                    >.value(
+                                      value: provider,
+                                      child: NotificationSettingsPage(
+                                        troubleshooting: true,
+                                        notificationService:
+                                            _notificationService,
+                                        agendaCoordinator: _agendaCoordinator,
+                                        productivityBridge: _productivityBridge,
+                                      ),
+                                    ),
+                              ),
                             ),
-                          ),
-                    ),
-                  ),
                 ),
               ];
+        if (widget.embedded) {
+          return PopScope<void>(
+            canPop: !uiCommandBusy,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                UiCommandBusyIndicator(
+                  busy: uiCommandBusy,
+                  showDelay: const Duration(milliseconds: 180),
+                ),
+                SettingsInteractionBlocker(
+                  blocked: uiCommandBusy,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // The overview exposes only the common master switch.
+                      // Defaults, permission actions and diagnostics stay on
+                      // the notification page and share this saving flow.
+                      ...children.where(
+                        (child) =>
+                            child.key ==
+                                const ValueKey(
+                                  'notification-settings-enabled',
+                                ) ||
+                            child.key ==
+                                const ValueKey('notification-coverage-notice'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         return PopScope<void>(
           canPop: !uiCommandBusy,
           child: Scaffold(
             appBar: WorkbenchAppBar(
-              automaticallyImplyLeading:
-                  widget.troubleshooting ||
-                  !AdaptiveNavigationScope.isWide(context),
+              automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(
+                context,
+              ),
               title: Text(
                 widget.troubleshooting
                     ? l10n.notificationTroubleshooting
@@ -596,6 +643,19 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   }) {
     final currentSelection = _selectionForMinutes(value);
     final entries = _reminderEntries(l10n, value);
+    if (widget.embedded) {
+      return SettingsChoiceTile<int>(
+        key: key,
+        title: label,
+        icon: icon,
+        value: currentSelection,
+        entries: entries,
+        enabled: !uiCommandBusy,
+        onSelected: (selection) {
+          if (selection != null) onChanged(_minutesForSelection(selection));
+        },
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SkedDropdownMenu<int>(

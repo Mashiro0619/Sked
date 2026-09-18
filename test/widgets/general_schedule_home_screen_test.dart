@@ -173,11 +173,7 @@ Future<TimetableProvider> _createProviderWithStorage(
 }
 
 Finder _calendarManagerEntry() {
-  for (final key in [
-    'general-calendar-selector',
-    'general-resource-menu',
-    'workspace-resource-open',
-  ]) {
+  for (final key in ['general-calendar-selector', 'workspace-resource-open']) {
     final finder = find.byKey(ValueKey(key));
     if (finder.evaluate().isNotEmpty) return finder;
   }
@@ -187,11 +183,6 @@ Finder _calendarManagerEntry() {
 Future<void> _openCalendarManager(WidgetTester tester) async {
   await tester.tap(_calendarManagerEntry());
   await tester.pumpAndSettle();
-  final manage = find.byKey(const ValueKey('general-resource-manage'));
-  if (manage.evaluate().isNotEmpty) {
-    await tester.tap(manage);
-    await tester.pumpAndSettle();
-  }
 }
 
 final _registeredProviderTeardowns = Expando<bool>();
@@ -4170,7 +4161,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('2026/6'), findsWidgets);
-    expect(find.text('No upcoming events'), findsWidgets);
+    expect(find.text('No events on this day'), findsWidgets);
   });
 
   testWidgets('month view agenda cards fit compact phone width', (
@@ -4234,64 +4225,75 @@ void main() {
   });
 
   final compactMonthTextScales = ValueVariant<double>({1, 1.3, 2});
-  testWidgets('compact month selection brings the agenda back into view', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'compact month selection keeps the current scroll position and month changes reveal the calendar',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    const calendar = GeneralSchedule(id: 'cal1', name: 'Calendar', events: []);
-    final provider = await _createGeneralProvider(
-      buildInitialAppData(
-        buildDefaultPeriodTimes(),
-        localeCode: defaultLocaleCode,
-      ).copyWith(
-        activeMode: AppMode.general,
-        generalMode: GeneralScheduleData(
-          activeScheduleId: 'cal1',
-          schedules: [calendar],
-          selectedDateIso: '2026-06-01',
-          defaultView: generalViewMonth,
+      const calendar = GeneralSchedule(
+        id: 'cal1',
+        name: 'Calendar',
+        events: [],
+      );
+      final provider = await _createGeneralProvider(
+        buildInitialAppData(
+          buildDefaultPeriodTimes(),
+          localeCode: defaultLocaleCode,
+        ).copyWith(
+          activeMode: AppMode.general,
+          generalMode: GeneralScheduleData(
+            activeScheduleId: 'cal1',
+            schedules: [calendar],
+            selectedDateIso: '2026-06-01',
+            defaultView: generalViewMonth,
+          ),
         ),
-      ),
-    );
+      );
 
-    await _pumpGeneralScheduleHomeScreen(
-      tester,
-      provider,
-      textScaler: TextScaler.linear(compactMonthTextScales.currentValue!),
-    );
-    final monthScroll = find.byWidgetPredicate(
-      (widget) =>
-          widget is ListView &&
-          widget.padding == const EdgeInsets.fromLTRB(12, 6, 12, 88),
-    );
-    expect(monthScroll, findsOneWidget);
-    final day = find.byKey(const ValueKey('general-month-day-cell-2026-6-29'));
-    final grids = tester.widgetList<GridView>(
-      find.descendant(of: monthScroll, matching: find.byType(GridView)),
-    );
-    expect(grids, isNotEmpty);
-    expect(
-      grids.every((grid) => grid.physics is NeverScrollableScrollPhysics),
-      isTrue,
-      reason: 'The compact month and agenda share one vertical scroll surface',
-    );
-    await tester.drag(monthScroll, const Offset(0, -420));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(day);
-    await tester.pumpAndSettle();
-    expect(day.hitTestable(), findsOneWidget);
-    await tester.tap(day);
-    await tester.pumpAndSettle();
+      await _pumpGeneralScheduleHomeScreen(
+        tester,
+        provider,
+        textScaler: TextScaler.linear(compactMonthTextScales.currentValue!),
+      );
+      final monthScroll = find.byKey(
+        const ValueKey('general-month-compact-scroll'),
+      );
+      expect(monthScroll, findsOneWidget);
+      final day = find.byKey(
+        const ValueKey('general-month-day-cell-2026-6-29'),
+      );
+      final grids = tester.widgetList<GridView>(
+        find.descendant(of: monthScroll, matching: find.byType(GridView)),
+      );
+      expect(grids, isNotEmpty);
+      expect(
+        grids.every((grid) => grid.physics is NeverScrollableScrollPhysics),
+        isTrue,
+        reason:
+            'The compact month and agenda share one vertical scroll surface',
+      );
+      await tester.drag(monthScroll, const Offset(0, -420));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(day);
+      await tester.pumpAndSettle();
+      expect(day.hitTestable(), findsOneWidget);
+      final controller = tester
+          .widget<CustomScrollView>(monthScroll)
+          .controller!;
+      final offset = controller.offset;
+      await tester.tap(day);
+      await tester.pumpAndSettle();
 
-    expect(provider.selectedGeneralDate, DateTime(2026, 6, 29));
-    expect(
-      find.byKey(const ValueKey('general-month-compact-agenda')).hitTestable(),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  }, variant: compactMonthTextScales);
+      expect(provider.selectedGeneralDate, DateTime(2026, 6, 29));
+      expect(controller.offset, closeTo(offset, .01));
+      await provider.setSelectedGeneralDate(DateTime(2026, 7, 1));
+      await tester.pumpAndSettle();
+      expect(controller.offset, 0);
+      expect(tester.takeException(), isNull);
+    },
+    variant: compactMonthTextScales,
+  );
 
   testWidgets('month view fits wide short height without overflow', (
     tester,
@@ -4397,48 +4399,51 @@ void main() {
     expect(find.text('夏至'), findsOneWidget);
   });
 
-  testWidgets('month view compact selected day clips ripple to the selection', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(496, 1052));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'month compact selection has a full-cell tap target and a smaller tonal highlight',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(496, 1052));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final calendar = const GeneralSchedule(
-      id: 'cal1',
-      name: 'Calendar',
-      events: [],
-    );
-    final provider = await _createGeneralProvider(
-      buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'zh').copyWith(
-        activeMode: AppMode.general,
-        generalMode: GeneralScheduleData(
-          activeScheduleId: 'cal1',
-          schedules: [calendar],
-          selectedDateIso: '2026-06-05',
-          defaultView: generalViewMonth,
+      final calendar = const GeneralSchedule(
+        id: 'cal1',
+        name: 'Calendar',
+        events: [],
+      );
+      final provider = await _createGeneralProvider(
+        buildInitialAppData(
+          buildDefaultPeriodTimes(),
+          localeCode: 'zh',
+        ).copyWith(
+          activeMode: AppMode.general,
+          generalMode: GeneralScheduleData(
+            activeScheduleId: 'cal1',
+            schedules: [calendar],
+            selectedDateIso: '2026-06-05',
+            defaultView: generalViewMonth,
+          ),
         ),
-      ),
-    );
+      );
 
-    await _pumpGeneralScheduleHomeScreen(tester, provider);
+      await _pumpGeneralScheduleHomeScreen(tester, provider);
 
-    final feedback = find.byKey(_generalMonthCompactSelectedDayFeedbackKey);
-    expect(feedback, findsOneWidget);
+      final feedback = find.byKey(_generalMonthCompactSelectedDayFeedbackKey);
+      expect(feedback, findsOneWidget);
 
-    final feedbackSize = tester.getSize(feedback);
-    final inkWell = find.descendant(
-      of: feedback,
-      matching: find.byType(InkWell),
-    );
-    expect(inkWell, findsOneWidget);
-    final inkWellSize = tester.getSize(inkWell);
-    final material = tester.widget<Material>(feedback);
-
-    expect(material.shape, isA<RoundedRectangleBorder>());
-    expect(feedbackSize.width, closeTo(feedbackSize.height, 0.01));
-    expect(inkWellSize.width, feedbackSize.width);
-    expect(inkWellSize.height, feedbackSize.height);
-  });
+      final feedbackSize = tester.getSize(feedback);
+      final inkWell = find
+          .ancestor(of: feedback, matching: find.byType(InkWell))
+          .first;
+      expect(inkWell, findsOneWidget);
+      final inkWellSize = tester.getSize(inkWell);
+      final material = tester.widget<Material>(feedback);
+      expect(material.shape, isA<RoundedSuperellipseBorder>());
+      expect(inkWellSize.height, greaterThanOrEqualTo(48));
+      expect(inkWellSize.width, greaterThanOrEqualTo(feedbackSize.width));
+      expect(inkWellSize.height, greaterThan(feedbackSize.height));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('month view lunar special labels follow theme colors', (
     tester,

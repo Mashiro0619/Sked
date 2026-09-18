@@ -15,6 +15,8 @@ import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/secret_store.dart';
@@ -174,6 +176,13 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
     );
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<AgendaNotificationService>(
+          create: (_) => AgendaNotificationService(
+            enabled: false,
+            gateway: MemoryAgendaNotificationGateway(),
+            runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+          ),
+        ),
         ChangeNotifierProvider<TimetableProvider>.value(value: provider),
         if (developerUiPreferences != null)
           ChangeNotifierProvider<DeveloperUiPreferences>.value(

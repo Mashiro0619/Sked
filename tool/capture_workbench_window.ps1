@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory=$true)][int]$ProcessId,
-  [ValidateSet('resize','capture','maximize','restore','snap','minimize','close-request','drag','range-drag','wheel')][string]$Action = 'capture',
+  [ValidateSet('resize','capture','maximize','restore','snap','minimize','close-request','drag','range-drag','wheel','inspect')][string]$Action = 'capture',
   [double]$WidthDp = 1440,
   [double]$HeightDp = 900,
   [double]$PointXDp = 0,
@@ -57,7 +57,7 @@ if ($Action -eq 'resize') {
 } elseif ($Action -eq 'maximize') { [void][SkedWindowCapture]::ShowWindow($handle,3) }
 elseif ($Action -eq 'restore') { [void][SkedWindowCapture]::ShowWindow($handle,9) }
 elseif ($Action -eq 'minimize') { [void][SkedWindowCapture]::ShowWindow($handle,6) }
-[void][SkedWindowCapture]::SetForegroundWindow($handle)
+if ($Action -ne 'inspect') { [void][SkedWindowCapture]::SetForegroundWindow($handle) }
 if ($Action -eq 'close-request') { [void][SkedWindowCapture]::PostMessage($handle,0x10,[IntPtr]::Zero,[IntPtr]::Zero) }
 Start-Sleep -Milliseconds 250
 $r = New-Object SkedWindowCapture+Rect

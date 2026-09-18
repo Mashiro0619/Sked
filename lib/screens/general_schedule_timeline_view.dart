@@ -282,6 +282,9 @@ class _WeekCalendarViewState extends State<_WeekCalendarView> {
                                 (widget.provider.generalShowWeekends ? 7 : 5),
                             fitWeekColumnsToWidth:
                                 widget.provider.generalFitWeekColumnsToWidth,
+                            customDayMinWidth: widget.customRange == null
+                                ? null
+                                : widget.provider.generalCustomDayMinWidth,
                           ).totalWidth <=
                           constraints.maxWidth + .5
                   ? const PageScrollPhysics()
@@ -372,6 +375,9 @@ class _WeekTimelinePage extends StatelessWidget {
       hourHeight: provider.generalTimeGridHourHeight.toDouble(),
       showHeader: true,
       fitWeekColumnsToWidth: provider.generalFitWeekColumnsToWidth,
+      customDayMinWidth: customDayCount == null
+          ? null
+          : provider.generalCustomDayMinWidth,
       onDaySelected: onDaySelected,
       onEmptySlotTap: onEmptySlotTap,
       onOccurrenceTap: onOccurrenceTap,
@@ -1076,6 +1082,7 @@ class _CalendarTimeline extends StatelessWidget {
     required this.hourHeight,
     required this.showHeader,
     this.fitWeekColumnsToWidth = false,
+    this.customDayMinWidth,
     this.onDaySelected,
     required this.onEmptySlotTap,
     required this.onOccurrenceTap,
@@ -1098,6 +1105,7 @@ class _CalendarTimeline extends StatelessWidget {
   final double hourHeight;
   final bool showHeader;
   final bool fitWeekColumnsToWidth;
+  final int? customDayMinWidth;
   final ValueChanged<DateTime>? onDaySelected;
   final ValueChanged<DateTime>? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
@@ -1145,6 +1153,7 @@ class _CalendarTimeline extends StatelessWidget {
           constraints.maxWidth,
           dayCount: days.length,
           fitWeekColumnsToWidth: fitWeekColumnsToWidth,
+          customDayMinWidth: customDayMinWidth,
         );
 
         final compactTouch = WorkbenchChromeMetrics.compactTouch(
@@ -1919,6 +1928,7 @@ class _TimelineMetrics {
     double width, {
     required int dayCount,
     bool fitWeekColumnsToWidth = false,
+    int? customDayMinWidth,
   }) {
     final scale = WorkbenchLayoutPolicy.textFactor(
       MediaQuery.textScalerOf(context).scale(14) / 14,
@@ -1927,9 +1937,15 @@ class _TimelineMetrics {
     final rail = compact
         ? _TimelineTimeRuler.measuredWidth(context)
         : 64 * scale;
-    final fit = compact && fitWeekColumnsToWidth && dayCount <= 7;
+    final fit =
+        customDayMinWidth == null &&
+        compact &&
+        fitWeekColumnsToWidth &&
+        dayCount <= 7;
+    final minimumDayWidth =
+        (customDayMinWidth ?? generalCustomDayMinWidthDefault) * scale;
     return _TimelineMetrics.fromWidth(
-      fit ? width : math.max(width, rail + dayCount * 96 * scale),
+      fit ? width : math.max(width, rail + dayCount * minimumDayWidth),
       dayCount: dayCount,
       timeColumnWidth: rail,
     );
@@ -2240,11 +2256,24 @@ class _CalendarHorizontalViewportState
         (widget.active &&
             (!oldWidget.active ||
                 oldWidget.focusRevision != widget.focusRevision))) {
-      _scheduleReveal(resetOffset: replaced || !oldWidget.active);
+      // Preserve the fractional leading date, not its old pixel offset. The
+      // pinned time rail stays fixed while all three date layers resize together.
+      final anchorOffset =
+          !replaced &&
+              oldWidget.active &&
+              widget.active &&
+              oldWidget.dayWidth > 0 &&
+              _controller.hasClients
+          ? _controller.offset / oldWidget.dayWidth * widget.dayWidth
+          : null;
+      _scheduleReveal(
+        resetOffset: replaced || !oldWidget.active,
+        anchorOffset: anchorOffset,
+      );
     }
   }
 
-  void _scheduleReveal({bool resetOffset = false}) {
+  void _scheduleReveal({bool resetOffset = false, double? anchorOffset}) {
     final generation = ++_revealGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted ||
@@ -2262,6 +2291,15 @@ class _CalendarHorizontalViewportState
             position.maxScrollExtent,
           ),
         );
+      }
+      if (!resetOffset && anchorOffset != null) {
+        final target = anchorOffset.clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        );
+        if ((target - _controller.offset).abs() > .01) {
+          _controller.jumpTo(target);
+        }
       }
       // Settings/resize may remove horizontal overflow without changing focus.
       // Clamp that axis only; the vertical viewport owns its time anchor.

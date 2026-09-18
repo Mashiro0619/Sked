@@ -2148,7 +2148,11 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('设置页语言入口会进入独立页面并更新 provider', (tester) async {
+    testWidgets('设置语言入口恢复独立页面并在保存后返回窄屏总览', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 852);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
       final provider = TimetableProvider(
         storage: MemoryTimetableStorage(
           initialData: _buildTestAppData().copyWith(localeCode: 'en'),
@@ -2174,46 +2178,26 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const ValueKey('settings-category-language')),
-        findsOneWidget,
-      );
-
-      final languageEntry = find.text('语言');
+      final languageEntry = find.byKey(const ValueKey('settings-language'));
+      expect(languageEntry, findsOneWidget);
       await tester.ensureVisible(languageEntry);
       await tester.pumpAndSettle();
       await tester.tap(languageEntry);
       await tester.pumpAndSettle();
-
-      expect(find.byType(SearchBar), findsNothing);
-      expect(find.text('简体中文'), findsOneWidget);
-      expect(find.text('繁体中文'), findsOneWidget);
-      expect(find.text('英语'), findsWidgets);
-      expect(find.text('意大利语'), findsOneWidget);
-      expect(find.text('葡萄牙语'), findsOneWidget);
-      expect(find.text('俄语'), findsOneWidget);
-      expect(find.text('日语'), findsOneWidget);
-
+      expect(find.byType(LanguageSettingsPage), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('language-search')),
-        '简体',
+        'zh',
       );
       await tester.pumpAndSettle();
-
-      final simplifiedChineseOption = find.byKey(
-        const ValueKey('language-option-zh'),
-      );
-      await tester.ensureVisible(simplifiedChineseOption);
+      final simplified = find.byKey(const ValueKey('language-option-zh'));
+      await tester.ensureVisible(simplified);
       await tester.pumpAndSettle();
-      await tester.tap(simplifiedChineseOption);
+      await tester.tap(simplified);
       await tester.pumpAndSettle();
-
       expect(provider.localeCode, 'zh');
-      expect(find.byType(LanguageSettingsPage), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('settings-category-language')),
-        findsOneWidget,
-      );
+      expect(find.byType(LanguageSettingsPage), findsNothing);
+      expect(languageEntry, findsOneWidget);
     });
 
     testWidgets('课表导入任务可直接进入已启用课表的解析 API 配置', (tester) async {

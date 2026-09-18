@@ -59,6 +59,33 @@ void _samePaint(Color actual, Color expected) {
 }
 
 void main() {
+  test('small foreground accents retain the theme hue with readable surface contrast', () {
+    for (final brightness in Brightness.values) {
+      for (final seed in [
+        const Color(0xff6750a4),
+        const Color(0xffffff00),
+        const Color(0xff101010),
+      ]) {
+        final colors = ColorScheme.fromSeed(
+          seedColor: seed,
+          brightness: brightness,
+        ).copyWith(primary: seed);
+        for (final surface in [colors.surface, colors.surfaceContainerLow]) {
+          final accent = skedReadableAccent(colors, surface: surface);
+          final a = accent.computeLuminance(), b = surface.computeLuminance();
+          final contrast = a > b
+              ? (a + .05) / (b + .05)
+              : (b + .05) / (a + .05);
+          expect(contrast, greaterThanOrEqualTo(4.5));
+          expect(
+            colors.primary,
+            seed,
+            reason: 'A foreground choice never changes the saved theme color.',
+          );
+        }
+      }
+    }
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('com.mashiro.sked/window');
   final calls = <String>[];
@@ -266,10 +293,10 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(
-        SkedSurface.roleOf(t.element(_key('settings-category-language'))),
+        SkedSurface.roleOf(t.element(_key('settings-category-appearance'))),
         SkedSurfaceRole.frame,
       );
-      final theme = Theme.of(t.element(_key('settings-category-language')));
+      final theme = Theme.of(t.element(_key('settings-category-appearance')));
       expect(theme.appBarTheme.scrolledUnderElevation, 0);
       expect(theme.appBarTheme.surfaceTintColor, Colors.transparent);
       expect(

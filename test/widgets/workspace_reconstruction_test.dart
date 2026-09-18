@@ -24,41 +24,46 @@ void recordLayoutErrors() {
 }
 
 void main() {
-  testWidgets(
-    'wide settings keep the category navigation in the semantics tree',
-    (tester) async {
-      tester.view.devicePixelRatio = 1;
+  testWidgets('wide settings keep the section index in the semantics tree', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1280);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final semantics = tester.ensureSemantics();
+    try {
+      final p = await workspaceProvider(mode: AppMode.general);
+      await tester.pumpWidget(
+        WorkspaceHarness(provider: p, home: const SettingsPage()),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ThemeSettingsPage), findsOneWidget);
+      final index = find.byKey(const ValueKey('settings-category-appearance'));
+      expect(
+        tester.getSemantics(index).label,
+        contains('Appearance & language'),
+      );
+      await tester.tap(find.byKey(const ValueKey('settings-category-about')));
+      await tester.pumpAndSettle();
+      expect(index, findsOneWidget);
+      tester.view.physicalSize = const Size(360, 800);
+      await tester.pumpAndSettle();
+      expect(index, findsNothing);
+      expect(
+        find.byKey(const ValueKey('settings-overview-about')),
+        findsOneWidget,
+      );
       tester.view.physicalSize = const Size(800, 1280);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPhysicalSize);
-      final semantics = tester.ensureSemantics();
-      try {
-        final p = await workspaceProvider(mode: AppMode.general);
-        await tester.pumpWidget(
-          WorkspaceHarness(provider: p, home: const SettingsPage()),
-        );
-        await tester.pumpAndSettle();
-        expect(find.byType(ThemeSettingsPage), findsOneWidget);
-        expect(find.bySemanticsLabel('Language'), findsOneWidget);
-        await tester.tap(
-          find.byKey(const ValueKey('settings-category-language')),
-        );
-        await tester.pumpAndSettle();
-        expect(find.bySemanticsLabel('Appearance'), findsOneWidget);
-        tester.view.physicalSize = const Size(360, 800);
-        await tester.pumpAndSettle();
-        expect(find.bySemanticsLabel('Appearance'), findsNothing);
-        tester.view.physicalSize = const Size(800, 1280);
-        await tester.pumpAndSettle();
-        expect(find.bySemanticsLabel('Appearance'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-        p.dispose();
-      } finally {
-        semantics.dispose();
-      }
-    },
-  );
+      await tester.pumpAndSettle();
+      expect(index, findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      p.dispose();
+    } finally {
+      semantics.dispose();
+    }
+  });
 
   testWidgets(
     'pointer double click opens the timed editor and Escape returns the canvas',
@@ -463,11 +468,30 @@ void main() {
         find.byKey(const ValueKey('theme-workspace-target')),
         findsNothing,
       );
-      expect(find.text('Student timetable'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('settings-overview-student')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('workspace-enabled-student')),
+        findsNothing,
+      );
       expect(
         find.byKey(const ValueKey('settings-category-features')),
         findsOneWidget,
       );
+      final features = find.byKey(
+        const ValueKey('settings-workspace-features'),
+      );
+      await tester.ensureVisible(features);
+      await tester.pumpAndSettle();
+      await tester.tap(features);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('workspace-enabled-student')),
+        findsOneWidget,
+      );
+      expect(p.isWorkspaceEnabled(AppMode.student), isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
       p.dispose();
     },

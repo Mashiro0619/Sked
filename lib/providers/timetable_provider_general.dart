@@ -21,6 +21,7 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   String get generalDateLabelFormat => _appData.generalMode.dateLabelFormat;
   bool get generalFitWeekColumnsToWidth =>
       _appData.generalMode.fitWeekColumnsToWidth;
+  int? get generalCustomDayMinWidth => _appData.generalMode.customDayMinWidth;
   bool get generalShowWeekends => _appData.generalMode.showWeekends;
   bool get generalShowLunarCalendar => _appData.generalMode.showLunarCalendar;
   int get generalDayStartHour => _appData.generalMode.dayStartHour;
@@ -193,6 +194,16 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     _generalDateFocusRevision++;
     notifyListeners();
     _scheduleUiStateSave();
+  }
+
+  Future<void> updateGeneralCustomDayMinWidth(int? value) async {
+    requireWorkspaceEnabled(AppMode.general);
+    final width = normalizeGeneralCustomDayMinWidth(value);
+    if (width == generalCustomDayMinWidth) return;
+    _appData = _appData.copyWith(
+      generalMode: _appData.generalMode.copyWith(customDayMinWidth: width),
+    );
+    await _saveAndNotify();
   }
 
   Future<void> updateGeneralDisplaySettings({

@@ -31,58 +31,64 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
         final l10n = AppLocalizations.of(context);
         final languageOptions = supportedLanguageOptions(l10n);
         final currentCode = normalizeLocaleCode(provider.localeCode);
-        return Scaffold(
-          appBar: WorkbenchAppBar(
-            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-            title: Text(l10n.language),
-          ),
-          body: Column(
-            children: [
-              UiCommandBusyIndicator(busy: _isSelectingLanguage),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: TextField(
-                    key: const ValueKey('language-search'),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
-                      hintText: MaterialLocalizations.of(context)
-                          .searchFieldLabel,
-                    ),
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                ),
+        return PopScope(
+          canPop: !_isSelectingLanguage,
+          child: Scaffold(
+            appBar: WorkbenchAppBar(
+              automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(
+                context,
               ),
-              Expanded(
-                child: SafeArea(
-                  top: false,
-                  child: ResponsiveSettingsSingleColumnBody(
-                    child: Column(
-                      children: [
-                        for (final option in _filterLanguageOptions(
-                          languageOptions,
-                          _query,
-                        ))
-                          _LanguageOptionTile(
-                            key: ValueKey('language-option-${option.code}'),
-                            option: option,
-                            selected: option.code == currentCode,
-                            onTap:
-                                _isSelectingLanguage || _languageSelectionPopped
-                                ? null
-                                : () {
-                                    unawaited(
-                                      _selectLanguage(provider, option.code),
-                                    );
-                                  },
-                          ),
-                      ],
+              title: Text(l10n.language),
+            ),
+            body: Column(
+              children: [
+                UiCommandBusyIndicator(busy: _isSelectingLanguage),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: TextField(
+                      key: const ValueKey('language-search'),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: MaterialLocalizations.of(context)
+                            .searchFieldLabel,
+                      ),
+                      onChanged: (value) => setState(() => _query = value),
                     ),
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: SafeArea(
+                    top: false,
+                    child: ResponsiveSettingsSingleColumnBody(
+                      child: Column(
+                        children: [
+                          for (final option in _filterLanguageOptions(
+                            languageOptions,
+                            _query,
+                          ))
+                            _LanguageOptionTile(
+                              key: ValueKey('language-option-${option.code}'),
+                              option: option,
+                              selected: option.code == currentCode,
+                              onTap:
+                                  _isSelectingLanguage ||
+                                      _languageSelectionPopped
+                                  ? null
+                                  : () {
+                                      unawaited(
+                                        _selectLanguage(provider, option.code),
+                                      );
+                                    },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

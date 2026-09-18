@@ -3,6 +3,7 @@ import '../theme/sked_surface.dart';
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:provider/provider.dart';
 
 import '../models/timetable_models.dart';
@@ -15,8 +16,6 @@ import 'workbench_chrome_metrics.dart';
 import 'desktop_window_host.dart';
 import 'workspace_frame.dart';
 import '../screens/settings_page.dart';
-import '../screens/timetable_display_settings_page.dart';
-import '../screens/general_display_settings_page.dart';
 
 /// All shell navigation, including integrated resource links, uses the same
 /// save gate and focus hand-off as the compact navigation bar.
@@ -177,172 +176,277 @@ class WorkspaceResourcePanel extends StatelessWidget {
         p.hasMultipleWorkspaces &&
         !p.hideHomeWorkspaceNavigation &&
         (scope?.integrated ?? true);
-    final header = SizedBox(
-      height: m.toolbarHeight,
-      child: Material(
-        color: SkedSurfaceRole.frame.resolve(colors),
-        shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
-        child: DesktopDragRegion(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              mainAxisAlignment: collapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                IconButton(
-                  key: const ValueKey('workspace-resource-collapse'),
-                  style: m.iconStyle,
-                  tooltip: collapsed
-                      ? l.expandWorkspaceNavigation
-                      : l.collapseWorkspaceNavigation,
-                  onPressed: enabled
-                      ? (forcedCompact ? onOpenResources : toggle)
-                      : null,
-                  icon: Icon(collapsed ? Icons.menu_open : Icons.menu),
-                ),
-                if (!collapsed) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l.appTitle,
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    final navigation = <Widget>[
-      if (showModes) ...[
-        const SizedBox(height: 8),
-        for (final mode in p.enabledWorkspaces)
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: collapsed ? 8 : 10,
-              vertical: 2,
-            ),
-            child: collapsed
-                ? IconButton(
-                    key: ValueKey('workspace-resource-mode-${mode.value}'),
-                    style: m.iconStyle,
-                    isSelected: p.activeMode == mode,
-                    tooltip: mode == AppMode.student
-                        ? l.studentTimetable
-                        : l.generalSchedule,
-                    onPressed: enabled
-                        ? () => selectWorkspace(context, mode)
-                        : null,
-                    icon: Icon(
-                      mode == AppMode.student
-                          ? Icons.school_outlined
-                          : Icons.event_note_outlined,
-                    ),
-                  )
-                : ListTile(
-                    key: ValueKey('workspace-resource-mode-${mode.value}'),
-                    minTileHeight: m.resourceRowHeight,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                    selected: p.activeMode == mode,
-                    selectedTileColor: colors.secondaryContainer.withValues(
-                      alpha: .65,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    leading: Icon(
-                      mode == AppMode.student
-                          ? Icons.school_outlined
-                          : Icons.event_note_outlined,
-                      size: 20,
-                    ),
-                    title: Text(
-                      mode == AppMode.student
-                          ? l.studentTimetable
-                          : l.generalSchedule,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: enabled
-                        ? () => selectWorkspace(context, mode)
-                        : null,
-                  ),
-          ),
-      ],
-      if (collapsed)
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: IconButton(
-            key: const ValueKey('workspace-resource-open'),
-            style: m.iconStyle,
-            tooltip: title,
-            onPressed: enabled ? (onOpenResources ?? toggle) : null,
-            icon: Icon(
-              p.isStudentMode
-                  ? Icons.view_week_outlined
-                  : Icons.category_outlined,
-            ),
-          ),
-        )
-      else
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 8, 8),
-          child: IconButtonTheme(
-            data: IconButtonThemeData(style: m.iconStyle),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
-                ...headerActions,
-              ],
-            ),
-          ),
-        ),
-    ];
-    final settings = onSettings == null
-        ? const SizedBox.shrink()
-        : Padding(
-            padding: const EdgeInsets.all(8),
-            child: collapsed
-                ? IconButton(
-                    key: const ValueKey('workspace-resource-settings'),
-                    style: m.iconStyle,
-                    tooltip: l.settings,
-                    onPressed: enabled ? onSettings : null,
-                    icon: const Icon(Icons.settings_outlined),
-                  )
-                : ListTile(
-                    key: const ValueKey('workspace-resource-settings'),
-                    focusNode: layout?.resources == true
-                        ? settingsFocusNode
-                        : null,
-                    minTileHeight: m.resourceRowHeight,
-                    leading: const Icon(Icons.settings_outlined, size: 20),
-                    title: Text(l.settings),
-                    onTap: enabled ? onSettings : null,
-                  ),
-          );
+    final factor = WorkbenchLayoutPolicy.textFactor(m.textScale);
+    final compactWidth =
+        (m.desktop
+            ? AppBreakpoints.pointerCompactResourcePane
+            : AppBreakpoints.compactResourcePane) *
+        factor;
+    final expandedWidth = AppBreakpoints.resourcePane * factor;
+
     return SkedSurface(
       key: const ValueKey('workspace-resource-panel'),
       role: SkedSurfaceRole.frame,
       child: LayoutBuilder(
-        builder: (context, c) {
-          if (c.maxHeight < m.toolbarHeight + 200 * m.textScale) {
-            return ListView(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < compactWidth) {
+            return const SizedBox.shrink();
+          }
+          // Read the *animated* width, not just the target layout. All icons
+          // keep one slot and one row height throughout the transition.
+          final progress =
+              ((constraints.maxWidth - compactWidth) /
+                      (expandedWidth - compactWidth))
+                  .clamp(0.0, 1.0);
+          final labelOpacity = const Interval(.15, .85).transform(progress);
+          final detailsInteractive = !collapsed && progress >= .999;
+          Widget label(Widget child) => _ResourcePaneReveal(
+            width: expandedWidth - compactWidth,
+            opacity: labelOpacity,
+            child: child,
+          );
+          final header = SizedBox(
+            height: m.toolbarHeight,
+            child: Material(
+              color: SkedSurfaceRole.frame.resolve(colors),
+              shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
+              child: DesktopDragRegion(
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: compactWidth,
+                      child: Center(
+                        child: IconButton(
+                          key: const ValueKey('workspace-resource-collapse'),
+                          style: m.iconStyle,
+                          tooltip: collapsed
+                              ? l.expandWorkspaceNavigation
+                              : l.collapseWorkspaceNavigation,
+                          onPressed: enabled
+                              ? (forcedCompact ? onOpenResources : toggle)
+                              : null,
+                          icon: Icon(collapsed ? Icons.menu_open : Icons.menu),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: label(
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            l.appTitle,
+                            style: Theme.of(context).textTheme.titleMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          Widget navigationAction({
+            required String id,
+            required String title,
+            required IconData icon,
+            required VoidCallback? onTap,
+            bool selected = false,
+            FocusNode? focusNode,
+          }) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            child: Tooltip(
+              message: collapsed ? title : '',
+              excludeFromSemantics: true,
+              child: ListTile(
+                key: ValueKey(id),
+                focusNode: focusNode,
+                enabled: onTap != null,
+                minTileHeight: m.resourceRowHeight,
+                minVerticalPadding: 0,
+                contentPadding: EdgeInsets.zero,
+                selected: selected,
+                selectedTileColor: colors.secondaryContainer.withValues(
+                  alpha: .65,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                // The same ListTile owns focus, semantics and its hit target in
+                // both states; hiding a label must not replace it with a button.
+                title: SizedBox(
+                  height: m.resourceRowHeight,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: compactWidth - 16,
+                        child: Icon(
+                          icon,
+                          size: m.desktop ? 20 : 22,
+                          color: onTap == null
+                              ? colors.onSurface.withValues(alpha: .38)
+                              : selected
+                              ? colors.onSecondaryContainer
+                              : colors.onSurfaceVariant,
+                        ),
+                      ),
+                      Expanded(
+                        child: _ResourcePaneReveal(
+                          width: expandedWidth - compactWidth,
+                          opacity: labelOpacity,
+                          keepSemantics: true,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                onTap: onTap,
+              ),
+            ),
+          );
+          final navigation = <Widget>[
+            if (showModes) ...[
+              const SizedBox(height: 8),
+              for (final mode in p.enabledWorkspaces)
+                navigationAction(
+                  id: 'workspace-resource-mode-${mode.value}',
+                  title: mode == AppMode.student
+                      ? l.studentTimetable
+                      : l.generalSchedule,
+                  icon: mode == AppMode.student
+                      ? Icons.school_outlined
+                      : Icons.event_note_outlined,
+                  selected: p.activeMode == mode,
+                  onTap: enabled ? () => selectWorkspace(context, mode) : null,
+                ),
+            ],
+            Padding(
+              padding: const EdgeInsets.only(top: 20, bottom: 8),
+              child: SizedBox(
+                height: m.resourceRowHeight,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: compactWidth,
+                      child: Center(
+                        child: IconButton(
+                          key: const ValueKey('workspace-resource-open'),
+                          style: m.iconStyle,
+                          tooltip: title,
+                          onPressed: enabled
+                              ? (onOpenResources ?? toggle)
+                              : null,
+                          icon: Icon(
+                            p.isStudentMode
+                                ? Icons.view_week_outlined
+                                : Icons.category_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: IgnorePointer(
+                        ignoring: !detailsInteractive,
+                        child: ExcludeFocus(
+                          excluding: !detailsInteractive,
+                          child: ExcludeSemantics(
+                            excluding: !detailsInteractive,
+                            child: label(
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  end: 8,
+                                ),
+                                child: IconButtonTheme(
+                                  data: IconButtonThemeData(style: m.iconStyle),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          title,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      ...headerActions,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ];
+          final settings = onSettings == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: navigationAction(
+                    id: 'workspace-resource-settings',
+                    title: l.settings,
+                    icon: Icons.settings_outlined,
+                    focusNode: layout?.resources == true
+                        ? settingsFocusNode
+                        : null,
+                    onTap: enabled ? onSettings : null,
+                  ),
+                );
+          Widget resources({bool shrinkWrap = false}) => IgnorePointer(
+            ignoring: !detailsInteractive,
+            child: ExcludeFocus(
+              excluding: !detailsInteractive,
+              child: ExcludeSemantics(
+                excluding: !detailsInteractive,
+                child: _ResourcePaneReveal(
+                  width: expandedWidth,
+                  opacity: labelOpacity,
+                  child: ListView(
+                    key: const PageStorageKey('workspace-resource-list'),
+                    primary: false,
+                    shrinkWrap: shrinkWrap,
+                    physics: shrinkWrap
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    children: [...children, ...actions],
+                  ),
+                ),
+              ),
+            ),
+          );
+          if (constraints.maxHeight < m.toolbarHeight + 200 * m.textScale) {
+            // Even a very short window keeps Settings anchored at the bottom.
+            return Column(
               children: [
-                header,
-                ...navigation,
-                if (!collapsed) ...children,
-                if (!collapsed) ...actions,
+                Expanded(
+                  child: ListView(
+                    children: [
+                      header,
+                      ...navigation,
+                      if (!collapsed) resources(shrinkWrap: true),
+                    ],
+                  ),
+                ),
                 settings,
               ],
             );
@@ -352,15 +456,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
             children: [
               header,
               ...navigation,
-              Expanded(
-                child: collapsed
-                    ? const SizedBox.shrink()
-                    : ListView(
-                        key: const PageStorageKey('workspace-resource-list'),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        children: [...children, ...actions],
-                      ),
-              ),
+              Expanded(child: resources()),
               settings,
             ],
           );
@@ -368,6 +464,36 @@ class WorkspaceResourcePanel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Keep the expanded content laid out at its final width while clipping and
+/// revealing it. Calendars and labels never reflow into a narrow intermediate
+/// column; navigation labels keep their accessible name when visually hidden.
+class _ResourcePaneReveal extends StatelessWidget {
+  const _ResourcePaneReveal({
+    required this.width,
+    required this.opacity,
+    required this.child,
+    this.keepSemantics = false,
+  });
+  final double width;
+  final double opacity;
+  final bool keepSemantics;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    child: OverflowBox(
+      fit: OverflowBoxFit.deferToChild,
+      alignment: AlignmentDirectional.centerStart,
+      minWidth: width,
+      maxWidth: width,
+      child: Opacity(
+        opacity: opacity,
+        alwaysIncludeSemantics: keepSemantics,
+        child: child,
+      ),
+    ),
+  );
 }
 
 /// Only show the fallback when no visible navigation can switch workspaces.
@@ -396,29 +522,3 @@ Future<void> openWorkspaceTransfer(
     ),
   ),
 );
-
-Future<void> openWorkspacePreferences(BuildContext context, AppMode mode) =>
-    Navigator.of(context, rootNavigator: true).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-          value: context.read<TimetableProvider>(),
-          child: mode == AppMode.student
-              ? const TimetableDisplaySettingsPage()
-              : const GeneralDisplaySettingsPage(),
-        ),
-      ),
-    );
-
-class WorkspaceActionsMenu extends StatelessWidget {
-  const WorkspaceActionsMenu({super.key, required this.mode});
-  final AppMode mode;
-  @override
-  Widget build(BuildContext context) => IconButton(
-    key: ValueKey('workspace-actions-${mode.value}'),
-    tooltip: AppLocalizations.of(context).workspacePreferences,
-    icon: const Icon(Icons.tune),
-    onPressed: (WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true)
-        ? () => openWorkspacePreferences(context, mode)
-        : null,
-  );
-}

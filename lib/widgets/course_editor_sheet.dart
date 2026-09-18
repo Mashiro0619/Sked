@@ -80,6 +80,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   late bool _scheduleSectionExpanded;
   late bool _detailsSectionExpanded;
   late CourseReminderBehavior _reminderBehavior;
+  final _detailsExpansion = ExpansibleController();
+  final _reminderMinutesFocus = FocusNode();
+  bool _reminderMinutesInvalid = false;
 
   @override
   String get draftFingerprint => jsonEncode([
@@ -182,6 +185,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     _remarksController.dispose();
     _customFieldsController.dispose();
     _reminderMinutesController.dispose();
+    _detailsExpansion.dispose();
+    _reminderMinutesFocus.dispose();
     super.dispose();
   }
 
@@ -277,21 +282,18 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
             ),
             const SizedBox(height: 8),
             _EditorSection(
+              key: const ValueKey('course-details-section'),
+              controller: _detailsExpansion,
               icon: Icons.notes_outlined,
               title: l10n.more,
+              subtitle: _detailsSectionExpanded
+                  ? null
+                  : '${l10n.courseSystemReminder} · ${_reminderSummary(l10n)}',
               initiallyExpanded: _detailsSectionExpanded,
               onExpansionChanged: (expanded) =>
                   setState(() => _detailsSectionExpanded = expanded),
               enabled: !_blocked,
               child: _buildDetailsFields(l10n),
-            ),
-            const SizedBox(height: 8),
-            CourseSystemReminderField(
-              key: const ValueKey('course-reminder-section'),
-              behavior: _reminderBehavior,
-              minutesController: _reminderMinutesController,
-              enabled: !_blocked,
-              onChanged: (value) => setState(() => _reminderBehavior = value),
             ),
           ],
         ),
@@ -360,6 +362,19 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     );
   }
 
+  String _reminderSummary(AppLocalizations l10n) => switch (_reminderBehavior) {
+    CourseReminderBehavior.inherit => l10n.courseReminderUseDefault,
+    CourseReminderBehavior.disabled => l10n.notificationReminderOff,
+    CourseReminderBehavior.custom => switch (int.tryParse(
+      _reminderMinutesController.text.trim(),
+    )) {
+      final int minutes when minutes >= 0 => l10n.notificationReminderCustom(
+        minutes,
+      ),
+      _ => l10n.recurrenceCustom,
+    },
+  };
+
   Widget _buildDetailsFields(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,6 +422,23 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
             prefixIcon: const Icon(Icons.data_object_outlined),
           ),
           maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        CourseSystemReminderField(
+          key: const ValueKey('course-reminder-section'),
+          behavior: _reminderBehavior,
+          minutesController: _reminderMinutesController,
+          minutesFocusNode: _reminderMinutesFocus,
+          minutesError: _reminderMinutesInvalid
+              ? l10n.courseReminderInvalidMinutes
+              : null,
+          onMinutesChanged: (_) =>
+              setState(() => _reminderMinutesInvalid = false),
+          enabled: !_blocked,
+          onChanged: (value) => setState(() {
+            _reminderBehavior = value;
+            _reminderMinutesInvalid = false;
+          }),
         ),
       ],
     );
@@ -749,6 +781,31 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       return;
     }
 
+    final reminderMinutes = int.tryParse(
+      _reminderMinutesController.text.trim(),
+    );
+    if (_reminderBehavior == CourseReminderBehavior.custom &&
+        (reminderMinutes == null || reminderMinutes < 0)) {
+      setState(() => _reminderMinutesInvalid = true);
+      _detailsExpansion.expand();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _blocked) return;
+        _reminderMinutesFocus.requestFocus();
+        final fieldContext = _reminderMinutesFocus.context;
+        if (fieldContext != null) {
+          unawaited(
+            Scrollable.ensureVisible(
+              fieldContext,
+              alignment: 0.5,
+              duration: SkedMotionPolicy.of(context)
+                  .effects(SkedMotionSpeed.fast),
+            ),
+          );
+        }
+      });
+      return;
+    }
+
     final periods = _normalizeSelectedPeriods(
       _selectedPeriods.isEmpty ? _matchedPeriods : _selectedPeriods,
     );
@@ -794,10 +851,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     if (_reminderBehavior != CourseReminderBehavior.custom) {
       return CourseReminderSettings(behavior: _reminderBehavior);
     }
-    final minutes = int.tryParse(_reminderMinutesController.text.trim());
-    if (minutes == null || minutes < 0) {
-      return const CourseReminderSettings();
-    }
+    // _submit validates before constructing a course, even while More is folded.
+    final minutes = int.parse(_reminderMinutesController.text.trim());
     return CourseReminderSettings(
       behavior: CourseReminderBehavior.custom,
       minutesBefore: minutes,
@@ -1183,6 +1238,8 @@ class _ResponsiveFormRow extends StatelessWidget {
 /// a text controller or a pending picker selection.
 class _EditorSection extends StatelessWidget {
   const _EditorSection({
+    super.key,
+    this.controller,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -1192,6 +1249,7 @@ class _EditorSection extends StatelessWidget {
     this.subtitle,
   });
 
+  final ExpansibleController? controller;
   final IconData icon;
   final String title;
   final String? subtitle;
@@ -1208,6 +1266,7 @@ class _EditorSection extends StatelessWidget {
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
+        controller: controller,
         initiallyExpanded: initiallyExpanded,
         maintainState: true,
         enabled: enabled,

@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
-import '../screens/notification_settings_page.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import 'workbench_chrome_metrics.dart';
@@ -22,12 +21,18 @@ class CourseSystemReminderField extends StatefulWidget {
     required this.onChanged,
     this.enabled = true,
     this.notificationService,
+    this.minutesFocusNode,
+    this.minutesError,
+    this.onMinutesChanged,
   });
   final CourseReminderBehavior behavior;
   final TextEditingController minutesController;
   final ValueChanged<CourseReminderBehavior> onChanged;
   final bool enabled;
   final AgendaNotificationService? notificationService;
+  final FocusNode? minutesFocusNode;
+  final String? minutesError;
+  final ValueChanged<String>? onMinutesChanged;
   @override
   State<CourseSystemReminderField> createState() =>
       _CourseSystemReminderFieldState();
@@ -41,7 +46,6 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
   bool? _battery;
   bool _loading = false;
   bool _error = false;
-  bool _settingsOpen = false;
   @override
   void initState() {
     super.initState();
@@ -95,27 +99,6 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
       if (mounted) setState(() => _error = true);
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _openSettings() async {
-    if (_settingsOpen || !widget.enabled) return;
-    _settingsOpen = true;
-    try {
-      final provider = context.read<TimetableProvider?>();
-      if (provider == null) return;
-      FocusManager.instance.primaryFocus?.unfocus();
-      await Navigator.of(context, rootNavigator: true).push<void>(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider.value(
-            value: provider,
-            child: NotificationSettingsPage(notificationService: _service),
-          ),
-        ),
-      );
-      if (mounted) await _refresh();
-    } finally {
-      _settingsOpen = false;
     }
   }
 
@@ -214,10 +197,13 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
           TextField(
             key: const ValueKey('course-reminder-custom-minutes'),
             controller: widget.minutesController,
+            focusNode: widget.minutesFocusNode,
+            onChanged: widget.onMinutesChanged,
             enabled: widget.enabled,
             keyboardType: const TextInputType.numberWithOptions(),
             decoration: InputDecoration(
               labelText: l.courseReminderMinutesLabel,
+              errorText: widget.minutesError,
             ),
           ),
         ],
@@ -243,13 +229,6 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        if (provider != null)
-          TextButton.icon(
-            key: const ValueKey('course-open-notifications'),
-            onPressed: widget.enabled ? _openSettings : null,
-            icon: const Icon(Icons.notifications_outlined, size: 18),
-            label: Text(l.notificationSettingsSection),
-          ),
         if (_error)
           TextButton(
             onPressed: _loading ? null : _refresh,

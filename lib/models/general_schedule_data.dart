@@ -24,6 +24,22 @@ const generalTimeGridHourHeightMin = 36;
 const generalTimeGridHourHeightMax = 120;
 const generalTimeGridHourHeightStep = 4;
 const generalScheduleSchemaVersion = 5;
+const generalCustomDayMinWidthDefault = 96;
+const generalCustomDayMinWidthMin = 64;
+const generalCustomDayMinWidthMax = 320;
+const generalCustomDayMinWidthStep = 8;
+
+/// Null retains the legacy automatic fit/overflow policy. Widths are logical dp
+/// before the timeline applies its accessibility text factor.
+int? normalizeGeneralCustomDayMinWidth(int? value) {
+  if (value == null) return null;
+  final bounded = value.clamp(
+    generalCustomDayMinWidthMin,
+    generalCustomDayMinWidthMax,
+  );
+  return (bounded / generalCustomDayMinWidthStep).round() *
+      generalCustomDayMinWidthStep;
+}
 
 Map<String, dynamic>? _asStringKeyedMap(Object? value) {
   if (value is! Map) {
@@ -258,6 +274,7 @@ class GeneralScheduleData {
     this.toolbarWidthPolicy = generalToolbarWidthPolicyContent,
     this.dateLabelFormat = generalDateLabelFormatSlash,
     this.fitWeekColumnsToWidth = true,
+    this.customDayMinWidth,
     this.showWeekends = true,
     this.showLunarCalendar = true,
     this.dayStartHour = 6,
@@ -287,6 +304,7 @@ class GeneralScheduleData {
   final String toolbarWidthPolicy;
   final String dateLabelFormat;
   final bool fitWeekColumnsToWidth;
+  final int? customDayMinWidth;
   final bool showWeekends;
   final bool showLunarCalendar;
   final int dayStartHour;
@@ -346,6 +364,8 @@ class GeneralScheduleData {
     ),
     'dateLabelFormat': normalizeGeneralDateLabelFormat(dateLabelFormat),
     'fitWeekColumnsToWidth': fitWeekColumnsToWidth,
+    if (customDayMinWidth != null)
+      'customDayMinWidth': normalizeGeneralCustomDayMinWidth(customDayMinWidth),
     'showWeekends': showWeekends,
     'showLunarCalendar': showLunarCalendar,
     'dayStartHour': dayStartHour,
@@ -416,6 +436,9 @@ class GeneralScheduleData {
         dateLabelFormat: dateLabelFormat,
         fitWeekColumnsToWidth:
             _boolValue(json['fitWeekColumnsToWidth']) ?? true,
+        customDayMinWidth: normalizeGeneralCustomDayMinWidth(
+          _intValue(json['customDayMinWidth']),
+        ),
         showAddEventFab: showAddEventFab,
         enableLongPressAddEvent: enableLongPressAddEvent,
         allDayTimelineCollapsed: allDayTimelineCollapsed,
@@ -465,6 +488,9 @@ class GeneralScheduleData {
       toolbarWidthPolicy: toolbarWidthPolicy,
       dateLabelFormat: dateLabelFormat,
       fitWeekColumnsToWidth: _boolValue(json['fitWeekColumnsToWidth']) ?? true,
+      customDayMinWidth: normalizeGeneralCustomDayMinWidth(
+        _intValue(json['customDayMinWidth']),
+      ),
       showWeekends: _boolValue(json['showWeekends']) ?? true,
       showLunarCalendar: _boolValue(json['showLunarCalendar']) ?? true,
       dayStartHour: (_intValue(json['dayStartHour']) ?? 6).clamp(0, 23).toInt(),
@@ -520,6 +546,7 @@ class GeneralScheduleData {
     String? toolbarWidthPolicy,
     String? dateLabelFormat,
     bool? fitWeekColumnsToWidth,
+    Object? customDayMinWidth = _keepNullable,
     bool? showWeekends,
     bool? showLunarCalendar,
     int? dayStartHour,
@@ -560,6 +587,9 @@ class GeneralScheduleData {
       ),
       fitWeekColumnsToWidth:
           fitWeekColumnsToWidth ?? this.fitWeekColumnsToWidth,
+      customDayMinWidth: identical(customDayMinWidth, _keepNullable)
+          ? this.customDayMinWidth
+          : normalizeGeneralCustomDayMinWidth(customDayMinWidth as int?),
       showWeekends: showWeekends ?? this.showWeekends,
       showLunarCalendar: showLunarCalendar ?? this.showLunarCalendar,
       dayStartHour: dayStartHour ?? this.dayStartHour,
@@ -722,6 +752,7 @@ class GeneralScheduleData {
       ),
       dateLabelFormat: normalizeGeneralDateLabelFormat(dateLabelFormat),
       fitWeekColumnsToWidth: fitWeekColumnsToWidth,
+      customDayMinWidth: normalizeGeneralCustomDayMinWidth(customDayMinWidth),
       showWeekends: showWeekends,
       showLunarCalendar: showLunarCalendar,
       dayStartHour: start,

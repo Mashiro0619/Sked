@@ -10,6 +10,8 @@ import '../theme/sked_expressive_theme.dart';
 import 'expressive_motion.dart';
 import 'workbench_layout_policy.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_dropdown_menu.dart';
+import '../models/app_mode.dart';
 
 /// Blocks a settings surface during persistence without switching every child
 /// to its disabled colors. Pointer and keyboard actions are unavailable while
@@ -305,11 +307,13 @@ class SettingsConnectedGroup extends StatelessWidget {
     required this.children,
     this.title,
     this.margin = const EdgeInsets.symmetric(vertical: 6),
+    this.tonal = false,
   });
 
   final String? title;
   final List<Widget> children;
   final EdgeInsetsGeometry margin;
+  final bool tonal;
 
   @override
   Widget build(BuildContext context) {
@@ -319,57 +323,88 @@ class SettingsConnectedGroup extends StatelessWidget {
     if (visibleChildren.isEmpty && title == null) {
       return const SizedBox.shrink();
     }
-    return Padding(
-      padding: margin,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
-              child: Semantics(
-                header: true,
-                child: Text(
-                  title!,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w700,
+    return _SettingsTonalGroup(
+      tonal: tonal,
+      child: Padding(
+        padding: margin,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (title != null)
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 4, 8),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title!,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: tonal
+                          ? skedReadableAccent(
+                              colors,
+                              surface: colors.surfaceContainerLow,
+                            )
+                          : colors.primary,
+                      fontWeight: tonal ? FontWeight.w600 : FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
-            ),
-          Material(
-            color: Colors.transparent,
-            shape: WorkbenchChromeMetrics.of(context).desktop
-                ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))
-                : shapes.container,
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (
-                  var index = 0;
-                  index < visibleChildren.length;
-                  index++
-                ) ...[
-                  if (index > 0)
-                    Divider(
-                      height: 1,
-                      indent: WorkbenchChromeMetrics.of(context).desktop
-                          ? 52
-                          : 72,
-                      endIndent: 16,
-                      color: colors.outlineVariant.withValues(alpha: 0.55),
-                    ),
-                  visibleChildren[index],
+            Material(
+              color: tonal ? colors.surfaceContainerLow : Colors.transparent,
+              shape: tonal
+                  ? RoundedSuperellipseBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    )
+                  : WorkbenchChromeMetrics.of(context).desktop
+                  ? RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    )
+                  : shapes.container,
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (
+                    var index = 0;
+                    index < visibleChildren.length;
+                    index++
+                  ) ...[
+                    if (index > 0)
+                      Divider(
+                        height: 1,
+                        indent: tonal
+                            ? 52
+                            : WorkbenchChromeMetrics.of(context).desktop
+                            ? 52
+                            : 72,
+                        endIndent: 16,
+                        color: colors.outlineVariant.withValues(
+                          alpha: tonal ? 0.28 : 0.55,
+                        ),
+                      ),
+                    visibleChildren[index],
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
+
+class _SettingsTonalGroup extends InheritedWidget {
+  const _SettingsTonalGroup({required this.tonal, required super.child});
+  final bool tonal;
+  static bool of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<_SettingsTonalGroup>()
+          ?.tonal ??
+      false;
+  @override
+  bool updateShouldNotify(_SettingsTonalGroup oldWidget) =>
+      tonal != oldWidget.tonal;
 }
 
 /// A row for [SettingsConnectedGroup]. The trailing affordance stays in a
@@ -432,7 +467,9 @@ class SettingsConnectedTile extends StatelessWidget {
           title,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: resolvedForegroundColor ?? colors.onSurface,
-            fontWeight: FontWeight.w600,
+            fontWeight: _SettingsTonalGroup.of(context)
+                ? FontWeight.w400
+                : FontWeight.w600,
           ),
         ),
         if (subtitle != null) ...[
@@ -461,15 +498,25 @@ class SettingsConnectedTile extends StatelessWidget {
           borderRadius: BorderRadius.zero,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: WorkbenchChromeMetrics.of(context).desktop ? 40 : 64,
+              minHeight: _SettingsTonalGroup.of(context)
+                  ? 56
+                  : WorkbenchChromeMetrics.of(context).desktop
+                  ? 40
+                  : 64,
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 360;
                 return Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 16,
-                    vertical: WorkbenchChromeMetrics.of(context).desktop
+                    horizontal: _SettingsTonalGroup.of(context)
+                        ? 16
+                        : compact
+                        ? 12
+                        : 16,
+                    vertical: _SettingsTonalGroup.of(context)
+                        ? 4
+                        : WorkbenchChromeMetrics.of(context).desktop
                         ? 6
                         : 10,
                   ),
@@ -481,7 +528,13 @@ class SettingsConnectedTile extends StatelessWidget {
                         color: foregroundColor,
                         child: leading,
                       ),
-                      SizedBox(width: compact ? 8 : 12),
+                      SizedBox(
+                        width: _SettingsTonalGroup.of(context)
+                            ? 12
+                            : compact
+                            ? 8
+                            : 12,
+                      ),
                       Expanded(child: textContent),
                       if (trailingWidget != null) ...[
                         SizedBox(width: compact ? 4 : 8),
@@ -626,14 +679,32 @@ class _SettingsTileIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return SizedBox(
-      width: WorkbenchChromeMetrics.of(context).desktop ? 24 : 40,
-      height: WorkbenchChromeMetrics.of(context).desktop ? 24 : 40,
+      width: _SettingsTonalGroup.of(context)
+          ? 24
+          : WorkbenchChromeMetrics.of(context).desktop
+          ? 24
+          : 40,
+      height: _SettingsTonalGroup.of(context)
+          ? 24
+          : WorkbenchChromeMetrics.of(context).desktop
+          ? 24
+          : 40,
       child: Center(
         child: IconTheme.merge(
           data: IconThemeData(
-            size: WorkbenchChromeMetrics.of(context).desktop ? 18 : 24,
+            size: _SettingsTonalGroup.of(context)
+                ? 22
+                : WorkbenchChromeMetrics.of(context).desktop
+                ? 18
+                : 24,
             color: enabled
-                ? color ?? colors.onSurfaceVariant
+                ? color ??
+                      (_SettingsTonalGroup.of(context)
+                          ? skedReadableAccent(
+                              colors,
+                              surface: colors.surfaceContainerLow,
+                            )
+                          : colors.onSurfaceVariant)
                 : colors.onSurface.withValues(alpha: 0.38),
           ),
           child: child,
@@ -652,8 +723,12 @@ class _SettingsTileTrailing extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: BoxConstraints(
-        minWidth: WorkbenchChromeMetrics.of(context).iconTarget,
-        minHeight: WorkbenchChromeMetrics.of(context).iconTarget,
+        minWidth: _SettingsTonalGroup.of(context)
+            ? 52
+            : WorkbenchChromeMetrics.of(context).iconTarget,
+        minHeight: _SettingsTonalGroup.of(context)
+            ? 48
+            : WorkbenchChromeMetrics.of(context).iconTarget,
       ),
       child: Center(child: child),
     );
@@ -722,7 +797,8 @@ class SettingsSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (WorkbenchChromeMetrics.of(context).desktop) {
+    if (_SettingsTonalGroup.of(context) ||
+        WorkbenchChromeMetrics.of(context).desktop) {
       return SettingsConnectedTile(
         leading: Icon(icon),
         title: title,
@@ -1414,6 +1490,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
     final enabled = widget.enabled;
+    final tonal = _SettingsTonalGroup.of(context);
     final safeValue = _clamp(_previewValue);
     final foregroundColor = enabled
         ? colors.onSurface
@@ -1423,16 +1500,16 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
         : colors.onSurface.withValues(alpha: 0.38);
     final label = widget.labelBuilder(safeValue);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: tonal ? 0 : 12, vertical: 4),
       child: Ink(
         decoration: ShapeDecoration(
-          color: SkedSurface.colorOf(context),
+          color: tonal ? Colors.transparent : SkedSurface.colorOf(context),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          padding: EdgeInsets.fromLTRB(16, tonal ? 6 : 14, 16, 8),
           child: Column(
             children: [
               LayoutBuilder(
@@ -1442,7 +1519,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                     softWrap: true,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: foregroundColor,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: tonal ? FontWeight.w400 : FontWeight.w500,
                     ),
                   );
                   final valueWidget = Text(
@@ -1455,14 +1532,23 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                       color: enabled
                           ? colors.primary
                           : colors.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   );
                   final iconWidget = SizedBox(
-                    width: 40,
-                    height: 40,
+                    width: tonal ? 24 : 40,
+                    height: tonal ? 24 : 40,
                     child: Center(
-                      child: Icon(widget.icon, color: secondaryColor),
+                      child: Icon(
+                        widget.icon,
+                        size: tonal ? 22 : null,
+                        color: tonal
+                            ? skedReadableAccent(
+                                colors,
+                                surface: colors.surfaceContainerLow,
+                              )
+                            : secondaryColor,
+                      ),
                     ),
                   );
                   final valueMaxWidth =
@@ -1491,7 +1577,10 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
               ),
               if (widget.subtitle != null)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 52, end: 8),
+                  padding: EdgeInsetsDirectional.only(
+                    start: tonal ? 36 : 52,
+                    end: 8,
+                  ),
                   child: Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: Text(
@@ -1530,6 +1619,91 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                         }
                       : null,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A direct, lightweight choice row using the same guarded menu as form fields.
+class SettingsChoiceTile<T> extends StatelessWidget {
+  const SettingsChoiceTile({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.value,
+    required this.entries,
+    required this.onSelected,
+    this.enabled = true,
+    this.workspace,
+    this.sessionKey,
+  });
+  final String title;
+  final IconData icon;
+  final T? value;
+  final List<DropdownMenuEntry<T>> entries;
+  final ValueChanged<T?>? onSelected;
+  final bool enabled;
+  final AppMode? workspace;
+  final Object? sessionKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SkedDropdownMenu<T>(
+      initialSelection: value,
+      dropdownMenuEntries: entries,
+      enabled: enabled,
+      onSelected: onSelected,
+      workspace: workspace,
+      sessionKey: sessionKey,
+      expandedInsets: EdgeInsets.zero,
+      fieldBuilder: (context, selected) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              SizedBox.square(
+                dimension: 24,
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: enabled
+                      ? skedReadableAccent(
+                          theme.colorScheme,
+                          surface: theme.colorScheme.surfaceContainerLow,
+                        )
+                      : theme.disabledColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    if (selected != null)
+                      Text(
+                        selected,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const _SettingsTileTrailing(
+                child: Icon(Icons.unfold_more, size: 20),
               ),
             ],
           ),

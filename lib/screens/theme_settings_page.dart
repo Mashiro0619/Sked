@@ -235,8 +235,15 @@ class _AppearanceChoiceField extends StatelessWidget {
 }
 
 class ThemeSettingsPage extends StatefulWidget {
-  const ThemeSettingsPage({super.key, this.initialWorkspace});
+  const ThemeSettingsPage({
+    super.key,
+    this.initialWorkspace,
+    this.embedded = false,
+    this.onWorkspaceChanged,
+  });
   final AppMode? initialWorkspace;
+  final bool embedded;
+  final ValueChanged<AppMode>? onWorkspaceChanged;
 
   @override
   State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
@@ -246,6 +253,15 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     with UiCommandRunner<ThemeSettingsPage> {
   late AppMode? _targetMode = widget.initialWorkspace;
   var _outlineSettingsPageOpen = false;
+  var _overviewColorOpen = false;
+
+  @override
+  void didUpdateWidget(covariant ThemeSettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialWorkspace != oldWidget.initialWorkspace) {
+      _targetMode = widget.initialWorkspace;
+    }
+  }
 
   void _updateSetting(String debugLabel, Future<void> Function() command) {
     unawaited(runUiCommand(debugLabel: debugLabel, command: command));
@@ -255,7 +271,104 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     final target = AppMode.values.singleWhere((mode) => mode.value == value);
     if (provider.source.isWorkspaceEnabled(target)) {
       setState(() => _targetMode = target);
+      widget.onWorkspaceChanged?.call(target);
     }
+  }
+
+  Widget _buildOverview(WorkspaceThemeTarget provider, AppLocalizations l) {
+    return PopScope<void>(
+      canPop: !uiCommandBusy,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          UiCommandBusyIndicator(
+            busy: uiCommandBusy,
+            showDelay: const Duration(milliseconds: 180),
+          ),
+          SettingsInteractionBlocker(
+            blocked: uiCommandBusy,
+            child: Column(
+              children: [
+                if (provider.source.hasMultipleWorkspaces)
+                  SettingsChoiceTile<String>(
+                    key: const ValueKey('theme-workspace-target'),
+                    title: l.settingsSectionWorkspace,
+                    icon: Icons.dashboard_outlined,
+                    value: provider.activeMode.value,
+                    enabled: !uiCommandBusy,
+                    entries: [
+                      if (provider.source.isWorkspaceEnabled(AppMode.student))
+                        DropdownMenuEntry(
+                          value: AppMode.student.value,
+                          label: l.timetable,
+                        ),
+                      if (provider.source.isWorkspaceEnabled(AppMode.general))
+                        DropdownMenuEntry(
+                          value: AppMode.general.value,
+                          label: l.themeWorkspaceSchedule,
+                        ),
+                    ],
+                    onSelected: (value) {
+                      if (value != null) _switchWorkspace(provider, value);
+                    },
+                  ),
+                SettingsChoiceTile<String>(
+                  key: const ValueKey('theme-brightness-choice'),
+                  title: l.theme,
+                  icon: Icons.brightness_6_outlined,
+                  value: provider.themeMode,
+                  workspace: provider.activeMode,
+                  enabled: !uiCommandBusy,
+                  entries: [
+                    DropdownMenuEntry(
+                      value: 'system',
+                      label: l.themeFollowSystem,
+                    ),
+                    DropdownMenuEntry(value: 'light', label: l.themeLight),
+                    DropdownMenuEntry(value: 'dark', label: l.themeDark),
+                  ],
+                  onSelected: (value) {
+                    if (value != null) {
+                      _updateSetting(
+                        'Update theme brightness mode',
+                        () => provider.updateThemeMode(value),
+                      );
+                    }
+                  },
+                ),
+                SettingsConnectedTile(
+                  key: const ValueKey('settings-theme-seed'),
+                  leading: const Icon(Icons.palette_outlined),
+                  title: l.themeColor,
+                  subtitle: _formatColorHex(provider.themeSeedColorValue),
+                  trailing: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Color(provider.themeSeedColorValue),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
+                  onTap: uiCommandBusy || _overviewColorOpen
+                      ? null
+                      : () async {
+                          _overviewColorOpen = true;
+                          try {
+                            await _openCustomColorDialog(context, provider);
+                          } finally {
+                            _overviewColorOpen = false;
+                          }
+                        },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openOutlineSettingsPage(
@@ -288,6 +401,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
             : source.activeMode;
         final provider = WorkspaceThemeTarget(source, target);
         final l10n = AppLocalizations.of(context);
+        if (widget.embedded) return _buildOverview(provider, l10n);
         final hasCustomColor = !_isPresetThemeColor(
           provider.themeSeedColorValue,
         );

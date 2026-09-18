@@ -925,30 +925,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 : null,
             icon: const Icon(Icons.add),
           ),
-          PopupMenuButton<String>(
-            key: const ValueKey('general-resource-menu'),
-            tooltip: l10n.more,
-            enabled: widget.interactive,
-            icon: const Icon(Icons.more_horiz),
-            onSelected: (value) => value == 'manage'
-                ? _openCalendarManager(context, provider)
-                : openWorkspaceTransfer(
-                    context,
-                    AppMode.general,
-                    direction: value == 'import'
-                        ? SettingsTransferDirection.import
-                        : SettingsTransferDirection.export,
-                  ),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                key: const ValueKey('general-resource-manage'),
-                value: 'manage',
-                child: Text(l10n.calendars),
-              ),
-              PopupMenuItem(value: 'import', child: Text(l10n.importAction)),
-              PopupMenuItem(value: 'export', child: Text(l10n.exportAction)),
-            ],
-          ),
         ],
         children: [
           if (WorkbenchChromeMetrics.of(context).desktop)
@@ -1070,8 +1046,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 unawaited(_pane.show<void>(_buildSelectedDayAgenda));
               case 'category':
                 unawaited(_openCalendarManager(context, provider));
-              case 'preferences':
-                unawaited(openWorkspacePreferences(context, AppMode.general));
               case 'today':
                 unawaited(_goToToday(provider));
               case 'date':
@@ -1153,12 +1127,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               value: 'category',
               enabled: !_calendarManagerOpen,
               child: Text(l.calendars),
-            ),
-            SkedPopupMenuItem<String>(
-              key: const ValueKey('workspace-actions-general'),
-              value: 'preferences',
-              enabled: navigation?.enabled ?? true,
-              child: Text(l.workspacePreferences),
             ),
             if (showWorkspaceMenu)
               for (final mode in provider.enabledWorkspaces)
@@ -1305,14 +1273,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               onSelected: (_) =>
                   unawaited(_pane.show<void>(_buildSelectedDayAgenda)),
             ),
-          WorkbenchOverflowAction(
-            id: 'workspace-actions-general',
-            label: l.workspacePreferences,
-            icon: Icons.tune,
-            dividerBefore: true,
-            onSelected: (_) =>
-                unawaited(openWorkspacePreferences(context, AppMode.general)),
-          ),
           if (assistant?.enabled == true)
             WorkbenchOverflowAction(
               id: 'assistant-toggle',
@@ -1467,7 +1427,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ),
           ),
         ),
-        const WorkspaceActionsMenu(mode: AppMode.general),
         _ReminderStrip(
           provider: provider,
           filter: const _GeneralOccurrenceFilter(query: '', colorValue: null),
@@ -2287,10 +2246,6 @@ class _GeneralToolbarLayout extends StatelessWidget {
               hidden.isNotEmpty &&
               !hidden.contains('more');
           final actionById = <String, Widget>{
-            'workspace-actions': const SizedBox.square(
-              dimension: 48,
-              child: WorkspaceActionsMenu(mode: AppMode.general),
-            ),
             if (categoryVisible) 'category': calendar,
             'date': dateNavigation,
             'view': viewNavigation,
@@ -2376,7 +2331,6 @@ class _GeneralToolbarLayout extends StatelessWidget {
           if (settings != null && !orderedIds.contains('settings')) {
             orderedIds.add('settings');
           }
-          orderedIds.add('workspace-actions');
           if (compactToolbar &&
               order.join(',') !=
                   generalToolbarNavigationDefaultOrder.join(',')) {
@@ -3003,6 +2957,7 @@ class _GeneralHomeSnapshot {
     required this.schedules,
     required this.reminderAcknowledgements,
     required this.fitWeekColumnsToWidth,
+    required this.customDayMinWidth,
     required this.showWeekends,
     required this.showLunarCalendar,
     required this.dayStartHour,
@@ -3030,6 +2985,7 @@ class _GeneralHomeSnapshot {
       schedules: data.schedules,
       reminderAcknowledgements: data.reminderAcknowledgements,
       fitWeekColumnsToWidth: data.fitWeekColumnsToWidth,
+      customDayMinWidth: data.customDayMinWidth,
       showWeekends: data.showWeekends,
       showLunarCalendar: data.showLunarCalendar,
       dayStartHour: data.dayStartHour,
@@ -3055,6 +3011,7 @@ class _GeneralHomeSnapshot {
   final List<GeneralSchedule> schedules;
   final List<GeneralReminderAcknowledgement> reminderAcknowledgements;
   final bool fitWeekColumnsToWidth;
+  final int? customDayMinWidth;
   final bool showWeekends;
   final bool showLunarCalendar;
   final int dayStartHour;
@@ -3081,6 +3038,7 @@ class _GeneralHomeSnapshot {
         identical(other.schedules, schedules) &&
         identical(other.reminderAcknowledgements, reminderAcknowledgements) &&
         other.fitWeekColumnsToWidth == fitWeekColumnsToWidth &&
+        other.customDayMinWidth == customDayMinWidth &&
         other.showWeekends == showWeekends &&
         other.showLunarCalendar == showLunarCalendar &&
         other.dayStartHour == dayStartHour &&
@@ -3115,6 +3073,7 @@ class _GeneralHomeSnapshot {
     identityHashCode(schedules),
     identityHashCode(reminderAcknowledgements),
     fitWeekColumnsToWidth,
+    customDayMinWidth,
     showWeekends,
     showLunarCalendar,
     dayStartHour,

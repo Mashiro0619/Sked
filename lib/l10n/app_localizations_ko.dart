@@ -2980,4 +2980,39 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get timePickerWheelMode => '휠로 선택';
+
+  @override
+  String get courseReminderUseDefault => 'Use default';
+
+  @override
+  String get courseReminderInvalidMinutes =>
+      'Enter a whole number of minutes, zero or greater.';
+
+  @override
+  String get generalCustomColumnWidth => 'Custom view column width';
+
+  @override
+  String get generalCustomColumnWidthAuto => 'Automatic';
+
+  @override
+  String get generalCustomColumnWidthManual => 'Minimum width';
+
+  @override
+  String get generalCustomColumnWidthMinimum => 'Minimum width per day';
+
+  @override
+  String get generalCustomColumnWidthHint =>
+      'All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.';
+
+  @override
+  String get settingsAppearanceLanguage => 'Appearance & language';
+
+  @override
+  String get settingsAppearanceDetails => 'Colors & outlines';
+
+  @override
+  String get monthNoEvents => 'No events on this day';
+
+  @override
+  String get settingsOverview => 'Overview';
 }

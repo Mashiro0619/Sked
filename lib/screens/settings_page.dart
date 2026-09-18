@@ -15,6 +15,7 @@ import '../widgets/text_transfer_widgets.dart';
 
 import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/app_locale.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/agenda_coordinator.dart';
@@ -30,11 +31,13 @@ import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/ui_command.dart';
 import '../widgets/adaptive_settings_scaffold.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 import '../models/settings_destination.dart';
 import '../models/settings_catalog.dart';
 import '../widgets/period_time_set_manager.dart';
+import '../widgets/period_time_set_picker_dialog.dart';
 import 'workspace_features_page.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
@@ -67,6 +70,7 @@ List<String> _defaultGeneralScheduleSelectionIds(
 
 enum _SettingsFlow {
   schoolSitesPage,
+  periodTimeSetPicker,
   parserSettingsPage,
   studentDataActions,
   generalDataActions,
@@ -92,6 +96,7 @@ class SettingsPage extends StatefulWidget {
     this.initialDestination,
     this.initialWorkspace,
     this.transferDirection,
+    this.onThemeWorkspaceChanged,
   });
 
   final Future<PackageInfo> Function()? packageInfoLoader;
@@ -101,12 +106,21 @@ class SettingsPage extends StatefulWidget {
   final SettingsDestination? initialDestination;
   final AppMode? initialWorkspace;
   final SettingsTransferDirection? transferDirection;
+  final ValueChanged<AppMode>? onThemeWorkspaceChanged;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage>
+    with UiCommandRunner<SettingsPage> {
+  AppMode? _appearanceWorkspace;
+
+  void _setAppearanceWorkspace(AppMode mode) {
+    if (mounted) setState(() => _appearanceWorkspace = mode);
+    widget.onThemeWorkspaceChanged?.call(mode);
+  }
+
   static const _exportService = ExportService();
   static const _dataTransferController = SettingsDataTransferController();
 
@@ -133,6 +147,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    _appearanceWorkspace = widget.initialWorkspace;
     unawaited(_loadCurrentVersion());
   }
 
@@ -147,13 +162,19 @@ class _SettingsPageState extends State<SettingsPage> {
           canClearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
         );
         return PopScope(
-          canPop: !_clearingAppData && !provider.isDataClearActive,
+          canPop:
+              !_clearingAppData &&
+              !provider.isDataClearActive &&
+              !uiCommandBusy,
           child: SettingsInteractionBlocker(
-            blocked: _clearingAppData || provider.isDataClearActive,
+            blocked:
+                _clearingAppData || provider.isDataClearActive || uiCommandBusy,
             child: widget.initialDestination != null
                 ? _buildDestination(widget.initialDestination!, provider)
                 : AdaptiveSettingsScaffold(
                     catalog: catalog,
+                    overviewBuilder: (context, controller, keys, open) =>
+                        _buildOverview(provider, controller, keys, open),
                     notice: provider.lastRecoveryStatus == RecoveryStatus.none
                         ? null
                         : _RecoveryNoticeTile(
@@ -161,7 +182,11 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                     builder: (entry) => SettingsPage(
                       initialDestination: entry.destination,
-                      initialWorkspace: entry.workspace,
+                      initialWorkspace:
+                          entry.destination == SettingsDestination.appearance
+                          ? _appearanceWorkspace
+                          : entry.workspace,
+                      onThemeWorkspaceChanged: _setAppearanceWorkspace,
                       packageInfoLoader: widget.packageInfoLoader,
                       dataClearCoordinator: widget.dataClearCoordinator,
                       urlLauncher: widget.urlLauncher,
@@ -174,13 +199,183 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildOverview(
+    TimetableProvider provider,
+    ScrollController controller,
+    Map<String, GlobalKey> keys,
+    ValueChanged<SettingsDestination> open,
+  ) {
+    final l = AppLocalizations.of(context);
+    Widget group(String id, String title, List<Widget> children) =>
+        KeyedSubtree(
+          key: keys[id],
+          child: SettingsConnectedGroup(
+            key: ValueKey('settings-overview-$id'),
+            title: title,
+            tonal: true,
+            margin: const EdgeInsets.only(bottom: 20),
+            children: children,
+          ),
+        );
+    Widget link(
+      String id,
+      String title,
+      IconData icon,
+      SettingsDestination destination, {
+      String? subtitle,
+    }) => SettingsConnectedTile(
+      key: ValueKey(id),
+      title: title,
+      subtitle: subtitle,
+      leading: Icon(icon),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: () => open(destination),
+    );
+    return Column(
+      children: [
+        UiCommandBusyIndicator(
+          busy: uiCommandBusy,
+          showDelay: const Duration(milliseconds: 180),
+        ),
+        Expanded(
+          child: ResponsiveSettingsBody(
+            controller: controller,
+            scrollViewKey: const PageStorageKey('settings-overview-scroll'),
+            topPadding: 16,
+            children: [
+              group('appearance', l.settingsAppearanceLanguage, [
+                ThemeSettingsPage(
+                  embedded: true,
+                  initialWorkspace: _appearanceWorkspace,
+                  onWorkspaceChanged: _setAppearanceWorkspace,
+                ),
+                link(
+                  'settings-language',
+                  l.language,
+                  Icons.language,
+                  SettingsDestination.language,
+                  subtitle: languageLabelForLocaleCode(
+                    provider.localeCode,
+                    l10n: l,
+                  ),
+                ),
+                link(
+                  'settings-appearance-details',
+                  l.settingsAppearanceDetails,
+                  Icons.palette_outlined,
+                  SettingsDestination.appearance,
+                ),
+              ]),
+              if (provider.isWorkspaceEnabled(AppMode.student))
+                group('student', l.studentTimetable, [
+                  link(
+                    'settings-student-display',
+                    l.timetableDisplaySettings,
+                    Icons.tune,
+                    SettingsDestination.studentPreferences,
+                  ),
+                  SettingsConnectedTile(
+                    key: const ValueKey('settings-period-times'),
+                    title: l.periodTimeSets,
+                    subtitle: provider.activePeriodTimeSetOrNull?.name,
+                    leading: const Icon(Icons.schedule),
+                    trailing: const Icon(Icons.unfold_more, size: 20),
+                    onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
+                        ? null
+                        : () => _guardFlow(
+                            _SettingsFlow.periodTimeSetPicker,
+                            () => selectTimetablePeriodTimeSet(
+                              context,
+                              provider: provider,
+                            ),
+                          ),
+                  ),
+                ]),
+              if (provider.isWorkspaceEnabled(AppMode.general))
+                group('general', l.generalSchedule, [
+                  link(
+                    'settings-general-display',
+                    l.generalDisplaySettings,
+                    Icons.tune,
+                    SettingsDestination.generalPreferences,
+                  ),
+                ]),
+              group('notifications', l.notificationSettingsSection, [
+                NotificationSettingsPage(
+                  embedded: true,
+                  notificationService: widget.notificationService,
+                  agendaCoordinator: _agendaCoordinator,
+                ),
+                link(
+                  'settings-notifications',
+                  l.notificationSettingsSection,
+                  Icons.tune,
+                  SettingsDestination.notifications,
+                ),
+              ]),
+              group('features', l.workspaceFeatures, [
+                link(
+                  'settings-workspace-features',
+                  l.workspaceFeatures,
+                  Icons.dashboard_outlined,
+                  SettingsDestination.features,
+                ),
+              ]),
+              group('data', l.settingsDataPrivacy, [
+                if (provider.isWorkspaceEnabled(AppMode.student))
+                  link(
+                    'settings-student-transfer',
+                    l.dataImportExport,
+                    Icons.school_outlined,
+                    SettingsDestination.student,
+                  ),
+                if (provider.isWorkspaceEnabled(AppMode.general))
+                  link(
+                    'settings-general-transfer',
+                    l.generalScheduleImportExport,
+                    Icons.import_export,
+                    SettingsDestination.general,
+                  ),
+                _dataControls(provider, l).first,
+                link(
+                  'settings-data-privacy',
+                  l.settingsDataPrivacy,
+                  Icons.privacy_tip_outlined,
+                  SettingsDestination.data,
+                ),
+              ]),
+              group('about', l.settingsSectionAbout, [
+                ..._aboutControls(provider, l).where(
+                  (item) =>
+                      item.key == const ValueKey('settings-check-for-updates'),
+                ),
+                link(
+                  'settings-about',
+                  l.settingsSectionAbout,
+                  Icons.info_outline,
+                  SettingsDestination.about,
+                  subtitle: _currentVersion.isEmpty
+                      ? null
+                      : 'Sked $_currentVersion',
+                ),
+              ]),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDestination(
     SettingsDestination destination,
     TimetableProvider provider,
   ) {
     final l10n = AppLocalizations.of(context);
     if (destination == SettingsDestination.appearance) {
-      return ThemeSettingsPage(initialWorkspace: widget.initialWorkspace);
+      return ThemeSettingsPage(
+        initialWorkspace: widget.initialWorkspace,
+        onWorkspaceChanged: widget.onThemeWorkspaceChanged,
+      );
     }
     if (destination == SettingsDestination.notifications) {
       return NotificationSettingsPage(
@@ -291,7 +486,56 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     }
-    final dataChildren = [
+    final dataChildren = _dataControls(provider, l10n);
+    final aboutChildren = _aboutControls(provider, l10n);
+
+    final (title, children) = switch (destination) {
+      SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
+      _ => (l10n.settingsDataPrivacy, dataChildren),
+    };
+    return Scaffold(
+      appBar: WorkbenchAppBar(
+        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+        title: Text(title),
+      ),
+      body: SafeArea(
+        top: false,
+        child: ResponsiveSettingsSingleColumnBody(
+          children: [
+            SettingsConnectedGroup(
+              title: title,
+              children: children
+                  .where(
+                    (item) =>
+                        item.key != const ValueKey('settings-clear-app-data'),
+                  )
+                  .toList(),
+            ),
+            if (children.any(
+              (item) => item.key == const ValueKey('settings-clear-app-data'),
+            )) ...[
+              const SizedBox(height: 32),
+              SettingsConnectedGroup(
+                title: l10n.clearAppData,
+                children: children
+                    .where(
+                      (item) =>
+                          item.key == const ValueKey('settings-clear-app-data'),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _dataControls(
+    TimetableProvider provider,
+    AppLocalizations l10n,
+  ) {
+    return [
       SettingsConnectedTile(
         leading: const Icon(Icons.inventory_2_outlined),
         title: l10n.appBackupTitle,
@@ -335,10 +579,16 @@ class _SettingsPageState extends State<SettingsPage> {
               : () => _confirmClearAppData(provider),
         ),
     ];
+  }
+
+  List<Widget> _aboutControls(
+    TimetableProvider provider,
+    AppLocalizations l10n,
+  ) {
     final updateEntryBusy =
         _isFlowOpen(_SettingsFlow.updateCheck) ||
         _isFlowOpen(_SettingsFlow.developerModePage);
-    final aboutChildren = [
+    return [
       SettingsConnectedTile(
         leading: const Icon(Icons.description_outlined),
         title: l10n.openSourceLicenses,
@@ -372,47 +622,6 @@ class _SettingsPageState extends State<SettingsPage> {
         onTapHint: l10n.checkForUpdates,
       ),
     ];
-
-    final (title, children) = switch (destination) {
-      SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
-      _ => (l10n.settingsDataPrivacy, dataChildren),
-    };
-    return Scaffold(
-      appBar: WorkbenchAppBar(
-        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
-        title: Text(title),
-      ),
-      body: SafeArea(
-        top: false,
-        child: ResponsiveSettingsSingleColumnBody(
-          children: [
-            SettingsConnectedGroup(
-              title: title,
-              children: children
-                  .where(
-                    (item) =>
-                        item.key != const ValueKey('settings-clear-app-data'),
-                  )
-                  .toList(),
-            ),
-            if (children.any(
-              (item) => item.key == const ValueKey('settings-clear-app-data'),
-            )) ...[
-              const SizedBox(height: 32),
-              SettingsConnectedGroup(
-                title: l10n.clearAppData,
-                children: children
-                    .where(
-                      (item) =>
-                          item.key == const ValueKey('settings-clear-app-data'),
-                    )
-                    .toList(),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 
   bool _isFlowOpen(_SettingsFlow flow) => _openFlows.contains(flow);

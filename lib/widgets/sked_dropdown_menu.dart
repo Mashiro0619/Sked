@@ -22,6 +22,7 @@ class SkedDropdownMenu<T> extends StatefulWidget {
     this.onSelected,
     this.workspace,
     this.sessionKey,
+    this.fieldBuilder,
   });
 
   final List<DropdownMenuEntry<T>> dropdownMenuEntries;
@@ -33,6 +34,11 @@ class SkedDropdownMenu<T> extends StatefulWidget {
   final ValueChanged<T?>? onSelected;
   final AppMode? workspace;
   final Object? sessionKey;
+
+  /// Optional non-interactive field content. The menu retains ownership of
+  /// taps, keyboard focus, selected state and data-session invalidation.
+  final Widget Function(BuildContext context, String? selectedLabel)?
+  fieldBuilder;
 
   @override
   State<SkedDropdownMenu<T>> createState() => _SkedDropdownMenuState<T>();
@@ -233,23 +239,25 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
                       }
                     : null,
                 borderRadius: shapes.fieldRadius,
-                child: InputDecorator(
-                  isEmpty: selectedEntry == null,
-                  decoration: InputDecoration(
-                    label: widget.label,
-                    prefixIcon: widget.leadingIcon,
-                    enabled: widget.enabled,
-                    suffixIcon: AnimatedRotation(
-                      turns: controller.isOpen ? 0.5 : 0,
-                      duration: motion.spatialAnimationsEnabled
-                          ? motion.effects(SkedMotionSpeed.fast)
-                          : Duration.zero,
-                      curve: motion.scheme.enterCurve,
-                      child: const Icon(Icons.arrow_drop_down),
+                child:
+                    widget.fieldBuilder?.call(context, selectedEntry?.label) ??
+                    InputDecorator(
+                      isEmpty: selectedEntry == null,
+                      decoration: InputDecoration(
+                        label: widget.label,
+                        prefixIcon: widget.leadingIcon,
+                        enabled: widget.enabled,
+                        suffixIcon: AnimatedRotation(
+                          turns: controller.isOpen ? 0.5 : 0,
+                          duration: motion.spatialAnimationsEnabled
+                              ? motion.effects(SkedMotionSpeed.fast)
+                              : Duration.zero,
+                          curve: motion.scheme.enterCurve,
+                          child: const Icon(Icons.arrow_drop_down),
+                        ),
+                      ).applyDefaults(effectiveInputDecorationTheme),
+                      child: _SelectedDropdownLabel(entry: selectedEntry),
                     ),
-                  ).applyDefaults(effectiveInputDecorationTheme),
-                  child: _SelectedDropdownLabel(entry: selectedEntry),
-                ),
               ),
             );
             if (!expand) {

@@ -20,7 +20,9 @@ class WorkspaceFeaturesPage extends StatefulWidget {
     super.key,
     this.coordinator,
     this.notificationService,
+    this.embedded = false,
   });
+  final bool embedded;
   final AgendaCoordinator? coordinator;
   final AgendaNotificationService? notificationService;
   @override
@@ -123,6 +125,86 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
   Widget build(BuildContext context) {
     final p = context.watch<TimetableProvider>();
     final l = AppLocalizations.of(context);
+    final controls = <Widget>[
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(l.workspaceEnableHint),
+      ),
+      for (final mode in AppMode.values)
+        SettingsSwitchTile(
+          key: ValueKey('workspace-enabled-${mode.value}'),
+          icon: mode == AppMode.student
+              ? Icons.school_outlined
+              : Icons.event_note_outlined,
+          title: mode == AppMode.student
+              ? l.studentTimetable
+              : l.generalSchedule,
+          subtitle: p.isWorkspaceEnabled(mode) && !p.hasMultipleWorkspaces
+              ? l.workspaceLastRequired
+              : null,
+          value: p.isWorkspaceEnabled(mode),
+          onChanged: p.isWorkspaceEnabled(mode) && !p.hasMultipleWorkspaces
+              ? null
+              : (value) => unawaited(_set(mode, value)),
+        ),
+      if (p.hasMultipleWorkspaces)
+        SettingsSwitchTile(
+          icon: Icons.navigation_outlined,
+          title: l.hideHomeWorkspaceNavigation,
+          subtitle: l.hideHomeWorkspaceNavigationDesc,
+          value: p.hideHomeWorkspaceNavigation,
+          onChanged: (value) => unawaited(
+            runUiCommand(
+              debugLabel: 'Change workspace navigation',
+              command: () => p.updateHideHomeWorkspaceNavigation(value),
+            ),
+          ),
+        ),
+      if (_cleanupPending ||
+          (!p.hasMultipleWorkspaces && _service?.status.lastError != null))
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Text(
+                l.workspaceReminderCleanupFailed,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              TextButton(
+                onPressed: () => unawaited(
+                  runUiCommand(
+                    debugLabel: 'Retry notification cleanup',
+                    command: () async {
+                      await _reconcile();
+                      if (mounted) {
+                        setState(() => _cleanupPending = false);
+                      }
+                    },
+                  ),
+                ),
+                child: Text(l.dataRecoveryRetryAction),
+              ),
+            ],
+          ),
+        ),
+    ];
+    if (widget.embedded) {
+      return PopScope<void>(
+        canPop: !uiCommandBusy,
+        child: Column(
+          children: [
+            UiCommandBusyIndicator(busy: uiCommandBusy),
+            SettingsInteractionBlocker(
+              blocked: uiCommandBusy,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: controls.skip(1).toList(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: WorkbenchAppBar(
         automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
@@ -134,77 +216,7 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
           Expanded(
             child: SettingsInteractionBlocker(
               blocked: uiCommandBusy,
-              child: ResponsiveSettingsSingleColumnBody(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(l.workspaceEnableHint),
-                  ),
-                  for (final mode in AppMode.values)
-                    SettingsSwitchTile(
-                      key: ValueKey('workspace-enabled-${mode.value}'),
-                      icon: mode == AppMode.student
-                          ? Icons.school_outlined
-                          : Icons.event_note_outlined,
-                      title: mode == AppMode.student
-                          ? l.studentTimetable
-                          : l.generalSchedule,
-                      subtitle:
-                          p.isWorkspaceEnabled(mode) && !p.hasMultipleWorkspaces
-                          ? l.workspaceLastRequired
-                          : null,
-                      value: p.isWorkspaceEnabled(mode),
-                      onChanged:
-                          p.isWorkspaceEnabled(mode) && !p.hasMultipleWorkspaces
-                          ? null
-                          : (value) => unawaited(_set(mode, value)),
-                    ),
-                  if (p.hasMultipleWorkspaces)
-                    SettingsSwitchTile(
-                      icon: Icons.navigation_outlined,
-                      title: l.hideHomeWorkspaceNavigation,
-                      subtitle: l.hideHomeWorkspaceNavigationDesc,
-                      value: p.hideHomeWorkspaceNavigation,
-                      onChanged: (value) => unawaited(
-                        runUiCommand(
-                          debugLabel: 'Change workspace navigation',
-                          command: () =>
-                              p.updateHideHomeWorkspaceNavigation(value),
-                        ),
-                      ),
-                    ),
-                  if (_cleanupPending ||
-                      (!p.hasMultipleWorkspaces &&
-                          _service?.status.lastError != null))
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Text(
-                            l.workspaceReminderCleanupFailed,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => unawaited(
-                              runUiCommand(
-                                debugLabel: 'Retry notification cleanup',
-                                command: () async {
-                                  await _reconcile();
-                                  if (mounted) {
-                                    setState(() => _cleanupPending = false);
-                                  }
-                                },
-                              ),
-                            ),
-                            child: Text(l.dataRecoveryRetryAction),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+              child: ResponsiveSettingsSingleColumnBody(children: controls),
             ),
           ),
         ],

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/widgets/course_system_reminder_field.dart';
@@ -94,7 +93,7 @@ void main() {
     },
   );
   testWidgets(
-    'query errors can retry and going to notification settings preserves the caller draft',
+    'query errors retry in place without a settings jump or changing the caller draft',
     (tester) async {
       final p = await workspaceProvider();
       addTearDown(p.dispose);
@@ -141,10 +140,11 @@ void main() {
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
       expect(gateway.reads, 2);
-      await tester.tap(find.byKey(const ValueKey('course-open-notifications')));
-      await tester.pumpAndSettle();
-      expect(find.byType(NotificationSettingsPage), findsOneWidget);
-      await tester.pageBack();
+      expect(
+        find.byKey(const ValueKey('course-open-notifications')),
+        findsNothing,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
       expect(draft.text, 'Course draft');
       expect(minutes.text, '25');

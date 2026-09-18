@@ -302,15 +302,11 @@ void main() {
             );
           }
           if (name == 'category-editor') {
-            final resourceMenu = find
-                .byKey(const ValueKey('general-resource-menu'))
+            final resources = find
+                .byKey(const ValueKey('workspace-resource-open'))
                 .hitTestable();
-            if (resourceMenu.evaluate().isNotEmpty) {
-              await tester.tap(resourceMenu);
-              await tester.pumpAndSettle();
-              await tester.tap(
-                find.byKey(const ValueKey('general-resource-manage')),
-              );
+            if (resources.evaluate().isNotEmpty) {
+              await tester.tap(resources);
             } else {
               await tester.tap(
                 find.byKey(const ValueKey('general-calendar-selector')),

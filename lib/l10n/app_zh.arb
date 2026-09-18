@@ -2120,5 +2120,27 @@
     }
   },
   "timePickerWheelMode": "切换为滚轮选择",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "courseReminderUseDefault": "沿用默认",
+  "@courseReminderUseDefault": {},
+  "courseReminderInvalidMinutes": "请输入大于或等于 0 的整数分钟。",
+  "@courseReminderInvalidMinutes": {},
+  "generalCustomColumnWidth": "自定义视图列宽",
+  "@generalCustomColumnWidth": {},
+  "generalCustomColumnWidthAuto": "自动",
+  "@generalCustomColumnWidthAuto": {},
+  "generalCustomColumnWidthManual": "手动最小列宽",
+  "@generalCustomColumnWidthManual": {},
+  "generalCustomColumnWidthMinimum": "每列最小宽度",
+  "@generalCustomColumnWidthMinimum": {},
+  "generalCustomColumnWidthHint": "所有日期使用相同的最小列宽。空间充足时等宽铺满，不足时横向滚动；仅影响自定义视图。",
+  "@generalCustomColumnWidthHint": {},
+  "settingsAppearanceLanguage": "外观与语言",
+  "@settingsAppearanceLanguage": {},
+  "settingsAppearanceDetails": "详细配色与轮廓",
+  "@settingsAppearanceDetails": {},
+  "monthNoEvents": "当天没有日程",
+  "@monthNoEvents": {},
+  "settingsOverview": "常用设置",
+  "@settingsOverview": {}
 }

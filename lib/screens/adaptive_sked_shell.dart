@@ -3,6 +3,7 @@ import '../theme/sked_surface.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -846,16 +847,31 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
     // Keep Material's label scaling policy and grow only for genuine wrapping,
     // rather than shrinking a translation or scaling the entire bar with text.
     final theme = Theme.of(context);
+    final android = theme.platform == TargetPlatform.android;
+    final navigationSurface = SkedSurfaceRole.frame.resolve(colors);
+    final selectedColor = skedReadableAccent(
+      colors,
+      surface: navigationSurface,
+    );
     final labelStyles = WidgetStateProperty.resolveWith<TextStyle>((states) {
       // Material supplies bodyMedium as DefaultTextStyle. Resolve that merge
       // here too: a partial theme label style must measure exactly as it paints.
       final base =
           theme.textTheme.bodyMedium ??
           const TextStyle(fontSize: 14, height: 20 / 14);
-      return base.merge(
-        theme.navigationBarTheme.labelTextStyle?.resolve(states) ??
-            theme.textTheme.labelMedium,
-      );
+      return base
+          .merge(
+            theme.navigationBarTheme.labelTextStyle?.resolve(states) ??
+                theme.textTheme.labelMedium,
+          )
+          .copyWith(
+            color: states.contains(WidgetState.selected)
+                ? selectedColor
+                : colors.onSurfaceVariant,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
+          );
     });
     final textScaler = MediaQuery.textScalerOf(context)
         .clamp(maxScaleFactor: 1.3);
@@ -886,6 +902,17 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
     final navigationBar = NavigationBar(
       key: const ValueKey('adaptive-shell-navigation-bar'),
       height: contentHeight,
+      indicatorColor: Colors.transparent,
+      // Keep the flat icon treatment for pointer/touch interaction. A focused
+      // destination must still be discoverable when navigating by keyboard.
+      overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+        if (states.contains(WidgetState.disabled) ||
+            states.contains(WidgetState.pressed)) {
+          return Colors.transparent;
+        }
+        if (states.contains(WidgetState.focused)) return theme.focusColor;
+        return Colors.transparent;
+      }),
       labelTextStyle: labelStyles,
       labelPadding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
       animationDuration: navigationAnimationDuration,
@@ -896,15 +923,27 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
         for (final destination in [
           NavigationDestination(
             key: const ValueKey('adaptive-shell-student-destination'),
-            icon: const Icon(Icons.school_outlined),
-            selectedIcon: const Icon(Icons.school),
+            icon: Transform.translate(
+              offset: const Offset(0, 4),
+              child: const Icon(Icons.school_outlined),
+            ),
+            selectedIcon: Transform.translate(
+              offset: const Offset(0, 4),
+              child: Icon(Icons.school, color: selectedColor),
+            ),
             label: l10n.studentTimetable,
             enabled: enabled && !busy,
           ),
           NavigationDestination(
             key: const ValueKey('adaptive-shell-general-destination'),
-            icon: const Icon(Icons.event_note_outlined),
-            selectedIcon: const Icon(Icons.event_note),
+            icon: Transform.translate(
+              offset: const Offset(0, 4),
+              child: const Icon(Icons.event_note_outlined),
+            ),
+            selectedIcon: Transform.translate(
+              offset: const Offset(0, 4),
+              child: Icon(Icons.event_note, color: selectedColor),
+            ),
             label: l10n.generalSchedule,
             enabled: enabled && !busy,
           ),
@@ -917,12 +956,16 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
           ),
       ],
     );
-    return Material(
-      color: SkedSurfaceRole.frame.resolve(colors),
+    final result = Material(
+      color: navigationSurface,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          navigationBar,
+          // Scope NoSplash to the bottom workspace bar, not other controls.
+          Theme(
+            data: theme.copyWith(splashFactory: NoSplash.splashFactory),
+            child: navigationBar,
+          ),
           if (busy)
             PositionedDirectional(
               top: 0,
@@ -935,6 +978,21 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
             ),
         ],
       ),
+    );
+    if (!android) return result;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      key: const ValueKey('adaptive-shell-system-navigation-style'),
+      value: SystemUiOverlayStyle(
+        // Keep the same surface through the one safe inset owned by NavigationBar.
+        // Android draws its own gesture handle; this only controls its contrast.
+        systemNavigationBarColor: navigationSurface,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: colors.brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        systemNavigationBarContrastEnforced: false,
+      ),
+      child: result,
     );
   }
 }

@@ -32,6 +32,12 @@ Future<void> _openTimetablePicker(WidgetTester tester) async {
 }
 
 Future<AppLocalizations> _openOutline(WidgetTester tester) async {
+  final appearance = find.byKey(const ValueKey('settings-appearance-details'));
+  if (appearance.evaluate().isNotEmpty) {
+    await tester.ensureVisible(appearance);
+    await tester.tap(appearance);
+    await tester.pumpAndSettle();
+  }
   final card = find.byKey(const ValueKey('theme-outline-settings-card'));
   await tester.ensureVisible(card);
   await tester.pumpAndSettle();

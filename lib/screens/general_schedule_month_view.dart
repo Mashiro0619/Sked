@@ -10,6 +10,8 @@ bool workspaceMonthCanSplit(BuildContext context, double width) =>
     );
 
 const _monthGridSpacing = 1.0;
+bool _showMonthLunar(TimetableProvider provider) =>
+    provider.generalShowLunarCalendar && provider.localeCode.startsWith('zh');
 const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
   'general-month-compact-selected-day-feedback',
 );
@@ -24,10 +26,62 @@ double _monthCellHeightForWidth(double cellWidth, {required bool compact}) {
   return preferred.clamp(minHeight, maxHeight).toDouble();
 }
 
+TextStyle _compactMonthDateStyle(BuildContext context) =>
+    (Theme.of(context).textTheme.titleMedium ?? const TextStyle(fontSize: 16))
+        .copyWith(height: 1.2, fontWeight: FontWeight.w500);
+
+double _monthTextHeight(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: DefaultTextStyle.of(context).style.merge(style),
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final height = painter.height;
+  painter.dispose();
+  return height;
+}
+
+int _compactMonthLunarLines(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(11) > 11 * 1.3 ? 2 : 1;
+
+double _compactMonthDateStackHeight(BuildContext context, bool lunar) =>
+    _monthTextHeight(context, '28', _compactMonthDateStyle(context)) +
+    (lunar
+        ? 1 +
+              _compactMonthLunarLines(context) *
+                  _monthTextHeight(
+                    context,
+                    '廿八',
+                    const TextStyle(
+                      fontSize: 11,
+                      height: 1.05,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  )
+        : 0);
+
 double _monthMinimumCellHeight(
-  double textScale, {
+  BuildContext context, {
   required bool showLunarCalendar,
-}) => (showLunarCalendar ? 72.0 : 68.0) * textScale;
+  bool compact = false,
+}) {
+  if (!compact) {
+    final scale = WorkbenchLayoutPolicy.textFactor(
+      MediaQuery.textScalerOf(context).scale(14) / 14,
+    );
+    return (showLunarCalendar ? 72.0 : 68.0) * scale;
+  }
+  // Date/lunar text, selection padding and a reserved marker row share one
+  // measured budget. Large fonts grow the row, never shrink the glyphs.
+  return math.max(
+    showLunarCalendar ? 56 : 48,
+    _compactMonthDateStackHeight(context, showLunarCalendar) + 18,
+  );
+}
 
 class _MonthCalendarView extends StatefulWidget {
   const _MonthCalendarView({
@@ -56,7 +110,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
   final ScrollController _compactScrollController = ScrollController();
-  bool _agendaRevealScheduled = false;
+  bool _calendarRevealScheduled = false;
 
   @override
   void dispose() {
@@ -81,29 +135,28 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   void _selectDay(DateTime nextDate) {
     final selectedDate = _visibleDayForDate(nextDate);
     widget.onDaySelected(selectedDate);
-    _scheduleAgendaReveal();
   }
 
-  void _scheduleAgendaReveal() {
-    if (!widget.active || _agendaRevealScheduled) return;
+  void _scheduleCalendarReveal() {
+    if (!widget.active || _calendarRevealScheduled) return;
     final workspace = WorkspaceCanvasScope.maybeOf(context);
     if (workspace?.supporting == true ||
         workspace?.dockedDetail == true ||
         workspace?.dockedAssistant == true) {
       return;
     }
-    _agendaRevealScheduled = true;
+    _calendarRevealScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _agendaRevealScheduled = false;
+      _calendarRevealScheduled = false;
       if (!mounted || !widget.active || !_compactScrollController.hasClients) {
         return;
       }
-      // The agenda may have left ListView's cache at large text sizes. Its
-      // scroll position is stable even when its element has been unmounted.
+      // Only month navigation reveals the calendar. Selecting another day in
+      // the same month must not pull the agenda away from the user's viewport.
       unawaited(
         _compactScrollController.animateTo(
           _compactScrollController.position.minScrollExtent,
-          duration: const Duration(milliseconds: 180),
+          duration: SkedMotionPolicy.of(context).effects(SkedMotionSpeed.fast),
           curve: Curves.easeOutCubic,
         ),
       );
@@ -113,8 +166,10 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
   @override
   void didUpdateWidget(covariant _MonthCalendarView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_sameDay(widget.date, oldWidget.date)) {
-      _scheduleAgendaReveal();
+    if (widget.active &&
+        (widget.date.year != oldWidget.date.year ||
+            widget.date.month != oldWidget.date.month)) {
+      _scheduleCalendarReveal();
     }
   }
 
@@ -222,8 +277,8 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
         final minimumCalendarHeight =
             model.rowCount *
                 _monthMinimumCellHeight(
-                  textScale,
-                  showLunarCalendar: widget.provider.generalShowLunarCalendar,
+                  context,
+                  showLunarCalendar: _showMonthLunar(widget.provider),
                 ) +
             48 * textScale;
         if (constraints.hasBoundedHeight &&
@@ -245,22 +300,59 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           );
         }
 
-        return ListView(
+        final l = AppLocalizations.of(context);
+        return CustomScrollView(
+          key: const ValueKey('general-month-compact-scroll'),
           controller: _compactScrollController,
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 88),
-          children: [
-            // On a phone the selected-day agenda is the actionable content;
-            // keep it in the first viewport and let the full month grid follow
-            // in the same scroll surface.
-            SizedBox(
-              height: 188,
-              child: KeyedSubtree(
-                key: _generalMonthCompactAgendaKey,
-                child: agenda,
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+              sliver: SliverToBoxAdapter(child: calendar),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              sliver: SliverMainAxisGroup(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _MonthAgendaHeader(
+                      key: _generalMonthCompactAgendaKey,
+                      date: selectedDate,
+                      count: selectedOccurrences.length,
+                      filtered: widget.filter.isActive,
+                      compact: true,
+                      onAddEvent: () => widget.onEmptySlotTap(selectedDate),
+                    ),
+                  ),
+                  if (selectedOccurrences.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                        child: Text(
+                          widget.filter.isActive
+                              ? l.noMatchingEvents
+                              : l.monthNoEvents,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverList.builder(
+                      itemCount: selectedOccurrences.length,
+                      itemBuilder: (context, index) => _MonthAgendaTile(
+                        occurrence: selectedOccurrences[index],
+                        onTap: () =>
+                            widget.onOccurrenceTap(selectedOccurrences[index]),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            calendar,
+            const SliverToBoxAdapter(child: SizedBox(height: 88)),
           ],
         );
       },
@@ -608,9 +700,13 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
         return Material(
           key: const ValueKey('general-month-calendar-panel'),
           color: colorScheme.surface,
-          shape: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: .55),
-          ),
+          shape: compact
+              ? RoundedSuperellipseBorder(
+                  borderRadius: BorderRadius.circular(24),
+                )
+              : Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: .55),
+                ),
           clipBehavior: Clip.antiAlias,
           child: Column(
             mainAxisSize: shouldFillHeight
@@ -619,6 +715,7 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
             children: [
               _MonthWeekdayHeaderRow(
                 showWeekends: widget.provider.generalShowWeekends,
+                compact: compact,
               ),
               if (shouldFillHeight) Expanded(child: grid) else grid,
             ],
@@ -675,6 +772,7 @@ class _DraggableMonthGrid extends StatelessWidget {
   final GestureDragCancelCallback onDragCancel;
 
   double _gridHeight(
+    BuildContext context,
     _MonthGridModel model,
     BoxConstraints constraints,
     double width,
@@ -690,8 +788,9 @@ class _DraggableMonthGrid extends StatelessWidget {
     final preferredCellHeight = math.max(
       _monthCellHeightForWidth(cellWidth, compact: compact) * textScale,
       _monthMinimumCellHeight(
-        textScale,
-        showLunarCalendar: provider.generalShowLunarCalendar,
+        context,
+        compact: compact,
+        showLunarCalendar: _showMonthLunar(provider),
       ),
     );
     final totalSpacing = (model.rowCount - 1) * _monthGridSpacing;
@@ -747,7 +846,13 @@ class _DraggableMonthGrid extends StatelessWidget {
           1.0,
           MediaQuery.textScalerOf(context).scale(14) / 14,
         );
-        final height = _gridHeight(model, constraints, width, textScale);
+        final height = _gridHeight(
+          context,
+          model,
+          constraints,
+          width,
+          textScale,
+        );
         final showPreviousPage = dragOffset > 0;
         final showNextPage = dragOffset < 0;
 
@@ -840,8 +945,9 @@ class _MonthDateGrid extends StatelessWidget {
         final preferredGridHeight =
             model.rowCount * preferredHeight + totalSpacing;
         final minimumCellHeight = _monthMinimumCellHeight(
-          textScale,
-          showLunarCalendar: provider.generalShowLunarCalendar,
+          context,
+          compact: compact,
+          showLunarCalendar: _showMonthLunar(provider),
         );
         final minimumGridHeight =
             model.rowCount * minimumCellHeight + totalSpacing;
@@ -891,7 +997,7 @@ class _MonthDateGrid extends StatelessWidget {
                       isSelected: _sameDay(day, selectedDate),
                       occurrences: dayOccurrences.sortedForAgenda(),
                       localeCode: provider.localeCode,
-                      showLunarCalendar: provider.generalShowLunarCalendar,
+                      showLunarCalendar: _showMonthLunar(provider),
                       cellWidth: cellWidth,
                       cellHeight: cellConstraints.maxHeight,
                       compact: cellCompact,
@@ -958,9 +1064,13 @@ Map<String, List<GeneralEventOccurrence>> _groupOccurrencesByDay(
 }
 
 class _MonthWeekdayHeaderRow extends StatelessWidget {
-  const _MonthWeekdayHeaderRow({required this.showWeekends});
+  const _MonthWeekdayHeaderRow({
+    required this.showWeekends,
+    this.compact = false,
+  });
 
   final bool showWeekends;
+  final bool compact;
 
   static final _referenceMonday = DateTime(2026, 1, 5);
 
@@ -1000,7 +1110,7 @@ class _MonthWeekdayHeaderRow extends StatelessWidget {
         );
         return ConstrainedBox(
           key: const ValueKey('general-month-weekday-header'),
-          constraints: const BoxConstraints(minHeight: 40),
+          constraints: BoxConstraints(minHeight: compact ? 36 : 40),
           child: Row(
             children: [
               for (var index = 0; index < weekdays.length; index++) ...[
@@ -1078,28 +1188,16 @@ class _MonthDayCell extends StatelessWidget {
     final standardBorderColor = !compact && isSelected
         ? colorScheme.primary
         : Colors.transparent;
-    final compactTextColor = isSelected
-        ? colorScheme.primary
-        : isToday
-        ? colorScheme.primary
-        : baseColor;
-    final compactTileSize = math.max(
-      34.0,
-      math.min(math.min(cellWidth, cellHeight) - 4, 56.0),
-    );
-    final compactButtonSize = compactTileSize;
-    final compactScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final compactAccent = skedReadableAccent(colorScheme);
+    final compactTextColor = isSelected || isToday ? compactAccent : baseColor;
+    final compactButtonSize = math.min(cellWidth - 4, 48.0);
     final compactButtonHeight = math.max(
-      compactTileSize,
-      14 * compactScale +
-          (showLunarCalendar ? 11 * compactScale * 1.6 + 1 : 0) +
-          8,
+      32.0,
+      _compactMonthDateStackHeight(context, showLunarCalendar) + 6,
     );
-    final compactDateStyle = theme.textTheme.titleLarge?.copyWith(
-      height: 1.0,
+    final compactDateStyle = _compactMonthDateStyle(context).copyWith(
       color: compactTextColor,
-      fontWeight: FontWeight.w700,
-      fontSize: 14,
+      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
     );
     final compactLunarWidget = showLunarCalendar
         ? _LunarDateLabel(
@@ -1108,19 +1206,18 @@ class _MonthDayCell extends StatelessWidget {
             localeCode: localeCode,
             enabled: showLunarCalendar,
             overrideColor: compactTextColor,
+            fontSize: 11,
+            maxLines: _compactMonthLunarLines(context),
+            overflow: TextOverflow.fade,
           )
         : const SizedBox.shrink();
-    final hasCompactEventMarker = hasEventMarker;
     final compactEventMarker = AnimatedOpacity(
-      opacity: hasCompactEventMarker ? 1 : 0,
+      opacity: hasEventMarker ? 1 : 0,
       duration: const Duration(milliseconds: 160),
       child: Container(
         width: 6,
         height: 6,
-        decoration: BoxDecoration(
-          color: colorScheme.primary,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: compactAccent, shape: BoxShape.circle),
       ),
     );
     final standardEventMarker = AnimatedOpacity(
@@ -1288,40 +1385,41 @@ class _MonthDayCell extends StatelessWidget {
         ? colorScheme.primary.withValues(alpha: 0.12)
         : Colors.transparent;
     final compactDateContent = Center(
-      child: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: compactButtonSize,
-              height: compactButtonHeight,
-              child: Material(
-                key: isSelected
-                    ? _generalMonthCompactSelectedDayFeedbackKey
-                    : null,
-                color: compactButtonBackground,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  customBorder: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: compactButtonHeight,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: compactButtonSize,
+                  height: compactButtonHeight,
+                  child: Material(
+                    key: isSelected
+                        ? _generalMonthCompactSelectedDayFeedbackKey
+                        : null,
+                    color: compactButtonBackground,
+                    shape: RoundedSuperellipseBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                  onTap: onTap,
+                ),
+                // The decorative selection must not constrain or ellipsize a date.
+                // Use the entire cell for glyphs; large lunar labels may wrap.
+                Positioned.fill(
                   child: Padding(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           date.day.toString(),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
                           textAlign: TextAlign.center,
                           style: compactDateStyle,
                         ),
@@ -1331,12 +1429,12 @@ class _MonthDayCell extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-            if (hasCompactEventMarker) const SizedBox(height: 2),
-            if (hasCompactEventMarker) compactEventMarker,
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          compactEventMarker,
+        ],
       ),
     );
     final semanticsLabel = occurrences.isNotEmpty
@@ -1349,9 +1447,16 @@ class _MonthDayCell extends StatelessWidget {
         button: true,
         selected: isSelected,
         label: semanticsLabel,
-        child: Padding(
-          padding: const EdgeInsets.all(2),
-          child: compactDateContent,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: compactDateContent,
+            ),
+          ),
         ),
       );
     }
@@ -1383,6 +1488,65 @@ class _MonthDayCell extends StatelessWidget {
   }
 }
 
+class _MonthAgendaHeader extends StatelessWidget {
+  const _MonthAgendaHeader({
+    super.key,
+    required this.date,
+    required this.count,
+    required this.filtered,
+    required this.onAddEvent,
+    this.compact = false,
+  });
+  final DateTime date;
+  final int count;
+  final bool filtered, compact;
+  final VoidCallback onAddEvent;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: compact
+          ? const EdgeInsets.only(left: 4)
+          : const EdgeInsets.fromLTRB(14, 10, 10, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${_formatDate(date)}  ${_weekdayLabel(context, date)}',
+                  maxLines: compact ? null : 1,
+                  overflow: compact ? null : TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (!compact || count > 0)
+                  Text(
+                    count == 0
+                        ? (filtered ? l.noMatchingEvents : l.noUpcomingEvents)
+                        : l.monthDayEvents(date.day, count),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: l.addEvent,
+            onPressed: onAddEvent,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MonthAgendaPanel extends StatelessWidget {
   const _MonthAgendaPanel({
     required this.date,
@@ -1402,7 +1566,6 @@ class _MonthAgendaPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
     return Material(
       color: colorScheme.surface,
       shape: Border.all(
@@ -1411,43 +1574,11 @@ class _MonthAgendaPanel extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 10, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${_formatDate(date)}  ${_weekdayLabel(context, date)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      Text(
-                        occurrences.isEmpty
-                            ? (filtered
-                                  ? l10n.noMatchingEvents
-                                  : l10n.noUpcomingEvents)
-                            : l10n.monthDayEvents(date.day, occurrences.length),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  tooltip: l10n.addEvent,
-                  onPressed: onAddEvent,
-                ),
-              ],
-            ),
+          _MonthAgendaHeader(
+            date: date,
+            count: occurrences.length,
+            filtered: filtered,
+            onAddEvent: onAddEvent,
           ),
           const Divider(height: 1),
           Expanded(
@@ -1594,6 +1725,8 @@ class _LunarDateLabel extends StatelessWidget {
     required this.enabled,
     this.overrideColor,
     this.fontSize = 9.5,
+    this.maxLines = 1,
+    this.overflow = TextOverflow.ellipsis,
   });
 
   final DateTime date;
@@ -1602,6 +1735,8 @@ class _LunarDateLabel extends StatelessWidget {
   final bool enabled;
   final Color? overrideColor;
   final double fontSize;
+  final int maxLines;
+  final TextOverflow overflow;
 
   @override
   Widget build(BuildContext context) {
@@ -1623,7 +1758,13 @@ class _LunarDateLabel extends StatelessWidget {
         overrideColor ?? colorScheme.onSurfaceVariant,
       ),
     };
-    return _LunarText(text: label.text, color: color, fontSize: fontSize);
+    return _LunarText(
+      text: label.text,
+      color: color,
+      fontSize: fontSize,
+      maxLines: maxLines,
+      overflow: overflow,
+    );
   }
 }
 
@@ -1671,18 +1812,22 @@ class _LunarText extends StatelessWidget {
     required this.text,
     required this.color,
     required this.fontSize,
+    this.maxLines = 1,
+    this.overflow = TextOverflow.ellipsis,
   });
 
   final String text;
   final Color color;
   final double fontSize;
+  final int maxLines;
+  final TextOverflow overflow;
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      maxLines: maxLines,
+      overflow: overflow,
       textAlign: TextAlign.center,
       style: TextStyle(
         fontSize: fontSize,

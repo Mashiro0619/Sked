@@ -160,7 +160,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               ),
             ),
           ),
-          const WorkspaceActionsMenu(mode: AppMode.student),
           const AssistantPaneToggle(),
           if (showSettings)
             IconButton(
@@ -347,7 +346,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         resourceLayout?.resources == true &&
         resourceLayout!.resourceWidth > AppBreakpoints.compactResourcePane;
     final actionById = <String, Widget>{
-      'workspace-actions': const WorkspaceActionsMenu(mode: AppMode.student),
       if (!timetableInResources) 'timetable': buildTimetableSelector(),
       // The surrounding slot supplies the responsive width computed below.
       'week': buildWeekPicker(width: double.infinity),
@@ -406,7 +404,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     if (canShowMore && !orderedIds.contains('more')) {
       orderedIds.add('more');
     }
-    orderedIds.add('workspace-actions');
     // Keep settings reachable even when an older snapshot omitted it.
     if (showSettings && !orderedIds.contains('settings')) {
       orderedIds.add('settings');
@@ -452,7 +449,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           // final `contentWidth` check read from this one map, so adding an
           // action of a different width cannot make the two disagree.
           const fixedActionWidths = <String, double>{
-            'workspace-actions': 48,
             'view': 48,
             'settings': 48,
             'more': 48,
@@ -619,14 +615,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 ? null
                 : (_) => onViewChanged!(mode),
           ),
-        WorkbenchOverflowAction(
-          id: 'workspace-actions-student',
-          label: l.workspacePreferences,
-          icon: Icons.tune,
-          dividerBefore: true,
-          onSelected: (_) =>
-              unawaited(openWorkspacePreferences(context, AppMode.student)),
-        ),
         if (assistant?.enabled == true)
           WorkbenchOverflowAction(
             id: 'assistant-toggle',

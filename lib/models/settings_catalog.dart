@@ -11,62 +11,62 @@ class SettingsCatalogEntry {
     this._workspace,
     this.category = false,
   });
-  final String id;
-  final String title;
-  final String summary;
+  final String id, title, summary;
   final SettingsDestination destination;
   final AppMode? _workspace;
   AppMode? get workspace => _workspace ?? destination.workspace;
   final bool category;
 }
 
-/// The settings center has six destinations; workflow settings live with their task.
+/// The wide index anchors the same grouped overview used on phones.
+/// Detailed display and workflow preferences remain on their own pages.
 List<SettingsCatalogEntry> settingsCatalog(
   AppLocalizations l,
   Set<AppMode> enabled, {
   bool canClearData = true,
-}) {
-  final entries = <SettingsCatalogEntry>[
+}) => [
+  SettingsCatalogEntry(
+    'appearance',
+    l.settingsAppearanceLanguage,
+    SettingsDestination.appearance,
+    category: true,
+  ),
+  if (enabled.contains(AppMode.student))
     SettingsCatalogEntry(
-      'appearance',
-      l.settingsSectionAppearance,
-      SettingsDestination.appearance,
+      'student',
+      l.studentTimetable,
+      SettingsDestination.studentPreferences,
       category: true,
     ),
+  if (enabled.contains(AppMode.general))
     SettingsCatalogEntry(
-      'notifications',
-      l.notificationSettingsSection,
-      SettingsDestination.notifications,
+      'general',
+      l.generalSchedule,
+      SettingsDestination.generalPreferences,
       category: true,
     ),
-    SettingsCatalogEntry(
-      'language',
-      l.language,
-      SettingsDestination.language,
-      category: true,
-    ),
-    SettingsCatalogEntry(
-      'data',
-      l.settingsDataPrivacy,
-      SettingsDestination.data,
-      category: true,
-    ),
-    SettingsCatalogEntry(
-      'features',
-      l.workspaceFeatures,
-      SettingsDestination.features,
-      category: true,
-    ),
-    SettingsCatalogEntry(
-      'about',
-      l.settingsSectionAbout,
-      SettingsDestination.about,
-      category: true,
-    ),
-  ];
-  return entries
-      .where(
-        (entry) => entry.workspace == null || enabled.contains(entry.workspace),
-      )
-      .toList(growable: false);
-}
+  SettingsCatalogEntry(
+    'notifications',
+    l.notificationSettingsSection,
+    SettingsDestination.notifications,
+    category: true,
+  ),
+  SettingsCatalogEntry(
+    'features',
+    l.workspaceFeatures,
+    SettingsDestination.features,
+    category: true,
+  ),
+  SettingsCatalogEntry(
+    'data',
+    l.settingsDataPrivacy,
+    SettingsDestination.data,
+    category: true,
+  ),
+  SettingsCatalogEntry(
+    'about',
+    l.settingsSectionAbout,
+    SettingsDestination.about,
+    category: true,
+  ),
+];

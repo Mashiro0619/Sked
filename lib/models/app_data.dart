@@ -1171,6 +1171,20 @@ void _validateStorageGeneralSettings(
   Map<String, dynamic> generalMode, {
   bool validateCurrentSemantics = false,
 }) {
+  _validateNullableStorageIntegerField(
+    generalMode,
+    'customDayMinWidth',
+    errorMessage: 'Stored general schedule column width is invalid.',
+  );
+  final customWidth = generalMode['customDayMinWidth'];
+  if (customWidth is int &&
+      (customWidth < generalCustomDayMinWidthMin ||
+          customWidth > generalCustomDayMinWidthMax ||
+          customWidth % generalCustomDayMinWidthStep != 0)) {
+    throw const FormatException(
+      'Stored general schedule column width is invalid.',
+    );
+  }
   for (final key in const [
     'defaultView',
     'viewSwitchBehavior',

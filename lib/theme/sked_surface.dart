@@ -87,3 +87,22 @@ class _SurfaceScope extends InheritedWidget {
   @override
   bool updateShouldNotify(_SurfaceScope oldWidget) => role != oldWidget.role;
 }
+
+/// A small foreground accent, not a new theme. Exact user seed colors are kept
+/// for fills/swatches; text and icon-only selection need readable contrast on
+/// a bare surface, especially after removing a filled navigation indicator.
+Color skedReadableAccent(ColorScheme colors, {Color? surface}) {
+  final background = surface ?? colors.surface;
+  final foregroundLuminance = Color.alphaBlend(
+    colors.primary,
+    background,
+  ).computeLuminance();
+  final backgroundLuminance = background.computeLuminance();
+  final contrast = foregroundLuminance > backgroundLuminance
+      ? (foregroundLuminance + .05) / (backgroundLuminance + .05)
+      : (backgroundLuminance + .05) / (foregroundLuminance + .05);
+  if (contrast >= 4.5) return colors.primary;
+  return colors.brightness == Brightness.dark
+      ? colors.primaryFixedDim
+      : colors.onPrimaryFixedVariant;
+}

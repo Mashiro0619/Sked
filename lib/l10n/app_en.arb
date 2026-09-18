@@ -2136,5 +2136,27 @@
     }
   },
   "timePickerWheelMode": "Use scroll wheels",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "courseReminderUseDefault": "Use default",
+  "@courseReminderUseDefault": {},
+  "courseReminderInvalidMinutes": "Enter a whole number of minutes, zero or greater.",
+  "@courseReminderInvalidMinutes": {},
+  "generalCustomColumnWidth": "Custom view column width",
+  "@generalCustomColumnWidth": {},
+  "generalCustomColumnWidthAuto": "Automatic",
+  "@generalCustomColumnWidthAuto": {},
+  "generalCustomColumnWidthManual": "Minimum width",
+  "@generalCustomColumnWidthManual": {},
+  "generalCustomColumnWidthMinimum": "Minimum width per day",
+  "@generalCustomColumnWidthMinimum": {},
+  "generalCustomColumnWidthHint": "All dates share this minimum width. Columns fill available space or scroll sideways. Only affects Custom view.",
+  "@generalCustomColumnWidthHint": {},
+  "settingsAppearanceLanguage": "Appearance & language",
+  "@settingsAppearanceLanguage": {},
+  "settingsAppearanceDetails": "Colors & outlines",
+  "@settingsAppearanceDetails": {},
+  "monthNoEvents": "No events on this day",
+  "@monthNoEvents": {},
+  "settingsOverview": "Overview",
+  "@settingsOverview": {}
 }

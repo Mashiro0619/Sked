@@ -1,6 +1,7 @@
 import '../widgets/workbench_chrome_metrics.dart';
 
 import '../widgets/desktop_window_host.dart';
+import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
 
@@ -14,6 +15,7 @@ import '../utils/constants.dart';
 import '../providers/timetable_provider.dart';
 import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
 
 class TimetableDisplaySettingsPage extends StatefulWidget {
@@ -44,6 +46,7 @@ class _TimetableDisplaySettingsPageState
         final l10n = AppLocalizations.of(context);
         return Scaffold(
           appBar: WorkbenchAppBar(
+            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
             title: Semantics(
               header: true,
               label: l10n.timetableDisplaySettings,
@@ -137,15 +140,11 @@ class _TimetableDisplaySettingsPageState
                             () => provider.updateFitDaySelectorToWidth(value),
                           ),
                         ),
-                        SettingsSwitchTile(
-                          icon: Icons.view_column_outlined,
-                          value: provider.fitWeekColumnsToWidth,
-                          title: l10n.fitWeekColumnsToWidth,
-                          subtitle: l10n.fitWeekColumnsToWidthHint,
-                          onChanged: (value) => _updateSetting(
-                            'Update week column width mode',
-                            () => provider.updateFitWeekColumnsToWidth(value),
-                          ),
+                        studentWeekWidthSetting(
+                          provider,
+                          l10n,
+                          _updateSetting,
+                          enabled: !uiCommandBusy,
                         ),
                         SettingsSwitchTile(
                           icon: Icons.swipe_outlined,
@@ -161,15 +160,11 @@ class _TimetableDisplaySettingsPageState
                         SettingsSectionHeader(
                           title: l10n.generalTimeGridSection,
                         ),
-                        SettingsSwitchTile(
-                          icon: Icons.grid_4x4_outlined,
-                          value: provider.showTimetableGridLines,
-                          title: l10n.showTimetableGridLines,
-                          subtitle: l10n.showTimetableGridLinesHint,
-                          onChanged: (value) => _updateSetting(
-                            'Update timetable grid line visibility',
-                            () => provider.updateShowTimetableGridLines(value),
-                          ),
+                        studentGridLinesSetting(
+                          provider,
+                          l10n,
+                          _updateSetting,
+                          enabled: !uiCommandBusy,
                         ),
                         SettingsSectionHeader(
                           title: l10n.toolbarNavigationSection,

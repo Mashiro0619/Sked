@@ -12,16 +12,26 @@ import '../models/settings_catalog.dart';
 import '../models/settings_destination.dart';
 import 'workbench_layout_policy.dart';
 import 'adaptive_navigation_scope.dart';
+import '../theme/sked_expressive_theme.dart';
+
+typedef SettingsOverviewBuilder = Widget Function(
+  BuildContext context,
+  ScrollController controller,
+  Map<String, GlobalKey> sectionKeys,
+  ValueChanged<SettingsDestination> openDestination,
+);
 
 class AdaptiveSettingsScaffold extends StatefulWidget {
   const AdaptiveSettingsScaffold({
     super.key,
     required this.catalog,
     required this.builder,
+    required this.overviewBuilder,
     this.notice,
   });
   final List<SettingsCatalogEntry> catalog;
   final Widget Function(SettingsCatalogEntry) builder;
+  final SettingsOverviewBuilder overviewBuilder;
   final Widget? notice;
   @override
   State<AdaptiveSettingsScaffold> createState() =>
@@ -32,6 +42,9 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
   final _navigator = GlobalKey<NavigatorState>();
   final _observer = _SettingsNavigatorObserver();
   final _pageExitGuards = <ModalRoute<dynamic>, Future<bool> Function()>{};
+  final _overviewController = ScrollController();
+  final _sectionKeys = <String, GlobalKey>{};
+  String _highlightedGroup = 'appearance';
 
   VoidCallback _registerPageExitGuard(
     ModalRoute<dynamic> route,
@@ -57,15 +70,57 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
   @override
   void dispose() {
     _pageExitGuards.clear();
+    _overviewController.dispose();
     super.dispose();
   }
 
   SettingsDestination? _selected;
   bool _opening = false;
   bool _closing = false;
-  bool _initialSelectionScheduled = false;
   bool _wide = false;
   int _routeGeneration = 0;
+
+  void _openDestination(SettingsDestination destination) {
+    final entry =
+        widget.catalog
+            .where((entry) => entry.destination == destination)
+            .firstOrNull ??
+        SettingsCatalogEntry(destination.name, '', destination);
+    unawaited(_open(entry));
+  }
+
+  Future<void> _scrollToSection(SettingsCatalogEntry entry) async {
+    if (_opening || _closing) return;
+    _opening = true;
+    try {
+      final navigator = _navigator.currentState!;
+      while (navigator.canPop()) {
+        final revision = _observer.revision;
+        await _popCurrentPage(navigator);
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted || !navigator.mounted || revision == _observer.revision) {
+          return;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _selected = null;
+        _highlightedGroup = entry.id;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      final section = _sectionKeys[entry.id]?.currentContext;
+      if (section != null && section.mounted) {
+        await Scrollable.ensureVisible(
+          section,
+          alignment: 0,
+          duration: SkedMotionPolicy.of(context).effects(SkedMotionSpeed.fast),
+        );
+      }
+    } finally {
+      _opening = false;
+    }
+  }
 
   Future<void> _open(SettingsCatalogEntry entry) async {
     final destination = entry.destination;
@@ -112,15 +167,14 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
     try {
       final navigator = _navigator.currentState!;
       if (navigator.canPop()) {
-        final revision = _observer.revision;
         await _popCurrentPage(navigator);
-        await WidgetsBinding.instance.endOfFrame;
-        if (!mounted ||
-            revision == _observer.revision ||
-            !_wide ||
-            navigator.canPop()) {
-          return;
-        }
+        // A detail always returns to the retained overview first, even wide.
+        return;
+      }
+      // Inline controls register PopScopes on the nested overview route too.
+      // Do not bypass them just because the inner navigator is at its root.
+      if (_observer.topRoute?.popDisposition == RoutePopDisposition.doNotPop) {
+        return;
       }
       if (mounted) await Navigator.of(context).maybePop();
     } finally {
@@ -134,8 +188,6 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 12),
-        if (widget.notice != null)
-          Padding(padding: const EdgeInsets.all(12), child: widget.notice),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -143,15 +195,18 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
               for (final entry in entries)
                 ListTile(
                   key: ValueKey('settings-category-${entry.id}'),
-                  selected: sidebar && entry.destination == _selected,
-                  leading: Icon(_icon(entry.destination)),
-                  title: Text(entry.title),
+                  selected: sidebar && entry.id == _highlightedGroup,
+                  leading: Icon(_icon(entry.destination), size: 22),
+                  title: Text(
+                    entry.title,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   subtitle: entry.summary.isEmpty ? null : Text(entry.summary),
                   trailing: sidebar ? null : const Icon(Icons.chevron_right),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  onTap: () => unawaited(_open(entry)),
+                  onTap: () => unawaited(_scrollToSection(entry)),
                 ),
             ],
           ),
@@ -168,23 +223,14 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
         constraints.maxWidth,
         textScale,
       );
-      if (_wide && !_initialSelectionScheduled) {
-        _initialSelectionScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _selected == null) {
-            unawaited(
-              _open(
-                widget.catalog.firstWhere((entry) => entry.id == 'appearance'),
-              ),
-            );
-          }
-        });
+      for (final entry in widget.catalog) {
+        _sectionKeys.putIfAbsent(
+          entry.id,
+          () => GlobalKey(debugLabel: 'settings-section-${entry.id}'),
+        );
       }
       return PopScope(
         canPop: _selected == null,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) unawaited(_back());
-        },
         child: Scaffold(
           body: SafeArea(
             child: Row(
@@ -232,35 +278,51 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                     child: Semantics(
                       container: true,
                       explicitChildNodes: true,
-                      child: Navigator(
-                        key: _navigator,
-                        observers: [_observer],
-                        requestFocus: false,
-                        onGenerateRoute: (_) => MaterialPageRoute<void>(
-                          builder: (pageContext) => Scaffold(
-                            appBar: AdaptiveNavigationScope.isWide(pageContext)
-                                ? null
-                                : WorkbenchAppBar(
-                                    title: Text(
-                                      AppLocalizations.of(context)
-                                          .settingsTitle,
+                      child: NavigatorPopHandler<void>(
+                        onPopWithResult: (_) => unawaited(_back()),
+                        child: Navigator(
+                          key: _navigator,
+                          observers: [_observer],
+                          requestFocus: false,
+                          onGenerateRoute: (_) => MaterialPageRoute<void>(
+                            builder: (pageContext) => Scaffold(
+                              appBar: WorkbenchAppBar(
+                                key: const ValueKey(
+                                  'settings-overview-app-bar',
+                                ),
+                                automaticallyImplyLeading: false,
+                                title: Text(
+                                  AdaptiveNavigationScope.isWide(pageContext)
+                                      ? AppLocalizations.of(context)
+                                            .settingsOverview
+                                      : AppLocalizations.of(context)
+                                            .settingsTitle,
+                                ),
+                                leading:
+                                    AdaptiveNavigationScope.isWide(pageContext)
+                                    ? null
+                                    : BackButton(
+                                        onPressed: () => unawaited(_back()),
+                                      ),
+                              ),
+                              body: Column(
+                                children: [
+                                  if (widget.notice != null)
+                                    Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: widget.notice,
                                     ),
-                                    leading: BackButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
+                                  Expanded(
+                                    child: widget.overviewBuilder(
+                                      pageContext,
+                                      _overviewController,
+                                      _sectionKeys,
+                                      _openDestination,
                                     ),
                                   ),
-                            body: AdaptiveNavigationScope.isWide(pageContext)
-                                ? Center(
-                                    child: Text(
-                                      AppLocalizations.of(context)
-                                          .settingsTitle,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall,
-                                    ),
-                                  )
-                                : _navigation(sidebar: false),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -286,8 +348,8 @@ IconData _icon(SettingsDestination destination) => switch (destination) {
   SettingsDestination.student => Icons.school_outlined,
   SettingsDestination.general => Icons.event_outlined,
   SettingsDestination.schoolImport => Icons.download_outlined,
-  SettingsDestination.studentPreferences ||
-  SettingsDestination.generalPreferences => Icons.tune,
+  SettingsDestination.studentPreferences => Icons.school_outlined,
+  SettingsDestination.generalPreferences => Icons.event_note_outlined,
   SettingsDestination.parser => Icons.code,
   SettingsDestination.periods => Icons.schedule,
   SettingsDestination.notificationPermissions =>
