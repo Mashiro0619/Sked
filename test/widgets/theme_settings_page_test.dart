@@ -285,10 +285,18 @@ void main() {
         colorModeSelector: 2,
       };
       for (final entry in selectors.entries) {
-        final field = tester.widget<SkedDropdownMenu<String>>(entry.key);
+        final field = tester.widget<SkedDropdownMenu<String>>(
+          find.descendant(
+            of: entry.key,
+            matching: find.byType(SkedDropdownMenu<String>),
+          ),
+        );
         expect(field.dropdownMenuEntries, hasLength(entry.value));
         expect(tester.getSize(entry.key).height, greaterThanOrEqualTo(48));
-        expect(tester.getSize(entry.key).width, lessThanOrEqualTo(320));
+        expect(
+          tester.getSize(entry.key).width,
+          lessThanOrEqualTo(tester.view.physicalSize.width),
+        );
         expect(field.expandedInsets, EdgeInsets.zero);
         for (final item in field.dropdownMenuEntries) {
           expect(item.label, isNotEmpty);
@@ -461,8 +469,13 @@ void main() {
       await tester.ensureVisible(field);
       await tester.pumpAndSettle();
       final select = tester
-          .widget<DropdownButtonFormField<String>>(field)
-          .onChanged!;
+          .widget<SkedDropdownMenu<String>>(
+            find.descendant(
+              of: field,
+              matching: find.byType(SkedDropdownMenu<String>),
+            ),
+          )
+          .onSelected!;
       storage.blockNextSave();
       storage.failNextSave();
       select('dark');

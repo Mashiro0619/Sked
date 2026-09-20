@@ -173,8 +173,15 @@ class _SettingsPageState extends State<SettingsPage>
                 ? _buildDestination(widget.initialDestination!, provider)
                 : AdaptiveSettingsScaffold(
                     catalog: catalog,
-                    overviewBuilder: (context, controller, keys, open) =>
-                        _buildOverview(provider, controller, keys, open),
+                    overviewBuilder:
+                        (context, controller, keys, open, header) =>
+                            _buildOverview(
+                              provider,
+                              controller,
+                              keys,
+                              open,
+                              header,
+                            ),
                     notice: provider.lastRecoveryStatus == RecoveryStatus.none
                         ? null
                         : _RecoveryNoticeTile(
@@ -204,6 +211,7 @@ class _SettingsPageState extends State<SettingsPage>
     ScrollController controller,
     Map<String, GlobalKey> keys,
     ValueChanged<SettingsDestination> open,
+    Widget headerSliver,
   ) {
     final l = AppLocalizations.of(context);
     Widget group(String id, String title, List<Widget> children) =>
@@ -213,7 +221,7 @@ class _SettingsPageState extends State<SettingsPage>
             key: ValueKey('settings-overview-$id'),
             title: title,
             tonal: true,
-            margin: const EdgeInsets.only(bottom: 20),
+            margin: const EdgeInsets.only(bottom: 24),
             children: children,
           ),
         );
@@ -223,10 +231,12 @@ class _SettingsPageState extends State<SettingsPage>
       IconData icon,
       SettingsDestination destination, {
       String? subtitle,
+      String? value,
     }) => SettingsConnectedTile(
       key: ValueKey(id),
       title: title,
       subtitle: subtitle,
+      value: value,
       leading: Icon(icon),
       trailing: const Icon(Icons.chevron_right, size: 20),
       onTap: () => open(destination),
@@ -240,32 +250,35 @@ class _SettingsPageState extends State<SettingsPage>
         Expanded(
           child: ResponsiveSettingsBody(
             controller: controller,
+            headerSliver: headerSliver,
             scrollViewKey: const PageStorageKey('settings-overview-scroll'),
             topPadding: 16,
             children: [
-              group('appearance', l.settingsAppearanceLanguage, [
-                ThemeSettingsPage(
-                  embedded: true,
-                  initialWorkspace: _appearanceWorkspace,
-                  onWorkspaceChanged: _setAppearanceWorkspace,
-                ),
-                link(
-                  'settings-language',
-                  l.language,
-                  Icons.language,
-                  SettingsDestination.language,
-                  subtitle: languageLabelForLocaleCode(
-                    provider.localeCode,
-                    l10n: l,
-                  ),
-                ),
-                link(
-                  'settings-appearance-details',
-                  l.settingsAppearanceDetails,
-                  Icons.palette_outlined,
-                  SettingsDestination.appearance,
-                ),
-              ]),
+              ThemeSettingsPage(
+                embedded: true,
+                initialWorkspace: _appearanceWorkspace,
+                onWorkspaceChanged: _setAppearanceWorkspace,
+                overviewBuilder: (controls) =>
+                    group('appearance', l.settingsAppearanceLanguage, [
+                      ...controls,
+                      link(
+                        'settings-language',
+                        l.language,
+                        Icons.language,
+                        SettingsDestination.language,
+                        value: languageLabelForLocaleCode(
+                          provider.localeCode,
+                          l10n: l,
+                        ),
+                      ),
+                      link(
+                        'settings-appearance-details',
+                        l.settingsAppearanceDetails,
+                        Icons.palette_outlined,
+                        SettingsDestination.appearance,
+                      ),
+                    ]),
+              ),
               if (provider.isWorkspaceEnabled(AppMode.student))
                 group('student', l.studentTimetable, [
                   link(
@@ -273,11 +286,12 @@ class _SettingsPageState extends State<SettingsPage>
                     l.timetableDisplaySettings,
                     Icons.tune,
                     SettingsDestination.studentPreferences,
+                    subtitle: l.timetableDisplaySettingsDesc,
                   ),
                   SettingsConnectedTile(
                     key: const ValueKey('settings-period-times'),
                     title: l.periodTimeSets,
-                    subtitle: provider.activePeriodTimeSetOrNull?.name,
+                    value: provider.activePeriodTimeSetOrNull?.name,
                     leading: const Icon(Icons.schedule),
                     trailing: const Icon(Icons.unfold_more, size: 20),
                     onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
@@ -298,27 +312,32 @@ class _SettingsPageState extends State<SettingsPage>
                     l.generalDisplaySettings,
                     Icons.tune,
                     SettingsDestination.generalPreferences,
+                    subtitle: l.generalDisplaySettingsDesc,
                   ),
                 ]),
-              group('notifications', l.notificationSettingsSection, [
-                NotificationSettingsPage(
-                  embedded: true,
-                  notificationService: widget.notificationService,
-                  agendaCoordinator: _agendaCoordinator,
-                ),
-                link(
-                  'settings-notifications',
-                  l.notificationSettingsSection,
-                  Icons.tune,
-                  SettingsDestination.notifications,
-                ),
-              ]),
-              group('features', l.workspaceFeatures, [
+              NotificationSettingsPage(
+                embedded: true,
+                notificationService: widget.notificationService,
+                agendaCoordinator: _agendaCoordinator,
+                overviewBuilder: (controls) =>
+                    group('notifications', l.notificationSettingsSection, [
+                      ...controls,
+                      link(
+                        'settings-notifications',
+                        l.settingsNotificationPreferences,
+                        Icons.tune,
+                        SettingsDestination.notifications,
+                        subtitle: l.settingsNotificationPreferencesSummary,
+                      ),
+                    ]),
+              ),
+              group('features', l.settingsSectionWorkspace, [
                 link(
                   'settings-workspace-features',
                   l.workspaceFeatures,
                   Icons.dashboard_outlined,
                   SettingsDestination.features,
+                  subtitle: l.settingsFeaturesSummary,
                 ),
               ]),
               group('data', l.settingsDataPrivacy, [
@@ -342,6 +361,7 @@ class _SettingsPageState extends State<SettingsPage>
                   l.settingsDataPrivacy,
                   Icons.privacy_tip_outlined,
                   SettingsDestination.data,
+                  subtitle: l.settingsPrivacySummary,
                 ),
               ]),
               group('about', l.settingsSectionAbout, [
@@ -504,6 +524,7 @@ class _SettingsPageState extends State<SettingsPage>
           children: [
             SettingsConnectedGroup(
               title: title,
+              tonal: true,
               children: children
                   .where(
                     (item) =>
@@ -517,6 +538,7 @@ class _SettingsPageState extends State<SettingsPage>
               const SizedBox(height: 32),
               SettingsConnectedGroup(
                 title: l10n.clearAppData,
+                tonal: true,
                 children: children
                     .where(
                       (item) =>

@@ -28,6 +28,7 @@ import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/period_time_set_picker_dialog.dart';
+import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/timetable_entry.dart';
@@ -3008,17 +3009,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final choices = tester.widget<DropdownButton<String>>(
+      final choices = tester.widget<SkedDropdownMenu<String>>(
         find.descendant(
           of: find.byKey(const ValueKey('theme-color-mode-choice-list')),
-          matching: find.byType(DropdownButton<String>),
+          matching: find.byType(SkedDropdownMenu<String>),
         ),
       );
       expect(
-        choices.items!.map((item) => (item.child as Text).data),
+        choices.dropdownMenuEntries.map((item) => item.label),
         containsAll(['单调主题色', '五彩缤纷']),
       );
-      expect(choices.value, themeColorModeColorful);
+      expect(choices.initialSelection, themeColorModeColorful);
       expect(find.text('UI 配色'), findsOneWidget);
       expect(find.text('课程颜色'), findsOneWidget);
       expect(find.text('主色'), findsOneWidget);

@@ -3092,4 +3092,23 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsOverview => 'Overview';
+
+  @override
+  String get settingsThemeTarget => 'Theme for';
+
+  @override
+  String get settingsColorMode => 'Color mode';
+
+  @override
+  String get settingsNotificationPreferences => 'Reminder preferences';
+
+  @override
+  String get settingsNotificationPreferencesSummary =>
+      'Default reminders, permissions and reliability';
+
+  @override
+  String get settingsFeaturesSummary => 'Workspaces and navigation';
+
+  @override
+  String get settingsPrivacySummary => 'Privacy policy and clear local data';
 }

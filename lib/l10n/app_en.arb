@@ -2158,5 +2158,17 @@
   "monthNoEvents": "No events on this day",
   "@monthNoEvents": {},
   "settingsOverview": "Overview",
-  "@settingsOverview": {}
+  "@settingsOverview": {},
+  "settingsThemeTarget": "Theme for",
+  "@settingsThemeTarget": {},
+  "settingsColorMode": "Color mode",
+  "@settingsColorMode": {},
+  "settingsNotificationPreferences": "Reminder preferences",
+  "@settingsNotificationPreferences": {},
+  "settingsNotificationPreferencesSummary": "Default reminders, permissions and reliability",
+  "@settingsNotificationPreferencesSummary": {},
+  "settingsFeaturesSummary": "Workspaces and navigation",
+  "@settingsFeaturesSummary": {},
+  "settingsPrivacySummary": "Privacy policy and clear local data",
+  "@settingsPrivacySummary": {}
 }

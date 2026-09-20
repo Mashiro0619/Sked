@@ -13,12 +13,14 @@ import '../models/settings_destination.dart';
 import 'workbench_layout_policy.dart';
 import 'adaptive_navigation_scope.dart';
 import '../theme/sked_expressive_theme.dart';
+import 'settings_list.dart';
 
 typedef SettingsOverviewBuilder = Widget Function(
   BuildContext context,
   ScrollController controller,
   Map<String, GlobalKey> sectionKeys,
   ValueChanged<SettingsDestination> openDestination,
+  Widget headerSliver,
 );
 
 class AdaptiveSettingsScaffold extends StatefulWidget {
@@ -286,25 +288,6 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                           requestFocus: false,
                           onGenerateRoute: (_) => MaterialPageRoute<void>(
                             builder: (pageContext) => Scaffold(
-                              appBar: WorkbenchAppBar(
-                                key: const ValueKey(
-                                  'settings-overview-app-bar',
-                                ),
-                                automaticallyImplyLeading: false,
-                                title: Text(
-                                  AdaptiveNavigationScope.isWide(pageContext)
-                                      ? AppLocalizations.of(context)
-                                            .settingsOverview
-                                      : AppLocalizations.of(context)
-                                            .settingsTitle,
-                                ),
-                                leading:
-                                    AdaptiveNavigationScope.isWide(pageContext)
-                                    ? null
-                                    : BackButton(
-                                        onPressed: () => unawaited(_back()),
-                                      ),
-                              ),
                               body: Column(
                                 children: [
                                   if (widget.notice != null)
@@ -318,6 +301,9 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                                       _overviewController,
                                       _sectionKeys,
                                       _openDestination,
+                                      _SettingsOverviewAppBar(
+                                        onBack: () => unawaited(_back()),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -336,6 +322,77 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
       );
     },
   );
+}
+
+/// The overview has one scroll owner. Mobile gets Material's large title that
+/// collapses naturally; pointer layouts keep a caption-safe compact toolbar.
+class _SettingsOverviewAppBar extends StatelessWidget {
+  const _SettingsOverviewAppBar({required this.onBack});
+  final VoidCallback onBack;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final metrics = WorkbenchChromeMetrics.of(context);
+    final wide = AdaptiveNavigationScope.isWide(context);
+    final l = AppLocalizations.of(context);
+    if (metrics.desktop || wide) {
+      return SliverAppBar(
+        key: const ValueKey('settings-overview-app-bar'),
+        pinned: true,
+        primary: false,
+        toolbarHeight: metrics.toolbarHeight,
+        automaticallyImplyLeading: false,
+        leading: wide ? null : BackButton(onPressed: onBack),
+        title: Text(wide ? l.settingsOverview : l.settingsTitle),
+        actions: const [DesktopCaptionSpacer()],
+        flexibleSpace: const DesktopDragRegion(child: SizedBox.expand()),
+        backgroundColor: SkedSurfaceRole.frame.resolve(colors),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+      );
+    }
+    final titleHeight =
+        MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3).scale(32) *
+        1.25;
+    return Theme(
+      // AppBarTheme's compact title style otherwise overrides Material's large
+      // expanded typography. Keep this override local to the overview header.
+      data: theme.copyWith(
+        appBarTheme: const AppBarThemeData(),
+        textTheme: theme.textTheme.copyWith(
+          headlineMedium: theme.textTheme.headlineMedium?.copyWith(
+            fontSize: 32,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+      child: SliverAppBar.large(
+        key: const ValueKey('settings-overview-app-bar'),
+        primary: false,
+        pinned: true,
+        expandedHeight: 104 + titleHeight,
+        automaticallyImplyLeading: false,
+        leadingWidth: 72,
+        leading: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
+          child: BackButton(
+            onPressed: onBack,
+            style: IconButton.styleFrom(
+              backgroundColor: SettingsVisuals.rowColor(colors),
+              shape: const CircleBorder(),
+            ),
+          ),
+        ),
+        title: Text(l.settingsTitle),
+        backgroundColor: colors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+    );
+  }
 }
 
 IconData _icon(SettingsDestination destination) => switch (destination) {

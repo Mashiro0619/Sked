@@ -849,3 +849,41 @@ ADB 仍未发现设备：Android 手势／三键导航和真实系统栏不计�
 - 新增实际字体视觉测试通过，**7 组配置、25 张截图**；检查底栏按住已选／未选项时的实际像素、亮暗主题、320／393 dp 手机几何，以及 330／660／1440 dp Windows 布局的关闭按钮边距与分类标题。该轮 Windows 尺寸使用测试视口，Android 安全区为模拟，不作为新增原生窗口／Android 真机验收。
 - 日志：`.scratch/workspace-chrome-analyze.log`、`.scratch/workspace-chrome-full-tests.log`、`.scratch/workspace-chrome-gate.log`、`.scratch/workspace-chrome-visual.log`。截图及清单：`.scratch/workspace-chrome-visual/`；汇总图为同目录 `feedback-summary.png`。
 - `git diff --check` 通过；依赖、版本 `2.3.0+14` 与 HEAD 未改，未暂存、提交或推送。
+
+
+## 2026-09-20：参考设置页的视觉整理
+
+这轮以用户提供的两款开源软件截图为视觉参考，主要借鉴连贯分组、明确的文字层级和可扫读的当前值，不复制其功能、品牌或系统状态栏，也不重新改变已经确认的设置层级。
+
+- **连续分组而非卡片套卡片。** 每组使用 2 dp 细间隔连接设置行，首尾外角 24 dp、内部角 4 dp，无阴影和额外外层卡片。深色取 `surfaceContainerHighest`、浅色取 `surfaceContainer`，建立页面／设置行／当前值控件的三层关系；大多数图标不再使用强调色。
+- **标题、说明、当前值分开。** 正文普通字重，说明放在标题下，当前值优先居右；空间不足或大字体时自然放到下一行，不截断关键偏好。宽度按实际尾部控件占位计算，支持 RTL。下拉样式为当前值按钮，但整行仍由原菜单负责点击、键盘、焦点和数据会话保护。
+- **手机大标题随唯一滚动区域折叠。** 使用官方 `SliverAppBar.large`，修正旧 AppBarTheme 覆盖展开字号的问题。Windows／宽屏维持紧凑固定标题栏、窗口按钮避让和连续背景；不把手机大标题生搬到桌面。分组锚点、返回守卫和总览滚动位置继续保留。
+- **一级、二级使用相同视觉语言。** 课表／日程显示、外观、提醒、工作区、隐私和关于沿用共享设置控件。主题色和分项颜色不再散落在独立黑色卡片中，手机外观预览放到控件之后、宽屏继续旁置；平台限制等说明不作为单独的薄卡片。语言仍是独立搜索页，节次仍为选择弹窗，默认提醒和显示细项仍在二级页。
+- **本轮边界。** 不改主页底栏／侧栏、不改通知身份与调度、不升级依赖或版本；保存、权限请求、失败回滚、退出守卫、备份及数据清理流程不变。未自动提交或推送。
+
+视觉夹具从提交 `78b26fc` 独立解包生成修改前基线，未临时覆盖当前工作区源码。前后使用同一组内存样例、相同窗口、字体倍率、语言和明暗偏好；真实 Windows Flutter 字体渲染，不将模拟 Android 尺寸／安全区描述成真机验收。
+
+### 最终验证与证据
+
+| 检查 | 结果 |
+| --- | --- |
+| 静态分析 | `flutter analyze --no-pub` 通过，无问题 |
+| 全量测试 | **2967 项通过，1 项既有 DST 条件跳过**；未增加跳过项或修改超时标准 |
+| 覆盖率门禁 | **PASS**：整体 **38780/42549（91.1420%）**，改动行 **569/581（97.9346%）**；源文件清单为 201 个已测量、20 个既有显式不可用项，共 221 个，未修改门槛或排除规则 |
+| 实际字体视觉对照 | **13 组配置、143 对前后截图**；覆盖 320／360／393／412 dp、1／1.3／2 倍文字、明暗主题、英文大字、平板和 Windows 窄宽窗口；同一组 11 个场景的文件清单逐项对应 |
+| 真实 Win32 缩放 | **6 个场景通过**：总览 360／660／1000／1440 dp，详情 360／1000 dp；120 DPI，客户区与 Flutter 渲染尺寸一致，最大化区域均命中 HTMAXBUTTON（9） |
+
+新增控件回归检查分组颜色／圆角／间隔、中性图标、RTL／大字体下的实际文本、当前值语义及选择、标题折叠、返回滚动恢复、窗口缩放状态、控件先于预览以及说明文本不被包装成操作卡片。已有保存失败、主题目标隔离、通知权限和导航守卫测试继续通过。删除了被共享设置行完全替代且已无引用的 `WorkbenchFormRow`，没有为了覆盖率添加排除规则。
+
+证据位置：
+
+- 静态分析：`.scratch/settings-reference-analyze-final.log`；全量测试：`.scratch/settings-reference-full-final.log`。
+- 最后一次标题栏背景修正后的定向复测：`.scratch/settings-reference-final-smoke.log`，**64 项通过**，涵盖设置页、导航、参考设计及跨平台表面。
+- 覆盖率：`.scratch/settings-reference-gate.log`、`.scratch/settings-reference-coverage.md`。
+- 最终前后矩阵：`.scratch/settings-reference-before-final/`、`.scratch/settings-reference-final/`，各含截图清单；日志为 `.scratch/settings-reference-visual-before-final.log`、`.scratch/settings-reference-visual-final.log`。
+- 原生窗口：`.scratch/settings-reference-native/`，包含六张截图及 `native-window-evidence.json`；日志为 `.scratch/settings-reference-native.log`。
+- 汇总对照：`.scratch/settings-reference-comparison/settings-overview.png`、`.scratch/settings-reference-comparison/settings-details.png`。
+
+Android 尺寸和手势安全区仍是模拟，不能代替 Android 真机检查。原生 Windows 测试窗口未抢占前台（`foregroundIsApp: false`），这里只确认真实窗口尺寸及标题区域命中，不宣称已完成人工悬停、Snap 或 MSIX 验收。Windows 构建仍有第三方插件既有 CMake 警告，本轮未升级依赖。版本保持 `2.3.0+14`，未自动提交或推送。
+
+最终 `git diff --check` 通过，暂存区为空；HEAD 仍为 `78b26fc`，`pubspec.yaml` 和 `pubspec.lock` 未变化。

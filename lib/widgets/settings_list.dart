@@ -1,6 +1,7 @@
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -51,8 +52,12 @@ class ResponsiveSettingsBody extends StatelessWidget {
     this.controller,
     this.topPadding = 8,
     this.bottomPadding = 24,
+    this.connectedSections = false,
+    this.headerSliver,
   });
 
+  final bool connectedSections;
+  final Widget? headerSliver;
   final List<Widget> children;
   final List<Widget>? firstColumnChildren;
   final List<Widget>? secondColumnChildren;
@@ -73,17 +78,20 @@ class ResponsiveSettingsBody extends StatelessWidget {
                 .clamp(0.0, 1120.0)
                 .toDouble();
         final availableColumnWidth = (availableContentWidth - 20) / 2;
-        final groupedSections = firstColumnSectionIndices == null
+        final groupedSections =
+            firstColumnSectionIndices == null && !connectedSections
             ? null
-            : _groupSettingsSections(children);
-        final derivedFirstColumnChildren = groupedSections == null
+            : _groupSettingsSections(children, connected: connectedSections);
+        final derivedFirstColumnChildren =
+            groupedSections == null || firstColumnSectionIndices == null
             ? firstColumnChildren
             : [
                 for (var index = 0; index < groupedSections.length; index++)
                   if (firstColumnSectionIndices!.contains(index))
                     groupedSections[index],
               ];
-        final derivedSecondColumnChildren = groupedSections == null
+        final derivedSecondColumnChildren =
+            groupedSections == null || firstColumnSectionIndices == null
             ? secondColumnChildren
             : [
                 for (var index = 0; index < groupedSections.length; index++)
@@ -125,10 +133,23 @@ class ResponsiveSettingsBody extends StatelessWidget {
                 key: const ValueKey('responsive-settings-single-column'),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: children,
+                  children: connectedSections ? groupedSections! : children,
                 ),
               );
 
+        final contentPadding = EdgeInsets.fromLTRB(
+          horizontalPadding,
+          topPadding,
+          horizontalPadding,
+          bottomPadding,
+        );
+        final measuredContent = Center(
+          child: ConstrainedBox(
+            key: const ValueKey('responsive-settings-content'),
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: SizedBox(width: double.infinity, child: content),
+          ),
+        );
         return ScrollConfiguration(
           behavior: const MaterialScrollBehavior().copyWith(
             dragDevices: {
@@ -139,26 +160,28 @@ class ResponsiveSettingsBody extends StatelessWidget {
               PointerDeviceKind.invertedStylus,
             },
           ),
-          child: ListView(
-            key: scrollViewKey,
-            controller: controller,
-            padding: EdgeInsets.fromLTRB(
-              horizontalPadding,
-              topPadding,
-              horizontalPadding,
-              bottomPadding,
-            ),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            children: [
-              Center(
-                child: ConstrainedBox(
-                  key: const ValueKey('responsive-settings-content'),
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: SizedBox(width: double.infinity, child: content),
+          child: headerSliver != null
+              ? CustomScrollView(
+                  key: scrollViewKey,
+                  controller: controller,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  slivers: [
+                    headerSliver!,
+                    SliverPadding(
+                      padding: contentPadding,
+                      sliver: SliverToBoxAdapter(child: measuredContent),
+                    ),
+                  ],
+                )
+              : ListView(
+                  key: scrollViewKey,
+                  controller: controller,
+                  padding: contentPadding,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [measuredContent],
                 ),
-              ),
-            ],
-          ),
         );
       },
     );
@@ -176,7 +199,10 @@ class SettingsSectionBreak extends StatelessWidget {
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
-List<Widget> _groupSettingsSections(List<Widget> children) {
+List<Widget> _groupSettingsSections(
+  List<Widget> children, {
+  bool connected = false,
+}) {
   final sections = <List<Widget>>[];
   var currentSection = <Widget>[];
   for (final child in children) {
@@ -192,7 +218,32 @@ List<Widget> _groupSettingsSections(List<Widget> children) {
   if (currentSection.isNotEmpty) sections.add(currentSection);
   return [
     for (final section in sections)
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: section),
+      if (connected)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final note in section.whereType<SettingsSectionNote>()) note,
+            SettingsConnectedGroup(
+              tonal: true,
+              title: section.first is SettingsSectionHeader
+                  ? (section.first as SettingsSectionHeader).title
+                  : null,
+              margin: const EdgeInsets.only(bottom: 24),
+              children: [
+                for (final child in section)
+                  if (child is! SettingsSectionHeader &&
+                      child is! SettingsSectionNote &&
+                      !(child is SizedBox && child.child == null))
+                    child,
+              ],
+            ),
+          ],
+        )
+      else
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: section,
+        ),
   ];
 }
 
@@ -295,12 +346,29 @@ class ResponsiveSettingsSection extends StatelessWidget {
   }
 }
 
+/// A small settings-only palette. Semantic accents and saved workspace colors
+/// are untouched; neutral surfaces establish hierarchy instead of colored icons.
+abstract final class SettingsVisuals {
+  static Color rowColor(ColorScheme colors) =>
+      colors.brightness == Brightness.dark
+      ? colors.surfaceContainerHighest
+      : colors.surfaceContainer;
+  static Color valueColor(ColorScheme colors) =>
+      colors.brightness == Brightness.dark
+      ? colors.surfaceContainerLow
+      : colors.surface;
+  static const double rowGap = 2;
+  static const double groupRadius = 24;
+  static const double innerRadius = 4;
+}
+
+typedef SettingsRowsBuilder = Widget Function(List<Widget> rows);
+
 /// A settings group whose rows read as one connected surface.
 ///
 /// The group deliberately owns the separators and outer shape so callers can
-/// focus on the setting semantics.  It is used by the settings landing page;
-/// the existing [SettingsListTile] remains available for the denser secondary
-/// pages.
+/// focus on setting semantics. Tonal groups share their row layout across the
+/// overview and detail pages; non-tonal callers keep the legacy flat treatment.
 class SettingsConnectedGroup extends StatelessWidget {
   const SettingsConnectedGroup({
     super.key,
@@ -323,8 +391,59 @@ class SettingsConnectedGroup extends StatelessWidget {
     if (visibleChildren.isEmpty && title == null) {
       return const SizedBox.shrink();
     }
+    if (tonal) {
+      return _SettingsTonalGroup(
+        tonal: true,
+        child: Padding(
+          padding: margin,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (title != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 10),
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      title!,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: skedReadableAccent(colors),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              for (var index = 0; index < visibleChildren.length; index++) ...[
+                if (index > 0) const SizedBox(height: SettingsVisuals.rowGap),
+                Material(
+                  key: ValueKey('settings-group-row-$index'),
+                  color: SettingsVisuals.rowColor(colors),
+                  surfaceTintColor: Colors.transparent,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(
+                        index == 0
+                            ? SettingsVisuals.groupRadius
+                            : SettingsVisuals.innerRadius,
+                      ),
+                      bottom: Radius.circular(
+                        index == visibleChildren.length - 1
+                            ? SettingsVisuals.groupRadius
+                            : SettingsVisuals.innerRadius,
+                      ),
+                    ),
+                  ),
+                  child: visibleChildren[index],
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
     return _SettingsTonalGroup(
-      tonal: tonal,
+      tonal: false,
       child: Padding(
         padding: margin,
         child: Column(
@@ -338,24 +457,15 @@ class SettingsConnectedGroup extends StatelessWidget {
                   child: Text(
                     title!,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: tonal
-                          ? skedReadableAccent(
-                              colors,
-                              surface: colors.surfaceContainerLow,
-                            )
-                          : colors.primary,
-                      fontWeight: tonal ? FontWeight.w600 : FontWeight.w700,
+                      color: colors.primary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ),
             Material(
-              color: tonal ? colors.surfaceContainerLow : Colors.transparent,
-              shape: tonal
-                  ? RoundedSuperellipseBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    )
-                  : WorkbenchChromeMetrics.of(context).desktop
+              color: Colors.transparent,
+              shape: WorkbenchChromeMetrics.of(context).desktop
                   ? RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     )
@@ -372,15 +482,11 @@ class SettingsConnectedGroup extends StatelessWidget {
                     if (index > 0)
                       Divider(
                         height: 1,
-                        indent: tonal
-                            ? 52
-                            : WorkbenchChromeMetrics.of(context).desktop
+                        indent: WorkbenchChromeMetrics.of(context).desktop
                             ? 52
                             : 72,
                         endIndent: 16,
-                        color: colors.outlineVariant.withValues(
-                          alpha: tonal ? 0.28 : 0.55,
-                        ),
+                        color: colors.outlineVariant.withValues(alpha: 0.55),
                       ),
                     visibleChildren[index],
                   ],
@@ -418,10 +524,12 @@ class SettingsConnectedTile extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.semanticToggled,
+    this.semanticSelected,
     this.onLongPress,
     this.onLongPressHint,
     this.onTapHint,
     this.foregroundColor,
+    this.value,
   });
 
   final Widget leading;
@@ -434,6 +542,7 @@ class SettingsConnectedTile extends StatelessWidget {
   /// node.  The visual subtree is intentionally excluded to avoid duplicate
   /// announcements, so toggle state must be forwarded explicitly.
   final bool? semanticToggled;
+  final bool? semanticSelected;
 
   /// Optional secondary action exposed on the same semantics node. Physical
   /// gesture ownership remains with the caller so specialized timings do not
@@ -442,6 +551,9 @@ class SettingsConnectedTile extends StatelessWidget {
   final String? onLongPressHint;
   final String? onTapHint;
   final Color? foregroundColor;
+
+  /// A current preference, distinct from explanatory [subtitle] text.
+  final String? value;
 
   @override
   Widget build(BuildContext context) {
@@ -486,8 +598,10 @@ class SettingsConnectedTile extends StatelessWidget {
     return Semantics(
       button: semanticToggled == null && enabled,
       toggled: semanticToggled,
+      selected: semanticSelected,
       enabled: enabled,
       label: subtitle == null ? title : '$title, $subtitle',
+      value: value,
       onTap: onTap,
       onTapHint: onTapHint,
       onLongPress: onLongPress,
@@ -496,60 +610,258 @@ class SettingsConnectedTile extends StatelessWidget {
         child: ExpressiveTap(
           onTap: onTap,
           borderRadius: BorderRadius.zero,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: _SettingsTonalGroup.of(context)
-                  ? 56
-                  : WorkbenchChromeMetrics.of(context).desktop
-                  ? 40
-                  : 64,
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 360;
-                return Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _SettingsTonalGroup.of(context)
-                        ? 16
-                        : compact
-                        ? 12
-                        : 16,
-                    vertical: _SettingsTonalGroup.of(context)
-                        ? 4
+          child: _SettingsTonalGroup.of(context)
+              ? _SettingsRowContent(
+                  leading: leading,
+                  title: title,
+                  subtitle: subtitle,
+                  value: value,
+                  trailing: trailingWidget,
+                  enabled: enabled,
+                  foregroundColor: foregroundColor,
+                )
+              : ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: _SettingsTonalGroup.of(context)
+                        ? 56
                         : WorkbenchChromeMetrics.of(context).desktop
-                        ? 6
-                        : 10,
+                        ? 40
+                        : 64,
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _SettingsTileIcon(
-                        enabled: enabled,
-                        color: foregroundColor,
-                        child: leading,
-                      ),
-                      SizedBox(
-                        width: _SettingsTonalGroup.of(context)
-                            ? 12
-                            : compact
-                            ? 8
-                            : 12,
-                      ),
-                      Expanded(child: textContent),
-                      if (trailingWidget != null) ...[
-                        SizedBox(width: compact ? 4 : 8),
-                        _SettingsTileTrailing(child: trailingWidget),
-                      ],
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 360;
+                      return Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: _SettingsTonalGroup.of(context)
+                              ? 16
+                              : compact
+                              ? 12
+                              : 16,
+                          vertical: _SettingsTonalGroup.of(context)
+                              ? 4
+                              : WorkbenchChromeMetrics.of(context).desktop
+                              ? 6
+                              : 10,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _SettingsTileIcon(
+                              enabled: enabled,
+                              color: foregroundColor,
+                              child: leading,
+                            ),
+                            SizedBox(
+                              width: _SettingsTonalGroup.of(context)
+                                  ? 12
+                                  : compact
+                                  ? 8
+                                  : 12,
+                            ),
+                            Expanded(child: textContent),
+                            if (trailingWidget != null) ...[
+                              SizedBox(width: compact ? 4 : 8),
+                              _SettingsTileTrailing(child: trailingWidget),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ),
       ),
     );
   }
+}
+
+/// Presentation only. The surrounding tile/menu remains the single focus,
+/// semantics and activation owner, including when large text stacks the value.
+class _SettingsRowContent extends StatelessWidget {
+  const _SettingsRowContent({
+    required this.leading,
+    required this.title,
+    this.subtitle,
+    this.value,
+    this.trailing,
+    this.valuePill = false,
+    this.enabled = true,
+    this.foregroundColor,
+  });
+  final Widget leading;
+  final String title;
+  final String? subtitle, value;
+  final Widget? trailing;
+  final bool valuePill, enabled;
+  final Color? foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final desktop = WorkbenchChromeMetrics.of(context).desktop;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final foreground = enabled
+        ? foregroundColor ?? colors.onSurface
+        : theme.disabledColor;
+    final secondary = enabled
+        ? foregroundColor ?? colors.onSurfaceVariant
+        : theme.disabledColor;
+    final titleStyle = theme.textTheme.bodyLarge!.copyWith(
+      color: foreground,
+      fontWeight: FontWeight.w400,
+    );
+    final valueStyle = theme.textTheme.bodyMedium!.copyWith(
+      color: secondary,
+      fontWeight: FontWeight.w400,
+    );
+    double measure(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textScaler: textScaler,
+        textDirection: Directionality.of(context),
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    final labels = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: titleStyle),
+        if (subtitle != null) ...[
+          const SizedBox(height: 3),
+          Text(
+            subtitle!,
+            style: theme.textTheme.bodyMedium?.copyWith(color: secondary),
+          ),
+        ],
+      ],
+    );
+    Widget valueField(double maxWidth) {
+      final content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: Text(value ?? '', style: valueStyle)),
+          if (valuePill) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.expand_more, size: 18, color: secondary),
+          ],
+        ],
+      );
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: valuePill
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  color: SettingsVisuals.valueColor(colors),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  child: content,
+                ),
+              )
+            : content,
+      );
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: desktop ? 52 : (subtitle == null ? 60 : 76),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: desktop ? 10 : 12,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox.square(
+              dimension: desktop ? 24 : 28,
+              child: Center(
+                child: IconTheme.merge(
+                  data: IconThemeData(
+                    size: desktop ? 20 : 24,
+                    color: secondary,
+                  ),
+                  child: leading,
+                ),
+              ),
+            ),
+            SizedBox(width: desktop ? 12 : 16),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final hasValue = value != null;
+                  // LayoutBuilder is inside the text slot, so real trailing
+                  // control widths (including scaled switches) are already paid.
+                  final available = constraints.maxWidth;
+                  final valueWidth = hasValue
+                      ? measure(value!, valueStyle) + (valuePill ? 50 : 0)
+                      : 0.0;
+                  final titleWidth = measure(
+                    title,
+                    titleStyle,
+                  ).clamp(72.0, 160.0);
+                  final inline =
+                      !hasValue || titleWidth + valueWidth + 16 <= available;
+                  final textAndValue = inline
+                      ? Row(
+                          children: [
+                            Expanded(child: labels),
+                            if (hasValue) ...[
+                              const SizedBox(width: 16),
+                              valueField(math.min(valueWidth, available)),
+                            ],
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            labels,
+                            const SizedBox(height: 8),
+                            valueField(available),
+                          ],
+                        );
+                  return textAndValue;
+                },
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 12),
+              IconTheme.merge(
+                data: IconThemeData(size: 20, color: secondary),
+                child: trailing!,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SettingsSectionNote extends StatelessWidget {
+  const SettingsSectionNote(this.text, {super.key});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 14),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.bodyMedium
+          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    ),
+  );
 }
 
 class SettingsSectionHeader extends StatelessWidget {
@@ -592,7 +904,8 @@ class SettingsListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (WorkbenchChromeMetrics.of(context).desktop) {
+    if (_SettingsTonalGroup.of(context) ||
+        WorkbenchChromeMetrics.of(context).desktop) {
       return SettingsConnectedTile(
         leading: leading,
         title: title,
@@ -1542,12 +1855,7 @@ class _SettingsSliderTileState extends State<SettingsSliderTile> {
                       child: Icon(
                         widget.icon,
                         size: tonal ? 22 : null,
-                        color: tonal
-                            ? skedReadableAccent(
-                                colors,
-                                surface: colors.surfaceContainerLow,
-                              )
-                            : secondaryColor,
+                        color: secondaryColor,
                       ),
                     ),
                   );
@@ -1640,7 +1948,9 @@ class SettingsChoiceTile<T> extends StatelessWidget {
     this.enabled = true,
     this.workspace,
     this.sessionKey,
+    this.subtitle,
   });
+  final String? subtitle;
   final String title;
   final IconData icon;
   final T? value;
@@ -1652,7 +1962,6 @@ class SettingsChoiceTile<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return SkedDropdownMenu<T>(
       initialSelection: value,
       dropdownMenuEntries: entries,
@@ -1661,53 +1970,13 @@ class SettingsChoiceTile<T> extends StatelessWidget {
       workspace: workspace,
       sessionKey: sessionKey,
       expandedInsets: EdgeInsets.zero,
-      fieldBuilder: (context, selected) => ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              SizedBox.square(
-                dimension: 24,
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: enabled
-                      ? skedReadableAccent(
-                          theme.colorScheme,
-                          surface: theme.colorScheme.surfaceContainerLow,
-                        )
-                      : theme.disabledColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    if (selected != null)
-                      Text(
-                        selected,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const _SettingsTileTrailing(
-                child: Icon(Icons.unfold_more, size: 20),
-              ),
-            ],
-          ),
-        ),
+      fieldBuilder: (context, selected) => _SettingsRowContent(
+        leading: Icon(icon),
+        title: title,
+        subtitle: subtitle,
+        value: selected,
+        valuePill: true,
+        enabled: enabled,
       ),
     );
   }

@@ -44,7 +44,6 @@ class _ColorfulThemeSection extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 12),
         if (provider.isStudentMode) ...[
           _ColorSettingsGroup(
             title: AppLocalizations.of(context).themeColorCourseColors,
@@ -86,7 +85,6 @@ class _ColorfulThemeSection extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
           _ColorSettingsGroup(
             title: _generalMonthTextColorGroupTitle(context),
             children: [
@@ -117,19 +115,11 @@ class _ColorSettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SurfacePanel(
-      padding: EdgeInsets.zero,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-            child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-          ),
-          ...children,
-        ],
-      ),
+    return SettingsConnectedGroup(
+      tonal: true,
+      title: title,
+      margin: const EdgeInsets.only(bottom: 24),
+      children: children,
     );
   }
 }
@@ -148,54 +138,22 @@ class _ColorValueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final colorLabel = _formatColorHex(colorValue);
-    return Semantics(
-      label: '$title, $colorLabel',
-      button: true,
-      onTap: onTap,
-      child: ExcludeSemantics(
-        child: ExpressiveTap(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        colorLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _ThemeColorPreview(colorValue: colorValue, selected: false),
-              ],
-            ),
+    return SettingsConnectedTile(
+      leading: const Icon(Icons.palette_outlined),
+      title: title,
+      value: _formatColorHex(colorValue),
+      trailing: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: Color(colorValue),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
       ),
+      onTap: onTap,
     );
   }
 }

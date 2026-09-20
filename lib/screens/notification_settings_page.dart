@@ -15,7 +15,6 @@ import '../services/agenda_notification_service.dart';
 import '../services/agenda_notification_runtime_store.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/android_productivity_bridge.dart';
-import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 
@@ -32,10 +31,12 @@ class NotificationSettingsPage extends StatefulWidget {
     this.troubleshooting = false,
     this.embedded = false,
     this.onOpenTroubleshooting,
+    this.overviewBuilder,
   });
 
   final bool troubleshooting;
   final bool embedded;
+  final SettingsRowsBuilder? overviewBuilder;
   final VoidCallback? onOpenTroubleshooting;
   final AgendaNotificationService? notificationService;
   final AgendaCoordinator? agendaCoordinator;
@@ -328,17 +329,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
             (coverage == AgendaNotificationCoverage.renewable ||
                 coverage == AgendaNotificationCoverage.capacityLimited);
         final children = <Widget>[
-          SettingsSectionHeader(title: l10n.notificationSettingsSection),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              l10n.notificationPrecisionLimitations,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
+          SettingsSectionNote(l10n.notificationPrecisionLimitations),
           SettingsSwitchTile(
             key: const ValueKey('notification-settings-enabled'),
             icon: Icons.notifications_active_outlined,
@@ -559,6 +550,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 ),
               ];
         if (widget.embedded) {
+          final overviewRows = children
+              .where(
+                (child) =>
+                    child.key ==
+                        const ValueKey('notification-settings-enabled') ||
+                    child.key == const ValueKey('notification-coverage-notice'),
+              )
+              .toList();
           return PopScope<void>(
             canPop: !uiCommandBusy,
             child: Column(
@@ -570,23 +569,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                 ),
                 SettingsInteractionBlocker(
                   blocked: uiCommandBusy,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // The overview exposes only the common master switch.
-                      // Defaults, permission actions and diagnostics stay on
-                      // the notification page and share this saving flow.
-                      ...children.where(
-                        (child) =>
-                            child.key ==
-                                const ValueKey(
-                                  'notification-settings-enabled',
-                                ) ||
-                            child.key ==
-                                const ValueKey('notification-coverage-notice'),
+                  child:
+                      widget.overviewBuilder?.call(overviewRows) ??
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: overviewRows,
                       ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -616,11 +604,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
                     top: false,
                     child: SettingsInteractionBlocker(
                       blocked: uiCommandBusy,
-                      child: ResponsiveSettingsSingleColumnBody(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: pageChildren,
-                        ),
+                      child: ResponsiveSettingsBody(
+                        connectedSections: true,
+                        children: pageChildren,
                       ),
                     ),
                   ),
@@ -643,34 +629,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage>
   }) {
     final currentSelection = _selectionForMinutes(value);
     final entries = _reminderEntries(l10n, value);
-    if (widget.embedded) {
-      return SettingsChoiceTile<int>(
-        key: key,
-        title: label,
-        icon: icon,
-        value: currentSelection,
-        entries: entries,
-        enabled: !uiCommandBusy,
-        onSelected: (selection) {
-          if (selection != null) onChanged(_minutesForSelection(selection));
-        },
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SkedDropdownMenu<int>(
-        key: key,
-        initialSelection: currentSelection,
-        label: Text(label),
-        leadingIcon: Icon(icon),
-        expandedInsets: EdgeInsets.zero,
-        enabled: !uiCommandBusy,
-        dropdownMenuEntries: entries,
-        onSelected: (selection) {
-          if (selection == null) return;
-          onChanged(_minutesForSelection(selection));
-        },
-      ),
+    return SettingsChoiceTile<int>(
+      key: key,
+      title: label,
+      icon: icon,
+      value: currentSelection,
+      entries: entries,
+      enabled: !uiCommandBusy,
+      onSelected: (selection) {
+        if (selection != null) onChanged(_minutesForSelection(selection));
+      },
     );
   }
 

@@ -1,7 +1,6 @@
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/sked_dropdown_menu.dart';
-import '../widgets/workbench_form_row.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -175,7 +174,11 @@ class _AppearanceChoiceField extends StatelessWidget {
     this.choiceListKey,
     this.enabled = true,
     this.workspace,
+    this.title,
+    this.icon,
   });
+  final String? title;
+  final IconData? icon;
   final List<_SegmentOption> segments;
   final Set<String> selected;
   final ValueChanged<Set<String>> onSelectionChanged;
@@ -183,55 +186,75 @@ class _AppearanceChoiceField extends StatelessWidget {
   final bool enabled;
   final AppMode? workspace;
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: AlignmentDirectional.centerStart,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 320),
-      child: WorkbenchChromeMetrics.compactTouch(context)
-          ? SkedDropdownMenu<String>(
-              key: choiceListKey,
-              initialSelection: selected.first,
-              enabled: enabled,
-              workspace: workspace,
-              sessionKey: workspace,
-              expandedInsets: EdgeInsets.zero,
-              dropdownMenuEntries: [
-                for (final option in segments)
-                  DropdownMenuEntry(value: option.value, label: option.label),
-              ],
-              onSelected: (value) {
-                if (value != null) onSelectionChanged({value});
-              },
-            )
-          : DropdownButtonFormField<String>(
-              key: choiceListKey,
-              initialValue: selected.first,
-              isExpanded: true,
-              itemHeight: null,
-              decoration: InputDecoration(
-                isDense: WorkbenchChromeMetrics.of(context).desktop,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-              ),
-              items: [
-                for (final option in segments)
-                  DropdownMenuItem(
-                    value: option.value,
-                    child: Text(
-                      option.label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+  Widget build(BuildContext context) => title != null
+      ? SettingsChoiceTile<String>(
+          key: choiceListKey,
+          title: title!,
+          icon: icon!,
+          value: selected.first,
+          entries: [
+            for (final option in segments)
+              DropdownMenuEntry(value: option.value, label: option.label),
+          ],
+          enabled: enabled,
+          workspace: workspace,
+          sessionKey: workspace,
+          onSelected: (value) {
+            if (value != null) onSelectionChanged({value});
+          },
+        )
+      : Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: WorkbenchChromeMetrics.compactTouch(context)
+                ? SkedDropdownMenu<String>(
+                    key: choiceListKey,
+                    initialSelection: selected.first,
+                    enabled: enabled,
+                    workspace: workspace,
+                    sessionKey: workspace,
+                    expandedInsets: EdgeInsets.zero,
+                    dropdownMenuEntries: [
+                      for (final option in segments)
+                        DropdownMenuEntry(
+                          value: option.value,
+                          label: option.label,
+                        ),
+                    ],
+                    onSelected: (value) {
+                      if (value != null) onSelectionChanged({value});
+                    },
+                  )
+                : DropdownButtonFormField<String>(
+                    key: choiceListKey,
+                    initialValue: selected.first,
+                    isExpanded: true,
+                    itemHeight: null,
+                    decoration: InputDecoration(
+                      isDense: WorkbenchChromeMetrics.of(context).desktop,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                     ),
+                    items: [
+                      for (final option in segments)
+                        DropdownMenuItem(
+                          value: option.value,
+                          child: Text(
+                            option.label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) onSelectionChanged({value});
+                    },
                   ),
-              ],
-              onChanged: (value) {
-                if (value != null) onSelectionChanged({value});
-              },
-            ),
-    ),
-  );
+          ),
+        );
 }
 
 class ThemeSettingsPage extends StatefulWidget {
@@ -240,7 +263,9 @@ class ThemeSettingsPage extends StatefulWidget {
     this.initialWorkspace,
     this.embedded = false,
     this.onWorkspaceChanged,
+    this.overviewBuilder,
   });
+  final SettingsRowsBuilder? overviewBuilder;
   final AppMode? initialWorkspace;
   final bool embedded;
   final ValueChanged<AppMode>? onWorkspaceChanged;
@@ -276,6 +301,79 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }
 
   Widget _buildOverview(WorkspaceThemeTarget provider, AppLocalizations l) {
+    final controls = <Widget>[
+      if (provider.source.hasMultipleWorkspaces)
+        SettingsChoiceTile<String>(
+          key: const ValueKey('theme-workspace-target'),
+          title: l.settingsThemeTarget,
+          icon: Icons.dashboard_outlined,
+          value: provider.activeMode.value,
+          enabled: !uiCommandBusy,
+          entries: [
+            if (provider.source.isWorkspaceEnabled(AppMode.student))
+              DropdownMenuEntry(
+                value: AppMode.student.value,
+                label: l.timetable,
+              ),
+            if (provider.source.isWorkspaceEnabled(AppMode.general))
+              DropdownMenuEntry(
+                value: AppMode.general.value,
+                label: l.themeWorkspaceSchedule,
+              ),
+          ],
+          onSelected: (value) {
+            if (value != null) _switchWorkspace(provider, value);
+          },
+        ),
+      SettingsChoiceTile<String>(
+        key: const ValueKey('theme-brightness-choice'),
+        title: l.settingsColorMode,
+        icon: Icons.brightness_6_outlined,
+        value: provider.themeMode,
+        workspace: provider.activeMode,
+        enabled: !uiCommandBusy,
+        entries: [
+          DropdownMenuEntry(value: 'system', label: l.themeFollowSystem),
+          DropdownMenuEntry(value: 'light', label: l.themeLight),
+          DropdownMenuEntry(value: 'dark', label: l.themeDark),
+        ],
+        onSelected: (value) {
+          if (value != null) {
+            _updateSetting(
+              'Update theme brightness mode',
+              () => provider.updateThemeMode(value),
+            );
+          }
+        },
+      ),
+      SettingsConnectedTile(
+        key: const ValueKey('settings-theme-seed'),
+        leading: const Icon(Icons.palette_outlined),
+        title: l.themeColor,
+        value: _formatColorHex(provider.themeSeedColorValue),
+        trailing: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: Color(provider.themeSeedColorValue),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+        ),
+        onTap: uiCommandBusy || _overviewColorOpen
+            ? null
+            : () async {
+                _overviewColorOpen = true;
+                try {
+                  await _openCustomColorDialog(context, provider);
+                } finally {
+                  _overviewColorOpen = false;
+                }
+              },
+      ),
+    ];
     return PopScope<void>(
       canPop: !uiCommandBusy,
       child: Column(
@@ -287,84 +385,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           ),
           SettingsInteractionBlocker(
             blocked: uiCommandBusy,
-            child: Column(
-              children: [
-                if (provider.source.hasMultipleWorkspaces)
-                  SettingsChoiceTile<String>(
-                    key: const ValueKey('theme-workspace-target'),
-                    title: l.settingsSectionWorkspace,
-                    icon: Icons.dashboard_outlined,
-                    value: provider.activeMode.value,
-                    enabled: !uiCommandBusy,
-                    entries: [
-                      if (provider.source.isWorkspaceEnabled(AppMode.student))
-                        DropdownMenuEntry(
-                          value: AppMode.student.value,
-                          label: l.timetable,
-                        ),
-                      if (provider.source.isWorkspaceEnabled(AppMode.general))
-                        DropdownMenuEntry(
-                          value: AppMode.general.value,
-                          label: l.themeWorkspaceSchedule,
-                        ),
-                    ],
-                    onSelected: (value) {
-                      if (value != null) _switchWorkspace(provider, value);
-                    },
-                  ),
-                SettingsChoiceTile<String>(
-                  key: const ValueKey('theme-brightness-choice'),
-                  title: l.theme,
-                  icon: Icons.brightness_6_outlined,
-                  value: provider.themeMode,
-                  workspace: provider.activeMode,
-                  enabled: !uiCommandBusy,
-                  entries: [
-                    DropdownMenuEntry(
-                      value: 'system',
-                      label: l.themeFollowSystem,
-                    ),
-                    DropdownMenuEntry(value: 'light', label: l.themeLight),
-                    DropdownMenuEntry(value: 'dark', label: l.themeDark),
-                  ],
-                  onSelected: (value) {
-                    if (value != null) {
-                      _updateSetting(
-                        'Update theme brightness mode',
-                        () => provider.updateThemeMode(value),
-                      );
-                    }
-                  },
-                ),
-                SettingsConnectedTile(
-                  key: const ValueKey('settings-theme-seed'),
-                  leading: const Icon(Icons.palette_outlined),
-                  title: l.themeColor,
-                  subtitle: _formatColorHex(provider.themeSeedColorValue),
-                  trailing: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Color(provider.themeSeedColorValue),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                    ),
-                  ),
-                  onTap: uiCommandBusy || _overviewColorOpen
-                      ? null
-                      : () async {
-                          _overviewColorOpen = true;
-                          try {
-                            await _openCustomColorDialog(context, provider);
-                          } finally {
-                            _overviewColorOpen = false;
-                          }
-                        },
-                ),
-              ],
-            ),
+            child:
+                widget.overviewBuilder?.call(controls) ??
+                Column(children: controls),
           ),
         ],
       ),
@@ -433,109 +456,115 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         'theme-settings-scroll-view',
                       ),
                       children: [
-                        if (source.hasMultipleWorkspaces)
-                          WorkbenchFormRow(
-                            label: l10n.settingsSectionWorkspace,
-                            child: _AppearanceChoiceField(
+                        SettingsConnectedGroup(
+                          tonal: true,
+                          margin: const EdgeInsets.only(bottom: 24),
+                          title: l10n.settingsSectionAppearance,
+                          children: [
+                            if (source.hasMultipleWorkspaces)
+                              _AppearanceChoiceField(
+                                title: l10n.settingsThemeTarget,
+                                icon: Icons.dashboard_outlined,
+                                enabled: !uiCommandBusy,
+                                workspace: provider.activeMode,
+                                key: const ValueKey('theme-workspace-target'),
+                                choiceListKey: const ValueKey(
+                                  'theme-workspace-mode-choice-list',
+                                ),
+                                segments: [
+                                  if (source.isWorkspaceEnabled(
+                                    AppMode.student,
+                                  ))
+                                    _SegmentOption(
+                                      value: AppMode.student.value,
+                                      label: l10n.timetable,
+                                    ),
+                                  if (source.isWorkspaceEnabled(
+                                    AppMode.general,
+                                  ))
+                                    _SegmentOption(
+                                      value: AppMode.general.value,
+                                      label: l10n.themeWorkspaceSchedule,
+                                    ),
+                                ],
+                                selected: {provider.activeMode.value},
+                                onSelectionChanged: (selection) {
+                                  if (selection.isEmpty) return;
+                                  _switchWorkspace(provider, selection.first);
+                                },
+                              ),
+                            _AppearanceChoiceField(
+                              title: l10n.settingsColorMode,
+                              icon: Icons.brightness_6_outlined,
                               enabled: !uiCommandBusy,
                               workspace: provider.activeMode,
-                              key: const ValueKey('theme-workspace-target'),
+                              key: const ValueKey('theme-brightness-choice'),
                               choiceListKey: const ValueKey(
-                                'theme-workspace-mode-choice-list',
+                                'theme-brightness-mode-choice-list',
                               ),
                               segments: [
-                                if (source.isWorkspaceEnabled(AppMode.student))
-                                  _SegmentOption(
-                                    value: AppMode.student.value,
-                                    label: l10n.timetable,
-                                  ),
-                                if (source.isWorkspaceEnabled(AppMode.general))
-                                  _SegmentOption(
-                                    value: AppMode.general.value,
-                                    label: l10n.themeWorkspaceSchedule,
-                                  ),
+                                _SegmentOption(
+                                  value: 'system',
+                                  label: l10n.themeFollowSystem,
+                                ),
+                                _SegmentOption(
+                                  value: 'light',
+                                  label: l10n.themeLight,
+                                ),
+                                _SegmentOption(
+                                  value: 'dark',
+                                  label: l10n.themeDark,
+                                ),
                               ],
-                              selected: {provider.activeMode.value},
+                              selected: {provider.themeMode},
                               onSelectionChanged: (selection) {
-                                if (selection.isEmpty) return;
-                                _switchWorkspace(provider, selection.first);
+                                if (selection.isEmpty) {
+                                  return;
+                                }
+                                _updateSetting(
+                                  'Update theme brightness mode',
+                                  () =>
+                                      provider.updateThemeMode(selection.first),
+                                );
                               },
                             ),
-                          ),
-                        const SizedBox(height: 12),
-                        WorkbenchFormRow(
-                          label: l10n.theme,
-                          child: _AppearanceChoiceField(
-                            enabled: !uiCommandBusy,
-                            workspace: provider.activeMode,
-                            key: const ValueKey('theme-brightness-choice'),
-                            choiceListKey: const ValueKey(
-                              'theme-brightness-mode-choice-list',
-                            ),
-                            segments: [
-                              _SegmentOption(
-                                value: 'system',
-                                label: l10n.themeFollowSystem,
+                            _AppearanceChoiceField(
+                              title: l10n.themeColor,
+                              icon: Icons.palette_outlined,
+                              enabled: !uiCommandBusy,
+                              workspace: provider.activeMode,
+                              key: const ValueKey('theme-color-choice'),
+                              choiceListKey: const ValueKey(
+                                'theme-color-mode-choice-list',
                               ),
-                              _SegmentOption(
-                                value: 'light',
-                                label: l10n.themeLight,
-                              ),
-                              _SegmentOption(
-                                value: 'dark',
-                                label: l10n.themeDark,
-                              ),
-                            ],
-                            selected: {provider.themeMode},
-                            onSelectionChanged: (selection) {
-                              if (selection.isEmpty) {
-                                return;
-                              }
-                              _updateSetting(
-                                'Update theme brightness mode',
-                                () => provider.updateThemeMode(selection.first),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        WorkbenchFormRow(
-                          label: l10n.themeColor,
-                          child: _AppearanceChoiceField(
-                            enabled: !uiCommandBusy,
-                            workspace: provider.activeMode,
-                            key: const ValueKey('theme-color-choice'),
-                            choiceListKey: const ValueKey(
-                              'theme-color-mode-choice-list',
-                            ),
-                            segments: [
-                              _SegmentOption(
-                                value: themeColorModeSingle,
-                                label: l10n.themeColorModeSingle,
-                              ),
-                              _SegmentOption(
-                                value: themeColorModeColorful,
-                                label: l10n.themeColorModeColorful,
-                              ),
-                            ],
-                            selected: {provider.themeColorMode},
-                            onSelectionChanged: (selection) {
-                              if (selection.isEmpty) {
-                                return;
-                              }
-                              _updateSetting(
-                                'Update theme color mode',
-                                () => provider.updateThemeColorMode(
-                                  selection.first,
+                              segments: [
+                                _SegmentOption(
+                                  value: themeColorModeSingle,
+                                  label: l10n.themeColorModeSingle,
                                 ),
-                              );
-                            },
-                          ),
+                                _SegmentOption(
+                                  value: themeColorModeColorful,
+                                  label: l10n.themeColorModeColorful,
+                                ),
+                              ],
+                              selected: {provider.themeColorMode},
+                              onSelectionChanged: (selection) {
+                                if (selection.isEmpty) {
+                                  return;
+                                }
+                                _updateSetting(
+                                  'Update theme color mode',
+                                  () => provider.updateThemeColorMode(
+                                    selection.first,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
                         const SettingsSectionBreak(),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.zero,
                           child: AnimatedSwitcher(
                             duration: switcherDuration,
                             switchInCurve: Curves.easeOut,
@@ -660,9 +689,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           ),
                         ),
                         if (provider.isStudentMode) ...[
-                          const SizedBox(height: 12),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.zero,
                             child: _OutlineSettingsCard(
                               key: const ValueKey(
                                 'theme-outline-settings-card',
@@ -1099,51 +1127,60 @@ class _SingleThemeColorSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsConnectedGroup(
+      tonal: true,
+      title: l10n.themeColor,
+      margin: const EdgeInsets.only(bottom: 24),
       children: [
-        _PreviewBanner(
-          title: l10n.themeColor,
-          value: _formatColorHex(provider.themeSeedColorValue),
-          preview: _ThemeColorPreview(
-            colorValue: provider.themeSeedColorValue,
-            selected: true,
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          key: const ValueKey('theme-seed-color-palette'),
-          width: double.infinity,
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            runAlignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 12,
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final colorValue in _themeSeedOptions)
-                _ThemeColorOption(
-                  key: ValueKey(
-                    'theme-seed-color-${_formatColorHex(colorValue)}',
-                  ),
-                  colorValue: colorValue,
-                  selected: provider.themeSeedColorValue == colorValue,
-                  onTap: () => onSelectColor(colorValue),
+              Text(
+                _formatColorHex(provider.themeSeedColorValue),
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                key: const ValueKey('theme-seed-color-palette'),
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final colorValue in _themeSeedOptions)
+                      _ThemeColorOption(
+                        key: ValueKey(
+                          'theme-seed-color-${_formatColorHex(colorValue)}',
+                        ),
+                        colorValue: colorValue,
+                        selected: provider.themeSeedColorValue == colorValue,
+                        onTap: () => onSelectColor(colorValue),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _ActionOptionCard(
-          onTap: onPickCustomColor,
-          selected: hasCustomColor,
-          leading: _ThemeColorPreview(
+        SettingsConnectedTile(
+          leading: const Icon(Icons.colorize_outlined),
+          title: l10n.themeCustomColor,
+          value: hasCustomColor
+              ? _formatColorHex(provider.themeSeedColorValue)
+              : null,
+          semanticSelected: hasCustomColor,
+          trailing: _ThemeColorPreview(
             colorValue: provider.themeSeedColorValue,
             selected: hasCustomColor,
           ),
-          title: l10n.themeCustomColor,
-          subtitle: hasCustomColor
-              ? _formatColorHex(provider.themeSeedColorValue)
-              : null,
+          onTap: onPickCustomColor,
         ),
       ],
     );
@@ -1168,87 +1205,90 @@ class _OutlineSettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    return _SurfacePanel(
-      padding: EdgeInsets.zero,
-      child: ExpressiveTap(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.liveCourseOutlineSettings,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.liveCourseOutlineSettingsHint,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+    return SettingsConnectedGroup(
+      tonal: true,
+      margin: EdgeInsets.zero,
+      children: [
+        ExpressiveTap(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.liveCourseOutlineSettings,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.liveCourseOutlineSettingsHint,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    _OutlineColorPreview(
+                      colorValue: effectiveOutlineColorValue,
+                      borderWidth: outlineWidth,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _SummaryValueRow(
+                  label: l10n.liveCourseOutlineEnabled,
+                  value: Icon(
+                    provider.liveCourseOutlineEnabled
+                        ? Icons.check_circle_outline
+                        : Icons.remove_circle_outline,
+                    color: provider.liveCourseOutlineEnabled
+                        ? colors.primary
+                        : colors.outline,
                   ),
-                  const SizedBox(width: 12),
-                  _OutlineColorPreview(
-                    colorValue: effectiveOutlineColorValue,
-                    borderWidth: outlineWidth,
+                ),
+                const SizedBox(height: 10),
+                _SummaryValueRow(
+                  label: l10n.liveCourseOutlineFollowTheme,
+                  value: Icon(
+                    provider.liveCourseOutlineFollowTheme
+                        ? Icons.check_circle_outline
+                        : Icons.palette_outlined,
+                    color: provider.liveCourseOutlineFollowTheme
+                        ? colors.primary
+                        : colors.outline,
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _SummaryValueRow(
-                label: l10n.liveCourseOutlineEnabled,
-                value: Icon(
-                  provider.liveCourseOutlineEnabled
-                      ? Icons.check_circle_outline
-                      : Icons.remove_circle_outline,
-                  color: provider.liveCourseOutlineEnabled
-                      ? colors.primary
-                      : colors.outline,
                 ),
-              ),
-              const SizedBox(height: 10),
-              _SummaryValueRow(
-                label: l10n.liveCourseOutlineFollowTheme,
-                value: Icon(
-                  provider.liveCourseOutlineFollowTheme
-                      ? Icons.check_circle_outline
-                      : Icons.palette_outlined,
-                  color: provider.liveCourseOutlineFollowTheme
-                      ? colors.primary
-                      : colors.outline,
+                const SizedBox(height: 10),
+                _SummaryValueRow(
+                  label: l10n.liveCourseOutlineTarget,
+                  value: Text(
+                    _outlineModeLabel(context, provider.liveCourseOutlineMode),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              _SummaryValueRow(
-                label: l10n.liveCourseOutlineTarget,
-                value: Text(
-                  _outlineModeLabel(context, provider.liveCourseOutlineMode),
+                const SizedBox(height: 10),
+                _SummaryValueRow(
+                  label: l10n.liveCourseOutlineEffectiveColor,
+                  value: Text(_formatColorHex(effectiveOutlineColorValue)),
                 ),
-              ),
-              const SizedBox(height: 10),
-              _SummaryValueRow(
-                label: l10n.liveCourseOutlineEffectiveColor,
-                value: Text(_formatColorHex(effectiveOutlineColorValue)),
-              ),
-              const SizedBox(height: 10),
-              _SummaryValueRow(
-                label: l10n.liveCourseOutlineWidth,
-                value: Text(_formatOutlineWidthValue(context, outlineWidth)),
-              ),
-            ],
+                const SizedBox(height: 10),
+                _SummaryValueRow(
+                  label: l10n.liveCourseOutlineWidth,
+                  value: Text(_formatOutlineWidthValue(context, outlineWidth)),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -1433,77 +1473,6 @@ class _ThemeColorPreview extends StatelessWidget {
                   child: Center(child: child),
                 ),
               ),
-      ),
-    );
-  }
-}
-
-class _ActionOptionCard extends StatelessWidget {
-  const _ActionOptionCard({
-    required this.onTap,
-    required this.selected,
-    required this.leading,
-    required this.title,
-    this.subtitle,
-  });
-
-  final VoidCallback onTap;
-  final bool selected;
-  final Widget leading;
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      label: title,
-      hint: subtitle,
-      button: true,
-      selected: selected,
-      onTap: onTap,
-      child: ExcludeSemantics(
-        child: ExpressiveTap(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Material(
-            color: selected
-                ? colors.primary.withValues(alpha: 0.12)
-                : colors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  leading,
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle!,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    selected ? Icons.check : Icons.chevron_right,
-                    color: selected ? colors.primary : null,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1827,8 +1796,10 @@ class _WorkspaceThemePreview extends StatelessWidget {
       data: theme,
       child: Material(
         color: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

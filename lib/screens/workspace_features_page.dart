@@ -216,7 +216,15 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
           Expanded(
             child: SettingsInteractionBlocker(
               blocked: uiCommandBusy,
-              child: ResponsiveSettingsSingleColumnBody(children: controls),
+              child: ResponsiveSettingsSingleColumnBody(
+                children: [
+                  controls.first,
+                  SettingsConnectedGroup(
+                    tonal: true,
+                    children: controls.skip(1).toList(),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

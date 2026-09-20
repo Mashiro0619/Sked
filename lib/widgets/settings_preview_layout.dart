@@ -28,12 +28,12 @@ class SettingsPreviewLayout extends StatelessWidget {
             child: ResponsiveSettingsSingleColumnBody(
               scrollViewKey: scrollViewKey,
               children: [
+                ...children,
                 if (!wide)
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.only(top: 16, bottom: 16),
                     child: IgnorePointer(child: preview),
                   ),
-                ...children,
               ],
             ),
           ),

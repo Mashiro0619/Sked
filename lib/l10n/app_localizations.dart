@@ -5519,6 +5519,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overview'**
   String get settingsOverview;
+
+  /// No description provided for @settingsThemeTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme for'**
+  String get settingsThemeTarget;
+
+  /// No description provided for @settingsColorMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Color mode'**
+  String get settingsColorMode;
+
+  /// No description provided for @settingsNotificationPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder preferences'**
+  String get settingsNotificationPreferences;
+
+  /// No description provided for @settingsNotificationPreferencesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Default reminders, permissions and reliability'**
+  String get settingsNotificationPreferencesSummary;
+
+  /// No description provided for @settingsFeaturesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspaces and navigation'**
+  String get settingsFeaturesSummary;
+
+  /// No description provided for @settingsPrivacySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy and clear local data'**
+  String get settingsPrivacySummary;
 }
 
 class _AppLocalizationsDelegate

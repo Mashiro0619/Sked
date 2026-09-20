@@ -177,7 +177,14 @@ void main() {
       await t.pumpAndSettle();
       expect(p.appData.generalMode.themeMode, original);
       expect(
-        t.widget<SkedDropdownMenu<String>>(field).initialSelection,
+        t
+            .widget<SkedDropdownMenu<String>>(
+              find.descendant(
+                of: field,
+                matching: find.byType(SkedDropdownMenu<String>),
+              ),
+            )
+            .initialSelection,
         original,
       );
       expect(find.byType(SnackBar), findsOneWidget);
@@ -369,18 +376,24 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
-  testWidgets('desktop theme retains its existing dropdown presentation', (
-    t,
-  ) async {
-    _size(t, const Size(1440, 1000));
-    final p = await workspaceProvider();
-    addTearDown(p.dispose);
-    await t.pumpWidget(
-      WorkspaceHarness(provider: p, home: const ThemeSettingsPage()),
-    );
-    await t.pumpAndSettle();
-    expect(find.byType(DropdownButtonFormField<String>), findsNWidgets(3));
-    expect(find.byType(SkedDropdownMenu<String>), findsNothing);
-    expect(t.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  testWidgets(
+    'desktop theme shares connected choice rows and keeps menu activation',
+    (t) async {
+      _size(t, const Size(1440, 1000));
+      final p = await workspaceProvider();
+      addTearDown(p.dispose);
+      await t.pumpWidget(
+        WorkspaceHarness(provider: p, home: const ThemeSettingsPage()),
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+      expect(find.byType(SkedDropdownMenu<String>), findsNWidgets(3));
+      await _open(t, _key('theme-brightness-mode-choice-list'));
+      await t.tap(find.text('Dark').last);
+      await t.pumpAndSettle();
+      expect(p.appData.studentMode.themeMode, 'dark');
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 }

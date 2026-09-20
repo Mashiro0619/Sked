@@ -2142,5 +2142,17 @@
   "monthNoEvents": "当天没有日程",
   "@monthNoEvents": {},
   "settingsOverview": "常用设置",
-  "@settingsOverview": {}
+  "@settingsOverview": {},
+  "settingsThemeTarget": "外观配置目标",
+  "@settingsThemeTarget": {},
+  "settingsColorMode": "明暗模式",
+  "@settingsColorMode": {},
+  "settingsNotificationPreferences": "提醒设置",
+  "@settingsNotificationPreferences": {},
+  "settingsNotificationPreferencesSummary": "默认提前量、权限与可靠性",
+  "@settingsNotificationPreferencesSummary": {},
+  "settingsFeaturesSummary": "管理工作区启用与导航显示",
+  "@settingsFeaturesSummary": {},
+  "settingsPrivacySummary": "隐私政策与本地数据清理",
+  "@settingsPrivacySummary": {}
 }

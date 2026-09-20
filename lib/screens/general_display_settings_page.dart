@@ -12,7 +12,6 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
-import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
@@ -59,6 +58,7 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
+                      connectedSections: true,
                       scrollViewKey: const ValueKey(
                         'general-display-settings-list',
                       ),
@@ -77,131 +77,111 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                           enabled: !uiCommandBusy,
                         ),
                         const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<String>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey('general-view-switch-behavior'),
-                            initialSelection:
-                                provider.generalViewSwitchBehavior,
-                            label: Text(l10n.generalViewSwitchBehavior),
-                            leadingIcon: const Icon(Icons.swap_horiz_outlined),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry<String>(
-                                value: generalViewSwitchBehaviorCycle,
-                                label: l10n.generalViewSwitchCycle,
-                              ),
-                              DropdownMenuEntry<String>(
-                                value: generalViewSwitchBehaviorMenu,
-                                label: l10n.generalViewSwitchMenu,
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                _updateSetting(
-                                  'Update general view switch behavior',
-                                  () => provider.updateGeneralDisplaySettings(
-                                    viewSwitchBehavior: value,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                        SettingsChoiceTile<String>(
+                          enabled:
+                              !WorkbenchChromeMetrics.compactTouch(context) ||
+                              !uiCommandBusy,
+                          key: const ValueKey('general-view-switch-behavior'),
+                          value: provider.generalViewSwitchBehavior,
+                          title: l10n.generalViewSwitchBehavior,
+                          icon: Icons.swap_horiz_outlined,
+                          entries: [
+                            DropdownMenuEntry<String>(
+                              value: generalViewSwitchBehaviorCycle,
+                              label: l10n.generalViewSwitchCycle,
+                            ),
+                            DropdownMenuEntry<String>(
+                              value: generalViewSwitchBehaviorMenu,
+                              label: l10n.generalViewSwitchMenu,
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) {
+                              _updateSetting(
+                                'Update general view switch behavior',
+                                () => provider.updateGeneralDisplaySettings(
+                                  viewSwitchBehavior: value,
+                                ),
+                              );
+                            }
+                          },
                         ),
                         SettingsSectionHeader(
                           title: l10n.generalToolbarSection,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<String>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey('general-toolbar-width-policy'),
-                            initialSelection:
-                                provider.generalToolbarWidthPolicy,
-                            label: Text(l10n.generalToolbarWidthPolicy),
-                            leadingIcon: const Icon(Icons.space_bar_outlined),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry(
-                                value: generalToolbarWidthPolicyContent,
-                                label: l10n.generalToolbarWidthContent,
-                              ),
-                              DropdownMenuEntry(
-                                value: generalToolbarWidthPolicyBalanced,
-                                label: l10n.generalToolbarWidthBalanced,
-                              ),
-                              DropdownMenuEntry(
-                                value:
-                                    generalToolbarWidthPolicyCalendarPriority,
-                                label: l10n.generalToolbarWidthCalendarPriority,
-                              ),
-                              DropdownMenuEntry(
-                                value: generalToolbarWidthPolicyDatePriority,
-                                label: l10n.generalToolbarWidthDatePriority,
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                _updateSetting(
-                                  'Update general toolbar width policy',
-                                  () => provider.updateGeneralDisplaySettings(
-                                    toolbarWidthPolicy: value,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                        SettingsChoiceTile<String>(
+                          enabled:
+                              !WorkbenchChromeMetrics.compactTouch(context) ||
+                              !uiCommandBusy,
+                          key: const ValueKey('general-toolbar-width-policy'),
+                          value: provider.generalToolbarWidthPolicy,
+                          title: l10n.generalToolbarWidthPolicy,
+                          icon: Icons.space_bar_outlined,
+                          entries: [
+                            DropdownMenuEntry(
+                              value: generalToolbarWidthPolicyContent,
+                              label: l10n.generalToolbarWidthContent,
+                            ),
+                            DropdownMenuEntry(
+                              value: generalToolbarWidthPolicyBalanced,
+                              label: l10n.generalToolbarWidthBalanced,
+                            ),
+                            DropdownMenuEntry(
+                              value: generalToolbarWidthPolicyCalendarPriority,
+                              label: l10n.generalToolbarWidthCalendarPriority,
+                            ),
+                            DropdownMenuEntry(
+                              value: generalToolbarWidthPolicyDatePriority,
+                              label: l10n.generalToolbarWidthDatePriority,
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) {
+                              _updateSetting(
+                                'Update general toolbar width policy',
+                                () => provider.updateGeneralDisplaySettings(
+                                  toolbarWidthPolicy: value,
+                                ),
+                              );
+                            }
+                          },
                         ),
                         const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<String>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey('general-date-label-format'),
-                            initialSelection: provider.generalDateLabelFormat,
-                            label: Text(l10n.generalDateLabelFormat),
-                            leadingIcon: const Icon(Icons.text_format_outlined),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry(
-                                value: generalDateLabelFormatLocalized,
-                                label: l10n.generalDateLabelFormatLocalized,
-                              ),
-                              DropdownMenuEntry(
-                                value: generalDateLabelFormatSlash,
-                                label: l10n.generalDateLabelFormatSlash,
-                              ),
-                              DropdownMenuEntry(
-                                value: generalDateLabelFormatIso,
-                                label: l10n.generalDateLabelFormatIso,
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                _updateSetting(
-                                  'Update general date label format',
-                                  () => provider.updateGeneralDisplaySettings(
-                                    dateLabelFormat: value,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                        SettingsChoiceTile<String>(
+                          enabled:
+                              !WorkbenchChromeMetrics.compactTouch(context) ||
+                              !uiCommandBusy,
+                          key: const ValueKey('general-date-label-format'),
+                          value: provider.generalDateLabelFormat,
+                          title: l10n.generalDateLabelFormat,
+                          subtitle: l10n.generalDateLabelFormatDescription,
+                          icon: Icons.text_format_outlined,
+                          entries: [
+                            DropdownMenuEntry(
+                              value: generalDateLabelFormatLocalized,
+                              label: l10n.generalDateLabelFormatLocalized,
+                            ),
+                            DropdownMenuEntry(
+                              value: generalDateLabelFormatSlash,
+                              label: l10n.generalDateLabelFormatSlash,
+                            ),
+                            DropdownMenuEntry(
+                              value: generalDateLabelFormatIso,
+                              label: l10n.generalDateLabelFormatIso,
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) {
+                              _updateSetting(
+                                'Update general date label format',
+                                () => provider.updateGeneralDisplaySettings(
+                                  dateLabelFormat: value,
+                                ),
+                              );
+                            }
+                          },
                         ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-                          child: Text(
-                            l10n.generalDateLabelFormatDescription,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
+
                         SettingsSectionHeader(
                           title: l10n.generalScheduleDisplaySection,
                         ),
@@ -242,42 +222,38 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<int>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey('general-time-grid'),
-                            initialSelection: provider.generalTimeGridMinutes,
-                            label: Text(l10n.timeGridDensity),
-                            leadingIcon: const Icon(Icons.grid_4x4_outlined),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry(
-                                value: 15,
-                                label: l10n.timeGridMinutes(15),
-                              ),
-                              DropdownMenuEntry(
-                                value: 30,
-                                label: l10n.timeGridMinutes(30),
-                              ),
-                              DropdownMenuEntry(
-                                value: 60,
-                                label: l10n.timeGridMinutes(60),
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                _updateSetting(
-                                  'Update general time grid density',
-                                  () => provider.updateGeneralDisplaySettings(
-                                    timeGridMinutes: value,
-                                  ),
-                                );
-                              }
-                            },
-                          ),
+                        SettingsChoiceTile<int>(
+                          enabled:
+                              !WorkbenchChromeMetrics.compactTouch(context) ||
+                              !uiCommandBusy,
+                          key: const ValueKey('general-time-grid'),
+                          value: provider.generalTimeGridMinutes,
+                          title: l10n.timeGridDensity,
+                          icon: Icons.grid_4x4_outlined,
+                          entries: [
+                            DropdownMenuEntry(
+                              value: 15,
+                              label: l10n.timeGridMinutes(15),
+                            ),
+                            DropdownMenuEntry(
+                              value: 30,
+                              label: l10n.timeGridMinutes(30),
+                            ),
+                            DropdownMenuEntry(
+                              value: 60,
+                              label: l10n.timeGridMinutes(60),
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) {
+                              _updateSetting(
+                                'Update general time grid density',
+                                () => provider.updateGeneralDisplaySettings(
+                                  timeGridMinutes: value,
+                                ),
+                              );
+                            }
+                          },
                         ),
                         const SizedBox(height: 8),
                         SettingsSliderTile(
@@ -312,42 +288,37 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSectionHeader(
                           title: l10n.toolbarNavigationSection,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<Object>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey(
-                              'general-toolbar-hidden-behavior',
-                            ),
-                            initialSelection:
-                                provider.generalToolbarHiddenItemsBehavior,
-                            label: Text(l10n.toolbarNavigationHiddenBehavior),
-                            leadingIcon: const Icon(Icons.more_horiz_outlined),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: <DropdownMenuEntry<Object>>[
-                              DropdownMenuEntry<Object>(
-                                value: toolbarHiddenItemsBehaviorRemove,
-                                label: l10n.toolbarNavigationRemove,
-                              ),
-                              DropdownMenuEntry<Object>(
-                                value: toolbarHiddenItemsBehaviorMore,
-                                label: l10n.toolbarNavigationMore,
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value is String) {
-                                _updateSetting(
-                                  'Update general toolbar hidden items behavior',
-                                  () => provider
-                                      .updateGeneralToolbarHiddenItemsBehavior(
-                                        value,
-                                      ),
-                                );
-                              }
-                            },
+                        SettingsChoiceTile<Object>(
+                          enabled:
+                              !WorkbenchChromeMetrics.compactTouch(context) ||
+                              !uiCommandBusy,
+                          key: const ValueKey(
+                            'general-toolbar-hidden-behavior',
                           ),
+                          value: provider.generalToolbarHiddenItemsBehavior,
+                          title: l10n.toolbarNavigationHiddenBehavior,
+                          icon: Icons.more_horiz_outlined,
+                          entries: <DropdownMenuEntry<Object>>[
+                            DropdownMenuEntry<Object>(
+                              value: toolbarHiddenItemsBehaviorRemove,
+                              label: l10n.toolbarNavigationRemove,
+                            ),
+                            DropdownMenuEntry<Object>(
+                              value: toolbarHiddenItemsBehaviorMore,
+                              label: l10n.toolbarNavigationMore,
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value is String) {
+                              _updateSetting(
+                                'Update general toolbar hidden items behavior',
+                                () => provider
+                                    .updateGeneralToolbarHiddenItemsBehavior(
+                                      value,
+                                    ),
+                              );
+                            }
+                          },
                         ),
                         SettingsToolbarNavigationEditor(
                           key: const ValueKey(

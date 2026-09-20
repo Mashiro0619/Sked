@@ -13,7 +13,6 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/constants.dart';
 import '../providers/timetable_provider.dart';
-import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/workspace_display_controls.dart';
 import '../widgets/ui_command.dart';
@@ -76,6 +75,7 @@ class _TimetableDisplaySettingsPageState
                   child: SettingsInteractionBlocker(
                     blocked: uiCommandBusy,
                     child: ResponsiveSettingsBody(
+                      connectedSections: true,
                       scrollViewKey: const ValueKey(
                         'timetable-display-settings-list',
                       ),
@@ -169,42 +169,37 @@ class _TimetableDisplaySettingsPageState
                         SettingsSectionHeader(
                           title: l10n.toolbarNavigationSection,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SkedDropdownMenu<String>(
-                            enabled:
-                                !WorkbenchChromeMetrics.compactTouch(context) ||
-                                !uiCommandBusy,
-                            key: const ValueKey(
-                              'timetable-toolbar-hidden-behavior',
-                            ),
-                            initialSelection:
-                                provider.studentToolbarHiddenItemsBehavior,
-                            label: Text(l10n.toolbarNavigationHiddenBehavior),
-                            leadingIcon: const Icon(Icons.more_horiz_outlined),
-                            expandedInsets: EdgeInsets.zero,
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry<String>(
-                                value: toolbarHiddenItemsBehaviorRemove,
-                                label: l10n.toolbarNavigationRemove,
-                              ),
-                              DropdownMenuEntry<String>(
-                                value: toolbarHiddenItemsBehaviorMore,
-                                label: l10n.toolbarNavigationMore,
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) {
-                                _updateSetting(
-                                  'Update timetable toolbar hidden items behavior',
-                                  () => provider
-                                      .updateStudentToolbarHiddenItemsBehavior(
-                                        value,
-                                      ),
-                                );
-                              }
-                            },
+                        SettingsChoiceTile<String>(
+                          enabled:
+                              !WorkbenchChromeMetrics.compactTouch(context) ||
+                              !uiCommandBusy,
+                          key: const ValueKey(
+                            'timetable-toolbar-hidden-behavior',
                           ),
+                          value: provider.studentToolbarHiddenItemsBehavior,
+                          title: l10n.toolbarNavigationHiddenBehavior,
+                          icon: Icons.more_horiz_outlined,
+                          entries: [
+                            DropdownMenuEntry<String>(
+                              value: toolbarHiddenItemsBehaviorRemove,
+                              label: l10n.toolbarNavigationRemove,
+                            ),
+                            DropdownMenuEntry<String>(
+                              value: toolbarHiddenItemsBehaviorMore,
+                              label: l10n.toolbarNavigationMore,
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) {
+                              _updateSetting(
+                                'Update timetable toolbar hidden items behavior',
+                                () => provider
+                                    .updateStudentToolbarHiddenItemsBehavior(
+                                      value,
+                                    ),
+                              );
+                            }
+                          },
                         ),
                         SettingsToolbarNavigationEditor(
                           key: const ValueKey(

@@ -308,7 +308,7 @@ void main() {
       await t.ensureVisible(display);
       await t.pumpAndSettle();
       final scroll = t
-          .widget<ListView>(
+          .widget<ScrollView>(
             find.byKey(const PageStorageKey('settings-overview-scroll')),
           )
           .controller!;

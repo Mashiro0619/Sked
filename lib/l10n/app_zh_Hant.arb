@@ -2144,5 +2144,17 @@
   "monthNoEvents": "當天沒有行程",
   "@monthNoEvents": {},
   "settingsOverview": "常用設定",
-  "@settingsOverview": {}
+  "@settingsOverview": {},
+  "settingsThemeTarget": "外觀設定目標",
+  "@settingsThemeTarget": {},
+  "settingsColorMode": "明暗模式",
+  "@settingsColorMode": {},
+  "settingsNotificationPreferences": "提醒設定",
+  "@settingsNotificationPreferences": {},
+  "settingsNotificationPreferencesSummary": "預設提前量、權限與可靠性",
+  "@settingsNotificationPreferencesSummary": {},
+  "settingsFeaturesSummary": "管理工作區啟用與導覽顯示",
+  "@settingsFeaturesSummary": {},
+  "settingsPrivacySummary": "隱私權政策與本機資料清理",
+  "@settingsPrivacySummary": {}
 }

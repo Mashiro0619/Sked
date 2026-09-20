@@ -486,7 +486,14 @@ void main() {
         expect(
           t.getTopLeft(k('settings-overview-appearance')).dy,
           greaterThanOrEqualTo(
-            t.getBottomLeft(k('settings-overview-app-bar')).dy,
+            t
+                .getBottomLeft(
+                  find.descendant(
+                    of: k('settings-overview-app-bar'),
+                    matching: find.byType(AppBar),
+                  ),
+                )
+                .dy,
           ),
         );
         await capture(geometry, 'native-settings-${width.toInt()}');

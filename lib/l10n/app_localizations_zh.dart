@@ -2893,6 +2893,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsOverview => '常用设置';
+
+  @override
+  String get settingsThemeTarget => '外观配置目标';
+
+  @override
+  String get settingsColorMode => '明暗模式';
+
+  @override
+  String get settingsNotificationPreferences => '提醒设置';
+
+  @override
+  String get settingsNotificationPreferencesSummary => '默认提前量、权限与可靠性';
+
+  @override
+  String get settingsFeaturesSummary => '管理工作区启用与导航显示';
+
+  @override
+  String get settingsPrivacySummary => '隐私政策与本地数据清理';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5785,4 +5803,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsOverview => '常用設定';
+
+  @override
+  String get settingsThemeTarget => '外觀設定目標';
+
+  @override
+  String get settingsColorMode => '明暗模式';
+
+  @override
+  String get settingsNotificationPreferences => '提醒設定';
+
+  @override
+  String get settingsNotificationPreferencesSummary => '預設提前量、權限與可靠性';
+
+  @override
+  String get settingsFeaturesSummary => '管理工作區啟用與導覽顯示';
+
+  @override
+  String get settingsPrivacySummary => '隱私權政策與本機資料清理';
 }
