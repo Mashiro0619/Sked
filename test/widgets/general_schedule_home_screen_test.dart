@@ -1338,6 +1338,18 @@ void main() {
 
     await tester.tap(addCalendarButton);
     await tester.tap(addCalendarButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(storage.saveCount, 0);
+    expect(provider.generalSchedules, hasLength(1));
+    await tester.enterText(
+      find.byKey(const ValueKey('add-calendar-field')),
+      'New planning category',
+    );
+    await tester.pump();
+    final saveButton = find.widgetWithText(FilledButton, l10n.save);
+    await tester.tap(saveButton);
+    await tester.tap(saveButton, warnIfMissed: false);
     await storage.firstSaveStarted.future;
     await tester.pump();
 
@@ -1426,7 +1438,7 @@ void main() {
       find.byKey(const ValueKey('calendar-manager-tile-cal1')),
     );
     final flags = firstCalendar.getSemanticsData().flagsCollection;
-    expect(flags.isSelected, ui.Tristate.isFalse);
+    expect(flags.isSelected, ui.Tristate.none);
     expect(flags.isToggled, ui.Tristate.none);
     expect(flags.isButton, isTrue);
     final visibilityButton = find.byKey(
@@ -1477,7 +1489,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('calendar row and visibility action each save once', (
+  testWidgets('calendar name opens editing and visibility action saves once', (
     tester,
   ) async {
     const primary = GeneralSchedule(
@@ -1503,11 +1515,25 @@ void main() {
     await tester.pumpAndSettle();
     final baselineSaveCount = storage.saveCount;
 
-    await tester.tap(find.byKey(const ValueKey('calendar-manager-tile-cal2')));
+    final categoryRow = find.byKey(
+      const ValueKey('calendar-manager-tile-cal2'),
+    );
+    await tester.tap(
+      find.descendant(of: categoryRow, matching: find.text(secondary.name)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rename-calendar-field')), findsOneWidget);
+    expect(storage.saveCount, baselineSaveCount);
+    expect(provider.generalSchedules.last.isVisible, isTrue);
+    expect(provider.activeGeneralSchedule.id, primary.id);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
     await tester.pumpAndSettle();
     expect(storage.saveCount, baselineSaveCount + 1);
     expect(provider.generalSchedules.last.isVisible, isFalse);
-    expect(provider.activeGeneralSchedule.id, primary.id);
+    expect(find.byKey(const ValueKey('rename-calendar-field')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('calendar-visibility-cal2')));
     await tester.pumpAndSettle();
@@ -1615,12 +1641,22 @@ void main() {
     await _openCalendarManager(tester);
     await tester.tap(find.byTooltip(l10n.addCalendar));
     await tester.pumpAndSettle();
+    final nameField = find.byKey(const ValueKey('add-calendar-field'));
+    await tester.enterText(nameField, 'Unsaved category');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+    await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
     expect(provider.generalSchedules, hasLength(1));
     expect(find.text('Save failed. Please try again later.'), findsOneWidget);
-    final addButton = find.widgetWithIcon(IconButton, Icons.add);
-    expect(tester.widget<IconButton>(addButton).onPressed, isNotNull);
+    expect(nameField, findsOneWidget);
+    expect(
+      tester.widget<TextField>(nameField).controller!.text,
+      'Unsaved category',
+    );
+    final saveButton = find.widgetWithText(FilledButton, l10n.save);
+    expect(tester.widget<FilledButton>(saveButton).onPressed, isNotNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -1653,6 +1689,7 @@ void main() {
 
     final nameField = find.byKey(const ValueKey('rename-calendar-field'));
     await tester.enterText(nameField, 'Retry draft');
+    await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await _pumpRouteTransition(tester);
 

@@ -317,14 +317,15 @@ void main() {
             final tile = find.byKey(
               ValueKey('calendar-manager-tile-${calendar.id}'),
             );
-            // The tile center can be its separate visibility button in a compact
-            // resource column. Select the explicit name, not a nested control.
+            // Activate the name independently of the row's visibility action.
             await tester.tap(
               find.descendant(of: tile, matching: find.text(calendar.name)),
             );
             await tester.pumpAndSettle();
           }
           if (name == 'category-editor') {
+            expect(find.byType(AlertDialog), findsOneWidget);
+            expect(find.byType(BackButton), findsOneWidget);
             expect(
               find.byKey(const ValueKey('rename-calendar-field')),
               findsOneWidget,

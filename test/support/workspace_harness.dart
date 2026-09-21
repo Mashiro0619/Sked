@@ -133,6 +133,7 @@ class WorkspaceHarness extends StatefulWidget {
     this.home,
     this.developerUiPreferences,
     this.textScale = 1,
+    this.textDirection,
     this.locale = const Locale('en'),
     this.brightness = Brightness.light,
     this.fontFamily,
@@ -141,6 +142,7 @@ class WorkspaceHarness extends StatefulWidget {
   final Widget? home;
   final DeveloperUiPreferences? developerUiPreferences;
   final double? textScale;
+  final TextDirection? textDirection;
   final Locale locale;
   final Brightness brightness;
   final String? fontFamily;
@@ -164,6 +166,7 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
       :home,
       :developerUiPreferences,
       :textScale,
+      :textDirection,
       :locale,
       :brightness,
       :fontFamily,
@@ -214,7 +217,13 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
               ? MediaQuery.of(context)
               : MediaQuery.of(context)
                     .copyWith(textScaler: TextScaler.linear(textScale)),
-          child: DesktopWindowHost(modalObserver: _windowModals, child: child!),
+          child: Directionality(
+            textDirection: textDirection ?? Directionality.of(context),
+            child: DesktopWindowHost(
+              modalObserver: _windowModals,
+              child: child!,
+            ),
+          ),
         ),
         home:
             home ??

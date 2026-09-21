@@ -27,7 +27,6 @@ import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
 import '../widgets/assistant_pane.dart';
 import '../widgets/app_layout_tokens.dart';
-import '../widgets/adaptive_collection_scaffold.dart';
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../widgets/workspace_navigation.dart';
@@ -1781,7 +1780,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
             value: provider,
             child: UiCommandFeedbackHost(
-              builder: (_) => _CalendarManagerSheet(createOnOpen: create),
+              builder: (_) => _CalendarManagerPage(createOnOpen: create),
             ),
           ),
         ),
