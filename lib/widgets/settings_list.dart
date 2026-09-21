@@ -686,6 +686,7 @@ class _SettingsRowContent extends StatelessWidget {
     this.value,
     this.trailing,
     this.valuePill = false,
+    this.valueAnchorBuilder,
     this.enabled = true,
     this.foregroundColor,
   });
@@ -694,6 +695,7 @@ class _SettingsRowContent extends StatelessWidget {
   final String? subtitle, value;
   final Widget? trailing;
   final bool valuePill, enabled;
+  final Widget Function(Widget child)? valueAnchorBuilder;
   final Color? foregroundColor;
 
   @override
@@ -752,10 +754,10 @@ class _SettingsRowContent extends StatelessWidget {
           ],
         ],
       );
-      return ConstrainedBox(
+      final field = ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: valuePill
-            ? DecoratedBox(
+            ? Ink(
                 decoration: BoxDecoration(
                   color: SettingsVisuals.valueColor(colors),
                   borderRadius: BorderRadius.circular(18),
@@ -770,6 +772,7 @@ class _SettingsRowContent extends StatelessWidget {
               )
             : content,
       );
+      return valueAnchorBuilder?.call(field) ?? field;
     }
 
     return ConstrainedBox(
@@ -800,12 +803,12 @@ class _SettingsRowContent extends StatelessWidget {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final hasValue = value != null;
+                  final hasValue = value != null || valuePill;
                   // LayoutBuilder is inside the text slot, so real trailing
                   // control widths (including scaled switches) are already paid.
                   final available = constraints.maxWidth;
                   final valueWidth = hasValue
-                      ? measure(value!, valueStyle) + (valuePill ? 50 : 0)
+                      ? measure(value ?? '', valueStyle) + (valuePill ? 50 : 0)
                       : 0.0;
                   final titleWidth = measure(
                     title,
@@ -1970,12 +1973,13 @@ class SettingsChoiceTile<T> extends StatelessWidget {
       workspace: workspace,
       sessionKey: sessionKey,
       expandedInsets: EdgeInsets.zero,
-      fieldBuilder: (context, selected) => _SettingsRowContent(
+      fieldBuilder: (context, selected, anchor) => _SettingsRowContent(
         leading: Icon(icon),
         title: title,
         subtitle: subtitle,
         value: selected,
         valuePill: true,
+        valueAnchorBuilder: anchor,
         enabled: enabled,
       ),
     );

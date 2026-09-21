@@ -676,6 +676,10 @@ void main() {
   ) async {
     final p = await _createProvider(_buildGeneralData());
     await _pumpSettingsPage(tester, p);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('settings-appearance-details')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('settings-appearance-details')));
     await tester.pumpAndSettle();
     expect(find.byType(ThemeSettingsPage), findsOneWidget);
@@ -707,6 +711,10 @@ void main() {
       final storage = _MemoryTimetableStorage(data);
       final p = await _createProvider(data, storage: storage);
       await _pumpSettingsPage(tester, p);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('settings-appearance-details')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey('settings-appearance-details')),
       );
@@ -1090,10 +1098,15 @@ void main() {
     final p = await _createProvider(_buildStudentData());
     await _pumpSettingsPage(tester, p);
     final entry = find.byKey(const ValueKey('settings-appearance-details'));
+    await tester.ensureVisible(entry);
+    await tester.pumpAndSettle();
     await tester.tap(entry);
     await tester.tap(entry, warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(find.byType(ThemeSettingsPage), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((w) => w is ThemeSettingsPage && !w.embedded),
+      findsOneWidget,
+    );
   });
 
   testWidgets('student import/export actions ignore rapid duplicate taps', (

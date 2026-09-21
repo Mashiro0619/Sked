@@ -254,31 +254,6 @@ class _SettingsPageState extends State<SettingsPage>
             scrollViewKey: const PageStorageKey('settings-overview-scroll'),
             topPadding: 16,
             children: [
-              ThemeSettingsPage(
-                embedded: true,
-                initialWorkspace: _appearanceWorkspace,
-                onWorkspaceChanged: _setAppearanceWorkspace,
-                overviewBuilder: (controls) =>
-                    group('appearance', l.settingsAppearanceLanguage, [
-                      ...controls,
-                      link(
-                        'settings-language',
-                        l.language,
-                        Icons.language,
-                        SettingsDestination.language,
-                        value: languageLabelForLocaleCode(
-                          provider.localeCode,
-                          l10n: l,
-                        ),
-                      ),
-                      link(
-                        'settings-appearance-details',
-                        l.settingsAppearanceDetails,
-                        Icons.palette_outlined,
-                        SettingsDestination.appearance,
-                      ),
-                    ]),
-              ),
               if (provider.isWorkspaceEnabled(AppMode.student))
                 group('student', l.studentTimetable, [
                   link(
@@ -331,6 +306,31 @@ class _SettingsPageState extends State<SettingsPage>
                       ),
                     ]),
               ),
+              ThemeSettingsPage(
+                embedded: true,
+                initialWorkspace: _appearanceWorkspace,
+                onWorkspaceChanged: _setAppearanceWorkspace,
+                overviewBuilder: (controls) =>
+                    group('appearance', l.settingsAppearanceLanguage, [
+                      ...controls,
+                      link(
+                        'settings-language',
+                        l.language,
+                        Icons.language,
+                        SettingsDestination.language,
+                        value: languageLabelForLocaleCode(
+                          provider.localeCode,
+                          l10n: l,
+                        ),
+                      ),
+                      link(
+                        'settings-appearance-details',
+                        l.settingsAppearanceDetails,
+                        Icons.palette_outlined,
+                        SettingsDestination.appearance,
+                      ),
+                    ]),
+              ),
               group('features', l.settingsSectionWorkspace, [
                 link(
                   'settings-workspace-features',
@@ -374,9 +374,6 @@ class _SettingsPageState extends State<SettingsPage>
                   l.settingsSectionAbout,
                   Icons.info_outline,
                   SettingsDestination.about,
-                  subtitle: _currentVersion.isEmpty
-                      ? null
-                      : 'Sked $_currentVersion',
                 ),
               ]),
             ],

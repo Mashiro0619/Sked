@@ -194,7 +194,10 @@ void main() {
       expect(storage.data.generalMode.themeMode, 'dark');
       expect(t.takeException(), isNull);
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
   );
 
   for (final change in [

@@ -887,3 +887,36 @@ ADB 仍未发现设备：Android 手势／三键导航和真实系统栏不计�
 Android 尺寸和手势安全区仍是模拟，不能代替 Android 真机检查。原生 Windows 测试窗口未抢占前台（`foregroundIsApp: false`），这里只确认真实窗口尺寸及标题区域命中，不宣称已完成人工悬停、Snap 或 MSIX 验收。Windows 构建仍有第三方插件既有 CMake 警告，本轮未升级依赖。版本保持 `2.3.0+14`，未自动提交或推送。
 
 最终 `git diff --check` 通过，暂存区为空；HEAD 仍为 `78b26fc`，`pubspec.yaml` 和 `pubspec.lock` 未变化。
+
+## 2026-09-21：设置顺序、重复版本与选项菜单
+
+本轮只处理用户指出的三个具体问题，不再次调整设置层级，也不改变底栏、侧栏展开、通知调度、数据模型或备份格式。
+
+- **主要功能优先。** 总览与宽屏索引统一为学生课表、通用日程、提醒与通知、外观与语言、工作区、数据与隐私、关于；禁用工作区仍不出现其专属分组。索引初始选中第一项有效工作区，当前分组被禁用时也回到第一项有效分组，不再固定高亮外观。
+- **版本不重复。** “关于 Sked”入口不显示版本副标题；版本仍显示在“检测更新”下方，关于详情内容保留。
+- **菜单锚点与外观一致。** 旧设置行将整个列表行交给 MenuAnchor 并强制定宽，导致小型当前值按钮展开成整行菜单。现在实际锚点只包裹当前值按钮，菜单按选项内容取自然宽度；保留 144 dp 的基本可操作宽度，最大 360 dp，同时受屏幕安全区约束。长文本及大字体自然换行，长列表限高滚动，不通过缩字达到紧凑效果。
+- **交互不退化。** 整行仍可点击，只有当前值按钮拥有键盘焦点及合并后的语义操作；菜单打开／关闭、方向键、Enter、Esc、焦点恢复继续使用既有菜单机制。当前值背景改由 Ink 绘制，保证按钮焦点和按压反馈可见。整行与按钮共享同一 TapRegion，避免慢速再次点击时先被当成外部点击而关闭、松手后又重开；该行为也覆盖减少动态效果模式。设置菜单的工作区、选项及数据会话失效保护也覆盖桌面，不允许关闭后的旧回调再次提交；普通编辑表单的整字段菜单保持原尺寸策略。
+- **测试覆盖展开状态。** 新增总览／索引顺序、单工作区、版本去重、实际菜单宽度和位置、RTL／两倍字、空选择、键盘、跨宽窄窗口、失效旧回调及 Windows 保存失败重试。实际字体矩阵新增总览明暗、外观明暗、日程默认视图三个展开菜单场景；旧的“菜单铺满整行”断言已替换，导航和草稿守卫测试先等待滚动完成再执行真实点击。
+
+正在运行的用户 Sked 窗口占用原开发构建目录，因此视觉验证改用独立解包的源码副本，不终止该窗口或读取其应用数据。修改前副本来自提交 c9e2ce7，修改后逐文件复制当前工作区并核对 SHA-256；两者使用相同视觉夹具与内存样例，不将截图数量当作 Android 真机或 Windows 安装包验收。
+
+### 最终验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| 静态分析 | `flutter analyze --no-pub` 通过，无问题 |
+| 全量回归 | **3008 项通过，1 项既有 DST 条件跳过**；未新增跳过、降低超时或门槛 |
+| 覆盖率门禁 | **PASS**：整体 **38809/42590（91.1223%）**，改动行 **99/99（100%）**；201 个已测量、20 个既有显式不可用项，共 221 个源文件清单通过；未修改排除规则 |
+| 实际字体视觉对照 | **13 组配置、182 对前后截图**，包含 39 对菜单展开状态；明暗主题、320／360／393／412 dp、1／1.3／2 倍字、英文大字、平板和 Windows 窄宽布局 |
+| 真实 Win32 缩放 | **6 个场景通过**：总览 360／660／1000／1440 dp，详情 360／1000 dp；120 DPI，客户区和 Flutter 渲染尺寸一致，最大化区域均命中 HTMAXBUTTON（9） |
+
+证据：
+
+- 软件回归：`.scratch/settings-feedback-analyze-final.log`、`.scratch/settings-feedback-full-final.log`、`.scratch/settings-feedback-gate.log`、`.scratch/settings-feedback-coverage.md`。
+- 最终菜单定向回归：`.scratch/settings-feedback-final-menu-regression.log`，**63 项通过**；草稿／窗口退出守卫的定向复测为 `.scratch/settings-feedback-guard-regression.log`。
+- 前后视觉矩阵：`.scratch/settings-feedback-before/`、`.scratch/settings-feedback-after/`，各有清单；日志为 `.scratch/settings-feedback-visual-before.log` 和 `.scratch/settings-feedback-visual-after.log`。旧版本桌面菜单由视觉驱动显式关闭；新版本仍实际执行 Esc 并断言菜单关闭，没有以旧版本的键盘行为降低当前回归要求。
+- 最终视觉源码校验：`.scratch/settings-feedback-visual-source-verification.json`，核对生产改动、视觉夹具、内存测试环境和依赖文件，防止独立副本与工作区不一致。
+- 原生窗口：`.scratch/settings-feedback-native/`，包含六张截图及 `native-window-evidence.json`；日志为 `.scratch/settings-feedback-native.log`。
+- 汇总对照：`.scratch/settings-feedback-comparison/menus-before-after.png`、`.scratch/settings-feedback-comparison/overview-and-about.png`。
+
+Android 仍只有模拟几何与安全区，没有进行真机验收。真实 Windows 检查不等于人工悬停／Snap／MSIX 验收：测试窗口没有抢占前台（`foregroundIsApp: false`）。第三方插件既有 CMake 编译警告未在本轮修改。版本保持 `2.3.0+14`，依赖不变，未自动提交或推送。

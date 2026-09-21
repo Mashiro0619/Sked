@@ -35,6 +35,8 @@ Future<AppLocalizations> _openOutline(WidgetTester tester) async {
   final appearance = find.byKey(const ValueKey('settings-appearance-details'));
   if (appearance.evaluate().isNotEmpty) {
     await tester.ensureVisible(appearance);
+    await tester.pumpAndSettle();
+    expect(appearance.hitTestable(), findsOneWidget);
     await tester.tap(appearance);
     await tester.pumpAndSettle();
   }

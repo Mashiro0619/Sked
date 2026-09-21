@@ -10,6 +10,14 @@ import 'workbench_chrome_metrics.dart';
 
 import '../theme/sked_expressive_theme.dart';
 
+/// Builds row content around a current-value anchor. The dropdown owns pointer
+/// activation and a single keyboard/semantics trigger for the whole row.
+typedef SkedDropdownFieldBuilder = Widget Function(
+  BuildContext context,
+  String? selectedLabel,
+  Widget Function(Widget child) anchor,
+);
+
 class SkedDropdownMenu<T> extends StatefulWidget {
   const SkedDropdownMenu({
     super.key,
@@ -35,10 +43,10 @@ class SkedDropdownMenu<T> extends StatefulWidget {
   final AppMode? workspace;
   final Object? sessionKey;
 
-  /// Optional non-interactive field content. The menu retains ownership of
-  /// taps, keyboard focus, selected state and data-session invalidation.
-  final Widget Function(BuildContext context, String? selectedLabel)?
-  fieldBuilder;
+  /// Optional row presentation. Wrap only the current-value control with
+  /// [SkedDropdownFieldBuilder]'s anchor so the popup follows that control,
+  /// rather than taking the row's full width. Non-settings fields stay unchanged.
+  final SkedDropdownFieldBuilder? fieldBuilder;
 
   @override
   State<SkedDropdownMenu<T>> createState() => _SkedDropdownMenuState<T>();
@@ -56,6 +64,8 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   String? _workspaces;
   bool _compact = false, _ownerCurrent = true, _acceptSelection = false;
   int _generation = 0;
+
+  bool get _managedMenu => _compact || widget.fieldBuilder != null;
 
   bool get _sessionCurrent =>
       _ownerCurrent &&
@@ -81,7 +91,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   }
 
   void _checkSession() {
-    if (_compact && _menu.isOpen && !_sessionCurrent) _invalidateMenu();
+    if (_managedMenu && _menu.isOpen && !_sessionCurrent) _invalidateMenu();
   }
 
   void _invalidateMenu() {
@@ -94,7 +104,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   }
 
   void _opened() {
-    if (!_compact) return;
+    if (!_managedMenu) return;
     _dataSession = _provider?.dataSessionToken;
     _workspaces = _provider?.enabledWorkspaces
         .map((mode) => mode.value)
@@ -114,7 +124,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
 
   void _closed() {
     _acceptSelection = false;
-    if (!_compact) return;
+    if (!_managedMenu) return;
     final generation = ++_generation;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted &&
@@ -151,7 +161,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   @override
   void didUpdateWidget(covariant SkedDropdownMenu<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_compact &&
+    if (_managedMenu &&
         _menu.isOpen &&
         (!widget.enabled ||
             widget.workspace != oldWidget.workspace ||
@@ -185,11 +195,32 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final anchorWidth = constraints.maxWidth;
-        final menuStyle = _menuStyleForAnchor(baseMenuStyle, anchorWidth);
-        return MenuAnchor(
+        final menuStyle = _menuStyleForAnchor(
+          baseMenuStyle,
+          constraints.maxWidth,
+        );
+        void toggleMenu() {
+          if (_menu.isOpen) {
+            _menu.close();
+          } else {
+            if (_managedMenu) _triggerFocus.requestFocus();
+            _menu.open();
+          }
+        }
+
+        Widget trigger(Widget content) => Semantics(
+          button: true,
+          enabled: widget.enabled,
+          child: InkWell(
+            focusNode: _managedMenu ? _triggerFocus : null,
+            onTap: widget.enabled ? toggleMenu : null,
+            borderRadius: shapes.fieldRadius,
+            child: content,
+          ),
+        );
+        Widget anchor({Widget? child}) => MenuAnchor(
           controller: _menu,
-          childFocusNode: _compact ? _triggerFocus : null,
+          childFocusNode: _managedMenu ? _triggerFocus : null,
           onOpen: _opened,
           onClose: _closed,
           animated: motion.spatialAnimationsEnabled,
@@ -199,15 +230,16 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
           menuChildren: [
             for (final entry in widget.dropdownMenuEntries)
               _SkedDropdownMenuItem<T>(
-                key: _compact && entry.value == _selectedValue
+                key: _managedMenu && entry.value == _selectedValue
                     ? _selectedItem
                     : null,
-                compact: _compact,
+                compact: _managedMenu,
+                reserveCheckSpace: widget.fieldBuilder != null,
                 entry: entry,
                 selected: entry.value == _selectedValue,
                 onSelected: widget.enabled && entry.enabled
                     ? (value) {
-                        if (_compact) {
+                        if (_managedMenu) {
                           if (!_acceptSelection ||
                               !_menu.isOpen ||
                               !_sessionCurrent) {
@@ -222,50 +254,64 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
                     : null,
               ),
           ],
-          builder: (context, controller, child) {
-            final field = Semantics(
-              button: true,
-              enabled: widget.enabled,
-              expanded: controller.isOpen,
-              child: InkWell(
-                focusNode: _compact ? _triggerFocus : null,
-                onTap: widget.enabled
-                    ? () {
-                        if (controller.isOpen) {
-                          controller.close();
-                        } else {
-                          controller.open();
-                        }
-                      }
-                    : null,
-                borderRadius: shapes.fieldRadius,
-                child:
-                    widget.fieldBuilder?.call(context, selectedEntry?.label) ??
-                    InputDecorator(
-                      isEmpty: selectedEntry == null,
-                      decoration: InputDecoration(
-                        label: widget.label,
-                        prefixIcon: widget.leadingIcon,
-                        enabled: widget.enabled,
-                        suffixIcon: AnimatedRotation(
-                          turns: controller.isOpen ? 0.5 : 0,
-                          duration: motion.spatialAnimationsEnabled
-                              ? motion.effects(SkedMotionSpeed.fast)
-                              : Duration.zero,
-                          curve: motion.scheme.enterCurve,
-                          child: const Icon(Icons.arrow_drop_down),
-                        ),
-                      ).applyDefaults(effectiveInputDecorationTheme),
-                      child: _SelectedDropdownLabel(entry: selectedEntry),
+          child: child,
+          builder: (context, controller, anchorChild) {
+            if (anchorChild != null) {
+              return Material(
+                type: MaterialType.transparency,
+                child: trigger(
+                  Semantics(expanded: controller.isOpen, child: anchorChild),
+                ),
+              );
+            }
+            return trigger(
+              Semantics(
+                expanded: controller.isOpen,
+                child: InputDecorator(
+                  isEmpty: selectedEntry == null,
+                  decoration: InputDecoration(
+                    label: widget.label,
+                    prefixIcon: widget.leadingIcon,
+                    enabled: widget.enabled,
+                    suffixIcon: AnimatedRotation(
+                      turns: controller.isOpen ? 0.5 : 0,
+                      duration: motion.spatialAnimationsEnabled
+                          ? motion.effects(SkedMotionSpeed.fast)
+                          : Duration.zero,
+                      curve: motion.scheme.enterCurve,
+                      child: const Icon(Icons.arrow_drop_down),
                     ),
+                  ).applyDefaults(effectiveInputDecorationTheme),
+                  child: _SelectedDropdownLabel(entry: selectedEntry),
+                ),
               ),
             );
-            if (!expand) {
-              return field;
-            }
-            return SizedBox(width: double.infinity, child: field);
           },
         );
+        final field = widget.fieldBuilder == null
+            ? anchor()
+            : TapRegion(
+                // The whole row opens this menu, so it must also count as an
+                // inside tap. Otherwise a slow row tap closes on pointer-down
+                // and immediately reopens the menu on pointer-up.
+                groupId: _menu,
+                child: MergeSemantics(
+                  child: InkWell(
+                    // Pointer users may activate the full row, but keyboard and
+                    // semantics have one trigger inside the actual MenuAnchor.
+                    canRequestFocus: false,
+                    excludeFromSemantics: true,
+                    onTap: widget.enabled ? toggleMenu : null,
+                    borderRadius: shapes.fieldRadius,
+                    child: widget.fieldBuilder!(
+                      context,
+                      selectedEntry?.label,
+                      (child) => anchor(child: child),
+                    ),
+                  ),
+                ),
+              );
+        return expand ? SizedBox(width: double.infinity, child: field) : field;
       },
     );
   }
@@ -275,6 +321,37 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
         ? WidgetStatePropertyAll(Size.fromWidth(anchorWidth))
         : null;
 
+    if (widget.fieldBuilder != null) {
+      final media = MediaQuery.of(context);
+      final maxWidth = math.min(
+        360.0,
+        math.max(0.0, media.size.width - media.padding.horizontal - 16),
+      );
+      final maxHeight = math.min(
+        360.0,
+        math.max(
+          48.0,
+          media.size.height -
+              media.padding.top -
+              math.max(media.padding.bottom, media.viewInsets.bottom) -
+              16,
+        ),
+      );
+      return (baseStyle ?? const MenuStyle()).copyWith(
+        fixedSize: const WidgetStatePropertyAll<Size?>(null),
+        minimumSize: WidgetStatePropertyAll(Size(math.min(144, maxWidth), 0)),
+        maximumSize: WidgetStatePropertyAll(Size(maxWidth, maxHeight)),
+        padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
+        backgroundColor: WidgetStatePropertyAll(
+          Theme.of(context).colorScheme.surface,
+        ),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        alignment: AlignmentDirectional.bottomStart,
+      );
+    }
     if (!_compact) {
       return (baseStyle ?? const MenuStyle()).copyWith(
         fixedSize: fixedSize,
@@ -328,6 +405,7 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
   const _SkedDropdownMenuItem({
     super.key,
     required this.compact,
+    required this.reserveCheckSpace,
     required this.entry,
     required this.selected,
     required this.onSelected,
@@ -335,6 +413,7 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
 
   final DropdownMenuEntry<T> entry;
   final bool compact;
+  final bool reserveCheckSpace;
   final bool selected;
   final ValueChanged<T>? onSelected;
 
@@ -357,7 +436,11 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
         leadingIcon: entry.leadingIcon,
         trailingIcon:
             entry.trailingIcon ??
-            (selected ? Icon(Icons.check, color: colors.primary) : null),
+            (selected
+                ? Icon(Icons.check, color: colors.primary)
+                : reserveCheckSpace
+                ? const SizedBox.square(dimension: 24)
+                : null),
         closeOnActivate: !compact,
         onPressed: enabled ? () => onSelected?.call(entry.value) : null,
         style:

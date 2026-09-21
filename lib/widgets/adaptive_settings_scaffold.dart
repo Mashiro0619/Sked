@@ -46,7 +46,7 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
   final _pageExitGuards = <ModalRoute<dynamic>, Future<bool> Function()>{};
   final _overviewController = ScrollController();
   final _sectionKeys = <String, GlobalKey>{};
-  String _highlightedGroup = 'appearance';
+  String? _highlightedGroup;
 
   VoidCallback _registerPageExitGuard(
     ModalRoute<dynamic> route,
@@ -225,6 +225,14 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
         constraints.maxWidth,
         textScale,
       );
+      if (!widget.catalog.any(
+        (entry) => entry.category && entry.id == _highlightedGroup,
+      )) {
+        _highlightedGroup = widget.catalog
+            .where((entry) => entry.category)
+            .firstOrNull
+            ?.id;
+      }
       for (final entry in widget.catalog) {
         _sectionKeys.putIfAbsent(
           entry.id,

@@ -25,12 +25,6 @@ List<SettingsCatalogEntry> settingsCatalog(
   Set<AppMode> enabled, {
   bool canClearData = true,
 }) => [
-  SettingsCatalogEntry(
-    'appearance',
-    l.settingsAppearanceLanguage,
-    SettingsDestination.appearance,
-    category: true,
-  ),
   if (enabled.contains(AppMode.student))
     SettingsCatalogEntry(
       'student',
@@ -49,6 +43,12 @@ List<SettingsCatalogEntry> settingsCatalog(
     'notifications',
     l.notificationSettingsSection,
     SettingsDestination.notifications,
+    category: true,
+  ),
+  SettingsCatalogEntry(
+    'appearance',
+    l.settingsAppearanceLanguage,
+    SettingsDestination.appearance,
     category: true,
   ),
   SettingsCatalogEntry(

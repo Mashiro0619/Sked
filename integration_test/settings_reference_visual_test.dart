@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -164,6 +165,40 @@ void main() {
                 find.byKey(const PageStorageKey('settings-overview-scroll')),
               )
               .controller!;
+          Future<void> captureChoice(String id, String scene) async {
+            await Scrollable.ensureVisible(t.element(k(id)), alignment: .35);
+            await t.pumpAndSettle();
+            await t.tap(k(id));
+            await t.pumpAndSettle();
+            expect(find.byType(MenuItemButton), findsWidgets);
+            if (!baseline && scale == 1) {
+              final item = t.getRect(find.byType(MenuItemButton).first);
+              expect(item.width, lessThan(t.getSize(k(id)).width));
+            }
+            await capture(scene);
+            if (baseline) {
+              // The prior desktop trigger does not retain keyboard focus; the
+              // visual baseline driver closes its menu without changing data.
+              t
+                  .widget<MenuAnchor>(
+                    find.descendant(
+                      of: k(id),
+                      matching: find.byType(MenuAnchor),
+                    ),
+                  )
+                  .controller!
+                  .close();
+            } else {
+              await t.sendKeyEvent(LogicalKeyboardKey.escape);
+            }
+            await t.pumpAndSettle();
+            expect(find.byType(MenuItemButton), findsNothing);
+          }
+
+          await captureChoice(
+            'theme-brightness-choice',
+            'overview-brightness-menu',
+          );
           controller.jumpTo(controller.position.maxScrollExtent);
           await t.pumpAndSettle();
           await capture('overview-bottom');
@@ -181,6 +216,17 @@ void main() {
           ]) {
             await open(entry);
             await capture(scene);
+            if (scene == 'appearance') {
+              await captureChoice(
+                'theme-brightness-mode-choice-list',
+                'appearance-brightness-menu',
+              );
+            } else if (scene == 'general-display') {
+              await captureChoice(
+                'general-default-view',
+                'general-default-view-menu',
+              );
+            }
             await t.tap(find.byType(BackButton).hitTestable().first);
             await t.pumpAndSettle();
             expect(controller.hasClients, isTrue);

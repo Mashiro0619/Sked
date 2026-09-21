@@ -423,30 +423,35 @@ void main() {
     }
   });
 
-  testWidgets('default view dropdown opens with a full field-width menu', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
+  testWidgets(
+    'default view dropdown follows its value control, not the full row',
+    (tester) async {
+      final provider = await _createProvider();
 
-    await _pumpPage(tester, provider);
+      await _pumpPage(tester, provider);
 
-    final dropdown = find.byKey(const ValueKey('general-default-view'));
-    final dropdownRect = tester.getRect(dropdown);
+      final dropdown = find.byKey(const ValueKey('general-default-view'));
+      final dropdownRect = tester.getRect(dropdown);
+      final anchorRect = tester.getRect(
+        find.descendant(of: dropdown, matching: find.byType(MenuAnchor)),
+      );
 
-    await tester.tap(dropdown);
-    await tester.pumpAndSettle();
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
 
-    final firstMenuItem = find
-        .ancestor(
-          of: find.text('Week').last,
-          matching: find.byType(MenuItemButton),
-        )
-        .first;
-    final menuItemRect = tester.getRect(firstMenuItem);
+      final firstMenuItem = find
+          .ancestor(
+            of: find.text('Week').last,
+            matching: find.byType(MenuItemButton),
+          )
+          .first;
+      final menuItemRect = tester.getRect(firstMenuItem);
 
-    expect(menuItemRect.left, closeTo(dropdownRect.left, 1));
-    expect(menuItemRect.width, greaterThanOrEqualTo(dropdownRect.width - 16));
-  });
+      expect(menuItemRect.left, closeTo(anchorRect.left + 4, 1));
+      expect(menuItemRect.top, greaterThanOrEqualTo(anchorRect.bottom + 4));
+      expect(menuItemRect.width, lessThan(dropdownRect.width / 2));
+    },
+  );
 
   testWidgets('persists schedule, time-grid, and popup controls', (
     tester,
