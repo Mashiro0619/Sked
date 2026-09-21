@@ -4,7 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
+import 'package:sked/widgets/desktop_window_host.dart';
 import 'package:sked/widgets/settings_list.dart';
+import 'package:sked/widgets/workbench_chrome_metrics.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 
 import '../support/workspace_harness.dart';
@@ -18,6 +20,56 @@ void viewport(WidgetTester t, Size size) {
 }
 
 void main() {
+  for (final scale in [1.0, 1.5, 2.0]) {
+    testWidgets(
+      'desktop overview toolbar aligns with the frame at $scale text scale before and after scrolling or resizing',
+      (t) async {
+        viewport(t, const Size(1600, 900));
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            textScale: scale,
+            home: const SettingsPage(),
+          ),
+        );
+        await t.pumpAndSettle();
+        final overview = find.byKey(
+          const PageStorageKey('settings-overview-scroll'),
+        );
+        final toolbar = find.descendant(
+          of: k('settings-overview-app-bar'),
+          matching: find.byType(AppBar),
+        );
+        final controller = t.widget<ScrollView>(overview).controller!;
+        for (final width in [1600.0, 360.0, 1600.0]) {
+          t.view.physicalSize = Size(width, 900);
+          await t.pumpAndSettle();
+          for (final offset in [0.0, 300.0]) {
+            controller.jumpTo(offset);
+            await t.pumpAndSettle();
+            final rect = t.getRect(toolbar);
+            final height = WorkbenchChromeMetrics.of(t.element(toolbar))
+                .toolbarHeight;
+            expect(t.getTopLeft(overview).dy, 0);
+            expect(rect.top, 0);
+            expect(rect.bottom, height);
+            if (width == 1600) {
+              final sidebar = t.getRect(
+                find.byType(WorkbenchAppBar).hitTestable(),
+              );
+              expect(rect.top, sidebar.top);
+              expect(rect.bottom, sidebar.bottom);
+            }
+            expect(t.takeException(), isNull);
+          }
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
   for (final brightness in Brightness.values) {
     testWidgets(
       'connected settings have neutral row surfaces and continuous first/last corners in $brightness',

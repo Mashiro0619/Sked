@@ -112,11 +112,26 @@ void main() {
       );
       await t.tap(find.text('Open settings'));
       await t.pumpAndSettle();
+      final toolbar = find.descendant(
+        of: k('settings-overview-app-bar'),
+        matching: find.byType(AppBar),
+      );
+      expect(t.getTopLeft(toolbar).dy, 0);
       await t.ensureVisible(k('notification-settings-enabled'));
       await t.pumpAndSettle();
+      final toolbarBeforeSaving = t.getRect(toolbar);
       await t.tap(k('notification-settings-enabled'));
+      await t.pump();
       await t.pump(const Duration(milliseconds: 200));
       expect(p.notificationsEnabled, isTrue);
+      expect(t.getRect(toolbar), toolbarBeforeSaving);
+      expect(
+        find.descendant(
+          of: find.byType(NotificationSettingsPage),
+          matching: find.byType(LinearProgressIndicator),
+        ),
+        findsOneWidget,
+      );
       await t.tap(find.byType(BackButton).hitTestable().first);
       await t.pump();
       expect(find.byType(SettingsPage), findsOneWidget);
@@ -125,13 +140,18 @@ void main() {
       expect(find.byType(SettingsPage), findsOneWidget);
       gateway.pending.complete(true);
       await t.pumpAndSettle();
+      expect(t.getRect(toolbar), toolbarBeforeSaving);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
       await t.tap(find.byType(BackButton).hitTestable().first);
       await t.pumpAndSettle();
       expect(find.text('Open settings'), findsOneWidget);
       expect(find.byType(SettingsPage), findsNothing);
       expect(t.takeException(), isNull);
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.windows,
+    }),
   );
   for (final (size, scale, brightness) in [
     (const Size(320, 700), 2.0, Brightness.light),

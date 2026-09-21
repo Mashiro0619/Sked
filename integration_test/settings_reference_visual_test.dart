@@ -79,6 +79,14 @@ void main() {
           'zh',
         ),
         (
+          'windows-1280',
+          const Size(1280, 900),
+          1.0,
+          Brightness.light,
+          TargetPlatform.windows,
+          'zh',
+        ),
+        (
           'windows-1440',
           const Size(1440, 900),
           1.3,
@@ -157,6 +165,21 @@ void main() {
             await t.pumpAndSettle();
             await t.tap(k(id));
             await t.pumpAndSettle();
+          }
+
+          if (!baseline && platform == TargetPlatform.windows) {
+            final toolbar = t.getRect(
+              find.descendant(
+                of: k('settings-overview-app-bar'),
+                matching: find.byType(AppBar),
+              ),
+            );
+            expect(toolbar.top, 0, reason: '$name toolbar origin');
+            expect(
+              toolbar.bottom,
+              t.getBottomLeft(k('desktop-window-divider')).dy,
+              reason: '$name toolbar must share the native frame divider',
+            );
           }
 
           await capture('overview-top');

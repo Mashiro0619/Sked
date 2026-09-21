@@ -31,7 +31,6 @@ import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
-import '../widgets/ui_command.dart';
 import '../widgets/adaptive_settings_scaffold.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 import '../models/settings_destination.dart';
@@ -112,8 +111,7 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage>
-    with UiCommandRunner<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage> {
   AppMode? _appearanceWorkspace;
 
   void _setAppearanceWorkspace(AppMode mode) {
@@ -162,13 +160,9 @@ class _SettingsPageState extends State<SettingsPage>
           canClearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
         );
         return PopScope(
-          canPop:
-              !_clearingAppData &&
-              !provider.isDataClearActive &&
-              !uiCommandBusy,
+          canPop: !_clearingAppData && !provider.isDataClearActive,
           child: SettingsInteractionBlocker(
-            blocked:
-                _clearingAppData || provider.isDataClearActive || uiCommandBusy,
+            blocked: _clearingAppData || provider.isDataClearActive,
             child: widget.initialDestination != null
                 ? _buildDestination(widget.initialDestination!, provider)
                 : AdaptiveSettingsScaffold(
@@ -241,144 +235,135 @@ class _SettingsPageState extends State<SettingsPage>
       trailing: const Icon(Icons.chevron_right, size: 20),
       onTap: () => open(destination),
     );
-    return Column(
+    // Embedded setting groups own their save feedback. Keep the scroll header
+    // at the viewport origin so it aligns with the sidebar and native caption.
+    return ResponsiveSettingsBody(
+      controller: controller,
+      headerSliver: headerSliver,
+      scrollViewKey: const PageStorageKey('settings-overview-scroll'),
+      topPadding: 16,
       children: [
-        UiCommandBusyIndicator(
-          busy: uiCommandBusy,
-          showDelay: const Duration(milliseconds: 180),
+        if (provider.isWorkspaceEnabled(AppMode.student))
+          group('student', l.studentTimetable, [
+            link(
+              'settings-student-display',
+              l.timetableDisplaySettings,
+              Icons.tune,
+              SettingsDestination.studentPreferences,
+              subtitle: l.timetableDisplaySettingsDesc,
+            ),
+            SettingsConnectedTile(
+              key: const ValueKey('settings-period-times'),
+              title: l.periodTimeSets,
+              value: provider.activePeriodTimeSetOrNull?.name,
+              leading: const Icon(Icons.schedule),
+              trailing: const Icon(Icons.unfold_more, size: 20),
+              onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
+                  ? null
+                  : () => _guardFlow(
+                      _SettingsFlow.periodTimeSetPicker,
+                      () => selectTimetablePeriodTimeSet(
+                        context,
+                        provider: provider,
+                      ),
+                    ),
+            ),
+          ]),
+        if (provider.isWorkspaceEnabled(AppMode.general))
+          group('general', l.generalSchedule, [
+            link(
+              'settings-general-display',
+              l.generalDisplaySettings,
+              Icons.tune,
+              SettingsDestination.generalPreferences,
+              subtitle: l.generalDisplaySettingsDesc,
+            ),
+          ]),
+        NotificationSettingsPage(
+          embedded: true,
+          notificationService: widget.notificationService,
+          agendaCoordinator: _agendaCoordinator,
+          overviewBuilder: (controls) =>
+              group('notifications', l.notificationSettingsSection, [
+                ...controls,
+                link(
+                  'settings-notifications',
+                  l.settingsNotificationPreferences,
+                  Icons.tune,
+                  SettingsDestination.notifications,
+                  subtitle: l.settingsNotificationPreferencesSummary,
+                ),
+              ]),
         ),
-        Expanded(
-          child: ResponsiveSettingsBody(
-            controller: controller,
-            headerSliver: headerSliver,
-            scrollViewKey: const PageStorageKey('settings-overview-scroll'),
-            topPadding: 16,
-            children: [
-              if (provider.isWorkspaceEnabled(AppMode.student))
-                group('student', l.studentTimetable, [
-                  link(
-                    'settings-student-display',
-                    l.timetableDisplaySettings,
-                    Icons.tune,
-                    SettingsDestination.studentPreferences,
-                    subtitle: l.timetableDisplaySettingsDesc,
-                  ),
-                  SettingsConnectedTile(
-                    key: const ValueKey('settings-period-times'),
-                    title: l.periodTimeSets,
-                    value: provider.activePeriodTimeSetOrNull?.name,
-                    leading: const Icon(Icons.schedule),
-                    trailing: const Icon(Icons.unfold_more, size: 20),
-                    onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
-                        ? null
-                        : () => _guardFlow(
-                            _SettingsFlow.periodTimeSetPicker,
-                            () => selectTimetablePeriodTimeSet(
-                              context,
-                              provider: provider,
-                            ),
-                          ),
-                  ),
-                ]),
-              if (provider.isWorkspaceEnabled(AppMode.general))
-                group('general', l.generalSchedule, [
-                  link(
-                    'settings-general-display',
-                    l.generalDisplaySettings,
-                    Icons.tune,
-                    SettingsDestination.generalPreferences,
-                    subtitle: l.generalDisplaySettingsDesc,
-                  ),
-                ]),
-              NotificationSettingsPage(
-                embedded: true,
-                notificationService: widget.notificationService,
-                agendaCoordinator: _agendaCoordinator,
-                overviewBuilder: (controls) =>
-                    group('notifications', l.notificationSettingsSection, [
-                      ...controls,
-                      link(
-                        'settings-notifications',
-                        l.settingsNotificationPreferences,
-                        Icons.tune,
-                        SettingsDestination.notifications,
-                        subtitle: l.settingsNotificationPreferencesSummary,
-                      ),
-                    ]),
+        ThemeSettingsPage(
+          embedded: true,
+          initialWorkspace: _appearanceWorkspace,
+          onWorkspaceChanged: _setAppearanceWorkspace,
+          overviewBuilder: (controls) => group(
+            'appearance',
+            l.settingsAppearanceLanguage,
+            [
+              ...controls,
+              link(
+                'settings-language',
+                l.language,
+                Icons.language,
+                SettingsDestination.language,
+                value: languageLabelForLocaleCode(provider.localeCode, l10n: l),
               ),
-              ThemeSettingsPage(
-                embedded: true,
-                initialWorkspace: _appearanceWorkspace,
-                onWorkspaceChanged: _setAppearanceWorkspace,
-                overviewBuilder: (controls) =>
-                    group('appearance', l.settingsAppearanceLanguage, [
-                      ...controls,
-                      link(
-                        'settings-language',
-                        l.language,
-                        Icons.language,
-                        SettingsDestination.language,
-                        value: languageLabelForLocaleCode(
-                          provider.localeCode,
-                          l10n: l,
-                        ),
-                      ),
-                      link(
-                        'settings-appearance-details',
-                        l.settingsAppearanceDetails,
-                        Icons.palette_outlined,
-                        SettingsDestination.appearance,
-                      ),
-                    ]),
+              link(
+                'settings-appearance-details',
+                l.settingsAppearanceDetails,
+                Icons.palette_outlined,
+                SettingsDestination.appearance,
               ),
-              group('features', l.settingsSectionWorkspace, [
-                link(
-                  'settings-workspace-features',
-                  l.workspaceFeatures,
-                  Icons.dashboard_outlined,
-                  SettingsDestination.features,
-                  subtitle: l.settingsFeaturesSummary,
-                ),
-              ]),
-              group('data', l.settingsDataPrivacy, [
-                if (provider.isWorkspaceEnabled(AppMode.student))
-                  link(
-                    'settings-student-transfer',
-                    l.dataImportExport,
-                    Icons.school_outlined,
-                    SettingsDestination.student,
-                  ),
-                if (provider.isWorkspaceEnabled(AppMode.general))
-                  link(
-                    'settings-general-transfer',
-                    l.generalScheduleImportExport,
-                    Icons.import_export,
-                    SettingsDestination.general,
-                  ),
-                _dataControls(provider, l).first,
-                link(
-                  'settings-data-privacy',
-                  l.settingsDataPrivacy,
-                  Icons.privacy_tip_outlined,
-                  SettingsDestination.data,
-                  subtitle: l.settingsPrivacySummary,
-                ),
-              ]),
-              group('about', l.settingsSectionAbout, [
-                ..._aboutControls(provider, l).where(
-                  (item) =>
-                      item.key == const ValueKey('settings-check-for-updates'),
-                ),
-                link(
-                  'settings-about',
-                  l.settingsSectionAbout,
-                  Icons.info_outline,
-                  SettingsDestination.about,
-                ),
-              ]),
             ],
           ),
         ),
+        group('features', l.settingsSectionWorkspace, [
+          link(
+            'settings-workspace-features',
+            l.workspaceFeatures,
+            Icons.dashboard_outlined,
+            SettingsDestination.features,
+            subtitle: l.settingsFeaturesSummary,
+          ),
+        ]),
+        group('data', l.settingsDataPrivacy, [
+          if (provider.isWorkspaceEnabled(AppMode.student))
+            link(
+              'settings-student-transfer',
+              l.dataImportExport,
+              Icons.school_outlined,
+              SettingsDestination.student,
+            ),
+          if (provider.isWorkspaceEnabled(AppMode.general))
+            link(
+              'settings-general-transfer',
+              l.generalScheduleImportExport,
+              Icons.import_export,
+              SettingsDestination.general,
+            ),
+          _dataControls(provider, l).first,
+          link(
+            'settings-data-privacy',
+            l.settingsDataPrivacy,
+            Icons.privacy_tip_outlined,
+            SettingsDestination.data,
+            subtitle: l.settingsPrivacySummary,
+          ),
+        ]),
+        group('about', l.settingsSectionAbout, [
+          ..._aboutControls(provider, l).where(
+            (item) => item.key == const ValueKey('settings-check-for-updates'),
+          ),
+          link(
+            'settings-about',
+            l.settingsSectionAbout,
+            Icons.info_outline,
+            SettingsDestination.about,
+          ),
+        ]),
       ],
     );
   }
