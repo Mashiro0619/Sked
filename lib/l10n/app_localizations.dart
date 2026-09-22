@@ -5555,6 +5555,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy policy and clear local data'**
   String get settingsPrivacySummary;
+
+  /// No description provided for @periodTimesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 period} other{{count} periods}}'**
+  String periodTimesCount(int count);
+
+  /// No description provided for @periodTimesPeriodColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get periodTimesPeriodColumn;
+
+  /// No description provided for @periodTimesDurationColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get periodTimesDurationColumn;
+
+  /// No description provided for @periodTimesGapColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Break'**
+  String get periodTimesGapColumn;
+
+  /// No description provided for @periodTimesMinutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String periodTimesMinutesShort(int minutes);
+
+  /// No description provided for @periodTimesSavePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to save…'**
+  String get periodTimesSavePending;
+
+  /// No description provided for @periodTimesSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not saved · Save failed'**
+  String get periodTimesSaveFailed;
+
+  /// No description provided for @periodTimesInvalidStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Not saved · Fix the highlighted times'**
+  String get periodTimesInvalidStatus;
 }
 
 class _AppLocalizationsDelegate

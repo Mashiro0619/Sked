@@ -4,7 +4,7 @@ import '../widgets/workspace_route_lifecycle.dart';
 
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:ui' show FontFeature, PointerDeviceKind;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +19,9 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/ui_command.dart';
+import '../widgets/workbench_chrome_metrics.dart';
+
+part 'period_times_editor.dart';
 
 enum _PeriodTimesMenuAction {
   importTemplate,
@@ -63,6 +66,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
 
   late final TextEditingController _nameController;
   late List<CoursePeriodTime> _periodTimes;
+  final _scrollController = ScrollController();
+  final _scrollViewportKey = GlobalKey();
+  final _periodRowKeys = <GlobalKey>[];
+  Object? _layoutSignature;
+  int _scrollGeneration = 0;
   var _loading = true;
   var _timePickerOpen = false;
   var _menuActionInProgress = false;
@@ -107,6 +115,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         _nameController.text = AppLocalizations.of(context).periodTimesTitle;
         _periodTimes = buildPeriodTimesForCount(10);
       }
+      _resetPeriodRowKeys();
       _loading = false;
     }
   }
@@ -122,6 +131,8 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       }),
     );
     _autoSaveDebounce?.cancel();
+    _scrollGeneration++;
+    _scrollController.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -148,11 +159,6 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       appBar: WorkbenchAppBar(
         title: Text(l10n.periodTimesTitle),
         actions: [
-          IconButton(
-            tooltip: l10n.addOnePeriod,
-            onPressed: _interactionBlocked ? null : _addPeriod,
-            icon: const Icon(Icons.add),
-          ),
           SkedPopupMenuButton<_PeriodTimesMenuAction>(
             tooltip: l10n.importExport,
             enabled: !_menuBlocked,
@@ -183,7 +189,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
               SkedPopupMenuDivider(),
               SkedPopupMenuItem(
                 value: _PeriodTimesMenuAction.deleteSet,
-                child: Text(l10n.deletePeriodTimeSet),
+                child: Text(
+                  l10n.deletePeriodTimeSet,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ),
             ],
           ),
@@ -219,300 +228,201 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     );
   }
 
-  Widget _buildEditorBody(AppLocalizations l10n) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontalPadding = constraints.maxWidth < 600 ? 16.0 : 24.0;
-        final textScale = MediaQuery.textScalerOf(context).scale(1);
-        final availableWidth = (constraints.maxWidth - horizontalPadding * 2)
-            .clamp(0.0, double.infinity);
-        final useTableRows =
-            constraints.maxWidth >= 840 &&
-            textScale <= 1.3 &&
-            (availableWidth - 12) / 2 >= 360;
-        final maxContentWidth = useTableRows ? 960.0 : 720.0;
+  _PeriodEditorSaveState get _saveState {
+    if (_hasInvalidPeriodTimes) return _PeriodEditorSaveState.invalid;
+    if (_failedAutoSaveRevision == _autoSaveRevision) {
+      return _PeriodEditorSaveState.failed;
+    }
+    if (_autoSaveInProgress) return _PeriodEditorSaveState.saving;
+    if (_persistedAutoSaveRevision != _autoSaveRevision) {
+      return _PeriodEditorSaveState.pending;
+    }
+    return _PeriodEditorSaveState.saved;
+  }
 
-        return ScrollConfiguration(
-          behavior: const MaterialScrollBehavior().copyWith(
-            dragDevices: {
-              PointerDeviceKind.touch,
-              PointerDeviceKind.mouse,
-              PointerDeviceKind.trackpad,
-              PointerDeviceKind.stylus,
-              PointerDeviceKind.invertedStylus,
-            },
-          ),
+  Widget _buildEditorBody(AppLocalizations l10n) => LayoutBuilder(
+    builder: (context, constraints) {
+      final signature = (
+        constraints.maxWidth,
+        MediaQuery.textScalerOf(context).scale(14),
+        l10n.localeName,
+        Theme.of(context).platform,
+      );
+      if (_layoutSignature != signature) {
+        final anchor = _captureScrollAnchor();
+        _layoutSignature = signature;
+        if (anchor != null) _restoreScrollAnchor(anchor);
+      }
+      final padding = constraints.maxWidth < 600 ? 16.0 : 24.0;
+      final width = math.min(
+        800.0,
+        math.max(0.0, constraints.maxWidth - padding * 2),
+      );
+      final columns = _PeriodTableColumns.resolve(context, width, _periodTimes);
+      return ScrollConfiguration(
+        behavior: const MaterialScrollBehavior().copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+            PointerDeviceKind.stylus,
+            PointerDeviceKind.invertedStylus,
+          },
+        ),
+        child: SizedBox.expand(
+          key: _scrollViewportKey,
           child: ListView(
             key: const ValueKey('period-times-editor-scroll-view'),
-            padding: EdgeInsets.fromLTRB(
-              horizontalPadding,
-              16,
-              horizontalPadding,
-              24,
-            ),
+            controller: _scrollController,
+            padding: EdgeInsets.fromLTRB(padding, 16, padding, 24),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             children: [
               Center(
-                child: ConstrainedBox(
-                  key: const ValueKey(
-                    'responsive-settings-single-column-content',
-                  ),
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextField(
-                          controller: _nameController,
-                          onChanged: (_) => _scheduleAutoSave(debounce: true),
-                          onSubmitted: (_) {
-                            unawaited(_flushPendingAutoSave());
-                          },
-                          decoration: InputDecoration(
-                            labelText: l10n.periodTimeSetName,
-                            prefixIcon: const Icon(Icons.schedule_outlined),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        LayoutBuilder(
-                          builder: (context, gridConstraints) {
-                            final cardWidth = gridConstraints.maxWidth;
-                            return Wrap(
-                              key: const ValueKey('period-times-editor-grid'),
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                for (
-                                  var index = 0;
-                                  index < _periodTimes.length;
-                                  index++
-                                )
-                                  SizedBox(
-                                    key: ValueKey(
-                                      'period-card-${_periodTimes[index].index}',
-                                    ),
-                                    width: cardWidth,
-                                    child: useTableRows
-                                        ? _buildPeriodRow(index)
-                                        : _buildPeriodCard(index),
+                child: SizedBox(
+                  key: const ValueKey('period-times-editor-content'),
+                  width: width,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _PeriodEditorHeading(
+                        controller: _nameController,
+                        periodCount: _periodTimes.length,
+                        saveState: _saveState,
+                        onChanged: (_) => _scheduleAutoSave(debounce: true),
+                        onSubmitted: (_) => unawaited(_flushPendingAutoSave()),
+                        onRetry: _menuBlocked
+                            ? null
+                            : () => unawaited(_flushPendingAutoSave()),
+                      ),
+                      const SizedBox(height: 16),
+                      Material(
+                        key: const ValueKey('period-times-list'),
+                        type: MaterialType.transparency,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (columns != null)
+                              _PeriodTableHeader(columns: columns),
+                            for (
+                              var index = 0;
+                              index < _periodTimes.length;
+                              index++
+                            )
+                              KeyedSubtree(
+                                key: _periodRowKeys[index],
+                                child: _PeriodEditorRow(
+                                  key: ValueKey(
+                                    'period-row-${_periodTimes[index].index}',
                                   ),
-                              ],
-                            );
-                          },
+                                  period: _periodTimes[index],
+                                  previous: index == 0
+                                      ? null
+                                      : _periodTimes[index - 1],
+                                  columns: columns,
+                                  timeEnabled:
+                                      !_timePickerOpen && !_interactionBlocked,
+                                  onPickStart: (anchor) => _pickPeriodTime(
+                                    index,
+                                    isStart: true,
+                                    anchorContext: anchor,
+                                  ),
+                                  onPickEnd: (anchor) => _pickPeriodTime(
+                                    index,
+                                    isStart: false,
+                                    anchorContext: anchor,
+                                  ),
+                                  onDelete:
+                                      _periodTimes.length > 1 &&
+                                          !_interactionBlocked
+                                      ? () => _removePeriod(index)
+                                      : null,
+                                ),
+                              ),
+                            _PeriodAddAction(
+                              onPressed: _interactionBlocked
+                                  ? null
+                                  : _addPeriod,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: FilledButton.icon(
-                            onPressed: _interactionBlocked ? null : _addPeriod,
-                            icon: const Icon(Icons.add),
-                            label: Text(l10n.addOnePeriod),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
+
+  void _resetPeriodRowKeys() {
+    _periodRowKeys
+      ..clear()
+      ..addAll(List.generate(_periodTimes.length, (_) => GlobalKey()));
   }
 
-  Widget _buildPeriodRow(int index) {
-    final l = AppLocalizations.of(context);
-    final period = _periodTimes[index];
-    final duration = period.endMinutes - period.startMinutes;
-    final gap = index == 0
-        ? null
-        : period.startMinutes - _periodTimes[index - 1].endMinutes;
-    final invalid = duration <= 0 || (gap != null && gap < 0);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 80,
-              child: Text(
-                l.periodNumberLabel(period.index),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: _PeriodTimeRange(
-                startLabel: l.startTime,
-                startValue: formatMinutes(period.startMinutes),
-                endLabel: l.endTime,
-                endValue: formatMinutes(period.endMinutes),
-                enabled: !_timePickerOpen,
-                onPickStart: (anchor) => _pickPeriodTime(
-                  index,
-                  isStart: true,
-                  anchorContext: anchor,
-                ),
-                onPickEnd: (anchor) => _pickPeriodTime(
-                  index,
-                  isStart: false,
-                  anchorContext: anchor,
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                invalid
-                    ? (duration <= 0
-                          ? l.endTimeMustBeLater
-                          : l.periodOverlapPrevious)
-                    : [
-                        l.durationMinutes(duration),
-                        if (gap != null) l.gapFromPrevious(gap),
-                      ].join('\n'),
-                style: TextStyle(
-                  color: invalid
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: l.deleteThisPeriod,
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _periodTimes.length > 1
-                  ? () => _removePeriod(index)
-                  : null,
-            ),
-          ],
-        ),
-      ),
-    );
+  _PeriodScrollAnchor? _captureScrollAnchor() {
+    if (!_scrollController.hasClients || _scrollController.offset <= 0) {
+      return null;
+    }
+    final viewport = _scrollViewportKey.currentContext?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.hasSize) return null;
+    final top = viewport.localToGlobal(Offset.zero).dy;
+    for (final key in _periodRowKeys) {
+      final box = key.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize || !box.attached) continue;
+      final leading = box.localToGlobal(Offset.zero).dy - top;
+      if (leading + box.size.height > 0 && leading < viewport.size.height) {
+        return _PeriodScrollAnchor(key, leading);
+      }
+    }
+    return null;
   }
 
-  Widget _buildPeriodCard(int index) {
-    final l10n = AppLocalizations.of(context);
-    final period = _periodTimes[index];
-    final previous = index == 0 ? null : _periodTimes[index - 1];
-    final duration = period.endMinutes - period.startMinutes;
-    final gap = previous == null
-        ? null
-        : period.startMinutes - previous.endMinutes;
-    final invalid = duration <= 0 || (previous != null && gap! < 0);
+  void _restoreScrollAnchor(_PeriodScrollAnchor anchor) {
+    final generation = ++_scrollGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          generation != _scrollGeneration ||
+          !_scrollController.hasClients) {
+        return;
+      }
+      final viewport = _scrollViewportKey.currentContext?.findRenderObject();
+      final row = anchor.key.currentContext?.findRenderObject();
+      if (viewport is! RenderBox || row is! RenderBox || !row.hasSize) return;
+      final leading =
+          row.localToGlobal(Offset.zero).dy -
+          viewport.localToGlobal(Offset.zero).dy;
+      final position = _scrollController.position;
+      final offset = (position.pixels + leading - anchor.leading).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if ((position.pixels - offset).abs() > .5) {
+        _scrollController.jumpTo(offset);
+      }
+    });
+  }
 
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    final shapeScheme = Theme.of(context).extension<SkedShapeScheme>();
-    final cardShape =
-        shapeScheme?.control ??
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
-    final compactShape =
-        shapeScheme?.compact ??
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
-
-    return Material(
-      color: Colors.transparent,
-      shape: cardShape,
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: DecoratedBox(
-                      decoration: ShapeDecoration(
-                        color: colors.primary.withValues(alpha: 0.12),
-                        shape: compactShape,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        child: Text(
-                          l10n.periodNumberLabel(period.index),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.labelLarge?.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (_periodTimes.length > 1) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: l10n.deleteThisPeriod,
-                    onPressed: () => _removePeriod(index),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            _PeriodTimeRange(
-              startLabel: l10n.startTime,
-              startValue: formatMinutes(period.startMinutes),
-              endLabel: l10n.endTime,
-              endValue: formatMinutes(period.endMinutes),
-              enabled: !_timePickerOpen,
-              onPickStart: (anchor) =>
-                  _pickPeriodTime(index, isStart: true, anchorContext: anchor),
-              onPickEnd: (anchor) =>
-                  _pickPeriodTime(index, isStart: false, anchorContext: anchor),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                _MetaChip(
-                  label: l10n.durationMinutes(duration > 0 ? duration : 0),
-                  backgroundColor: colors.surfaceContainerHighest,
-                  foregroundColor: colors.onSurfaceVariant,
-                ),
-                if (gap != null)
-                  _MetaChip(
-                    label: l10n.gapFromPrevious(gap > 0 ? gap : 0),
-                    backgroundColor: colors.surfaceContainerHighest,
-                    foregroundColor: colors.onSurfaceVariant,
-                  ),
-              ],
-            ),
-            if (invalid) ...[
-              const SizedBox(height: 6),
-              Text(
-                duration <= 0
-                    ? l10n.endTimeMustBeLater
-                    : l10n.periodOverlapPrevious,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: colors.error),
-              ),
-            ],
-          ],
+  void _revealAddedPeriod(GlobalKey key) {
+    final generation = ++_scrollGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _scrollGeneration) return;
+      final row = key.currentContext;
+      if (row == null) return;
+      final motion = SkedMotionPolicy.of(context);
+      unawaited(
+        Scrollable.ensureVisible(
+          row,
+          alignment: 1,
+          duration: motion.spatialAnimationsEnabled
+              ? motion.effects(SkedMotionSpeed.fast)
+              : Duration.zero,
         ),
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _handleMenuAction(_PeriodTimesMenuAction action) async {
@@ -573,8 +483,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         _periodTimes.length + 1,
         source: _periodTimes,
       );
+      _periodRowKeys.add(GlobalKey());
     });
     _scheduleAutoSave();
+    _revealAddedPeriod(_periodRowKeys.last);
   }
 
   void _removePeriod(int index) {
@@ -584,7 +496,15 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         _periodTimes.length <= 1) {
       return;
     }
+    var anchor = _captureScrollAnchor();
+    if (anchor?.key == _periodRowKeys[index]) {
+      final neighbor = index + 1 < _periodRowKeys.length
+          ? index + 1
+          : index - 1;
+      anchor = _PeriodScrollAnchor(_periodRowKeys[neighbor], anchor!.leading);
+    }
     setState(() {
+      _periodRowKeys.removeAt(index);
       final next = [..._periodTimes]..removeAt(index);
       _periodTimes = List.generate(
         next.length,
@@ -592,6 +512,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       );
     });
     _scheduleAutoSave();
+    if (anchor != null) _restoreScrollAnchor(anchor);
   }
 
   PeriodTimeSet _currentAutoSaveValue() {
@@ -937,6 +858,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       }
       setState(() {
         _periodTimes = imported;
+        _resetPeriodRowKeys();
       });
       _scheduleAutoSave();
       _showMessage(l10n.importedPeriodTimesCount(count));
@@ -971,6 +893,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
               }
               setState(() {
                 _periodTimes = imported;
+                _resetPeriodRowKeys();
               });
               _scheduleAutoSave();
               _showMessage(l10n.importedPeriodTimesCount(count));
@@ -1157,6 +1080,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     }
     setState(() => _timePickerOpen = true);
     final period = _periodTimes[index];
+    final rowKey = _periodRowKeys[index];
     final initialMinutes = normalizeMinuteOfDay(
       isStart ? period.startMinutes : period.endMinutes,
     );
@@ -1171,16 +1095,13 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         workspace: AppMode.student,
         alwaysUse24HourFormat: true,
       );
-      if (!mounted ||
-          picked == null ||
-          index < 0 ||
-          index >= _periodTimes.length) {
-        return;
-      }
+      if (!mounted || picked == null) return;
+      final targetIndex = _periodRowKeys.indexOf(rowKey);
+      if (targetIndex < 0) return;
       final minutes = (picked.hour * 60) + picked.minute;
       setState(() {
-        final currentPeriod = _periodTimes[index];
-        _periodTimes[index] = isStart
+        final currentPeriod = _periodTimes[targetIndex];
+        _periodTimes[targetIndex] = isStart
             ? currentPeriod.copyWith(startMinutes: minutes)
             : currentPeriod.copyWith(endMinutes: minutes);
       });
@@ -1193,258 +1114,4 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
       }
     }
   }
-}
-
-class _PeriodTimeRange extends StatelessWidget {
-  const _PeriodTimeRange({
-    required this.startLabel,
-    required this.startValue,
-    required this.endLabel,
-    required this.endValue,
-    required this.enabled,
-    required this.onPickStart,
-    required this.onPickEnd,
-  });
-
-  final String startLabel;
-  final String startValue;
-  final String endLabel;
-  final String endValue;
-  final bool enabled;
-  final ValueChanged<BuildContext>? onPickStart;
-  final ValueChanged<BuildContext>? onPickEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final shapeScheme = theme.extension<SkedShapeScheme>();
-    final shape =
-        shapeScheme?.control ??
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
-    return Material(
-      key: const ValueKey('period-time-range'),
-      type: MaterialType.transparency,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final textScale = MediaQuery.textScalerOf(context).scale(1);
-          final textScaler = MediaQuery.textScalerOf(context);
-          final textDirection = Directionality.of(context);
-          final labelStyle = theme.textTheme.labelMedium;
-          final valueStyle = theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          );
-          final startWidth = math.max(
-            96.0,
-            _measurePeriodTimeActionWidth(
-              label: startLabel,
-              value: startValue,
-              labelStyle: labelStyle,
-              valueStyle: valueStyle,
-              textScaler: textScaler,
-              textDirection: textDirection,
-            ),
-          );
-          final endWidth = math.max(
-            96.0,
-            _measurePeriodTimeActionWidth(
-              label: endLabel,
-              value: endValue,
-              labelStyle: labelStyle,
-              valueStyle: valueStyle,
-              textScaler: textScaler,
-              textDirection: textDirection,
-            ),
-          );
-          final stacksVertically =
-              textScale > 1.3 ||
-              constraints.maxWidth < startWidth + endWidth + 40;
-          final start = _PeriodTimeAction(
-            key: const ValueKey('period-start-time-action'),
-            label: startLabel,
-            value: startValue,
-            enabled: enabled,
-            onTap: onPickStart,
-          );
-          final end = _PeriodTimeAction(
-            key: const ValueKey('period-end-time-action'),
-            label: endLabel,
-            value: endValue,
-            enabled: enabled,
-            onTap: onPickEnd,
-          );
-          if (stacksVertically) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(width: double.infinity, child: start),
-                SizedBox(width: double.infinity, child: end),
-              ],
-            );
-          }
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: start),
-                SizedBox(
-                  key: const ValueKey('period-time-range-arrow'),
-                  width: 40,
-                  child: Center(
-                    child: ExcludeSemantics(
-                      child: Icon(
-                        Icons.arrow_forward,
-                        size: 18,
-                        color: enabled
-                            ? colors.onSurfaceVariant
-                            : colors.onSurface.withValues(alpha: 0.38),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(child: end),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _PeriodTimeAction extends StatelessWidget {
-  const _PeriodTimeAction({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final ValueChanged<BuildContext>? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      excludeSemantics: true,
-      label: label,
-      value: value,
-      onTap: enabled && onTap != null ? () => onTap!(context) : null,
-      child: InkWell(
-        customBorder:
-            theme.extension<SkedShapeScheme>()?.compact ??
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        excludeFromSemantics: true,
-        onTap: enabled && onTap != null ? () => onTap!(context) : null,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: enabled
-                          ? colors.onSurfaceVariant
-                          : colors.onSurface.withValues(alpha: 0.38),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: enabled
-                          ? colors.onSurface
-                          : colors.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({
-    required this.label,
-    this.backgroundColor,
-    this.foregroundColor,
-  });
-
-  final String label;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      excludeSemantics: true,
-      label: label,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 28, maxWidth: 320),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: backgroundColor ?? colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: foregroundColor ?? colors.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-double _measurePeriodTimeActionWidth({
-  required String label,
-  required String value,
-  required TextStyle? labelStyle,
-  required TextStyle? valueStyle,
-  required TextScaler textScaler,
-  required TextDirection textDirection,
-}) {
-  double measure(String text, TextStyle? style) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: textDirection,
-      textScaler: textScaler,
-      maxLines: 1,
-    )..layout();
-    final width = painter.width;
-    painter.dispose();
-    return width;
-  }
-
-  return math.max(measure(label, labelStyle), measure(value, valueStyle)) + 20;
 }

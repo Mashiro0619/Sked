@@ -2156,5 +2156,33 @@
   "settingsFeaturesSummary": "管理工作區啟用與導覽顯示",
   "@settingsFeaturesSummary": {},
   "settingsPrivacySummary": "隱私權政策與本機資料清理",
-  "@settingsPrivacySummary": {}
+  "@settingsPrivacySummary": {},
+  "periodTimesCount": "共 {count} 節",
+  "@periodTimesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "periodTimesPeriodColumn": "節次",
+  "@periodTimesPeriodColumn": {},
+  "periodTimesDurationColumn": "時長",
+  "@periodTimesDurationColumn": {},
+  "periodTimesGapColumn": "課間",
+  "@periodTimesGapColumn": {},
+  "periodTimesMinutesShort": "{minutes} 分鐘",
+  "@periodTimesMinutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "periodTimesSavePending": "等待儲存…",
+  "@periodTimesSavePending": {},
+  "periodTimesSaveFailed": "尚未儲存 · 儲存失敗",
+  "@periodTimesSaveFailed": {},
+  "periodTimesInvalidStatus": "尚未儲存 · 請修正標示的時間",
+  "@periodTimesInvalidStatus": {}
 }

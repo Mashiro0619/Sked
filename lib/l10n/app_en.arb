@@ -2170,5 +2170,33 @@
   "settingsFeaturesSummary": "Workspaces and navigation",
   "@settingsFeaturesSummary": {},
   "settingsPrivacySummary": "Privacy policy and clear local data",
-  "@settingsPrivacySummary": {}
+  "@settingsPrivacySummary": {},
+  "periodTimesCount": "{count, plural, =1{1 period} other{{count} periods}}",
+  "@periodTimesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "periodTimesPeriodColumn": "Period",
+  "@periodTimesPeriodColumn": {},
+  "periodTimesDurationColumn": "Duration",
+  "@periodTimesDurationColumn": {},
+  "periodTimesGapColumn": "Break",
+  "@periodTimesGapColumn": {},
+  "periodTimesMinutesShort": "{minutes} min",
+  "@periodTimesMinutesShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "periodTimesSavePending": "Waiting to save…",
+  "@periodTimesSavePending": {},
+  "periodTimesSaveFailed": "Not saved · Save failed",
+  "@periodTimesSaveFailed": {},
+  "periodTimesInvalidStatus": "Not saved · Fix the highlighted times",
+  "@periodTimesInvalidStatus": {}
 }

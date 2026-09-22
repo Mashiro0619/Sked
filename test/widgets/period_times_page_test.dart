@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:sked/widgets/sked_time_picker.dart';
 
@@ -141,6 +142,7 @@ Future<void> _pumpPeriodTimesPage(
   PeriodTimesTextPicker? textFilePicker,
   TextScaler textScaler = TextScaler.noScaling,
   Locale locale = const Locale('en'),
+  TextDirection textDirection = TextDirection.ltr,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<TimetableProvider>.value(
@@ -151,7 +153,7 @@ Future<void> _pumpPeriodTimesPage(
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-          child: child!,
+          child: Directionality(textDirection: textDirection, child: child!),
         ),
         home: PeriodTimesPage(
           periodTimeSetId: defaultPeriodTimeSetId,
@@ -240,326 +242,227 @@ void main() {
     },
   );
 
-  testWidgets('uses readable chronological table rows on wide tablets', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(1024, 768);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final provider = await _createProvider();
-
-    await _pumpPeriodTimesPage(tester, provider);
-
-    final list = find.byType(ListView).last;
-    expect(tester.getSize(list).width, 1024);
-    expect(
-      tester
-          .getSize(
-            find.byKey(
-              const ValueKey('responsive-settings-single-column-content'),
-            ),
-          )
-          .width,
-      lessThanOrEqualTo(1120),
-    );
-    final grid = find.byKey(const ValueKey('period-times-editor-grid'));
-    expect(grid, findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const ValueKey('period-card-1'))).width,
-      greaterThan(350),
-    );
-    expect(
-      tester.getSize(find.byKey(const ValueKey('period-card-2'))).width,
-      tester.getSize(find.byKey(const ValueKey('period-card-1'))).width,
-    );
-    expect((tester.widget<ListView>(list).padding! as EdgeInsets).bottom, 24);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets(
-    'keeps consecutive periods in chronological rows at both sides of the breakpoint',
+    'wide editor uses shared column headers and one continuous bounded list',
     (tester) async {
       tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(839, 760);
+      tester.view.physicalSize = const Size(1280, 800);
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final provider = await _createProvider();
-
-      await _pumpPeriodTimesPage(tester, provider);
-      final narrowCardWidth = tester
-          .getSize(find.byKey(const ValueKey('period-card-1')))
-          .width;
-      final narrowGridWidth = tester
-          .getSize(find.byKey(const ValueKey('period-times-editor-grid')))
-          .width;
-      expect(narrowCardWidth, closeTo(narrowGridWidth, 0.01));
-
-      tester.view.physicalSize = const Size(840, 760);
-      await tester.pumpAndSettle();
-      final wideCardWidth = tester
-          .getSize(find.byKey(const ValueKey('period-card-1')))
-          .width;
-      final wideGridWidth = tester
-          .getSize(find.byKey(const ValueKey('period-times-editor-grid')))
-          .width;
-      expect(wideCardWidth, closeTo(wideGridWidth, 0.01));
-      final first = tester.getRect(find.byKey(const ValueKey('period-card-1')));
-      final second = tester.getRect(
-        find.byKey(const ValueKey('period-card-2')),
-      );
-      expect(second.top, greaterThanOrEqualTo(first.bottom));
-      expect(first.left, closeTo(second.left, 0.01));
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider, locale: const Locale('zh'));
+      final content = find.byKey(const ValueKey('period-times-editor-content'));
+      expect(tester.getSize(content).width, lessThanOrEqualTo(800));
       expect(
-        wideCardWidth,
-        closeTo(
-          tester.getSize(find.byKey(const ValueKey('period-card-2'))).width,
-          0.01,
-        ),
+        find.byKey(const ValueKey('period-times-table-header')),
+        findsOneWidget,
       );
+      expect(find.text('开始时间'), findsOneWidget);
+      expect(find.text('结束时间'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_forward), findsNothing);
+      expect(find.byType(Card), findsNothing);
+      final first = find.byKey(const ValueKey('period-row-1'));
+      final second = find.byKey(const ValueKey('period-row-2'));
+      final firstRect = tester.getRect(first);
+      final secondRect = tester.getRect(second);
+      expect(firstRect.width, tester.getSize(content).width);
+      expect(secondRect.top, closeTo(firstRect.bottom, .01));
+      final start = find.descendant(
+        of: first,
+        matching: find.byKey(const ValueKey('period-start-time-action')),
+      );
+      final end = find.descendant(
+        of: first,
+        matching: find.byKey(const ValueKey('period-end-time-action')),
+      );
+      expect(
+        tester.getRect(end).left - tester.getRect(start).right,
+        lessThanOrEqualTo(12),
+      );
+      expect(tester.getRect(start).top, tester.getRect(end).top);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('period-times-name'))).width,
+        lessThanOrEqualTo(360),
+      );
+      expect(find.byTooltip('Add period'), findsNothing);
+      expect(find.byKey(const ValueKey('period-times-add')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  for (final width in [320.0, 393.0, 800.0, 1280.0, 1440.0]) {
+    for (final scale in [1.0, 1.3, 2.0]) {
+      testWidgets(
+        'readable period rows fit $width dp at $scale text scale',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = Size(width, 900);
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final provider = await _createProvider();
+          addTearDown(provider.dispose);
+          for (final locale in const [Locale('en'), Locale('zh')]) {
+            await _pumpPeriodTimesPage(
+              tester,
+              provider,
+              textScaler: TextScaler.linear(scale),
+              locale: locale,
+              textDirection: locale.languageCode == 'en'
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+            );
+            final content = find.byKey(
+              const ValueKey('period-times-editor-content'),
+            );
+            final first = find.byKey(const ValueKey('period-row-1'));
+            final firstRect = tester.getRect(first);
+            final nextRect = tester.getRect(
+              find.byKey(const ValueKey('period-row-2')),
+            );
+            expect(tester.getSize(content).width, lessThanOrEqualTo(800));
+            expect(firstRect.left, greaterThanOrEqualTo(0));
+            expect(firstRect.right, lessThanOrEqualTo(width));
+            expect(nextRect.top, closeTo(firstRect.bottom, .01));
+            for (final boundary in ['start', 'end']) {
+              final action = find.descendant(
+                of: first,
+                matching: find.byKey(ValueKey('period-$boundary-time-action')),
+              );
+              final rect = tester.getRect(action);
+              expect(rect.left, greaterThanOrEqualTo(firstRect.left));
+              expect(rect.right, lessThanOrEqualTo(firstRect.right));
+              final minTarget =
+                  Theme.of(tester.element(first)).platform ==
+                      TargetPlatform.windows
+                  ? 32
+                  : 48;
+              expect(rect.height, greaterThanOrEqualTo(minTarget));
+              expect(rect.width, greaterThanOrEqualTo(minTarget));
+              final value = find.descendant(
+                of: action,
+                matching: find.byType(Text),
+              );
+              final paragraph = tester.renderObject<RenderParagraph>(value);
+              expect(paragraph.didExceedMaxLines, isFalse);
+              expect(
+                paragraph.getMaxIntrinsicWidth(double.infinity),
+                lessThanOrEqualTo(paragraph.size.width + .5),
+              );
+              expect(tester.widget<Text>(value).maxLines, 1);
+              expect(
+                tester.widget<Text>(value).data,
+                boundary == 'start' ? '08:00' : '08:45',
+              );
+            }
+            final list = tester.widget<ListView>(
+              find.byKey(const ValueKey('period-times-editor-scroll-view')),
+            );
+            list.controller!.jumpTo(list.controller!.position.maxScrollExtent);
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('period-times-add')).hitTestable(),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pumpAndSettle();
+          }
+        },
+        variant: TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.windows,
+        }),
+      );
+    }
+  }
+
+  testWidgets(
+    'compact rows prioritize the horizontal time range without repeated labels',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      final row = find.byKey(const ValueKey('period-row-1'));
+      final start = find.descendant(
+        of: row,
+        matching: find.byKey(const ValueKey('period-start-time-action')),
+      );
+      final end = find.descendant(
+        of: row,
+        matching: find.byKey(const ValueKey('period-end-time-action')),
+      );
+      expect(
+        find.byKey(const ValueKey('period-times-table-header')),
+        findsNothing,
+      );
+      expect(find.text('Start time'), findsNothing);
+      expect(find.text('End time'), findsNothing);
+      expect(find.byIcon(Icons.arrow_forward), findsNothing);
+      expect(tester.getRect(start).top, tester.getRect(end).top);
+      // Ahem has wider glyphs than real UI fonts; it may require a second line.
+      expect(tester.getSize(row).height, lessThanOrEqualTo(132));
+      expect(tester.getSemantics(start).label, 'Period 1, Start time');
+      expect(tester.getSemantics(end).label, 'Period 1, End time');
+      expect(tester.getSemantics(start).value, '08:00');
+      expect(tester.getSemantics(end).value, '08:45');
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('period time cards fit narrow phone width', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(320, 640);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final provider = await _createProvider();
-    await _pumpPeriodTimesPage(
-      tester,
-      provider,
-      textScaler: const TextScaler.linear(2),
-    );
-
-    expect(find.byType(PeriodTimesPage), findsOneWidget);
-    expect(find.text('Start time'), findsWidgets);
-    expect(
-      find.byKey(const ValueKey('period-start-time-action')),
-      findsWidgets,
-    );
-    expect(find.byKey(const ValueKey('period-end-time-action')), findsWidgets);
-    final firstCard = find.byKey(const ValueKey('period-card-1'));
-    final timeRange = find.descendant(
-      of: firstCard,
-      matching: find.byKey(const ValueKey('period-time-range')),
-    );
-    final timeRangeMaterial = tester.widget<Material>(timeRange);
-    expect(timeRangeMaterial.type, MaterialType.transparency);
-    expect(timeRangeMaterial.color, isNull);
-    expect((timeRangeMaterial.shape! as OutlinedBorder).side, BorderSide.none);
-    expect(
-      find.descendant(of: timeRange, matching: find.byType(Divider)),
-      findsNothing,
-    );
-    final startRect = tester.getRect(
-      find.byKey(const ValueKey('period-start-time-action')).first,
-    );
-    final endRect = tester.getRect(
-      find.byKey(const ValueKey('period-end-time-action')).first,
-    );
-    expect(startRect.height, greaterThanOrEqualTo(48));
-    expect(endRect.height, greaterThanOrEqualTo(48));
-    expect(startRect.bottom, lessThanOrEqualTo(endRect.top));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('time range stays horizontal when a phone card has room', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(390, 844);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final provider = await _createProvider();
-
-    await _pumpPeriodTimesPage(tester, provider);
-
-    final firstCard = find.byKey(const ValueKey('period-card-1'));
-    final startAction = find.descendant(
-      of: firstCard,
-      matching: find.byKey(const ValueKey('period-start-time-action')),
-    );
-    final endAction = find.descendant(
-      of: firstCard,
-      matching: find.byKey(const ValueKey('period-end-time-action')),
-    );
-    final startLabel = find.descendant(
-      of: startAction,
-      matching: find.text('Start time'),
-    );
-    final startValue = find.descendant(
-      of: startAction,
-      matching: find.text('08:00'),
-    );
-    final endLabel = find.descendant(
-      of: endAction,
-      matching: find.text('End time'),
-    );
-    final endValue = find.descendant(
-      of: endAction,
-      matching: find.text('08:45'),
-    );
-    final arrow = find.descendant(
-      of: firstCard,
-      matching: find.byIcon(Icons.arrow_forward),
-    );
-    final timeRange = find.descendant(
-      of: firstCard,
-      matching: find.byKey(const ValueKey('period-time-range')),
-    );
-    expect(startAction, findsOneWidget);
-    expect(endAction, findsOneWidget);
-    expect(startLabel, findsOneWidget);
-    expect(startValue, findsOneWidget);
-    expect(endLabel, findsOneWidget);
-    expect(endValue, findsOneWidget);
-    expect(arrow, findsOneWidget);
-    expect(
-      find.descendant(of: timeRange, matching: find.byType(Divider)),
-      findsNothing,
-    );
-
-    for (final action in [startAction, endAction]) {
-      final inkWell = tester.widget<InkWell>(
-        find.descendant(of: action, matching: find.byType(InkWell)),
-      );
-      expect(inkWell.onTap, isNotNull);
-      expect(inkWell.customBorder, isA<OutlinedBorder>());
-    }
-
-    final startRect = tester.getRect(startAction);
-    final endRect = tester.getRect(endAction);
-    final arrowRect = tester.getRect(arrow);
-    expect(startRect.top, closeTo(endRect.top, 0.01));
-    expect(startRect.width, closeTo(endRect.width, 0.01));
-    expect(startRect.height, greaterThanOrEqualTo(48));
-    expect(endRect.height, greaterThanOrEqualTo(48));
-    expect(
-      tester.getRect(startLabel).center.dx,
-      closeTo(startRect.center.dx, 0.5),
-    );
-    expect(
-      tester.getRect(startValue).center.dx,
-      closeTo(startRect.center.dx, 0.5),
-    );
-    expect(tester.getRect(endLabel).center.dx, closeTo(endRect.center.dx, 0.5));
-    expect(tester.getRect(endValue).center.dx, closeTo(endRect.center.dx, 0.5));
-    expect(
-      arrowRect.center.dx - startRect.center.dx,
-      closeTo(endRect.center.dx - arrowRect.center.dx, 0.5),
-    );
-    expect(
-      arrowRect.center.dx,
-      closeTo((startRect.left + endRect.right) / 2, 0.5),
-    );
-    final startSemantics = tester.getSemantics(startAction);
-    final endSemantics = tester.getSemantics(endAction);
-    expect(startSemantics.label, 'Start time');
-    expect(startSemantics.value, '08:00');
-    expect(endSemantics.label, 'End time');
-    expect(endSemantics.value, '08:45');
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('localized labels remain stable in compact and wide layouts', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    for (final scenario in const <({Size size, Locale locale, double scale})>[
-      (size: Size(390, 844), locale: Locale('zh'), scale: 1.3),
-      (size: Size(840, 760), locale: Locale('de'), scale: 1.3),
-    ]) {
-      tester.view.physicalSize = scenario.size;
+  testWidgets(
+    'single append action reveals the new period without opening a picker',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 568);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final provider = await _createProvider();
+      addTearDown(provider.dispose);
       await _pumpPeriodTimesPage(
         tester,
         provider,
-        locale: scenario.locale,
-        textScaler: TextScaler.linear(scenario.scale),
+        textScaler: const TextScaler.linear(2),
       );
-
+      final add = find.byKey(const ValueKey('period-times-add'));
+      final before = provider
+          .periodTimeSetForId(defaultPeriodTimeSetId)!
+          .periodTimes
+          .length;
+      expect(add, findsOneWidget);
+      await tester.ensureVisible(add);
+      await tester.pumpAndSettle();
+      await tester.tap(add);
+      await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey('period-times-editor-grid')),
-        findsOneWidget,
+        provider.periodTimeSetForId(defaultPeriodTimeSetId)!.periodTimes,
+        hasLength(before + 1),
+      );
+      final last = find.byKey(ValueKey('period-row-${before + 1}'));
+      final viewport = tester.getRect(
+        find.byKey(const ValueKey('period-times-editor-scroll-view')),
       );
       expect(
-        find.byKey(const ValueKey('period-start-time-action')),
-        findsWidgets,
+        tester.getRect(last).bottom,
+        lessThanOrEqualTo(viewport.bottom + .5),
       );
-      expect(
-        find.byKey(const ValueKey('period-end-time-action')),
-        findsWidgets,
-      );
+      expect(tester.getRect(last).top, greaterThanOrEqualTo(viewport.top - .5));
+      expect(find.byType(SkedTimePicker), findsNothing);
       expect(tester.takeException(), isNull);
-    }
-  });
-
-  testWidgets('top and bottom add controls append to the same draft', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(430, 900);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final provider = await _createProvider();
-    await _pumpPeriodTimesPage(tester, provider);
-
-    final startActions = find.byKey(const ValueKey('period-start-time-action'));
-    final initialCount = startActions.evaluate().length;
-    await tester.tap(find.byTooltip('Add period'));
-    await tester.pump();
-    expect(startActions, findsNWidgets(initialCount + 1));
-
-    final bottomAdd = find.widgetWithText(FilledButton, 'Add period');
-    await tester.ensureVisible(bottomAdd);
-    await tester.pumpAndSettle();
-    await tester.tap(bottomAdd);
-    await tester.pump();
-    expect(startActions, findsNWidgets(initialCount + 2));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('period time editor remains reachable on a short scaled phone', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(320, 568);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final provider = await _createProvider();
-    await _pumpPeriodTimesPage(
-      tester,
-      provider,
-      textScaler: const TextScaler.linear(2),
-    );
-
-    final list = find.byType(ListView).last;
-    await tester.fling(list, const Offset(0, -1200), 5000);
-    await tester.pumpAndSettle();
-    final scrollable = tester.state<ScrollableState>(
-      find.byType(Scrollable).last,
-    );
-    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Add period'), findsOneWidget);
-    expect(tester.getRect(list).bottom, lessThanOrEqualTo(568));
-    expect(tester.takeException(), isNull);
-  });
+    },
+  );
 
   testWidgets('time picker ignores rapid duplicate taps', (tester) async {
     final provider = await _createProvider();
     await _pumpPeriodTimesPage(tester, provider);
 
-    final startTimeLabel = find.text('Start time').first;
     final startTimeCell = find
-        .ancestor(of: startTimeLabel, matching: find.byType(InkWell))
+        .byKey(const ValueKey('period-start-time-action'))
         .first;
     await tester.tap(startTimeCell);
     await tester.tap(startTimeCell, warnIfMissed: false);
@@ -611,7 +514,7 @@ void main() {
     final provider = await _createProvider(storage: storage);
     await _pumpPeriodTimesPage(tester, provider);
 
-    final lastCard = find.byKey(const ValueKey('period-card-12'));
+    final lastCard = find.byKey(const ValueKey('period-row-12'));
     final deleteButton = find.descendant(
       of: lastCard,
       matching: find.byType(IconButton),
@@ -691,62 +594,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'large text centers the stacked time actions and keeps semantics',
-    (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(320, 568);
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final provider = await _createProvider();
-      await _pumpPeriodTimesPage(
-        tester,
-        provider,
-        textScaler: const TextScaler.linear(2),
-      );
-
-      final firstCard = find.byKey(const ValueKey('period-card-1'));
-      final startAction = find.descendant(
-        of: firstCard,
-        matching: find.byKey(const ValueKey('period-start-time-action')),
-      );
-      final endAction = find.descendant(
-        of: firstCard,
-        matching: find.byKey(const ValueKey('period-end-time-action')),
-      );
-      final startRect = tester.getRect(startAction);
-      final endRect = tester.getRect(endAction);
-      for (final entry in <({Finder action, String label, String value})>[
-        (action: startAction, label: 'Start time', value: '08:00'),
-        (action: endAction, label: 'End time', value: '08:45'),
-      ]) {
-        final label = find.descendant(
-          of: entry.action,
-          matching: find.text(entry.label),
-        );
-        final value = find.descendant(
-          of: entry.action,
-          matching: find.text(entry.value),
-        );
-        final actionRect = tester.getRect(entry.action);
-        expect(
-          tester.getRect(label).center.dx,
-          closeTo(actionRect.center.dx, 0.5),
-        );
-        expect(
-          tester.getRect(value).center.dx,
-          closeTo(actionRect.center.dx, 0.5),
-        );
-        final semantics = tester.getSemantics(entry.action);
-        expect(semantics.label, entry.label);
-        expect(semantics.value, entry.value);
-        expect(actionRect.height, greaterThanOrEqualTo(48));
-      }
-      expect(startRect.bottom, lessThanOrEqualTo(endRect.top));
-      expect(tester.takeException(), isNull);
-    },
-  );
-
   testWidgets('name changes debounce into one automatic save', (tester) async {
     final storage = _MemoryTimetableStorage(_initialData());
     final provider = await _createProvider(storage: storage);
@@ -779,7 +626,8 @@ void main() {
           .name,
       'Auto saved period set',
     );
-    expect(find.text('Period times saved'), findsNothing);
+    expect(find.text('Period times saved'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('invalid time drafts are not persisted with repaired values', (
@@ -910,12 +758,10 @@ void main() {
 
     final startActions = find.byKey(const ValueKey('period-start-time-action'));
     final initialCount = startActions.evaluate().length;
-    final addButton = find.byTooltip('Add period');
-    final addIconButton = find.byWidgetPredicate(
-      (widget) => widget is IconButton && widget.tooltip == 'Add period',
-    );
+    final addButton = find.byKey(const ValueKey('period-times-add'));
+    final addControl = tester.widget<TextButton>(addButton);
 
-    await tester.tap(addButton);
+    tester.widget<TextButton>(addButton).onPressed!();
     await storage.saveStarted.future;
     await tester.pump();
 
@@ -929,10 +775,9 @@ void main() {
           .absorbing,
       isFalse,
     );
-    expect(addIconButton, findsOneWidget);
-    expect(tester.widget<IconButton>(addIconButton).onPressed, isNotNull);
+    expect(addControl.onPressed, isNotNull);
 
-    await tester.tap(addButton);
+    tester.widget<TextButton>(addButton).onPressed!();
     await tester.pump();
 
     expect(startActions, findsNWidgets(initialCount + 2));
@@ -962,12 +807,12 @@ void main() {
 
     final actions = find.byKey(const ValueKey('period-start-time-action'));
     final initialCount = actions.evaluate().length;
-    final addButton = find.byTooltip('Add period');
-    await tester.tap(addButton);
+    final addButton = find.byKey(const ValueKey('period-times-add'));
+    tester.widget<TextButton>(addButton).onPressed!();
     await storage.firstSaveStarted.future;
     await tester.pump();
 
-    await tester.tap(addButton);
+    tester.widget<TextButton>(addButton).onPressed!();
     await tester.pump();
     expect(actions, findsNWidgets(initialCount + 2));
     expect(storage.saveCount, 1);
@@ -993,10 +838,8 @@ void main() {
     final provider = await _createProvider(storage: storage);
     await _pumpPeriodTimesPage(tester, provider);
     final l10n = AppLocalizations.of(tester.element(find.byType(Scaffold)));
-    final addButton = tester.widget<IconButton>(
-      find.byWidgetPredicate(
-        (widget) => widget is IconButton && widget.tooltip == l10n.addOnePeriod,
-      ),
+    final addButton = tester.widget<TextButton>(
+      find.byKey(const ValueKey('period-times-add')),
     );
 
     await tester.tap(find.byTooltip(l10n.importExport));
@@ -1206,6 +1049,325 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'last remaining period cannot be deleted and uses the singular count',
+    (tester) async {
+      final data = _initialData();
+      final set = data.studentMode.periodTimeSets.first;
+      final storage = _MemoryTimetableStorage(
+        data.copyWith(
+          studentMode: data.studentMode.copyWith(
+            periodTimeSets: [
+              set.copyWith(periodTimes: [set.periodTimes.first]),
+            ],
+          ),
+        ),
+      );
+      final provider = await _createProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      expect(find.text('1 period'), findsOneWidget);
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(const ValueKey('period-delete-1')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        find.byKey(const ValueKey('period-start-time-action')),
+        findsOneWidget,
+      );
+      expect(storage.saveCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a newer invalid draft never reports saved when an older write completes',
+    (tester) async {
+      final storage = _BlockingTimetableStorage(_initialData());
+      addTearDown(storage.completeSave);
+      final provider = await _createProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      final start = find
+          .byKey(const ValueKey('period-start-time-action'))
+          .first;
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+      tester
+          .widget<SkedTimePicker>(find.byType(SkedTimePicker))
+          .onSelected(const TimeOfDay(hour: 8, minute: 40));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await storage.saveStarted.future;
+      expect(find.text('Saving changes...'), findsOneWidget);
+      await tester.tap(start);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      tester
+          .widget<SkedTimePicker>(find.byType(SkedTimePicker))
+          .onSelected(const TimeOfDay(hour: 8, minute: 50));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(
+        find.text('Not saved · Fix the highlighted times'),
+        findsOneWidget,
+      );
+      expect(find.text('Saving changes...'), findsNothing);
+      storage.completeSave();
+      await tester.pumpAndSettle();
+      expect(find.text('Period times saved'), findsNothing);
+      expect(
+        find.text('Not saved · Fix the highlighted times'),
+        findsOneWidget,
+      );
+      expect(find.text('08:50'), findsOneWidget);
+      expect(
+        storage
+            .data!
+            .studentMode
+            .periodTimeSets
+            .first
+            .periodTimes
+            .first
+            .startMinutes,
+        520,
+      );
+      expect(storage.saveCount, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'save status reserves its space while debouncing, saving and completing',
+    (tester) async {
+      final storage = _BlockingTimetableStorage(_initialData());
+      addTearDown(storage.completeSave);
+      final provider = await _createProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      final first = find.byKey(const ValueKey('period-row-1'));
+      final status = find.byKey(const ValueKey('period-times-save-status'));
+      final firstBefore = tester.getRect(first);
+      final statusBefore = tester.getRect(status);
+      expect(find.text('Period times saved'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('period-times-name')),
+        'Compact timetable',
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Waiting to save…'), findsOneWidget);
+      expect(tester.getRect(first), firstBefore);
+      expect(tester.getRect(status), statusBefore);
+      await tester.pump(const Duration(milliseconds: 400));
+      await storage.saveStarted.future;
+      await tester.pump();
+      expect(find.text('Saving changes...'), findsOneWidget);
+      expect(tester.getRect(first), firstBefore);
+      expect(tester.getRect(status), statusBefore);
+      storage.completeSave();
+      await tester.pumpAndSettle();
+      expect(find.text('Period times saved'), findsOneWidget);
+      expect(tester.getRect(first), firstBefore);
+      expect(tester.getRect(status), statusBefore);
+      expect(storage.saveCount, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('failed save exposes an inline retry without moving the list', (
+    tester,
+  ) async {
+    final storage = _MemoryTimetableStorage(_initialData(), failSaves: true);
+    final provider = await _createProvider(storage: storage);
+    addTearDown(provider.dispose);
+    await _pumpPeriodTimesPage(tester, provider);
+    final first = find.byKey(const ValueKey('period-row-1'));
+    final status = find.byKey(const ValueKey('period-times-save-status'));
+    final before = tester.getRect(first);
+    final statusBefore = tester.getRect(status);
+    await tester.enterText(
+      find.byKey(const ValueKey('period-times-name')),
+      'Retry name',
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(find.text('Not saved · Save failed'), findsOneWidget);
+    expect(find.text('Period times saved'), findsNothing);
+    expect(tester.getRect(first), before);
+    expect(tester.getRect(status), statusBefore);
+    storage.failSaves = false;
+    await tester.tap(find.byKey(const ValueKey('period-times-retry-save')));
+    await tester.pumpAndSettle();
+    expect(find.text('Period times saved'), findsOneWidget);
+    expect(tester.getRect(first), before);
+    expect(storage.saveCount, 2);
+    expect(_storedDefaultPeriodTimeSet(storage).name, 'Retry name');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'invalid status takes precedence over an earlier failure and shows the full row error',
+    (tester) async {
+      final storage = _MemoryTimetableStorage(_initialData(), failSaves: true);
+      final provider = await _createProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      await tester.enterText(
+        find.byKey(const ValueKey('period-times-name')),
+        'Invalid draft',
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      expect(find.text('Not saved · Save failed'), findsOneWidget);
+      await _enterTimePickerValue(
+        tester,
+        action: find.byKey(const ValueKey('period-start-time-action')).first,
+        hour: '08',
+        minute: '50',
+      );
+      expect(
+        find.text('Not saved · Fix the highlighted times'),
+        findsOneWidget,
+      );
+      expect(find.text('Not saved · Save failed'), findsNothing);
+      expect(find.text('Period times saved'), findsNothing);
+      final error = find.byKey(const ValueKey('period-error-1'));
+      expect(tester.widget<Text>(error).maxLines, isNull);
+      expect(
+        tester.renderObject<RenderParagraph>(error).didExceedMaxLines,
+        isFalse,
+      );
+      expect(storage.saveCount, 1);
+      expect(
+        _storedDefaultPeriodTimeSet(storage).periodTimes.first.startMinutes,
+        480,
+      );
+      storage.failSaves = false;
+      await _enterTimePickerValue(
+        tester,
+        action: find.byKey(const ValueKey('period-end-time-action')).first,
+        hour: '08',
+        minute: '55',
+      );
+      expect(find.text('Period times saved'), findsOneWidget);
+      expect(error, findsNothing);
+      expect(
+        _storedDefaultPeriodTimeSet(storage).periodTimes.first.startMinutes,
+        530,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'resizing retains the visible period, name draft and an open picker',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1280, 600);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final storage = _MemoryTimetableStorage(_initialData(), failSaves: true);
+      final provider = await _createProvider(storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      final name = find.byKey(const ValueKey('period-times-name'));
+      await tester.enterText(name, 'Unsaved resized name');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      final row = find.byKey(const ValueKey('period-row-8'));
+      await Scrollable.ensureVisible(tester.element(row), alignment: .3);
+      await tester.pumpAndSettle();
+      final viewport = tester.getRect(
+        find.byKey(const ValueKey('period-times-editor-scroll-view')),
+      );
+      final visible = List.generate(
+        12,
+        (i) => find.byKey(ValueKey('period-row-${i + 1}')),
+      ).firstWhere((row) => tester.getRect(row).bottom > viewport.top);
+      final visibleBefore = tester.getRect(visible).top;
+      final controller = tester
+          .widget<ListView>(
+            find.byKey(const ValueKey('period-times-editor-scroll-view')),
+          )
+          .controller!;
+      tester.view.physicalSize = const Size(393, 600);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(visible).top, closeTo(visibleBefore, 1));
+      expect(
+        tester.widget<TextField>(name).controller!.text,
+        'Unsaved resized name',
+      );
+      expect(
+        tester
+            .widget<ListView>(
+              find.byKey(const ValueKey('period-times-editor-scroll-view')),
+            )
+            .controller,
+        same(controller),
+      );
+      final start = find.descendant(
+        of: row,
+        matching: find.byKey(const ValueKey('period-start-time-action')),
+      );
+      await tester.ensureVisible(start);
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+      final pickerState = tester.state(find.byType(SkedTimePicker));
+      tester.view.physicalSize = const Size(1280, 600);
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(SkedTimePicker)), same(pickerState));
+      expect(
+        tester.widget<TextField>(name).controller!.text,
+        'Unsaved resized name',
+      );
+      await tester.tap(find.byKey(const ValueKey('sked-time-cancel')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SkedTimePicker), findsNothing);
+      expect(storage.saveCount, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'deleting above the visible range preserves its time row position',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1280, 500);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      await _pumpPeriodTimesPage(tester, provider);
+      final row = find.byKey(const ValueKey('period-row-8'));
+      await Scrollable.ensureVisible(tester.element(row), alignment: .3);
+      await tester.pumpAndSettle();
+      final before = tester.getRect(row).top;
+      final time = provider
+          .periodTimeSetForId(defaultPeriodTimeSetId)!
+          .periodTimes[7]
+          .startMinutes;
+      tester
+          .widget<IconButton>(find.byKey(const ValueKey('period-delete-1')))
+          .onPressed!();
+      await tester.pumpAndSettle();
+      final after = find.byKey(const ValueKey('period-row-7'));
+      expect(tester.getRect(after).top, closeTo(before, 1));
+      expect(
+        provider
+            .periodTimeSetForId(defaultPeriodTimeSetId)!
+            .periodTimes[6]
+            .startMinutes,
+        time,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('file import ignores rapid duplicate menu actions', (
     tester,

@@ -3116,4 +3116,39 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get settingsPrivacySummary => 'Privacy policy and clear local data';
+
+  @override
+  String periodTimesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count periods',
+      one: '1 period',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get periodTimesPeriodColumn => 'Period';
+
+  @override
+  String get periodTimesDurationColumn => 'Duration';
+
+  @override
+  String get periodTimesGapColumn => 'Break';
+
+  @override
+  String periodTimesMinutesShort(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get periodTimesSavePending => 'Waiting to save…';
+
+  @override
+  String get periodTimesSaveFailed => 'Not saved · Save failed';
+
+  @override
+  String get periodTimesInvalidStatus =>
+      'Not saved · Fix the highlighted times';
 }

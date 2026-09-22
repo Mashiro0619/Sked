@@ -2911,6 +2911,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsPrivacySummary => '隐私政策与本地数据清理';
+
+  @override
+  String periodTimesCount(int count) {
+    return '共 $count 节';
+  }
+
+  @override
+  String get periodTimesPeriodColumn => '节次';
+
+  @override
+  String get periodTimesDurationColumn => '时长';
+
+  @override
+  String get periodTimesGapColumn => '课间';
+
+  @override
+  String periodTimesMinutesShort(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get periodTimesSavePending => '等待保存…';
+
+  @override
+  String get periodTimesSaveFailed => '尚未保存 · 保存失败';
+
+  @override
+  String get periodTimesInvalidStatus => '尚未保存 · 请修正标出的时间';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5821,4 +5849,32 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get settingsPrivacySummary => '隱私權政策與本機資料清理';
+
+  @override
+  String periodTimesCount(int count) {
+    return '共 $count 節';
+  }
+
+  @override
+  String get periodTimesPeriodColumn => '節次';
+
+  @override
+  String get periodTimesDurationColumn => '時長';
+
+  @override
+  String get periodTimesGapColumn => '課間';
+
+  @override
+  String periodTimesMinutesShort(int minutes) {
+    return '$minutes 分鐘';
+  }
+
+  @override
+  String get periodTimesSavePending => '等待儲存…';
+
+  @override
+  String get periodTimesSaveFailed => '尚未儲存 · 儲存失敗';
+
+  @override
+  String get periodTimesInvalidStatus => '尚未儲存 · 請修正標示的時間';
 }
