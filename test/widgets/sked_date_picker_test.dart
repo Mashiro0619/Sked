@@ -92,8 +92,26 @@ void main() {
       final row = tester.widget<DecoratedBox>(
         _key('sked-date-week-2026-09-07'),
       );
-      expect((row.decoration as BoxDecoration).color, isNotNull);
+      expect((row.decoration as BoxDecoration).color, isNull);
+      final selected =
+          tester
+                  .widget<DecoratedBox>(
+                    _key('sked-date-range-marker-2026-09-10'),
+                  )
+                  .decoration
+              as BoxDecoration;
+      expect(selected.shape, BoxShape.rectangle);
+      expect(
+        selected.color,
+        Theme.of(tester.element(_key('sked-date-2026-09-10')))
+            .colorScheme
+            .primary,
+      );
       for (final day in ['07', '08', '09', '10', '11', '12', '13']) {
+        final band = tester.getRect(_key('sked-date-range-band-2026-09-$day'));
+        final cell = tester.getRect(_key('sked-date-2026-09-$day'));
+        expect(band.top, greaterThan(cell.top));
+        expect(band.bottom, lessThan(cell.bottom));
         expect(
           tester
               .getSemantics(_key('sked-date-2026-09-$day'))

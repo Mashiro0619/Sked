@@ -411,7 +411,7 @@ void main() {
   }
 
   testWidgets(
-    'mobile touch range uses round endpoints without persistent ink or focus boxes',
+    'mobile touch range uses rounded-square endpoints without persistent ink or focus boxes',
     (t) async {
       size(t, const Size(360, 850));
       final p = await workspaceProvider(
@@ -448,7 +448,8 @@ void main() {
                   )
                   .decoration
               as BoxDecoration;
-      expect(marker.shape, BoxShape.circle);
+      expect(marker.shape, BoxShape.rectangle);
+      expect(marker.borderRadius, BorderRadius.circular(8));
       expect(marker.border, isNull);
       expect(marker.color, Theme.of(t.element(day(22))).colorScheme.primary);
       expect(

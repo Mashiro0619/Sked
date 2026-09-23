@@ -1533,12 +1533,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   week && DateUtils.isSameDay(rowStart, range.start);
               return DecoratedBox(
                 key: ValueKey('sked-date-week-${_key(rowStart)}'),
-                decoration: BoxDecoration(
-                  color: rowSelected && !_compactCalendar
-                      ? c.secondaryContainer
-                      : null,
-                  borderRadius: BorderRadius.circular(6),
-                ),
+                decoration: const BoxDecoration(),
                 child: Row(
                   children: [
                     for (var col = 0; col < 7; col++)
@@ -1591,143 +1586,21 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                               label: label,
                               excludeSemantics: true,
                               onTap: allowed ? () => _choose(day) : null,
-                              child: _compactCalendar
-                                  ? _compactDayCell(
-                                      context,
-                                      day: day,
-                                      height: height,
-                                      col: col,
-                                      allowed: allowed,
-                                      selected: selected,
-                                      today: today,
-                                      focused: focused,
-                                      inRange: inRange,
-                                      paintRange: paintRange,
-                                      rangeStart:
-                                          selectedRange?.start ?? pendingStart,
-                                      rangeEnd:
-                                          selectedRange?.end ?? pendingStart,
-                                    )
-                                  : Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        key: ValueKey('sked-date-${_key(day)}'),
-                                        canRequestFocus: false,
-                                        onTap: allowed
-                                            ? () {
-                                                _gridFocus.requestFocus();
-                                                _choose(day);
-                                              }
-                                            : null,
-                                        borderRadius: BorderRadius.circular(5),
-                                        child: Container(
-                                          height: height,
-                                          alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color:
-                                                (paintRange
-                                                    ? inRange
-                                                    : selected && !week)
-                                                ? c.secondaryContainer
-                                                : null,
-                                            borderRadius: paintRange
-                                                ? BorderRadius.horizontal(
-                                                    left: Radius.circular(
-                                                      col == 0 ||
-                                                              DateUtils.isSameDay(
-                                                                day,
-                                                                selectedRange
-                                                                        ?.start ??
-                                                                    pendingStart,
-                                                              )
-                                                          ? 5
-                                                          : 0,
-                                                    ),
-                                                    right: Radius.circular(
-                                                      col == 6 ||
-                                                              DateUtils.isSameDay(
-                                                                day,
-                                                                selectedRange
-                                                                        ?.end ??
-                                                                    pendingStart,
-                                                              )
-                                                          ? 5
-                                                          : 0,
-                                                    ),
-                                                  )
-                                                : BorderRadius.circular(5),
-                                            border:
-                                                (paintRange
-                                                        ? DateUtils.isSameDay(
-                                                                day,
-                                                                pendingStart ??
-                                                                    selectedRange
-                                                                        ?.start,
-                                                              ) ||
-                                                              DateUtils.isSameDay(
-                                                                day,
-                                                                selectedRange
-                                                                    ?.end,
-                                                              )
-                                                        : selected) ||
-                                                    focused
-                                                ? Border.all(
-                                                    color: focused
-                                                        ? c.primary
-                                                        : c.outline,
-                                                    width: focused ? 2 : 1,
-                                                  )
-                                                : null,
-                                          ),
-                                          child: SizedBox.expand(
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        bottom: 4,
-                                                      ),
-                                                  child: Text(
-                                                    '${day.day}',
-                                                    style: theme
-                                                        .textTheme
-                                                        .labelMedium
-                                                        ?.copyWith(
-                                                          color: !allowed
-                                                              ? c.onSurface
-                                                                    .withValues(
-                                                                      alpha:
-                                                                          0.38,
-                                                                    )
-                                                              : day.month ==
-                                                                    _month.month
-                                                              ? c.onSurface
-                                                              : c.onSurfaceVariant,
-                                                        ),
-                                                  ),
-                                                ),
-                                                if (today)
-                                                  Positioned(
-                                                    bottom: 2,
-                                                    child: Container(
-                                                      key: const ValueKey(
-                                                        'sked-date-today-marker',
-                                                      ),
-                                                      width: 4,
-                                                      height: 4,
-                                                      decoration: BoxDecoration(
-                                                        color: c.primary,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                              child: _roundedDayCell(
+                                context,
+                                day: day,
+                                height: height,
+                                col: col,
+                                allowed: allowed,
+                                selected: selected,
+                                today: today,
+                                focused: focused,
+                                inRange: inRange,
+                                paintRange: paintRange,
+                                rangeStart:
+                                    selectedRange?.start ?? pendingStart,
+                                rangeEnd: selectedRange?.end ?? pendingStart,
+                              ),
                             );
                           },
                         ),
@@ -1741,10 +1614,10 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     );
   }
 
-  /// Compact touch uses a single quiet band and round endpoints. In particular,
-  /// a cancelled pan must not leave Material ink or a keyboard focus rectangle
-  /// on unrelated dates, which looks like another selected range on a phone.
-  Widget _compactDayCell(
+  /// Day, week and custom ranges share centered, rounded-square date markers.
+  /// Bands stay inside each row so full weeks retain whitespace between rows.
+  /// Compact touch avoids persistent Material ink after a cancelled range pan.
+  Widget _roundedDayCell(
     BuildContext context, {
     required DateTime day,
     required double height,
@@ -1759,101 +1632,164 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
     required DateTime? rangeEnd,
   }) {
     final theme = Theme.of(context), colors = theme.colorScheme;
+    final compact = _compactCalendar;
+    final cornerRadius = compact ? 8.0 : 5.0;
     final isStart = DateUtils.isSameDay(day, rangeStart);
     final isEnd = DateUtils.isSameDay(day, rangeEnd);
     final endpoint = paintRange ? isStart || isEnd : selected;
     final keyboardFocus =
         focused &&
         FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-    return GestureDetector(
-      key: ValueKey('sked-date-${_key(day)}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: allowed
-          ? () {
-              _gridFocus.requestFocus();
-              _choose(day);
-            }
-          : null,
-      child: SizedBox(
-        height: height,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final diameter = math.min(height - 6, constraints.maxWidth);
-            final radius = Radius.circular(diameter / 2);
-            final inset = (constraints.maxWidth - diameter) / 2;
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                if (inRange &&
-                    (paintRange ||
-                        widget.selectionUnit == DateSelectionUnit.week))
-                  PositionedDirectional(
-                    start: isStart ? inset : 0,
-                    end: isEnd ? inset : 0,
-                    height: diameter,
-                    top: (height - diameter) / 2,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.primary.withValues(alpha: 0.10),
-                        borderRadius: BorderRadiusDirectional.horizontal(
-                          start: isStart || col == 0 ? radius : Radius.zero,
-                          end: isEnd || col == 6 ? radius : Radius.zero,
+    final VoidCallback? onTap = allowed
+        ? () {
+            _gridFocus.requestFocus();
+            _choose(day);
+          }
+        : null;
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final markerSize = math.min(
+            height - 6,
+            constraints.maxWidth - (compact ? 0 : 4),
+          );
+          final rowRadius = Radius.circular(compact ? markerSize / 2 : 5);
+          final content = Stack(
+            alignment: Alignment.center,
+            children: [
+              // Center the number itself, not a number-and-indicator group.
+              // Today is positioned independently and must not shift the label.
+              Text(
+                '${day.day}',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+                style:
+                    (compact
+                            ? theme.textTheme.titleMedium?.copyWith(
+                                fontSize: 18,
+                              )
+                            : theme.textTheme.labelMedium)
+                        ?.copyWith(
+                          height: 1.2,
+                          color: endpoint
+                              ? colors.onPrimary
+                              : !allowed
+                              ? colors.onSurface.withValues(alpha: 0.38)
+                              : day.month == _month.month
+                              ? colors.onSurface
+                              : colors.onSurfaceVariant.withValues(
+                                  alpha: compact ? 0.65 : 1,
+                                ),
+                          fontWeight: endpoint
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                         ),
+              ),
+              if (today)
+                Positioned(
+                  bottom: (height - markerSize) / 2 + (compact ? 3 : 1),
+                  child: Container(
+                    key: const ValueKey('sked-date-today-marker'),
+                    width: compact ? 4 : 3,
+                    height: compact ? 4 : 3,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: endpoint ? colors.onPrimary : colors.primary,
+                    ),
+                  ),
+                ),
+            ],
+          );
+          return Stack(
+            fit: StackFit.expand,
+            alignment: Alignment.center,
+            children: [
+              if (inRange &&
+                  !(isStart && isEnd) &&
+                  (paintRange ||
+                      widget.selectionUnit == DateSelectionUnit.week))
+                PositionedDirectional(
+                  // Only the inner half of an endpoint joins the range. A
+                  // single date has no band, and RTL mirrors these joins.
+                  start: isStart ? constraints.maxWidth / 2 : 0,
+                  end: isEnd ? constraints.maxWidth / 2 : 0,
+                  height: markerSize,
+                  top: (height - markerSize) / 2,
+                  child: DecoratedBox(
+                    key: ValueKey('sked-date-range-band-${_key(day)}'),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(
+                        alpha: theme.brightness == Brightness.dark
+                            ? 0.16
+                            : 0.10,
+                      ),
+                      borderRadius: BorderRadiusDirectional.horizontal(
+                        start: col == 0 && !isStart ? rowRadius : Radius.zero,
+                        end: col == 6 && !isEnd ? rowRadius : Radius.zero,
                       ),
                     ),
                   ),
-                SizedBox.square(
-                  dimension: diameter,
+                ),
+              Center(
+                child: SizedBox.square(
+                  dimension: markerSize,
                   child: DecoratedBox(
-                    key: ValueKey('sked-date-touch-marker-${_key(day)}'),
+                    key: ValueKey(
+                      'sked-date-${compact ? 'touch' : 'range'}-marker-${_key(day)}',
+                    ),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(cornerRadius),
                       color: endpoint ? colors.primary : null,
-                      border: keyboardFocus
-                          ? Border.all(color: colors.primary, width: 2)
+                      border: compact && keyboardFocus
+                          ? Border.all(
+                              color: endpoint
+                                  ? colors.onPrimary
+                                  : colors.primary,
+                              width: 2,
+                            )
                           : null,
                     ),
                   ),
                 ),
-                // Text uses the whole touch cell, not the smaller circular
-                // decoration, to avoid clipping large digits to that circle.
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(
-                    '${day.day}',
-                    maxLines: 1,
-                    softWrap: false,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontSize: 18,
-                      height: 1.2,
-                      color: endpoint
-                          ? colors.onPrimary
-                          : !allowed
-                          ? colors.onSurface.withValues(alpha: 0.38)
-                          : day.month == _month.month
-                          ? colors.onSurface
-                          : colors.onSurfaceVariant.withValues(alpha: 0.65),
-                      fontWeight: endpoint ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-                if (today)
-                  Positioned(
-                    bottom: (height - diameter) / 2 + 3,
-                    child: Container(
-                      key: const ValueKey('sked-date-today-marker'),
-                      width: 4,
-                      height: 4,
+              ),
+              if (!compact && keyboardFocus)
+                Center(
+                  child: SizedBox.square(
+                    dimension: markerSize + 4,
+                    child: DecoratedBox(
+                      key: ValueKey('sked-date-focus-${_key(day)}'),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: endpoint ? colors.onPrimary : colors.primary,
+                        borderRadius: BorderRadius.circular(cornerRadius + 2),
+                        border: Border.all(color: colors.primary, width: 1.5),
                       ),
                     ),
                   ),
-              ],
-            );
-          },
-        ),
+                ),
+              if (compact)
+                GestureDetector(
+                  key: ValueKey('sked-date-${_key(day)}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onTap,
+                  child: content,
+                )
+              else
+                // Ink sits above the band and marker, not hidden below their
+                // opaque decorations. The entire day remains the hit target.
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: ValueKey('sked-date-${_key(day)}'),
+                    canRequestFocus: false,
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(cornerRadius + 2),
+                    child: content,
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
