@@ -176,11 +176,6 @@ class _SettingsPageState extends State<SettingsPage> {
                               open,
                               header,
                             ),
-                    notice: provider.lastRecoveryStatus == RecoveryStatus.none
-                        ? null
-                        : _RecoveryNoticeTile(
-                            status: provider.lastRecoveryStatus,
-                          ),
                     builder: (entry) => SettingsPage(
                       initialDestination: entry.destination,
                       initialWorkspace:
@@ -243,6 +238,12 @@ class _SettingsPageState extends State<SettingsPage> {
       scrollViewKey: const PageStorageKey('settings-overview-scroll'),
       topPadding: 16,
       children: [
+        if (provider.lastRecoveryStatus != RecoveryStatus.none)
+          Padding(
+            key: const ValueKey('settings-recovery-notice'),
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _RecoveryNoticeTile(status: provider.lastRecoveryStatus),
+          ),
         if (provider.isWorkspaceEnabled(AppMode.student))
           group('student', l.studentTimetable, [
             link(

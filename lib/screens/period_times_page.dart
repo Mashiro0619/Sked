@@ -60,7 +60,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   @override
   AppMode get routeWorkspace => AppMode.student;
   @override
-  Future<bool> prepareWorkspaceDisable() => _flushPendingAutoSave();
+  Future<bool> prepareWorkspaceDisable() => _flushAndExit(retire: true);
 
   static const _autoSaveDelay = Duration(milliseconds: 400);
 
@@ -76,6 +76,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   var _menuActionInProgress = false;
   var _autoSaveInProgress = false;
   var _isDisposing = false;
+  var _retired = false;
   var _allowPop = true;
   var _isHandlingPop = false;
   Timer? _autoSaveDebounce;
@@ -87,7 +88,8 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   int? _failedAutoSaveRevision;
   var _persistedAutoSaveRevision = 0;
 
-  bool get _interactionBlocked => _menuActionInProgress || _isHandlingPop;
+  bool get _interactionBlocked =>
+      _retired || _menuActionInProgress || _isHandlingPop;
 
   bool get _menuBlocked => _interactionBlocked || _autoSaveInProgress;
 
@@ -149,7 +151,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
 
   @override
   Widget build(BuildContext context) {
-    if (!routeWorkspaceEnabled) return const SizedBox.shrink();
+    if (_retired || !routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -541,7 +543,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   void _scheduleAutoSave({bool debounce = false}) {
-    if (!mounted || _isDisposing) {
+    if (!mounted || _isDisposing || _retired) {
       return;
     }
     _allowPop = false;
@@ -684,55 +686,64 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<void> _flushAndPop() async {
-    if (_isHandlingPop || _menuActionInProgress) {
-      return;
+    await _flushAndExit();
+  }
+
+  Future<bool> _flushAndExit({bool retire = false}) async {
+    if (_retired || !mounted) return true;
+    if (_isHandlingPop || _menuActionInProgress || _timePickerOpen) {
+      return false;
     }
     final route = ModalRoute.of(context);
     final navigator = Navigator.of(context);
+    var leaving = false;
     setState(() => _isHandlingPop = true);
     FocusScope.of(context).unfocus();
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) {
-      return;
-    }
-    while (mounted) {
-      final saved = await _flushPendingAutoSave();
-      if (!mounted) {
-        return;
-      }
-      if (saved && _allowPop) {
-        await WidgetsBinding.instance.endOfFrame;
-        if (mounted && navigator.mounted && route?.isCurrent == true) {
-          navigator.pop();
-        } else if (mounted) {
-          setState(() => _isHandlingPop = false);
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      while (mounted) {
+        final saved = await _flushPendingAutoSave();
+        if (!mounted) return false;
+        // An invalid draft has no queued write, but is still unsaved.
+        if (saved && _allowPop) break;
+
+        final action = await _showUnsavedExitDialog(
+          canRetry: _pendingAutoSaveRevision != null,
+        );
+        if (!mounted) return false;
+        switch (action) {
+          case _UnsavedPeriodTimesExitAction.retry:
+            continue;
+          case _UnsavedPeriodTimesExitAction.discard:
+            _discardPendingAutoSave();
+            setState(() => _allowPop = true);
+          case _UnsavedPeriodTimesExitAction.keepEditing:
+          case null:
+            return false;
         }
-        return;
+        break;
       }
 
-      final canRetry = _pendingAutoSaveRevision != null;
-      final action = await _showUnsavedExitDialog(canRetry: canRetry);
-      if (!mounted) {
-        return;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || !navigator.mounted) return false;
+      if (retire) {
+        // Window close, workspace disable and backup replacement share this
+        // guard. Retire the old draft before replacement data is published,
+        // including when another route (such as the restore page) is above it.
+        _discardPendingAutoSave();
+        setState(() => _retired = true);
+        leaving = true;
+        if (route != null && route.isActive && !route.isFirst) {
+          navigator.removeRoute(route);
+        }
+        return true;
       }
-      switch (action) {
-        case _UnsavedPeriodTimesExitAction.retry:
-          continue;
-        case _UnsavedPeriodTimesExitAction.discard:
-          _discardPendingAutoSave();
-          setState(() => _allowPop = true);
-          await WidgetsBinding.instance.endOfFrame;
-          if (mounted && navigator.mounted && route?.isCurrent == true) {
-            navigator.pop();
-          } else if (mounted) {
-            setState(() => _isHandlingPop = false);
-          }
-          return;
-        case _UnsavedPeriodTimesExitAction.keepEditing:
-        case null:
-          setState(() => _isHandlingPop = false);
-          return;
-      }
+      if (route?.isCurrent != true) return false;
+      leaving = true;
+      navigator.pop();
+      return true;
+    } finally {
+      if (!leaving && mounted) setState(() => _isHandlingPop = false);
     }
   }
 
@@ -1075,7 +1086,10 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     required bool isStart,
     required BuildContext anchorContext,
   }) async {
-    if (_timePickerOpen || index < 0 || index >= _periodTimes.length) {
+    if (_interactionBlocked ||
+        _timePickerOpen ||
+        index < 0 ||
+        index >= _periodTimes.length) {
       return;
     }
     setState(() => _timePickerOpen = true);
@@ -1095,7 +1109,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         workspace: AppMode.student,
         alwaysUse24HourFormat: true,
       );
-      if (!mounted || picked == null) return;
+      if (!mounted || _retired || picked == null) return;
       final targetIndex = _periodRowKeys.indexOf(rowKey);
       if (targetIndex < 0) return;
       final minutes = (picked.hour * 60) + picked.minute;

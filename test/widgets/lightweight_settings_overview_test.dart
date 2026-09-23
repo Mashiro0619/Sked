@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/screens/language_settings_page.dart';
@@ -70,7 +71,77 @@ class _Gateway extends MemoryAgendaNotificationGateway {
   }
 }
 
+class _RecoveryStorage extends WorkspaceMemoryStorage {
+  _RecoveryStorage(this.status)
+    : super(buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en'));
+
+  final RecoveryStatus status;
+  @override
+  Future<StorageLoadResult> load() async =>
+      StorageLoadResult(data: data, recoveryStatus: status);
+}
+
 void main() {
+  for (final status in [
+    RecoveryStatus.restoredFromBackup,
+    RecoveryStatus.failedBackupRestore,
+  ]) {
+    for (final (size, scale) in [
+      (const Size(1280, 800), 1.0),
+      (const Size(1280, 900), 2.0),
+      (const Size(393, 852), 2.0),
+    ]) {
+      testWidgets(
+        'recovery notice stays below the pinned overview toolbar at $size/$scale/$status',
+        (t) async {
+          viewport(t, size);
+          final p = await workspaceProvider(storage: _RecoveryStorage(status));
+          addTearDown(p.dispose);
+          await t.pumpWidget(
+            WorkspaceHarness(
+              provider: p,
+              textScale: scale,
+              home: const SettingsPage(),
+            ),
+          );
+          await t.pumpAndSettle();
+          final toolbar = find.descendant(
+            of: k('settings-overview-app-bar'),
+            matching: find.byType(AppBar),
+          );
+          final notice = k('settings-recovery-notice');
+          expect(notice, findsOneWidget);
+          expect(t.getTopLeft(toolbar).dy, 0);
+          expect(
+            t.getTopLeft(notice).dy,
+            greaterThanOrEqualTo(t.getBottomLeft(toolbar).dy),
+          );
+          final scroll = t
+              .widget<CustomScrollView>(
+                find.byKey(const PageStorageKey('settings-overview-scroll')),
+              )
+              .controller!;
+          scroll.jumpTo(scroll.position.maxScrollExtent);
+          await t.pumpAndSettle();
+          expect(
+            t.getTopLeft(toolbar).dy,
+            0,
+            reason: 'The overview toolbar must stay pinned after the notice scrolls away.',
+          );
+          expect(
+            t.getBottomLeft(notice).dy,
+            lessThan(t.getBottomLeft(toolbar).dy),
+          );
+          expect(t.takeException(), isNull);
+        },
+        variant: TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.windows,
+        }),
+      );
+    }
+  }
+
   const channel = MethodChannel(AndroidProductivityChannel.name);
   setUp(
     () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

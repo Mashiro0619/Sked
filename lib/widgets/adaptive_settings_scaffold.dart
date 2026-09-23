@@ -29,12 +29,10 @@ class AdaptiveSettingsScaffold extends StatefulWidget {
     required this.catalog,
     required this.builder,
     required this.overviewBuilder,
-    this.notice,
   });
   final List<SettingsCatalogEntry> catalog;
   final Widget Function(SettingsCatalogEntry) builder;
   final SettingsOverviewBuilder overviewBuilder;
-  final Widget? notice;
   @override
   State<AdaptiveSettingsScaffold> createState() =>
       _AdaptiveSettingsScaffoldState();
@@ -296,25 +294,14 @@ class _AdaptiveSettingsScaffoldState extends State<AdaptiveSettingsScaffold> {
                           requestFocus: false,
                           onGenerateRoute: (_) => MaterialPageRoute<void>(
                             builder: (pageContext) => Scaffold(
-                              body: Column(
-                                children: [
-                                  if (widget.notice != null)
-                                    Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: widget.notice,
-                                    ),
-                                  Expanded(
-                                    child: widget.overviewBuilder(
-                                      pageContext,
-                                      _overviewController,
-                                      _sectionKeys,
-                                      _openDestination,
-                                      _SettingsOverviewAppBar(
-                                        onBack: () => unawaited(_back()),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              body: widget.overviewBuilder(
+                                pageContext,
+                                _overviewController,
+                                _sectionKeys,
+                                _openDestination,
+                                _SettingsOverviewAppBar(
+                                  onBack: () => unawaited(_back()),
+                                ),
                               ),
                             ),
                           ),

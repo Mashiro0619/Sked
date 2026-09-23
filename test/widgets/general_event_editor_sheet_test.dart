@@ -101,7 +101,238 @@ Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _pickEventTimeDraft(
+  WidgetTester tester,
+  TimeOfDay time, {
+  bool start = false,
+}) async {
+  final action = start
+      ? find.byTooltip('Pick time').first
+      : find.byTooltip('Pick time').last;
+  await tester.ensureVisible(action);
+  await tester.tap(action);
+  await tester.pumpAndSettle();
+  tester.widget<SkedTimePicker>(find.byType(SkedTimePicker)).onSelected(time);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pickEventEndDate(WidgetTester tester, String isoDate) async {
+  final action = find.byTooltip('Pick date').last;
+  await tester.ensureVisible(action);
+  await tester.tap(action);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(ValueKey('sked-date-$isoDate')));
+  await tester.tap(find.byKey(const ValueKey('sked-date-confirm')));
+  await tester.pumpAndSettle();
+}
+
+GeneralEvent _timeValidationEvent({bool allDay = false}) => GeneralEvent(
+  id: 'time-validation',
+  calendarId: 'work',
+  title: 'Meeting',
+  startDateTimeIso: allDay
+      ? '2026-05-25T00:00:00.000'
+      : '2026-05-25T10:00:00.000',
+  endDateTimeIso: allDay
+      ? '2026-05-26T00:00:00.000'
+      : '2026-05-25T11:00:00.000',
+  isAllDay: allDay,
+);
+
 void main() {
+  for (final invalidEnd in [
+    const TimeOfDay(hour: 9, minute: 0),
+    const TimeOfDay(hour: 10, minute: 0),
+  ]) {
+    testWidgets(
+      'rejects end time $invalidEnd without changing the draft or saving',
+      (tester) async {
+        final saved = <GeneralEvent>[];
+        await tester.pumpWidget(
+          _localizedApp(
+            GeneralEventEditorSheet(
+              initialEvent: _timeValidationEvent(),
+              calendars: const [
+                GeneralSchedule(id: 'work', name: 'Work', events: []),
+              ],
+              onSave: (event) async => saved.add(event),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _pickEventTimeDraft(tester, invalidEnd);
+        final context = tester.element(find.byType(GeneralEventEditorSheet));
+        final l10n = AppLocalizations.of(context);
+        final displayedEnd = '2026-05-25 ${invalidEnd.format(context)}';
+        expect(find.text(displayedEnd), findsWidgets);
+        expect(find.text(l10n.endTimeMustBeLater), findsOneWidget);
+        await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+        await tester.pumpAndSettle();
+        expect(saved, isEmpty);
+        expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+        expect(find.text(displayedEnd), findsWidgets);
+        await _pickEventTimeDraft(
+          tester,
+          const TimeOfDay(hour: 11, minute: 30),
+        );
+        expect(find.text(l10n.endTimeMustBeLater), findsNothing);
+        await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+        await tester.pumpAndSettle();
+        expect(saved, hasLength(1));
+        expect(saved.single.endDateTimeIso, '2026-05-25T11:30:00.000');
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'changing the start past the end blocks save until the range is fixed',
+    (tester) async {
+      final saved = <GeneralEvent>[];
+      await tester.pumpWidget(
+        _localizedApp(
+          GeneralEventEditorSheet(
+            initialEvent: _timeValidationEvent(),
+            onSave: (event) async => saved.add(event),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _pickEventTimeDraft(
+        tester,
+        const TimeOfDay(hour: 12, minute: 0),
+        start: true,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+      expect(saved, isEmpty);
+      expect(
+        find.byKey(const ValueKey('event-time-range-error')),
+        findsOneWidget,
+      );
+      await _pickEventTimeDraft(tester, const TimeOfDay(hour: 13, minute: 0));
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+      expect(saved, hasLength(1));
+      expect(saved.single.startDateTimeIso, '2026-05-25T12:00:00.000');
+      expect(saved.single.endDateTimeIso, '2026-05-25T13:00:00.000');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final allDay in [false, true]) {
+    testWidgets(
+      'rejects an earlier end date, preserving all-day semantics: $allDay',
+      (tester) async {
+        final saved = <GeneralEvent>[];
+        await tester.pumpWidget(
+          _localizedApp(
+            GeneralEventEditorSheet(
+              initialEvent: _timeValidationEvent(allDay: allDay),
+              onSave: (event) async => saved.add(event),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _pickEventEndDate(tester, '2026-05-24');
+        expect(find.textContaining('2026-05-24'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('event-time-range-error')),
+          findsOneWidget,
+        );
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await tester.pumpAndSettle();
+        expect(saved, isEmpty);
+        await _pickEventEndDate(tester, '2026-05-25');
+        expect(
+          find.byKey(const ValueKey('event-time-range-error')),
+          findsNothing,
+        );
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await tester.pumpAndSettle();
+        expect(saved, hasLength(1));
+        expect(saved.single.isAllDay, allDay);
+        expect(
+          saved.single.endDateTimeIso,
+          allDay ? '2026-05-26T00:00:00.000' : '2026-05-25T11:00:00.000',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('an overnight event keeps its selected next-day end time', (
+    tester,
+  ) async {
+    final saved = <GeneralEvent>[];
+    await tester.pumpWidget(
+      _localizedApp(
+        GeneralEventEditorSheet(
+          initialEvent: _timeValidationEvent(),
+          onSave: (event) async => saved.add(event),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _pickEventTimeDraft(tester, const TimeOfDay(hour: 9, minute: 0));
+    await _pickEventEndDate(tester, '2026-05-26');
+    expect(find.byKey(const ValueKey('event-time-range-error')), findsNothing);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(saved, hasLength(1));
+    expect(saved.single.endDateTimeIso, '2026-05-26T09:00:00.000');
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final locale in [const Locale('en'), const Locale('zh')]) {
+    testWidgets(
+      'invalid event range is revealed from a collapsed section at 2x text in $locale',
+      (tester) async {
+        _setTestViewport(tester, const Size(320, 700));
+        addTearDown(() => _resetTestViewport(tester));
+        final saved = <GeneralEvent>[];
+        await tester.pumpWidget(
+          _localizedCompactApp(
+            GeneralEventEditorSheet(
+              initialEvent: _timeValidationEvent(),
+              onSave: (event) async => saved.add(event),
+            ),
+            locale: locale,
+            textScaler: const TextScaler.linear(2),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(GeneralEventEditorSheet)),
+        );
+        final end = find.byTooltip(l10n.pickTime).last;
+        await tester.ensureVisible(end);
+        await tester.tap(end);
+        await tester.pumpAndSettle();
+        tester
+            .widget<SkedTimePicker>(find.byType(SkedTimePicker))
+            .onSelected(const TimeOfDay(hour: 9, minute: 0));
+        await tester.pumpAndSettle();
+        final timeSection = find.byWidgetPredicate(
+          (widget) => widget is ExpansionTile && widget.controller != null,
+        );
+        tester.widget<ExpansionTile>(timeSection).controller!.collapse();
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, l10n.save));
+        await tester.pumpAndSettle();
+        expect(saved, isEmpty);
+        expect(
+          tester.widget<ExpansionTile>(timeSection).controller!.isExpanded,
+          isTrue,
+        );
+        final error = find.byKey(const ValueKey('event-time-range-error'));
+        expect(error.hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
   testWidgets(
     'event minute wraps independently in 12-hour mode and remains an editor draft',
     (tester) async {

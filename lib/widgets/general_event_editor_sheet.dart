@@ -83,6 +83,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   bool _sectionsInitialized = false;
 
   final _formKey = GlobalKey<FormState>();
+  final _timeExpansion = ExpansibleController();
+  final _timeErrorKey = GlobalKey();
+  Timer? _timeErrorReveal;
 
   bool get _isEditing => widget.initialEvent != null;
   bool get _showCalendarPicker => _calendarOptions.length > 1;
@@ -203,6 +206,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     _titleController.dispose();
     _locationController.dispose();
     _notesController.dispose();
+    _timeErrorReveal?.cancel();
+    _timeExpansion.dispose();
     super.dispose();
   }
 
@@ -245,33 +250,64 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   }
 
   DateTime _buildEndDateTime() {
-    if (_isAllDay) {
-      var end = calendarDateEndExclusive(_endDate);
-      final start = _buildStartDateTime();
-      if (!end.isAfter(start)) {
-        end = calendarDateEndExclusive(start);
-      }
-      return end;
-    }
-    var end = DateTime(
+    if (_isAllDay) return calendarDateEndExclusive(_endDate);
+    return DateTime(
       _endDate.year,
       _endDate.month,
       _endDate.day,
       _endTime.hour,
       _endTime.minute,
     );
-    final start = _buildStartDateTime();
-    if (!end.isAfter(start)) {
-      end = start.add(const Duration(hours: 1));
-    }
-    return end;
   }
+
+  bool get _hasInvalidTimeRange =>
+      !_buildEndDateTime().isAfter(_buildStartDateTime());
 
   Future<void> _save() async {
     if (_blocked) return;
     if (!_formKey.currentState!.validate()) return;
     final startDt = _buildStartDateTime();
     final endDt = _buildEndDateTime();
+    if (!endDt.isAfter(startDt)) {
+      _dismissActiveInputFocus();
+      final expansionDuration = MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : Theme.of(context)
+                    .expansionTileTheme
+                    .expansionAnimationStyle
+                    ?.duration ??
+                const Duration(milliseconds: 200);
+      _timeExpansion.expand();
+      _timeErrorReveal?.cancel();
+      // Start after the first expanded frame, then measure the final transform.
+      // Measuring during expansion scrolls short with accessibility text sizes.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _blocked) return;
+        _timeErrorReveal?.cancel();
+        _timeErrorReveal = Timer(expansionDuration, () async {
+          _timeErrorReveal = null;
+          await WidgetsBinding.instance.endOfFrame;
+          if (!mounted ||
+              _blocked ||
+              !_hasInvalidTimeRange ||
+              !_timeExpansion.isExpanded) {
+            return;
+          }
+          final errorContext = _timeErrorKey.currentContext;
+          if (errorContext != null && errorContext.mounted) {
+            unawaited(
+              Scrollable.ensureVisible(
+                errorContext,
+                alignment: 1,
+                duration: SkedMotionPolicy.of(context)
+                    .effects(SkedMotionSpeed.fast),
+              ),
+            );
+          }
+        });
+      });
+      return;
+    }
     final now = DateTime.now().toIso8601String();
     final rule = _buildRecurrenceRule(_repeatCount);
     final event = GeneralEvent(
@@ -479,6 +515,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                       ],
                       const SizedBox(height: 8),
                       _EditorSection(
+                        controller: _timeExpansion,
                         icon: Icons.schedule_outlined,
                         title: '${l10n.eventDate} · ${l10n.eventTime}',
                         initiallyExpanded: _timeSectionExpanded,
@@ -549,6 +586,10 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                                       },
                               ),
                               end: _DateTimeRow(
+                                errorKey: _timeErrorKey,
+                                errorText: _hasInvalidTimeRange
+                                    ? l10n.endTimeMustBeLater
+                                    : null,
                                 icon: Icons.stop_outlined,
                                 label: l10n.eventEndTime,
                                 date: _endDate,
@@ -769,6 +810,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 /// while a user collapses a section on a small Android screen.
 class _EditorSection extends StatelessWidget {
   const _EditorSection({
+    this.controller,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -780,6 +822,7 @@ class _EditorSection extends StatelessWidget {
   final IconData icon;
   final String title;
   final bool initiallyExpanded;
+  final ExpansibleController? controller;
   final ValueChanged<bool> onExpansionChanged;
   final bool enabled;
   final Widget child;
@@ -792,6 +835,7 @@ class _EditorSection extends StatelessWidget {
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
+        controller: controller,
         initiallyExpanded: initiallyExpanded,
         maintainState: true,
         enabled: enabled,
@@ -1253,6 +1297,8 @@ class _DateTimeRange extends StatelessWidget {
 
 class _DateTimeRow extends StatelessWidget {
   const _DateTimeRow({
+    this.errorKey,
+    this.errorText,
     required this.icon,
     required this.label,
     required this.date,
@@ -1267,6 +1313,8 @@ class _DateTimeRow extends StatelessWidget {
   final DateTime date;
   final TimeOfDay time;
   final bool showTime;
+  final String? errorText;
+  final Key? errorKey;
   final ValueChanged<BuildContext>? onPickDate;
   final ValueChanged<BuildContext>? onPickTime;
 
@@ -1336,9 +1384,26 @@ class _DateTimeRow extends StatelessWidget {
                 value,
                 softWrap: true,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
+                  color: errorText == null
+                      ? colors.onSurfaceVariant
+                      : colors.error,
                 ),
               ),
+              if (errorText != null)
+                Padding(
+                  key: errorKey,
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      errorText!,
+                      key: const ValueKey('event-time-range-error'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.error,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
           final actions = Wrap(
