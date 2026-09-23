@@ -11,9 +11,12 @@ import '../data/timetable_storage.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
+import '../services/desktop_window_bridge.dart';
 import '../services/export_service.dart';
+import '../widgets/desktop_window_host.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 import 'adaptive_sked_shell.dart';
 import 'settings_page.dart';
 
@@ -524,8 +527,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       selector: (_, provider) => _AppHomeSnapshot.from(provider),
       builder: (context, snapshot, child) {
         if (!snapshot.isLoaded) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            appBar: _startupAppBar(context),
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -620,6 +624,19 @@ String _recoveryArtifactFileName(String artifactPath) {
   return fileName;
 }
 
+// Startup states precede the workspace toolbar, but the borderless native
+// window already draws its caption controls. Supply their matching drag row
+// without reserving extra space on phones or when native chrome is unavailable.
+PreferredSizeWidget? _startupAppBar(BuildContext context) {
+  final metrics = WorkbenchChromeMetrics.of(context);
+  if (!metrics.desktop || !DesktopWindowBridge.instance.available) return null;
+  return WorkbenchAppBar(
+    key: const ValueKey('startup-window-toolbar'),
+    automaticallyImplyLeading: false,
+    toolbarHeight: metrics.toolbarHeight,
+  );
+}
+
 class _DataRecoveryScreen extends StatelessWidget {
   const _DataRecoveryScreen({
     required this.status,
@@ -670,6 +687,7 @@ class _DataRecoveryScreen extends StatelessWidget {
 
     return Scaffold(
       key: const ValueKey('data-recovery-screen'),
+      appBar: _startupAppBar(context),
       backgroundColor: colors.surface,
       body: SafeArea(
         child: Center(
@@ -1025,6 +1043,7 @@ class _FirstLaunchOnboardingScreen extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
+      appBar: _startupAppBar(context),
       backgroundColor: colors.surface,
       body: SafeArea(
         child: LayoutBuilder(
