@@ -65,6 +65,67 @@ Future<void> _fixture(WidgetTester t, double width) async {
 
 void main() {
   for (final (width, platform) in [
+    (393.0, TargetPlatform.android),
+    (393.0, TargetPlatform.iOS),
+    (660.0, TargetPlatform.windows),
+    (1280.0, TargetPlatform.windows),
+  ]) {
+    testWidgets(
+      'backup has one overview entry and is absent from privacy at $width',
+      (t) async {
+        t.view.devicePixelRatio = 1;
+        t.view.physicalSize = Size(width, 1000);
+        addTearDown(t.view.resetDevicePixelRatio);
+        addTearDown(t.view.resetPhysicalSize);
+        final provider = await workspaceProvider();
+        addTearDown(provider.dispose);
+        await t.pumpWidget(
+          WorkspaceHarness(provider: provider, home: const SettingsPage()),
+        );
+        await t.pumpAndSettle();
+
+        final backup = k('settings-app-backup');
+        expect(backup, findsOneWidget);
+        expect(find.text('App backup and restore'), findsOneWidget);
+        expect(
+          find.descendant(of: k('settings-overview-data'), matching: backup),
+          findsOneWidget,
+        );
+        await _open(t, k('settings-data-privacy'));
+
+        expect(backup, findsNothing);
+        expect(find.text('App backup and restore'), findsNothing);
+        expect(
+          find.byKey(
+            const ValueKey('settings-app-backup'),
+            skipOffstage: false,
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Privacy Policy'), findsOneWidget);
+        expect(
+          k('settings-clear-app-data'),
+          platform == TargetPlatform.iOS ? findsNothing : findsOneWidget,
+        );
+        final back = find.byType(BackButton).hitTestable();
+        expect(back, findsOneWidget);
+        await t.tap(back);
+        await t.pumpAndSettle();
+
+        expect(backup, findsOneWidget);
+        await _open(t, backup);
+        expect(find.text('Restore from JSON file'), findsOneWidget);
+        expect(find.text('Paste backup JSON'), findsOneWidget);
+        expect(find.text('Share backup file'), findsOneWidget);
+        expect(find.text('Save backup file'), findsOneWidget);
+        expect(find.text('Copy backup text'), findsOneWidget);
+        expect(t.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(platform),
+    );
+  }
+
+  for (final (width, platform) in [
     (1280.0, TargetPlatform.windows),
     (660.0, TargetPlatform.windows),
     (393.0, TargetPlatform.android),

@@ -345,7 +345,7 @@ class _SettingsPageState extends State<SettingsPage> {
               Icons.import_export,
               SettingsDestination.general,
             ),
-          _dataControls(provider, l).first,
+          _appBackupControl(provider, l),
           link(
             'settings-data-privacy',
             l.settingsDataPrivacy,
@@ -495,12 +495,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     }
-    final dataChildren = _dataControls(provider, l10n);
+    final privacyChildren = _privacyControls(provider, l10n);
     final aboutChildren = _aboutControls(provider, l10n);
 
     final (title, children) = switch (destination) {
       SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
-      _ => (l10n.settingsDataPrivacy, dataChildren),
+      _ => (l10n.settingsDataPrivacy, privacyChildren),
     };
     return Scaffold(
       appBar: WorkbenchAppBar(
@@ -542,12 +542,9 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  List<Widget> _dataControls(
-    TimetableProvider provider,
-    AppLocalizations l10n,
-  ) {
-    return [
+  Widget _appBackupControl(TimetableProvider provider, AppLocalizations l10n) =>
       SettingsConnectedTile(
+        key: const ValueKey('settings-app-backup'),
         leading: const Icon(Icons.inventory_2_outlined),
         title: l10n.appBackupTitle,
         subtitle: l10n.backupWorkspaceSelection,
@@ -555,7 +552,13 @@ class _SettingsPageState extends State<SettingsPage> {
         onTap: _isFlowOpen(_SettingsFlow.appDataActions)
             ? null
             : () => _showAppDataActions(provider),
-      ),
+      );
+
+  List<Widget> _privacyControls(
+    TimetableProvider provider,
+    AppLocalizations l10n,
+  ) {
+    return [
       SettingsConnectedTile(
         leading: const Icon(Icons.privacy_tip_outlined),
         title: l10n.privacyPolicyTitle,

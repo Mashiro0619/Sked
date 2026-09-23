@@ -270,6 +270,7 @@ void main() {
           'notification-settings-enabled',
           'settings-notifications',
           'settings-workspace-features',
+          'settings-app-backup',
           'settings-data-privacy',
           'settings-about',
         ]) {

@@ -988,13 +988,9 @@ void main() {
     tester,
   ) async {
     final provider = await _createProvider(_buildGeneralData());
-    await _pumpSettingsPage(
-      tester,
-      provider,
-      destination: SettingsDestination.data,
-    );
+    await _pumpSettingsPage(tester, provider);
 
-    final backupEntry = find.text('App backup and restore');
+    final backupEntry = find.byKey(const ValueKey('settings-app-backup'));
     await tester.ensureVisible(backupEntry);
     await tester.pumpAndSettle();
     await tester.tap(backupEntry);
@@ -1020,13 +1016,9 @@ void main() {
       recoverySources: const {artifact: '{broken-journal'},
     );
     expect(provider.recoveryArtifacts, [artifact]);
-    await _pumpSettingsPage(
-      tester,
-      provider,
-      destination: SettingsDestination.data,
-    );
+    await _pumpSettingsPage(tester, provider);
 
-    final backupEntry = find.text('App backup and restore');
+    final backupEntry = find.byKey(const ValueKey('settings-app-backup'));
     await tester.ensureVisible(backupEntry);
     await tester.pumpAndSettle();
     await tester.tap(backupEntry);
@@ -1052,13 +1044,9 @@ void main() {
       recoverySources: const {artifact: '{unreadable'},
       recoveryReadError: StateError('recovery storage unavailable'),
     );
-    await _pumpSettingsPage(
-      tester,
-      provider,
-      destination: SettingsDestination.data,
-    );
+    await _pumpSettingsPage(tester, provider);
 
-    final backupEntry = find.text('App backup and restore');
+    final backupEntry = find.byKey(const ValueKey('settings-app-backup'));
     await tester.ensureVisible(backupEntry);
     await tester.pumpAndSettle();
     await tester.tap(backupEntry);
