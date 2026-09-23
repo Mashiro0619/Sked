@@ -12,6 +12,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
+import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
@@ -1201,10 +1202,16 @@ void main() {
       expect(titleFinder, findsOneWidget);
 
       final tileBox = tester.renderObject<RenderBox>(
-        find.ancestor(of: titleFinder, matching: find.byType(ListTile)),
+        find.ancestor(
+          of: titleFinder,
+          matching: find.byType(SettingsTransferPageTile),
+        ),
       );
       final chevronFinder = find.descendant(
-        of: find.ancestor(of: titleFinder, matching: find.byType(ListTile)),
+        of: find.ancestor(
+          of: titleFinder,
+          matching: find.byType(SettingsTransferPageTile),
+        ),
         matching: find.byIcon(Icons.chevron_right),
       );
       final chevronBox = tester.renderObject<RenderBox>(chevronFinder);

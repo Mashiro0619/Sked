@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../widgets/app_modal_sheet.dart';
-import '../widgets/workbench_layout_policy.dart';
 import '../widgets/expressive_motion.dart';
+import '../widgets/settings_list.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 
 enum SettingsStudentDataAction {
   importTimetables,
@@ -269,12 +272,14 @@ class SettingsDataTransferController {
     BuildContext context, {
     required ValueChanged<SettingsStudentDataAction> onAction,
     required bool busy,
+    List<Widget> additionalImports = const [],
     List<Widget> importConfiguration = const [],
     SettingsTransferDirection? direction,
   }) => _TransferPageContent(
     spec: _studentSpec(context),
     onAction: onAction,
     busy: busy,
+    additionalImports: additionalImports,
     importConfiguration: importConfiguration,
     direction: direction,
   );
@@ -517,73 +522,179 @@ class _ActionSheetTile extends StatelessWidget {
   }
 }
 
+/// Full-page transfer actions share one density and never truncate descriptions.
+/// Configuration links use the same geometry without inheriting ListTile defaults.
+class SettingsTransferPageTile extends StatelessWidget {
+  const SettingsTransferPageTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final enabled = onTap != null;
+    final foreground = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: 0.38);
+    final secondary = enabled
+        ? colors.onSurfaceVariant
+        : colors.onSurface.withValues(alpha: 0.38);
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: '$title, $subtitle',
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 80),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  SizedBox.square(
+                    dimension: 24,
+                    child: Icon(icon, size: 22, color: secondary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: secondary,
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.chevron_right, size: 18, color: secondary),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A direct task page, not a settings intermediary followed by another modal.
 class _TransferPageContent<T> extends StatelessWidget {
   const _TransferPageContent({
     required this.spec,
     required this.onAction,
     required this.busy,
+    this.additionalImports = const [],
     this.importConfiguration = const [],
     this.direction,
   });
   final _TransferSheetSpec<T> spec;
   final ValueChanged<T> onAction;
   final bool busy;
+  final List<Widget> additionalImports;
   final List<Widget> importConfiguration;
   final SettingsTransferDirection? direction;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, c) {
+    builder: (context, constraints) {
       final l = AppLocalizations.of(context);
-      final split = WorkbenchLayoutPolicy.formCanSplit(
-        c.maxWidth,
-        MediaQuery.textScalerOf(context).scale(14) / 14,
-        navigation: 400,
-        content: 400,
-      );
-      Widget group(int index) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      final metrics = WorkbenchChromeMetrics.of(context);
+      final inset = constraints.maxWidth < 600 ? 16.0 : 24.0;
+      // Decide from the actual content budget, after outer padding and the
+      // column gap. A large-font or narrow page keeps one readable column.
+      final available = math.max(0.0, constraints.maxWidth - inset * 2);
+      final splitWidth = math.min(1040.0, available);
+      final split =
+          direction == null && splitWidth >= 360 * metrics.textScale * 2 + 24;
+      Widget group(int index) => SettingsConnectedGroup(
+        tonal: true,
+        margin: EdgeInsets.zero,
+        key: ValueKey(
+          index == 0 ? 'transfer-import-group' : 'transfer-export-group',
+        ),
+        title: index == 0 ? l.importAction : l.exportAction,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: Text(
-              index == 0 ? l.importAction : l.exportAction,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
           for (final action in spec.groups[index])
-            ListTile(
-              leading: Icon(action.icon, size: 20),
-              title: Text(action.title),
-              subtitle: Text(action.subtitle),
-              trailing: const Icon(Icons.chevron_right, size: 18),
+            SettingsTransferPageTile(
+              key: ValueKey('transfer-action-${action.value}'),
+              icon: action.icon,
+              title: action.title,
+              subtitle: action.subtitle,
               onTap: busy ? null : () => onAction(action.value),
             ),
-          if (index == 0) ...importConfiguration,
+          if (index == 0) ...additionalImports,
+        ],
+      );
+      final imports = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          group(0),
+          if (importConfiguration.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            SettingsConnectedGroup(
+              tonal: true,
+              margin: EdgeInsets.zero,
+              key: const ValueKey('transfer-configuration-group'),
+              title: l.settingsAdvanced,
+              children: importConfiguration,
+            ),
+          ],
         ],
       );
       return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        key: const PageStorageKey('transfer-page-scroll'),
+        padding: EdgeInsets.fromLTRB(inset, 24, inset, 32),
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: direction == null ? 1120 : 720,
-            ),
+            key: const ValueKey('transfer-page-content'),
+            constraints: BoxConstraints(maxWidth: split ? 1040 : 680),
             child: direction != null
-                ? group(direction == SettingsTransferDirection.import ? 0 : 1)
+                ? (direction == SettingsTransferDirection.import
+                      ? imports
+                      : group(1))
                 : split
                 ? Row(
+                    key: const ValueKey('transfer-two-columns'),
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: group(0)),
-                      const SizedBox(width: 32),
+                      Expanded(child: imports),
+                      const SizedBox(width: 24),
                       Expanded(child: group(1)),
                     ],
                   )
                 : Column(
+                    key: const ValueKey('transfer-single-column'),
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [group(0), const SizedBox(height: 20), group(1)],
+                    children: [imports, const SizedBox(height: 24), group(1)],
                   ),
           ),
         ),

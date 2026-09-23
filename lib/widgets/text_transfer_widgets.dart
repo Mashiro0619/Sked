@@ -1,3 +1,5 @@
+import 'adaptive_navigation_scope.dart';
+
 import 'desktop_window_host.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -55,7 +57,10 @@ class _TextImportPageState extends State<TextImportPage> {
     return PopScope(
       canPop: !_isSubmitting,
       child: Scaffold(
-        appBar: WorkbenchAppBar(title: Text(widget.title)),
+        appBar: WorkbenchAppBar(
+          automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+          title: Text(widget.title),
+        ),
         body: SafeArea(
           top: false,
           child: Center(

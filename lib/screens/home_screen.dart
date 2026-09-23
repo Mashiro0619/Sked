@@ -581,6 +581,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 PopupMenuButton<String>(
                   key: const ValueKey('student-resource-menu'),
+                  // Popup defaults otherwise override the compact icon theme.
+                  style: WorkbenchChromeMetrics.of(context).iconStyle,
                   tooltip: l10n.more,
                   icon: const Icon(Icons.more_horiz),
                   onSelected: (value) => value == 'periods'

@@ -1827,6 +1827,11 @@ class _EmptyTimetableToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
+    final layout = WorkspaceCanvasScope.maybeOf(context);
+    final titleInSidebar =
+        layout?.resources == true &&
+        layout!.resourceWidth >=
+            AppBreakpoints.resourcePane * metrics.textScale;
     final compactTouch = WorkbenchChromeMetrics.compactTouch(context);
     final padding = EdgeInsetsDirectional.fromSTEB(
       12,
@@ -1845,18 +1850,20 @@ class _EmptyTimetableToolbar extends StatelessWidget {
             Expanded(
               // An expanded paragraph would hit-test the blank toolbar space
               // and prevent the drag region behind it from receiving gestures.
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                heightFactor: 1,
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: metrics.desktop
-                      ? Theme.of(context).textTheme.titleMedium
-                      : null,
-                ),
-              ),
+              child: titleInSidebar
+                  ? const SizedBox.shrink()
+                  : Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      heightFactor: 1,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: metrics.desktop
+                            ? Theme.of(context).textTheme.titleMedium
+                            : null,
+                      ),
+                    ),
             ),
             if (context.watch<TimetableProvider>().hideHomeWorkspaceNavigation)
               const WorkspaceModeMenu(),

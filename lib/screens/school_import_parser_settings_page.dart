@@ -1,3 +1,5 @@
+import '../widgets/adaptive_navigation_scope.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_route_lifecycle.dart';
 import '../models/app_mode.dart';
@@ -153,6 +155,9 @@ class _SchoolImportParserSettingsPageState
           },
           child: Scaffold(
             appBar: WorkbenchAppBar(
+              automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(
+                context,
+              ),
               title: Text(l10n.schoolImportParserSettingsTitle),
             ),
             body: Column(

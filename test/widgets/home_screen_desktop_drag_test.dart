@@ -78,6 +78,9 @@ void main() {
 
         final toolbar = find.byKey(const ValueKey('student-workspace-toolbar'));
         expect(toolbar, findsOneWidget);
+        // The sidebar owns the app name when expanded; the canvas supplies it
+        // only when that label is absent, without removing the drag surface.
+        expect(find.text('Sked').hitTestable(), findsOneWidget);
         final toolbarRect = tester.getRect(toolbar);
         final captionRect = tester.getRect(find.bySemanticsLabel('Minimize'));
         expect(toolbarRect.top, captionRect.top);

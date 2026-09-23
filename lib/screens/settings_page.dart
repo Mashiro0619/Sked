@@ -431,6 +431,7 @@ class _SettingsPageState extends State<SettingsPage> {
         canPop: !busy,
         child: Scaffold(
           appBar: WorkbenchAppBar(
+            automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
             title: Text(
               widget.transferDirection == SettingsTransferDirection.import
                   ? l10n.importAction
@@ -456,18 +457,23 @@ class _SettingsPageState extends State<SettingsPage> {
                           onAction: (action) => unawaited(
                             _performStudentTransfer(provider, action),
                           ),
-                          importConfiguration: [
-                            const Divider(),
-                            ListTile(
-                              leading: const Icon(Icons.language_outlined),
-                              title: Text(l10n.schoolWebImportEntry),
+                          additionalImports: [
+                            SettingsTransferPageTile(
+                              key: const ValueKey('transfer-school-web'),
+                              icon: Icons.language_outlined,
+                              title: l10n.schoolWebImportEntry,
+                              subtitle: l10n.schoolWebImportEntryDesc,
                               onTap: busy
                                   ? null
                                   : () => _openSchoolSitesPage(provider),
                             ),
-                            ListTile(
-                              leading: const Icon(Icons.tune),
-                              title: Text(l10n.schoolImportParserSettingsTitle),
+                          ],
+                          importConfiguration: [
+                            SettingsTransferPageTile(
+                              key: const ValueKey('transfer-parser-settings'),
+                              icon: Icons.tune,
+                              title: l10n.schoolImportParserSettingsTitle,
+                              subtitle: l10n.schoolImportParserSettingsDesc,
                               onTap: busy
                                   ? null
                                   : () => _openParserSettingsPage(provider),

@@ -1,3 +1,5 @@
+import '../widgets/adaptive_navigation_scope.dart';
+
 import '../widgets/desktop_window_host.dart';
 import '../widgets/adaptive_form_columns.dart';
 import '../widgets/workspace_route_lifecycle.dart';
@@ -122,6 +124,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     final isConfigured = isSchoolImportParserConfigured(provider);
     return Scaffold(
       appBar: WorkbenchAppBar(
+        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
         title: Text(l10n.schoolHtmlImportPageTitle),
         actions: [
           if (widget.showReturnToWebPageButton)

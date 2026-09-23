@@ -1,3 +1,5 @@
+import '../widgets/adaptive_navigation_scope.dart';
+
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
@@ -108,6 +110,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     final canUsePageActions = !_loading && loadResult?.canWrite == true;
     return Scaffold(
       appBar: WorkbenchAppBar(
+        automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
         title: Text(l10n.schoolSitesPageTitle),
         actions: [
           IconButton(

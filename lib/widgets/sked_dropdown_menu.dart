@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -64,6 +65,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   String? _workspaces;
   bool _compact = false, _ownerCurrent = true, _acceptSelection = false;
   int _generation = 0;
+  bool _restoreTriggerFocus = true;
 
   bool get _managedMenu => _compact || widget.fieldBuilder != null;
 
@@ -132,9 +134,36 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
           !_menu.isOpen &&
           _ownerCurrent &&
           widget.enabled) {
-        _triggerFocus.requestFocus();
+        if (_restoreTriggerFocus) {
+          _triggerFocus.requestFocus();
+        } else if (_triggerFocus.hasFocus) {
+          _triggerFocus.unfocus(
+            disposition: UnfocusDisposition.previouslyFocusedChild,
+          );
+        }
       }
     });
+  }
+
+  Widget _trackInput(Widget child) {
+    if (!_managedMenu) return child;
+    return Focus(
+      canRequestFocus: false,
+      includeSemantics: false,
+      onKeyEvent: (_, event) {
+        // Escape alone dismisses a pointer-opened menu without changing the input
+        // mode. Actual keyboard navigation/activation keeps the trigger reachable.
+        if (event is KeyDownEvent &&
+            event.logicalKey != LogicalKeyboardKey.escape) {
+          _restoreTriggerFocus = true;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Listener(
+        onPointerDown: (_) => _restoreTriggerFocus = false,
+        child: child,
+      ),
+    );
   }
 
   bool _entriesChanged(List<DropdownMenuEntry<T>> before) {
@@ -229,29 +258,31 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
           crossAxisUnconstrained: false,
           menuChildren: [
             for (final entry in widget.dropdownMenuEntries)
-              _SkedDropdownMenuItem<T>(
-                key: _managedMenu && entry.value == _selectedValue
-                    ? _selectedItem
-                    : null,
-                compact: _managedMenu,
-                reserveCheckSpace: widget.fieldBuilder != null,
-                entry: entry,
-                selected: entry.value == _selectedValue,
-                onSelected: widget.enabled && entry.enabled
-                    ? (value) {
-                        if (_managedMenu) {
-                          if (!_acceptSelection ||
-                              !_menu.isOpen ||
-                              !_sessionCurrent) {
-                            return;
+              _trackInput(
+                _SkedDropdownMenuItem<T>(
+                  key: _managedMenu && entry.value == _selectedValue
+                      ? _selectedItem
+                      : null,
+                  compact: _managedMenu,
+                  reserveCheckSpace: widget.fieldBuilder != null,
+                  entry: entry,
+                  selected: entry.value == _selectedValue,
+                  onSelected: widget.enabled && entry.enabled
+                      ? (value) {
+                          if (_managedMenu) {
+                            if (!_acceptSelection ||
+                                !_menu.isOpen ||
+                                !_sessionCurrent) {
+                              return;
+                            }
+                            _acceptSelection = false;
+                            _menu.close();
                           }
-                          _acceptSelection = false;
-                          _menu.close();
+                          setState(() => _selectedValue = value);
+                          widget.onSelected?.call(value);
                         }
-                        setState(() => _selectedValue = value);
-                        widget.onSelected?.call(value);
-                      }
-                    : null,
+                      : null,
+                ),
               ),
           ],
           child: child,
@@ -290,28 +321,35 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
         );
         final field = widget.fieldBuilder == null
             ? anchor()
-            : TapRegion(
-                // The whole row opens this menu, so it must also count as an
-                // inside tap. Otherwise a slow row tap closes on pointer-down
-                // and immediately reopens the menu on pointer-up.
-                groupId: _menu,
-                child: MergeSemantics(
-                  child: InkWell(
-                    // Pointer users may activate the full row, but keyboard and
-                    // semantics have one trigger inside the actual MenuAnchor.
-                    canRequestFocus: false,
-                    excludeFromSemantics: true,
-                    onTap: widget.enabled ? toggleMenu : null,
-                    borderRadius: shapes.fieldRadius,
-                    child: widget.fieldBuilder!(
-                      context,
-                      selectedEntry?.label,
-                      (child) => anchor(child: child),
-                    ),
+            : MergeSemantics(
+                child: InkWell(
+                  // Pointer users may activate the full row, but keyboard and
+                  // semantics have one trigger inside the actual MenuAnchor.
+                  canRequestFocus: false,
+                  excludeFromSemantics: true,
+                  onTap: widget.enabled ? toggleMenu : null,
+                  borderRadius: shapes.fieldRadius,
+                  child: widget.fieldBuilder!(
+                    context,
+                    selectedEntry?.label,
+                    (child) => anchor(child: child),
                   ),
                 ),
               );
-        return expand ? SizedBox(width: double.infinity, child: field) : field;
+        final interactiveField = _managedMenu
+            ? TapRegion(
+                // The whole row is inside the menu's tap region so a slow tap
+                // closes it once. Outside clicks must not have focus stolen back.
+                groupId: _menu,
+                onTapOutside: (_) {
+                  if (_menu.isOpen) _restoreTriggerFocus = false;
+                },
+                child: _trackInput(field),
+              )
+            : field;
+        return expand
+            ? SizedBox(width: double.infinity, child: interactiveField)
+            : interactiveField;
       },
     );
   }
