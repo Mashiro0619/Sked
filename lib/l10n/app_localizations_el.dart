@@ -556,6 +556,13 @@ class AppLocalizationsEl extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Λήψη προκαταρκτικών ενημερώσεων';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Συμπερίληψη εκδόσεων Alpha, Beta και RC, που ενδέχεται να είναι ασταθείς. Όταν είναι ανενεργό, προσφέρονται μόνο σταθερές εκδόσεις.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Ήδη στην τελευταία έκδοση ($version)';
   }

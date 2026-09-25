@@ -549,6 +549,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Nhận bản cập nhật phát hành trước';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Bao gồm các phiên bản Alpha, Beta và RC có thể chưa ổn định. Khi tắt, chỉ cung cấp các phiên bản ổn định.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Đã có phiên bản mới nhất ($version)';
   }

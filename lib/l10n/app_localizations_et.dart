@@ -548,6 +548,13 @@ class AppLocalizationsEt extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Eelväljalasete värskendused';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Kaasa Alpha-, Beta- ja RC-versioonid, mis võivad olla ebastabiilsed. Väljalülitatuna pakutakse ainult stabiilseid versioone.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Juba viimase versiooniga ($version)';
   }

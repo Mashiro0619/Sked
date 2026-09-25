@@ -364,6 +364,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Vorabversionen erhalten",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Auch Alpha-, Beta- und RC-Versionen berücksichtigen, die instabil sein können. Ausgeschaltet werden nur stabile Versionen angeboten.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Sie verwenden bereits die neueste Version ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

@@ -1690,6 +1690,11 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
       errorMessage: 'Stored home navigation setting is invalid.',
     );
   }
+  _validateStorageBooleanField(
+    json,
+    'includePrereleaseUpdates',
+    errorMessage: 'Stored update channel setting is invalid.',
+  );
   _validateStorageThemeSettings(json, validateCurrentSemantics: true);
   _validateStorageAiApiSettings(json);
   _validateStorageNotificationSettings(json);
@@ -1772,6 +1777,7 @@ class AppData {
     Map<String, int>? colorfulUiColorValues,
     String? privacyPolicyAcceptedVersion,
     String? privacyPolicyAcceptedAtIso,
+    bool includePrereleaseUpdates = false,
     String? ignoredUpdateVersion,
     String? availableUpdateVersion,
   }) {
@@ -1823,6 +1829,7 @@ class AppData {
       notificationSettings: notificationSettings,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
       privacyPolicyAcceptedAtIso: privacyPolicyAcceptedAtIso,
+      includePrereleaseUpdates: includePrereleaseUpdates,
       ignoredUpdateVersion: ignoredUpdateVersion,
       availableUpdateVersion: availableUpdateVersion,
     );
@@ -1841,6 +1848,7 @@ class AppData {
     this.notificationSettings = const NotificationSettings(),
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
+    this.includePrereleaseUpdates = false,
     this.ignoredUpdateVersion,
     this.availableUpdateVersion,
   });
@@ -1860,6 +1868,7 @@ class AppData {
   final NotificationSettings notificationSettings;
   final String? privacyPolicyAcceptedVersion;
   final String? privacyPolicyAcceptedAtIso;
+  final bool includePrereleaseUpdates;
   final String? ignoredUpdateVersion;
   final String? availableUpdateVersion;
 
@@ -1901,6 +1910,7 @@ class AppData {
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
       'privacyPolicyAcceptedAtIso': privacyPolicyAcceptedAtIso,
+    if (includePrereleaseUpdates) 'includePrereleaseUpdates': true,
     if (ignoredUpdateVersion != null)
       'ignoredUpdateVersion': ignoredUpdateVersion,
     if (availableUpdateVersion != null)
@@ -1995,6 +2005,7 @@ class AppData {
       privacyPolicyAcceptedAtIso: _nullableStringValue(
         migrated['privacyPolicyAcceptedAtIso'],
       ),
+      includePrereleaseUpdates: migrated['includePrereleaseUpdates'] == true,
       ignoredUpdateVersion: _nullableStringValue(
         migrated['ignoredUpdateVersion'],
       ),
@@ -2021,6 +2032,7 @@ class AppData {
     Map<String, int>? colorfulUiColorValues,
     Object? privacyPolicyAcceptedVersion = _keepNullable,
     Object? privacyPolicyAcceptedAtIso = _keepNullable,
+    bool? includePrereleaseUpdates,
     Object? ignoredUpdateVersion = _keepNullable,
     Object? availableUpdateVersion = _keepNullable,
   }) {
@@ -2081,6 +2093,8 @@ class AppData {
           identical(privacyPolicyAcceptedAtIso, _keepNullable)
           ? this.privacyPolicyAcceptedAtIso
           : privacyPolicyAcceptedAtIso as String?,
+      includePrereleaseUpdates:
+          includePrereleaseUpdates ?? this.includePrereleaseUpdates,
       ignoredUpdateVersion: identical(ignoredUpdateVersion, _keepNullable)
           ? this.ignoredUpdateVersion
           : ignoredUpdateVersion as String?,

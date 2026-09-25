@@ -549,6 +549,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Vastaanota ennakkoversioita';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Sisällytä Alpha-, Beta- ja RC-versiot, jotka voivat olla epävakaita. Pois käytöstä tarjotaan vain vakaita versioita.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Jo uusimmassa versiossa ($version)';
   }

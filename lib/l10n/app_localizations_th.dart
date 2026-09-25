@@ -546,6 +546,13 @@ class AppLocalizationsTh extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'รับการอัปเดตเวอร์ชันก่อนเผยแพร่';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'รวมเวอร์ชัน Alpha, Beta และ RC ซึ่งอาจไม่เสถียร เมื่อปิดจะเสนอเฉพาะเวอร์ชันเสถียรเท่านั้น';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'อยู่ในรุ่นล่าสุดแล้ว ($version)';
   }

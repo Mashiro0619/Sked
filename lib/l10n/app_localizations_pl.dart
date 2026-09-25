@@ -550,6 +550,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Otrzymuj wersje przedpremierowe';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Uwzględniaj wersje Alpha, Beta i RC, które mogą być niestabilne. Po wyłączeniu oferowane są tylko wersje stabilne.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Już w najnowszej wersji ($version)';
   }

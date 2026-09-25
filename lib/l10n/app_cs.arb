@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Přijímat předběžné aktualizace",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Zahrnout verze Alpha, Beta a RC, které mohou být nestabilní. Při vypnutí se nabízejí pouze stabilní verze.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Již v nejnovější verzi ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

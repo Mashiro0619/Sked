@@ -7,6 +7,27 @@ void main() {
 
   AppData base() => AppData.fromJson(const {});
 
+  test('changing the update channel clears cached candidates and preserves ignored versions', () {
+    final initial = base().copyWith(
+      availableUpdateVersion: '2.0.0',
+      ignoredUpdateVersion: '1.9.0',
+    );
+    final preview = service.updateIncludePrereleaseUpdates(initial, true);
+    expect(preview.includePrereleaseUpdates, isTrue);
+    expect(preview.availableUpdateVersion, isNull);
+    expect(preview.ignoredUpdateVersion, '1.9.0');
+    expect(
+      identical(service.updateIncludePrereleaseUpdates(preview, true), preview),
+      isTrue,
+    );
+    final withCandidate = preview.copyWith(
+      availableUpdateVersion: '3.0.0-rc.1',
+    );
+    final stable = service.updateIncludePrereleaseUpdates(withCandidate, false);
+    expect(stable.includePrereleaseUpdates, isFalse);
+    expect(stable.availableUpdateVersion, isNull);
+  });
+
   test(
     'updates home navigation collapsed preference and guards no-op writes',
     () {

@@ -258,7 +258,7 @@ Future<void> _pumpSettingsPage(
               viewInsets: viewInsets,
             ),
             child: SettingsPage(
-              packageInfoLoader: packageInfoLoader,
+              packageInfoLoader: packageInfoLoader ?? PackageInfo.fromPlatform,
               dataClearCoordinator: dataClearCoordinator,
               urlLauncher: urlLauncher,
               initialDestination: destination,
@@ -544,6 +544,169 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'prerelease opt-in persists and changing channel clears the old update badge',
+    (tester) async {
+      final data = _buildStudentData();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        destination: SettingsDestination.about,
+      );
+      final toggle = find.byKey(
+        const ValueKey('settings-include-prerelease-updates'),
+      );
+      await tester.ensureVisible(toggle);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(storage.data!.includePrereleaseUpdates, isTrue);
+      final reloaded = await _createProvider(storage.data!, storage: storage);
+      addTearDown(reloaded.dispose);
+      expect(reloaded.includePrereleaseUpdates, isTrue);
+
+      await provider.updateAvailableUpdateVersion('2.0.0-rc.1');
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Update available'), findsOneWidget);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(provider.includePrereleaseUpdates, isFalse);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(provider.availableUpdateVersion, isNull);
+      expect(find.textContaining('Update available'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'failed prerelease preference save rolls back and reports the failure',
+    (tester) async {
+      final data = _buildStudentData();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        destination: SettingsDestination.about,
+      );
+      storage.failSaves = true;
+      final toggle = find.byKey(
+        const ValueKey('settings-include-prerelease-updates'),
+      );
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(provider.includePrereleaseUpdates, isFalse);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(tester.widget<SettingsSwitchTile>(toggle).value, isFalse);
+      final l10n = AppLocalizations.of(tester.element(toggle));
+      expect(find.text(l10n.saveFailedRetry), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'pending prerelease save disables duplicate changes until committed',
+    (tester) async {
+      final data = _buildStudentData();
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        destination: SettingsDestination.about,
+      );
+      storage.blockNextSave();
+      final toggle = find.byKey(
+        const ValueKey('settings-include-prerelease-updates'),
+      );
+      await tester.ensureVisible(toggle);
+      final writesBefore = storage.saveCount;
+      await tester.tap(toggle);
+      await tester.pump();
+      expect(tester.widget<SettingsSwitchTile>(toggle).onChanged, isNull);
+      expect(storage.data!.includePrereleaseUpdates, isFalse);
+      expect(storage.saveCount, writesBefore + 1);
+      storage.completePendingSave();
+      await tester.pumpAndSettle();
+      expect(storage.data!.includePrereleaseUpdates, isTrue);
+      expect(tester.widget<SettingsSwitchTile>(toggle).onChanged, isNotNull);
+    },
+  );
+
+  testWidgets('an RC still displays the same-core stable update badge', (
+    tester,
+  ) async {
+    final provider = await _createProvider(
+      _buildStudentData().copyWith(availableUpdateVersion: '2.0.0'),
+    );
+    addTearDown(provider.dispose);
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      destination: SettingsDestination.about,
+      packageInfoLoader: () async => PackageInfo(
+        appName: 'Sked',
+        packageName: 'com.mashiro.sked',
+        version: '2.0.0-rc.1',
+        buildNumber: '1',
+      ),
+    );
+    expect(provider.availableUpdateVersion, '2.0.0');
+    expect(find.textContaining('2.0.0-rc.1'), findsOneWidget);
+    expect(find.textContaining('Update available'), findsOneWidget);
+  });
+
+  testWidgets('stable channel removes a prerelease badge from restored data', (
+    tester,
+  ) async {
+    final provider = await _createProvider(
+      _buildStudentData().copyWith(availableUpdateVersion: '2.0.0-rc.1'),
+    );
+    addTearDown(provider.dispose);
+    await _pumpSettingsPage(
+      tester,
+      provider,
+      destination: SettingsDestination.about,
+    );
+    expect(provider.availableUpdateVersion, isNull);
+    expect(find.textContaining('Update available'), findsNothing);
+  });
+
+  for (final width in [320.0, 840.0, 1440.0]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'update channel remains usable at width $width and text scale $scale',
+        (tester) async {
+          _setTestViewport(tester, Size(width, 800));
+          addTearDown(() => _resetTestViewport(tester));
+          final provider = await _createProvider(_buildStudentData());
+          addTearDown(provider.dispose);
+          await _pumpSettingsPage(
+            tester,
+            provider,
+            destination: SettingsDestination.about,
+            textScaler: TextScaler.linear(scale),
+          );
+          final toggle = find.byKey(
+            const ValueKey('settings-include-prerelease-updates'),
+          );
+          await tester.ensureVisible(toggle);
+          await tester.pumpAndSettle();
+          await tester.tap(toggle);
+          await tester.pumpAndSettle();
+          expect(provider.includePrereleaseUpdates, isTrue);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   testWidgets('background package info failure is contained', (tester) async {
     final provider = await _createProvider(_buildStudentData());

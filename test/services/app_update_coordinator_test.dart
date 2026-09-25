@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +38,20 @@ class _FixedUpdateService extends UpdateService {
   final UpdateCheckResult result;
 
   @override
-  Future<UpdateCheckResult> checkForUpdates() async => result;
+  Future<UpdateCheckResult> checkForUpdates({
+    bool includePrereleases = false,
+  }) async => result;
+}
+
+class _PendingUpdateService extends UpdateService {
+  final pending = Completer<UpdateCheckResult>();
+  bool? requestedPrereleases;
+
+  @override
+  Future<UpdateCheckResult> checkForUpdates({bool includePrereleases = false}) {
+    requestedPrereleases = includePrereleases;
+    return pending.future;
+  }
 }
 
 UpdateCheckResult _updateResult({required bool hasUpdate}) {
@@ -52,10 +67,12 @@ UpdateCheckResult _updateResult({required bool hasUpdate}) {
 Future<TimetableProvider> _createProvider({
   String? availableVersion,
   String? ignoredVersion,
+  bool includePrereleases = false,
 }) async {
   final data = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
     availableUpdateVersion: availableVersion,
     ignoredUpdateVersion: ignoredVersion,
+    includePrereleaseUpdates: includePrereleases,
   );
   final provider = TimetableProvider(storage: _MemoryStorage(data));
   await provider.load();
@@ -95,6 +112,101 @@ void main() {
   tearDown(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_urlLauncherChannel, null);
+  });
+
+  for (final source in UpdateCheckSource.values) {
+    for (final includePrereleases in [false, true]) {
+      testWidgets(
+        '$source passes persisted prerelease preference $includePrereleases',
+        (tester) async {
+          final provider = await _createProvider(
+            includePrereleases: includePrereleases,
+          );
+          addTearDown(provider.dispose);
+          final context = await _pumpHarness(tester, provider);
+          final service = _PendingUpdateService();
+          final check = AppUpdateCoordinator.checkForUpdates(
+            context,
+            provider: provider,
+            source: source,
+            updateService: service,
+          );
+          expect(service.requestedPrereleases, includePrereleases);
+          service.pending.complete(_updateResult(hasUpdate: false));
+          await check;
+          await tester.pumpAndSettle();
+          expect(provider.availableUpdateVersion, isNull);
+        },
+      );
+    }
+  }
+
+  for (final fail in [false, true]) {
+    testWidgets(
+      'channel changes discard an in-flight result (failure: $fail)',
+      (tester) async {
+        final provider = await _createProvider(includePrereleases: true);
+        addTearDown(provider.dispose);
+        final context = await _pumpHarness(tester, provider);
+        final service = _PendingUpdateService();
+        final check = AppUpdateCoordinator.checkForUpdates(
+          context,
+          provider: provider,
+          source: UpdateCheckSource.manual,
+          updateService: service,
+        );
+        await provider.updateIncludePrereleaseUpdates(false);
+        if (fail) {
+          service.pending.completeError(
+            StateError('old channel request failed'),
+          );
+        } else {
+          service.pending.complete(
+            const UpdateCheckResult(
+              localVersion: '1.0.0',
+              remoteVersion: '2.0.0-rc.1',
+              releaseUrl: 'https://example.com/rc',
+              updateContent: '',
+              hasUpdate: true,
+            ),
+          );
+        }
+        await check;
+        await tester.pumpAndSettle();
+        expect(provider.availableUpdateVersion, isNull);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+      },
+    );
+  }
+
+  testWidgets('ignoring an RC does not ignore the same-core final release', (
+    tester,
+  ) async {
+    final provider = await _createProvider(ignoredVersion: '2.0.0-rc.1');
+    addTearDown(provider.dispose);
+    final context = await _pumpHarness(tester, provider);
+    final check = AppUpdateCoordinator.checkForUpdates(
+      context,
+      provider: provider,
+      source: UpdateCheckSource.startup,
+      updateService: const _FixedUpdateService(
+        UpdateCheckResult(
+          localVersion: '2.0.0-rc.1',
+          remoteVersion: '2.0.0',
+          releaseUrl: 'https://example.com/final',
+          updateContent: '',
+          hasUpdate: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(provider.availableUpdateVersion, '2.0.0');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await check;
+    expect(provider.ignoredUpdateVersion, '2.0.0-rc.1');
   });
 
   testWidgets('manual latest result clears stale state and reports success', (

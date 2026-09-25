@@ -552,6 +552,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Получать предварительные версии';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Включать версии Alpha, Beta и RC, которые могут быть нестабильными. Если выключено, предлагаются только стабильные версии.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Уже установлена последняя версия ($version)';
   }

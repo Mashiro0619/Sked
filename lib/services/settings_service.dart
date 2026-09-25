@@ -415,6 +415,16 @@ class SettingsService {
     );
   }
 
+  AppData updateIncludePrereleaseUpdates(AppData data, bool value) {
+    if (data.includePrereleaseUpdates == value) return data;
+    return data.copyWith(
+      includePrereleaseUpdates: value,
+      // The cached candidate belongs to the previous channel. Do not reuse it
+      // until a check has completed under the new preference.
+      availableUpdateVersion: null,
+    );
+  }
+
   AppData ignoreUpdateVersion(AppData data, String version) {
     final normalized = version.trim();
     if (normalized.isEmpty || data.ignoredUpdateVersion == normalized) {

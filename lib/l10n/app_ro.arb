@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Primește versiuni preliminare",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Include versiunile Alpha, Beta și RC, care pot fi instabile. Când este dezactivat, sunt oferite doar versiuni stabile.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Deja pe cea mai recentă versiune ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

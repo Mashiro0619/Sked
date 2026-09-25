@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Előzetes frissítések fogadása",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Az esetleg instabil Alpha, Beta és RC verziók is megjelennek. Kikapcsolva csak stabil verziókat kínál fel.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Már a legújabb verzió ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

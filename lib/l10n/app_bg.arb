@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Получаване на предварителни версии",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Включва версии Alpha, Beta и RC, които може да са нестабилни. При изключване се предлагат само стабилни версии.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Вече на най-новата версия ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

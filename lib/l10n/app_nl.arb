@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Voorlopige updates ontvangen",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Neem Alpha-, Beta- en RC-versies op, die instabiel kunnen zijn. Uitgeschakeld worden alleen stabiele versies aangeboden.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Already on the latest version ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

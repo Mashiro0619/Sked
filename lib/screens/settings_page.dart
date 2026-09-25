@@ -20,6 +20,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/app_update_coordinator.dart';
+import '../services/app_version_service.dart';
 import '../services/app_data_clear_coordinator.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/export_service.dart';
@@ -31,6 +32,7 @@ import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/ui_command.dart';
 import '../widgets/adaptive_settings_scaffold.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 import '../models/settings_destination.dart';
@@ -111,7 +113,8 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage>
+    with UiCommandRunner<SettingsPage> {
   AppMode? _appearanceWorkspace;
 
   void _setAppearanceWorkspace(AppMode mode) {
@@ -160,9 +163,13 @@ class _SettingsPageState extends State<SettingsPage> {
           canClearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
         );
         return PopScope(
-          canPop: !_clearingAppData && !provider.isDataClearActive,
+          canPop:
+              !uiCommandBusy &&
+              !_clearingAppData &&
+              !provider.isDataClearActive,
           child: SettingsInteractionBlocker(
-            blocked: _clearingAppData || provider.isDataClearActive,
+            blocked:
+                uiCommandBusy || _clearingAppData || provider.isDataClearActive,
             child: widget.initialDestination != null
                 ? _buildDestination(widget.initialDestination!, provider)
                 : AdaptiveSettingsScaffold(
@@ -600,6 +607,7 @@ class _SettingsPageState extends State<SettingsPage> {
     AppLocalizations l10n,
   ) {
     final updateEntryBusy =
+        uiCommandBusy ||
         _isFlowOpen(_SettingsFlow.updateCheck) ||
         _isFlowOpen(_SettingsFlow.developerModePage);
     return [
@@ -634,6 +642,21 @@ class _SettingsPageState extends State<SettingsPage> {
         onLongPress: updateEntryBusy ? null : _openDeveloperModePage,
         onLongPressHint: l10n.developerModeLongPressHint,
         onTapHint: l10n.checkForUpdates,
+      ),
+      SettingsSwitchTile(
+        key: const ValueKey('settings-include-prerelease-updates'),
+        value: provider.includePrereleaseUpdates,
+        icon: Icons.science_outlined,
+        title: l10n.includePrereleaseUpdates,
+        subtitle: l10n.includePrereleaseUpdatesDesc,
+        onChanged: updateEntryBusy || !provider.canWrite
+            ? null
+            : (value) => unawaited(
+                runUiCommand(
+                  debugLabel: 'Updating prerelease update preference',
+                  command: () => provider.updateIncludePrereleaseUpdates(value),
+                ),
+              ),
       ),
     ];
   }
@@ -703,7 +726,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final availableUpdateVersion = provider.availableUpdateVersion;
     if (availableUpdateVersion == null ||
         availableUpdateVersion.isEmpty ||
-        !_isNewerThanCurrentVersion(availableUpdateVersion)) {
+        !_isNewerThanCurrentVersion(
+          availableUpdateVersion,
+          includePrereleases: provider.includePrereleaseUpdates,
+        )) {
       return versionLabel;
     }
     return '$versionLabel · ${l10n.newVersionAvailable}';
@@ -712,11 +738,11 @@ class _SettingsPageState extends State<SettingsPage> {
   String _backupFileName() => 'Sked_backup.json';
 
   Future<void> _loadCurrentVersion() async {
-    PackageInfo info;
+    String currentVersion;
     try {
-      info =
-          await (widget.packageInfoLoader?.call() ??
-              PackageInfo.fromPlatform());
+      currentVersion = await loadCurrentAppVersion(
+        packageInfoLoader: widget.packageInfoLoader,
+      );
     } catch (error, stackTrace) {
       debugPrint('Loading the current app version failed: $error\n$stackTrace');
       return;
@@ -724,7 +750,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) {
       return;
     }
-    final currentVersion = info.version;
     setState(() => _currentVersion = currentVersion);
     final provider = context.read<TimetableProvider>();
     final availableUpdateVersion = provider.availableUpdateVersion;
@@ -733,10 +758,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     int comparison;
     try {
-      comparison = compareUpdateVersions(
-        availableUpdateVersion,
-        currentVersion,
-      );
+      comparison =
+          !provider.includePrereleaseUpdates &&
+              isPrereleaseUpdateVersion(availableUpdateVersion)
+          ? -1
+          : compareUpdateVersions(availableUpdateVersion, currentVersion);
     } on FormatException catch (error) {
       assert(() {
         debugPrint(
@@ -803,12 +829,16 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  bool _isNewerThanCurrentVersion(String version) {
-    if (_currentVersion.isEmpty) {
-      return true;
-    }
+  bool _isNewerThanCurrentVersion(
+    String version, {
+    required bool includePrereleases,
+  }) {
     try {
-      return compareUpdateVersions(version, _currentVersion) > 0;
+      if (!includePrereleases && isPrereleaseUpdateVersion(version)) {
+        return false;
+      }
+      return _currentVersion.isEmpty ||
+          compareUpdateVersions(version, _currentVersion) > 0;
     } on FormatException {
       return false;
     }

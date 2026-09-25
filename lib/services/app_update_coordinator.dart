@@ -20,17 +20,22 @@ class AppUpdateCoordinator {
     UpdateService updateService = _updateService,
   }) async {
     if (!provider.canWrite) return;
+    final includePrereleases = provider.includePrereleaseUpdates;
+    bool isCurrentChannel() =>
+        provider.includePrereleaseUpdates == includePrereleases;
     final l10n = AppLocalizations.of(context);
     final showIgnoreButton = source == UpdateCheckSource.startup;
     try {
-      final result = await updateService.checkForUpdates();
-      if (!context.mounted || !provider.canWrite) {
+      final result = await updateService.checkForUpdates(
+        includePrereleases: includePrereleases,
+      );
+      if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
       }
       final latestMessage = l10n.alreadyLatestVersion(result.localVersion);
       if (!result.hasUpdate) {
         await provider.updateAvailableUpdateVersion(null);
-        if (!context.mounted || !provider.canWrite) {
+        if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
           return;
         }
         if (source == UpdateCheckSource.manual) {
@@ -39,7 +44,7 @@ class AppUpdateCoordinator {
         return;
       }
       await provider.updateAvailableUpdateVersion(result.remoteVersion);
-      if (!context.mounted || !provider.canWrite) {
+      if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
       }
       if (showIgnoreButton &&
@@ -51,7 +56,7 @@ class AppUpdateCoordinator {
         result,
         showIgnoreButton: showIgnoreButton,
       );
-      if (!context.mounted || !provider.canWrite) {
+      if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
       }
       await _handleUpdateAction(
@@ -63,14 +68,14 @@ class AppUpdateCoordinator {
         releaseUrl: result.releaseUrl,
       );
     } catch (_) {
-      if (!context.mounted || !provider.canWrite) {
+      if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
       }
       final action = await _showUpdateCheckFailedDialog(
         context,
         showIgnoreButton: showIgnoreButton,
       );
-      if (!context.mounted || !provider.canWrite) {
+      if (!context.mounted || !provider.canWrite || !isCurrentChannel()) {
         return;
       }
       await _handleUpdateAction(
@@ -78,7 +83,9 @@ class AppUpdateCoordinator {
         provider: provider,
         action: action,
         showIgnoreButton: showIgnoreButton,
-        releaseUrl: UpdateService.latestReleaseUrl,
+        releaseUrl: includePrereleases
+            ? UpdateService.releasesUrl
+            : UpdateService.latestReleaseUrl,
       );
     }
   }

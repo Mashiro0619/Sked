@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "รับการอัปเดตเวอร์ชันก่อนเผยแพร่",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "รวมเวอร์ชัน Alpha, Beta และ RC ซึ่งอาจไม่เสถียร เมื่อปิดจะเสนอเฉพาะเวอร์ชันเสถียรเท่านั้น",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "อยู่ในรุ่นล่าสุดแล้ว ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

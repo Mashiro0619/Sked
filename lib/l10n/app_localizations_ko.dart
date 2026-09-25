@@ -534,6 +534,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => '사전 출시 업데이트 받기';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      '불안정할 수 있는 Alpha, Beta, RC 버전도 확인합니다. 끄면 안정 버전만 제공됩니다.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return '이미 최신 버전입니다 ($version)';
   }

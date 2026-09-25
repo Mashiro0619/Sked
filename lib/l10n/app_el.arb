@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Λήψη προκαταρκτικών ενημερώσεων",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Συμπερίληψη εκδόσεων Alpha, Beta και RC, που ενδέχεται να είναι ασταθείς. Όταν είναι ανενεργό, προσφέρονται μόνο σταθερές εκδόσεις.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Ήδη στην τελευταία έκδοση ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

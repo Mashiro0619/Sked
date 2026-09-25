@@ -553,6 +553,13 @@ class AppLocalizationsHu extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Előzetes frissítések fogadása';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Az esetleg instabil Alpha, Beta és RC verziók is megjelennek. Kikapcsolva csak stabil verziókat kínál fel.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Már a legújabb verzió ($version)';
   }

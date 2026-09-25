@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Vastaanota ennakkoversioita",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Sisällytä Alpha-, Beta- ja RC-versiot, jotka voivat olla epävakaita. Pois käytöstä tarjotaan vain vakaita versioita.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Jo uusimmassa versiossa ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

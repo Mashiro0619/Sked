@@ -519,6 +519,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => '接收预发布更新';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      '同时检查 Alpha、Beta、RC 等测试版，可能不稳定；关闭时仅检查正式版。';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return '当前已是最新版本（$version）';
   }
@@ -3453,6 +3460,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get checkForUpdatesDesc => 'GitHub';
+
+  @override
+  String get includePrereleaseUpdates => '接收預先發行更新';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      '同時檢查 Alpha、Beta、RC 等測試版，可能不穩定；關閉時僅檢查正式版。';
 
   @override
   String alreadyLatestVersion(Object version) {

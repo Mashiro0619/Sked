@@ -548,6 +548,13 @@ class AppLocalizationsDa extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Modtag foreløbige opdateringer';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Medtag Alpha-, Beta- og RC-versioner, som kan være ustabile. Når slået fra, tilbydes kun stabile versioner.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Allerede på den seneste version ($version)';
   }

@@ -1,6 +1,13 @@
 part of 'timetable_provider.dart';
 
 mixin _TimetableProviderSettings on _TimetableProviderBase {
+  Future<void> updateIncludePrereleaseUpdates(bool value) async {
+    final next = _settings.updateIncludePrereleaseUpdates(_appData, value);
+    if (identical(next, _appData)) return;
+    _appData = next;
+    await _saveAndNotify();
+  }
+
   NotificationSettings get notificationSettings =>
       _appData.notificationSettings;
 

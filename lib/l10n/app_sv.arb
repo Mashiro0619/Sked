@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Ta emot förhandsversioner",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Inkludera Alpha-, Beta- och RC-versioner, som kan vara instabila. När avstängt erbjuds endast stabila versioner.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Redan på den senaste versionen ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

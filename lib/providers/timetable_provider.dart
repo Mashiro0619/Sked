@@ -627,6 +627,7 @@ class TimetableProvider extends _TimetableProviderBase
       _appData.studentMode.liveCourseOutlineMode;
   double get liveCourseOutlineWidth =>
       _appData.studentMode.liveCourseOutlineWidth;
+  bool get includePrereleaseUpdates => _appData.includePrereleaseUpdates;
   String? get ignoredUpdateVersion => _appData.ignoredUpdateVersion;
   String? get availableUpdateVersion => _appData.availableUpdateVersion;
 

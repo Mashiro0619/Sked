@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Eelväljalasete värskendused",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Kaasa Alpha-, Beta- ja RC-versioonid, mis võivad olla ebastabiilsed. Väljalülitatuna pakutakse ainult stabiilseid versioone.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Juba viimase versiooniga ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

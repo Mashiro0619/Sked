@@ -549,6 +549,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get includePrereleaseUpdates => 'Voorlopige updates ontvangen';
+
+  @override
+  String get includePrereleaseUpdatesDesc =>
+      'Neem Alpha-, Beta- en RC-versies op, die instabiel kunnen zijn. Uitgeschakeld worden alleen stabiele versies aangeboden.';
+
+  @override
   String alreadyLatestVersion(Object version) {
     return 'Already on the latest version ($version)';
   }

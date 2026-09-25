@@ -150,7 +150,9 @@ class FakeSuccessUpdateService extends UpdateService {
   final UpdateCheckResult result;
 
   @override
-  Future<UpdateCheckResult> checkForUpdates() async {
+  Future<UpdateCheckResult> checkForUpdates({
+    bool includePrereleases = false,
+  }) async {
     return result;
   }
 }
@@ -161,7 +163,9 @@ class FakeThrowingUpdateService extends UpdateService {
   final Object error;
 
   @override
-  Future<UpdateCheckResult> checkForUpdates() async {
+  Future<UpdateCheckResult> checkForUpdates({
+    bool includePrereleases = false,
+  }) async {
     throw error;
   }
 }

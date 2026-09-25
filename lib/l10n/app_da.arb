@@ -362,6 +362,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "Modtag foreløbige opdateringer",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "Medtag Alpha-, Beta- og RC-versioner, som kan være ustabile. Når slået fra, tilbydes kun stabile versioner.",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "Allerede på den seneste version ({version})",
   "@alreadyLatestVersion": {
     "placeholders": {

@@ -372,6 +372,10 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "includePrereleaseUpdates": "接收预发布更新",
+  "@includePrereleaseUpdates": {},
+  "includePrereleaseUpdatesDesc": "同时检查 Alpha、Beta、RC 等测试版，可能不稳定；关闭时仅检查正式版。",
+  "@includePrereleaseUpdatesDesc": {},
   "alreadyLatestVersion": "当前已是最新版本（{version}）",
   "@alreadyLatestVersion": {
     "placeholders": {

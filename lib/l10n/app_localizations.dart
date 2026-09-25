@@ -1129,6 +1129,18 @@ abstract class AppLocalizations {
   /// **'GitHub'**
   String get checkForUpdatesDesc;
 
+  /// No description provided for @includePrereleaseUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive prerelease updates'**
+  String get includePrereleaseUpdates;
+
+  /// No description provided for @includePrereleaseUpdatesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Include Alpha, Beta, and RC releases, which may be unstable. When off, only stable releases are offered.'**
+  String get includePrereleaseUpdatesDesc;
+
   /// No description provided for @alreadyLatestVersion.
   ///
   /// In en, this message translates to:
