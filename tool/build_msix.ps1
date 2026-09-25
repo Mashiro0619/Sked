@@ -4,7 +4,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$versionMatch = Select-String -Path 'pubspec.yaml' -Pattern '^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)(?:\+([0-9]+))?\s*$'
+# MSIX requires four numeric components. Keep prerelease identifiers in the
+# Flutter build name, and use its numeric core plus build number for the package.
+$versionMatch = Select-String -Path 'pubspec.yaml' -Pattern '^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+([0-9]+))?\s*$'
 if ($null -eq $versionMatch) {
   throw 'Could not read the Flutter version from pubspec.yaml.'
 }
