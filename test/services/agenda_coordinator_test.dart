@@ -9,6 +9,7 @@ import 'package:sked/services/agenda_action_router.dart';
 import 'package:sked/services/agenda_coordinator.dart';
 import 'package:sked/services/agenda_notification_runtime_store.dart';
 import 'package:sked/services/agenda_notification_service.dart';
+import 'package:sked/services/agenda_runtime_mutation_lock.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/school_site_service.dart';
 
@@ -120,6 +121,52 @@ class _AuthoritativeDiagnosticsRuntimeStore
     if (value.mode == AgendaNotificationReconcileMode.authoritative &&
         !authoritativeWritten.isCompleted) {
       authoritativeWritten.complete(value);
+    }
+  }
+}
+
+class _GatedFenceRuntimeStore extends MemoryAgendaNotificationRuntimeStore {
+  Future<void> Function()? beforeNextRead;
+
+  @override
+  Future<AgendaNotificationProjectionFence> readProjectionFence() async {
+    final gate = beforeNextRead;
+    beforeNextRead = null;
+    await gate?.call();
+    return super.readProjectionFence();
+  }
+}
+
+class _BlockingClearGateway extends MemoryAgendaNotificationGateway {
+  final clearEntered = Completer<void>();
+  final releaseClear = Completer<void>();
+
+  @override
+  Future<void> cancelAll() async {
+    if (!clearEntered.isCompleted) clearEntered.complete();
+    await releaseClear.future;
+    await super.cancelAll();
+  }
+}
+
+class _ConcurrentScheduleGateway extends MemoryAgendaNotificationGateway {
+  int activeSchedules = 0;
+  int maxActiveSchedules = 0;
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    activeSchedules += 1;
+    if (activeSchedules > maxActiveSchedules) {
+      maxActiveSchedules = activeSchedules;
+    }
+    try {
+      await Future<void>.delayed(Duration.zero);
+      await super.schedule(request, exact: exact);
+    } finally {
+      activeSchedules -= 1;
     }
   }
 }
@@ -671,6 +718,228 @@ void main() {
     expect(coordinator.isStarted, isTrue);
     expect(errors, contains(isA<StateError>()));
     expect(await runtime.readPendingActions(), hasLength(1));
+  });
+  for (final fromPoll in [true, false]) {
+    test(
+      'runtime lock ordering lets recovery and a competing service request finish: $fromPoll',
+      () async {
+        final anchor = DateTime(2026, 8, 3, 8);
+        final provider = await _providerWithData(_dataWithEvent());
+        addTearDown(provider.dispose);
+        final runtime = _GatedFenceRuntimeStore();
+        final gateway = MemoryAgendaNotificationGateway();
+        final service = AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          runtimeStore: runtime,
+          now: () => anchor,
+        );
+        addTearDown(service.dispose);
+        final errors = <Object>[];
+        final coordinator = AgendaCoordinator(
+          provider: provider,
+          notificationService: service,
+          productivityBridge: AndroidProductivityBridge(enabled: false),
+          clock: () => anchor,
+          onError: (error, _) => errors.add(error),
+        );
+        addTearDown(coordinator.dispose);
+        await coordinator.start();
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        runtime.beforeNextRead = () async {
+          entered.complete();
+          await release.future;
+        };
+        final recovery = coordinator.reconcileRecovery();
+        await entered.future;
+        final Future<void> competing = fromPoll
+            ? service.reconcilePendingActions()
+            : service.reconcile(provider.committedAppData).then((_) {});
+        // Drain the competing entry's microtasks while recovery still owns the
+        // runtime lock. It must not reserve a service queue slot ahead of the owner.
+        await Future<void>.delayed(Duration.zero);
+        release.complete();
+        await Future.wait([recovery, competing])
+            .timeout(const Duration(seconds: 5));
+        expect(errors, isEmpty);
+        expect(gateway.scheduled, hasLength(1));
+        await coordinator.reconcileRecovery();
+      },
+    );
+  }
+
+  test(
+    'a queued action poll uses the latest committed notification settings',
+    () async {
+      final anchor = DateTime(2026, 8, 3, 8);
+      final provider = await _providerWithData(_dataWithEvent());
+      addTearDown(provider.dispose);
+      final runtime = _GatedFenceRuntimeStore();
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: runtime,
+        now: () => anchor,
+      );
+      addTearDown(service.dispose);
+      final coordinator = AgendaCoordinator(
+        provider: provider,
+        notificationService: service,
+        productivityBridge: AndroidProductivityBridge(enabled: false),
+        clock: () => anchor,
+      );
+      addTearDown(coordinator.dispose);
+      await coordinator.start();
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      runtime.beforeNextRead = () async {
+        entered.complete();
+        await release.future;
+      };
+      await provider.updateNotificationSettings(lockScreenShowTitles: true);
+      await entered.future;
+      final poll = service.reconcilePendingActions();
+      await Future<void>.delayed(Duration.zero);
+      release.complete();
+      await poll.timeout(const Duration(seconds: 5));
+      expect(
+        provider.committedAppData.notificationSettings.lockScreenShowTitles,
+        isTrue,
+      );
+      expect(gateway.scheduled.values.single.title, contains('Appointment'));
+    },
+  );
+
+  for (final fromPoll in [false, true]) {
+    test(
+      'runtime clear invalidates requests waiting for the runtime lock: $fromPoll',
+      () async {
+        final anchor = DateTime(2026, 8, 3, 8);
+        final gateway = MemoryAgendaNotificationGateway();
+        final service = AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+          now: () => anchor,
+        );
+        addTearDown(service.dispose);
+        final data = _dataWithEvent();
+        service.committedDataReader = () => data;
+        await service.reconcile(data);
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        final owner = withAgendaRuntimeMutationLock(() async {
+          entered.complete();
+          await release.future;
+        });
+        await entered.future;
+        final Future<void> queued = fromPoll
+            ? service.reconcilePendingActions()
+            : service.reconcile(data).then((_) {});
+        await Future<void>.delayed(Duration.zero);
+        final clearing = service.clearRuntime();
+        await Future<void>.delayed(Duration.zero);
+        release.complete();
+        await Future.wait<void>([owner, queued, clearing])
+            .timeout(const Duration(seconds: 5));
+        expect(gateway.scheduled, isEmpty);
+        expect(service.status.directScheduledCount, 0);
+        // Clearing cancels old work, not a new explicit recovery request.
+        await service.reconcile(data);
+        expect(gateway.scheduled, hasLength(1));
+      },
+    );
+  }
+
+  test(
+    'an action poll cannot bootstrap a service before its initial projection',
+    () async {
+      final gateway = MemoryAgendaNotificationGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        now: () => DateTime(2026, 8, 3, 8),
+      );
+      addTearDown(service.dispose);
+      service.committedDataReader = _dataWithEvent;
+      await service.reconcilePendingActions();
+      expect(gateway.scheduled, isEmpty);
+    },
+  );
+
+  test(
+    'an action poll arriving during a clear cannot revive the cleared plan',
+    () async {
+      final gateway = _BlockingClearGateway();
+      final service = AgendaNotificationService(
+        enabled: true,
+        gateway: gateway,
+        runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        now: () => DateTime(2026, 8, 3, 8),
+      );
+      addTearDown(service.dispose);
+      final data = _dataWithEvent();
+      service.committedDataReader = () => data;
+      await service.reconcile(data);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final owner = withAgendaRuntimeMutationLock(() async {
+        entered.complete();
+        await release.future;
+      });
+      await entered.future;
+      final clearing = service.clearRuntime();
+      await gateway.clearEntered.future;
+      final poll = service.reconcilePendingActions();
+      await Future<void>.delayed(Duration.zero);
+      gateway.releaseClear.complete();
+      await clearing;
+      release.complete();
+      await Future.wait([owner, poll]).timeout(const Duration(seconds: 5));
+      expect(gateway.scheduled, isEmpty);
+      expect(service.status.directScheduledCount, 0);
+    },
+  );
+
+  test('reentrant reconcile calls reserve FIFO slots before awaiting their predecessor', () async {
+    final anchor = DateTime(2026, 8, 3, 8);
+    final gateway = _ConcurrentScheduleGateway();
+    final service = AgendaNotificationService(
+      enabled: true,
+      gateway: gateway,
+      runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+      now: () => anchor,
+    );
+    addTearDown(service.dispose);
+    final data = _dataWithEvent().copyWith(
+      notificationSettings: const NotificationSettings(
+        enabled: true,
+        lockScreenShowTitles: true,
+      ),
+    );
+    final schedule = data.generalMode.schedules.single;
+    final event = schedule.events.single;
+    await withAgendaRuntimeMutationLock(
+      () => Future.wait([
+        for (final index in [1, 2, 3])
+          service.reconcile(
+            data.copyWith(
+              generalMode: data.generalMode.copyWith(
+                schedules: [
+                  schedule.copyWith(
+                    events: [event.copyWith(title: 'Update $index')],
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ]),
+    ).timeout(const Duration(seconds: 5));
+    expect(gateway.maxActiveSchedules, 1);
+    expect(gateway.scheduled.values.single.title, contains('Update 3'));
   });
 }
 

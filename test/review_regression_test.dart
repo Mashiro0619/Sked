@@ -174,6 +174,20 @@ Future<TimetableProvider> providerFor(
   return provider;
 }
 
+Future<TimetableProvider> _studentProviderAtWeek12(ProbeStorage storage) async {
+  final provider = await providerFor(storage);
+  await provider.addTimetable(
+    TimetableConfig(
+      name: 'Week rollback',
+      startDate: anchor,
+      totalWeeks: 20,
+      periodTimeSetId: provider.activePeriodTimeSet.id,
+    ),
+  );
+  await provider.setSelectedWeek(12);
+  return provider;
+}
+
 AgendaNotificationService serviceFor(
   MemoryAgendaNotificationGateway gateway, {
   AgendaNotificationRuntimeStore? runtime,
@@ -513,6 +527,131 @@ END:VCALENDAR''',
   );
 
   test(
+    'failed week-count reduction restores the original selected week',
+    () async {
+      final storage = ProbeStorage(baseData());
+      final provider = await _studentProviderAtWeek12(storage);
+      final timetableId = provider.activeTimetable.id;
+      storage.nextSaveError = const StorageWriteException(
+        'week-count save failed',
+      );
+      await expectLater(
+        provider.updateTimetableConfig(
+          provider.activeTimetable.config.copyWith(totalWeeks: 8),
+        ),
+        throwsA(isA<StorageWriteException>()),
+      );
+      expect(provider.activeTimetable.id, timetableId);
+      expect(provider.activeTimetable.config.totalWeeks, 20);
+      expect(provider.selectedWeek, 12);
+    },
+  );
+
+  test(
+    'successful week-count reduction still clamps the selected week',
+    () async {
+      final provider = await _studentProviderAtWeek12(ProbeStorage(baseData()));
+      await provider.updateTimetableConfig(
+        provider.activeTimetable.config.copyWith(totalWeeks: 8),
+      );
+      expect(provider.activeTimetable.config.totalWeeks, 8);
+      expect(provider.selectedWeek, 8);
+    },
+  );
+
+  for (final nextWeek in [6, 8]) {
+    test(
+      'week rollback preserves newer navigation to week $nextWeek',
+      () async {
+        final storage = ProbeStorage(baseData());
+        final provider = await _studentProviderAtWeek12(storage);
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        storage.saveEntered = entered;
+        storage.saveGate = release;
+        storage.nextSaveError = const StorageWriteException(
+          'delayed config failure',
+        );
+        final failure = expectLater(
+          provider.updateTimetableConfig(
+            provider.activeTimetable.config.copyWith(totalWeeks: 8),
+          ),
+          throwsA(isA<StorageWriteException>()),
+        );
+        await entered.future;
+        expect(provider.selectedWeek, 8);
+        await provider.setSelectedWeek(6);
+        await provider.setSelectedWeek(nextWeek);
+        release.complete();
+        await failure;
+        expect(provider.activeTimetable.config.totalWeeks, 20);
+        expect(provider.selectedWeek, nextWeek);
+      },
+    );
+  }
+
+  test(
+    'failed week-count extension clamps a newer out-of-range selection',
+    () async {
+      final storage = ProbeStorage(baseData());
+      final provider = await _studentProviderAtWeek12(storage);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      storage.saveEntered = entered;
+      storage.saveGate = release;
+      storage.nextSaveError = const StorageWriteException('extension failed');
+      final failure = expectLater(
+        provider.updateTimetableConfig(
+          provider.activeTimetable.config.copyWith(totalWeeks: 30),
+        ),
+        throwsA(isA<StorageWriteException>()),
+      );
+      await entered.future;
+      await provider.setSelectedWeek(25);
+      release.complete();
+      await failure;
+      expect(provider.activeTimetable.config.totalWeeks, 20);
+      expect(provider.selectedWeek, 20);
+    },
+  );
+
+  for (final deleteActive in [false, true]) {
+    test(
+      'failed timetable deletion preserves or relocates the week by identity: $deleteActive',
+      () async {
+        final storage = ProbeStorage(baseData());
+        final provider = await _studentProviderAtWeek12(storage);
+        final first = provider.activeTimetable;
+        // Seed a distinct identity instead of racing two millisecond-based
+        // addTimetable IDs in a fast in-memory test.
+        final second = first.copyWith(
+          id: 'review-other-timetable',
+          config: first.config.copyWith(name: 'Other timetable'),
+        );
+        storage.data = storage.data.copyWith(
+          studentMode: storage.data.studentMode.copyWith(
+            activeTimetableId: first.id,
+            timetables: [first, second],
+          ),
+        );
+        await provider.retryStorageLoad();
+        await provider.setSelectedWeek(12);
+        storage.nextSaveError = const StorageWriteException('delete failed');
+        await expectLater(
+          provider.deleteTimetable(deleteActive ? first.id : second.id),
+          throwsA(isA<StorageWriteException>()),
+        );
+        expect(provider.timetables, hasLength(2));
+        expect(provider.activeTimetable.id, first.id);
+        expect(
+          provider.selectedWeek,
+          deleteActive ? currentWeekFor(first.config) : 12,
+        );
+      },
+    );
+  }
+
+  test(
     'handled rotation failure cannot resurrect an aborted snapshot on reload',
     () async {
       final directory = await storageDirectory();
@@ -744,6 +883,46 @@ END:VCALENDAR''',
       expect(await File('${await store.filePath()}.tmp').exists(), isFalse);
     },
   );
+
+  test('a rollback temporary never replaces a newer main after rollback verification fails', () async {
+    final directory = await storageDirectory();
+    final original = baseData();
+    final newer = original.copyWith(localeCode: 'de');
+    final store = IoTimetableStorage(directoryProvider: () async => directory);
+    await store.save(original);
+    final main = await store.filePath();
+    final failing = IoTimetableStorage(
+      directoryProvider: () async => directory,
+      afterMainRotation: () async => throw StateError('rotation interrupted'),
+      beforeTemporaryDelete: () async {
+        // The original main was already checked as missing. Simulate an
+        // external writer publishing a newer main during rollback cleanup.
+        await File(main).writeAsString(newer.encode());
+      },
+    );
+    StorageWriteStateUnknownException? failure;
+    try {
+      await failing.save(original.copyWith(localeCode: 'zh'));
+    } on StorageWriteStateUnknownException catch (error) {
+      failure = error;
+    }
+    expect(failure, isNotNull);
+    expect(await File(main).readAsString(), newer.encode());
+    expect(await File('$main.bak').readAsString(), original.encode());
+    expect(await File('$main.tmp').exists(), isFalse);
+    expect(await File('$main.tmp.failed').readAsString(), original.encode());
+    expect(failure!.recoveryArtifacts, contains('$main.tmp.failed'));
+    expect(
+      utf8.decode((await store.readRecoveryArtifact('$main.tmp.failed'))!),
+      original.encode(),
+    );
+    expect((await store.load()).data!.localeCode, 'de');
+    final restarted = IoTimetableStorage(
+      directoryProvider: () async => directory,
+    );
+    expect((await restarted.load()).data!.localeCode, 'de');
+    expect(await File(main).readAsString(), newer.encode());
+  });
 
   test('rollback failure preserves the only new snapshot and reports unknown state', () async {
     final directory = await storageDirectory();

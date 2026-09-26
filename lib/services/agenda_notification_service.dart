@@ -2167,6 +2167,7 @@ class AgendaNotificationService extends ChangeNotifier {
   Map<String, DateTime> _snoozedUntil = const {};
   Set<String> _handledOccurrenceIds = const {};
   bool _runtimeClearing = false;
+  int _runtimeClearEpoch = 0;
   AgendaNotificationDiagnostics? _latestDiagnostics;
   final List<AgendaNotificationRegistrationDiagnostic> _registrationDecisions =
       [];
@@ -2280,16 +2281,23 @@ class AgendaNotificationService extends ChangeNotifier {
   /// Drains background actions against the latest durable projection. The
   /// normal reconcile path remains the single place that applies the action
   /// and rebuilds the platform plan.
-  Future<void> reconcilePendingActions() async {
-    final data = _lastData;
-    if (data == null || _runtimeClearing) return;
-    await reconcile(
-      data,
-      anchor: now(),
-      mode: AgendaNotificationReconcileMode.recovery,
-      onPayload: _onPayload,
-      onAction: _onAction,
-    );
+  Future<void> reconcilePendingActions() {
+    if (_lastData == null || _runtimeClearing) return Future<void>.value();
+    final clearEpoch = _runtimeClearEpoch;
+    return withAgendaRuntimeMutationLock(() async {
+      if (_runtimeClearing || clearEpoch != _runtimeClearEpoch) return;
+      // A commit may finish while this poll is waiting for the lock. Resolve
+      // the durable snapshot here, never from the previous projection at enqueue.
+      final data = committedDataReader?.call() ?? _lastData;
+      if (data == null) return;
+      await reconcile(
+        data,
+        anchor: now(),
+        mode: AgendaNotificationReconcileMode.recovery,
+        onPayload: _onPayload,
+        onAction: _onAction,
+      );
+    });
   }
 
   /// Records a projection failure that occurred before [reconcile] could build
@@ -2494,49 +2502,62 @@ class AgendaNotificationService extends ChangeNotifier {
     AgendaNotificationProjectionFence? projectionFence,
     void Function(String? payload)? onPayload,
     FutureOr<void> Function(String? payload, String? actionId)? onAction,
-  }) async {
-    if (_runtimeClearing) return _status;
-    if (!(await _allowsProjectionFence(projectionFence))) return _status;
-    if (!_enabled) {
-      await _recordDiagnostics(
-        AgendaNotificationDiagnostics(
-          recordedAt: (anchor ?? now()).toLocal(),
+  }) {
+    if (_runtimeClearing) return Future.value(_status);
+    final clearEpoch = _runtimeClearEpoch;
+    // Acquire the shared lock before reserving this service's queue. Otherwise
+    // a foreground poll can reserve a slot while waiting for a coordinator that
+    // owns the lock and needs that same slot to finish its reconciliation.
+    return withAgendaRuntimeMutationLock(() async {
+      final previous = _reconcileInFlight;
+      final operation = () async {
+        if (previous != null) {
+          try {
+            await previous;
+          } catch (_) {}
+        }
+        // A request waiting outside the lock is not yet in the local queue.
+        // Do not let it recreate a plan after clearRuntime has already finished.
+        if (_runtimeClearing || clearEpoch != _runtimeClearEpoch) return;
+        if (!(await _allowsProjectionFence(projectionFence))) return;
+        if (!_enabled) {
+          await _recordDiagnostics(
+            AgendaNotificationDiagnostics(
+              recordedAt: (anchor ?? now()).toLocal(),
+              mode: mode,
+              origin: origin,
+              result: AgendaNotificationDiagnosticResult.skipped,
+              notificationsEnabled: false,
+              exactAlarmsAllowed: false,
+              coverage: AgendaNotificationCoverage.ready,
+              directScheduledCount: _status.directScheduledCount,
+              directCapacity: planner.maxScheduledNotifications,
+              retainedPendingCount: 0,
+              plan: const [],
+            ),
+          );
+          return;
+        }
+        await _reconcileNow(
+          data,
+          anchor: anchor,
           mode: mode,
           origin: origin,
-          result: AgendaNotificationDiagnosticResult.skipped,
-          notificationsEnabled: false,
-          exactAlarmsAllowed: false,
-          coverage: AgendaNotificationCoverage.ready,
-          directScheduledCount: _status.directScheduledCount,
-          directCapacity: planner.maxScheduledNotifications,
-          retainedPendingCount: 0,
-          plan: const [],
-        ),
-      );
-      return _status;
-    }
-    final previous = _reconcileInFlight;
-    if (previous != null) {
+          projectionFence: projectionFence,
+          onPayload: onPayload,
+          onAction: onAction,
+        );
+      }();
+      // Reserve immediately, before awaiting the predecessor, so concurrent
+      // calls in a reentrant lock zone remain FIFO rather than sharing one tail.
+      _reconcileInFlight = operation;
       try {
-        await previous;
-      } catch (_) {}
-    }
-    final operation = _reconcileNow(
-      data,
-      anchor: anchor,
-      mode: mode,
-      origin: origin,
-      projectionFence: projectionFence,
-      onPayload: onPayload,
-      onAction: onAction,
-    );
-    _reconcileInFlight = operation;
-    try {
-      await operation;
-    } finally {
-      if (identical(_reconcileInFlight, operation)) _reconcileInFlight = null;
-    }
-    return _status;
+        await operation;
+      } finally {
+        if (identical(_reconcileInFlight, operation)) _reconcileInFlight = null;
+      }
+      return _status;
+    });
   }
 
   /// Returns the next best-effort renewal point without creating a platform
@@ -4469,6 +4490,7 @@ class AgendaNotificationService extends ChangeNotifier {
   Future<void> clearRuntime({bool invalidateProjection = false}) async {
     if (_runtimeClearing) return;
     _runtimeClearing = true;
+    _runtimeClearEpoch += 1;
     try {
       if (invalidateProjection) {
         // Fence first. A headless Android worker may be in another isolate and

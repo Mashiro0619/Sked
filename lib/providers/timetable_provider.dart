@@ -189,8 +189,11 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
   Future<void> _startFreshAfterCorruptAppBackupRestoreJournal();
   // These declarations are part of the mixin contract; the concrete methods
   // below carry additional internal options used by the save transaction.
-  // ignore: unused_element_parameter
-  Future<void> _saveAndNotify({bool emitCommit = true});
+  Future<void> _saveAndNotify({
+    // ignore: unused_element_parameter
+    bool emitCommit = true,
+    int? rollbackSelectedWeek,
+  });
   // ignore: unused_element_parameter
   Future<void> _save({bool emitCommit = true});
   void emitAppDataCommit(AppData snapshot);
@@ -530,8 +533,19 @@ class TimetableProvider extends _TimetableProviderBase
     _appDataValue = _withRuntimeCustomSchoolImportApiKey(_appDataValue, value);
   }
 
+  int _selectedWeekValue = 1;
+  int _selectedWeekMutationEpoch = 0;
+
   @override
-  int _selectedWeek = 1;
+  int get _selectedWeek => _selectedWeekValue;
+
+  @override
+  set _selectedWeek(int value) {
+    if (_selectedWeekValue == value) return;
+    _selectedWeekValue = value;
+    _selectedWeekMutationEpoch += 1;
+  }
+
   @override
   bool _isLoaded = false;
   @override
@@ -909,9 +923,11 @@ class TimetableProvider extends _TimetableProviderBase
     bool allowDuringModeSwitch = false,
     bool rollbackOnFailure = true,
     bool emitCommit = true,
+    int? rollbackSelectedWeek,
   }) async {
     _ensureAppBackupRestoreMutationAllowed();
     final timetableIdBeforeSave = activeTimetableOrNull?.id;
+    final selectedWeekEpoch = _selectedWeekMutationEpoch;
     final hadScheduledUiStateSave = _cancelScheduledUiStateSave();
     try {
       await _save(
@@ -924,7 +940,14 @@ class TimetableProvider extends _TimetableProviderBase
       if (timetable?.id != timetableIdBeforeSave) {
         _selectedWeek = _currentWeekForActiveTimetable();
       } else if (timetable != null) {
-        _selectedWeek = _selectedWeek.clamp(1, timetable.config.totalWeeks);
+        // Configuration edits may have clamped the selection optimistically.
+        // Restore its prior value only if no later navigation superseded it.
+        final preferredWeek =
+            rollbackSelectedWeek != null &&
+                _selectedWeekMutationEpoch == selectedWeekEpoch
+            ? rollbackSelectedWeek
+            : _selectedWeek;
+        _selectedWeek = preferredWeek.clamp(1, timetable.config.totalWeeks);
       }
       if (hadScheduledUiStateSave && !rollbackOnFailure) {
         _scheduleUiStateSave();

@@ -347,6 +347,7 @@ class IoTimetableStorage
     final bytes = utf8.encode(data.encode());
     final writtenTemp = _DecodeAttempt(_Outcome.success, data, bytes);
     var ownsTemp = false;
+    var ownedTempSnapshot = writtenTemp;
     var mainRotated = false;
     var mainPromoted = false;
     try {
@@ -399,6 +400,9 @@ class IoTimetableStorage
           // Keep the verified backup intact while restoring through an atomic
           // rename. An interrupted rollback still has a recoverable old copy.
           final restore = await tmp.open(mode: FileMode.write);
+          // A failed restore owns the old snapshot now, not the attempted new
+          // save. Its cleanup must keep this copy out of automatic promotion.
+          ownedTempSnapshot = originalMain;
           try {
             await restore.writeFrom(originalMain.bytes!);
             await restore.flush();
@@ -426,7 +430,7 @@ class IoTimetableStorage
         // is unavailable, retain every file and report the unknown outcome.
         if (ownsTemp) {
           try {
-            await _isolateOwnedTemporary(storagePaths, writtenTemp);
+            await _isolateOwnedTemporary(storagePaths, ownedTempSnapshot);
           } catch (_) {}
         }
         throw StorageWriteStateUnknownException(

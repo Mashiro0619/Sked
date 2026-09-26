@@ -111,6 +111,7 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
     TimetableConfig config,
   ) async {
     requireWorkspaceEnabled(AppMode.student);
+    final selectedWeekBeforeUpdate = _selectedWeek;
     final next = _studentTimetableService.updateTimetableConfig(
       _appData.studentMode,
       timetableId,
@@ -126,7 +127,7 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
         fallbackWeek: _selectedWeek,
       );
     }
-    await _saveAndNotify();
+    await _saveAndNotify(rollbackSelectedWeek: selectedWeekBeforeUpdate);
   }
 
   // Long-lived editors must pass their original target. A removed target is
@@ -179,13 +180,16 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
 
   Future<void> deleteTimetable(String timetableId) async {
     requireWorkspaceEnabled(AppMode.student);
+    final previousTimetableId = activeTimetableOrNull?.id;
     final next = _studentTimetableService.deleteTimetable(
       _appData.studentMode,
       timetableId,
     );
     if (identical(next, _appData.studentMode)) return;
     _appData = _appData.copyWith(studentMode: next);
-    _selectedWeek = _currentWeekForActiveTimetable();
+    if (activeTimetableOrNull?.id != previousTimetableId) {
+      _selectedWeek = _currentWeekForActiveTimetable();
+    }
     await _saveAndNotify();
   }
 
