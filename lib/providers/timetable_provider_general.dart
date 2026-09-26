@@ -92,13 +92,11 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       scheduleId,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
 
   Future<void> addGeneralSchedule({String? name, int? colorValue}) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.addSchedule(
@@ -118,7 +116,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       name,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
@@ -130,7 +127,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       schedule,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
@@ -139,7 +135,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     String scheduleId,
     bool isVisible,
   ) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.updateScheduleVisibility(
@@ -152,7 +147,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   }
 
   Future<void> deleteGeneralSchedule(String scheduleId) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.deleteSchedule(
@@ -227,7 +221,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     String? toolbarHiddenItemsBehavior,
   }) async {
     requireWorkspaceEnabled(AppMode.general);
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.updateDisplaySettings(
         _appData.generalMode,
@@ -261,7 +254,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       order,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
@@ -277,7 +269,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       visible,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
@@ -291,7 +282,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       hiddenIds,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
@@ -303,7 +293,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       behavior,
     );
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
@@ -312,13 +301,11 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     requireWorkspaceEnabled(AppMode.general);
     final next = _calendarService.saveEvent(_appData.generalMode, event);
     if (identical(next, _appData.generalMode)) return;
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: next);
     await _saveAndNotify();
   }
 
   Future<void> deleteGeneralEvent(String eventId) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.deleteEvent(_appData.generalMode, eventId),
@@ -334,7 +321,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
       _appData.generalMode,
       occurrence,
     );
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(generalMode: result.data);
     await _saveAndNotify();
     return result.event;
@@ -343,7 +329,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   Future<void> deleteGeneralOccurrence(
     GeneralEventOccurrence occurrence,
   ) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.deleteOccurrence(
@@ -357,7 +342,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   Future<void> deleteFutureGeneralOccurrences(
     GeneralEventOccurrence occurrence,
   ) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.deleteFutureOccurrences(
@@ -410,7 +394,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
 
   Future<void> dismissGeneralReminder(GeneralEventOccurrence occurrence) async {
     requireWorkspaceEnabled(AppMode.general);
-    requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.dismissReminder(
         _appData.generalMode,
@@ -421,7 +404,6 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
   }
 
   Future<void> restoreGeneralReminder(GeneralEventOccurrence occurrence) async {
-    requireWorkspaceEnabled(AppMode.general);
     requireWorkspaceEnabled(AppMode.general);
     _appData = _appData.copyWith(
       generalMode: _calendarService.restoreReminder(

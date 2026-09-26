@@ -537,6 +537,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         if (!snapshot.canWrite) {
           return _DataRecoveryScreen(
             status: snapshot.storageLoadStatus,
+            writeStateUnknown: snapshot.writeStateUnknown,
             artifacts: snapshot.recoveryArtifacts,
             isBusy: _isHandlingRecovery,
             onRetry: () => _retryRecovery(provider),
@@ -640,6 +641,7 @@ PreferredSizeWidget? _startupAppBar(BuildContext context) {
 class _DataRecoveryScreen extends StatelessWidget {
   const _DataRecoveryScreen({
     required this.status,
+    required this.writeStateUnknown,
     required this.artifacts,
     required this.isBusy,
     required this.onRetry,
@@ -648,6 +650,7 @@ class _DataRecoveryScreen extends StatelessWidget {
   });
 
   final StorageLoadStatus status;
+  final bool writeStateUnknown;
   final List<String> artifacts;
   final bool isBusy;
   final VoidCallback onRetry;
@@ -667,15 +670,17 @@ class _DataRecoveryScreen extends StatelessWidget {
       StorageLoadStatus.restored ||
       StorageLoadStatus.corrupt => l10n.dataRecoveryCorruptTitle,
     };
-    final message = switch (status) {
-      StorageLoadStatus.ioFailure => l10n.dataRecoveryIoFailureMessage,
-      StorageLoadStatus.unsupportedVersion =>
-        l10n.dataRecoveryUnsupportedVersionMessage,
-      StorageLoadStatus.missing ||
-      StorageLoadStatus.success ||
-      StorageLoadStatus.restored ||
-      StorageLoadStatus.corrupt => l10n.dataRecoveryCorruptMessage,
-    };
+    final message = writeStateUnknown
+        ? l10n.dataRecoveryWriteStateUnknownMessage
+        : switch (status) {
+            StorageLoadStatus.ioFailure => l10n.dataRecoveryIoFailureMessage,
+            StorageLoadStatus.unsupportedVersion =>
+              l10n.dataRecoveryUnsupportedVersionMessage,
+            StorageLoadStatus.missing ||
+            StorageLoadStatus.success ||
+            StorageLoadStatus.restored ||
+            StorageLoadStatus.corrupt => l10n.dataRecoveryCorruptMessage,
+          };
     final icon = switch (status) {
       StorageLoadStatus.ioFailure => Icons.storage_outlined,
       StorageLoadStatus.unsupportedVersion => Icons.system_update_outlined,
@@ -780,6 +785,7 @@ class _AppHomeSnapshot {
     required this.homeWorkspaceNavigationCollapsed,
     required this.canWrite,
     required this.storageLoadStatus,
+    required this.writeStateUnknown,
     required this.recoveryArtifacts,
   });
 
@@ -797,6 +803,7 @@ class _AppHomeSnapshot {
           provider.homeWorkspaceNavigationCollapsed,
       canWrite: provider.canWrite,
       storageLoadStatus: provider.storageLoadStatus,
+      writeStateUnknown: provider.isStorageWriteStateUnknown,
       recoveryArtifacts: provider.recoveryArtifacts,
     );
   }
@@ -810,6 +817,7 @@ class _AppHomeSnapshot {
   final bool homeWorkspaceNavigationCollapsed;
   final bool canWrite;
   final StorageLoadStatus storageLoadStatus;
+  final bool writeStateUnknown;
   final List<String> recoveryArtifacts;
 
   @override
@@ -826,6 +834,7 @@ class _AppHomeSnapshot {
             homeWorkspaceNavigationCollapsed &&
         other.canWrite == canWrite &&
         other.storageLoadStatus == storageLoadStatus &&
+        other.writeStateUnknown == writeStateUnknown &&
         listEquals(other.recoveryArtifacts, recoveryArtifacts);
   }
 
@@ -840,6 +849,7 @@ class _AppHomeSnapshot {
     homeWorkspaceNavigationCollapsed,
     canWrite,
     storageLoadStatus,
+    writeStateUnknown,
     Object.hashAll(recoveryArtifacts),
   );
 }

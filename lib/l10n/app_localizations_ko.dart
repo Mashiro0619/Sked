@@ -3079,4 +3079,8 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      '마지막 저장이 취소되었는지 확인할 수 없습니다. 쓰기를 중지하고 복구 사본을 보존했습니다. 저장소 상태를 확인한 후 다시 불러오세요.';
 }

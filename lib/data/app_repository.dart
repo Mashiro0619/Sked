@@ -25,6 +25,7 @@ class AppRepository {
   StorageLoadStatus _lastLoadStatus = StorageLoadStatus.missing;
   List<String> _recoveryArtifacts = const [];
   var _canWrite = true;
+  bool _isWriteStateUnknown = false;
   Future<void> _pendingWrite = Future.value();
   var _currentRevision = 0;
   int _writesInFlight = 0;
@@ -36,6 +37,8 @@ class AppRepository {
   StorageLoadStatus get lastLoadStatus => _lastLoadStatus;
 
   bool get canWrite => _canWrite;
+
+  bool get isWriteStateUnknown => _isWriteStateUnknown;
 
   List<String> get recoveryArtifacts => _recoveryArtifacts;
 
@@ -67,6 +70,7 @@ class AppRepository {
     _lastLoadStatus = result.status;
     _recoveryArtifacts = List.unmodifiable(result.recoveryArtifacts);
     _canWrite = result.canWrite;
+    if (result.canWrite) _isWriteStateUnknown = false;
     _current = result.data;
     _lastPersisted = result.data;
     _currentRevision += 1;
@@ -224,7 +228,14 @@ class AppRepository {
           }
           try {
             await _storage.save(data);
-          } on StorageWriteException {
+          } on StorageWriteException catch (error) {
+            _isWriteStateUnknown = error is StorageWriteStateUnknownException;
+            if (error is StorageWriteStateUnknownException) {
+              _recoveryArtifacts = List.unmodifiable({
+                ..._recoveryArtifacts,
+                ...error.recoveryArtifacts,
+              });
+            }
             _blockWritesAfterStorageFailure();
             rethrow;
           }

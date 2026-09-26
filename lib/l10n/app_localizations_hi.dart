@@ -3133,4 +3133,8 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked यह पुष्टि नहीं कर सका कि पिछली सेव प्रक्रिया के बदलाव वापस किए गए हैं या नहीं। लिखना रोक दिया गया है और पुनर्प्राप्ति प्रतियाँ सुरक्षित हैं। स्टोरेज जाँचें और डेटा फिर से लोड करें।';
 }

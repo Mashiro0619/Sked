@@ -72,7 +72,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       timetableId,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     _selectedWeek = _currentWeekForActiveTimetable();
     await _saveAndNotify();
@@ -119,7 +118,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       fallbackPeriodTimeSet: activePeriodTimeSet,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     if (_appData.studentMode.activeTimetableId == timetableId) {
       _selectedWeek = _studentTimetableService.resolveSelectedWeek(
@@ -150,7 +148,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       course,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -163,7 +160,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       courseId,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -176,7 +172,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       fallbackPeriodTimeSet:
           activePeriodTimeSetOrNull ?? _createFallbackPeriodTimeSet(),
     );
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: result.data);
     _selectedWeek = 1;
     await _saveAndNotify();
@@ -189,7 +184,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       timetableId,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     _selectedWeek = _currentWeekForActiveTimetable();
     await _saveAndNotify();
@@ -224,7 +218,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       localeCode: _appData.localeCode,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -237,7 +230,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       localeCode: _appData.localeCode,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -253,7 +245,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       periodTimeSetId,
     );
     if (identical(next, _appData.studentMode)) return;
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }
@@ -271,7 +262,6 @@ mixin _TimetableProviderStudent on _TimetableProviderBase {
       conflictKey,
       courseId,
     );
-    requireWorkspaceEnabled(AppMode.student);
     _appData = _appData.copyWith(studentMode: next);
     await _saveAndNotify();
   }

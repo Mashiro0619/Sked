@@ -3157,4 +3157,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked konnte nicht bestätigen, ob der letzte Speichervorgang rückgängig gemacht wurde. Schreibvorgänge sind angehalten und Wiederherstellungskopien bleiben erhalten. Prüfe den Speicher und versuche das Laden erneut.';
 }

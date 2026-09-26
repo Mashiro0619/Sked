@@ -92,6 +92,21 @@ class StorageWriteException implements Exception {
   String toString() => 'StorageWriteException: $message';
 }
 
+/// The attempted write and its rollback both failed. The last confirmed
+/// snapshot is only a UI fallback until a successful reload resolves storage.
+class StorageWriteStateUnknownException extends StorageWriteException {
+  const StorageWriteStateUnknownException({
+    required this.writeError,
+    required this.rollbackError,
+    this.recoveryArtifacts = const [],
+    super.stackTrace,
+  }) : super('AppData save result could not be confirmed.', cause: writeError);
+
+  final Object writeError;
+  final Object rollbackError;
+  final List<String> recoveryArtifacts;
+}
+
 /// 这里只管整份 AppData 的读写，至于落文件还是浏览器存储，让平台层自己决定。
 abstract class TimetableStorage {
   factory TimetableStorage() => createTimetableStorage();

@@ -3139,4 +3139,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked không thể xác nhận lần lưu gần nhất đã được hoàn tác hay chưa. Việc ghi đã tạm dừng và các bản sao khôi phục được giữ lại. Hãy kiểm tra bộ nhớ rồi thử tải lại.';
 }

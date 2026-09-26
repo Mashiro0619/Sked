@@ -3135,4 +3135,8 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked ei saanud kinnitada, kas viimane salvestamine võeti tagasi. Kirjutamine on peatatud ja taastekoopiad säilitatud. Kontrollige salvestusruumi ja proovige uuesti laadida.';
 }

@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "ホイールで選択",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "前回の保存が取り消されたかどうかを確認できませんでした。書き込みを停止し、復元用のコピーを保持しています。ストレージを確認してから、読み込みを再試行してください。",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

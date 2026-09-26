@@ -581,19 +581,22 @@ int _firstCandidateIndex({
   if (!rangeStart.isAfter(eventStart)) {
     return 0;
   }
+  // Civil-date arithmetic must use the recurrence's time basis. Comparing
+  // UTC date fields with local date fields can skip the first overlap.
+  final boundary = eventStart.isUtc ? rangeStart.toUtc() : rangeStart.toLocal();
   final interval = rule.normalizedInterval;
   final unit = _effectiveUnit(rule);
   switch (unit) {
     case GeneralEventRecurrenceUnit.day:
-      final days = calendarDaysBetween(eventStart, rangeStart);
+      final days = calendarDaysBetween(eventStart, boundary);
       return (days ~/ interval).clamp(0, 1 << 30).toInt();
     case GeneralEventRecurrenceUnit.week:
-      final days = calendarDaysBetween(eventStart, rangeStart);
+      final days = calendarDaysBetween(eventStart, boundary);
       return (days ~/ (7 * interval)).clamp(0, 1 << 30).toInt();
     case GeneralEventRecurrenceUnit.month:
       final months =
-          (rangeStart.year - eventStart.year) * 12 +
-          (rangeStart.month - eventStart.month);
+          (boundary.year - eventStart.year) * 12 +
+          (boundary.month - eventStart.month);
       return (months ~/ interval).clamp(0, 1 << 30).toInt();
   }
 }

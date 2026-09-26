@@ -121,38 +121,8 @@ class GeneralCalendarService {
 
   GeneralScheduleData setSelectedDate(GeneralScheduleData data, DateTime date) {
     final selectedDateIso = date.toIso8601String().split('T').first;
-    if (data.selectedDateIso == selectedDateIso) {
-      return data;
-    }
-    return GeneralScheduleData(
-      activeScheduleId: data.activeScheduleId,
-      schedules: data.schedules,
-      selectedDateIso: selectedDateIso,
-      customDateRange: data.customDateRange,
-      defaultView: data.defaultView,
-      viewSwitchBehavior: data.viewSwitchBehavior,
-      toolbarWidthPolicy: data.toolbarWidthPolicy,
-      dateLabelFormat: data.dateLabelFormat,
-      fitWeekColumnsToWidth: data.fitWeekColumnsToWidth,
-      showWeekends: data.showWeekends,
-      showLunarCalendar: data.showLunarCalendar,
-      dayStartHour: data.dayStartHour,
-      dayEndHour: data.dayEndHour,
-      timeGridMinutes: data.timeGridMinutes,
-      timeGridHourHeight: data.timeGridHourHeight,
-      closeEventPopupOnOutsideTap: data.closeEventPopupOnOutsideTap,
-      showAddEventFab: data.showAddEventFab,
-      enableLongPressAddEvent: data.enableLongPressAddEvent,
-      allDayTimelineCollapsed: data.allDayTimelineCollapsed,
-      toolbarNavigationOrder: data.toolbarNavigationOrder,
-      hiddenToolbarNavigationIds: data.hiddenToolbarNavigationIds,
-      toolbarHiddenItemsBehavior: data.toolbarHiddenItemsBehavior,
-      themeMode: data.themeMode,
-      themeColorMode: data.themeColorMode,
-      themeSeedColorValue: data.themeSeedColorValue,
-      colorfulUiColorValues: data.colorfulUiColorValues,
-      reminderAcknowledgements: data.reminderAcknowledgements,
-    );
+    if (data.selectedDateIso == selectedDateIso) return data;
+    return data.copyWith(selectedDateIso: selectedDateIso);
   }
 
   GeneralScheduleData updateDisplaySettings(

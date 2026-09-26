@@ -3143,4 +3143,8 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked ni mogel potrditi, ali je bilo zadnje shranjevanje razveljavljeno. Pisanje je ustavljeno, obnovitvene kopije pa so ohranjene. Preverite shrambo in poskusite znova naložiti podatke.';
 }

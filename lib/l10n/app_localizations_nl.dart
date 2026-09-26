@@ -3139,4 +3139,8 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked kon niet bevestigen of de laatste opslagbewerking is teruggedraaid. Schrijven is gepauzeerd en herstelkopieën zijn bewaard. Controleer de opslag en probeer opnieuw te laden.';
 }

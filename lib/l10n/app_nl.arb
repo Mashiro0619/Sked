@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Kiezen met scrollwielen",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked kon niet bevestigen of de laatste opslagbewerking is teruggedraaid. Schrijven is gepauzeerd en herstelkopieën zijn bewaard. Controleer de opslag en probeer opnieuw te laden.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

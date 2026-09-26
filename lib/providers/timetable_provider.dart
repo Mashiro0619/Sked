@@ -307,32 +307,46 @@ abstract class _TimetableProviderBase extends ChangeNotifier {
     }
   }
 
+  /// Waits for a stable write queue and confirms ambiguous writes without
+  /// poisoning future close/disable attempts with an already reported error.
   Future<void> _ensureCustomSchoolImportApiKeyPersistenceKnown() async {
-    try {
-      await _pendingSecretWrite;
-    } catch (_) {
-      // Re-read below to resolve the result of an ambiguous queued write.
-    }
-    if (_customSchoolImportApiKeyPersistenceKnown) return;
+    while (true) {
+      final pending = _pendingSecretWrite;
+      final epoch = _customSchoolImportApiKeyMutationEpoch;
+      try {
+        await pending;
+      } catch (_) {
+        // The initiating save reports its error. A known persisted value is
+        // still safe; an unknown result must be read back before proceeding.
+      }
+      bool isCurrent() =>
+          identical(pending, _pendingSecretWrite) &&
+          epoch == _customSchoolImportApiKeyMutationEpoch;
+      if (!isCurrent()) continue;
+      if (_customSchoolImportApiKeyPersistenceKnown) return;
 
-    try {
-      final value = (await _secrets.readCustomSchoolImportApiKey()).trim();
+      late final String value;
+      try {
+        value = (await _secrets.readCustomSchoolImportApiKey()).trim();
+      } catch (error, stackTrace) {
+        if (!isCurrent()) continue;
+        _customSchoolImportApiKeyPersistenceKnown = false;
+        debugPrint(
+          'Secure API key state could not be confirmed: $error\n$stackTrace',
+        );
+        throw StateError(
+          'Unable to confirm the current custom school import API key.',
+        );
+      }
+      // A delayed read must never overwrite a more recent write or its cache.
+      if (!isCurrent()) continue;
       _lastPersistedCustomSchoolImportApiKey = value;
       _customSchoolImportApiKeyPersistenceKnown = true;
-      final current = _appData.aiApiSettings.customApiKey;
-      if (current != value) {
+      if (_appData.aiApiSettings.customApiKey != value) {
         _replaceRuntimeCustomSchoolImportApiKey(value);
         notifyListeners();
       }
-    } catch (error, stackTrace) {
-      _customSchoolImportApiKeyPersistenceKnown = false;
-      debugPrint(
-        'Secure API key state could not be confirmed: '
-        '$error\n$stackTrace',
-      );
-      throw StateError(
-        'Unable to confirm the current custom school import API key.',
-      );
+      if (isCurrent()) return;
     }
   }
 
@@ -562,6 +576,7 @@ class TimetableProvider extends _TimetableProviderBase
   StorageLoadStatus get storageLoadStatus =>
       _journalRecoveryLoadStatus ?? _repository.lastLoadStatus;
   bool get canWrite => _repository.canWrite;
+  bool get isStorageWriteStateUnknown => _repository.isWriteStateUnknown;
 
   /// Whether local app data is being cleared or has been cleared for this
   /// process lifetime.
@@ -657,11 +672,7 @@ class TimetableProvider extends _TimetableProviderBase
         // runtime lock. Derive availability from the current snapshot, not the
         // state from before those asynchronous boundaries.
         if (!enabled && mode == AppMode.student) {
-          while (true) {
-            final pending = _pendingSecretWrite;
-            await pending;
-            if (identical(pending, _pendingSecretWrite)) break;
-          }
+          await _ensureCustomSchoolImportApiKeyPersistenceKnown();
         }
         await _commitWorkspaceAvailability(mode, enabled);
       });
@@ -900,6 +911,7 @@ class TimetableProvider extends _TimetableProviderBase
     bool emitCommit = true,
   }) async {
     _ensureAppBackupRestoreMutationAllowed();
+    final timetableIdBeforeSave = activeTimetableOrNull?.id;
     final hadScheduledUiStateSave = _cancelScheduledUiStateSave();
     try {
       await _save(
@@ -908,7 +920,12 @@ class TimetableProvider extends _TimetableProviderBase
         emitCommit: emitCommit,
       );
     } catch (_) {
-      _selectedWeek = _currentWeekForActiveTimetable();
+      final timetable = activeTimetableOrNull;
+      if (timetable?.id != timetableIdBeforeSave) {
+        _selectedWeek = _currentWeekForActiveTimetable();
+      } else if (timetable != null) {
+        _selectedWeek = _selectedWeek.clamp(1, timetable.config.totalWeeks);
+      }
       if (hadScheduledUiStateSave && !rollbackOnFailure) {
         _scheduleUiStateSave();
       }
@@ -1005,7 +1022,7 @@ class TimetableProvider extends _TimetableProviderBase
     }
     await flushPendingUiStateSaves();
     await _repository.waitForPendingWrites(propagateErrors: true);
-    await _pendingSecretWrite;
+    await _ensureCustomSchoolImportApiKeyPersistenceKnown();
     await _schoolSites.waitForPendingOperations();
     return true;
   }

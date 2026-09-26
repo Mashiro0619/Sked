@@ -3153,4 +3153,8 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'O Sked não conseguiu confirmar se a última gravação foi revertida. A escrita está suspensa e as cópias de recuperação foram preservadas. Verifique o armazenamento e tente carregar novamente.';
 }

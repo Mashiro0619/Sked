@@ -5621,6 +5621,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not saved · Fix the highlighted times'**
   String get periodTimesInvalidStatus;
+
+  /// No description provided for @dataRecoveryWriteStateUnknownMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sked could not confirm whether the last save was rolled back. Writing is paused and recovery copies are preserved. Check your storage and retry loading.'**
+  String get dataRecoveryWriteStateUnknownMessage;
 }
 
 class _AppLocalizationsDelegate

@@ -22,6 +22,10 @@ class IoTimetableStorage
     DateTime Function()? clock,
     this._fileReader,
     this._beforeMainReplace,
+    this._afterMainRotation,
+    this._afterMainReplace,
+    this._beforeTemporaryDelete,
+    this._beforeTemporaryIsolation,
     this._beforeLegacySecretArtifactReplace,
     Stream<FileSystemEntity> Function(Directory)? directoryLister,
   }) : _layout =
@@ -34,6 +38,7 @@ class IoTimetableStorage
   static const _fileName = AppStorageLayout.appDataFileName;
   static const _backupSuffix = AppStorageLayout.backupSuffix;
   static const _tempSuffix = AppStorageLayout.temporarySuffix;
+  static const _failedTempSuffix = AppStorageLayout.failedTemporarySuffix;
   static const _legacySecretScrubTemporarySuffix = '.secret-scrub.tmp';
   static const _legacySecretScrubRollbackSuffix = '.secret-scrub.rollback';
   static const _recoveryDirectoryPrefix =
@@ -46,6 +51,10 @@ class IoTimetableStorage
   final DateTime Function() _clock;
   final Future<List<int>> Function(File)? _fileReader;
   final Future<void> Function()? _beforeMainReplace;
+  final Future<void> Function()? _afterMainRotation;
+  final Future<void> Function()? _afterMainReplace;
+  final Future<void> Function()? _beforeTemporaryDelete;
+  final Future<void> Function()? _beforeTemporaryIsolation;
   final Future<void> Function(File)? _beforeLegacySecretArtifactReplace;
   final Stream<FileSystemEntity> Function(Directory) _directoryLister;
 
@@ -54,6 +63,7 @@ class IoTimetableStorage
     late final AppDataStoragePaths storagePaths;
     try {
       storagePaths = await _resolvePaths();
+      await _regularFileOrMissing(storagePaths.failedTemporary);
       await _recoverInterruptedLegacySecretScrubs(storagePaths);
     } catch (_) {
       return const StorageLoadResult(
@@ -330,43 +340,163 @@ class IoTimetableStorage
     final main = storagePaths.main;
     final tmp = storagePaths.temporary;
     final backup = storagePaths.backup;
-
-    // Reject links and unexpected entities before a write can follow them
-    // outside the application-support root.
-    await _regularFileOrMissing(main);
     await _regularFileOrMissing(tmp);
-    await _regularFileOrMissing(backup);
-
-    // 1. 写入 .tmp 并 flush，确保数据真的落盘。
-    final raf = await tmp.open(mode: FileMode.write);
+    await _regularFileOrMissing(storagePaths.failedTemporary);
+    final originalMain = await _writeSnapshot(main);
+    final originalBackup = await _writeSnapshot(backup);
+    final bytes = utf8.encode(data.encode());
+    final writtenTemp = _DecodeAttempt(_Outcome.success, data, bytes);
+    var ownsTemp = false;
+    var mainRotated = false;
+    var mainPromoted = false;
     try {
-      await raf.writeString(data.encode());
-      await raf.flush();
-    } finally {
-      await raf.close();
+      final raf = await tmp.open(mode: FileMode.write);
+      ownsTemp = true;
+      try {
+        await raf.writeFrom(bytes);
+        await raf.flush();
+      } finally {
+        await raf.close();
+      }
+      await _beforeMainReplace?.call();
+      // Verify content as well as entity type: never rotate a newer snapshot
+      // that replaced a path while this write was awaiting filesystem work.
+      if (await _regularFileOrMissing(tmp) != FileSystemEntityType.file) {
+        throw FileSystemException(
+          'AppData temporary snapshot disappeared before rotation.',
+          tmp.path,
+        );
+      }
+      await _verifyExpectedState(tmp, writtenTemp);
+      await _verifyExpectedState(main, originalMain);
+      await _verifyExpectedState(backup, originalBackup);
+      if (originalMain.outcome != _Outcome.missing) {
+        if (originalBackup.outcome != _Outcome.missing) await backup.delete();
+        await main.rename(backup.path);
+        mainRotated = true;
+      }
+      await _afterMainRotation?.call();
+      await _verifyExpectedState(tmp, writtenTemp);
+      await _verifyExpectedState(
+        main,
+        const _DecodeAttempt(_Outcome.missing, null),
+      );
+      await tmp.rename(main.path);
+      mainPromoted = true;
+      await _afterMainReplace?.call();
+      await _bestEffortFlushDirectory(main.parent);
+    } catch (writeError, writeStackTrace) {
+      try {
+        if (mainRotated) {
+          // The current backup must still be this transaction's previous main,
+          // not an arbitrary older backup or an externally replaced file.
+          await _verifyExpectedState(backup, originalMain);
+          final currentMain = mainPromoted
+              ? writtenTemp
+              : const _DecodeAttempt(_Outcome.missing, null);
+          await _verifyExpectedState(main, currentMain);
+          await _discardOwnedTemporary(storagePaths, writtenTemp);
+          // Keep the verified backup intact while restoring through an atomic
+          // rename. An interrupted rollback still has a recoverable old copy.
+          final restore = await tmp.open(mode: FileMode.write);
+          try {
+            await restore.writeFrom(originalMain.bytes!);
+            await restore.flush();
+          } finally {
+            await restore.close();
+          }
+          await _verifyExpectedState(tmp, originalMain);
+          await _verifyExpectedState(backup, originalMain);
+          await _verifyExpectedState(main, currentMain);
+          await tmp.rename(main.path);
+          await _verifyExpectedState(main, originalMain);
+        } else {
+          if (mainPromoted) {
+            // A failed first save has no previous main to restore.
+            await _verifyExpectedState(main, writtenTemp);
+            await main.delete();
+          }
+          await _verifyExpectedState(main, originalMain);
+          if (ownsTemp) await _discardOwnedTemporary(storagePaths, writtenTemp);
+        }
+        await _bestEffortFlushDirectory(main.parent);
+      } catch (rollbackError) {
+        // Preserve an owned failed snapshot as evidence, but do not leave it
+        // eligible to replace a newer main on the next load. If even isolation
+        // is unavailable, retain every file and report the unknown outcome.
+        if (ownsTemp) {
+          try {
+            await _isolateOwnedTemporary(storagePaths, writtenTemp);
+          } catch (_) {}
+        }
+        throw StorageWriteStateUnknownException(
+          writeError: writeError,
+          rollbackError: rollbackError,
+          stackTrace: writeStackTrace,
+          recoveryArtifacts: await _recoveryArtifactsIncludingActive(
+            directory: storagePaths.root,
+            activeFiles: [main, backup, tmp, storagePaths.failedTemporary],
+          ),
+        );
+      }
+      Error.throwWithStackTrace(writeError, writeStackTrace);
     }
+  }
 
-    // 2. 旋转：把现有主文件移到 .bak（覆盖旧 .bak），再把 .tmp 升为主文件。
-    await _beforeMainReplace?.call();
-    // Re-check immediately before rotation. This cannot eliminate filesystem
-    // TOCTOU races, but it rejects pre-existing links and special files.
-    final writtenTempType = await _regularFileOrMissing(tmp);
-    if (writtenTempType != FileSystemEntityType.file) {
-      throw FileSystemException(
-        'AppData temporary snapshot disappeared before rotation.',
-        tmp.path,
+  Future<_DecodeAttempt> _writeSnapshot(File file) async {
+    if (await _regularFileOrMissing(file) == FileSystemEntityType.notFound) {
+      return const _DecodeAttempt(_Outcome.missing, null);
+    }
+    return _DecodeAttempt(
+      _Outcome.success,
+      null,
+      List<int>.unmodifiable(await file.readAsBytes()),
+    );
+  }
+
+  Future<void> _discardOwnedTemporary(
+    AppDataStoragePaths paths,
+    _DecodeAttempt expected,
+  ) async {
+    final tmp = paths.temporary;
+    if (await _regularFileOrMissing(tmp) == FileSystemEntityType.notFound) {
+      return;
+    }
+    await _verifyExpectedState(tmp, expected);
+    try {
+      await _beforeTemporaryDelete?.call();
+      await _verifyExpectedState(tmp, expected);
+      await tmp.delete();
+    } catch (_) {
+      await _isolateOwnedTemporary(paths, expected);
+    }
+  }
+
+  Future<void> _isolateOwnedTemporary(
+    AppDataStoragePaths paths,
+    _DecodeAttempt expected,
+  ) async {
+    final tmp = paths.temporary;
+    if (await _regularFileOrMissing(tmp) == FileSystemEntityType.notFound) {
+      return;
+    }
+    await _verifyExpectedState(tmp, expected);
+    await _beforeTemporaryIsolation?.call();
+    final failed = paths.failedTemporary;
+    final previous = await _writeSnapshot(failed);
+    if (previous.outcome != _Outcome.missing) {
+      await _isolateActiveFiles(
+        directory: paths.root,
+        files: [failed],
+        expectedFiles: {failed: previous},
       );
     }
-    final mainType = await _regularFileOrMissing(main);
-    final backupType = await _regularFileOrMissing(backup);
-    if (mainType == FileSystemEntityType.file) {
-      if (backupType == FileSystemEntityType.file) {
-        await backup.delete();
-      }
-      await main.rename(backup.path);
-    }
-    await tmp.rename(main.path);
-    await _bestEffortFlushDirectory(main.parent);
+    await _verifyExpectedState(tmp, expected);
+    await _verifyExpectedState(
+      failed,
+      const _DecodeAttempt(_Outcome.missing, null),
+    );
+    await tmp.rename(failed.path);
   }
 
   @override
@@ -384,6 +514,7 @@ class IoTimetableStorage
         path.normalize(main.path),
         path.normalize(storagePaths.backup.path),
         path.normalize(storagePaths.temporary.path),
+        path.normalize(storagePaths.failedTemporary.path),
       };
       final recoveryDirectory = path.dirname(candidatePath);
       final isIsolatedArtifact =
@@ -429,6 +560,7 @@ class IoTimetableStorage
       storagePaths.main,
       storagePaths.backup,
       storagePaths.temporary,
+      storagePaths.failedTemporary,
       ...recoveryScan.artifacts.map(File.new),
     };
     for (final file in files) {
@@ -543,6 +675,7 @@ class IoTimetableStorage
     await _recoverInterruptedLegacySecretScrub(storagePaths.main);
     await _recoverInterruptedLegacySecretScrub(storagePaths.backup);
     await _recoverInterruptedLegacySecretScrub(storagePaths.temporary);
+    await _recoverInterruptedLegacySecretScrub(storagePaths.failedTemporary);
     await _recoverInterruptedLegacySecretScrubsInRecoveryDirectories(
       storagePaths.root,
     );
@@ -873,6 +1006,12 @@ class IoTimetableStorage
         return const _RecoveryArtifactScan.success(<String>[]);
       }
       await for (final entity in _directoryLister(parent)) {
+        if (path.basename(entity.path) == '$_fileName$_failedTempSuffix' &&
+            await FileSystemEntity.type(entity.path, followLinks: false) ==
+                FileSystemEntityType.file) {
+          artifacts.add(entity.path);
+          continue;
+        }
         if (await FileSystemEntity.type(entity.path, followLinks: false) !=
                 FileSystemEntityType.directory ||
             !_recoveryDirectoryNamePattern.hasMatch(
@@ -940,6 +1079,7 @@ class IoTimetableStorage
     _fileName,
     '$_fileName$_backupSuffix',
     '$_fileName$_tempSuffix',
+    '$_fileName$_failedTempSuffix',
   ];
 
   Future<FileSystemEntityType> _regularFileOrMissing(File file) async {

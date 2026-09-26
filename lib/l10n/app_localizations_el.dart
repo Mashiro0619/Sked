@@ -3165,4 +3165,8 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Το Sked δεν μπόρεσε να επιβεβαιώσει αν αναιρέθηκε η τελευταία αποθήκευση. Οι εγγραφές έχουν ανασταλεί και διατηρούνται αντίγραφα ανάκτησης. Ελέγξτε τον χώρο αποθήκευσης και δοκιμάστε ξανά τη φόρτωση.';
 }

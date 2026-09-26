@@ -3145,4 +3145,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked nie może potwierdzić, czy ostatni zapis został wycofany. Zapisywanie jest wstrzymane, a kopie odzyskiwania zostały zachowane. Sprawdź pamięć i spróbuj ponownie wczytać dane.';
 }

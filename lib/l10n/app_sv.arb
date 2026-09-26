@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Välj med rullhjul",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked kunde inte bekräfta om den senaste sparningen återställdes. Skrivning är pausad och återställningskopior har bevarats. Kontrollera lagringen och försök läsa in igen.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

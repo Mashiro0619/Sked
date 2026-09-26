@@ -275,6 +275,10 @@ class AppStorageLayout {
       main: _fileInRoot(root, appDataFileName),
       backup: _fileInRoot(root, '$appDataFileName$backupSuffix'),
       temporary: _fileInRoot(root, '$appDataFileName$temporarySuffix'),
+      failedTemporary: _fileInRoot(
+        root,
+        '$appDataFileName$failedTemporarySuffix',
+      ),
     );
   }
 
@@ -411,12 +415,16 @@ class AppDataStoragePaths {
     required this.main,
     required this.backup,
     required this.temporary,
-  });
+    File? failedTemporary,
+  }) : failedTemporary =
+           failedTemporary ??
+           File('${main.path}${AppStorageLayout.failedTemporarySuffix}');
 
   final Directory root;
   final File main;
   final File backup;
   final File temporary;
+  final File failedTemporary;
 }
 
 class SchoolSiteStoragePaths {

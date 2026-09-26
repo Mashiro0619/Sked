@@ -1731,5 +1731,7 @@
     }
   },
   "timePickerWheelMode": "Mit Auswahlrädern wählen",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked konnte nicht bestätigen, ob der letzte Speichervorgang rückgängig gemacht wurde. Schreibvorgänge sind angehalten und Wiederherstellungskopien bleiben erhalten. Prüfe den Speicher und versuche das Laden erneut.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

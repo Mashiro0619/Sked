@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Kiválasztás görgetőkerekekkel",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "A Sked nem tudta megerősíteni, hogy a legutóbbi mentés vissza lett-e vonva. Az írás szünetel, a helyreállítási másolatok megmaradtak. Ellenőrizze a tárhelyet, és próbálja újra betölteni az adatokat.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

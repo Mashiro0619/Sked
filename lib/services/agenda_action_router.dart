@@ -7,6 +7,7 @@ import '../providers/timetable_provider.dart';
 import 'agenda_notification_fingerprint.dart';
 import 'agenda_projection_service.dart';
 import 'notification_planner.dart';
+import 'notification_occurrence_resolver.dart';
 
 /// Prefix used by notification payloads. Widget intents may omit it and send
 /// a target object directly, but notification payloads always carry it so a
@@ -504,37 +505,16 @@ class AgendaActionRouter {
     if (event == null) return false;
     final date = target.dateIso == null ? null : _parseDate(target.dateIso);
     if (target.dateIso != null && date == null) return false;
-    final occurrenceStart = _occurrenceStartFromKey(target.occurrenceKey);
-    if (target.occurrenceKey != null && occurrenceStart == null) return false;
-    final searchDate =
-        date ??
-        (occurrenceStart == null
-            ? null
-            : normalizeDateOnly(occurrenceStart.toLocal()));
     GeneralEventOccurrence? matchedOccurrence;
     if (target.occurrenceKey != null) {
-      if (searchDate == null) return false;
-      // dateIso is a source/calendar date and may remain UTC for imported
-      // timed events. Search a small civil-date window around the occurrence
-      // key instead of assuming that one local day contains the event.
-      final start = addCalendarDays(searchDate, -2);
-      final end = addCalendarDays(searchDate, 3);
-      var found = false;
-      for (final occurrence in provider.generalOccurrencesForRange(
-        startInclusive: start,
-        endExclusive: end,
-        onlyVisibleCalendars: true,
-      )) {
-        if (occurrence.calendar.id == scheduleId &&
-            occurrence.event.id == eventId &&
-            occurrence.occurrenceKey == target.occurrenceKey) {
-          found = true;
-          matchedOccurrence = occurrence;
-          break;
-        }
-      }
-      if (!found) return false;
+      matchedOccurrence = resolveNotificationOccurrence(provider, target);
+      if (matchedOccurrence == null) return false;
     }
+    final searchDate =
+        date ??
+        (matchedOccurrence == null
+            ? null
+            : normalizeDateOnly(matchedOccurrence.start.toLocal()));
     if (provider.activeMode != AppMode.general) {
       await provider.switchMode(AppMode.general);
     }
@@ -648,13 +628,6 @@ DateTime? _parseDate(String? value) {
   if (value == null || value.isEmpty) return null;
   final parsed = tryParseStrictIsoDateTime(value);
   return parsed == null ? null : normalizeDateOnly(parsed.toLocal());
-}
-
-DateTime? _occurrenceStartFromKey(String? key) {
-  if (key == null || key.trim().isEmpty) return null;
-  final parts = parseGeneralOccurrenceKey(key.trim());
-  if (parts == null) return null;
-  return tryParseStrictIsoDateTime(parts.startDateTimeIso);
 }
 
 void _validateOptionalActionString(

@@ -2949,6 +2949,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get periodTimesInvalidStatus => '尚未保存 · 请修正标出的时间';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      '上次保存结果尚未确认，Sked 无法确认修改是否已撤回。为保护数据，已暂停写入并保留恢复副本。请检查存储状态后重试读取。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5897,4 +5901,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get periodTimesInvalidStatus => '尚未儲存 · 請修正標示的時間';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      '上次儲存結果尚未確認，Sked 無法確認變更是否已復原。為保護資料，已暫停寫入並保留復原副本。請檢查儲存狀態後重試讀取。';
 }

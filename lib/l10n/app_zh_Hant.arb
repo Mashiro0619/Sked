@@ -2190,5 +2190,7 @@
   "periodTimesSaveFailed": "尚未儲存 · 儲存失敗",
   "@periodTimesSaveFailed": {},
   "periodTimesInvalidStatus": "尚未儲存 · 請修正標示的時間",
-  "@periodTimesInvalidStatus": {}
+  "@periodTimesInvalidStatus": {},
+  "dataRecoveryWriteStateUnknownMessage": "上次儲存結果尚未確認，Sked 無法確認變更是否已復原。為保護資料，已暫停寫入並保留復原副本。請檢查儲存狀態後重試讀取。",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

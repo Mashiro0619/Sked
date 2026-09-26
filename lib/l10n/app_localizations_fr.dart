@@ -3167,4 +3167,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked ne peut pas confirmer si le dernier enregistrement a été annulé. Les écritures sont suspendues et les copies de récupération sont conservées. Vérifiez le stockage, puis réessayez le chargement.';
 }

@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Valitse vierityspyörillä",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked ei voinut vahvistaa, peruttiinko viimeisin tallennus. Kirjoittaminen on keskeytetty ja palautuskopiot säilytetty. Tarkista tallennustila ja yritä lataamista uudelleen.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

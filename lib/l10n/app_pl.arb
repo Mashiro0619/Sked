@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Wybierz za pomocą pokręteł",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked nie może potwierdzić, czy ostatni zapis został wycofany. Zapisywanie jest wstrzymane, a kopie odzyskiwania zostały zachowane. Sprawdź pamięć i spróbuj ponownie wczytać dane.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

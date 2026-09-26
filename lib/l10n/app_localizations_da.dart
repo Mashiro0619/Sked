@@ -3133,4 +3133,8 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked kunne ikke bekræfte, om den seneste lagring blev rullet tilbage. Skrivning er sat på pause, og gendannelseskopier er bevaret. Kontrollér lageret, og prøv at indlæse igen.';
 }

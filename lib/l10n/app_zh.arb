@@ -2188,5 +2188,7 @@
   "periodTimesSaveFailed": "尚未保存 · 保存失败",
   "@periodTimesSaveFailed": {},
   "periodTimesInvalidStatus": "尚未保存 · 请修正标出的时间",
-  "@periodTimesInvalidStatus": {}
+  "@periodTimesInvalidStatus": {},
+  "dataRecoveryWriteStateUnknownMessage": "上次保存结果尚未确认，Sked 无法确认修改是否已撤回。为保护数据，已暂停写入并保留恢复副本。请检查存储状态后重试读取。",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

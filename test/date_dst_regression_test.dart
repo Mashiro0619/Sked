@@ -23,6 +23,68 @@ void main() {
   final scenario = _scenarioFor(zone);
 
   group('calendar behavior in $zone', () {
+    for (final entry in [
+      (
+        const GeneralEventRecurrenceRule(type: GeneralEventRecurrence.daily),
+        DateTime.utc(2026, 9, 9, 23, 30),
+      ),
+      (
+        const GeneralEventRecurrenceRule(type: GeneralEventRecurrence.weekly),
+        DateTime.utc(2026, 9, 7, 23, 30),
+      ),
+      (
+        const GeneralEventRecurrenceRule(type: GeneralEventRecurrence.monthly),
+        DateTime.utc(2026, 10, 31, 23, 30),
+      ),
+      (
+        const GeneralEventRecurrenceRule(
+          type: GeneralEventRecurrence.custom,
+          unit: GeneralEventRecurrenceUnit.day,
+          interval: 2,
+        ),
+        DateTime.utc(2026, 9, 8, 23, 30),
+      ),
+    ]) {
+      test('mixed UTC/local query preserves first occurrence for $entry', () {
+        final (rule, expected) = entry;
+        final event = GeneralEvent(
+          id: 'utc',
+          calendarId: 'calendar',
+          title: 'UTC recurrence',
+          startDateTimeIso: '2026-08-31T23:30:00.000Z',
+          endDateTimeIso: '2026-09-01T00:30:00.000Z',
+          recurrenceRule: rule,
+        );
+        final calendar = GeneralSchedule(
+          id: 'calendar',
+          name: 'Calendar',
+          events: [event],
+        );
+        List<GeneralEventOccurrence> query(
+          DateTime start,
+          DateTime end, [
+          GeneralEvent? value,
+        ]) => expandGeneralEventOccurrences(
+          calendar: calendar,
+          event: value ?? event,
+          startInclusive: start,
+          endExclusive: end,
+        );
+        final start = expected.subtract(const Duration(hours: 1));
+        final end = expected.add(const Duration(hours: 1));
+        expect(query(start, end).map((o) => o.start), [expected]);
+        expect(query(start.toLocal(), end.toLocal()).map((o) => o.start), [
+          expected,
+        ]);
+        final ended = event.copyWith(recurrenceRule: rule.copyWith(count: 1));
+        expect(query(start.toLocal(), end.toLocal(), ended), isEmpty);
+        final until = event.copyWith(
+          recurrenceRule: rule.copyWith(untilDateIso: '2026-08-31'),
+        );
+        expect(query(start.toLocal(), end.toLocal(), until), isEmpty);
+      });
+    }
+
     test('the requested timezone is active', () {
       expect(scenario.springBefore.timeZoneOffset, scenario.springOffsetBefore);
       expect(scenario.springAfter.timeZoneOffset, scenario.springOffsetAfter);

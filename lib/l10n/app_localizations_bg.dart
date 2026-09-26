@@ -3162,4 +3162,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked не може да потвърди дали последното записване е отменено. Записването е спряно, а копията за възстановяване са запазени. Проверете хранилището и опитайте да заредите отново.';
 }

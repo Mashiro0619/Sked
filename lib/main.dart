@@ -16,6 +16,7 @@ import 'screens/app_home_screen.dart';
 import 'services/app_instance_lease.dart';
 import 'services/agenda_background_reconciler.dart';
 import 'services/agenda_coordinator.dart';
+import 'services/notification_occurrence_resolver.dart';
 import 'widgets/app_modal_sheet.dart';
 import 'widgets/course_details_sheet.dart';
 import 'widgets/course_editor_sheet.dart';
@@ -595,32 +596,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         rawDate == null) {
       return;
     }
-    final parsedDate = tryParseStrictIsoDateTime(rawDate);
-    if (parsedDate == null) return;
-    final keyParts = parseGeneralOccurrenceKey(occurrenceKey);
-    final keyStart = keyParts == null
-        ? null
-        : tryParseStrictIsoDateTime(keyParts.startDateTimeIso);
-    // The target date is retained for compatibility, but a timed UTC event
-    // can cross the local midnight boundary. Search from the occurrence key's
-    // instant so details lookup uses the same civil-date window as routing.
-    final searchDate = normalizeDateOnly((keyStart ?? parsedDate).toLocal());
-    final start = addCalendarDays(searchDate, -2);
-    final end = addCalendarDays(searchDate, 3);
-    GeneralEventOccurrence? occurrence;
-    for (final candidate in widget.provider.generalOccurrencesForRange(
-      startInclusive: start,
-      endExclusive: end,
-      onlyVisibleCalendars: true,
-    )) {
-      if (candidate.calendar.id == calendarId &&
-          candidate.event.id == eventId &&
-          candidate.occurrenceKey == occurrenceKey) {
-        occurrence = candidate;
-        break;
-      }
-    }
-    final selectedOccurrence = occurrence;
+    if (tryParseStrictIsoDateTime(rawDate) == null) return;
+    final selectedOccurrence = resolveNotificationOccurrence(
+      widget.provider,
+      target,
+    );
     if (selectedOccurrence == null || !context.mounted) return;
     await showAppModalSheet<void>(
       context: context,

@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Выбрать прокруткой",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked не удалось подтвердить отмену последнего сохранения. Запись приостановлена, копии для восстановления сохранены. Проверьте хранилище и повторите загрузку.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

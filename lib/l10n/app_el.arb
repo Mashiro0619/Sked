@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Επιλογή με τροχούς κύλισης",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Το Sked δεν μπόρεσε να επιβεβαιώσει αν αναιρέθηκε η τελευταία αποθήκευση. Οι εγγραφές έχουν ανασταλεί και διατηρούνται αντίγραφα ανάκτησης. Ελέγξτε τον χώρο αποθήκευσης και δοκιμάστε ξανά τη φόρτωση.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

@@ -3130,4 +3130,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked could not confirm whether the last save was rolled back. Writing is paused and recovery copies are preserved. Check your storage and retry loading.';
 }

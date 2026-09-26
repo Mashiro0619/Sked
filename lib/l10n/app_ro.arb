@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Selectează cu rotițele",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked nu a putut confirma dacă ultima salvare a fost anulată. Scrierea este suspendată, iar copiile de recuperare sunt păstrate. Verificați stocarea și încercați din nou încărcarea.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

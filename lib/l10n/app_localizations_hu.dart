@@ -3149,4 +3149,8 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'A Sked nem tudta megerősíteni, hogy a legutóbbi mentés vissza lett-e vonva. Az írás szünetel, a helyreállítási másolatok megmaradtak. Ellenőrizze a tárhelyet, és próbálja újra betölteni az adatokat.';
 }

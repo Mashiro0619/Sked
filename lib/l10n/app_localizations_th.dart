@@ -3119,4 +3119,8 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked ไม่สามารถยืนยันได้ว่าการบันทึกครั้งล่าสุดถูกย้อนกลับแล้วหรือไม่ จึงหยุดการเขียนและเก็บสำเนาสำหรับกู้คืนไว้ โปรดตรวจสอบพื้นที่จัดเก็บแล้วลองโหลดข้อมูลอีกครั้ง';
 }

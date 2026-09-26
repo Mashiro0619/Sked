@@ -3077,4 +3077,8 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      '前回の保存が取り消されたかどうかを確認できませんでした。書き込みを停止し、復元用のコピーを保持しています。ストレージを確認してから、読み込みを再試行してください。';
 }

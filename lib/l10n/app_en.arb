@@ -2204,5 +2204,7 @@
   "periodTimesSaveFailed": "Not saved · Save failed",
   "@periodTimesSaveFailed": {},
   "periodTimesInvalidStatus": "Not saved · Fix the highlighted times",
-  "@periodTimesInvalidStatus": {}
+  "@periodTimesInvalidStatus": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked could not confirm whether the last save was rolled back. Writing is paused and recovery copies are preserved. Check your storage and retry loading.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

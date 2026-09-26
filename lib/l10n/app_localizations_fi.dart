@@ -3142,4 +3142,8 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked ei voinut vahvistaa, peruttiinko viimeisin tallennus. Kirjoittaminen on keskeytetty ja palautuskopiot säilytetty. Tarkista tallennustila ja yritä lataamista uudelleen.';
 }

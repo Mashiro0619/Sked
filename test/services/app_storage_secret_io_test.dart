@@ -86,8 +86,8 @@ void main() {
     await _expectFileExcludes(await layout.appDataFile, sentinel);
     await _expectFileExcludes(await layout.appDataBackupFile, sentinel);
 
-    // Leave a real write-in-progress sidecar behind by making the final
-    // promotion fail after IoTimetableStorage has flushed its .tmp file.
+    // A failed replacement now quarantines the flushed temporary snapshot.
+    // Recovery evidence must exclude secrets just like active storage does.
     final interruptedLayout = AppStorageLayout(
       directoryProvider: () async =>
           Directory(path.join(tempDirectory.path, 'interrupted-support')),
@@ -101,7 +101,7 @@ void main() {
       throwsA(isA<StorageWriteException>()),
     );
     await _expectFileExcludes(
-      await interruptedLayout.appDataTemporaryFile,
+      (await interruptedLayout.appDataPaths()).failedTemporary,
       sentinel,
     );
 

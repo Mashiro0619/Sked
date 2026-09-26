@@ -3160,4 +3160,8 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked no pudo confirmar si se revirtió el último guardado. Las escrituras están pausadas y se conservan las copias de recuperación. Revisa el almacenamiento y vuelve a cargar los datos.';
 }

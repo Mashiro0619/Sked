@@ -1729,5 +1729,7 @@
     }
   },
   "timePickerWheelMode": "Izberi z drsnimi kolesci",
-  "@timePickerWheelMode": {}
+  "@timePickerWheelMode": {},
+  "dataRecoveryWriteStateUnknownMessage": "Sked ni mogel potrditi, ali je bilo zadnje shranjevanje razveljavljeno. Pisanje je ustavljeno, obnovitvene kopije pa so ohranjene. Preverite shrambo in poskusite znova naložiti podatke.",
+  "@dataRecoveryWriteStateUnknownMessage": {}
 }

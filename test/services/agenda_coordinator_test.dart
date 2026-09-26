@@ -377,6 +377,8 @@ void main() {
 
       await provider.updateLocaleCode('zh');
       await Future<void>.delayed(Duration.zero);
+      // The complete commit now runs inside the serialized runtime queue.
+      await coordinator.reconcileRecovery();
 
       expect((await runtime.readProjectionFence()).blocked, isFalse);
     },

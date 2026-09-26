@@ -3137,4 +3137,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked kunde inte bekräfta om den senaste sparningen återställdes. Skrivning är pausad och återställningskopior har bevarats. Kontrollera lagringen och försök läsa in igen.';
 }

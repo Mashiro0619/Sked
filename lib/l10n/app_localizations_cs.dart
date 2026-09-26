@@ -3141,4 +3141,8 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked nemohl ověřit, zda bylo poslední uložení vráceno zpět. Zápis je pozastaven a kopie pro obnovení jsou zachovány. Zkontrolujte úložiště a zkuste data znovu načíst.';
 }

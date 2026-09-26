@@ -3156,4 +3156,8 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get periodTimesInvalidStatus =>
       'Not saved · Fix the highlighted times';
+
+  @override
+  String get dataRecoveryWriteStateUnknownMessage =>
+      'Sked не удалось подтвердить отмену последнего сохранения. Запись приостановлена, копии для восстановления сохранены. Проверьте хранилище и повторите загрузку.';
 }

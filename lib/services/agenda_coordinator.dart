@@ -5,6 +5,7 @@ import '../models/workspace_availability.dart';
 import 'agenda_runtime_mutation_lock.dart';
 import '../providers/timetable_provider.dart';
 import 'agenda_action_router.dart';
+import 'notification_occurrence_resolver.dart';
 import 'agenda_notification_service.dart';
 import 'agenda_notification_runtime_store.dart';
 import 'agenda_projection_service.dart';
@@ -13,8 +14,8 @@ import 'android_productivity_bridge.dart';
 /// Coordinates durable agenda projections with platform integrations.
 ///
 /// The coordinator deliberately listens to [TimetableProvider.committedData]
-/// instead of [ChangeNotifier] notifications.  A UI rebuild or a failed save
-/// therefore cannot schedule a notification.
+/// for data changes. Provider listeners only observe readiness transitions;
+/// a UI rebuild or a failed save cannot project an optimistic snapshot.
 /// Platform-specific sources remain behind [AgendaProjectionService], while
 /// this class only handles lifecycle, coalescing and error isolation.
 class AgendaCoordinator {
@@ -74,9 +75,16 @@ class AgendaCoordinator {
   bool _disposed = false;
   int? _lastPublishedRevision;
   Timer? _notificationRetryTimer;
-  AppData? _notificationRetryData;
-  int? _notificationRetryRevision;
-  bool _notificationRetryAttempted = false;
+  _AgendaProjectionWork? _notificationRetryWork;
+  int _projectionEpoch = 0;
+  bool _startRequested = false;
+  bool _wasProjectable = false;
+  bool _restartAfterAttempt = false;
+  Future<void>? _explicitReady;
+  bool _explicitReadyCompleted = true;
+  Object? _explicitReadyError;
+  StackTrace? _explicitReadyStackTrace;
+  void Function()? _checkStartupReadiness;
   Timer? _foregroundActionPollTimer;
 
   bool get isStarted => _started && !_disposed;
@@ -92,26 +100,96 @@ class AgendaCoordinator {
   /// Starts listeners and performs one initial projection after the provider
   /// has loaded. Calling this method more than once is harmless.
   Future<void> start({Future<void>? providerReady}) {
-    if (_disposed) return Future<void>.value();
+    if (_disposed || _started) return Future<void>.value();
+    _startRequested = true;
+    _observeReadiness();
     final inFlight = _startOperation;
     if (inFlight != null) return inFlight;
-    final operation = _start(providerReady);
+    if (providerReady != null && !identical(providerReady, _explicitReady)) {
+      _trackExplicitReadiness(providerReady);
+    }
+    final operation = _start();
     _startOperation = operation;
     return operation.whenComplete(() {
       if (identical(_startOperation, operation)) _startOperation = null;
+      if (_restartAfterAttempt) {
+        _restartAfterAttempt = false;
+        _requestReadyStart();
+      }
     });
   }
 
-  Future<void> _start(Future<void>? providerReady) async {
+  bool get _readyToStart =>
+      _canProjectProviderData &&
+      _explicitReadyCompleted &&
+      _explicitReadyError == null;
+
+  void _observeReadiness() {
+    if (_removeProviderReadyListener != null) return;
+    _wasProjectable = _canProjectProviderData;
+    _provider.addListener(_onProviderReadinessChanged);
+    _removeProviderReadyListener = () {
+      _provider.removeListener(_onProviderReadinessChanged);
+      _removeProviderReadyListener = null;
+    };
+  }
+
+  void _onProviderReadinessChanged() {
+    if (_disposed) return;
+    final projectable = _canProjectProviderData;
+    final becameProjectable = projectable && !_wasProjectable;
+    _wasProjectable = projectable;
+    _checkStartupReadiness?.call();
+    if (!becameProjectable || !_startRequested) return;
+    if (_started) {
+      // A reload confirms readable data, not authority to reopen a clear fence.
+      unawaited(reconcileRecovery());
+    } else {
+      _requestReadyStart();
+    }
+  }
+
+  void _trackExplicitReadiness(Future<void> ready) {
+    _explicitReady = ready;
+    _explicitReadyCompleted = false;
+    _explicitReadyError = null;
+    _explicitReadyStackTrace = null;
+    unawaited(
+      ready.then<void>(
+        (_) {
+          if (_disposed || !identical(ready, _explicitReady)) return;
+          _explicitReadyCompleted = true;
+          _checkStartupReadiness?.call();
+          _requestReadyStart();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (_disposed || !identical(ready, _explicitReady)) return;
+          _explicitReadyError = error;
+          _explicitReadyStackTrace = stackTrace;
+          final check = _checkStartupReadiness;
+          if (check != null) {
+            check();
+          } else {
+            onError?.call(error, stackTrace);
+          }
+        },
+      ),
+    );
+  }
+
+  void _requestReadyStart() {
+    if (_disposed || _started || !_startRequested || !_readyToStart) return;
+    if (_startOperation != null) {
+      _restartAfterAttempt = true;
+      return;
+    }
+    unawaited(start());
+  }
+
+  Future<void> _start() async {
     if (_started || _disposed) return;
     try {
-      if (providerReady != null) {
-        await _awaitProviderReady(providerReady);
-      } else {
-        // AppBootstrap normally starts the provider load before constructing
-        // the shell. The deadline prevents a failed load from hanging startup.
-        await _awaitProviderReady();
-      }
+      await _awaitProviderReady();
       if (_disposed) return;
       _started = true;
       _commitSubscription = _provider.committedData.listen(_onCommit);
@@ -119,89 +197,38 @@ class AgendaCoordinator {
         _intentSubscription = _productivityBridge.agendaIntents.listen(
           _onAgendaIntent,
         );
-        // Subscribe before initialization so a cold-start intent emitted while
-        // the method channel is being installed is not lost.
         await _productivityBridge.initialize();
       }
-      // Do not reopen a blocked projection fence merely because the provider
-      // loaded writable data. A failed clear can leave the old file intact or
-      // partially removed; only a subsequent successful committed-data event
-      // has enough durability authority to activate a fresh generation.
-      // Starting or resuming the app must not invalidate a notification that
-      // has just become due while Android is delivering it. Only a durable
-      // data commit gets an authoritative replacement pass.
+      // Startup/reload only protects and renews a durable plan. Only a real
+      // committed-data event is allowed to reactivate a cleared generation.
       await reconcileRecovery();
     } catch (error, stackTrace) {
       _started = false;
-      final commitSubscription = _commitSubscription;
-      final intentSubscription = _intentSubscription;
+      final commits = _commitSubscription;
+      final intents = _intentSubscription;
       _commitSubscription = null;
       _intentSubscription = null;
-      if (commitSubscription != null) {
-        unawaited(commitSubscription.cancel());
-      }
-      if (intentSubscription != null) {
-        unawaited(intentSubscription.cancel());
-      }
+      if (commits != null) await commits.cancel();
+      if (intents != null) await intents.cancel();
       onError?.call(error, stackTrace);
     }
   }
 
-  /// Waits for the provider without a polling timer that can outlive a
-  /// short-lived widget test or a hot-restarted application shell.
-  Future<void> _awaitProviderReady([Future<void>? explicitReady]) async {
+  Future<void> _awaitProviderReady() async {
     if (_disposed) return;
-
-    // An explicit readiness future is an optional additional gate (used by
-    // bootstrap/tests); it must not allow reconciliation to start before the
-    // provider has actually published its loaded state.  The previous
-    // Future.any implementation could race those two signals and build a
-    // snapshot from a partially hydrated provider.
     final ready = Completer<void>();
-    // A read-only recovery snapshot must not become the source for durable
-    // notification scheduling. Wait until both hydration and write access are
-    // available; provider recovery actions notify listeners and will wake this
-    // gate without polling.
-    var providerReady = _provider.isLoaded && _provider.canWrite;
-    var explicitReadyCompleted = explicitReady == null;
-
-    void completeWhenReady() {
-      if (providerReady && explicitReadyCompleted && !ready.isCompleted) {
+    void check() {
+      if (ready.isCompleted) return;
+      final error = _explicitReadyError;
+      if (error != null) {
+        ready.completeError(error, _explicitReadyStackTrace);
+      } else if (_readyToStart) {
         ready.complete();
       }
     }
 
-    void onProviderChanged() {
-      providerReady = _provider.isLoaded && _provider.canWrite;
-      completeWhenReady();
-    }
-
-    _removeProviderReadyListener = () {
-      _provider.removeListener(onProviderChanged);
-      _removeProviderReadyListener = null;
-    };
-    _provider.addListener(onProviderChanged);
-
-    if (explicitReady != null) {
-      // Consume errors here as well as on the combined wait.  This prevents a
-      // late-failing caller future from becoming an unhandled error when the
-      // coordinator is disposed while it is waiting.
-      unawaited(
-        explicitReady.then<void>(
-          (_) {
-            explicitReadyCompleted = true;
-            completeWhenReady();
-          },
-          onError: (Object error, StackTrace stackTrace) {
-            if (!ready.isCompleted) {
-              ready.completeError(error, stackTrace);
-            }
-          },
-        ),
-      );
-    }
-    completeWhenReady();
-
+    _checkStartupReadiness = check;
+    check();
     _providerReadyTimeout = Timer(startupTimeout, () {
       if (!ready.isCompleted) {
         ready.completeError(
@@ -214,14 +241,14 @@ class AgendaCoordinator {
     });
     try {
       await Future.any<void>([ready.future, _disposeSignal.future]);
-      if (_disposed) return;
     } finally {
       _providerReadyTimeout?.cancel();
       _providerReadyTimeout = null;
-      _removeProviderReadyListener?.call();
-      if (!ready.isCompleted) {
-        ready.complete();
+      if (identical(_checkStartupReadiness, check)) {
+        _checkStartupReadiness = null;
       }
+      if (!ready.isCompleted) ready.complete();
+      // The independent readiness listener intentionally survives this attempt.
     }
   }
 
@@ -233,80 +260,71 @@ class AgendaCoordinator {
     int? revision,
     AgendaNotificationReconcileMode mode =
         AgendaNotificationReconcileMode.authoritative,
-  }) {
-    if (_disposed) return Future<void>.value();
-    Future<void> operation() async {
-      // Data clear reserves the provider before its file operation begins and
-      // keeps that reservation after a successful clear. Do not let an old
-      // commit snapshot recreate reminders while that shutdown boundary is in
-      // effect. clearRuntime is serialized through this same queue, so an
-      // already-running reconciliation is cancelled after it finishes.
-      if (!_canProjectProviderData) return;
-      final fence = await _notificationService.readProjectionFence();
-      if (fence.blocked) return;
-      final requested = data ?? _provider.appData;
-      final committed = _provider.committedAppData;
-      final snapshot = requested.sameWorkspaceAvailability(committed)
-          ? requested
-          : committed;
-      final effectiveRevision = revision ?? _lastPublishedRevision;
-      AgendaNotificationStatus? notificationStatus;
-      var notificationProjectionSucceeded = false;
-      // A read-only/recovery-gated provider must never schedule notifications
-      // from a snapshot that cannot be persisted.
-      if (_canProjectProviderData) {
-        try {
-          notificationStatus = await _notificationService.reconcile(
+  }) => _reconcileWork(
+    _AgendaProjectionWork(
+      data: data ?? _provider.committedAppData,
+      revision: revision,
+      mode: mode,
+      epoch: _projectionEpoch,
+    ),
+  );
+
+  Future<void> _reconcileWork(
+    _AgendaProjectionWork work, {
+    bool isRetry = false,
+  }) async {
+    if (_disposed) return;
+    try {
+      await _enqueueReconcile(
+        () => withAgendaRuntimeMutationLock(() async {
+          bool mayProject() =>
+              !_disposed &&
+              work.epoch == _projectionEpoch &&
+              _canProjectProviderData;
+          if (!mayProject()) return;
+          if (work.activateFence) {
+            await _notificationService.activateProjectionAfterDurableData();
+            if (!mayProject()) return;
+          }
+          final fence = await _notificationService.readProjectionFence();
+          if (fence.blocked || !mayProject()) return;
+          final committed = _provider.committedAppData;
+          final snapshot = work.data.sameWorkspaceAvailability(committed)
+              ? work.data
+              : committed;
+          final status = await _notificationService.reconcile(
             snapshot,
             anchor: _clock(),
-            mode: mode,
+            mode: work.mode,
             projectionFence: fence,
             onPayload: _onNotificationTap,
             onAction: _onNotificationAction,
           );
-          notificationProjectionSucceeded = true;
-        } catch (error, stackTrace) {
-          onError?.call(error, stackTrace);
-          _scheduleNotificationRetry(
-            data: snapshot,
-            revision: effectiveRevision,
-          );
-        }
-      }
-      // Do not mark a committed snapshot as published, and do not replace a
-      // previously valid renewal wake-up, when the notification platform
-      // failed. The next resume/manual diagnostic pass must be able to retry
-      // the same durable snapshot instead of silently treating this commit as
-      // complete.
-      if (!notificationProjectionSucceeded) return;
-      _clearNotificationRetry();
-      // A clear can begin while the platform call above is in flight. The
-      // queued clearRuntime pass will remove any already-written requests; do
-      // not add a new background wakeup after the provider becomes unsafe.
-      if (!_canProjectProviderData ||
-          !(await _notificationService.isProjectionFenceCurrent(fence))) {
-        return;
-      }
-      try {
-        // A native background wake-up exists only for best-effort renewal; it
-        // never delivers a user-facing reminder or competes at its fire time.
-        final nextRenewalAt =
-            notificationStatus?.nextRenewalAt ??
-            _notificationService.status.nextRenewalAt;
-        if (_productivityBridge.isSupported) {
-          await _productivityBridge.scheduleAgendaReconciliation(nextRenewalAt);
-        }
-        _lastPublishedRevision = effectiveRevision;
-      } catch (error, stackTrace) {
-        onError?.call(error, stackTrace);
+          if (!mayProject() ||
+              !(await _notificationService.isProjectionFenceCurrent(fence))) {
+            return;
+          }
+          if (_productivityBridge.isSupported) {
+            await _productivityBridge.scheduleAgendaReconciliation(
+              status.nextRenewalAt,
+            );
+          }
+          if (!mayProject()) return;
+          _lastPublishedRevision = work.revision ?? _lastPublishedRevision;
+          _clearNotificationRetry();
+        }),
+      );
+    } catch (error, stackTrace) {
+      if (_disposed) return;
+      onError?.call(error, stackTrace);
+      if (!isRetry && work.epoch == _projectionEpoch) {
+        _scheduleNotificationRetry(work);
       }
     }
-
-    return _enqueueReconcile(() => withAgendaRuntimeMutationLock(operation));
   }
 
-  /// Requests a fresh platform projection after returning to the foreground.
-  Future<void> onResume() => reconcileRecovery();
+  /// A resume repairs startup subscriptions as well as refreshing the plan.
+  Future<void> onResume() => _started ? reconcileRecovery() : start();
 
   /// Rebuilds only future notifications and protects managed notifications
   /// that have become due within the recovery grace window.
@@ -400,6 +418,7 @@ class AgendaCoordinator {
   /// platform recovery paths.
   Future<void> clearRuntime() async {
     if (_disposed) return;
+    _projectionEpoch += 1;
     _clearNotificationRetry();
     // Drop unconsumed commits immediately. A commit already being drained is
     // still harmless because reconcileNow checks the provider's clear gate.
@@ -429,15 +448,18 @@ class AgendaCoordinator {
 
   void _onCommit(AppDataCommit commit) {
     if (_disposed) return;
-    _notificationRetryTimer?.cancel();
-    _notificationRetryTimer = null;
-    _notificationRetryData = null;
-    _notificationRetryRevision = null;
-    _notificationRetryAttempted = false;
+    _projectionEpoch += 1;
+    _clearNotificationRetry();
     _pendingCommit = commit;
     if (_reconcileQueued) return;
     _reconcileQueued = true;
-    scheduleMicrotask(_drainCommits);
+    scheduleMicrotask(() {
+      unawaited(
+        _drainCommits().catchError((Object error, StackTrace stackTrace) {
+          onError?.call(error, stackTrace);
+        }),
+      );
+    });
   }
 
   Future<void> _drainCommits() async {
@@ -446,19 +468,19 @@ class AgendaCoordinator {
         final commit = _pendingCommit;
         _pendingCommit = null;
         if (commit == null) break;
-        // The commit stream is emitted only after AppRepository.save succeeds.
-        // It is the sole path that may reactivate a projection fence after a
-        // clear; failed saves never reach here.
-        if (_canProjectProviderData) {
-          await _notificationService.activateProjectionAfterDurableData();
-        }
-        await reconcileNow(data: commit.snapshot, revision: commit.revision);
+        await _reconcileWork(
+          _AgendaProjectionWork(
+            data: commit.snapshot,
+            revision: commit.revision,
+            mode: AgendaNotificationReconcileMode.authoritative,
+            epoch: _projectionEpoch,
+            activateFence: true,
+          ),
+        );
       }
     } finally {
       _reconcileQueued = false;
-      if (_pendingCommit != null && !_disposed) {
-        _onCommit(_pendingCommit!);
-      }
+      if (_pendingCommit != null && !_disposed) _onCommit(_pendingCommit!);
     }
   }
 
@@ -517,34 +539,8 @@ class AgendaCoordinator {
           rawDate == null) {
         return true;
       }
-      final parsedDate = tryParseStrictIsoDateTime(rawDate);
-      if (parsedDate == null) return true;
-      final keyParts = parseGeneralOccurrenceKey(occurrenceKey);
-      final keyStart = keyParts == null
-          ? null
-          : tryParseStrictIsoDateTime(keyParts.startDateTimeIso);
-      final targetDate = normalizeDateOnly(parsedDate.toLocal());
-      final searchDate = keyStart == null
-          ? targetDate
-          : normalizeDateOnly(keyStart.toLocal());
-      // Imported timed events can carry a UTC occurrence date that differs
-      // from the user's local civil date. Search around the exact occurrence
-      // instant so a handled action is not lost at a timezone boundary.
-      final start = addCalendarDays(searchDate, -2);
-      final end = addCalendarDays(searchDate, 3);
-      GeneralEventOccurrence? occurrence;
-      for (final candidate in _provider.generalOccurrencesForRange(
-        startInclusive: start,
-        endExclusive: end,
-        onlyVisibleCalendars: true,
-      )) {
-        if (candidate.calendar.id == calendarId &&
-            candidate.event.id == eventId &&
-            candidate.occurrenceKey == occurrenceKey) {
-          occurrence = candidate;
-          break;
-        }
-      }
+      if (tryParseStrictIsoDateTime(rawDate) == null) return true;
+      final occurrence = resolveNotificationOccurrence(_provider, target);
       if (occurrence == null ||
           _provider.isGeneralReminderHandled(occurrence)) {
         return true;
@@ -580,8 +576,8 @@ class AgendaCoordinator {
     _notificationRetryTimer = null;
     _foregroundActionPollTimer?.cancel();
     _foregroundActionPollTimer = null;
-    _notificationRetryData = null;
-    _notificationRetryRevision = null;
+    _notificationRetryWork = null;
+    _projectionEpoch += 1;
     _removeProviderReadyListener?.call();
     if (!_disposeSignal.isCompleted) _disposeSignal.complete();
     final commitSubscription = _commitSubscription;
@@ -593,34 +589,44 @@ class AgendaCoordinator {
     _productivityBridge.dispose();
   }
 
-  void _scheduleNotificationRetry({
-    required AppData data,
-    required int? revision,
-  }) {
-    if (_disposed || _notificationRetryAttempted) return;
-    _notificationRetryAttempted = true;
-    _notificationRetryData = data;
-    _notificationRetryRevision = revision;
+  void _scheduleNotificationRetry(_AgendaProjectionWork work) {
+    if (_disposed || _notificationRetryTimer != null) return;
+    _notificationRetryWork = work;
     _notificationRetryTimer = Timer(const Duration(seconds: 5), () {
       _notificationRetryTimer = null;
-      final retryData = _notificationRetryData;
-      final retryRevision = _notificationRetryRevision;
-      if (retryData == null || _disposed || !_canProjectProviderData) return;
-      unawaited(
-        reconcileNow(
-          data: retryData,
-          revision: retryRevision,
-          mode: AgendaNotificationReconcileMode.authoritative,
-        ),
-      );
+      final retry = _notificationRetryWork;
+      _notificationRetryWork = null;
+      if (retry == null ||
+          _disposed ||
+          retry.epoch != _projectionEpoch ||
+          !_canProjectProviderData) {
+        return;
+      }
+      unawaited(_reconcileWork(retry, isRetry: true));
     });
   }
 
   void _clearNotificationRetry() {
     _notificationRetryTimer?.cancel();
     _notificationRetryTimer = null;
-    _notificationRetryData = null;
-    _notificationRetryRevision = null;
-    _notificationRetryAttempted = false;
+    _notificationRetryWork = null;
   }
+}
+
+/// Retry authority travels with the original durable commit, never with a
+/// generic recovery request. The epoch invalidates superseded queued work.
+class _AgendaProjectionWork {
+  const _AgendaProjectionWork({
+    required this.data,
+    required this.revision,
+    required this.mode,
+    required this.epoch,
+    this.activateFence = false,
+  });
+
+  final AppData data;
+  final int? revision;
+  final AgendaNotificationReconcileMode mode;
+  final int epoch;
+  final bool activateFence;
 }
