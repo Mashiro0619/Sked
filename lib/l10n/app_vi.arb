@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Các bản cập nhật do Microsoft Store quản lý",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Nhận bản cập nhật phát hành trước",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Bao gồm các phiên bản Alpha, Beta và RC có thể chưa ổn định. Khi tắt, chỉ cung cấp các phiên bản ổn định.",

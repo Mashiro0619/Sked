@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "업데이트는 Microsoft Store에서 관리합니다",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "사전 출시 업데이트 받기",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "불안정할 수 있는 Alpha, Beta, RC 버전도 확인합니다. 끄면 안정 버전만 제공됩니다.",

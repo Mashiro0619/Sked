@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "A frissítéseket a Microsoft Store kezeli",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Előzetes frissítések fogadása",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Az esetleg instabil Alpha, Beta és RC verziók is megjelennek. Kikapcsolva csak stabil verziókat kínál fel.",

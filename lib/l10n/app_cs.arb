@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Aktualizace spravuje Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Přijímat předběžné aktualizace",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Zahrnout verze Alpha, Beta a RC, které mohou být nestabilní. Při vypnutí se nabízejí pouze stabilní verze.",

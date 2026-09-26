@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Οι ενημερώσεις διαχειρίζονται από το Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Λήψη προκαταρκτικών ενημερώσεων",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Συμπερίληψη εκδόσεων Alpha, Beta και RC, που ενδέχεται να είναι ασταθείς. Όταν είναι ανενεργό, προσφέρονται μόνο σταθερές εκδόσεις.",

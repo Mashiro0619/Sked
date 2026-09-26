@@ -519,6 +519,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates => '更新由 Microsoft Store 管理';
+
+  @override
   String get includePrereleaseUpdates => '接收预发布更新';
 
   @override
@@ -3460,6 +3463,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get checkForUpdatesDesc => 'GitHub';
+
+  @override
+  String get microsoftStoreUpdates => '更新由 Microsoft Store 管理';
 
   @override
   String get includePrereleaseUpdates => '接收預先發行更新';

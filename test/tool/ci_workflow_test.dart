@@ -154,6 +154,43 @@ void main() {
     );
   });
 
+  test('Windows CI builds both channels without submitting to the Store', () {
+    final windowsJob = jobs.values.cast<YamlMap>().singleWhere(
+      (job) =>
+          (job['strategy']?['matrix']?['include'] as YamlList?)?.any(
+            (entry) => entry['target'] == 'windows',
+          ) ??
+          false,
+    );
+    final steps = (windowsJob['steps'] as YamlList).cast<YamlMap>().toList();
+    final sideload = stepNamed(
+      steps,
+      'Build Windows MSIX notification package',
+    );
+    final store = stepNamed(steps, 'Build Microsoft Store submission package');
+    final upload = stepNamed(
+      steps,
+      'Upload Microsoft Store submission package',
+    );
+    expect(sideload['run'], 'pwsh -File tool/build_msix.ps1 -Unsigned');
+    expect(store['run'], 'pwsh -File tool/build_msix.ps1 -Store');
+    expect(store['if'], "matrix.target == 'windows'");
+    expect(steps.indexOf(store), greaterThan(steps.indexOf(sideload)));
+    expect(upload['with']['path'], 'build/microsoft-store/*.msix');
+    expect(upload['with']['if-no-files-found'], 'error');
+    expect(
+      stepNamed(steps, 'Build release application')['if'],
+      "matrix.target != 'windows'",
+    );
+    expect(workflow['permissions']['contents'], 'read');
+    expect(
+      steps.any(
+        (step) => (step['run'] as String? ?? '').contains('msstore publish'),
+      ),
+      isFalse,
+    );
+  });
+
   test(
     'test job retains coverage gates and builds the optimized web bundle',
     () {

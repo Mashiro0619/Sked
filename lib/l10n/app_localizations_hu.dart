@@ -553,6 +553,10 @@ class AppLocalizationsHu extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'A frissítéseket a Microsoft Store kezeli';
+
+  @override
   String get includePrereleaseUpdates => 'Előzetes frissítések fogadása';
 
   @override

@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "更新は Microsoft Store で管理されます",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "プレリリース版の更新を受け取る",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "不安定な可能性がある Alpha、Beta、RC 版も確認します。オフの場合は安定版のみが対象です。",

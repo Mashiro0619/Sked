@@ -372,6 +372,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "更新由 Microsoft Store 管理",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "接收预发布更新",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "同时检查 Alpha、Beta、RC 等测试版，可能不稳定；关闭时仅检查正式版。",

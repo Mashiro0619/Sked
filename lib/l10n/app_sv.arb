@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Uppdateringar hanteras av Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Ta emot förhandsversioner",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Inkludera Alpha-, Beta- och RC-versioner, som kan vara instabila. När avstängt erbjuds endast stabila versioner.",

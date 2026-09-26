@@ -556,6 +556,10 @@ class AppLocalizationsEl extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'Οι ενημερώσεις διαχειρίζονται από το Microsoft Store';
+
+  @override
   String get includePrereleaseUpdates => 'Λήψη προκαταρκτικών ενημερώσεων';
 
   @override

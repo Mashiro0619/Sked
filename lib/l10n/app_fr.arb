@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Les mises à jour sont gérées par le Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Recevoir les préversions",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Inclure les versions Alpha, Beta et RC, qui peuvent être instables. Sinon, seules les versions stables sont proposées.",

@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Updates worden beheerd door de Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Voorlopige updates ontvangen",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Neem Alpha-, Beta- en RC-versies op, die instabiel kunnen zijn. Uitgeschakeld worden alleen stabiele versies aangeboden.",

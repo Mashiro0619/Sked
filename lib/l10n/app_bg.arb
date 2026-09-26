@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Актуализациите се управляват от Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Получаване на предварителни версии",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Включва версии Alpha, Beta и RC, които може да са нестабилни. При изключване се предлагат само стабилни версии.",

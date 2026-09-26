@@ -1,6 +1,15 @@
 # Update versions and channels
 
-## User-visible behavior
+## Distribution channels
+
+Microsoft Store builds use Store-managed updates instead of the GitHub/custom
+feed below. Their update action opens the configured Store product; startup is
+quiet and the GitHub prerelease switch is hidden. Store availability and package
+flights are configured in Partner Center, not by this switch. See
+[Microsoft Store publishing](microsoft-store.md) for the separate identity and
+package-version mapping.
+
+## User-visible behavior (non-Store builds)
 
 Settings → About → **Receive prerelease updates** is an app-wide, saved opt-in.
 It defaults to **off**, including for existing installations and installations

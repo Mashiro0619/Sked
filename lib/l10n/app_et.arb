@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Värskendusi haldab Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Eelväljalasete värskendused",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Kaasa Alpha-, Beta- ja RC-versioonid, mis võivad olla ebastabiilsed. Väljalülitatuna pakutakse ainult stabiilseid versioone.",

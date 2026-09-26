@@ -548,6 +548,9 @@ class AppLocalizationsCs extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates => 'Aktualizace spravuje Microsoft Store';
+
+  @override
   String get includePrereleaseUpdates => 'Přijímat předběžné aktualizace';
 
   @override

@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Microsoft Store hallitsee päivityksiä",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Vastaanota ennakkoversioita",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Sisällytä Alpha-, Beta- ja RC-versiot, jotka voivat olla epävakaita. Pois käytöstä tarjotaan vain vakaita versioita.",

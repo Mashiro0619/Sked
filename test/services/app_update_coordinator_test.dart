@@ -11,6 +11,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/services/app_update_coordinator.dart';
 import 'package:sked/services/update_service.dart';
+import 'package:sked/services/microsoft_store_update_service.dart';
 
 const _urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
 
@@ -208,6 +209,66 @@ void main() {
     await check;
     expect(provider.ignoredUpdateVersion, '2.0.0-rc.1');
   });
+
+  for (final source in UpdateCheckSource.values) {
+    testWidgets(
+      'Store $source bypasses GitHub and preserves imported channel preferences',
+      (tester) async {
+        final provider = await _createProvider(
+          availableVersion: '9.0.0-alpha.1',
+          includePrereleases: true,
+        );
+        addTearDown(provider.dispose);
+        final context = await _pumpHarness(tester, provider);
+        final github = _PendingUpdateService();
+        final opened = <Uri>[];
+        await AppUpdateCoordinator.checkForUpdates(
+          context,
+          provider: provider,
+          source: source,
+          updateService: github,
+          storeUpdateService: MicrosoftStoreUpdateService(
+            productId: '9NWRR6ZP6K6T',
+            urlLauncher: (uri, _) async {
+              opened.add(uri);
+              return true;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(github.requestedPrereleases, isNull);
+        expect(opened.length, source == UpdateCheckSource.manual ? 1 : 0);
+        expect(provider.includePrereleaseUpdates, isTrue);
+        expect(provider.availableUpdateVersion, '9.0.0-alpha.1');
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
+      },
+    );
+  }
+
+  testWidgets(
+    'Store launch failure reports an error, not a GitHub update dialog',
+    (tester) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final context = await _pumpHarness(tester, provider);
+      final github = _PendingUpdateService();
+      await AppUpdateCoordinator.checkForUpdates(
+        context,
+        provider: provider,
+        source: UpdateCheckSource.manual,
+        updateService: github,
+        storeUpdateService: MicrosoftStoreUpdateService(
+          productId: '9NWRR6ZP6K6T',
+          urlLauncher: (_, _) async => false,
+        ),
+      );
+      await tester.pump();
+      expect(github.requestedPrereleases, isNull);
+      expect(find.text('Unable to open the update link'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+    },
+  );
 
   testWidgets('manual latest result clears stale state and reports success', (
     tester,

@@ -549,6 +549,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'Các bản cập nhật do Microsoft Store quản lý';
+
+  @override
   String get includePrereleaseUpdates => 'Nhận bản cập nhật phát hành trước';
 
   @override

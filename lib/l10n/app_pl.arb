@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Aktualizacjami zarządza Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Otrzymuj wersje przedpremierowe",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Uwzględniaj wersje Alpha, Beta i RC, które mogą być niestabilne. Po wyłączeniu oferowane są tylko wersje stabilne.",

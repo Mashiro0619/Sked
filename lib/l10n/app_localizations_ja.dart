@@ -533,6 +533,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates => '更新は Microsoft Store で管理されます';
+
+  @override
   String get includePrereleaseUpdates => 'プレリリース版の更新を受け取る';
 
   @override

@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Opdateringer administreres af Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Modtag foreløbige opdateringer",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Medtag Alpha-, Beta- og RC-versioner, som kan være ustabile. Når slået fra, tilbydes kun stabile versioner.",

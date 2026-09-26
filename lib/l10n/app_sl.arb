@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Posodobitve upravlja Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Prejemaj predizdaje",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Vključi različice Alpha, Beta in RC, ki so lahko nestabilne. Če je izklopljeno, so na voljo le stabilne različice.",

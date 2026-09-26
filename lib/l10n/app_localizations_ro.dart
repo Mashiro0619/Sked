@@ -548,6 +548,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'Actualizările sunt gestionate de Microsoft Store';
+
+  @override
   String get includePrereleaseUpdates => 'Primește versiuni preliminare';
 
   @override

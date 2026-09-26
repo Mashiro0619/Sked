@@ -1,6 +1,7 @@
-/// Stable Windows toast identity shared by the Flutter gateway and MSIX
-/// packaging. Changing the AUMID or GUID makes Windows treat the app as a new
-/// notification publisher and strands previously scheduled toasts.
+/// Stable fallback AUMID for unpackaged Windows and the sideload package name.
+/// Packaged apps (including Store builds) use their OS-provided package identity
+/// for toast delivery; do not replace this fallback with a Store package name.
+/// The activation GUID remains shared with both MSIX manifests.
 abstract final class WindowsNotificationIdentity {
   static const appName = 'Sked';
   static const appUserModelId = 'Mashiro.Sked';

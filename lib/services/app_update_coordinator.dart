@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/timetable_provider.dart';
 import '../widgets/expressive_dialog.dart';
 import 'update_service.dart';
+import 'microsoft_store_update_service.dart';
 
 enum UpdateCheckSource { manual, startup }
 
@@ -18,8 +19,21 @@ class AppUpdateCoordinator {
     required TimetableProvider provider,
     required UpdateCheckSource source,
     UpdateService updateService = _updateService,
+    MicrosoftStoreUpdateService storeUpdateService =
+        const MicrosoftStoreUpdateService(),
   }) async {
     if (!provider.canWrite) return;
+    if (storeUpdateService.isEnabled) {
+      // Store installs follow Store availability/flights, not GitHub SemVer.
+      // In particular, startup must neither open a window nor contact GitHub.
+      if (source == UpdateCheckSource.manual) {
+        final opened = await storeUpdateService.openProductPage();
+        if (!opened && context.mounted) {
+          _showMessage(context, AppLocalizations.of(context).openUpdatesFailed);
+        }
+      }
+      return;
+    }
     final includePrereleases = provider.includePrereleaseUpdates;
     bool isCurrentChannel() =>
         provider.includePrereleaseUpdates == includePrereleases;

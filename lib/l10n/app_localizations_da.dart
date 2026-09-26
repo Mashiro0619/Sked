@@ -548,6 +548,10 @@ class AppLocalizationsDa extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'Opdateringer administreres af Microsoft Store';
+
+  @override
   String get includePrereleaseUpdates => 'Modtag foreløbige opdateringer';
 
   @override

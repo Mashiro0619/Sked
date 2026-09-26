@@ -379,6 +379,7 @@ jobs:
         run: flutter test test/platform/platform_security_config_test.dart
 
       - name: Build release application
+        if: matrix.target != 'windows'
         run: flutter build ${{ matrix.target }} --release
 
       - name: Build Windows MSIX notification package
@@ -395,6 +396,21 @@ jobs:
           $manifest = Get-Content -Raw -Encoding utf8 (Join-Path $destination "AppxManifest.xml")
           if ($manifest -notmatch 'Name="Mashiro\.Sked"') { throw "Unexpected MSIX identity name" }
           if ($manifest -notmatch 'ToastActivatorCLSID="5d9d8f6a-4d1a-4f3a-9b0a-6a3e7d2c1f58"') { throw "Missing toast activator" }
+
+      # Store packaging rebuilds with the Store-only update channel and verifies
+      # its actual manifest. No certificate or Partner Center credentials are used.
+      - name: Build Microsoft Store submission package
+        if: matrix.target == 'windows'
+        run: pwsh -File tool/build_msix.ps1 -Store
+
+      - name: Upload Microsoft Store submission package
+        if: matrix.target == 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: microsoft-store-msix
+          path: build/microsoft-store/*.msix
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Build unsigned iOS release
         if: matrix.target == 'macos'

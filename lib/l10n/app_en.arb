@@ -374,6 +374,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Updates are managed by Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Receive prerelease updates",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Include Alpha, Beta, and RC releases, which may be unstable. When off, only stable releases are offered.",

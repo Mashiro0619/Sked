@@ -20,6 +20,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../services/agenda_coordinator.dart';
 import '../services/app_update_coordinator.dart';
+import '../services/microsoft_store_update_service.dart';
 import '../services/app_version_service.dart';
 import '../services/app_data_clear_coordinator.dart';
 import '../services/agenda_notification_service.dart';
@@ -93,6 +94,7 @@ class SettingsPage extends StatefulWidget {
     this.packageInfoLoader,
     this.dataClearCoordinator,
     this.urlLauncher,
+    this.storeUpdateService = const MicrosoftStoreUpdateService(),
     this.notificationService,
     this.initialDestination,
     this.initialWorkspace,
@@ -103,6 +105,7 @@ class SettingsPage extends StatefulWidget {
   final Future<PackageInfo> Function()? packageInfoLoader;
   final AppDataClearCoordinator? dataClearCoordinator;
   final SettingsUrlLauncher? urlLauncher;
+  final MicrosoftStoreUpdateService storeUpdateService;
   final AgendaNotificationService? notificationService;
   final SettingsDestination? initialDestination;
   final AppMode? initialWorkspace;
@@ -193,6 +196,7 @@ class _SettingsPageState extends State<SettingsPage>
                       packageInfoLoader: widget.packageInfoLoader,
                       dataClearCoordinator: widget.dataClearCoordinator,
                       urlLauncher: widget.urlLauncher,
+                      storeUpdateService: widget.storeUpdateService,
                       notificationService: widget.notificationService,
                     ),
                   ),
@@ -643,21 +647,23 @@ class _SettingsPageState extends State<SettingsPage>
         onLongPressHint: l10n.developerModeLongPressHint,
         onTapHint: l10n.checkForUpdates,
       ),
-      SettingsSwitchTile(
-        key: const ValueKey('settings-include-prerelease-updates'),
-        value: provider.includePrereleaseUpdates,
-        icon: Icons.science_outlined,
-        title: l10n.includePrereleaseUpdates,
-        subtitle: l10n.includePrereleaseUpdatesDesc,
-        onChanged: updateEntryBusy || !provider.canWrite
-            ? null
-            : (value) => unawaited(
-                runUiCommand(
-                  debugLabel: 'Updating prerelease update preference',
-                  command: () => provider.updateIncludePrereleaseUpdates(value),
+      if (!widget.storeUpdateService.isEnabled)
+        SettingsSwitchTile(
+          key: const ValueKey('settings-include-prerelease-updates'),
+          value: provider.includePrereleaseUpdates,
+          icon: Icons.science_outlined,
+          title: l10n.includePrereleaseUpdates,
+          subtitle: l10n.includePrereleaseUpdatesDesc,
+          onChanged: updateEntryBusy || !provider.canWrite
+              ? null
+              : (value) => unawaited(
+                  runUiCommand(
+                    debugLabel: 'Updating prerelease update preference',
+                    command: () =>
+                        provider.updateIncludePrereleaseUpdates(value),
+                  ),
                 ),
-              ),
-      ),
+        ),
     ];
   }
 
@@ -723,6 +729,9 @@ class _SettingsPageState extends State<SettingsPage>
     final versionLabel = _currentVersion.isEmpty
         ? l10n.currentVersionLabel
         : '${l10n.currentVersionLabel} $_currentVersion';
+    if (widget.storeUpdateService.isEnabled) {
+      return '$versionLabel · ${l10n.microsoftStoreUpdates}';
+    }
     final availableUpdateVersion = provider.availableUpdateVersion;
     if (availableUpdateVersion == null ||
         availableUpdateVersion.isEmpty ||
@@ -751,6 +760,8 @@ class _SettingsPageState extends State<SettingsPage>
       return;
     }
     setState(() => _currentVersion = currentVersion);
+    // Ignore GitHub badges restored from a backup without rewriting that data.
+    if (widget.storeUpdateService.isEnabled) return;
     final provider = context.read<TimetableProvider>();
     final availableUpdateVersion = provider.availableUpdateVersion;
     if (availableUpdateVersion == null || availableUpdateVersion.isEmpty) {
@@ -809,6 +820,7 @@ class _SettingsPageState extends State<SettingsPage>
         context,
         provider: context.read<TimetableProvider>(),
         source: UpdateCheckSource.manual,
+        storeUpdateService: widget.storeUpdateService,
       );
     });
   }

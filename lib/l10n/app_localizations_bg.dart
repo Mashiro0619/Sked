@@ -551,6 +551,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'Актуализациите се управляват от Microsoft Store';
+
+  @override
   String get includePrereleaseUpdates => 'Получаване на предварителни версии';
 
   @override

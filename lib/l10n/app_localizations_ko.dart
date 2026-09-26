@@ -534,6 +534,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates => '업데이트는 Microsoft Store에서 관리합니다';
+
+  @override
   String get includePrereleaseUpdates => '사전 출시 업데이트 받기';
 
   @override

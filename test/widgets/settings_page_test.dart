@@ -16,6 +16,7 @@ import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/privacy_service.dart';
+import 'package:sked/services/microsoft_store_update_service.dart';
 import 'package:sked/services/app_data_clear_coordinator.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/widgets/expressive_motion.dart';
@@ -229,6 +230,8 @@ Future<void> _pumpSettingsPage(
   Future<PackageInfo> Function()? packageInfoLoader,
   AppDataClearCoordinator? dataClearCoordinator,
   SettingsUrlLauncher? urlLauncher,
+  MicrosoftStoreUpdateService storeUpdateService =
+      const MicrosoftStoreUpdateService(),
   SettingsDestination? destination,
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
@@ -261,6 +264,7 @@ Future<void> _pumpSettingsPage(
               packageInfoLoader: packageInfoLoader ?? PackageInfo.fromPlatform,
               dataClearCoordinator: dataClearCoordinator,
               urlLauncher: urlLauncher,
+              storeUpdateService: storeUpdateService,
               initialDestination: destination,
             ),
           ),
@@ -707,6 +711,91 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'Store settings hide GitHub prereleases and stale update badges',
+    (tester) async {
+      final data = _buildStudentData().copyWith(
+        availableUpdateVersion: '9.0.0-rc.1',
+        includePrereleaseUpdates: true,
+      );
+      final storage = _MemoryTimetableStorage(data);
+      final provider = await _createProvider(data, storage: storage);
+      addTearDown(provider.dispose);
+      final opened = <Uri>[];
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        destination: SettingsDestination.about,
+        storeUpdateService: MicrosoftStoreUpdateService(
+          productId: '9NWRR6ZP6K6T',
+          urlLauncher: (uri, _) async {
+            opened.add(uri);
+            return true;
+          },
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('settings-include-prerelease-updates')),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('Updates are managed by Microsoft Store'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Update available'), findsNothing);
+      final update = find.byKey(const ValueKey('settings-check-for-updates'));
+      await tester.ensureVisible(update);
+      await tester.tap(update);
+      await tester.pumpAndSettle();
+      expect(
+        opened.single.toString(),
+        'ms-windows-store://pdp/?ProductId=9NWRR6ZP6K6T',
+      );
+      expect(storage.saveCount, 0);
+      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(provider.availableUpdateVersion, '9.0.0-rc.1');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Store identity remains in use when navigating from the settings overview',
+    (tester) async {
+      final provider = await _createProvider(_buildStudentData());
+      addTearDown(provider.dispose);
+      final opened = <Uri>[];
+      await _pumpSettingsPage(
+        tester,
+        provider,
+        storeUpdateService: MicrosoftStoreUpdateService(
+          productId: '9NWRR6ZP6K6T',
+          urlLauncher: (uri, _) async {
+            opened.add(uri);
+            return true;
+          },
+        ),
+      );
+      final about = find.byKey(const ValueKey('settings-about'));
+      await tester.ensureVisible(about);
+      await tester.tap(about);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('settings-include-prerelease-updates')),
+        findsNothing,
+      );
+      final update = find
+          .byKey(const ValueKey('settings-check-for-updates'))
+          .hitTestable();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('settings-check-for-updates')).last,
+      );
+      await tester.tap(update.last);
+      await tester.pumpAndSettle();
+      expect(opened.single.host, 'pdp');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('background package info failure is contained', (tester) async {
     final provider = await _createProvider(_buildStudentData());

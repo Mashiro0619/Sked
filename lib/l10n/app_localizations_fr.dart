@@ -552,6 +552,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get checkForUpdatesDesc => 'GitHub';
 
   @override
+  String get microsoftStoreUpdates =>
+      'Les mises à jour sont gérées par le Microsoft Store';
+
+  @override
   String get includePrereleaseUpdates => 'Recevoir les préversions';
 
   @override

@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "Actualizările sunt gestionate de Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "Primește versiuni preliminare",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "Include versiunile Alpha, Beta și RC, care pot fi instabile. Când este dezactivat, sunt oferite doar versiuni stabile.",

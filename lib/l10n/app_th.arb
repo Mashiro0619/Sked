@@ -362,6 +362,8 @@
   "@checkForUpdates": {},
   "checkForUpdatesDesc": "GitHub",
   "@checkForUpdatesDesc": {},
+  "microsoftStoreUpdates": "การอัปเดตจัดการโดย Microsoft Store",
+  "@microsoftStoreUpdates": {},
   "includePrereleaseUpdates": "รับการอัปเดตเวอร์ชันก่อนเผยแพร่",
   "@includePrereleaseUpdates": {},
   "includePrereleaseUpdatesDesc": "รวมเวอร์ชัน Alpha, Beta และ RC ซึ่งอาจไม่เสถียร เมื่อปิดจะเสนอเฉพาะเวอร์ชันเสถียรเท่านั้น",

@@ -1129,6 +1129,12 @@ abstract class AppLocalizations {
   /// **'GitHub'**
   String get checkForUpdatesDesc;
 
+  /// No description provided for @microsoftStoreUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates are managed by Microsoft Store'**
+  String get microsoftStoreUpdates;
+
   /// No description provided for @includePrereleaseUpdates.
   ///
   /// In en, this message translates to:

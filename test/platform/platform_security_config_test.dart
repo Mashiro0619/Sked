@@ -585,7 +585,7 @@ void main() {
     expect(RegExp(r'actions/checkout@v7').allMatches(workflow), hasLength(4));
     expect(
       RegExp(r'actions/upload-artifact@v7').allMatches(workflow),
-      hasLength(3),
+      hasLength(4), // Coverage, Android artifacts/reports, and the Store MSIX.
     );
     expect(RegExp(r'NuGet/setup-nuget@v4').allMatches(workflow), hasLength(1));
     expect(
