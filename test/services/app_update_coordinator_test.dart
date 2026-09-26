@@ -68,7 +68,7 @@ UpdateCheckResult _updateResult({required bool hasUpdate}) {
 Future<TimetableProvider> _createProvider({
   String? availableVersion,
   String? ignoredVersion,
-  bool includePrereleases = false,
+  bool? includePrereleases,
 }) async {
   final data = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
     availableUpdateVersion: availableVersion,
@@ -116,6 +116,26 @@ void main() {
   });
 
   for (final source in UpdateCheckSource.values) {
+    testWidgets('$source includes prereleases by default for new app data', (
+      tester,
+    ) async {
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final context = await _pumpHarness(tester, provider);
+      final service = _PendingUpdateService();
+      final check = AppUpdateCoordinator.checkForUpdates(
+        context,
+        provider: provider,
+        source: source,
+        updateService: service,
+      );
+      expect(provider.includePrereleaseUpdates, isTrue);
+      expect(service.requestedPrereleases, isTrue);
+      service.pending.complete(_updateResult(hasUpdate: false));
+      await check;
+      await tester.pumpAndSettle();
+    });
+
     for (final includePrereleases in [false, true]) {
       testWidgets(
         '$source passes persisted prerelease preference $includePrereleases',

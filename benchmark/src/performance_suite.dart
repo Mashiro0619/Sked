@@ -9,8 +9,8 @@ import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'benchmark_fixtures.dart';
 import 'benchmark_runner.dart';
 
-// The general fit-to-width default is now serialized. Only encode/decode
-// checksums change; event, cache and sanitizer workload contracts do not.
+// Snapshots now persist the default-on prerelease update preference explicitly.
+// Only serialization checksums change; event, cache and sanitizer contracts do not.
 const _expectedChecksums = <String, String>{
   'occurrence.1000_7d_cold': 'fnv1a64-utf16le:cf98943344242498',
   'occurrence.5000_42d_cold': 'fnv1a64-utf16le:de23b67a384a1d3e',
@@ -19,10 +19,10 @@ const _expectedChecksums = <String, String>{
   'cache.1000_churn': 'fnv1a64-utf16le:41afccfcf48cf9ee',
   'sanitizer.table_full': 'fnv1a64-utf16le:e8d76fa6544f75cd',
   'sanitizer.table_240k': 'fnv1a64-utf16le:3f7220f07decc524',
-  'app_data.5000_encode': 'fnv1a64-utf16le:038c671e9dfc7c60',
-  'app_data.5000_decode_storage': 'fnv1a64-utf16le:58798a058e0a010e',
-  'app_backup.5000_encode': 'fnv1a64-utf16le:f21d2a7c7ac52d48',
-  'app_backup.5000_decode': 'fnv1a64-utf16le:5de4d18a7cea3318',
+  'app_data.5000_encode': 'fnv1a64-utf16le:efdafb3d2e7977e8',
+  'app_data.5000_decode_storage': 'fnv1a64-utf16le:dc86b3867dcddcf6',
+  'app_backup.5000_encode': 'fnv1a64-utf16le:8d7579c1dade8950',
+  'app_backup.5000_decode': 'fnv1a64-utf16le:4ddc002a03998680',
 };
 
 List<PerformanceBenchmarkCase> buildPerformanceBenchmarkCases(

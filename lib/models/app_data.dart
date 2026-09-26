@@ -1777,7 +1777,7 @@ class AppData {
     Map<String, int>? colorfulUiColorValues,
     String? privacyPolicyAcceptedVersion,
     String? privacyPolicyAcceptedAtIso,
-    bool includePrereleaseUpdates = false,
+    bool includePrereleaseUpdates = true,
     String? ignoredUpdateVersion,
     String? availableUpdateVersion,
   }) {
@@ -1848,7 +1848,7 @@ class AppData {
     this.notificationSettings = const NotificationSettings(),
     this.privacyPolicyAcceptedVersion,
     this.privacyPolicyAcceptedAtIso,
-    this.includePrereleaseUpdates = false,
+    this.includePrereleaseUpdates = true,
     this.ignoredUpdateVersion,
     this.availableUpdateVersion,
   });
@@ -1910,7 +1910,7 @@ class AppData {
       'privacyPolicyAcceptedVersion': privacyPolicyAcceptedVersion,
     if (privacyPolicyAcceptedAtIso != null)
       'privacyPolicyAcceptedAtIso': privacyPolicyAcceptedAtIso,
-    if (includePrereleaseUpdates) 'includePrereleaseUpdates': true,
+    'includePrereleaseUpdates': includePrereleaseUpdates,
     if (ignoredUpdateVersion != null)
       'ignoredUpdateVersion': ignoredUpdateVersion,
     if (availableUpdateVersion != null)
@@ -2005,6 +2005,8 @@ class AppData {
       privacyPolicyAcceptedAtIso: _nullableStringValue(
         migrated['privacyPolicyAcceptedAtIso'],
       ),
+      // Older versions omitted false, so a missing stored flag may be an
+      // explicit opt-out. Only newly constructed data uses the enabled default.
       includePrereleaseUpdates: migrated['includePrereleaseUpdates'] == true,
       ignoredUpdateVersion: _nullableStringValue(
         migrated['ignoredUpdateVersion'],

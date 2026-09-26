@@ -11,9 +11,14 @@ package-version mapping.
 
 ## User-visible behavior (non-Store builds)
 
-Settings → About → **Receive prerelease updates** is an app-wide, saved opt-in.
-It defaults to **off**, including for existing installations and installations
-whose own version is an Alpha, Beta, or RC.
+Settings → About → **Receive prerelease updates** is an app-wide, saved preference.
+New installations default to **on**, regardless of whether the installed app is
+a stable, Alpha, Beta, or RC release. Existing saved choices are preserved.
+
+Older versions omitted this field when it was off, so an existing snapshot
+without it still loads as **off**; it cannot be distinguished from a deliberate
+opt-out. New saves always write the boolean explicitly, including **false**, so
+disabling the setting survives reloads and backup roundtrips.
 
 - **Off:** offer only stable releases.
 - **On:** include stable and prerelease releases and choose the highest eligible

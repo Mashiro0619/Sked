@@ -1,15 +1,49 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/models/app_data.dart';
+import 'package:sked/models/timetable_models.dart';
 
 void main() {
+  test('new app data receives prerelease updates by default', () {
+    final data = buildInitialAppData(buildDefaultPeriodTimes());
+    expect(data.includePrereleaseUpdates, isTrue);
+    expect(data.toJson()['includePrereleaseUpdates'], isTrue);
+    expect(
+      AppData.decodeStorageSnapshot(data.encode()).includePrereleaseUpdates,
+      isTrue,
+    );
+  });
+
+  for (final selected in [false, true]) {
+    test(
+      'explicit update preference $selected survives default and roundtrip',
+      () {
+        final initial = buildInitialAppData(buildDefaultPeriodTimes());
+        final data = AppData(
+          activeMode: initial.activeMode,
+          studentMode: initial.studentMode,
+          generalMode: initial.generalMode,
+          includePrereleaseUpdates: selected,
+        );
+        expect(
+          data.copyWith(localeCode: 'en').includePrereleaseUpdates,
+          selected,
+        );
+        expect(data.toJson()['includePrereleaseUpdates'], selected);
+        expect(
+          AppData.decodeStorageSnapshot(data.encode()).includePrereleaseUpdates,
+          selected,
+        );
+      },
+    );
+  }
+
   test(
-    'existing data defaults to stable updates without changing its snapshot',
+    'legacy missing preference keeps stable updates and is saved explicitly',
     () {
       final data = AppData.fromJson(const {});
       expect(data.includePrereleaseUpdates, isFalse);
-      expect(data.toJson(), isNot(contains('includePrereleaseUpdates')));
+      expect(data.toJson()['includePrereleaseUpdates'], isFalse);
       expect(
         AppData.decodeStorageSnapshot(data.encode()).includePrereleaseUpdates,
         isFalse,
@@ -31,7 +65,11 @@ void main() {
       expect(reloaded.toJson()['includePrereleaseUpdates'], isTrue);
       final stable = reloaded.copyWith(includePrereleaseUpdates: false);
       expect(stable.includePrereleaseUpdates, isFalse);
-      expect(stable.toJson(), isNot(contains('includePrereleaseUpdates')));
+      expect(stable.toJson()['includePrereleaseUpdates'], isFalse);
+      expect(
+        AppData.decodeStorageSnapshot(stable.encode()).includePrereleaseUpdates,
+        isFalse,
+      );
     },
   );
 

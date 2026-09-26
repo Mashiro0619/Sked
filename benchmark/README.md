@@ -91,3 +91,13 @@ unchanged; the four AppData and app-backup checksums were refreshed for the
 new persisted layout settings. The remaining timing differences were not
 treated as causal evidence because they also appeared in unrelated encode,
 decode, and sanitizer cases.
+
+## Dataset version 5: persisted update preference
+
+New AppData fixtures default to prerelease updates and explicitly serialize
+`includePrereleaseUpdates: true`. Dataset version 5 refreshes only the four
+AppData/app-backup serialization checksums for this added field; the seven
+non-serialization checksums and workload record counts remain unchanged.
+The fixture regression test removes the schema/display/update-preference
+additions and still checks the original workload checksums. The timing results
+above remain historical measurements, not new measurements of this dataset.

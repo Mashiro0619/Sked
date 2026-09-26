@@ -102,7 +102,7 @@ void main() {
     expect(actual, expectedPerformanceFixtureChecksums);
   });
   test(
-    'v5 and display-default additions do not change fixture workload data',
+    'schema and preference additions do not change fixture workload data',
     () {
       String asV4(String source) {
         expect(RegExp('"schemaVersion":5').allMatches(source), hasLength(1));
@@ -112,6 +112,7 @@ void main() {
                     ? root
                     : (root['data'] as Map<String, dynamic>)['appData'])
                 as Map<String, dynamic>;
+        expect(app.remove('includePrereleaseUpdates'), isTrue);
         final general = app['generalMode'] as Map<String, dynamic>;
         expect(general.remove('fitWeekColumnsToWidth'), isTrue);
         general['schemaVersion'] = 4;
