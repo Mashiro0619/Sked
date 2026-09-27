@@ -54,6 +54,14 @@ class SettingsService {
     return data.copyWith(homeWorkspaceNavigationCollapsed: value);
   }
 
+  AppData updateWorkspacePanelDisplayMode(
+    AppData data,
+    WorkspacePanelDisplayMode value,
+  ) {
+    if (data.workspacePanelDisplayMode == value) return data;
+    return data.copyWith(workspacePanelDisplayMode: value);
+  }
+
   AppData updateCloseCoursePopupOnOutsideTap(AppData data, bool value) {
     if (data.studentMode.closeCoursePopupOnOutsideTap == value) return data;
     return data.copyWith(

@@ -3164,4 +3164,32 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked no pudo confirmar si se revirtió el último guardado. Las escrituras están pausadas y se conservan las copias de recuperación. Revisa el almacenamiento y vuelve a cargar los datos.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Visualización de paneles';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Compartida por horarios y agendas';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Superpuesto';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'En paralelo';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automático';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Se superpone a la derecha sin cambiar el tamaño del calendario.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Prioriza la vista en paralelo; se superpone solo si el calendario queda demasiado estrecho.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Usa la vista en paralelo si el calendario conserva un ancho legible; si no, se superpone.';
 }

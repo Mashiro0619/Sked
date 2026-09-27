@@ -30,6 +30,7 @@ abstract final class AppBreakpoints {
   static const minimumSettingsContent = 520.0;
   static const paneDivider = 1.0;
   static const minimumCanvas = 600.0;
+  static const minimumSideBySideCanvas = 360.0;
   static const paneGap = 16.0;
 }
 

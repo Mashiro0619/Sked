@@ -3160,4 +3160,32 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked не удалось подтвердить отмену последнего сохранения. Запись приостановлена, копии для восстановления сохранены. Проверьте хранилище и повторите загрузку.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Отображение панелей';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Общее для расписаний и календарей';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Поверх';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Рядом';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Автоматически';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Показывает панель справа поверх календаря, не меняя его ширину.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Предпочитает размещение рядом; показывает поверх, только если календарь станет слишком узким.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Размещает рядом, если календарь остаётся читаемым, иначе показывает поверх.';
 }

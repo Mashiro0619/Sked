@@ -3157,4 +3157,32 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked non può confermare se l’ultimo salvataggio è stato annullato. La scrittura è sospesa e le copie di recupero sono conservate. Controlla lo spazio di archiviazione e riprova a caricare i dati.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Visualizzazione pannelli';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Condivisa tra orari e calendari';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Sovrapposti';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Affiancati';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatica';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Si sovrappone a destra senza ridimensionare il calendario.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Preferisce i pannelli affiancati; li sovrappone solo se il calendario diventa troppo stretto.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Affianca i pannelli se il calendario rimane leggibile, altrimenti li sovrappone.';
 }

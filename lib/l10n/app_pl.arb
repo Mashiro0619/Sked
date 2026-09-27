@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Wybierz za pomocą pokręteł",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked nie może potwierdzić, czy ostatni zapis został wycofany. Zapisywanie jest wstrzymane, a kopie odzyskiwania zostały zachowane. Sprawdź pamięć i spróbuj ponownie wczytać dane.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Wyświetlanie paneli",
+  "settingsPanelDisplayModeGlobal": "Wspólne dla planów zajęć i kalendarzy",
+  "settingsPanelDisplayOverlay": "Nakładka",
+  "settingsPanelDisplaySideBySide": "Obok siebie",
+  "settingsPanelDisplayAutomatic": "Automatycznie",
+  "settingsPanelDisplayOverlayDescription": "Nakłada panel po prawej bez zmiany szerokości kalendarza.",
+  "settingsPanelDisplaySideBySideDescription": "Preferuje układ obok siebie; nakłada panel tylko wtedy, gdy kalendarz byłby zbyt wąski.",
+  "settingsPanelDisplayAutomaticDescription": "Wyświetla obok siebie, jeśli kalendarz pozostaje czytelny; w przeciwnym razie nakłada panel."
 }

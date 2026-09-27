@@ -3123,4 +3123,32 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked ไม่สามารถยืนยันได้ว่าการบันทึกครั้งล่าสุดถูกย้อนกลับแล้วหรือไม่ จึงหยุดการเขียนและเก็บสำเนาสำหรับกู้คืนไว้ โปรดตรวจสอบพื้นที่จัดเก็บแล้วลองโหลดข้อมูลอีกครั้ง';
+
+  @override
+  String get settingsPanelDisplayMode => 'รูปแบบการแสดงแผง';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'ใช้ร่วมกันในตารางเรียนและกำหนดการ';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'ซ้อนทับ';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'เคียงข้างกัน';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'อัตโนมัติ';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'ซ้อนทับด้านขวาโดยไม่เปลี่ยนขนาดปฏิทิน';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'แสดงเคียงข้างกันเป็นหลัก และซ้อนทับเมื่อปฏิทินแคบเกินไปเท่านั้น';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'แสดงเคียงข้างกันเมื่อปฏิทินยังกว้างพอให้อ่านได้ มิฉะนั้นจะซ้อนทับ';
 }

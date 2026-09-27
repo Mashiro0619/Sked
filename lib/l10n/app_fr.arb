@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Choisir avec les roulettes",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked ne peut pas confirmer si le dernier enregistrement a été annulé. Les écritures sont suspendues et les copies de récupération sont conservées. Vérifiez le stockage, puis réessayez le chargement.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Affichage des panneaux",
+  "settingsPanelDisplayModeGlobal": "Commun aux emplois du temps et aux agendas",
+  "settingsPanelDisplayOverlay": "Superposition",
+  "settingsPanelDisplaySideBySide": "Côte à côte",
+  "settingsPanelDisplayAutomatic": "Automatique",
+  "settingsPanelDisplayOverlayDescription": "Se superpose à droite sans redimensionner le calendrier.",
+  "settingsPanelDisplaySideBySideDescription": "Privilégie côte à côte ; se superpose seulement si le calendrier devient trop étroit.",
+  "settingsPanelDisplayAutomaticDescription": "Affiche côte à côte si le calendrier reste lisible, sinon en superposition."
 }

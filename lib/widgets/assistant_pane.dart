@@ -40,9 +40,11 @@ class AssistantPaneScope extends InheritedWidget {
     required super.child,
     this.onToggle,
     this.interactive = true,
+    this.visible = false,
   });
   final VoidCallback? onToggle;
   final bool interactive;
+  final bool visible;
   final AssistantPaneController controller;
   final bool enabled;
   static AssistantPaneScope? of(BuildContext context) =>
@@ -51,7 +53,8 @@ class AssistantPaneScope extends InheritedWidget {
   bool updateShouldNotify(AssistantPaneScope oldWidget) =>
       controller != oldWidget.controller ||
       enabled != oldWidget.enabled ||
-      interactive != oldWidget.interactive;
+      interactive != oldWidget.interactive ||
+      visible != oldWidget.visible;
 }
 
 class AssistantPaneToggle extends StatelessWidget {

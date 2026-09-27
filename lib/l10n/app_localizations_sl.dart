@@ -3147,4 +3147,31 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked ni mogel potrditi, ali je bilo zadnje shranjevanje razveljavljeno. Pisanje je ustavljeno, obnovitvene kopije pa so ohranjene. Preverite shrambo in poskusite znova naložiti podatke.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Prikaz plošč';
+
+  @override
+  String get settingsPanelDisplayModeGlobal => 'Skupno urnikom in koledarjem';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Prekrivanje';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Druga ob drugi';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Samodejno';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Prekrije desno stran, ne da bi spremenil širino koledarja.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Daje prednost prikazu druga ob drugi; prekrije le, če bi koledar postal preozek.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Prikaže drugo ob drugi, če koledar ostane berljiv, sicer s prekrivanjem.';
 }

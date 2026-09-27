@@ -18,6 +18,14 @@ void _viewport(WidgetTester tester, Size size) {
 }
 
 Future<void> _openTimetablePicker(WidgetTester tester) async {
+  final resource = find
+      .byKey(const ValueKey('workspace-resource-open'))
+      .hitTestable();
+  if (resource.evaluate().isNotEmpty) {
+    await tester.tap(resource);
+    await tester.pumpAndSettle();
+    return;
+  }
   final picker = find.byKey(const ValueKey('student-timetable-picker-button'));
   if (picker.evaluate().isEmpty) {
     final more = find.byKey(const ValueKey('student-desktop-toolbar-more'));
@@ -110,7 +118,7 @@ void main() {
       );
       final editorState = tester.state(editor);
       await _openTimetablePicker(tester);
-      await tester.tap(find.text(other.config.name));
+      await tester.tap(find.text(other.config.name).hitTestable());
       await tester.pumpAndSettle();
       expect(p.activeTimetable.id, other.id);
       expect(tester.state(editor), same(editorState));
@@ -161,7 +169,7 @@ void main() {
           );
         }
         await _openTimetablePicker(tester);
-        await tester.tap(find.text(other.config.name));
+        await tester.tap(find.text(other.config.name).hitTestable());
         await tester.pumpAndSettle();
         expect(p.activeTimetable.id, other.id);
         expect(editor, findsOneWidget);

@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Selecionar com rodas de rolagem",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "O Sked não conseguiu confirmar se a última gravação foi revertida. A escrita está suspensa e as cópias de recuperação foram preservadas. Verifique o armazenamento e tente carregar novamente.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Exibição dos painéis",
+  "settingsPanelDisplayModeGlobal": "Compartilhada por horários e agendas",
+  "settingsPanelDisplayOverlay": "Sobreposição",
+  "settingsPanelDisplaySideBySide": "Lado a lado",
+  "settingsPanelDisplayAutomatic": "Automática",
+  "settingsPanelDisplayOverlayDescription": "Sobrepõe o lado direito sem redimensionar o calendário.",
+  "settingsPanelDisplaySideBySideDescription": "Prioriza lado a lado; sobrepõe apenas se o calendário ficar estreito demais.",
+  "settingsPanelDisplayAutomaticDescription": "Exibe lado a lado quando o calendário mantém uma largura legível; caso contrário, sobrepõe."
 }

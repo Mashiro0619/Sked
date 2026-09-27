@@ -116,6 +116,9 @@ void main() {
         _size(t, const Size(1440, 900));
         final p = await workspaceProvider(mode: AppMode.general);
         final boundary = GlobalKey();
+        await p.updateWorkspacePanelDisplayMode(
+          WorkspacePanelDisplayMode.automatic,
+        );
         await p.updateHomeWorkspaceNavigationCollapsed(true);
         await t.pumpWidget(
           RepaintBoundary(
@@ -193,6 +196,7 @@ void main() {
           home: Scaffold(
             body: WorkspaceFrame(
               controller: pane,
+              panelDisplayMode: WorkspacePanelDisplayMode.automatic,
               resources: const SkedSurface(
                 role: SkedSurfaceRole.frame,
                 child: SizedBox.expand(),

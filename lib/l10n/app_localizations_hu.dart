@@ -3153,4 +3153,32 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'A Sked nem tudta megerősíteni, hogy a legutóbbi mentés vissza lett-e vonva. Az írás szünetel, a helyreállítási másolatok megmaradtak. Ellenőrizze a tárhelyet, és próbálja újra betölteni az adatokat.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Panelek megjelenítése';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Közös az órarendekben és a naptárakban';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Átfedés';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Egymás mellett';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatikus';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'A jobb oldalt fedi le a naptár szélességének módosítása nélkül.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Az egymás melletti nézetet részesíti előnyben; csak túl keskeny naptár esetén fed rá.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Egymás mellett jelenít meg, ha a naptár olvasható marad, különben átfedéssel.';
 }

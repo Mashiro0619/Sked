@@ -2206,5 +2206,13 @@
   "periodTimesInvalidStatus": "Not saved · Fix the highlighted times",
   "@periodTimesInvalidStatus": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked could not confirm whether the last save was rolled back. Writing is paused and recovery copies are preserved. Check your storage and retry loading.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Panel display mode",
+  "settingsPanelDisplayModeGlobal": "Shared by timetables and schedules",
+  "settingsPanelDisplayOverlay": "Overlay",
+  "settingsPanelDisplaySideBySide": "Side by side",
+  "settingsPanelDisplayAutomatic": "Automatic",
+  "settingsPanelDisplayOverlayDescription": "Overlays the right side without resizing the calendar.",
+  "settingsPanelDisplaySideBySideDescription": "Prefers side by side; uses an overlay only when the calendar would be too narrow.",
+  "settingsPanelDisplayAutomaticDescription": "Uses side by side when the calendar has enough readable space; otherwise overlays."
 }

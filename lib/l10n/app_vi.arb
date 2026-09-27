@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Chọn bằng bánh xe cuộn",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked không thể xác nhận lần lưu gần nhất đã được hoàn tác hay chưa. Việc ghi đã tạm dừng và các bản sao khôi phục được giữ lại. Hãy kiểm tra bộ nhớ rồi thử tải lại.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Cách hiển thị bảng",
+  "settingsPanelDisplayModeGlobal": "Dùng chung cho thời khóa biểu và lịch",
+  "settingsPanelDisplayOverlay": "Lớp phủ",
+  "settingsPanelDisplaySideBySide": "Song song",
+  "settingsPanelDisplayAutomatic": "Tự động",
+  "settingsPanelDisplayOverlayDescription": "Phủ bên phải mà không đổi kích thước lịch.",
+  "settingsPanelDisplaySideBySideDescription": "Ưu tiên hiển thị song song; chỉ dùng lớp phủ khi lịch quá hẹp.",
+  "settingsPanelDisplayAutomaticDescription": "Hiển thị song song khi lịch còn đủ rộng để đọc; nếu không thì dùng lớp phủ."
 }

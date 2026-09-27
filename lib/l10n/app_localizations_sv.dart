@@ -3141,4 +3141,32 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked kunde inte bekräfta om den senaste sparningen återställdes. Skrivning är pausad och återställningskopior har bevarats. Kontrollera lagringen och försök läsa in igen.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Panelvisning';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Gemensam för scheman och kalendrar';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Överlagring';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Sida vid sida';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatisk';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Lägger panelen över höger sida utan att ändra kalenderns bredd.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Föredrar sida vid sida; överlagrar bara om kalendern blir för smal.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Visar sida vid sida när kalendern har läsbar bredd, annars som överlagring.';
 }

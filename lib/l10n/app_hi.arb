@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "स्क्रॉल व्हील से चुनें",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked यह पुष्टि नहीं कर सका कि पिछली सेव प्रक्रिया के बदलाव वापस किए गए हैं या नहीं। लिखना रोक दिया गया है और पुनर्प्राप्ति प्रतियाँ सुरक्षित हैं। स्टोरेज जाँचें और डेटा फिर से लोड करें।",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "पैनल दिखाने का तरीका",
+  "settingsPanelDisplayModeGlobal": "समय-सारणी और कैलेंडर के लिए साझा",
+  "settingsPanelDisplayOverlay": "ऊपर दिखाएँ",
+  "settingsPanelDisplaySideBySide": "साथ-साथ",
+  "settingsPanelDisplayAutomatic": "स्वचालित",
+  "settingsPanelDisplayOverlayDescription": "कैलेंडर की चौड़ाई बदले बिना दाईं ओर ऊपर दिखाता है।",
+  "settingsPanelDisplaySideBySideDescription": "साथ-साथ दिखाने को प्राथमिकता देता है; कैलेंडर बहुत संकरा होने पर ही ऊपर दिखाता है।",
+  "settingsPanelDisplayAutomaticDescription": "कैलेंडर पढ़ने योग्य चौड़ाई में हो तो साथ-साथ, अन्यथा ऊपर दिखाता है।"
 }

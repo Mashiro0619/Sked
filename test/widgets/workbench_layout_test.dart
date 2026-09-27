@@ -28,7 +28,7 @@ class _EditorState extends State<_Editor> {
 }
 
 void main() {
-  test('task budgets reserve the canvas at all sizes and font scales', () {
+  test('task modes preserve the base sidebar and their calendar budgets', () {
     for (final width in [
       360.0,
       599.0,
@@ -44,26 +44,68 @@ void main() {
     ]) {
       for (final scale in [1.0, 1.3, 2.0]) {
         for (final canvas in [600.0, 800.0]) {
-          for (final detail in [false, true]) {
-            for (final assistant in [false, true]) {
+          for (final mode in WorkspacePanelDisplayMode.values) {
+            for (final pointer in [false, true]) {
               for (final collapsed in [false, true]) {
-                final p = WorkbenchLayoutPolicy.resolve(
+                final base = WorkbenchLayoutPolicy.resolve(
                   width,
                   scale,
-                  detailOpen: detail,
+                  detailOpen: false,
                   hasSupporting: true,
-                  assistantOpen: assistant,
                   minimumCanvas: canvas,
+                  pointer: pointer,
                   resourcesCollapsed: collapsed,
+                  panelDisplayMode: mode,
                 );
-                final side =
-                    (p.resources ? p.resourceWidth + 1 : 0) +
-                    (p.dockedDetail || p.supporting ? p.detailWidth + 1 : 0) +
-                    (p.dockedAssistant ? p.assistantWidth + 1 : 0);
-                if (side > 0) {
-                  expect(width - side, greaterThanOrEqualTo(canvas * scale));
+                for (final detail in [false, true]) {
+                  for (final assistant in [false, true]) {
+                    for (final assistantActive in [false, true]) {
+                      final p = WorkbenchLayoutPolicy.resolve(
+                        width,
+                        scale,
+                        detailOpen: detail,
+                        assistantOpen: assistant,
+                        assistantActive: assistantActive,
+                        hasSupporting: true,
+                        minimumCanvas: canvas,
+                        pointer: pointer,
+                        resourcesCollapsed: collapsed,
+                        panelDisplayMode: mode,
+                      );
+                      expect(p.resources, base.resources);
+                      expect(p.resourceWidth, base.resourceWidth);
+                      final side =
+                          (p.resources ? p.resourceWidth + 1 : 0) +
+                          (p.dockedDetail
+                              ? p.detailWidth + 1
+                              : p.supporting
+                              ? p.supportingWidth + 1
+                              : 0) +
+                          (p.dockedAssistant ? p.assistantWidth + 1 : 0);
+                      if (side > 0) {
+                        expect(
+                          width - side,
+                          greaterThanOrEqualTo(p.minimumCanvasWidth),
+                        );
+                      }
+                      expect(
+                        p.supporting && (p.dockedDetail || p.dockedAssistant),
+                        isFalse,
+                      );
+                      if (p.detailVisible && p.assistantVisible) {
+                        expect(p.dockedDetail && p.dockedAssistant, isTrue);
+                      }
+                      final content =
+                          width - (p.resources ? p.resourceWidth + 1 : 0);
+                      expect(p.detailWidth, lessThanOrEqualTo(content));
+                      expect(p.assistantWidth, lessThanOrEqualTo(content));
+                      if (mode == WorkspacePanelDisplayMode.overlay) {
+                        expect(p.dockedDetail || p.dockedAssistant, isFalse);
+                        expect(p.supporting, base.supporting);
+                      }
+                    }
+                  }
                 }
-                expect(p.supporting && (detail || assistant), isFalse);
               }
             }
           }
@@ -87,6 +129,7 @@ void main() {
     final wide = WorkbenchLayoutPolicy.resolve(
       1920,
       1,
+      panelDisplayMode: WorkspacePanelDisplayMode.automatic,
       minimumCanvas: 800,
       detailOpen: true,
       hasSupporting: false,
@@ -99,14 +142,17 @@ void main() {
     final medium = WorkbenchLayoutPolicy.resolve(
       1280,
       1,
+      panelDisplayMode: WorkspacePanelDisplayMode.automatic,
       minimumCanvas: 800,
       detailOpen: true,
       hasSupporting: false,
       assistantOpen: true,
     );
-    expect(medium.resources, isFalse);
+    expect(medium.resources, isTrue);
     expect(medium.dockedDetail, isFalse);
-    expect(medium.dockedAssistant, isTrue);
+    expect(medium.dockedAssistant, isFalse);
+    expect(medium.detailVisible, isTrue);
+    expect(medium.assistantVisible, isFalse);
   });
   test(
     'assistant context is immutable and cannot expose a disabled workspace',
@@ -151,6 +197,7 @@ void main() {
               controller: pane,
               assistantController: assistant,
               assistantPreview: true,
+              panelDisplayMode: WorkspacePanelDisplayMode.automatic,
               minimumCanvas: 800,
               contextSnapshot: WorkspaceContextSnapshot(
                 enabledWorkspaces: {AppMode.general},

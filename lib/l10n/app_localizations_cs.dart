@@ -3145,4 +3145,32 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked nemohl ověřit, zda bylo poslední uložení vráceno zpět. Zápis je pozastaven a kopie pro obnovení jsou zachovány. Zkontrolujte úložiště a zkuste data znovu načíst.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Zobrazení panelů';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Společné pro rozvrhy a kalendáře';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Překrytí';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Vedle sebe';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automaticky';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Překryje pravou stranu bez změny šířky kalendáře.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Upřednostní zobrazení vedle sebe; překryje kalendář jen při nedostatku místa.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Zobrazí panely vedle sebe, pokud kalendář zůstane čitelný, jinak jako překrytí.';
 }

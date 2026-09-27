@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Выбрать прокруткой",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked не удалось подтвердить отмену последнего сохранения. Запись приостановлена, копии для восстановления сохранены. Проверьте хранилище и повторите загрузку.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Отображение панелей",
+  "settingsPanelDisplayModeGlobal": "Общее для расписаний и календарей",
+  "settingsPanelDisplayOverlay": "Поверх",
+  "settingsPanelDisplaySideBySide": "Рядом",
+  "settingsPanelDisplayAutomatic": "Автоматически",
+  "settingsPanelDisplayOverlayDescription": "Показывает панель справа поверх календаря, не меняя его ширину.",
+  "settingsPanelDisplaySideBySideDescription": "Предпочитает размещение рядом; показывает поверх, только если календарь станет слишком узким.",
+  "settingsPanelDisplayAutomaticDescription": "Размещает рядом, если календарь остаётся читаемым, иначе показывает поверх."
 }

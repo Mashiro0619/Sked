@@ -8,6 +8,21 @@ import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import 'adaptive_navigation_scope.dart';
 
+/// Completes an editor only after a successful mutation or an authorized exit.
+/// A newer task may have been pushed while the editor was awaiting work; never
+/// pop that task or deliver the editor's result to it instead.
+void completeEditorRoute<T>(BuildContext context, [T? result]) {
+  if (!context.mounted) return;
+  final route = ModalRoute.of(context);
+  final navigator = route?.navigator;
+  if (route == null || navigator == null || !route.isActive) return;
+  if (route.isCurrent) {
+    navigator.pop<T>(result);
+  } else {
+    navigator.removeRoute(route, result);
+  }
+}
+
 /// Covers system Back, panel Close and workspace disable with one draft policy.
 /// The caller owns the draft and persistence; this guard never saves implicitly.
 mixin EditorExitGuard<T extends StatefulWidget> on State<T> {

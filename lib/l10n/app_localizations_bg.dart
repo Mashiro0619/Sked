@@ -3166,4 +3166,32 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked не може да потвърди дали последното записване е отменено. Записването е спряно, а копията за възстановяване са запазени. Проверете хранилището и опитайте да заредите отново.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Показване на панелите';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Общо за учебни разписания и календари';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Наслагване';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Един до друг';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Автоматично';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Наслагва панела вдясно, без да променя ширината на календара.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Предпочита един до друг; наслагва само ако календарът стане твърде тесен.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Показва един до друг, ако календарът остава четим, иначе наслагва.';
 }

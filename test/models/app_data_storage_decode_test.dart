@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/migrations/migration.dart';
 import 'package:sked/models/ai_api_settings.dart';
 import 'package:sked/models/app_data.dart';
+import 'package:sked/models/workspace_panel_display_mode.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/services/import_export_service.dart';
@@ -1800,6 +1801,52 @@ void main() {
         );
       }
     });
+
+    test(
+      'panel display modes round-trip and old snapshots default to overlay',
+      () {
+        for (final mode in WorkspacePanelDisplayMode.values) {
+          final snapshot = validSnapshot()
+            ..['workspacePanelDisplayMode'] = mode.value;
+          final decoded = AppData.decodeStorageSnapshot(jsonEncode(snapshot));
+          expect(decoded.workspacePanelDisplayMode, mode);
+          expect(decoded.copyWith().workspacePanelDisplayMode, mode);
+          expect(
+            AppData.fromJson(decoded.toJson()).workspacePanelDisplayMode,
+            mode,
+          );
+          expect(
+            AppData.decodeStorageSnapshot(jsonEncode(decoded.toJson()))
+                .workspacePanelDisplayMode,
+            mode,
+          );
+        }
+        final oldSnapshot = validSnapshot()
+          ..remove('workspacePanelDisplayMode');
+        expect(
+          AppData.decodeStorageSnapshot(jsonEncode(oldSnapshot))
+              .workspacePanelDisplayMode,
+          WorkspacePanelDisplayMode.overlay,
+        );
+        for (final value in [
+          null,
+          1,
+          true,
+          '',
+          'unknown',
+          'overlay ',
+          <String, dynamic>{},
+        ]) {
+          final malformed = validSnapshot()
+            ..['workspacePanelDisplayMode'] = value;
+          expect(
+            () => AppData.decodeStorageSnapshot(jsonEncode(malformed)),
+            throwsFormatException,
+          );
+          expect(() => AppData.fromJson(malformed), throwsFormatException);
+        }
+      },
+    );
 
     test('round-trips and strictly decodes collapsed home navigation', () {
       final snapshot = validSnapshot()

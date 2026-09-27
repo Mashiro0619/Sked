@@ -17,6 +17,7 @@ import 'general_date_range.dart';
 import 'notification_settings.dart';
 import 'student_mode_data.dart';
 import 'timetable_data.dart';
+import 'workspace_panel_display_mode.dart';
 
 const Symbol _keepNullable = #keep;
 
@@ -1690,6 +1691,9 @@ void _validateStorageSnapshotShape(Map<String, dynamic> json) {
       errorMessage: 'Stored home navigation setting is invalid.',
     );
   }
+  if (json.containsKey('workspacePanelDisplayMode')) {
+    WorkspacePanelDisplayMode.fromJson(json['workspacePanelDisplayMode']);
+  }
   _validateStorageBooleanField(
     json,
     'includePrereleaseUpdates',
@@ -1769,6 +1773,8 @@ class AppData {
     String localeCode = defaultLocaleCode,
     bool hideHomeWorkspaceNavigation = false,
     bool homeWorkspaceNavigationCollapsed = false,
+    WorkspacePanelDisplayMode workspacePanelDisplayMode =
+        WorkspacePanelDisplayMode.overlay,
     AiApiSettings aiApiSettings = const AiApiSettings(),
     NotificationSettings notificationSettings = const NotificationSettings(),
     String? themeMode,
@@ -1825,6 +1831,7 @@ class AppData {
       localeCode: localeCode,
       hideHomeWorkspaceNavigation: hideHomeWorkspaceNavigation,
       homeWorkspaceNavigationCollapsed: homeWorkspaceNavigationCollapsed,
+      workspacePanelDisplayMode: workspacePanelDisplayMode,
       aiApiSettings: aiApiSettings,
       notificationSettings: notificationSettings,
       privacyPolicyAcceptedVersion: privacyPolicyAcceptedVersion,
@@ -1844,6 +1851,7 @@ class AppData {
     this.localeCode = defaultLocaleCode,
     this.hideHomeWorkspaceNavigation = false,
     this.homeWorkspaceNavigationCollapsed = false,
+    this.workspacePanelDisplayMode = WorkspacePanelDisplayMode.overlay,
     this.aiApiSettings = const AiApiSettings(),
     this.notificationSettings = const NotificationSettings(),
     this.privacyPolicyAcceptedVersion,
@@ -1864,6 +1872,7 @@ class AppData {
   final String localeCode;
   final bool hideHomeWorkspaceNavigation;
   final bool homeWorkspaceNavigationCollapsed;
+  final WorkspacePanelDisplayMode workspacePanelDisplayMode;
   final AiApiSettings aiApiSettings;
   final NotificationSettings notificationSettings;
   final String? privacyPolicyAcceptedVersion;
@@ -1900,6 +1909,8 @@ class AppData {
     // navigation shape, but its storage representation is still schema v2.
     'hideHomeBottomNavigationBar': hideHomeWorkspaceNavigation,
     'homeWorkspaceNavigationCollapsed': homeWorkspaceNavigationCollapsed,
+    if (workspacePanelDisplayMode != WorkspacePanelDisplayMode.overlay)
+      'workspacePanelDisplayMode': workspacePanelDisplayMode.value,
     'aiApiSettings': aiApiSettings.toJson(),
     // Keep the default snapshot byte-for-byte compatible with pre-notification
     // data.  The optional object is written as soon as the user changes one
@@ -1993,6 +2004,12 @@ class AppData {
       homeWorkspaceNavigationCollapsed: _decodeHomeWorkspaceNavigationCollapsed(
         migrated,
       ),
+      workspacePanelDisplayMode:
+          migrated.containsKey('workspacePanelDisplayMode')
+          ? WorkspacePanelDisplayMode.fromJson(
+              migrated['workspacePanelDisplayMode'],
+            )
+          : WorkspacePanelDisplayMode.overlay,
       aiApiSettings: AiApiSettings.fromJson(
         _decodeAiApiSettingsJson(migrated, studentModeJson),
       ),
@@ -2026,6 +2043,7 @@ class AppData {
     String? localeCode,
     bool? hideHomeWorkspaceNavigation,
     bool? homeWorkspaceNavigationCollapsed,
+    WorkspacePanelDisplayMode? workspacePanelDisplayMode,
     AiApiSettings? aiApiSettings,
     NotificationSettings? notificationSettings,
     String? themeMode,
@@ -2085,6 +2103,8 @@ class AppData {
       homeWorkspaceNavigationCollapsed:
           homeWorkspaceNavigationCollapsed ??
           this.homeWorkspaceNavigationCollapsed,
+      workspacePanelDisplayMode:
+          workspacePanelDisplayMode ?? this.workspacePanelDisplayMode,
       aiApiSettings: nextAiApiSettings,
       notificationSettings: notificationSettings ?? this.notificationSettings,
       privacyPolicyAcceptedVersion:

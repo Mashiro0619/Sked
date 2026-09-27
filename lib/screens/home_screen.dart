@@ -462,44 +462,46 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           if (!compactTouch) const SizedBox(height: 4),
                           Expanded(
-                            child: _TimetableWeekPager(
-                              controller: _pageController!,
-                              provider: provider,
-                              timetable: timetable,
-                              config: config,
-                              committedWeek: week,
-                              active: widget.active,
-                              interactive: widget.interactive,
-                              swipeEnabled: weekSwipeEnabled,
-                              viewMode: viewMode,
-                              selectedWeekday: selectedWeekday,
-                              fitDaySelectorToWidth:
-                                  snapshot.fitDaySelectorToWidth,
-                              fitWeekColumnsToWidth:
-                                  snapshot.fitWeekColumnsToWidth,
-                              shortcutFocusNode: widget.weekShortcutFocusNode,
-                              bottomContentInset: fabContentInset,
-                              onPageScrollStateChanged: (scrolling) {
-                                _weekPageScrolling = scrolling;
-                              },
-                              onWeekSettled: (settledWeek) =>
-                                  _settleWeekFromPager(provider, settledWeek),
-                              onWeekdaySelected: (weekday) {
-                                if (_selectedWeekday == weekday) return;
-                                setState(() => _selectedWeekday = weekday);
-                              },
-                              onJumpWeekBy: (offset) =>
-                                  _jumpWeekBy(provider, offset),
-                              onCourseTap: (info) =>
-                                  _openDetails(context, provider, info),
-                              onEmptySlotTap: longPressAddEnabled
-                                  ? (slotInfo) => _openEditor(
-                                      context,
-                                      provider,
-                                      weekday: slotInfo.weekday,
-                                      emptySlot: slotInfo,
-                                    )
-                                  : null,
+                            child: WorkspaceCanvasBody(
+                              child: _TimetableWeekPager(
+                                controller: _pageController!,
+                                provider: provider,
+                                timetable: timetable,
+                                config: config,
+                                committedWeek: week,
+                                active: widget.active,
+                                interactive: widget.interactive,
+                                swipeEnabled: weekSwipeEnabled,
+                                viewMode: viewMode,
+                                selectedWeekday: selectedWeekday,
+                                fitDaySelectorToWidth:
+                                    snapshot.fitDaySelectorToWidth,
+                                fitWeekColumnsToWidth:
+                                    snapshot.fitWeekColumnsToWidth,
+                                shortcutFocusNode: widget.weekShortcutFocusNode,
+                                bottomContentInset: fabContentInset,
+                                onPageScrollStateChanged: (scrolling) {
+                                  _weekPageScrolling = scrolling;
+                                },
+                                onWeekSettled: (settledWeek) =>
+                                    _settleWeekFromPager(provider, settledWeek),
+                                onWeekdaySelected: (weekday) {
+                                  if (_selectedWeekday == weekday) return;
+                                  setState(() => _selectedWeekday = weekday);
+                                },
+                                onJumpWeekBy: (offset) =>
+                                    _jumpWeekBy(provider, offset),
+                                onCourseTap: (info) =>
+                                    _openDetails(context, provider, info),
+                                onEmptySlotTap: longPressAddEnabled
+                                    ? (slotInfo) => _openEditor(
+                                        context,
+                                        provider,
+                                        weekday: slotInfo.weekday,
+                                        emptySlot: slotInfo,
+                                      )
+                                    : null,
+                              ),
                             ),
                           ),
                         ],
@@ -553,19 +555,22 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         active: widget.active,
         resourcesCollapsed: preferences.homeWorkspaceNavigationCollapsed,
+        panelDisplayMode: preferences.workspacePanelDisplayMode,
         canvas: workspace,
         resources: Consumer<TimetableProvider>(
           builder: (context, provider, _) {
             final l10n = AppLocalizations.of(context);
             return WorkspaceResourcePanel(
               title: l10n.timetable,
-              onOpenResources: _courseEditorOpen
-                  ? null
-                  : () => _showTimetablePicker(
+              // The editor owns its source timetable; background navigation
+              // must remain available without retargeting that draft.
+              onOpenResources: widget.interactive
+                  ? () => _showTimetablePicker(
                       context,
                       provider,
                       availableWidth: 560,
-                    ),
+                    )
+                  : null,
               settingsFocusNode: widget.settingsFocusNode,
               onSettings: widget.showSettingsAction && widget.settingsEnabled
                   ? widget.settingsAction ?? () => _openSettingsPage(provider)
@@ -617,13 +622,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: Text(timetable.config.name),
                     selected:
                         timetable.id == provider.activeTimetableOrNull?.id,
-                    onTap: _courseEditorOpen
-                        ? null
-                        : () => _switchTimetableFromPicker(
+                    onTap: widget.interactive
+                        ? () => _switchTimetableFromPicker(
                             context,
                             provider,
                             timetable,
-                          ),
+                          )
+                        : null,
                     trailing: IconButton(
                       tooltip: l10n.editTimetable,
                       icon: const Icon(Icons.edit_outlined),

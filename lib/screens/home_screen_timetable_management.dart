@@ -200,9 +200,9 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           final viewInsets = MediaQuery.of(context).viewInsets;
           var popped = false;
           void popWith(String? value) {
-            if (popped) return;
+            if (!context.mounted || popped) return;
             popped = true;
-            Navigator.of(context).pop(value);
+            completeEditorRoute(context, value);
           }
 
           String formatDate(DateTime date) {

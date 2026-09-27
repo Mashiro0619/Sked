@@ -2953,6 +2953,30 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       '上次保存结果尚未确认，Sked 无法确认修改是否已撤回。为保护数据，已暂停写入并保留恢复副本。请检查存储状态后重试读取。';
+
+  @override
+  String get settingsPanelDisplayMode => '面板显示方式';
+
+  @override
+  String get settingsPanelDisplayModeGlobal => '课表与日程通用';
+
+  @override
+  String get settingsPanelDisplayOverlay => '浮层';
+
+  @override
+  String get settingsPanelDisplaySideBySide => '并排';
+
+  @override
+  String get settingsPanelDisplayAutomatic => '自动';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription => '覆盖日历右侧，不改变日历布局。';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription => '优先并排，日历可变窄；极窄时使用浮层。';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription => '日历达到可读宽度时并排，否则使用浮层。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5905,4 +5929,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       '上次儲存結果尚未確認，Sked 無法確認變更是否已復原。為保護資料，已暫停寫入並保留復原副本。請檢查儲存狀態後重試讀取。';
+
+  @override
+  String get settingsPanelDisplayMode => '面板顯示方式';
+
+  @override
+  String get settingsPanelDisplayModeGlobal => '課表與行程共用';
+
+  @override
+  String get settingsPanelDisplayOverlay => '浮層';
+
+  @override
+  String get settingsPanelDisplaySideBySide => '並排';
+
+  @override
+  String get settingsPanelDisplayAutomatic => '自動';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription => '覆蓋日曆右側，不改變日曆配置。';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription => '優先並排，日曆可變窄；過窄時使用浮層。';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription => '日曆達到易讀寬度時並排，否則使用浮層。';
 }

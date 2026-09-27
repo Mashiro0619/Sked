@@ -345,133 +345,135 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             children: [
               toolbar,
               Expanded(
-                child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.trackpad,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.invertedStylus,
-                    },
-                  ),
-                  child: SkedDirectionalTransition(
-                    // Pager gestures own their spatial motion and commit with
-                    // direction zero. Toolbar navigation keeps this transition.
-                    trigger: _calendarDateKey(selectedDate),
-                    direction: dateNavigationDirection,
-                    fade: false,
-                    scale: false,
-                    child: ExpressiveSwitcher(
-                      child: KeyedSubtree(
-                        key: ValueKey(baseView),
-                        child: switch (view) {
-                          generalViewDay => _DayCalendarView(
-                            date: selectedDate,
-                            provider: provider,
-                            filter: filter,
-                            active: pagerActive,
-                            syncRevision: _pagerSyncRevision,
-                            onDaySelected: selectDate,
-                            onPageSettled: settleDate,
-                            onEmptySlotTap: longPressAddEnabled
-                                ? (date) => _openEditor(
+                child: WorkspaceCanvasBody(
+                  child: ScrollConfiguration(
+                    behavior: const MaterialScrollBehavior().copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                        PointerDeviceKind.stylus,
+                        PointerDeviceKind.invertedStylus,
+                      },
+                    ),
+                    child: SkedDirectionalTransition(
+                      // Pager gestures own their spatial motion and commit with
+                      // direction zero. Toolbar navigation keeps this transition.
+                      trigger: _calendarDateKey(selectedDate),
+                      direction: dateNavigationDirection,
+                      fade: false,
+                      scale: false,
+                      child: ExpressiveSwitcher(
+                        child: KeyedSubtree(
+                          key: ValueKey(baseView),
+                          child: switch (view) {
+                            generalViewDay => _DayCalendarView(
+                              date: selectedDate,
+                              provider: provider,
+                              filter: filter,
+                              active: pagerActive,
+                              syncRevision: _pagerSyncRevision,
+                              onDaySelected: selectDate,
+                              onPageSettled: settleDate,
+                              onEmptySlotTap: longPressAddEnabled
+                                  ? (date) => _openEditor(
+                                      context,
+                                      provider,
+                                      initialDate: date,
+                                    )
+                                  : null,
+                              onOccurrenceTap: (occurrence) =>
+                                  _openDetails(context, provider, occurrence),
+                              onMoreOccurrencesTap: (occurrences) =>
+                                  _openMoreOccurrences(
                                     context,
                                     provider,
-                                    initialDate: date,
-                                  )
-                                : null,
-                            onOccurrenceTap: (occurrence) =>
-                                _openDetails(context, provider, occurrence),
-                            onMoreOccurrencesTap: (occurrences) =>
-                                _openMoreOccurrences(
-                                  context,
-                                  provider,
-                                  occurrences,
-                                ),
-                            onAllDayCollapsedGroupTap: (occurrences, day) =>
-                                _openMoreOccurrences(
-                                  context,
-                                  provider,
-                                  occurrences,
-                                  contextDate: day,
-                                ),
-                            allDayTimelineCollapsed:
-                                snapshot.allDayTimelineCollapsed,
-                            onAllDayTimelineCollapsedChanged: (collapsed) =>
-                                unawaited(
-                                  _setAllDayTimelineCollapsed(
-                                    provider,
-                                    collapsed,
+                                    occurrences,
                                   ),
-                                ),
-                          ),
-                          generalViewList => _ListCalendarView(
-                            date: selectedDate,
-                            provider: provider,
-                            filter: filter,
-                            onOccurrenceTap: (occurrence) =>
-                                _openDetails(context, provider, occurrence),
-                          ),
-                          generalViewMonth => _MonthCalendarView(
-                            date: selectedDate,
-                            provider: provider,
-                            filter: filter,
-                            active: pagerActive,
-                            onDaySelected: selectDate,
-                            onEmptySlotTap: (date) => _openEditor(
-                              context,
-                              provider,
-                              initialDate: date,
+                              onAllDayCollapsedGroupTap: (occurrences, day) =>
+                                  _openMoreOccurrences(
+                                    context,
+                                    provider,
+                                    occurrences,
+                                    contextDate: day,
+                                  ),
+                              allDayTimelineCollapsed:
+                                  snapshot.allDayTimelineCollapsed,
+                              onAllDayTimelineCollapsedChanged: (collapsed) =>
+                                  unawaited(
+                                    _setAllDayTimelineCollapsed(
+                                      provider,
+                                      collapsed,
+                                    ),
+                                  ),
                             ),
-                            onOccurrenceTap: (occurrence) =>
-                                _openDetails(context, provider, occurrence),
-                          ),
-                          _ => _WeekCalendarView(
-                            viewport: _calendarViewport,
-                            customRange: snapshot.customDateRange,
-                            onRangePageSettled: (range) =>
-                                unawaited(_moveRange(provider, range)),
-                            date: selectedDate,
-                            provider: provider,
-                            filter: filter,
-                            active: pagerActive,
-                            syncRevision: _pagerSyncRevision,
-                            onDaySelected: selectDate,
-                            onPageSettled: settleDate,
-                            onEmptySlotTap: longPressAddEnabled
-                                ? (date) => _openEditor(
+                            generalViewList => _ListCalendarView(
+                              date: selectedDate,
+                              provider: provider,
+                              filter: filter,
+                              onOccurrenceTap: (occurrence) =>
+                                  _openDetails(context, provider, occurrence),
+                            ),
+                            generalViewMonth => _MonthCalendarView(
+                              date: selectedDate,
+                              provider: provider,
+                              filter: filter,
+                              active: pagerActive,
+                              onDaySelected: selectDate,
+                              onEmptySlotTap: (date) => _openEditor(
+                                context,
+                                provider,
+                                initialDate: date,
+                              ),
+                              onOccurrenceTap: (occurrence) =>
+                                  _openDetails(context, provider, occurrence),
+                            ),
+                            _ => _WeekCalendarView(
+                              viewport: _calendarViewport,
+                              customRange: snapshot.customDateRange,
+                              onRangePageSettled: (range) =>
+                                  unawaited(_moveRange(provider, range)),
+                              date: selectedDate,
+                              provider: provider,
+                              filter: filter,
+                              active: pagerActive,
+                              syncRevision: _pagerSyncRevision,
+                              onDaySelected: selectDate,
+                              onPageSettled: settleDate,
+                              onEmptySlotTap: longPressAddEnabled
+                                  ? (date) => _openEditor(
+                                      context,
+                                      provider,
+                                      initialDate: date,
+                                    )
+                                  : null,
+                              onOccurrenceTap: (occurrence) =>
+                                  _openDetails(context, provider, occurrence),
+                              onMoreOccurrencesTap: (occurrences) =>
+                                  _openMoreOccurrences(
                                     context,
                                     provider,
-                                    initialDate: date,
-                                  )
-                                : null,
-                            onOccurrenceTap: (occurrence) =>
-                                _openDetails(context, provider, occurrence),
-                            onMoreOccurrencesTap: (occurrences) =>
-                                _openMoreOccurrences(
-                                  context,
-                                  provider,
-                                  occurrences,
-                                ),
-                            onAllDayCollapsedGroupTap: (occurrences, day) =>
-                                _openMoreOccurrences(
-                                  context,
-                                  provider,
-                                  occurrences,
-                                  contextDate: day,
-                                ),
-                            allDayTimelineCollapsed:
-                                snapshot.allDayTimelineCollapsed,
-                            onAllDayTimelineCollapsedChanged: (collapsed) =>
-                                unawaited(
-                                  _setAllDayTimelineCollapsed(
-                                    provider,
-                                    collapsed,
+                                    occurrences,
                                   ),
-                                ),
-                          ),
-                        },
+                              onAllDayCollapsedGroupTap: (occurrences, day) =>
+                                  _openMoreOccurrences(
+                                    context,
+                                    provider,
+                                    occurrences,
+                                    contextDate: day,
+                                  ),
+                              allDayTimelineCollapsed:
+                                  snapshot.allDayTimelineCollapsed,
+                              onAllDayTimelineCollapsedChanged: (collapsed) =>
+                                  unawaited(
+                                    _setAllDayTimelineCollapsed(
+                                      provider,
+                                      collapsed,
+                                    ),
+                                  ),
+                            ),
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -905,6 +907,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       ),
       active: widget.active,
       resourcesCollapsed: provider.homeWorkspaceNavigationCollapsed,
+      panelDisplayMode: provider.workspacePanelDisplayMode,
       canvas: workspace,
       resources: WorkspaceResourcePanel(
         title: l10n.calendars,

@@ -38,6 +38,53 @@ Future<TimetableProvider> _providerFor(_ControllableStorage storage) async {
 
 void main() {
   test(
+    'panel display preference is global, durable and rolls back on failure',
+    () async {
+      final storage = _ControllableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      );
+      final provider = await _providerFor(storage);
+      addTearDown(provider.dispose);
+      expect(
+        provider.workspacePanelDisplayMode,
+        WorkspacePanelDisplayMode.overlay,
+      );
+      await provider.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.overlay,
+      );
+      expect(storage.saveCount, 0);
+      for (final mode in [
+        WorkspacePanelDisplayMode.sideBySide,
+        WorkspacePanelDisplayMode.automatic,
+      ]) {
+        await provider.updateWorkspacePanelDisplayMode(mode);
+        expect(provider.workspacePanelDisplayMode, mode);
+        expect(storage.data!.workspacePanelDisplayMode, mode);
+        final reloaded = await _providerFor(storage);
+        expect(reloaded.workspacePanelDisplayMode, mode);
+        reloaded.dispose();
+      }
+      expect(storage.saveCount, 2);
+      storage.nextSaveError = StateError('save failed');
+      await expectLater(
+        provider.updateWorkspacePanelDisplayMode(
+          WorkspacePanelDisplayMode.overlay,
+        ),
+        throwsStateError,
+      );
+      expect(
+        provider.workspacePanelDisplayMode,
+        WorkspacePanelDisplayMode.automatic,
+      );
+      expect(
+        storage.data!.workspacePanelDisplayMode,
+        WorkspacePanelDisplayMode.automatic,
+      );
+      expect(provider.homeWorkspaceNavigationCollapsed, isFalse);
+    },
+  );
+
+  test(
     'hidden home navigation setting persists and rolls back on failure',
     () async {
       final storage = _ControllableStorage(

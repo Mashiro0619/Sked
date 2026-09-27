@@ -3157,4 +3157,32 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'O Sked não conseguiu confirmar se a última gravação foi revertida. A escrita está suspensa e as cópias de recuperação foram preservadas. Verifique o armazenamento e tente carregar novamente.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Exibição dos painéis';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Compartilhada por horários e agendas';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Sobreposição';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Lado a lado';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automática';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Sobrepõe o lado direito sem redimensionar o calendário.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Prioriza lado a lado; sobrepõe apenas se o calendário ficar estreito demais.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Exibe lado a lado quando o calendário mantém uma largura legível; caso contrário, sobrepõe.';
 }

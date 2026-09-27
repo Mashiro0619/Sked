@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Επιλογή με τροχούς κύλισης",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Το Sked δεν μπόρεσε να επιβεβαιώσει αν αναιρέθηκε η τελευταία αποθήκευση. Οι εγγραφές έχουν ανασταλεί και διατηρούνται αντίγραφα ανάκτησης. Ελέγξτε τον χώρο αποθήκευσης και δοκιμάστε ξανά τη φόρτωση.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Εμφάνιση πλαισίων",
+  "settingsPanelDisplayModeGlobal": "Κοινή για ωρολόγια προγράμματα και ημερολόγια",
+  "settingsPanelDisplayOverlay": "Επικάλυψη",
+  "settingsPanelDisplaySideBySide": "Δίπλα δίπλα",
+  "settingsPanelDisplayAutomatic": "Αυτόματα",
+  "settingsPanelDisplayOverlayDescription": "Επικαλύπτει τη δεξιά πλευρά χωρίς να αλλάζει το πλάτος του ημερολογίου.",
+  "settingsPanelDisplaySideBySideDescription": "Προτιμά δίπλα δίπλα· επικαλύπτει μόνο αν το ημερολόγιο γίνει πολύ στενό.",
+  "settingsPanelDisplayAutomaticDescription": "Εμφανίζει δίπλα δίπλα όταν το ημερολόγιο παραμένει ευανάγνωστο, αλλιώς επικαλύπτει."
 }

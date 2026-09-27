@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Vali kerimisratastega",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked ei saanud kinnitada, kas viimane salvestamine võeti tagasi. Kirjutamine on peatatud ja taastekoopiad säilitatud. Kontrollige salvestusruumi ja proovige uuesti laadida.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Paneelide kuvamine",
+  "settingsPanelDisplayModeGlobal": "Ühine tunniplaanidele ja kalendritele",
+  "settingsPanelDisplayOverlay": "Ülekate",
+  "settingsPanelDisplaySideBySide": "Kõrvuti",
+  "settingsPanelDisplayAutomatic": "Automaatne",
+  "settingsPanelDisplayOverlayDescription": "Katab parema külje kalendri laiust muutmata.",
+  "settingsPanelDisplaySideBySideDescription": "Eelistab kõrvuti kuvamist; katab kalendri ainult siis, kui see jääks liiga kitsaks.",
+  "settingsPanelDisplayAutomaticDescription": "Kuvab kõrvuti, kui kalender jääb loetavaks, muidu ülekattena."
 }

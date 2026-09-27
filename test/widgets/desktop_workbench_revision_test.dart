@@ -337,13 +337,22 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('general-add-event')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, 'Event draft');
-      final state = tester.state(find.byType(GeneralEventEditorSheet));
+      final state = tester.state(
+        find.byType(GeneralEventEditorSheet, skipOffstage: false),
+      );
       tester.view.physicalSize = const Size(800, 1280);
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsNothing);
       expect(prefs.assistantVisible, isTrue);
-      expect(tester.state(find.byType(GeneralEventEditorSheet)), same(state));
+      expect(
+        tester.state(find.byType(GeneralEventEditorSheet, skipOffstage: false)),
+        same(state),
+      );
       tester.view.physicalSize = const Size(1920, 1080);
+      await tester.pumpAndSettle();
+      // Overlay mode keeps the editor foreground even after widening.
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -376,7 +385,11 @@ void main() {
             .text,
         'Local draft, not sent',
       );
-      expect(tester.state(find.byType(GeneralEventEditorSheet)), same(state));
+      expect(find.byType(GeneralEventEditorSheet), findsNothing);
+      expect(
+        tester.state(find.byType(GeneralEventEditorSheet, skipOffstage: false)),
+        same(state),
+      );
       await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsNothing);
@@ -402,7 +415,10 @@ void main() {
             .text,
         'Local draft, not sent',
       );
-      expect(tester.state(find.byType(GeneralEventEditorSheet)), same(state));
+      expect(
+        tester.state(find.byType(GeneralEventEditorSheet, skipOffstage: false)),
+        same(state),
+      );
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

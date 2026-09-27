@@ -97,20 +97,20 @@ void main() {
                 ),
           ),
         );
-        expect(rows, findsNWidgets(5));
+        expect(rows, findsNWidgets(6));
         final colors = Theme.of(t.element(group)).colorScheme;
         expect(
           find.descendant(of: group, matching: find.byType(Card)),
           findsNothing,
         );
-        for (var i = 0; i < 5; i++) {
+        for (var i = 0; i < 6; i++) {
           final row = t.widget<Material>(rows.at(i));
           expect(row.color, SettingsVisuals.rowColor(colors));
           expect(row.color, isNot(colors.surface));
           final radius = (row.shape! as RoundedRectangleBorder).borderRadius
               .resolve(TextDirection.ltr);
           expect(radius.topLeft.x, i == 0 ? 24 : 4);
-          expect(radius.bottomRight.x, i == 4 ? 24 : 4);
+          expect(radius.bottomRight.x, i == 5 ? 24 : 4);
           if (i > 0) {
             expect(
               t.getTopLeft(rows.at(i)).dy - t.getBottomLeft(rows.at(i - 1)).dy,

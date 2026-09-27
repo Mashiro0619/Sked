@@ -159,7 +159,14 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('general-day-agenda-toggle')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Selected day'), findsOneWidget);
+      // The month supporting agenda stays mounted beneath the overlay.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('workspace-detail-pane')),
+          matching: find.textContaining('Selected day'),
+        ),
+        findsOneWidget,
+      );
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());

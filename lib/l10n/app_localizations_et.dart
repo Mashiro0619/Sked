@@ -3139,4 +3139,32 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked ei saanud kinnitada, kas viimane salvestamine võeti tagasi. Kirjutamine on peatatud ja taastekoopiad säilitatud. Kontrollige salvestusruumi ja proovige uuesti laadida.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Paneelide kuvamine';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Ühine tunniplaanidele ja kalendritele';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Ülekate';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Kõrvuti';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automaatne';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Katab parema külje kalendri laiust muutmata.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Eelistab kõrvuti kuvamist; katab kalendri ainult siis, kui see jääks liiga kitsaks.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Kuvab kõrvuti, kui kalender jääb loetavaks, muidu ülekattena.';
 }

@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Kiezen met scrollwielen",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked kon niet bevestigen of de laatste opslagbewerking is teruggedraaid. Schrijven is gepauzeerd en herstelkopieën zijn bewaard. Controleer de opslag en probeer opnieuw te laden.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Paneelweergave",
+  "settingsPanelDisplayModeGlobal": "Gedeeld door lesroosters en agenda’s",
+  "settingsPanelDisplayOverlay": "Overlappend",
+  "settingsPanelDisplaySideBySide": "Naast elkaar",
+  "settingsPanelDisplayAutomatic": "Automatisch",
+  "settingsPanelDisplayOverlayDescription": "Overlapt de rechterkant zonder de kalenderbreedte te wijzigen.",
+  "settingsPanelDisplaySideBySideDescription": "Geeft voorkeur aan naast elkaar; overlapt alleen als de kalender te smal wordt.",
+  "settingsPanelDisplayAutomaticDescription": "Toont panelen naast elkaar als de kalender leesbaar blijft, anders overlappend."
 }

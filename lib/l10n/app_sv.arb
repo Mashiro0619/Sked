@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Välj med rullhjul",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked kunde inte bekräfta om den senaste sparningen återställdes. Skrivning är pausad och återställningskopior har bevarats. Kontrollera lagringen och försök läsa in igen.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Panelvisning",
+  "settingsPanelDisplayModeGlobal": "Gemensam för scheman och kalendrar",
+  "settingsPanelDisplayOverlay": "Överlagring",
+  "settingsPanelDisplaySideBySide": "Sida vid sida",
+  "settingsPanelDisplayAutomatic": "Automatisk",
+  "settingsPanelDisplayOverlayDescription": "Lägger panelen över höger sida utan att ändra kalenderns bredd.",
+  "settingsPanelDisplaySideBySideDescription": "Föredrar sida vid sida; överlagrar bara om kalendern blir för smal.",
+  "settingsPanelDisplayAutomaticDescription": "Visar sida vid sida när kalendern har läsbar bredd, annars som överlagring."
 }

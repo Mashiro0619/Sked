@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Seleccionar con ruedas",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked no pudo confirmar si se revirtió el último guardado. Las escrituras están pausadas y se conservan las copias de recuperación. Revisa el almacenamiento y vuelve a cargar los datos.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Visualización de paneles",
+  "settingsPanelDisplayModeGlobal": "Compartida por horarios y agendas",
+  "settingsPanelDisplayOverlay": "Superpuesto",
+  "settingsPanelDisplaySideBySide": "En paralelo",
+  "settingsPanelDisplayAutomatic": "Automático",
+  "settingsPanelDisplayOverlayDescription": "Se superpone a la derecha sin cambiar el tamaño del calendario.",
+  "settingsPanelDisplaySideBySideDescription": "Prioriza la vista en paralelo; se superpone solo si el calendario queda demasiado estrecho.",
+  "settingsPanelDisplayAutomaticDescription": "Usa la vista en paralelo si el calendario conserva un ancho legible; si no, se superpone."
 }

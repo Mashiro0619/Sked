@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Vælg med rullehjul",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked kunne ikke bekræfte, om den seneste lagring blev rullet tilbage. Skrivning er sat på pause, og gendannelseskopier er bevaret. Kontrollér lageret, og prøv at indlæse igen.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Panelvisning",
+  "settingsPanelDisplayModeGlobal": "Fælles for skemaer og kalendere",
+  "settingsPanelDisplayOverlay": "Overlejring",
+  "settingsPanelDisplaySideBySide": "Side om side",
+  "settingsPanelDisplayAutomatic": "Automatisk",
+  "settingsPanelDisplayOverlayDescription": "Lægger panelet over højre side uden at ændre kalenderens bredde.",
+  "settingsPanelDisplaySideBySideDescription": "Foretrækker side om side; overlejrer kun, hvis kalenderen bliver for smal.",
+  "settingsPanelDisplayAutomaticDescription": "Viser side om side, når kalenderen har en læsbar bredde, ellers som overlejring."
 }

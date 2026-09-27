@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Selectează cu rotițele",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked nu a putut confirma dacă ultima salvare a fost anulată. Scrierea este suspendată, iar copiile de recuperare sunt păstrate. Verificați stocarea și încercați din nou încărcarea.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Afișarea panourilor",
+  "settingsPanelDisplayModeGlobal": "Comună pentru orare și calendare",
+  "settingsPanelDisplayOverlay": "Suprapus",
+  "settingsPanelDisplaySideBySide": "Alăturat",
+  "settingsPanelDisplayAutomatic": "Automat",
+  "settingsPanelDisplayOverlayDescription": "Suprapune partea dreaptă fără a redimensiona calendarul.",
+  "settingsPanelDisplaySideBySideDescription": "Preferă afișarea alăturată; suprapune doar dacă calendarul devine prea îngust.",
+  "settingsPanelDisplayAutomaticDescription": "Afișează alăturat dacă lățimea calendarului rămâne lizibilă; altfel suprapune."
 }

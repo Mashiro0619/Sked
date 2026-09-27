@@ -3169,4 +3169,32 @@ class AppLocalizationsEl extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Το Sked δεν μπόρεσε να επιβεβαιώσει αν αναιρέθηκε η τελευταία αποθήκευση. Οι εγγραφές έχουν ανασταλεί και διατηρούνται αντίγραφα ανάκτησης. Ελέγξτε τον χώρο αποθήκευσης και δοκιμάστε ξανά τη φόρτωση.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Εμφάνιση πλαισίων';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Κοινή για ωρολόγια προγράμματα και ημερολόγια';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Επικάλυψη';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Δίπλα δίπλα';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Αυτόματα';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Επικαλύπτει τη δεξιά πλευρά χωρίς να αλλάζει το πλάτος του ημερολογίου.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Προτιμά δίπλα δίπλα· επικαλύπτει μόνο αν το ημερολόγιο γίνει πολύ στενό.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Εμφανίζει δίπλα δίπλα όταν το ημερολόγιο παραμένει ευανάγνωστο, αλλιώς επικαλύπτει.';
 }

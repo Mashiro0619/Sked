@@ -8,6 +8,7 @@ export 'notification_settings.dart';
 export 'agenda.dart';
 export 'student_mode_data.dart';
 export 'app_mode.dart';
+export 'workspace_panel_display_mode.dart';
 export 'general_event.dart';
 export 'general_schedule.dart';
 export 'general_schedule_data.dart';

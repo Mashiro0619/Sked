@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Seleziona con le rotelle",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked non può confermare se l’ultimo salvataggio è stato annullato. La scrittura è sospesa e le copie di recupero sono conservate. Controlla lo spazio di archiviazione e riprova a caricare i dati.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Visualizzazione pannelli",
+  "settingsPanelDisplayModeGlobal": "Condivisa tra orari e calendari",
+  "settingsPanelDisplayOverlay": "Sovrapposti",
+  "settingsPanelDisplaySideBySide": "Affiancati",
+  "settingsPanelDisplayAutomatic": "Automatica",
+  "settingsPanelDisplayOverlayDescription": "Si sovrappone a destra senza ridimensionare il calendario.",
+  "settingsPanelDisplaySideBySideDescription": "Preferisce i pannelli affiancati; li sovrappone solo se il calendario diventa troppo stretto.",
+  "settingsPanelDisplayAutomaticDescription": "Affianca i pannelli se il calendario rimane leggibile, altrimenti li sovrappone."
 }

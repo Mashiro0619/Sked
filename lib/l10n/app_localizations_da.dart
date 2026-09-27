@@ -3137,4 +3137,32 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked kunne ikke bekræfte, om den seneste lagring blev rullet tilbage. Skrivning er sat på pause, og gendannelseskopier er bevaret. Kontrollér lageret, og prøv at indlæse igen.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Panelvisning';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Fælles for skemaer og kalendere';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Overlejring';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Side om side';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatisk';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Lægger panelet over højre side uden at ændre kalenderens bredde.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Foretrækker side om side; overlejrer kun, hvis kalenderen bliver for smal.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Viser side om side, når kalenderen har en læsbar bredde, ellers som overlejring.';
 }

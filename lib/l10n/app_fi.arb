@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Valitse vierityspyörillä",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked ei voinut vahvistaa, peruttiinko viimeisin tallennus. Kirjoittaminen on keskeytetty ja palautuskopiot säilytetty. Tarkista tallennustila ja yritä lataamista uudelleen.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Paneelien näyttötapa",
+  "settingsPanelDisplayModeGlobal": "Yhteinen lukujärjestyksille ja kalentereille",
+  "settingsPanelDisplayOverlay": "Päällekkäin",
+  "settingsPanelDisplaySideBySide": "Vierekkäin",
+  "settingsPanelDisplayAutomatic": "Automaattinen",
+  "settingsPanelDisplayOverlayDescription": "Näyttää paneelin oikealla kalenterin päällä muuttamatta sen leveyttä.",
+  "settingsPanelDisplaySideBySideDescription": "Suosii vierekkäistä näkymää; näyttää päällekkäin vain, jos kalenteri kapenee liikaa.",
+  "settingsPanelDisplayAutomaticDescription": "Näyttää vierekkäin, jos kalenteri säilyy luettavana, muuten päällekkäin."
 }

@@ -3134,4 +3134,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked could not confirm whether the last save was rolled back. Writing is paused and recovery copies are preserved. Check your storage and retry loading.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Panel display mode';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Shared by timetables and schedules';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Overlay';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Side by side';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatic';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Overlays the right side without resizing the calendar.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Prefers side by side; uses an overlay only when the calendar would be too narrow.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Uses side by side when the calendar has enough readable space; otherwise overlays.';
 }

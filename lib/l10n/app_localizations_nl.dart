@@ -3143,4 +3143,32 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked kon niet bevestigen of de laatste opslagbewerking is teruggedraaid. Schrijven is gepauzeerd en herstelkopieën zijn bewaard. Controleer de opslag en probeer opnieuw te laden.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Paneelweergave';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Gedeeld door lesroosters en agenda’s';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Overlappend';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Naast elkaar';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatisch';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Overlapt de rechterkant zonder de kalenderbreedte te wijzigen.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Geeft voorkeur aan naast elkaar; overlapt alleen als de kalender te smal wordt.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Toont panelen naast elkaar als de kalender leesbaar blijft, anders overlappend.';
 }

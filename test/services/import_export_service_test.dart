@@ -53,6 +53,7 @@ void main() {
     final source = buildInitialAppData(buildDefaultPeriodTimes()).copyWith(
       hideHomeWorkspaceNavigation: true,
       homeWorkspaceNavigationCollapsed: true,
+      workspacePanelDisplayMode: WorkspacePanelDisplayMode.automatic,
       studentMode: buildInitialAppData(buildDefaultPeriodTimes()).studentMode
           .copyWith(showAddCourseFab: false, enableLongPressAddCourse: false),
       generalMode: GeneralScheduleData.createDefault().copyWith(
@@ -71,6 +72,10 @@ void main() {
 
     expect(normalized.hideHomeWorkspaceNavigation, isTrue);
     expect(normalized.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(
+      normalized.workspacePanelDisplayMode,
+      WorkspacePanelDisplayMode.automatic,
+    );
     expect(normalized.studentMode.showAddCourseFab, isFalse);
     expect(normalized.studentMode.enableLongPressAddCourse, isFalse);
     expect(normalized.generalMode.showAddEventFab, isFalse);

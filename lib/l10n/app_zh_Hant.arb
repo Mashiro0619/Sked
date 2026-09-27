@@ -2192,5 +2192,13 @@
   "periodTimesInvalidStatus": "尚未儲存 · 請修正標示的時間",
   "@periodTimesInvalidStatus": {},
   "dataRecoveryWriteStateUnknownMessage": "上次儲存結果尚未確認，Sked 無法確認變更是否已復原。為保護資料，已暫停寫入並保留復原副本。請檢查儲存狀態後重試讀取。",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "面板顯示方式",
+  "settingsPanelDisplayModeGlobal": "課表與行程共用",
+  "settingsPanelDisplayOverlay": "浮層",
+  "settingsPanelDisplaySideBySide": "並排",
+  "settingsPanelDisplayAutomatic": "自動",
+  "settingsPanelDisplayOverlayDescription": "覆蓋日曆右側，不改變日曆配置。",
+  "settingsPanelDisplaySideBySideDescription": "優先並排，日曆可變窄；過窄時使用浮層。",
+  "settingsPanelDisplayAutomaticDescription": "日曆達到易讀寬度時並排，否則使用浮層。"
 }

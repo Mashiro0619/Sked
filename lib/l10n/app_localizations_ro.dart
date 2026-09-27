@@ -3158,4 +3158,32 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked nu a putut confirma dacă ultima salvare a fost anulată. Scrierea este suspendată, iar copiile de recuperare sunt păstrate. Verificați stocarea și încercați din nou încărcarea.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Afișarea panourilor';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Comună pentru orare și calendare';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Suprapus';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Alăturat';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automat';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Suprapune partea dreaptă fără a redimensiona calendarul.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Preferă afișarea alăturată; suprapune doar dacă calendarul devine prea îngust.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Afișează alăturat dacă lățimea calendarului rămâne lizibilă; altfel suprapune.';
 }

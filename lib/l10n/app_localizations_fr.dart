@@ -3171,4 +3171,32 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked ne peut pas confirmer si le dernier enregistrement a été annulé. Les écritures sont suspendues et les copies de récupération sont conservées. Vérifiez le stockage, puis réessayez le chargement.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Affichage des panneaux';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Commun aux emplois du temps et aux agendas';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Superposition';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Côte à côte';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatique';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Se superpose à droite sans redimensionner le calendrier.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Privilégie côte à côte ; se superpose seulement si le calendrier devient trop étroit.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Affiche côte à côte si le calendrier reste lisible, sinon en superposition.';
 }

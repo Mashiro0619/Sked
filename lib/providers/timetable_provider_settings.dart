@@ -84,6 +84,9 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
   bool get homeWorkspaceNavigationCollapsed =>
       _appData.homeWorkspaceNavigationCollapsed;
 
+  WorkspacePanelDisplayMode get workspacePanelDisplayMode =>
+      _appData.workspacePanelDisplayMode;
+
   bool get fitDaySelectorToWidth => _appData.studentMode.fitDaySelectorToWidth;
 
   bool get fitWeekColumnsToWidth => _appData.studentMode.fitWeekColumnsToWidth;
@@ -115,6 +118,15 @@ mixin _TimetableProviderSettings on _TimetableProviderBase {
       _appData,
       value,
     );
+    await _saveAndNotify();
+  }
+
+  Future<void> updateWorkspacePanelDisplayMode(
+    WorkspacePanelDisplayMode value,
+  ) async {
+    final next = _settings.updateWorkspacePanelDisplayMode(_appData, value);
+    if (identical(next, _appData)) return;
+    _appData = next;
     await _saveAndNotify();
   }
 

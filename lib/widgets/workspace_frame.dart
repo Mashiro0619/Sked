@@ -2,6 +2,7 @@ import '../theme/sked_surface.dart';
 import '../theme/sked_expressive_theme.dart';
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:provider/provider.dart';
 
@@ -44,6 +45,8 @@ class WorkspacePaneController extends ChangeNotifier {
   final focusScope = FocusScopeNode(debugLabel: 'Workspace inspector');
   final List<_WorkspaceTaskRoute> _tasks = [];
   bool _closing = false;
+  int _activationRevision = 0;
+  int get activationRevision => _activationRevision;
   final _disposedSignal = Completer<void>();
   bool _disposed = false;
   bool get isOpen => _tasks.isNotEmpty;
@@ -99,6 +102,7 @@ class WorkspacePaneController extends ChangeNotifier {
     if (_disposed || !navigator.mounted) return null;
     final task = _WorkspaceTaskRoute(route, modal, selectionId, dismissible);
     _tasks.add(task);
+    if (!modal) _activationRevision += 1;
     notifyListeners();
     try {
       if (!modal) {
@@ -185,8 +189,12 @@ class WorkspaceCanvasScope extends InheritedWidget {
     super.key,
     required this.layout,
     required super.child,
+    this.bodyKey,
+    this.onBodyLayout,
   });
   final WorkspaceLayout layout;
+  final GlobalKey? bodyKey;
+  final VoidCallback? onBodyLayout;
   static WorkspaceLayout? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<WorkspaceCanvasScope>()
       ?.layout;
@@ -196,7 +204,40 @@ class WorkspaceCanvasScope extends InheritedWidget {
       layout.supporting != oldWidget.layout.supporting ||
       layout.dockedDetail != oldWidget.layout.dockedDetail ||
       layout.resourceWidth != oldWidget.layout.resourceWidth ||
-      layout.dockedAssistant != oldWidget.layout.dockedAssistant;
+      layout.dockedAssistant != oldWidget.layout.dockedAssistant ||
+      layout.canvasObscured != oldWidget.layout.canvasObscured;
+}
+
+/// Keeps the visible toolbar reachable when a narrow overlay covers the body.
+/// Also reports the actual body boundary for multi-row and large-text toolbars.
+class WorkspaceCanvasBody extends StatelessWidget {
+  const WorkspaceCanvasBody({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<WorkspaceCanvasScope>();
+    final obscured = scope?.layout.canvasObscured ?? false;
+    return NotificationListener<SizeChangedLayoutNotification>(
+      onNotification: (_) {
+        scope?.onBodyLayout?.call();
+        return false;
+      },
+      child: SizeChangedLayoutNotifier(
+        child: KeyedSubtree(
+          key: scope?.bodyKey,
+          child: ExcludeFocus(
+            excluding: obscured,
+            child: ExcludeSemantics(
+              excluding: obscured,
+              child: IgnorePointer(ignoring: obscured, child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class WorkspaceFrame extends StatefulWidget {
@@ -208,6 +249,7 @@ class WorkspaceFrame extends StatefulWidget {
     this.supporting,
     this.active = true,
     this.resourcesCollapsed = false,
+    this.panelDisplayMode = WorkspacePanelDisplayMode.overlay,
     this.minimumCanvas = 600,
     this.assistantController,
     this.assistantPreview = aiLayoutPreviewEnabled,
@@ -219,6 +261,7 @@ class WorkspaceFrame extends StatefulWidget {
   final Widget? supporting;
   final bool active;
   final bool resourcesCollapsed;
+  final WorkspacePanelDisplayMode panelDisplayMode;
   final double minimumCanvas;
   final AssistantPaneController? assistantController;
   final bool assistantPreview;
@@ -230,13 +273,22 @@ class WorkspaceFrame extends StatefulWidget {
 class _WorkspaceFrameState extends State<WorkspaceFrame> {
   late final AssistantPaneController _assistant =
       widget.assistantController ?? AssistantPaneController();
-  double _detailWidth = 360;
+  final _assistantFocus = FocusScopeNode(debugLabel: 'Workspace assistant');
+  final _workspaceFocus = FocusScopeNode(debugLabel: 'Workspace');
+  final _stackKey = GlobalKey();
+  final _bodyKey = GlobalKey();
+  double _detailWidth = AppBreakpoints.detailPane;
+  double? _bodyTop;
+  bool _geometryScheduled = false;
   bool _assistantLast = false;
   bool _wasDetailOpen = false;
   bool _wasAssistantOpen = false;
+  int _detailActivation = -1;
   String? _selection;
+  WorkspaceLayout? _layout;
   DeveloperUiPreferences? _developerUi;
   bool? _lastAssistantPreference;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -254,17 +306,55 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     final enabled = _developerUi?.assistantVisible;
     if (enabled != null && enabled != _lastAssistantPreference) {
       _lastAssistantPreference = enabled;
-      // Only a feature-toggle change opens/closes the panel. Save progress or
-      // failures must not undo a user's temporary close.
+      // Saving unrelated preferences must not reopen a temporarily closed pane.
       _assistant.setOpen(enabled);
     }
     setState(() {});
   }
 
-  void _setAssistantOpen(bool visible) {
-    // Panel visibility is transient; only developer settings persist whether
-    // the preview feature (and its toolbar entry) is enabled.
-    _assistant.setOpen(visible);
+  void _setAssistantOpen(bool visible) => _assistant.setOpen(visible);
+
+  void _toggleAssistant() {
+    if (_layout?.assistantVisible == true) {
+      _setAssistantOpen(false);
+    } else {
+      setState(() => _assistantLast = true);
+      _setAssistantOpen(true);
+      _requestAssistantFocus();
+    }
+  }
+
+  void _requestAssistantFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.active && _layout?.assistantVisible == true) {
+        _assistantFocus.requestFocus();
+      }
+    });
+  }
+
+  void _scheduleBodyGeometry() {
+    if (_geometryScheduled) return;
+    _geometryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _geometryScheduled = false;
+      if (!mounted) return;
+      final body = _bodyKey.currentContext?.findRenderObject();
+      final stack = _stackKey.currentContext?.findRenderObject();
+      if (body is! RenderBox ||
+          stack is! RenderBox ||
+          !body.attached ||
+          !body.hasSize ||
+          !stack.hasSize) {
+        return;
+      }
+      final top = body
+          .localToGlobal(Offset.zero, ancestor: stack)
+          .dy
+          .clamp(0.0, stack.size.height);
+      if (_bodyTop == null || (top - _bodyTop!).abs() > .5) {
+        setState(() => _bodyTop = top);
+      }
+    });
   }
 
   @override
@@ -275,16 +365,23 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   }
 
   void _detailChanged() {
-    if (widget.controller.hasPaneTasks &&
-        (!_wasDetailOpen || widget.controller.selectedId != _selection)) {
+    final controller = widget.controller;
+    if (controller.hasPaneTasks &&
+        (!_wasDetailOpen ||
+            controller.activationRevision != _detailActivation ||
+            controller.selectedId != _selection)) {
       _assistantLast = false;
     }
-    _wasDetailOpen = widget.controller.hasPaneTasks;
-    _selection = widget.controller.selectedId;
+    _wasDetailOpen = controller.hasPaneTasks;
+    _detailActivation = controller.activationRevision;
+    _selection = controller.selectedId;
   }
 
   void _assistantChanged() {
-    if (_assistant.isOpen && !_wasAssistantOpen) _assistantLast = true;
+    if (_assistant.isOpen && !_wasAssistantOpen) {
+      _assistantLast = true;
+      _requestAssistantFocus();
+    }
     _wasAssistantOpen = _assistant.isOpen;
   }
 
@@ -294,6 +391,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_detailChanged);
       widget.controller.addListener(_detailChanged);
+      _detailActivation = -1;
+      _detailChanged();
     }
   }
 
@@ -302,8 +401,104 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     _developerUi?.removeListener(_syncAssistantPreference);
     widget.controller.removeListener(_detailChanged);
     _assistant.removeListener(_assistantChanged);
+    _assistantFocus.dispose();
+    _workspaceFocus.dispose();
     if (widget.assistantController == null) _assistant.dispose();
     super.dispose();
+  }
+
+  Widget _detailPane(WorkspaceLayout policy) {
+    final controller = widget.controller;
+    final interactive = widget.active && policy.detailVisible;
+    return Offstage(
+      offstage: !policy.detailVisible,
+      child: FocusScope(
+        key: const ValueKey('workspace-inspector'),
+        node: controller.focusScope,
+        canRequestFocus: interactive,
+        descendantsAreFocusable: interactive,
+        descendantsAreTraversable: interactive,
+        onFocusChange: (focused) {
+          if (focused) _assistantLast = false;
+        },
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) => _assistantLast = false,
+          child: _PaneSurface(
+            floating: !policy.dockedDetail,
+            role: policy.dockedDetail
+                ? SkedSurfaceRole.frame
+                : SkedSurfaceRole.content,
+            child: Column(
+              children: [
+                Padding(
+                  key: const ValueKey('workspace-inspector-header'),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: IconButton(
+                      key: const ValueKey('workspace-inspector-close'),
+                      tooltip: MaterialLocalizations.of(context)
+                          .closeButtonTooltip,
+                      icon: const Icon(Icons.close),
+                      onPressed: controller.close,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Semantics(
+                    container: true,
+                    explicitChildNodes: true,
+                    child: Navigator(
+                      key: controller.navigatorKey,
+                      requestFocus: false,
+                      onGenerateRoute: (_) => MaterialPageRoute<void>(
+                        builder: (_) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _assistantPane(WorkspaceLayout policy, bool previewEnabled) {
+    final interactive = widget.active && policy.assistantVisible;
+    return Offstage(
+      offstage: !policy.assistantVisible,
+      child: FocusScope(
+        node: _assistantFocus,
+        canRequestFocus: interactive,
+        descendantsAreFocusable: interactive,
+        descendantsAreTraversable: interactive,
+        onFocusChange: (focused) {
+          if (focused) _assistantLast = true;
+        },
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) => _assistantLast = true,
+          child: _PaneSurface(
+            floating: !policy.dockedAssistant,
+            role: policy.dockedAssistant
+                ? SkedSurfaceRole.frame
+                : SkedSurfaceRole.content,
+            child: !previewEnabled
+                ? const SizedBox.shrink()
+                : AssistantPreviewPane(
+                    onClose: () => _setAssistantOpen(false),
+                    controller: _assistant,
+                    snapshot: widget.contextSnapshot?.withSelection(
+                      widget.controller.selectedId,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -317,57 +512,79 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final previewEnabled =
               _developerUi?.assistantVisible ?? widget.assistantPreview;
           final assistantOpen = previewEnabled && _assistant.isOpen;
+          final metrics = WorkbenchChromeMetrics.of(context);
           final policy = WorkspaceLayout.resolve(
             constraints.maxWidth,
-            MediaQuery.textScalerOf(context).scale(14) / 14,
+            metrics.textScale,
             detailOpen: controller.hasPaneTasks,
             hasSupporting: widget.supporting != null,
             assistantOpen: assistantOpen,
-            pointer: WorkbenchLayoutPolicy.pointerLayout(context),
+            assistantActive: _assistantLast,
+            pointer: metrics.desktop,
+            panelDisplayMode: widget.panelDisplayMode,
             minimumCanvas: widget.minimumCanvas,
             preferredDetailWidth: _detailWidth,
             preferredAssistantWidth: _assistant.width,
+            // Scaffold shortens the body for the IME. Only an actual short
+            // window, not typing in a pane, may compact the navigation.
             resourcesCollapsed:
-                widget.resourcesCollapsed || constraints.maxHeight < 480,
+                widget.resourcesCollapsed ||
+                MediaQuery.sizeOf(context).height < 480,
           );
-          final assistantOverlay = assistantOpen && !policy.dockedAssistant;
-          final detailOverlay = controller.hasPaneTasks && !policy.dockedDetail;
-          final assistantVisible =
-              assistantOpen && (!detailOverlay || _assistantLast);
-          final detailVisible =
-              controller.hasPaneTasks && (!assistantOverlay || !_assistantLast);
-          final obscured =
-              (assistantOverlay && assistantVisible) ||
-              (detailOverlay && detailVisible);
+          _layout = policy;
+          // A resize may hide a focused task. Do not steal focus merely because
+          // an additional task became visible beside an interactive calendar.
+          if (active &&
+              ((!policy.detailVisible && controller.focusScope.hasFocus) ||
+                  (!policy.assistantVisible && _assistantFocus.hasFocus))) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || !widget.active) return;
+              if (_layout?.assistantVisible == true &&
+                  (_layout?.detailVisible != true || _assistantLast)) {
+                _assistantFocus.requestFocus();
+              } else if (_layout?.detailVisible == true) {
+                controller.focusScope.requestFocus();
+              }
+            });
+          }
+          _scheduleBodyGeometry();
           final assistantSpace = policy.dockedAssistant
               ? policy.assistantWidth + 1
               : 0.0;
-          final detailSpace = policy.dockedDetail || policy.supporting
+          final detailSpace = policy.dockedDetail
               ? policy.detailWidth + 1
+              : policy.supporting
+              ? policy.supportingWidth + 1
               : 0.0;
-          // Native controls occupy this row, not a second application title bar.
-          final pointer = WorkbenchLayoutPolicy.pointerLayout(context);
-          final resizeExtent = pointer ? 9.0 : 48.0;
-          final metrics = WorkbenchChromeMetrics.of(context);
           final captionInset = DesktopWindowBridge.instance.available
               ? metrics.toolbarHeight
               : 0.0;
-          final captionWidth = metrics.captionWidth;
+          final overlayInset = math
+              .max(captionInset, _bodyTop ?? metrics.toolbarHeight)
+              .clamp(0.0, constraints.maxHeight);
+          final detailTop = policy.dockedDetail ? captionInset : overlayInset;
+          final assistantTop = policy.dockedAssistant
+              ? captionInset
+              : overlayInset;
+          final resizeExtent = metrics.desktop ? 9.0 : 48.0;
           final motion = SkedMotionPolicy.of(context);
-          // A window resize or newly docked task can shrink the budget mid-
-          // animation. Never borrow its required space for a closing sidebar.
+          // This budget uses the selected docking floor, never a task-first
+          // sidebar compromise. Opening a pane always leaves the base width safe.
           final resourceBudget =
               (constraints.maxWidth -
-                      widget.minimumCanvas *
-                          WorkbenchLayoutPolicy.textFactor(metrics.textScale) -
+                      policy.minimumCanvasWidth -
                       detailSpace -
                       assistantSpace -
                       1)
                   .clamp(0.0, constraints.maxWidth);
+          final overlayVisible =
+              (policy.detailVisible && !policy.dockedDetail) ||
+              (policy.assistantVisible && !policy.dockedAssistant);
           Future<void> dismiss() async {
-            if (assistantVisible && (!detailVisible || _assistantLast)) {
+            if (policy.assistantVisible &&
+                (!policy.detailVisible || _assistantLast)) {
               _setAssistantOpen(false);
-            } else if (detailVisible) {
+            } else if (policy.detailVisible) {
               await controller.close();
             }
           }
@@ -375,7 +592,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           return AssistantPaneScope(
             controller: _assistant,
             enabled: previewEnabled,
-            onToggle: () => _setAssistantOpen(!_assistant.isOpen),
+            visible: policy.assistantVisible,
+            onToggle: _toggleAssistant,
             child: PopScope(
               canPop: !active || (!controller.hasPaneTasks && !assistantOpen),
               onPopInvokedWithResult: (didPop, _) {
@@ -396,59 +614,72 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                           },
                         ),
                   },
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(end: policy.resourceWidth),
-                              duration: motion.spatialAnimationsEnabled
-                                  ? motion.effects(SkedMotionSpeed.standard)
-                                  : Duration.zero,
-                              curve: motion.scheme.standardCurve,
-                              builder: (context, width, child) => SizedBox(
-                                key: const ValueKey('workspace-resource-width'),
-                                width: policy.resources
-                                    ? width.clamp(0.0, resourceBudget)
-                                    : 0,
-                                child: ClipRect(child: child),
-                              ),
-                              child: Offstage(
-                                offstage: !policy.resources,
-                                child: ExcludeFocus(
-                                  excluding:
-                                      !active || !policy.resources || obscured,
-                                  child: WorkspaceCanvasScope(
-                                    layout: policy,
-                                    child: widget.resources,
+                  child: FocusScope(
+                    key: const ValueKey('workspace-focus'),
+                    node: _workspaceFocus,
+                    autofocus: active,
+                    canRequestFocus: active,
+                    descendantsAreFocusable: active,
+                    child: Stack(
+                      key: _stackKey,
+                      children: [
+                        Positioned.fill(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(end: policy.resourceWidth),
+                                duration: motion.spatialAnimationsEnabled
+                                    ? motion.effects(SkedMotionSpeed.standard)
+                                    : Duration.zero,
+                                curve: motion.scheme.standardCurve,
+                                builder: (context, width, child) => SizedBox(
+                                  key: const ValueKey(
+                                    'workspace-resource-width',
+                                  ),
+                                  width: policy.resources
+                                      ? width.clamp(0.0, resourceBudget)
+                                      : 0,
+                                  child: ClipRect(child: child),
+                                ),
+                                child: Offstage(
+                                  offstage: !policy.resources,
+                                  child: ExcludeFocus(
+                                    excluding: !active || !policy.resources,
+                                    child: WorkspaceCanvasScope(
+                                      layout: policy,
+                                      child: widget.resources,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            SizedBox(
-                              width: policy.resources ? 1 : 0,
-                              child: const VerticalDivider(width: 1),
-                            ),
-                            Expanded(
-                              child: ExcludeFocus(
-                                excluding: !active || obscured,
-                                child: WorkspaceCanvasScope(
-                                  layout: policy,
-                                  child: WorkspaceSelectionScope(
-                                    key: const ValueKey('workspace-canvas'),
-                                    selectedId: controller.selectedId,
-                                    child: ExcludeSemantics(
-                                      excluding: obscured,
+                              SizedBox(
+                                width: policy.resources ? 1 : 0,
+                                child: const VerticalDivider(width: 1),
+                              ),
+                              Expanded(
+                                child: ExcludeFocus(
+                                  excluding: !active,
+                                  child: WorkspaceCanvasScope(
+                                    layout: policy,
+                                    bodyKey: _bodyKey,
+                                    onBodyLayout: _scheduleBodyGeometry,
+                                    child: WorkspaceSelectionScope(
+                                      key: const ValueKey('workspace-canvas'),
+                                      selectedId: controller.selectedId,
                                       child: GestureDetector(
                                         behavior: HitTestBehavior.translucent,
                                         onTap:
                                             active &&
-                                                controller.hasPaneTasks &&
+                                                policy.detailVisible &&
                                                 controller.dismissOnCanvasTap
-                                            ? () =>
-                                                  unawaited(controller.close())
+                                            ? () {
+                                                // Activation can change without a frame rebuild.
+                                                if (!policy.assistantVisible ||
+                                                    !_assistantLast) {
+                                                  unawaited(controller.close());
+                                                }
+                                              }
                                             : null,
                                         child: widget.canvas,
                                       ),
@@ -456,174 +687,107 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                   ),
                                 ),
                               ),
-                            ),
-                            SizedBox(width: detailSpace + assistantSpace),
-                          ],
-                        ),
-                      ),
-                      if (captionInset > 0 &&
-                          assistantSpace + detailSpace > captionWidth)
-                        PositionedDirectional(
-                          end: captionWidth,
-                          top: 0,
-                          width: assistantSpace + detailSpace - captionWidth,
-                          height: captionInset,
-                          child: const SkedSurface(
-                            key: ValueKey('workspace-caption-fill'),
-                            role: SkedSurfaceRole.frame,
-                            child: DesktopDragRegion(child: SizedBox.expand()),
+                              SizedBox(width: detailSpace + assistantSpace),
+                            ],
                           ),
                         ),
-                      if (policy.supporting)
+                        if (captionInset > 0 &&
+                            assistantSpace + detailSpace > metrics.captionWidth)
+                          PositionedDirectional(
+                            end: metrics.captionWidth,
+                            top: 0,
+                            width:
+                                assistantSpace +
+                                detailSpace -
+                                metrics.captionWidth,
+                            height: captionInset,
+                            child: const SkedSurface(
+                              key: ValueKey('workspace-caption-fill'),
+                              role: SkedSurfaceRole.frame,
+                              child: DesktopDragRegion(
+                                child: SizedBox.expand(),
+                              ),
+                            ),
+                          ),
                         PositionedDirectional(
-                          end: assistantSpace,
+                          key: const ValueKey('workspace-supporting-pane'),
+                          end: 0,
                           top: captionInset,
                           bottom: 0,
-                          width: policy.detailWidth,
-                          child: _PaneSurface(child: widget.supporting!),
-                        ),
-                      // Keep both slots mounted at a stable address across dock/overlay changes.
-                      PositionedDirectional(
-                        end: detailOverlay ? 0 : assistantSpace,
-                        top: captionInset,
-                        bottom: 0,
-                        width: policy.detailWidth,
-                        child: Offstage(
-                          offstage: !detailVisible,
-                          child: ExcludeFocus(
-                            excluding: !active || !detailVisible,
-                            child: Listener(
-                              onPointerDown: (_) {
-                                _assistantLast = false;
-                              },
-                              child: _PaneSurface(
-                                role: policy.dockedDetail
-                                    ? SkedSurfaceRole.frame
-                                    : SkedSurfaceRole.content,
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      key: const ValueKey(
-                                        'workspace-inspector-header',
-                                      ),
-                                      padding: const EdgeInsets.all(
-                                        AppSpacing.sm,
-                                      ),
-                                      child: Align(
-                                        alignment:
-                                            AlignmentDirectional.centerEnd,
-                                        child: IconButton(
-                                          key: const ValueKey(
-                                            'workspace-inspector-close',
-                                          ),
-                                          tooltip: MaterialLocalizations.of(
-                                            context,
-                                          ).closeButtonTooltip,
-                                          icon: const Icon(Icons.close),
-                                          onPressed: controller.close,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: FocusScope(
-                                        key: const ValueKey(
-                                          'workspace-inspector',
-                                        ),
-                                        node: controller.focusScope,
-                                        canRequestFocus:
-                                            active && detailVisible,
-                                        descendantsAreFocusable:
-                                            active && detailVisible,
-                                        descendantsAreTraversable:
-                                            active && detailVisible,
-                                        child: Semantics(
-                                          container: true,
-                                          explicitChildNodes: true,
-                                          child: Navigator(
-                                            key: controller.navigatorKey,
-                                            requestFocus: false,
-                                            onGenerateRoute: (_) =>
-                                                MaterialPageRoute<void>(
-                                                  builder: (_) =>
-                                                      const SizedBox.shrink(),
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                          width: policy.supportingWidth,
+                          child: Offstage(
+                            offstage: !policy.supporting,
+                            child: ExcludeFocus(
+                              excluding:
+                                  !active ||
+                                  !policy.supporting ||
+                                  overlayVisible,
+                              child: ExcludeSemantics(
+                                excluding: overlayVisible,
+                                child: _PaneSurface(
+                                  child:
+                                      widget.supporting ??
+                                      const SizedBox.shrink(),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      PositionedDirectional(
-                        end: 0,
-                        top: captionInset,
-                        bottom: 0,
-                        width: policy.assistantWidth,
-                        child: Offstage(
-                          offstage: !assistantVisible,
-                          child: ExcludeFocus(
-                            excluding: !active || !assistantVisible,
-                            child: Listener(
-                              onPointerDown: (_) {
-                                _assistantLast = true;
-                              },
-                              child: _PaneSurface(
-                                role: policy.dockedAssistant
-                                    ? SkedSurfaceRole.frame
-                                    : SkedSurfaceRole.content,
-                                child: !previewEnabled
-                                    ? const SizedBox.shrink()
-                                    : AssistantPreviewPane(
-                                        onClose: () => _setAssistantOpen(false),
-                                        controller: _assistant,
-                                        snapshot: widget.contextSnapshot
-                                            ?.withSelection(
-                                              controller.selectedId,
-                                            ),
-                                      ),
+                        // These keyed slots never change identity on a resize,
+                        // mode change or activation of a different foreground task.
+                        PositionedDirectional(
+                          key: const ValueKey('workspace-detail-pane'),
+                          end: policy.dockedDetail ? assistantSpace : 0,
+                          top: detailTop,
+                          bottom: 0,
+                          width: policy.detailWidth,
+                          child: _detailPane(policy),
+                        ),
+                        PositionedDirectional(
+                          key: const ValueKey('workspace-assistant-pane'),
+                          end: 0,
+                          top: assistantTop,
+                          bottom: 0,
+                          width: policy.assistantWidth,
+                          child: _assistantPane(policy, previewEnabled),
+                        ),
+                        if (policy.detailVisible)
+                          PositionedDirectional(
+                            end:
+                                (policy.dockedDetail ? assistantSpace : 0) +
+                                policy.detailWidth -
+                                resizeExtent,
+                            top: detailTop,
+                            bottom: metrics.desktop ? 0 : null,
+                            height: metrics.desktop ? null : 48,
+                            width: resizeExtent,
+                            child: _PaneResizeHandle(
+                              key: const ValueKey('workspace-detail-resize'),
+                              onActivate: () => _assistantLast = false,
+                              onResize: (dx) => setState(
+                                () => _detailWidth =
+                                    (_detailWidth - dx / metrics.textScale)
+                                        .clamp(320, 600),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      if (policy.dockedDetail && detailVisible && !obscured)
-                        PositionedDirectional(
-                          end:
-                              assistantSpace +
-                              policy.detailWidth -
-                              resizeExtent,
-                          top: captionInset,
-                          bottom: pointer ? 0 : null,
-                          height: pointer ? null : 48,
-                          width: resizeExtent,
-                          child: _PaneResizeHandle(
-                            onResize: (dx) => setState(
-                              () => _detailWidth = (_detailWidth - dx).clamp(
-                                320,
-                                600,
+                        if (policy.assistantVisible)
+                          PositionedDirectional(
+                            end: policy.assistantWidth - resizeExtent,
+                            top: assistantTop,
+                            bottom: metrics.desktop ? 0 : null,
+                            height: metrics.desktop ? null : 48,
+                            width: resizeExtent,
+                            child: _PaneResizeHandle(
+                              key: const ValueKey('workspace-assistant-resize'),
+                              onActivate: () => _assistantLast = true,
+                              onResize: (dx) => _assistant.resize(
+                                _assistant.width - dx / metrics.textScale,
                               ),
                             ),
                           ),
-                        ),
-                      if (policy.dockedAssistant &&
-                          assistantVisible &&
-                          !obscured)
-                        PositionedDirectional(
-                          end: policy.assistantWidth - resizeExtent,
-                          top: captionInset,
-                          bottom: pointer ? 0 : null,
-                          height: pointer ? null : 48,
-                          width: resizeExtent,
-                          child: _PaneResizeHandle(
-                            onResize: (dx) =>
-                                _assistant.resize(_assistant.width - dx),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -636,12 +800,27 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
 }
 
 class _PaneSurface extends StatelessWidget {
-  const _PaneSurface({required this.child, this.role = SkedSurfaceRole.frame});
+  const _PaneSurface({
+    required this.child,
+    this.role = SkedSurfaceRole.frame,
+    this.floating = false,
+  });
   final Widget child;
   final SkedSurfaceRole role;
+  final bool floating;
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
+      boxShadow: floating
+          ? [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.shadow
+                    .withValues(alpha: .14),
+                blurRadius: 16,
+                offset: const Offset(-4, 0),
+              ),
+            ]
+          : null,
       border: BorderDirectional(
         start: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
@@ -651,24 +830,37 @@ class _PaneSurface extends StatelessWidget {
 }
 
 class _PaneResizeHandle extends StatelessWidget {
-  const _PaneResizeHandle({required this.onResize});
+  const _PaneResizeHandle({
+    super.key,
+    required this.onResize,
+    required this.onActivate,
+  });
   final ValueChanged<double> onResize;
+  final VoidCallback onActivate;
+  void _resize(double delta) {
+    onActivate();
+    onResize(delta);
+  }
+
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
     explicitChildNodes: true,
     label: AppLocalizations.of(context).resizePanel,
-    onIncrease: () => onResize(-24),
-    onDecrease: () => onResize(24),
+    onIncrease: () => _resize(-24),
+    onDecrease: () => _resize(24),
     child: Focus(
+      onFocusChange: (focused) {
+        if (focused) onActivate();
+      },
       onKeyEvent: (_, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-          onResize(-24);
+          _resize(-24);
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-          onResize(24);
+          _resize(24);
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -677,7 +869,8 @@ class _PaneResizeHandle extends StatelessWidget {
         cursor: SystemMouseCursors.resizeColumn,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onHorizontalDragUpdate: (details) => onResize(
+          onHorizontalDragDown: (_) => onActivate(),
+          onHorizontalDragUpdate: (details) => _resize(
             Directionality.of(context) == TextDirection.rtl
                 ? -details.delta.dx
                 : details.delta.dx,

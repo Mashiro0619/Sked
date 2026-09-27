@@ -3143,4 +3143,32 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked không thể xác nhận lần lưu gần nhất đã được hoàn tác hay chưa. Việc ghi đã tạm dừng và các bản sao khôi phục được giữ lại. Hãy kiểm tra bộ nhớ rồi thử tải lại.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Cách hiển thị bảng';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Dùng chung cho thời khóa biểu và lịch';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Lớp phủ';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Song song';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Tự động';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Phủ bên phải mà không đổi kích thước lịch.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Ưu tiên hiển thị song song; chỉ dùng lớp phủ khi lịch quá hẹp.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Hiển thị song song khi lịch còn đủ rộng để đọc; nếu không thì dùng lớp phủ.';
 }

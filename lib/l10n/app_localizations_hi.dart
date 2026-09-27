@@ -3137,4 +3137,32 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked यह पुष्टि नहीं कर सका कि पिछली सेव प्रक्रिया के बदलाव वापस किए गए हैं या नहीं। लिखना रोक दिया गया है और पुनर्प्राप्ति प्रतियाँ सुरक्षित हैं। स्टोरेज जाँचें और डेटा फिर से लोड करें।';
+
+  @override
+  String get settingsPanelDisplayMode => 'पैनल दिखाने का तरीका';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'समय-सारणी और कैलेंडर के लिए साझा';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'ऊपर दिखाएँ';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'साथ-साथ';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'स्वचालित';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'कैलेंडर की चौड़ाई बदले बिना दाईं ओर ऊपर दिखाता है।';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'साथ-साथ दिखाने को प्राथमिकता देता है; कैलेंडर बहुत संकरा होने पर ही ऊपर दिखाता है।';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'कैलेंडर पढ़ने योग्य चौड़ाई में हो तो साथ-साथ, अन्यथा ऊपर दिखाता है।';
 }

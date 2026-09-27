@@ -7,6 +7,20 @@ void main() {
 
   AppData base() => AppData.fromJson(const {});
 
+  test(
+    'panel display modes preserve other preferences and skip no-op updates',
+    () {
+      final initial = base().copyWith(homeWorkspaceNavigationCollapsed: true);
+      for (final mode in WorkspacePanelDisplayMode.values) {
+        final next = service.updateWorkspacePanelDisplayMode(initial, mode);
+        expect(next.workspacePanelDisplayMode, mode);
+        expect(next.homeWorkspaceNavigationCollapsed, isTrue);
+        expect(next.activeMode, initial.activeMode);
+        expect(service.updateWorkspacePanelDisplayMode(next, mode), same(next));
+      }
+    },
+  );
+
   test('changing the update channel clears cached candidates and preserves ignored versions', () {
     final initial = base().copyWith(
       availableUpdateVersion: '2.0.0',

@@ -3149,4 +3149,32 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked nie może potwierdzić, czy ostatni zapis został wycofany. Zapisywanie jest wstrzymane, a kopie odzyskiwania zostały zachowane. Sprawdź pamięć i spróbuj ponownie wczytać dane.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Wyświetlanie paneli';
+
+  @override
+  String get settingsPanelDisplayModeGlobal =>
+      'Wspólne dla planów zajęć i kalendarzy';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Nakładka';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Obok siebie';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatycznie';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Nakłada panel po prawej bez zmiany szerokości kalendarza.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Preferuje układ obok siebie; nakłada panel tylko wtedy, gdy kalendarz byłby zbyt wąski.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Wyświetla obok siebie, jeśli kalendarz pozostaje czytelny; w przeciwnym razie nakłada panel.';
 }

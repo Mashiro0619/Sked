@@ -5627,6 +5627,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sked could not confirm whether the last save was rolled back. Writing is paused and recovery copies are preserved. Check your storage and retry loading.'**
   String get dataRecoveryWriteStateUnknownMessage;
+
+  /// No description provided for @settingsPanelDisplayMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Panel display mode'**
+  String get settingsPanelDisplayMode;
+
+  /// No description provided for @settingsPanelDisplayModeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared by timetables and schedules'**
+  String get settingsPanelDisplayModeGlobal;
+
+  /// No description provided for @settingsPanelDisplayOverlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlay'**
+  String get settingsPanelDisplayOverlay;
+
+  /// No description provided for @settingsPanelDisplaySideBySide.
+  ///
+  /// In en, this message translates to:
+  /// **'Side by side'**
+  String get settingsPanelDisplaySideBySide;
+
+  /// No description provided for @settingsPanelDisplayAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get settingsPanelDisplayAutomatic;
+
+  /// No description provided for @settingsPanelDisplayOverlayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlays the right side without resizing the calendar.'**
+  String get settingsPanelDisplayOverlayDescription;
+
+  /// No description provided for @settingsPanelDisplaySideBySideDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefers side by side; uses an overlay only when the calendar would be too narrow.'**
+  String get settingsPanelDisplaySideBySideDescription;
+
+  /// No description provided for @settingsPanelDisplayAutomaticDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses side by side when the calendar has enough readable space; otherwise overlays.'**
+  String get settingsPanelDisplayAutomaticDescription;
 }
 
 class _AppLocalizationsDelegate

@@ -882,9 +882,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   }
 
   void _popOnce([CourseEditorResult? result]) {
-    if (_hasPopped) return;
+    if (!mounted || _hasPopped) return;
     setState(() => _hasPopped = true);
-    Navigator.of(context).pop(result);
+    completeEditorRoute(context, result);
   }
 
   List<int> _togglePeriodSelection(List<int> current, int periodIndex) {

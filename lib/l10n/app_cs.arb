@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Vybrat pomocí koleček",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked nemohl ověřit, zda bylo poslední uložení vráceno zpět. Zápis je pozastaven a kopie pro obnovení jsou zachovány. Zkontrolujte úložiště a zkuste data znovu načíst.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Zobrazení panelů",
+  "settingsPanelDisplayModeGlobal": "Společné pro rozvrhy a kalendáře",
+  "settingsPanelDisplayOverlay": "Překrytí",
+  "settingsPanelDisplaySideBySide": "Vedle sebe",
+  "settingsPanelDisplayAutomatic": "Automaticky",
+  "settingsPanelDisplayOverlayDescription": "Překryje pravou stranu bez změny šířky kalendáře.",
+  "settingsPanelDisplaySideBySideDescription": "Upřednostní zobrazení vedle sebe; překryje kalendář jen při nedostatku místa.",
+  "settingsPanelDisplayAutomaticDescription": "Zobrazí panely vedle sebe, pokud kalendář zůstane čitelný, jinak jako překrytí."
 }

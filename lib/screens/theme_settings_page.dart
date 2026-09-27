@@ -300,8 +300,53 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     }
   }
 
+  Widget _buildPanelDisplayChoice(
+    TimetableProvider source,
+    AppLocalizations l,
+  ) {
+    final description = switch (source.workspacePanelDisplayMode) {
+      WorkspacePanelDisplayMode.overlay =>
+        l.settingsPanelDisplayOverlayDescription,
+      WorkspacePanelDisplayMode.sideBySide =>
+        l.settingsPanelDisplaySideBySideDescription,
+      WorkspacePanelDisplayMode.automatic =>
+        l.settingsPanelDisplayAutomaticDescription,
+    };
+    return SettingsChoiceTile<WorkspacePanelDisplayMode>(
+      key: const ValueKey('settings-panel-display-mode'),
+      title: l.settingsPanelDisplayMode,
+      subtitle: '${l.settingsPanelDisplayModeGlobal} · $description',
+      icon: Icons.view_sidebar_outlined,
+      value: source.workspacePanelDisplayMode,
+      enabled: !uiCommandBusy,
+      entries: [
+        DropdownMenuEntry(
+          value: WorkspacePanelDisplayMode.overlay,
+          label: l.settingsPanelDisplayOverlay,
+        ),
+        DropdownMenuEntry(
+          value: WorkspacePanelDisplayMode.sideBySide,
+          label: l.settingsPanelDisplaySideBySide,
+        ),
+        DropdownMenuEntry(
+          value: WorkspacePanelDisplayMode.automatic,
+          label: l.settingsPanelDisplayAutomatic,
+        ),
+      ],
+      onSelected: (value) {
+        if (value != null) {
+          _updateSetting(
+            'Update workspace panel display mode',
+            () => source.updateWorkspacePanelDisplayMode(value),
+          );
+        }
+      },
+    );
+  }
+
   Widget _buildOverview(WorkspaceThemeTarget provider, AppLocalizations l) {
     final controls = <Widget>[
+      _buildPanelDisplayChoice(provider.source, l),
       if (provider.source.hasMultipleWorkspaces)
         SettingsChoiceTile<String>(
           key: const ValueKey('theme-workspace-target'),
@@ -461,6 +506,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           margin: const EdgeInsets.only(bottom: 24),
                           title: l10n.settingsSectionAppearance,
                           children: [
+                            _buildPanelDisplayChoice(source, l10n),
                             if (source.hasMultipleWorkspaces)
                               _AppearanceChoiceField(
                                 title: l10n.settingsThemeTarget,

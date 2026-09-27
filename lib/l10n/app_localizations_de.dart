@@ -3161,4 +3161,31 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       'Sked konnte nicht bestätigen, ob der letzte Speichervorgang rückgängig gemacht wurde. Schreibvorgänge sind angehalten und Wiederherstellungskopien bleiben erhalten. Prüfe den Speicher und versuche das Laden erneut.';
+
+  @override
+  String get settingsPanelDisplayMode => 'Paneldarstellung';
+
+  @override
+  String get settingsPanelDisplayModeGlobal => 'Für Stundenpläne und Kalender';
+
+  @override
+  String get settingsPanelDisplayOverlay => 'Überlagert';
+
+  @override
+  String get settingsPanelDisplaySideBySide => 'Nebeneinander';
+
+  @override
+  String get settingsPanelDisplayAutomatic => 'Automatisch';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'Überlagert die rechte Seite, ohne die Kalenderbreite zu ändern.';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      'Bevorzugt nebeneinander; überlagert nur, wenn der Kalender zu schmal würde.';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'Zeigt Panels nebeneinander bei ausreichend lesbarer Kalenderbreite, sonst überlagert.';
 }

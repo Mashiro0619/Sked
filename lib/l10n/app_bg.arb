@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Избор с колелца",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked не може да потвърди дали последното записване е отменено. Записването е спряно, а копията за възстановяване са запазени. Проверете хранилището и опитайте да заредите отново.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Показване на панелите",
+  "settingsPanelDisplayModeGlobal": "Общо за учебни разписания и календари",
+  "settingsPanelDisplayOverlay": "Наслагване",
+  "settingsPanelDisplaySideBySide": "Един до друг",
+  "settingsPanelDisplayAutomatic": "Автоматично",
+  "settingsPanelDisplayOverlayDescription": "Наслагва панела вдясно, без да променя ширината на календара.",
+  "settingsPanelDisplaySideBySideDescription": "Предпочита един до друг; наслагва само ако календарът стане твърде тесен.",
+  "settingsPanelDisplayAutomaticDescription": "Показва един до друг, ако календарът остава четим, иначе наслагва."
 }

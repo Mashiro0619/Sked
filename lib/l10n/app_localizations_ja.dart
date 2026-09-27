@@ -3081,4 +3081,31 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get dataRecoveryWriteStateUnknownMessage =>
       '前回の保存が取り消されたかどうかを確認できませんでした。書き込みを停止し、復元用のコピーを保持しています。ストレージを確認してから、読み込みを再試行してください。';
+
+  @override
+  String get settingsPanelDisplayMode => 'パネルの表示方法';
+
+  @override
+  String get settingsPanelDisplayModeGlobal => '時間割と予定で共通';
+
+  @override
+  String get settingsPanelDisplayOverlay => '重ねて表示';
+
+  @override
+  String get settingsPanelDisplaySideBySide => '並べて表示';
+
+  @override
+  String get settingsPanelDisplayAutomatic => '自動';
+
+  @override
+  String get settingsPanelDisplayOverlayDescription =>
+      'カレンダーの幅を変えず、右側に重ねて表示します。';
+
+  @override
+  String get settingsPanelDisplaySideBySideDescription =>
+      '並べて表示を優先し、カレンダーが狭すぎる場合のみ重ねて表示します。';
+
+  @override
+  String get settingsPanelDisplayAutomaticDescription =>
+      'カレンダーを読みやすい幅で表示できる場合は並べ、それ以外は重ねて表示します。';
 }

@@ -17,6 +17,7 @@ void main() {
   test('round-trips app data and school sites without API keys', () {
     final data = appData(localeCode: 'zh').copyWith(
       homeWorkspaceNavigationCollapsed: true,
+      workspacePanelDisplayMode: WorkspacePanelDisplayMode.sideBySide,
       aiApiSettings: const AiApiSettings(
         customBaseUrl: 'https://api.example.test/v1',
         customApiKey: 'sk-secret',
@@ -44,6 +45,10 @@ void main() {
     expect(decoded.includesSchoolSites, isTrue);
     expect(decoded.appData.localeCode, 'zh');
     expect(decoded.appData.homeWorkspaceNavigationCollapsed, isTrue);
+    expect(
+      decoded.appData.workspacePanelDisplayMode,
+      WorkspacePanelDisplayMode.sideBySide,
+    );
     expect(decoded.schoolSites.single.name, 'Example University');
     expect(decoded.appData.studentMode.fitDaySelectorToWidth, isFalse);
     expect(decoded.appData.studentMode.fitWeekColumnsToWidth, isFalse);

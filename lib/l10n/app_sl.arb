@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Izberi z drsnimi kolesci",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "Sked ni mogel potrditi, ali je bilo zadnje shranjevanje razveljavljeno. Pisanje je ustavljeno, obnovitvene kopije pa so ohranjene. Preverite shrambo in poskusite znova naložiti podatke.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Prikaz plošč",
+  "settingsPanelDisplayModeGlobal": "Skupno urnikom in koledarjem",
+  "settingsPanelDisplayOverlay": "Prekrivanje",
+  "settingsPanelDisplaySideBySide": "Druga ob drugi",
+  "settingsPanelDisplayAutomatic": "Samodejno",
+  "settingsPanelDisplayOverlayDescription": "Prekrije desno stran, ne da bi spremenil širino koledarja.",
+  "settingsPanelDisplaySideBySideDescription": "Daje prednost prikazu druga ob drugi; prekrije le, če bi koledar postal preozek.",
+  "settingsPanelDisplayAutomaticDescription": "Prikaže drugo ob drugi, če koledar ostane berljiv, sicer s prekrivanjem."
 }

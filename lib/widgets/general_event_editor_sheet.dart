@@ -375,9 +375,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   }
 
   void _popOnce([GeneralEventEditorResult? result]) {
-    if (_hasPopped) return;
+    if (!mounted || _hasPopped) return;
     setState(() => _hasPopped = true);
-    Navigator.of(context).pop(result);
+    completeEditorRoute(context, result);
   }
 
   GeneralEventRecurrenceRule _buildRecurrenceRule(int? repeatCount) {

@@ -636,7 +636,11 @@ Future<void> _openTimetablePicker(WidgetTester tester) async {
 }
 
 Future<void> _saveTimetableDialog(WidgetTester tester) async {
-  await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+  final save = find.widgetWithText(FilledButton, 'Save');
+  await tester.ensureVisible(save);
+  await tester.pumpAndSettle();
+  expect(save.hitTestable(), findsOneWidget);
+  await tester.tap(save);
 }
 
 String _selectedWeekTitle(TimetableProvider provider) {
@@ -2338,7 +2342,7 @@ void main() {
       reason: 'input reaches the config draft',
     );
     await tester.enterText(weeksField, '20');
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _saveTimetableDialog(tester);
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 1);
@@ -2353,7 +2357,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     storage.failSaves = false;
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await _saveTimetableDialog(tester);
     await tester.pumpAndSettle();
 
     expect(storage.saveCount, 2);
@@ -2412,7 +2416,11 @@ void main() {
     await _openTimetablePicker(tester);
     await tester.tap(find.byTooltip('Edit timetable').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    final delete = find.widgetWithText(TextButton, 'Delete');
+    await tester.ensureVisible(delete);
+    await tester.pumpAndSettle();
+    expect(delete.hitTestable(), findsOneWidget);
+    await tester.tap(delete);
     await tester.pumpAndSettle();
 
     final confirmDelete = find.widgetWithText(FilledButton, 'Delete');
@@ -2454,7 +2462,11 @@ void main() {
     await _openTimetablePicker(tester);
     await tester.tap(find.byTooltip('Edit timetable'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    final delete = find.widgetWithText(TextButton, 'Delete');
+    await tester.ensureVisible(delete);
+    await tester.pumpAndSettle();
+    expect(delete.hitTestable(), findsOneWidget);
+    await tester.tap(delete);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await tester.pumpAndSettle();

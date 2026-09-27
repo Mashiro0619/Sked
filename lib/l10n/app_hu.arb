@@ -1731,5 +1731,13 @@
   "timePickerWheelMode": "Kiválasztás görgetőkerekekkel",
   "@timePickerWheelMode": {},
   "dataRecoveryWriteStateUnknownMessage": "A Sked nem tudta megerősíteni, hogy a legutóbbi mentés vissza lett-e vonva. Az írás szünetel, a helyreállítási másolatok megmaradtak. Ellenőrizze a tárhelyet, és próbálja újra betölteni az adatokat.",
-  "@dataRecoveryWriteStateUnknownMessage": {}
+  "@dataRecoveryWriteStateUnknownMessage": {},
+  "settingsPanelDisplayMode": "Panelek megjelenítése",
+  "settingsPanelDisplayModeGlobal": "Közös az órarendekben és a naptárakban",
+  "settingsPanelDisplayOverlay": "Átfedés",
+  "settingsPanelDisplaySideBySide": "Egymás mellett",
+  "settingsPanelDisplayAutomatic": "Automatikus",
+  "settingsPanelDisplayOverlayDescription": "A jobb oldalt fedi le a naptár szélességének módosítása nélkül.",
+  "settingsPanelDisplaySideBySideDescription": "Az egymás melletti nézetet részesíti előnyben; csak túl keskeny naptár esetén fed rá.",
+  "settingsPanelDisplayAutomaticDescription": "Egymás mellett jelenít meg, ha a naptár olvasható marad, különben átfedéssel."
 }
