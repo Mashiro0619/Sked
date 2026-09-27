@@ -1,5 +1,6 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show ImageByteFormat, PointerDeviceKind, Tristate;
 
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -66,21 +67,24 @@ Future<void> pumpCalendar(
           alignment: Alignment.topLeft,
           child: SizedBox(
             width: width,
-            child: SkedDatePicker(
-              embedded: embedded,
-              initialDate: initialDate ?? selection.start,
-              currentDate: today ?? DateTime(2026, 9, 23),
-              browsedMonth: month,
-              firstDate: DateTime(1970),
-              lastDate: DateTime(2100),
-              selectionUnit: selectionUnit,
-              commitMode: DatePickerCommitMode.immediate,
-              displayRange: showRange ? selection : null,
-              rangeController: controller,
-              rangeInteraction: controller == null
-                  ? DateRangeInteraction.none
-                  : DateRangeInteraction.full,
-              onSelected: onSelected ?? (_) {},
+            child: RepaintBoundary(
+              key: const ValueKey('calendar-paint-boundary'),
+              child: SkedDatePicker(
+                embedded: embedded,
+                initialDate: initialDate ?? selection.start,
+                currentDate: today ?? DateTime(2026, 9, 23),
+                browsedMonth: month,
+                firstDate: DateTime(1970),
+                lastDate: DateTime(2100),
+                selectionUnit: selectionUnit,
+                commitMode: DatePickerCommitMode.immediate,
+                displayRange: showRange ? selection : null,
+                rangeController: controller,
+                rangeInteraction: controller == null
+                    ? DateRangeInteraction.none
+                    : DateRangeInteraction.full,
+                onSelected: onSelected ?? (_) {},
+              ),
             ),
           ),
         ),
@@ -90,7 +94,184 @@ Future<void> pumpCalendar(
   await t.pumpAndSettle();
 }
 
+typedef _CalendarRaster = ({ByteData bytes, int width, int height});
+
+Future<_CalendarRaster> _calendarRaster(WidgetTester t) async {
+  final boundary = t.renderObject<RenderRepaintBoundary>(
+    k('calendar-paint-boundary'),
+  );
+  return (await t.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    try {
+      final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+      return (bytes: bytes!, width: image.width, height: image.height);
+    } finally {
+      image.dispose();
+    }
+  }))!;
+}
+
+int _changedPixels(
+  _CalendarRaster before,
+  _CalendarRaster after,
+  Rect region, {
+  Rect? exclude,
+}) {
+  expect(after.width, before.width);
+  expect(after.height, before.height);
+  var changed = 0;
+  for (var y = region.top.ceil(); y < region.bottom.floor(); y++) {
+    for (var x = region.left.ceil(); x < region.right.floor(); x++) {
+      if (exclude?.contains(Offset(x + 0.5, y + 0.5)) ?? false) continue;
+      final offset = (y * before.width + x) * 4;
+      if (before.bytes.getUint32(offset) != after.bytes.getUint32(offset)) {
+        changed++;
+      }
+    }
+  }
+  return changed;
+}
+
 void main() {
+  for (final embedded in [true, false]) {
+    for (final (unit, showRange) in [
+      (DateSelectionUnit.day, false),
+      (DateSelectionUnit.week, false),
+      (DateSelectionUnit.week, true),
+    ]) {
+      for (final scale in [1.0, 2.0]) {
+        testWidgets(
+          'date ink bounds follow markers: embedded=$embedded $unit range=$showRange scale=$scale',
+          (t) async {
+            final selections = <DateTime>[];
+            await pumpCalendar(
+              t,
+              embedded: embedded,
+              width: embedded ? 280 : 400,
+              selectionUnit: unit,
+              showRange: showRange,
+              initialDate: DateTime(2026, 9, 23),
+              today: DateTime(2026, 9, 27),
+              scale: scale,
+              direction: scale == 2 ? TextDirection.rtl : TextDirection.ltr,
+              onSelected: selections.add,
+            );
+            final target = day('2026-09-24');
+            final cell = t.getRect(target);
+            final markerRect = t.getRect(marker('2026-09-24'));
+            final box = t.renderObject<RenderBox>(target);
+            final ink = t.widget<InkWell>(target);
+            final feedback =
+                (ink.getRectCallback(box)?.call() ?? (Offset.zero & box.size))
+                    .shift(box.localToGlobal(Offset.zero));
+            expect(feedback, markerRect);
+            expect(ink.borderRadius, BorderRadius.circular(5));
+            expect(ink.containedInkWell, isTrue);
+            expect(cell.height, greaterThan(feedback.height));
+            if (unit == DateSelectionUnit.week) {
+              final strip = t.getRect(band('2026-09-24'));
+              expect(feedback.top, closeTo(strip.top, 0.001));
+              expect(feedback.bottom, closeTo(strip.bottom, 0.001));
+            }
+            if (!showRange) {
+              final outerTap = cell.topCenter + const Offset(0, 1);
+              expect(feedback.contains(outerTap), isFalse);
+              await t.tapAt(outerTap);
+              await t.pumpAndSettle();
+              expect(selections, [DateTime(2026, 9, 24)]);
+            }
+            expect(t.takeException(), isNull);
+          },
+        );
+      }
+    }
+  }
+
+  testWidgets('date ink bounds stay live after a narrower layout', (t) async {
+    await pumpCalendar(
+      t,
+      embedded: false,
+      width: 400,
+      scale: 2,
+      showRange: false,
+      initialDate: DateTime(2026, 9, 23),
+    );
+    final target = day('2026-09-24');
+    final box = t.renderObject<RenderBox>(target);
+    final callback =
+        t.widget<InkWell>(target).getRectCallback(box) ??
+        () => Offset.zero & box.size;
+    final originalMarker = t.getSize(marker('2026-09-24'));
+    await pumpCalendar(
+      t,
+      embedded: false,
+      width: 320,
+      scale: 2,
+      showRange: false,
+      initialDate: DateTime(2026, 9, 23),
+    );
+    expect(t.renderObject<RenderBox>(target), same(box));
+    expect(t.getSize(marker('2026-09-24')), isNot(originalMarker));
+    expect(
+      callback().shift(box.localToGlobal(Offset.zero)),
+      t.getRect(marker('2026-09-24')),
+    );
+    expect(t.takeException(), isNull);
+  });
+
+  for (final embedded in [true, false]) {
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'date ink hover stays inside the week strip: embedded=$embedded $brightness',
+        (t) async {
+          await pumpCalendar(
+            t,
+            embedded: embedded,
+            width: embedded ? 280 : 400,
+            showRange: false,
+            initialDate: DateTime(2026, 9, 23),
+            today: DateTime(2026, 9, 27),
+            brightness: brightness,
+            scale: brightness == Brightness.dark ? 2 : 1,
+          );
+          final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
+          await mouse.addPointer(location: const Offset(950, 950));
+          addTearDown(mouse.removePointer);
+          await t.pumpAndSettle();
+          final origin = t.getTopLeft(k('calendar-paint-boundary'));
+          final target = t.getRect(day('2026-09-24'));
+          final cell = target.shift(-origin);
+          final markerRect = t.getRect(marker('2026-09-24')).shift(-origin);
+          final before = await _calendarRaster(t);
+          await mouse.moveTo(target.center);
+          await t.pumpAndSettle();
+          final hovered = await _calendarRaster(t);
+          expect(
+            _changedPixels(before, hovered, markerRect.deflate(1)),
+            greaterThan(0),
+            reason: 'Hover feedback must remain visible inside the marker.',
+          );
+          expect(
+            _changedPixels(
+              before,
+              hovered,
+              cell,
+              exclude: markerRect.inflate(1),
+            ),
+            0,
+            reason:
+                'Hover must not paint into the whitespace around the strip.',
+          );
+          await mouse.moveTo(const Offset(950, 950));
+          await t.pumpAndSettle();
+          final exited = await _calendarRaster(t);
+          expect(_changedPixels(before, exited, cell), 0);
+          expect(t.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   for (final unit in [DateSelectionUnit.day, DateSelectionUnit.week]) {
     for (final (embedded, width, platform) in [
       (true, 280.0, TargetPlatform.windows),

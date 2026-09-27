@@ -1650,9 +1650,9 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       height: height,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final markerSize = math.min(
-            height - 6,
-            constraints.maxWidth - (compact ? 0 : 4),
+          final markerSize = _calendarDayMarkerSize(
+            Size(constraints.maxWidth, height),
+            compact: compact,
           );
           final rowRadius = Radius.circular(compact ? markerSize / 2 : 5);
           final content = Stack(
@@ -1779,11 +1779,10 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                 // opaque decorations. The entire day remains the hit target.
                 Material(
                   color: Colors.transparent,
-                  child: InkWell(
+                  child: _CalendarDayInkWell(
                     key: ValueKey('sked-date-${_key(day)}'),
-                    canRequestFocus: false,
                     onTap: onTap,
-                    borderRadius: BorderRadius.circular(cornerRadius + 2),
+                    borderRadius: BorderRadius.circular(cornerRadius),
                     child: content,
                   ),
                 ),
@@ -2038,6 +2037,31 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
       ],
     );
   }
+}
+
+double _calendarDayMarkerSize(Size cellSize, {required bool compact}) =>
+    math.min(cellSize.height - 6, cellSize.width - (compact ? 0 : 4));
+
+/// Keeps ink inside the date marker without reducing the day's hit target.
+class _CalendarDayInkWell extends InkWell {
+  const _CalendarDayInkWell({
+    super.key,
+    required super.onTap,
+    required super.borderRadius,
+    required super.child,
+  }) : super(canRequestFocus: false);
+
+  @override
+  RectCallback getRectCallback(RenderBox referenceBox) => () {
+    // An active ink feature can retain this callback across a relayout.
+    final size = referenceBox.size;
+    final markerSize = _calendarDayMarkerSize(size, compact: false);
+    return Rect.fromCenter(
+      center: size.center(Offset.zero),
+      width: markerSize,
+      height: markerSize,
+    );
+  };
 }
 
 /// Touch choices own transient feedback instead of retaining Ink highlights
