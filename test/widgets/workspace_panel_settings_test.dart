@@ -8,6 +8,7 @@ import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
+import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/settings_list.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
@@ -33,6 +34,84 @@ Future<void> _choose(WidgetTester t, String key, String label) async {
 }
 
 void main() {
+  for (final mode in AppMode.values) {
+    testWidgets(
+      'real $mode editor and AI expand to four fifths without losing drafts',
+      (t) async {
+        _viewport(t, const Size(1920, 1000));
+        final provider = await workspaceProvider(mode: mode);
+        addTearDown(provider.dispose);
+        final preferences = DeveloperUiPreferences.memory(visible: true);
+        addTearDown(preferences.dispose);
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: provider,
+            developerUiPreferences: preferences,
+          ),
+        );
+        await t.pumpAndSettle();
+        await t.tap(_key('assistant-toggle'));
+        await t.pumpAndSettle();
+        final sidebar = t.getRect(_key('workspace-resource-width'));
+        final canvas = t.getRect(_key('workspace-canvas-viewport'));
+        final maximum = (1920 - sidebar.width - 1) * .8;
+        final l = AppLocalizations.of(t.element(find.byType(WorkspaceFrame)));
+        await t.tap(
+          mode == AppMode.general
+              ? _key('general-add-event')
+              : find.widgetWithText(FilledButton, l.addCourse).first,
+        );
+        await t.pumpAndSettle();
+        final editor = mode == AppMode.general
+            ? find.byType(GeneralEventEditorSheet)
+            : find.byType(CourseEditorSheet);
+        final state = t.state(editor);
+        final field = find
+            .descendant(of: editor, matching: find.byType(TextField))
+            .first;
+        await t.enterText(field, 'Resizable editor draft');
+        await t.drag(_key('workspace-detail-resize'), const Offset(-1800, 0));
+        await t.pumpAndSettle();
+        expect(
+          t.getSize(_key('workspace-detail-pane')).width,
+          closeTo(maximum, .01),
+        );
+        expect(t.getSize(editor).width, closeTo(maximum, .01));
+        expect(t.getRect(_key('workspace-resource-width')), sidebar);
+        expect(t.getRect(_key('workspace-canvas-viewport')), canvas);
+        await t.tap(_key('assistant-toggle'));
+        await t.pumpAndSettle();
+        await t.enterText(_key('assistant-draft'), 'Resizable AI draft');
+        await t.drag(
+          _key('workspace-assistant-resize'),
+          const Offset(-1800, 0),
+        );
+        await t.pumpAndSettle();
+        expect(
+          t.getSize(_key('workspace-assistant-pane')).width,
+          closeTo(maximum, .01),
+        );
+        expect(t.getRect(_key('workspace-resource-width')), sidebar);
+        expect(t.getRect(_key('workspace-canvas-viewport')), canvas);
+        expect(
+          t.widget<TextField>(_key('assistant-draft')).controller!.text,
+          'Resizable AI draft',
+        );
+        await t.tap(_key('assistant-toggle'));
+        await t.pumpAndSettle();
+        expect(t.state(editor), same(state));
+        expect(
+          t.widget<TextField>(field).controller!.text,
+          'Resizable editor draft',
+        );
+        expect(t.getSize(editor).width, closeTo(maximum, .01));
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox.shrink());
+      },
+      variant: _desktop,
+    );
+  }
+
   for (final workspace in AppMode.values) {
     for (final collapsed in [false, true]) {
       testWidgets(
@@ -53,14 +132,14 @@ void main() {
           );
           await t.pumpAndSettle();
           final sidebar = t.getRect(_key('workspace-resource-width'));
-          final canvas = t.getRect(find.byType(WorkspaceCanvasBody));
+          final canvas = t.getRect(_key('workspace-canvas-viewport'));
           await t.enterText(
             _key('assistant-draft'),
             'Keep the layout while typing',
           );
           t.view.viewInsets = const FakeViewPadding(bottom: 400);
           await t.pumpAndSettle();
-          final keyboardCanvas = t.getRect(find.byType(WorkspaceCanvasBody));
+          final keyboardCanvas = t.getRect(_key('workspace-canvas-viewport'));
           expect(
             t.getSize(_key('workspace-resource-width')).width,
             sidebar.width,
@@ -76,7 +155,7 @@ void main() {
           t.view.resetViewInsets();
           await t.pumpAndSettle();
           expect(t.getRect(_key('workspace-resource-width')), sidebar);
-          expect(t.getRect(find.byType(WorkspaceCanvasBody)), canvas);
+          expect(t.getRect(_key('workspace-canvas-viewport')), canvas);
           // Real window resizing still selects the short-window layout.
           t.view.physicalSize = const Size(1200, 400);
           await t.pumpAndSettle();
@@ -247,11 +326,11 @@ void main() {
           await t.pumpAndSettle();
           expect(find.byType(AssistantPreviewPane), findsNothing);
           final sidebar = t.getRect(_key('workspace-resource-width'));
-          final calendar = t.getRect(find.byType(WorkspaceCanvasBody));
+          final calendar = t.getRect(_key('workspace-canvas-viewport'));
           final frame = t.widget<WorkspaceFrame>(find.byType(WorkspaceFrame));
           void expectStable() {
             expect(t.getRect(_key('workspace-resource-width')), sidebar);
-            expect(t.getRect(find.byType(WorkspaceCanvasBody)), calendar);
+            expect(t.getRect(_key('workspace-canvas-viewport')), calendar);
             expect(provider.homeWorkspaceNavigationCollapsed, collapsed);
             expect(_key('assistant-toggle').hitTestable(), findsOneWidget);
           }
@@ -296,15 +375,21 @@ void main() {
         );
         await t.pumpAndSettle();
         final sidebar = t.getRect(_key('workspace-resource-width'));
-        final calendar = t.getRect(find.byType(WorkspaceCanvasBody));
+        final calendar = t.getRect(_key('workspace-canvas-viewport'));
+        final toolbar = t.getRect(_key('student-workspace-toolbar'));
+        final dayHeader = t.getRect(_key('timetable-day-header').first);
+        // Keep both the pager spacing and the grid's existing inner spacing.
+        expect(dayHeader.top, toolbar.bottom + 8);
         final frame = t.widget<WorkspaceFrame>(find.byType(WorkspaceFrame));
         final l = AppLocalizations.of(t.element(find.byType(WorkspaceFrame)));
         await t.tap(find.widgetWithText(FilledButton, l.addCourse).first);
         await t.pumpAndSettle();
         expect(frame.controller.hasPaneTasks, isTrue);
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
-        expect(t.getRect(find.byType(WorkspaceCanvasBody)), calendar);
-        expect(t.getRect(_key('workspace-detail-pane')).top, calendar.top);
+        expect(t.getRect(_key('workspace-canvas-viewport')), calendar);
+        expect(t.getRect(_key('workspace-detail-pane')).top, toolbar.bottom);
+        expect(t.getRect(_key('workspace-detail-resize')).top, toolbar.bottom);
+        expect(t.getRect(_key('timetable-day-header').first), dayHeader);
         await provider.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
         );
@@ -316,9 +401,15 @@ void main() {
           WorkspacePanelDisplayMode.sideBySide,
         );
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
+        expect(t.getRect(_key('workspace-detail-pane')).top, toolbar.bottom);
+        expect(t.getRect(_key('workspace-detail-resize')).top, toolbar.bottom);
+        expect(
+          t.getRect(_key('timetable-day-header').first).top,
+          dayHeader.top,
+        );
         if (scale < 2) {
           expect(
-            t.getSize(find.byType(WorkspaceCanvasBody)).width,
+            t.getSize(_key('workspace-canvas-viewport')).width,
             lessThan(calendar.width),
           );
         }

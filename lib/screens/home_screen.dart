@@ -325,28 +325,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             onOpenSettings: settingsAction,
                           ),
                         Expanded(
-                          child: _EmptyTimetableState(
-                            onCreate: _timetableItemDialogOpen
-                                ? null
-                                : () => _openCreateTimetableDialog(
-                                    context,
-                                    provider,
-                                  ),
-                            onImport: _fileImportInProgress
-                                ? null
-                                : () => _importTimetableData(context, provider),
-                            onImportFromText: _textImportPageOpen
-                                ? null
-                                : () => _importTimetablesFromText(
-                                    context,
-                                    provider,
-                                  ),
-                            onImportFromWeb: _schoolWebImportPageOpen
-                                ? null
-                                : () => _importTimetableFromWeb(
-                                    context,
-                                    provider,
-                                  ),
+                          child: WorkspaceCanvasBody(
+                            child: _EmptyTimetableState(
+                              onCreate: _timetableItemDialogOpen
+                                  ? null
+                                  : () => _openCreateTimetableDialog(
+                                      context,
+                                      provider,
+                                    ),
+                              onImport: _fileImportInProgress
+                                  ? null
+                                  : () =>
+                                        _importTimetableData(context, provider),
+                              onImportFromText: _textImportPageOpen
+                                  ? null
+                                  : () => _importTimetablesFromText(
+                                      context,
+                                      provider,
+                                    ),
+                              onImportFromWeb: _schoolWebImportPageOpen
+                                  ? null
+                                  : () => _importTimetableFromWeb(
+                                      context,
+                                      provider,
+                                    ),
+                            ),
                           ),
                         ),
                       ],
@@ -460,47 +463,57 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : null,
                             onOpenSettings: settingsAction,
                           ),
-                          if (!compactTouch) const SizedBox(height: 4),
                           Expanded(
                             child: WorkspaceCanvasBody(
-                              child: _TimetableWeekPager(
-                                controller: _pageController!,
-                                provider: provider,
-                                timetable: timetable,
-                                config: config,
-                                committedWeek: week,
-                                active: widget.active,
-                                interactive: widget.interactive,
-                                swipeEnabled: weekSwipeEnabled,
-                                viewMode: viewMode,
-                                selectedWeekday: selectedWeekday,
-                                fitDaySelectorToWidth:
-                                    snapshot.fitDaySelectorToWidth,
-                                fitWeekColumnsToWidth:
-                                    snapshot.fitWeekColumnsToWidth,
-                                shortcutFocusNode: widget.weekShortcutFocusNode,
-                                bottomContentInset: fabContentInset,
-                                onPageScrollStateChanged: (scrolling) {
-                                  _weekPageScrolling = scrolling;
-                                },
-                                onWeekSettled: (settledWeek) =>
-                                    _settleWeekFromPager(provider, settledWeek),
-                                onWeekdaySelected: (weekday) {
-                                  if (_selectedWeekday == weekday) return;
-                                  setState(() => _selectedWeekday = weekday);
-                                },
-                                onJumpWeekBy: (offset) =>
-                                    _jumpWeekBy(provider, offset),
-                                onCourseTap: (info) =>
-                                    _openDetails(context, provider, info),
-                                onEmptySlotTap: longPressAddEnabled
-                                    ? (slotInfo) => _openEditor(
-                                        context,
+                              // This spacing belongs to the grid, not the
+                              // shared body edge used to position task panes.
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  top: compactTouch ? 0 : 4,
+                                ),
+                                child: _TimetableWeekPager(
+                                  controller: _pageController!,
+                                  provider: provider,
+                                  timetable: timetable,
+                                  config: config,
+                                  committedWeek: week,
+                                  active: widget.active,
+                                  interactive: widget.interactive,
+                                  swipeEnabled: weekSwipeEnabled,
+                                  viewMode: viewMode,
+                                  selectedWeekday: selectedWeekday,
+                                  fitDaySelectorToWidth:
+                                      snapshot.fitDaySelectorToWidth,
+                                  fitWeekColumnsToWidth:
+                                      snapshot.fitWeekColumnsToWidth,
+                                  shortcutFocusNode:
+                                      widget.weekShortcutFocusNode,
+                                  bottomContentInset: fabContentInset,
+                                  onPageScrollStateChanged: (scrolling) {
+                                    _weekPageScrolling = scrolling;
+                                  },
+                                  onWeekSettled: (settledWeek) =>
+                                      _settleWeekFromPager(
                                         provider,
-                                        weekday: slotInfo.weekday,
-                                        emptySlot: slotInfo,
-                                      )
-                                    : null,
+                                        settledWeek,
+                                      ),
+                                  onWeekdaySelected: (weekday) {
+                                    if (_selectedWeekday == weekday) return;
+                                    setState(() => _selectedWeekday = weekday);
+                                  },
+                                  onJumpWeekBy: (offset) =>
+                                      _jumpWeekBy(provider, offset),
+                                  onCourseTap: (info) =>
+                                      _openDetails(context, provider, info),
+                                  onEmptySlotTap: longPressAddEnabled
+                                      ? (slotInfo) => _openEditor(
+                                          context,
+                                          provider,
+                                          weekday: slotInfo.weekday,
+                                          emptySlot: slotInfo,
+                                        )
+                                      : null,
+                                ),
                               ),
                             ),
                           ),

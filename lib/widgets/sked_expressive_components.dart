@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import 'workbench_chrome_metrics.dart';
 
 import 'desktop_window_host.dart';
-import 'workspace_frame.dart';
 import '../services/desktop_window_bridge.dart';
 
 import '../theme/sked_expressive_theme.dart';
@@ -309,13 +308,8 @@ class SkedWorkspaceToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final layout = WorkspaceCanvasScope.maybeOf(context);
-    final captionClearance =
-        DesktopWindowBridge.instance.available &&
-            !(layout?.dockedDetail == true ||
-                layout?.supporting == true ||
-                layout?.dockedAssistant == true)
-        ? 138.0
+    final captionClearance = DesktopWindowBridge.instance.available
+        ? WorkbenchChromeMetrics.of(context).captionWidth
         : 0.0;
     return Padding(
       padding: EdgeInsetsDirectional.only(end: captionClearance),

@@ -23,7 +23,10 @@ abstract final class AppBreakpoints {
   static const resourcePane = 224.0;
   static const compactResourcePane = 80.0;
   static const detailPane = 360.0;
+  static const minimumDetailPane = 320.0;
   static const assistantPane = 400.0;
+  static const minimumAssistantPane = 360.0;
+  static const maximumTaskPaneFraction = .8;
   static const pointerCompactResourcePane = 56.0;
   static const minimumWeekCanvas = 800.0;
   static const settingsNavigation = 224.0;

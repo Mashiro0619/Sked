@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -28,6 +30,156 @@ class _EditorState extends State<_Editor> {
 }
 
 void main() {
+  test(
+    'single-pane reservation is continuous across scaled docking limits',
+    () {
+      for (final mode in [
+        WorkspacePanelDisplayMode.sideBySide,
+        WorkspacePanelDisplayMode.automatic,
+      ]) {
+        for (final width in [1440.0, 1920.0, 2560.0]) {
+          for (final scale in [1.0, 1.3, 2.0]) {
+            for (final collapsed in [false, true]) {
+              for (final minimumCanvas in [600.0, 800.0]) {
+                for (final assistant in [false, true]) {
+                  WorkbenchLayoutPolicy resolve(double preference) =>
+                      WorkbenchLayoutPolicy.resolve(
+                        width,
+                        scale,
+                        detailOpen: !assistant,
+                        assistantOpen: assistant,
+                        hasSupporting: true,
+                        pointer: true,
+                        resourcesCollapsed: collapsed,
+                        panelDisplayMode: mode,
+                        minimumCanvas: minimumCanvas,
+                        preferredDetailWidth: preference,
+                        preferredAssistantWidth: preference,
+                      );
+                  final base = resolve(400);
+                  final content =
+                      width - (base.resources ? base.resourceWidth + 1 : 0);
+                  final floor =
+                      (mode == WorkspacePanelDisplayMode.sideBySide
+                          ? 360
+                          : minimumCanvas) *
+                      scale;
+                  final boundary = (content - floor - 1) / scale;
+                  final maximum =
+                      (assistant
+                          ? base.maximumAssistantWidth
+                          : base.maximumDetailWidth) /
+                      scale;
+                  if (boundary <= 400 || boundary + 1 >= maximum) continue;
+                  final before = resolve(boundary - 1);
+                  final after = resolve(boundary + 1);
+                  expect(before.dockedAssistant || before.dockedDetail, isTrue);
+                  expect(after.dockedAssistant || after.dockedDetail, isFalse);
+                  expect(
+                    after.canvasEndInset - before.canvasEndInset,
+                    closeTo(scale, .00001),
+                  );
+                  expect(
+                    content - after.canvasEndInset,
+                    closeTo(floor, .00001),
+                  );
+                  expect(after.supporting, isFalse);
+                  expect(after.resourceWidth, before.resourceWidth);
+                  expect(after.resources, before.resources);
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+  );
+
+  test('panel upper bounds use four fifths of the work area and preserve narrow defaults', () {
+    for (final width in [320.0, 393.0, 600.0, 900.0, 1440.0, 1920.0, 2560.0]) {
+      for (final scale in [1.0, 1.3, 2.0]) {
+        for (final collapsed in [false, true]) {
+          for (final supporting in [false, true]) {
+            for (final mode in WorkspacePanelDisplayMode.values) {
+              final base = WorkspaceLayout.resolve(
+                width,
+                scale,
+                detailOpen: false,
+                hasSupporting: supporting,
+                pointer: true,
+                resourcesCollapsed: collapsed,
+                panelDisplayMode: mode,
+              );
+              final resized = WorkspaceLayout.resolve(
+                width,
+                scale,
+                detailOpen: true,
+                assistantOpen: true,
+                hasSupporting: supporting,
+                pointer: true,
+                resourcesCollapsed: collapsed,
+                panelDisplayMode: mode,
+                preferredDetailWidth: 10000,
+                preferredAssistantWidth: 10000,
+              );
+              final content =
+                  width - (base.resources ? base.resourceWidth + 1 : 0);
+              final maxDetail = math.min(
+                content,
+                math.max(360 * scale, content * .8),
+              );
+              final maxAssistant = math.min(
+                content,
+                math.max(400 * scale, content * .8),
+              );
+              expect(resized.detailWidth, closeTo(maxDetail, .0001));
+              expect(resized.assistantWidth, closeTo(maxAssistant, .0001));
+              expect(resized.maximumDetailWidth, closeTo(maxDetail, .0001));
+              expect(
+                resized.maximumAssistantWidth,
+                closeTo(maxAssistant, .0001),
+              );
+              expect(resized.resources, base.resources);
+              expect(resized.resourceWidth, base.resourceWidth);
+              expect(
+                base.detailWidth,
+                closeTo(math.min(content, 360 * scale), .0001),
+              );
+              expect(
+                base.assistantWidth,
+                closeTo(math.min(content, 400 * scale), .0001),
+              );
+              if (mode == WorkspacePanelDisplayMode.overlay) {
+                expect(resized.supporting, base.supporting);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  test(
+    'assistant remembers wide preferences while layout owns the maximum',
+    () {
+      final assistant = AssistantPaneController();
+      addTearDown(assistant.dispose);
+      var notifications = 0;
+      assistant.addListener(() => notifications++);
+      assistant.resize(1400);
+      expect(assistant.width, 1400);
+      expect(notifications, 1);
+      assistant.resize(1400);
+      assistant.resize(double.nan);
+      assistant.resize(double.infinity);
+      expect(assistant.width, 1400);
+      expect(notifications, 1);
+      assistant.resize(10);
+      expect(assistant.width, 360);
+      expect(notifications, 2);
+    },
+  );
+
   test('task modes preserve the base sidebar and their calendar budgets', () {
     for (final width in [
       360.0,
@@ -76,12 +228,7 @@ void main() {
                       expect(p.resourceWidth, base.resourceWidth);
                       final side =
                           (p.resources ? p.resourceWidth + 1 : 0) +
-                          (p.dockedDetail
-                              ? p.detailWidth + 1
-                              : p.supporting
-                              ? p.supportingWidth + 1
-                              : 0) +
-                          (p.dockedAssistant ? p.assistantWidth + 1 : 0);
+                          p.canvasEndInset;
                       if (side > 0) {
                         expect(
                           width - side,

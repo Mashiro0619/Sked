@@ -8,7 +8,6 @@ import '../l10n/app_localizations.dart';
 import '../services/desktop_window_bridge.dart';
 import 'desktop_window_modal_observer.dart';
 import 'workbench_chrome_metrics.dart';
-import 'workspace_frame.dart';
 
 export 'desktop_window_modal_observer.dart';
 
@@ -255,12 +254,8 @@ class WorkbenchCommandBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = WorkbenchChromeMetrics.of(context);
     final colors = Theme.of(context).colorScheme;
-    final layout = WorkspaceCanvasScope.maybeOf(context);
-    final reserve =
-        DesktopWindowBridge.instance.available &&
-        !(layout?.dockedDetail == true ||
-            layout?.dockedAssistant == true ||
-            layout?.supporting == true);
+    // Task panes reserve space below this bar, never beside its commands.
+    final reserve = DesktopWindowBridge.instance.available;
     Widget row(List<Widget> items) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [

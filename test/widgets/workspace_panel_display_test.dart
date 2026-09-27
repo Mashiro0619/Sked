@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -194,7 +195,281 @@ Future<_FrameFixture> _mount(
   return f;
 }
 
+Future<void> _dragResize(WidgetTester t, Finder handle, double distance) async {
+  final gesture = await t.startGesture(
+    t.getCenter(handle),
+    kind: PointerDeviceKind.mouse,
+  );
+  try {
+    await gesture.moveBy(Offset(distance.sign * 24, 0));
+    await t.pump();
+    // Several frames are intentional: losing a resize handle's identity when
+    // a second pane hides must not interrupt this pointer's drag sequence.
+    for (var step = 0; step < 16; step++) {
+      await gesture.moveBy(Offset(distance / 16, 0));
+      await t.pump();
+    }
+  } finally {
+    await gesture.up();
+  }
+  await t.pumpAndSettle();
+}
+
 void main() {
+  for (final mode in [
+    WorkspacePanelDisplayMode.sideBySide,
+    WorkspacePanelDisplayMode.automatic,
+  ]) {
+    testWidgets(
+      'editor resize keeps the toolbar fixed and the calendar continuous: $mode',
+      (t) async {
+        final f = await _mount(t);
+        f.mode.value = mode;
+        await t.pumpAndSettle();
+        final toolbar = t.getRect(_key('test-toolbar'));
+        final resources = t.getRect(_key('workspace-resource-width'));
+        await t.tap(_key('test-edit-button'));
+        await t.pumpAndSettle();
+        final editor = t.state<_DraftEditorState>(find.byType(_DraftEditor));
+        editor.draft.text = 'Keep the editor and its navigation';
+        var canvas = t.getRect(_key('test-calendar'));
+        final gesture = await t.startGesture(
+          t.getCenter(_key('workspace-detail-resize')),
+          kind: PointerDeviceKind.mouse,
+        );
+        try {
+          for (var i = 0; i < 45; i++) {
+            await gesture.moveBy(const Offset(-24, 0));
+            await t.pump();
+            expect(t.getRect(_key('test-toolbar')), toolbar);
+            expect(t.getRect(_key('workspace-resource-width')), resources);
+            expect(
+              t.getRect(_key('workspace-detail-pane')).top,
+              toolbar.bottom,
+            );
+            final next = t.getRect(_key('test-calendar'));
+            expect(next.width, lessThanOrEqualTo(canvas.width + .01));
+            expect(canvas.width - next.width, lessThanOrEqualTo(48.01));
+            canvas = next;
+          }
+        } finally {
+          await gesture.up();
+        }
+        await t.pumpAndSettle();
+        expect(
+          canvas.width,
+          mode == WorkspacePanelDisplayMode.sideBySide ? 360 : 600,
+        );
+        expect(
+          t.getSize(_key('workspace-detail-pane')).width,
+          closeTo((1440 - 224 - 1) * .8, .01),
+        );
+        expect(
+          t.state<_DraftEditorState>(find.byType(_DraftEditor)),
+          same(editor),
+        );
+        expect(editor.draft.text, 'Keep the editor and its navigation');
+        expect(f.pane.hasPaneTasks, isTrue);
+        expect(t.takeException(), isNull);
+      },
+      variant: _desktop,
+    );
+  }
+
+  testWidgets('keyboard resizing observes the same work-area maximum', (
+    t,
+  ) async {
+    await _mount(t);
+    await t.tap(_key('test-edit-button'));
+    await t.pumpAndSettle();
+    await _dragResize(t, _key('workspace-detail-resize'), -1800);
+    const maximum = (1440 - 224 - 1) * .8;
+    final mouse = find
+        .descendant(
+          of: _key('workspace-detail-resize'),
+          matching: find.byType(MouseRegion),
+        )
+        .first;
+    Focus.of(t.element(mouse)).requestFocus();
+    await t.pump();
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await t.pumpAndSettle();
+    expect(
+      t.getSize(_key('workspace-detail-pane')).width,
+      closeTo(maximum, .01),
+    );
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await t.pumpAndSettle();
+    expect(
+      t.getSize(_key('workspace-detail-pane')).width,
+      closeTo(maximum - 24, .01),
+    );
+    expect(t.takeException(), isNull);
+  }, variant: _desktop);
+
+  for (final assistant in [false, true]) {
+    final paneKey = assistant
+        ? 'workspace-assistant-pane'
+        : 'workspace-detail-pane';
+    final resizeKey = assistant
+        ? 'workspace-assistant-resize'
+        : 'workspace-detail-resize';
+    for (final scale in [1.0, 1.3, 2.0]) {
+      for (final collapsed in [false, true]) {
+        testWidgets(
+          'panel resize reaches four fifths: assistant=$assistant scale=$scale collapsed=$collapsed',
+          (t) async {
+            final f = await _mount(
+              t,
+              width: 2560,
+              scale: scale,
+              collapsed: collapsed,
+            );
+            final resources = t.getRect(_key('workspace-resource-width'));
+            final calendar = t.getRect(_key('test-calendar'));
+            final contentWidth = 2560 - resources.width - 1;
+            await t.tap(
+              _key(assistant ? 'assistant-toggle' : 'test-edit-button'),
+            );
+            await t.pumpAndSettle();
+            expect(
+              t.getSize(_key(paneKey)).width,
+              (assistant ? 400 : 360) * scale,
+            );
+            final draft = assistant
+                ? f.assistant.draft
+                : t.state<_DraftEditorState>(find.byType(_DraftEditor)).draft;
+            draft.text = 'Retained resized draft';
+            await _dragResize(t, _key(resizeKey), -2200);
+            expect(
+              t.getSize(_key(paneKey)).width,
+              closeTo(contentWidth * .8, .01),
+            );
+            expect(t.getRect(_key('workspace-resource-width')), resources);
+            expect(t.getRect(_key('test-calendar')), calendar);
+            expect(draft.text, 'Retained resized draft');
+            // Hitting the upper bound is not allowed to accumulate a dead zone.
+            await _dragResize(t, _key(resizeKey), -100);
+            expect(
+              t.getSize(_key(paneKey)).width,
+              closeTo(contentWidth * .8, .01),
+            );
+            await _dragResize(t, _key(resizeKey), 80);
+            expect(
+              t.getSize(_key(paneKey)).width,
+              lessThan(contentWidth * .8 - 50),
+            );
+            expect(t.takeException(), isNull);
+          },
+          variant: _desktop,
+        );
+      }
+    }
+
+    testWidgets(
+      'resized pane adapts its cap on window and sidebar changes: assistant=$assistant',
+      (t) async {
+        final f = await _mount(t, width: 1920);
+        await t.tap(_key(assistant ? 'assistant-toggle' : 'test-edit-button'));
+        await t.pumpAndSettle();
+        await _dragResize(t, _key(resizeKey), -1800);
+        const wideMaximum = (1920 - 224 - 1) * .8;
+        expect(t.getSize(_key(paneKey)).width, closeTo(wideMaximum, .01));
+        t.view.physicalSize = const Size(1280, 900);
+        await t.pumpAndSettle();
+        const narrowMaximum = (1280 - 224 - 1) * .8;
+        expect(t.getSize(_key(paneKey)).width, closeTo(narrowMaximum, .01));
+        t.view.physicalSize = const Size(1920, 900);
+        await t.pumpAndSettle();
+        expect(t.getSize(_key(paneKey)).width, closeTo(wideMaximum, .01));
+        t.view.physicalSize = const Size(1280, 900);
+        await t.pumpAndSettle();
+        // Start from the constrained visible width, not the previous wider
+        // window's stored preference, so shrinking responds immediately.
+        await _dragResize(t, _key(resizeKey), 80);
+        expect(t.getSize(_key(paneKey)).width, lessThan(narrowMaximum - 50));
+        f.collapsed.value = true;
+        await t.pumpAndSettle();
+        await _dragResize(t, _key(resizeKey), -1500);
+        expect(
+          t.getSize(_key(paneKey)).width,
+          closeTo((1280 - 56 - 1) * .8, .01),
+        );
+        expect(t.takeException(), isNull);
+      },
+      variant: _desktop,
+    );
+
+    for (final mode in [
+      WorkspacePanelDisplayMode.sideBySide,
+      WorkspacePanelDisplayMode.automatic,
+    ]) {
+      testWidgets(
+        'continuous resize survives docking and pane visibility changes: $mode assistant=$assistant',
+        (t) async {
+          final f = await _mount(t, width: 1920);
+          f.mode.value = mode;
+          await t.tap(_key('test-edit-button'));
+          await t.pumpAndSettle();
+          final editor = t.state<_DraftEditorState>(find.byType(_DraftEditor));
+          editor.draft.text = 'Editor draft';
+          f.assistant.setOpen(true);
+          f.assistant.draft.text = 'AI draft';
+          await t.pumpAndSettle();
+          expect(find.byType(_DraftEditor), findsOneWidget);
+          expect(find.byType(AssistantPreviewPane), findsOneWidget);
+          await _dragResize(t, _key(resizeKey), -1800);
+          expect(
+            t.getSize(_key(paneKey)).width,
+            closeTo((1920 - 224 - 1) * .8, .01),
+          );
+          expect(t.getSize(_key('workspace-resource-width')).width, 224);
+          expect(
+            assistant
+                ? find.byType(AssistantPreviewPane)
+                : find.byType(_DraftEditor),
+            findsOneWidget,
+          );
+          expect(
+            assistant
+                ? find.byType(_DraftEditor)
+                : find.byType(AssistantPreviewPane),
+            findsNothing,
+          );
+          expect(f.pane.hasPaneTasks, isTrue);
+          expect(f.assistant.isOpen, isTrue);
+          expect(f.mode.value, mode);
+          expect(editor.draft.text, 'Editor draft');
+          expect(f.assistant.draft.text, 'AI draft');
+          expect(t.takeException(), isNull);
+        },
+        variant: _desktop,
+      );
+    }
+  }
+
+  testWidgets(
+    'month supporting agenda does not reduce the four-fifths resize budget',
+    (t) async {
+      final f = await _mount(t, width: 1920, supporting: true);
+      final resources = t.getRect(_key('workspace-resource-width'));
+      final calendar = t.getRect(_key('test-calendar'));
+      final supporting = t.getRect(_key('test-supporting'));
+      f.assistant.setOpen(true);
+      await t.pumpAndSettle();
+      await _dragResize(t, _key('workspace-assistant-resize'), -1800);
+      expect(
+        t.getSize(_key('workspace-assistant-pane')).width,
+        closeTo((1920 - 224 - 1) * .8, .01),
+      );
+      expect(t.getRect(_key('workspace-resource-width')), resources);
+      expect(t.getRect(_key('test-calendar')), calendar);
+      expect(t.getRect(_key('test-supporting')), supporting);
+      expect(t.takeException(), isNull);
+    },
+    variant: _desktop,
+  );
+
   test(
     'automatic and side-by-side have distinct, scaled docking boundaries',
     () {

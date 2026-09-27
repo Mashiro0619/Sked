@@ -129,14 +129,15 @@ void main() {
         await t.pumpAndSettle();
         await t.tap(_key('general-day-agenda-toggle'));
         await t.pumpAndSettle();
-        final fill = t.getRect(_key('workspace-caption-fill'));
         final agenda = t.getRect(_key('general-selected-day-agenda'));
         final bar = t.getRect(find.byType(WorkbenchCommandBar));
+        expect(bar.right, 1440);
+        final aboveAgenda = Offset(agenda.left + 2, bar.top + 4);
         final colors = Theme.of(t.element(_key('general-selected-day-agenda')))
             .colorScheme;
         final points = [
           bar.topLeft + const Offset(2, 4),
-          Offset(fill.center.dx, fill.top + 4),
+          aboveAgenda,
           const Offset(1436, 4),
           Offset(agenda.left + 2, 54),
           agenda.topLeft + const Offset(2, 20),
@@ -146,10 +147,7 @@ void main() {
         for (final color in await _pixels(t, boundary, points)) {
           _samePaint(color, colors.surfaceContainerLow);
         }
-        await t.dragFrom(
-          Offset(fill.center.dx, fill.top + 15),
-          const Offset(60, 0),
-        );
+        await t.dragFrom(aboveAgenda, const Offset(60, 0));
         await t.pumpAndSettle();
         expect(calls, contains('startDrag'));
         await p.updateHomeWorkspaceNavigationCollapsed(false);

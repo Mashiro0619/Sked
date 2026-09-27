@@ -17,7 +17,6 @@ import 'assistant_pane.dart';
 import 'workbench_layout_policy.dart';
 import '../models/workspace_context_snapshot.dart';
 import '../services/desktop_window_bridge.dart';
-import 'desktop_window_host.dart';
 import 'workbench_chrome_metrics.dart';
 import 'app_layout_tokens.dart';
 
@@ -205,6 +204,7 @@ class WorkspaceCanvasScope extends InheritedWidget {
       layout.dockedDetail != oldWidget.layout.dockedDetail ||
       layout.resourceWidth != oldWidget.layout.resourceWidth ||
       layout.dockedAssistant != oldWidget.layout.dockedAssistant ||
+      layout.canvasEndInset != oldWidget.layout.canvasEndInset ||
       layout.canvasObscured != oldWidget.layout.canvasObscured;
 }
 
@@ -219,19 +219,30 @@ class WorkspaceCanvasBody extends StatelessWidget {
     final scope = context
         .dependOnInheritedWidgetOfExactType<WorkspaceCanvasScope>();
     final obscured = scope?.layout.canvasObscured ?? false;
-    return NotificationListener<SizeChangedLayoutNotification>(
-      onNotification: (_) {
-        scope?.onBodyLayout?.call();
-        return false;
-      },
-      child: SizeChangedLayoutNotifier(
-        child: KeyedSubtree(
-          key: scope?.bodyKey,
-          child: ExcludeFocus(
-            excluding: obscured,
-            child: ExcludeSemantics(
-              excluding: obscured,
-              child: IgnorePointer(ignoring: obscured, child: child),
+    // The command bar above this body always receives the whole work area.
+    // Only the calendar gives up space to docked/resized tasks and its agenda.
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: EdgeInsetsDirectional.only(
+          end: scope?.layout.canvasEndInset ?? 0,
+        ),
+        child: NotificationListener<SizeChangedLayoutNotification>(
+          onNotification: (_) {
+            scope?.onBodyLayout?.call();
+            return false;
+          },
+          child: SizeChangedLayoutNotifier(
+            key: const ValueKey('workspace-canvas-viewport'),
+            child: KeyedSubtree(
+              key: scope?.bodyKey,
+              child: ExcludeFocus(
+                excluding: obscured,
+                child: ExcludeSemantics(
+                  excluding: obscured,
+                  child: IgnorePointer(ignoring: obscured, child: child),
+                ),
+              ),
             ),
           ),
         ),
@@ -322,6 +333,20 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       _setAssistantOpen(true);
       _requestAssistantFocus();
     }
+  }
+
+  double _resizedPaneWidth(
+    double preferredWidth,
+    double delta, {
+    required double minimumWidth,
+    required double maximumWidth,
+    required double textScale,
+  }) {
+    final maximum = math.max(minimumWidth, maximumWidth / textScale);
+    // Resizing from a temporary viewport cap must respond immediately, not
+    // first consume the off-screen portion of an earlier width preference.
+    final current = preferredWidth.clamp(minimumWidth, maximum);
+    return (current - delta / textScale).clamp(minimumWidth, maximum);
   }
 
   void _requestAssistantFocus() {
@@ -551,32 +576,26 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final assistantSpace = policy.dockedAssistant
               ? policy.assistantWidth + 1
               : 0.0;
-          final detailSpace = policy.dockedDetail
-              ? policy.detailWidth + 1
-              : policy.supporting
-              ? policy.supportingWidth + 1
-              : 0.0;
           final captionInset = DesktopWindowBridge.instance.available
               ? metrics.toolbarHeight
               : 0.0;
           final overlayInset = math
               .max(captionInset, _bodyTop ?? metrics.toolbarHeight)
               .clamp(0.0, constraints.maxHeight);
-          final detailTop = policy.dockedDetail ? captionInset : overlayInset;
-          final assistantTop = policy.dockedAssistant
-              ? captionInset
-              : overlayInset;
           final resizeExtent = metrics.desktop ? 9.0 : 48.0;
           final motion = SkedMotionPolicy.of(context);
-          // This budget uses the selected docking floor, never a task-first
-          // sidebar compromise. Opening a pane always leaves the base width safe.
-          final resourceBudget =
-              (constraints.maxWidth -
-                      policy.minimumCanvasWidth -
-                      detailSpace -
-                      assistantSpace -
-                      1)
-                  .clamp(0.0, constraints.maxWidth);
+          // Reserve only the calendar's bounded inset. The rest of a wide pane
+          // covers the body and can never consume the sidebar's base budget.
+          final resourceBudget = math.max(
+            // Even rounding at a fractional-scale limit must not shave width
+            // off the base sidebar or move the full-width command bar.
+            policy.resourceWidth,
+            (constraints.maxWidth -
+                    policy.minimumCanvasWidth -
+                    policy.canvasEndInset -
+                    1)
+                .clamp(0.0, constraints.maxWidth),
+          );
           final overlayVisible =
               (policy.detailVisible && !policy.dockedDetail) ||
               (policy.assistantVisible && !policy.dockedAssistant);
@@ -687,32 +706,13 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                   ),
                                 ),
                               ),
-                              SizedBox(width: detailSpace + assistantSpace),
                             ],
                           ),
                         ),
-                        if (captionInset > 0 &&
-                            assistantSpace + detailSpace > metrics.captionWidth)
-                          PositionedDirectional(
-                            end: metrics.captionWidth,
-                            top: 0,
-                            width:
-                                assistantSpace +
-                                detailSpace -
-                                metrics.captionWidth,
-                            height: captionInset,
-                            child: const SkedSurface(
-                              key: ValueKey('workspace-caption-fill'),
-                              role: SkedSurfaceRole.frame,
-                              child: DesktopDragRegion(
-                                child: SizedBox.expand(),
-                              ),
-                            ),
-                          ),
                         PositionedDirectional(
                           key: const ValueKey('workspace-supporting-pane'),
                           end: 0,
-                          top: captionInset,
+                          top: overlayInset,
                           bottom: 0,
                           width: policy.supportingWidth,
                           child: Offstage(
@@ -738,7 +738,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                         PositionedDirectional(
                           key: const ValueKey('workspace-detail-pane'),
                           end: policy.dockedDetail ? assistantSpace : 0,
-                          top: detailTop,
+                          top: overlayInset,
                           bottom: 0,
                           width: policy.detailWidth,
                           child: _detailPane(policy),
@@ -746,18 +746,21 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                         PositionedDirectional(
                           key: const ValueKey('workspace-assistant-pane'),
                           end: 0,
-                          top: assistantTop,
+                          top: overlayInset,
                           bottom: 0,
                           width: policy.assistantWidth,
                           child: _assistantPane(policy, previewEnabled),
                         ),
                         if (policy.detailVisible)
                           PositionedDirectional(
+                            key: const ValueKey(
+                              'workspace-detail-resize-position',
+                            ),
                             end:
                                 (policy.dockedDetail ? assistantSpace : 0) +
                                 policy.detailWidth -
                                 resizeExtent,
-                            top: detailTop,
+                            top: overlayInset,
                             bottom: metrics.desktop ? 0 : null,
                             height: metrics.desktop ? null : 48,
                             width: resizeExtent,
@@ -765,16 +768,24 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                               key: const ValueKey('workspace-detail-resize'),
                               onActivate: () => _assistantLast = false,
                               onResize: (dx) => setState(
-                                () => _detailWidth =
-                                    (_detailWidth - dx / metrics.textScale)
-                                        .clamp(320, 600),
+                                () => _detailWidth = _resizedPaneWidth(
+                                  _detailWidth,
+                                  dx,
+                                  minimumWidth:
+                                      AppBreakpoints.minimumDetailPane,
+                                  maximumWidth: policy.maximumDetailWidth,
+                                  textScale: metrics.textScale,
+                                ),
                               ),
                             ),
                           ),
                         if (policy.assistantVisible)
                           PositionedDirectional(
+                            key: const ValueKey(
+                              'workspace-assistant-resize-position',
+                            ),
                             end: policy.assistantWidth - resizeExtent,
-                            top: assistantTop,
+                            top: overlayInset,
                             bottom: metrics.desktop ? 0 : null,
                             height: metrics.desktop ? null : 48,
                             width: resizeExtent,
@@ -782,7 +793,14 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                               key: const ValueKey('workspace-assistant-resize'),
                               onActivate: () => _assistantLast = true,
                               onResize: (dx) => _assistant.resize(
-                                _assistant.width - dx / metrics.textScale,
+                                _resizedPaneWidth(
+                                  _assistant.width,
+                                  dx,
+                                  minimumWidth:
+                                      AppBreakpoints.minimumAssistantPane,
+                                  maximumWidth: policy.maximumAssistantWidth,
+                                  textScale: metrics.textScale,
+                                ),
                               ),
                             ),
                           ),

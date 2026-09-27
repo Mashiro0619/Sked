@@ -15,6 +15,8 @@ class WorkbenchLayoutPolicy {
     required this.supporting,
     required this.dockedDetail,
     required this.detailWidth,
+    required this.maximumDetailWidth,
+    required this.maximumAssistantWidth,
     this.resourceWidth = AppBreakpoints.resourcePane,
     this.supportingWidth = AppBreakpoints.detailPane,
     this.dockedAssistant = false,
@@ -22,12 +24,15 @@ class WorkbenchLayoutPolicy {
     this.detailVisible = false,
     this.assistantVisible = false,
     this.minimumCanvasWidth = AppBreakpoints.minimumCanvas,
+    this.canvasEndInset = 0,
     this.canvasObscured = false,
   });
   final bool resources;
   final bool supporting;
   final bool dockedDetail;
   final double detailWidth;
+  final double maximumDetailWidth;
+  final double maximumAssistantWidth;
   final double resourceWidth;
   final double supportingWidth;
   final bool dockedAssistant;
@@ -35,6 +40,10 @@ class WorkbenchLayoutPolicy {
   final bool detailVisible;
   final bool assistantVisible;
   final double minimumCanvasWidth;
+
+  /// Reserved only below the command bar. A resized pane may cover the canvas
+  /// beyond this inset, without releasing its entire slot at the docking limit.
+  final double canvasEndInset;
   final bool canvasObscured;
   static const divider = AppBreakpoints.paneDivider;
 
@@ -70,14 +79,6 @@ class WorkbenchLayoutPolicy {
   }) {
     final factor = textFactor(textScale);
     final canvas = minimumCanvas * factor;
-    final requestedDetail = math.max(
-      320 * factor,
-      preferredDetailWidth * factor,
-    );
-    final requestedAssistant = math.max(
-      360 * factor,
-      preferredAssistantWidth * factor,
-    );
     final supportingWidth = AppBreakpoints.detailPane * factor;
     final resourceWidth =
         (resourcesCollapsed
@@ -89,6 +90,33 @@ class WorkbenchLayoutPolicy {
     final resources = width >= canvas + resourceWidth + divider;
     final resourceSpace = resources ? resourceWidth + divider : 0.0;
     final contentWidth = math.max(0.0, width - resourceSpace);
+    // Use the entire sidebar-free work area, including any supporting agenda
+    // or other task. Keep default readable widths on small/large-text windows
+    // rather than making an unresized pane narrower just to enforce the ratio.
+    final fractionalMaximum =
+        contentWidth * AppBreakpoints.maximumTaskPaneFraction;
+    final maximumDetailWidth = math.min(
+      contentWidth,
+      math.max(AppBreakpoints.detailPane * factor, fractionalMaximum),
+    );
+    final maximumAssistantWidth = math.min(
+      contentWidth,
+      math.max(AppBreakpoints.assistantPane * factor, fractionalMaximum),
+    );
+    final requestedDetail = math.min(
+      maximumDetailWidth,
+      math.max(
+        AppBreakpoints.minimumDetailPane * factor,
+        preferredDetailWidth * factor,
+      ),
+    );
+    final requestedAssistant = math.min(
+      maximumAssistantWidth,
+      math.max(
+        AppBreakpoints.minimumAssistantPane * factor,
+        preferredAssistantWidth * factor,
+      ),
+    );
     final dockingCanvas =
         panelDisplayMode == WorkspacePanelDisplayMode.sideBySide
         ? AppBreakpoints.minimumSideBySideCanvas * factor
@@ -114,12 +142,23 @@ class WorkbenchLayoutPolicy {
         allowDock &&
         (bothDock ||
             contentWidth >= dockingCanvas + requestedAssistant + divider);
+    // Docking and canvas reservation are different budgets. Once the calendar
+    // reaches its floor, further resizing covers it instead of springing it
+    // back to the full work-area width. Pure overlay mode never reserves space.
+    final visibleTaskSpace =
+        (detailVisible ? requestedDetail + divider : 0.0) +
+        (assistantVisible ? requestedAssistant + divider : 0.0);
+    final taskSpace = allowDock
+        ? math.min(
+            visibleTaskSpace,
+            math.max(0.0, contentWidth - dockingCanvas),
+          )
+        : 0.0;
     // The month agenda belongs to the base view, not to a task's width. An
-    // overlay must not remove it and thereby resize the calendar underneath.
+    // overlay keeps it; a task slot reuses its space instead of reserving both.
     final supporting =
         hasSupporting &&
-        !detail &&
-        !assistant &&
+        taskSpace == 0 &&
         contentWidth >= canvas + supportingWidth + divider;
     return WorkbenchLayoutPolicy(
       resources: resources,
@@ -127,16 +166,15 @@ class WorkbenchLayoutPolicy {
       supporting: supporting,
       supportingWidth: supportingWidth,
       dockedDetail: detail,
-      detailWidth: detail
-          ? requestedDetail
-          : math.min(requestedDetail, contentWidth),
+      detailWidth: requestedDetail,
+      maximumDetailWidth: maximumDetailWidth,
+      maximumAssistantWidth: maximumAssistantWidth,
       dockedAssistant: assistant,
-      assistantWidth: assistant
-          ? requestedAssistant
-          : math.min(requestedAssistant, contentWidth),
+      assistantWidth: requestedAssistant,
       detailVisible: detailVisible,
       assistantVisible: assistantVisible,
-      minimumCanvasWidth: detail || assistant ? dockingCanvas : canvas,
+      minimumCanvasWidth: taskSpace > 0 ? dockingCanvas : canvas,
+      canvasEndInset: taskSpace + (supporting ? supportingWidth + divider : 0),
       canvasObscured:
           (detailVisible && !detail && requestedDetail >= contentWidth) ||
           (assistantVisible &&

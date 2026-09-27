@@ -4397,7 +4397,9 @@ void main() {
         find.byKey(const ValueKey('general-month-calendar-panel')),
       );
       final canvasSize = tester.getSize(
-        find.byKey(const ValueKey('workspace-canvas')),
+        // The command bar spans the work area; the calendar viewport excludes
+        // the month view's supporting agenda, without imposing a form-width cap.
+        find.byKey(const ValueKey('workspace-canvas-viewport')),
       );
       expect(panelSize.width, greaterThanOrEqualTo(canvasSize.width - 48));
       expect(panelSize.height, lessThanOrEqualTo(canvasSize.height));

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../models/workspace_context_snapshot.dart';
 import '../models/timetable_models.dart';
+import 'app_layout_tokens.dart';
 
 const aiLayoutPreviewEnabled = bool.fromEnvironment('SKED_AI_LAYOUT_PREVIEW');
 
@@ -12,7 +13,8 @@ class AssistantPaneController extends ChangeNotifier {
   final draft = TextEditingController();
   bool _open = false;
   bool get isOpen => _open;
-  double width = 400;
+  // Preferred width at text scale 1; the layout owns viewport-relative caps.
+  double width = AppBreakpoints.assistantPane;
   void toggle() => setOpen(!_open);
   void setOpen(bool value) {
     if (_open == value) return;
@@ -21,7 +23,13 @@ class AssistantPaneController extends ChangeNotifier {
   }
 
   void resize(double value) {
-    width = value.clamp(360, 640);
+    if (!value.isFinite) return;
+    final next = value.clamp(
+      AppBreakpoints.minimumAssistantPane,
+      double.infinity,
+    );
+    if (next == width) return;
+    width = next;
     notifyListeners();
   }
 
