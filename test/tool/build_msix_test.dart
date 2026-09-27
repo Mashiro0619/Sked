@@ -71,6 +71,8 @@ function dart {
 </Package>
 "@
   New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+  # PowerShell 5.1 needs the enum assembly before ZipArchiveMode is resolved.
+  Add-Type -AssemblyName System.IO.Compression
   Add-Type -AssemblyName System.IO.Compression.FileSystem
   $archive = [System.IO.Compression.ZipFile]::Open((Join-Path $outputPath "$outputName.msix"), [System.IO.Compression.ZipArchiveMode]::Create)
   try {
@@ -115,11 +117,12 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     int buildExitCode = 0,
     int packageExitCode = 0,
     String mismatch = '',
+    String? shellExecutable,
   }) async {
     await File(p.join(fixture.path, 'pubspec.yaml'))
         .writeAsString('name: sked\nversion: $version\n');
     return Process.run(
-      powershell!,
+      shellExecutable ?? powershell!,
       [
         '-NoProfile',
         '-NonInteractive',
@@ -242,6 +245,23 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       skip: skip,
     );
   }
+
+  test('Store package fixture works with Windows PowerShell 5.1', () async {
+    final result = await runBuild(
+      '2.3.0-alpha.1+14',
+      mode: 'Store',
+      shellExecutable: 'powershell.exe',
+    );
+    expect(
+      result.exitCode,
+      0,
+      reason: [result.stdout, result.stderr].join('\n'),
+    );
+    expect(
+      result.stdout,
+      contains('Verified Store identity: Mashiro0619.Sked_8xjzenwxj0w1p'),
+    );
+  }, skip: !Platform.isWindows);
 
   for (final invalid in [
     '2.3.0-',
