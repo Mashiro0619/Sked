@@ -35,6 +35,9 @@ class DeveloperUiPreferences extends ChangeNotifier {
   Object? _error;
   bool? _retryValue;
   Future<bool>? _pending;
+
+  /// Legacy name/key for feature enablement, not the panel's open state.
+  /// Closing the panel must not persist a change to this preference.
   bool get assistantVisible => _visible;
   bool get ready => _ready;
   bool get busy => _busy;

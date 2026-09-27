@@ -18,6 +18,7 @@ import '../services/agenda_notification_runtime_store.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/android_productivity_bridge.dart';
 import '../services/developer_sample_data_service.dart';
+import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/ui_command.dart';
 
@@ -449,7 +450,10 @@ class _DeveloperModePageState extends State<DeveloperModePage>
     return PopScope<void>(
       canPop: !uiCommandBusy,
       child: Scaffold(
-        appBar: WorkbenchAppBar(title: Text(l10n.developerModeTitle)),
+        appBar: WorkbenchAppBar(
+          automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
+          title: Text(l10n.developerModeTitle),
+        ),
         body: Column(
           children: [
             UiCommandBusyIndicator(

@@ -292,15 +292,19 @@ void main() {
   }
 
   testWidgets(
-    'developer preference opens AI on return, retains input and closes only after a successful save',
+    'developer preference enables AI while panel close keeps the entry and draft',
     (tester) async {
       viewport(tester, const Size(1920, 1080));
       final p = await denseWorkbenchProvider();
       addTearDown(p.dispose);
       var succeed = true;
+      final writes = <bool>[];
       final prefs = DeveloperUiPreferences(
         read: () async => false,
-        write: (_) async => succeed,
+        write: (value) async {
+          writes.add(value);
+          return succeed;
+        },
       );
       await prefs.load();
       addTearDown(prefs.dispose);
@@ -356,14 +360,41 @@ void main() {
       await tester.tap(close);
       await tester.pumpAndSettle();
       expect(prefs.assistantVisible, isTrue);
+      expect(prefs.hasError, isFalse);
+      expect(writes, [true]);
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      expect(find.byKey(const ValueKey('assistant-toggle')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      await tester.pumpAndSettle();
+      expect(prefs.assistantVisible, isTrue);
+      expect(writes, [true]);
+      expect(find.byType(AssistantPreviewPane), findsOneWidget);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('assistant-draft')))
+            .controller!
+            .text,
+        'Local draft, not sent',
+      );
+      expect(tester.state(find.byType(GeneralEventEditorSheet)), same(state));
+      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      expect(writes, [true]);
+      expect(await prefs.setAssistantVisible(false), isFalse);
+      await tester.pumpAndSettle();
+      expect(prefs.assistantVisible, isTrue);
       expect(prefs.hasError, isTrue);
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      expect(find.byKey(const ValueKey('assistant-toggle')), findsOneWidget);
       succeed = true;
-      await prefs.retry();
+      expect(await prefs.retry(), isTrue);
       await tester.pumpAndSettle();
       expect(prefs.assistantVisible, isFalse);
-      expect(find.byType(AssistantPreviewPane), findsNothing);
-      await prefs.setAssistantVisible(true);
+      expect(find.byKey(const ValueKey('assistant-toggle')), findsNothing);
+      expect(await prefs.setAssistantVisible(true), isTrue);
       await tester.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsOneWidget);
       expect(
         tester
             .widget<TextField>(find.byKey(const ValueKey('assistant-draft')))

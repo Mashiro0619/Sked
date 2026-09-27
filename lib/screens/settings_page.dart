@@ -180,6 +180,7 @@ class _SettingsPageState extends State<SettingsPage>
                     overviewBuilder:
                         (context, controller, keys, open, header) =>
                             _buildOverview(
+                              context,
                               provider,
                               controller,
                               keys,
@@ -207,6 +208,7 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   Widget _buildOverview(
+    BuildContext pageContext,
     TimetableProvider provider,
     ScrollController controller,
     Map<String, GlobalKey> keys,
@@ -366,7 +368,7 @@ class _SettingsPageState extends State<SettingsPage>
           ),
         ]),
         group('about', l.settingsSectionAbout, [
-          ..._aboutControls(provider, l).where(
+          ..._aboutControls(pageContext, provider, l).where(
             (item) => item.key == const ValueKey('settings-check-for-updates'),
           ),
           link(
@@ -507,7 +509,7 @@ class _SettingsPageState extends State<SettingsPage>
       );
     }
     final privacyChildren = _privacyControls(provider, l10n);
-    final aboutChildren = _aboutControls(provider, l10n);
+    final aboutChildren = _aboutControls(context, provider, l10n);
 
     final (title, children) = switch (destination) {
       SettingsDestination.about => (l10n.settingsSectionAbout, aboutChildren),
@@ -607,6 +609,7 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   List<Widget> _aboutControls(
+    BuildContext pageContext,
     TimetableProvider provider,
     AppLocalizations l10n,
   ) {
@@ -643,7 +646,9 @@ class _SettingsPageState extends State<SettingsPage>
         title: l10n.checkForUpdates,
         subtitle: _buildUpdateSubtitle(provider, l10n),
         onTap: updateEntryBusy ? null : _checkForUpdates,
-        onLongPress: updateEntryBusy ? null : _openDeveloperModePage,
+        onLongPress: updateEntryBusy
+            ? null
+            : () => _openDeveloperModePage(pageContext),
         onLongPressHint: l10n.developerModeLongPressHint,
         onTapHint: l10n.checkForUpdates,
       ),
@@ -825,15 +830,18 @@ class _SettingsPageState extends State<SettingsPage>
     });
   }
 
-  Future<void> _openDeveloperModePage() async {
+  Future<void> _openDeveloperModePage(BuildContext pageContext) async {
     if (_isFlowOpen(_SettingsFlow.updateCheck)) return;
     await _guardFlow(_SettingsFlow.developerModePage, () async {
-      if (!mounted) return;
-      unawaited(Feedback.forLongPress(context));
-      await Navigator.of(context).push(
+      if (!mounted || !pageContext.mounted) return;
+      final provider = pageContext.read<TimetableProvider>();
+      unawaited(Feedback.forLongPress(pageContext));
+      // The overview's State lives above the settings navigator. Use the
+      // rendered entry's route for both overview and About-page navigation.
+      await Navigator.of(pageContext).push<void>(
         MaterialPageRoute(
           builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: context.read<TimetableProvider>(),
+            value: provider,
             child: const DeveloperModePage(),
           ),
         ),

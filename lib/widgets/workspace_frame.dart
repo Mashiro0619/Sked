@@ -236,6 +236,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   bool _wasAssistantOpen = false;
   String? _selection;
   DeveloperUiPreferences? _developerUi;
+  bool? _lastAssistantPreference;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -243,35 +244,27 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     if (identical(next, _developerUi)) return;
     _developerUi?.removeListener(_syncAssistantPreference);
     _developerUi = next;
+    _lastAssistantPreference = null;
     next?.addListener(_syncAssistantPreference);
     _syncAssistantPreference();
   }
 
   void _syncAssistantPreference() {
     if (!mounted) return;
-    final p = _developerUi;
-    if (p != null) _assistant.setOpen(p.assistantVisible);
+    final enabled = _developerUi?.assistantVisible;
+    if (enabled != null && enabled != _lastAssistantPreference) {
+      _lastAssistantPreference = enabled;
+      // Only a feature-toggle change opens/closes the panel. Save progress or
+      // failures must not undo a user's temporary close.
+      _assistant.setOpen(enabled);
+    }
     setState(() {});
   }
 
-  Future<void> _setAssistantOpen(bool visible) async {
-    final p = _developerUi;
-    if (p?.busy == true) return;
-    if (p == null) {
-      _assistant.setOpen(visible);
-      return;
-    }
-    if (!await p.setAssistantVisible(visible) && mounted) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).saveFailedRetry),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context).dataRecoveryRetryAction,
-            onPressed: () => unawaited(_setAssistantOpen(visible)),
-          ),
-        ),
-      );
-    }
+  void _setAssistantOpen(bool visible) {
+    // Panel visibility is transient; only developer settings persist whether
+    // the preview feature (and its toolbar entry) is enabled.
+    _assistant.setOpen(visible);
   }
 
   @override
@@ -373,7 +366,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                   .clamp(0.0, constraints.maxWidth);
           Future<void> dismiss() async {
             if (assistantVisible && (!detailVisible || _assistantLast)) {
-              await _setAssistantOpen(false);
+              _setAssistantOpen(false);
             } else if (detailVisible) {
               await controller.close();
             }
@@ -382,8 +375,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           return AssistantPaneScope(
             controller: _assistant,
             enabled: previewEnabled,
-            interactive: _developerUi?.busy != true,
-            onToggle: () => unawaited(_setAssistantOpen(!_assistant.isOpen)),
+            onToggle: () => _setAssistantOpen(!_assistant.isOpen),
             child: PopScope(
               canPop: !active || (!controller.hasPaneTasks && !assistantOpen),
               onPopInvokedWithResult: (didPop, _) {
@@ -586,10 +578,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                 child: !previewEnabled
                                     ? const SizedBox.shrink()
                                     : AssistantPreviewPane(
-                                        closeEnabled:
-                                            _developerUi?.busy != true,
-                                        onClose: () =>
-                                            unawaited(_setAssistantOpen(false)),
+                                        onClose: () => _setAssistantOpen(false),
                                         controller: _assistant,
                                         snapshot: widget.contextSnapshot
                                             ?.withSelection(
