@@ -14,6 +14,7 @@ import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:lunar/lunar.dart';
 import 'package:provider/provider.dart';
@@ -48,6 +49,8 @@ part 'general_schedule_timeline_view.dart';
 part 'general_schedule_timeline_components.dart';
 part 'general_schedule_calendar_manager.dart';
 part 'general_schedule_month_view.dart';
+part 'general_schedule_desktop_month.dart';
+part 'general_schedule_month_grid_geometry.dart';
 
 const generalViewCustom = 'custom';
 

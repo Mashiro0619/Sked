@@ -10,6 +10,7 @@ bool workspaceMonthCanSplit(BuildContext context, double width) =>
     );
 
 const _monthGridSpacing = 1.0;
+
 bool _showMonthLunar(TimetableProvider provider) =>
     provider.generalShowLunarCalendar && provider.localeCode.startsWith('zh');
 const _generalMonthCompactSelectedDayFeedbackKey = ValueKey<String>(
@@ -236,17 +237,24 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           context,
           constraints.maxWidth,
         );
-        final calendar = _MonthCalendarPanel(
-          model: model,
-          selectedDate: selectedDate,
-          today: today,
-          occurrencesByDay: occurrencesByDay,
-          provider: widget.provider,
-          filter: widget.filter,
-          onPreviousMonth: _goToPreviousMonth,
-          onNextMonth: _goToNextMonth,
-          onDaySelected: _selectDay,
-        );
+        final workspace = WorkspaceCanvasScope.maybeOf(context);
+        Widget calendar({bool inset = false, bool split = false}) =>
+            _MonthCalendarPanel(
+              sharedTopEdge: !inset && workspace != null,
+              sharedStartEdge: !inset && workspace?.resources == true,
+              // The legacy split supplies a real VerticalDivider; task panes
+              // only reserve space, so the calendar owns its trailing outline.
+              sharedEndEdge: !inset && split,
+              model: model,
+              selectedDate: selectedDate,
+              today: today,
+              occurrencesByDay: occurrencesByDay,
+              provider: widget.provider,
+              filter: widget.filter,
+              onPreviousMonth: _goToPreviousMonth,
+              onNextMonth: _goToNextMonth,
+              onDaySelected: _selectDay,
+            );
         final agenda = _MonthAgendaPanel(
           date: selectedDate,
           occurrences: selectedOccurrences,
@@ -255,15 +263,14 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           onOccurrenceTap: widget.onOccurrenceTap,
         );
 
-        final workspace = WorkspaceCanvasScope.maybeOf(context);
         if (workspace?.supporting == true || workspace?.dockedDetail == true) {
-          return calendar;
+          return calendar();
         }
         if (sideBySide) {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: calendar),
+              Expanded(child: calendar(split: true)),
               const VerticalDivider(width: 1),
               SizedBox(width: 320, child: agenda),
             ],
@@ -289,7 +296,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           // of that viewport unused by sizing the calendar like a phone card.
           return Column(
             children: [
-              Expanded(child: calendar),
+              Expanded(child: calendar()),
               const Divider(height: 1),
               SizedBox(
                 key: const ValueKey('general-month-stacked-agenda'),
@@ -307,7 +314,7 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           slivers: [
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              sliver: SliverToBoxAdapter(child: calendar),
+              sliver: SliverToBoxAdapter(child: calendar(inset: true)),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -416,6 +423,9 @@ class _MonthCalendarPanel extends StatefulWidget {
     required this.onPreviousMonth,
     required this.onNextMonth,
     required this.onDaySelected,
+    this.sharedTopEdge = false,
+    this.sharedStartEdge = false,
+    this.sharedEndEdge = false,
   });
 
   final _MonthGridModel model;
@@ -427,6 +437,7 @@ class _MonthCalendarPanel extends StatefulWidget {
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
   final ValueChanged<DateTime> onDaySelected;
+  final bool sharedTopEdge, sharedStartEdge, sharedEndEdge;
 
   @override
   State<_MonthCalendarPanel> createState() => _MonthCalendarPanelState();
@@ -672,6 +683,26 @@ class _MonthCalendarPanelState extends State<_MonthCalendarPanel>
 
   @override
   Widget build(BuildContext context) {
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return _DesktopMonthCalendarPanel(
+        model: widget.model,
+        selectedDate: widget.selectedDate,
+        today: widget.today,
+        occurrencesByDay: widget.occurrencesByDay,
+        provider: widget.provider,
+        previousPage: _previousPage,
+        nextPage: _nextPage,
+        dragOffset: _dragOffset,
+        sharedTopEdge: widget.sharedTopEdge,
+        sharedStartEdge: widget.sharedStartEdge,
+        sharedEndEdge: widget.sharedEndEdge,
+        onDaySelected: widget.onDaySelected,
+        onDragStart: _handleDragStart,
+        onDragUpdate: _handleDragUpdate,
+        onDragEnd: _handleDragEnd,
+        onDragCancel: _handleDragCancel,
+      );
+    }
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return LayoutBuilder(
