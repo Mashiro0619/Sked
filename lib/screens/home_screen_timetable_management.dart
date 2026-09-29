@@ -197,7 +197,6 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
             : 'timetable:${timetable.id}',
         builder: (context) {
           final l10n = AppLocalizations.of(context);
-          final viewInsets = MediaQuery.of(context).viewInsets;
           var popped = false;
           void popWith(String? value) {
             if (!context.mounted || popped) return;
@@ -314,12 +313,17 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
 
                 return PopScope(
                   canPop: !blocked && !popped,
-                  child: AnimatedPadding(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                  // The modal host (or desktop Scaffold) already avoids the
+                  // keyboard. Only preserve the bottom system safe area here.
+                  child: SafeArea(
+                    top: false,
                     child: Align(
                       alignment: Alignment.topCenter,
+                      // Short phone forms must not expand to the route's
+                      // maximum height; desktop tasks keep their full pane.
+                      heightFactor: WorkspaceTaskScope.contains(context)
+                          ? null
+                          : 1,
                       child: SingleChildScrollView(
                         child: Form(
                           key: formKey,
