@@ -26,6 +26,8 @@ Sked is a Flutter app for student timetables and everyday schedules. Courses are
 
 ### Android Phone
 
+> **Screenshot update pending:** The phone screenshots below have not yet been updated to the latest version. Some toolbars, menus and dialogs may differ from the current app.
+
 <p align="center">
   <a href="docs/screenshots/en/student-week.jpg"><img src="docs/screenshots/en/student-week.jpg" width="200" alt="Student timetable week view on an Android phone" title="Student timetable · Week"></a>
   <a href="docs/screenshots/en/course-details.jpg"><img src="docs/screenshots/en/course-details.jpg" width="200" alt="Course details on an Android phone" title="Course details"></a>
@@ -37,11 +39,17 @@ Sked is a Flutter app for student timetables and everyday schedules. Courses are
   <a href="docs/screenshots/en/event-editor.jpg"><img src="docs/screenshots/en/event-editor.jpg" width="200" alt="Event editor on an Android phone" title="Event editor"></a>
 </p>
 
-### Android Tablet / Windows Desktop
+### Tablet / Desktop
 
 <p align="center">
-  <a href="docs/screenshots/en/student-week-tablet.jpg"><img src="docs/screenshots/en/student-week-tablet.jpg" width="400" alt="Student timetable week view on an Android tablet" title="Student timetable · Week"></a>
-  <a href="docs/screenshots/en/settings-tablet.jpg"><img src="docs/screenshots/en/settings-tablet.jpg" width="400" alt="Settings on an Android tablet" title="Settings"></a>
+  <a href="docs/screenshots/en/student-week-desktop.jpg"><img src="docs/screenshots/en/student-week-desktop.jpg" width="400" alt="Timetable week view" title="Timetable week view"></a>
+  <a href="docs/screenshots/en/course-details-desktop.jpg"><img src="docs/screenshots/en/course-details-desktop.jpg" width="400" alt="Course details" title="Course details"></a>
+  <a href="docs/screenshots/en/course-editor-desktop.jpg"><img src="docs/screenshots/en/course-editor-desktop.jpg" width="400" alt="Course editor" title="Course editor"></a>
+  <a href="docs/screenshots/en/general-week-desktop.jpg"><img src="docs/screenshots/en/general-week-desktop.jpg" width="400" alt="Schedule week view" title="Schedule week view"></a>
+  <a href="docs/screenshots/en/general-month-desktop.jpg"><img src="docs/screenshots/en/general-month-desktop.jpg" width="400" alt="Schedule month view" title="Schedule month view"></a>
+  <a href="docs/screenshots/en/event-details-desktop.jpg"><img src="docs/screenshots/en/event-details-desktop.jpg" width="400" alt="Event details" title="Event details"></a>
+  <a href="docs/screenshots/en/event-editor-desktop.jpg"><img src="docs/screenshots/en/event-editor-desktop.jpg" width="400" alt="Event editor" title="Event editor"></a>
+  <a href="docs/screenshots/en/settings-desktop.jpg"><img src="docs/screenshots/en/settings-desktop.jpg" width="400" alt="Settings" title="Settings"></a>
 </p>
 
 ## Features
@@ -68,12 +76,13 @@ Sked is a Flutter app for student timetables and everyday schedules. Courses are
 - Back up and restore timetables, schedules, period-time sets, and app settings.
 - Light, dark, system, and custom-color themes.
 - Configurable course styles, date formats, toolbar sizing, and common interactions.
-- Optional workspace navigation and floating add buttons on the home screen.
+- Hide workspace navigation or the floating add button when preferred. On phones, Workspace and Settings default to More; both can be reordered or moved back to the toolbar.
+- Both desktop workspaces share expanded-sidebar, icon-rail and hidden-navigation rules. Narrow windows can open an overlay resource drawer, while Add course / Add event stays directly accessible.
 - Timetables, calendars, and editor panes adapt to the available phone, tablet, and desktop window space, with a multilingual interface.
 
 ## Getting Started
 
-On first launch, enable Timetable only, Schedule only, or Both (which starts in Timetable). Switch enabled workspaces from the main screen. Use Settings → Feature management to disable or re-enable a workspace: disabling preserves its data, hides its entry points, and stops its reminders. At least one workspace must remain enabled. Hiding navigation while both are enabled is a separate preference, not a way to disable a workspace.
+On first launch, enable Timetable only, Schedule only, or Both (which starts in Timetable). Switch enabled workspaces from the main screen. Use Settings → Feature management to disable or re-enable a workspace: disabling preserves its data, hides its entry points, and stops its reminders. At least one workspace must remain enabled. Hiding navigation while both are enabled is a separate preference, not a way to disable a workspace. On phones with the bottom navigation hidden, select a workspace directly from More; if Workspace is configured to appear on the toolbar, use its switcher button instead.
 
 For a student timetable, create a timetable and period-time set before adding courses, or import an existing timetable from a file, text, HTML, or a school webpage. For general scheduling, create a calendar and then add events or import a JSON or ICS file.
 

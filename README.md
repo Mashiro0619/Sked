@@ -26,6 +26,8 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 
 ### Android 手机
 
+> **截图待更新：**以下手机截图尚未更新到最新版，部分工具栏、菜单与弹窗可能与当前版本不同。
+
 <p align="center">
   <a href="docs/screenshots/zh/student-week.jpg"><img src="docs/screenshots/zh/student-week.jpg" width="200" alt="Android 手机上的学生课表周视图" title="学生课表 · 周视图"></a>
   <a href="docs/screenshots/zh/course-details.jpg"><img src="docs/screenshots/zh/course-details.jpg" width="200" alt="Android 手机上的课程详情" title="课程详情"></a>
@@ -37,11 +39,17 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
   <a href="docs/screenshots/zh/event-editor.jpg"><img src="docs/screenshots/zh/event-editor.jpg" width="200" alt="Android 手机上的日程编辑页" title="日程编辑"></a>
 </p>
 
-### Android 平板 / Windows 桌面
+### 平板 / 桌面
 
 <p align="center">
-  <a href="docs/screenshots/zh/student-week-tablet.jpg"><img src="docs/screenshots/zh/student-week-tablet.jpg" width="400" alt="Android 平板上的学生课表周视图" title="学生课表 · 周视图"></a>
-  <a href="docs/screenshots/zh/settings-tablet.jpg"><img src="docs/screenshots/zh/settings-tablet.jpg" width="400" alt="Android 平板上的设置页" title="设置"></a>
+  <a href="docs/screenshots/zh/student-week-desktop.jpg"><img src="docs/screenshots/zh/student-week-desktop.jpg" width="400" alt="课表周视图" title="课表周视图"></a>
+  <a href="docs/screenshots/zh/course-details-desktop.jpg"><img src="docs/screenshots/zh/course-details-desktop.jpg" width="400" alt="课程详情" title="课程详情"></a>
+  <a href="docs/screenshots/zh/course-editor-desktop.jpg"><img src="docs/screenshots/zh/course-editor-desktop.jpg" width="400" alt="课程编辑" title="课程编辑"></a>
+  <a href="docs/screenshots/zh/general-week-desktop.jpg"><img src="docs/screenshots/zh/general-week-desktop.jpg" width="400" alt="日程周视图" title="日程周视图"></a>
+  <a href="docs/screenshots/zh/general-month-desktop.jpg"><img src="docs/screenshots/zh/general-month-desktop.jpg" width="400" alt="日程月视图" title="日程月视图"></a>
+  <a href="docs/screenshots/zh/event-details-desktop.jpg"><img src="docs/screenshots/zh/event-details-desktop.jpg" width="400" alt="日程详情" title="日程详情"></a>
+  <a href="docs/screenshots/zh/event-editor-desktop.jpg"><img src="docs/screenshots/zh/event-editor-desktop.jpg" width="400" alt="日程编辑" title="日程编辑"></a>
+  <a href="docs/screenshots/zh/settings-desktop.jpg"><img src="docs/screenshots/zh/settings-desktop.jpg" width="400" alt="设置" title="设置"></a>
 </p>
 
 ## 主要功能
@@ -68,12 +76,13 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 - 完整备份和恢复课表、日程、节次时间集及应用设置。
 - 浅色、深色、跟随系统和自定义主题色。
 - 可调整课程样式、日期格式、工具栏宽度和常用交互方式。
-- 可按需隐藏工作区导航或主界面的悬浮添加按钮。
+- 可按需隐藏工作区导航或主界面的悬浮添加按钮；手机工具栏的「工作区」「设置」默认收进「更多」，可重新排序或移回顶栏。
+- 桌面两个工作区共用完整侧栏、图标侧栏与隐藏入口的响应式规则；窄窗可临时打开资源抽屉，添加课程／日程始终保留直接入口。
 - 课表、日历和编辑面板按手机、平板及桌面窗口的实际空间调整，并提供多语言界面。
 
 ## 开始使用
 
-首次启动时选择「仅课表」「仅日程」或「两者」，选择两者默认进入课表。日常在主界面切换已启用的工作区；在「设置 → 功能管理」中可以停用或重新启用工作区。停用会保留数据、隐藏相关入口并停止对应提醒，至少保留一个工作区。双工作区下仍可单独隐藏导航，这不等于停用。
+首次启动时选择「仅课表」「仅日程」或「两者」，选择两者默认进入课表。日常在主界面切换已启用的工作区；在「设置 → 功能管理」中可以停用或重新启用工作区。停用会保留数据、隐藏相关入口并停止对应提醒，至少保留一个工作区。双工作区下仍可单独隐藏导航，这不等于停用。手机隐藏底部导航后，可在「更多」中直接选择工作区；若将「工作区」配置为顶栏显示，则点击切换按钮选择。
 
 使用学生课表时，可以先新建课表和节次时间集，再手动添加课程；已有课表也可以直接通过文件、文本、HTML 或学校网页导入。使用通用日程时，先建立日历，然后添加日程或导入 JSON、ICS 文件。
 
