@@ -68,8 +68,8 @@ Windows 的 `windows-snap-menu.png` 仅记录悬停探针，图中**未出现贴
 ### 复现
 
 ~~~powershell
-flutter test integration_test/workbench_revision_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/revision-visual-delivery
-flutter test integration_test/workspace_pages_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/revision-pages-delivery
+flutter test integration_test/workbench_revision_visual_test.dart -d windows --no-pub "--dart-define=SKED_VISUAL_OUTPUT=${PWD}/.scratch/revision-visual-delivery"
+flutter test integration_test/workspace_pages_visual_test.dart -d windows --no-pub "--dart-define=SKED_VISUAL_OUTPUT=${PWD}/.scratch/revision-pages-delivery"
 flutter build apk --debug --no-pub --target-platform android-x64 -t integration_test/workbench_preview.dart
 flutter build windows --debug --no-pub -t lib/main.dart
 flutter test --no-pub --coverage --concurrency=4 --timeout=120s --reporter expanded
@@ -694,7 +694,7 @@ Windows、宽平板、主页日期／月份导航及关闭选择器后的原编�
 
 ```powershell
 flutter test --no-pub test/widgets/general_navigation_contention_test.dart test/widgets/mobile_workspace_navigation_bar_test.dart test/providers/general_navigation_runtime_lock_test.dart test/services/notification_runtime_lock_order_test.dart
-flutter test integration_test/mobile_navigation_repair_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/mobile-navigation-after
+flutter test integration_test/mobile_navigation_repair_visual_test.dart -d windows --no-pub "--dart-define=SKED_VISUAL_OUTPUT=${PWD}/.scratch/mobile-navigation-after"
 dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/mobile-navigation-coverage.md
 ```
 
@@ -756,7 +756,7 @@ dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/mobile-naviga
 
 ```powershell
 flutter test --no-pub test/widgets/windows_compact_toolbar_test.dart test/widgets/windows_compact_toolbar_actions_test.dart test/widgets/workbench_review_regression_test.dart
-flutter test integration_test/windows_compact_toolbar_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/windows-toolbar-after
+flutter test integration_test/windows_compact_toolbar_visual_test.dart -d windows --no-pub "--dart-define=SKED_VISUAL_OUTPUT=${PWD}/.scratch/windows-toolbar-after"
 dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/windows-toolbar-coverage-verified.md
 ```
 
@@ -802,7 +802,7 @@ dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/windows-toolb
 flutter analyze --no-pub
 flutter test --no-pub --coverage --reporter expanded
 dart run tool/coverage_gate.dart --base-ref HEAD --report .scratch/md3e-final-coverage.md
-flutter test integration_test/lightweight_md3e_visual_test.dart -d windows --no-pub --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/md3e-after-final
+flutter test integration_test/lightweight_md3e_visual_test.dart -d windows --no-pub "--dart-define=SKED_VISUAL_OUTPUT=${PWD}/.scratch/md3e-after-final"
 ```
 
 ADB 仍未发现设备：Android 手势／三键导航和真实系统栏不计为已验收，仍需在用户设备复核。Windows 原生运行是未打包的测试宿主，不替代 MSIX 安装包回归。所有样例数据都走内存存储，不打开用户的应用数据。版本保持 `2.3.0+14`，不升级依赖、不自动提交或推送。

@@ -53,3 +53,58 @@ app.*.map.json
 /android/app/release
 # Widget Preview related
 .widget_preview/
+
+# Private local configuration and signing material (never commit real values)
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+key.properties
+local.properties
+*.pfx
+*.p12
+*.pem
+*.key
+*.jks
+*.keystore
+*.mobileprovision
+
+# Runtime user data, backups and recovery artifacts (not synthetic test source)
+Sked_data.json*
+Sked_school_sites.json*
+Sked_backup_restore_journal.json*
+Sked_instance.lock
+Sked_recovery_*/
+Sked_school_sites_recovery_*/
+Sked_backup_restore_recovery_*/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local agent state, accidental shell output directories and raw captures
+/.claude/
+/.codex/
+/.exe/
+/-c/
+/flutter test --no-pub test/
+/codex-clipboard-*
+
+# Local release acceptance records are not user-facing release notes.
+# Keep shared test plans and published release notes versioned.
+/docs/internal/
+/docs/releases/*-acceptance.md
+
+# Distribution packages belong in ignored build output or release assets.
+*.exe
+*.dll
+*.zip
+*.7z
+*.ipa
+*.dmg
+*.apk
+*.aab
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle

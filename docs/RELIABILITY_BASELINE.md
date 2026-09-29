@@ -137,7 +137,7 @@ dart run tool/coverage_gate.dart --base-ref HEAD --minimum-total 81.76 --minimum
 git diff --check
 
 # 使用本机 Flutter doctor 确认的 JDK；不要为此修改全局 SDK。
-$env:JAVA_HOME='D:\Soft\Android Studio\jbr'
+# 按 flutter doctor -v 的结果配置当前终端的 JAVA_HOME，不复制他人的绝对路径。
 # 首次 Flutter Android 构建会生成被 Git 忽略的 gradlew 和 wrapper JAR。
 flutter build apk --release
 Push-Location android

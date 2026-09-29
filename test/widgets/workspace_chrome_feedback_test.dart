@@ -187,7 +187,7 @@ void main() {
   for (final direction in TextDirection.values) {
     for (final scale in [1.0, 2.0]) {
       testWidgets(
-        'day agenda close keeps 8dp outer padding across desktop resizes at $direction/$scale',
+        'day agenda unified header keeps close reachable across desktop resizes at $direction/$scale',
         (t) async {
           _viewport(t, const Size(2400, 900));
           final previousNative = DesktopWindowBridge.instance.available;
@@ -214,14 +214,30 @@ void main() {
           for (final width in [2400.0, 1000.0, 660.0, 330.0, 1440.0]) {
             t.view.physicalSize = Size(width, 900);
             await t.pumpAndSettle();
-            final header = t.getRect(_key('workspace-inspector-header'));
-            final button = t.getRect(_key('workspace-inspector-close'));
-            expect(button.top - header.top, closeTo(8, .01));
-            expect(header.bottom - button.bottom, closeTo(8, .01));
+            // Viewing tasks now own one shared title/close header, rather than
+            // the legacy standalone inspector close row. Wrapped agenda actions
+            // may extend below the close button at narrow widths or large text.
+            expect(_key('workspace-inspector-header'), findsNothing);
+            expect(_key('workspace-view-header'), findsOneWidget);
+            final header = t.getRect(_key('workspace-view-header'));
+            final close = _key('workspace-inspector-close');
+            expect(
+              find.descendant(
+                of: _key('workspace-view-header'),
+                matching: close,
+              ),
+              findsOneWidget,
+            );
+            final button = t.getRect(close);
+            expect(button.top - header.top, closeTo(10, .01));
+            expect(header.bottom - button.bottom, greaterThanOrEqualTo(10));
             final edge = direction == TextDirection.ltr
                 ? header.right - button.right
                 : button.left - header.left;
-            expect(edge, closeTo(8, .01));
+            expect(
+              edge,
+              closeTo(direction == TextDirection.ltr ? 12 : 16, .01),
+            );
             expect(button.top, greaterThanOrEqualTo(48 + 8));
             expect(
               _key('workspace-inspector-close').hitTestable(),

@@ -14,7 +14,9 @@
 | Package Family Name | `Mashiro0619.Sked_8xjzenwxj0w1p` |
 | Store ID | `9NWRR6ZP6K6T` |
 
-Package SID 由 Windows 根据包身份派生，不作为打包参数。以上值是公开产品元数据，不是凭证。
+Package SID 由 Windows 根据包身份派生，不作为打包参数。以上值是公开产品元数据，不是凭证；包名、Publisher、PFN、Store ID 及通知 CLSID 不授予签名或商店发布权限。
+
+签名私钥、含私钥的 PFX/P12、证书密码、访问令牌和 Partner Center 客户端密钥不得写入本文或仓库。站外签名仅通过本地安全配置或 CI Secrets 注入；`.gitignore` 不是密钥保管库，也不能移除历史提交中的秘密。
 
 站外 MSIX 继续使用原有的 `Mashiro.Sked` 身份；商店包在构建时覆盖身份，而不修改 `pubspec.yaml` 中的站外配置。应用 ID 保持 `sked`，通知激活 CLSID 保持 `5d9d8f6a-4d1a-4f3a-9b0a-6a3e7d2c1f58`。打包应用的通知使用操作系统提供的包身份；不要把未打包程序的备用 AUMID 错改成商店包名称。
 
@@ -23,7 +25,7 @@ Package SID 由 Windows 根据包身份派生，不作为打包参数。以上�
 在 x64 Windows 上安装 Flutter、Visual Studio 的 C++ 桌面开发工具及 Windows SDK 后，在仓库根目录执行（当前脚本不构建 ARM64 包）：
 
 ```powershell
-Set-Location 'D:\Project\Flutter\sked'
+# 在仓库根目录执行；不需要固定的本机检出路径。
 flutter pub get --enforce-lockfile
 pwsh -NoProfile -File tool/build_msix.ps1 -Store
 ```
@@ -36,7 +38,7 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 4. 从生成的 MSIX 中读取 `AppxManifest.xml`，核对名称、Publisher、显示发布者、版本、架构、应用 ID 和通知激活器，拒绝带本地签名的提交包。
 5. 在 `build/microsoft-store/` 输出独立命名的商店提交文件。
 
-当前输出为 `build/microsoft-store/sked-v2.3.0-alpha.1-store-x64.msix`。这是供 Partner Center 使用的未签名提交包，不是可以直接双击侧载的受信任安装包。
+按当前版本运行 Store 构建时，预期输出为 `build/microsoft-store/sked-v2.3.0-rc.1-store-x64.msix`；这里说明命名规则，不代表已生成、安装或验收该包。这是供 Partner Center 使用的未签名提交包，不是可以直接双击侧载的受信任安装包。
 
 **不要把上次的构建目录直接拿来切换渠道。** 脚本的 Store、Unsigned 和签名模式均会重新编译正确渠道。普通便携 ZIP 仍需先运行不带商店标记的 `flutter build windows --release`，再打包完整 Release 目录。
 
@@ -47,12 +49,12 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 | 应用版本 | Store 包版本 |
 | --- | --- |
 | `2.3.0-alpha.1+14` | `2.3.14.0` |
-| `2.3.0-alpha.2+15` | `2.3.15.0` |
+| `2.3.0-rc.1+15` | `2.3.15.0` |
 | `2.3.0+16` | `2.3.16.0` |
 
 构建号必须明确填写、为正整数并持续递增，不要在 Alpha、RC 或正式版之间重置；各数字段须在 0–65535 内，主版本不能为零。补丁版本变化同样需要递增构建号，因为 Store 包版本第三段不使用 SemVer patch。上传前还须核对后台既有版本，不能把本地规则当成后台已接受的证明。
 
-站外包继续使用 **major.minor.patch.build**，例如 `2.3.0.14`。站外与商店版本规则不同，不能混用。
+站外包继续使用 **major.minor.patch.build**，例如 `2.3.0.15`。站外与商店版本规则不同，不能混用。
 
 ## 更新行为
 
