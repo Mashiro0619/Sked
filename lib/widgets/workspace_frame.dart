@@ -19,6 +19,10 @@ import '../models/workspace_context_snapshot.dart';
 import '../services/desktop_window_bridge.dart';
 import 'workbench_chrome_metrics.dart';
 import 'app_layout_tokens.dart';
+import 'workspace_view_panel.dart';
+
+export 'workspace_view_panel.dart'
+    show WorkspacePanePresentation, WorkspaceViewPanel;
 
 export 'assistant_pane.dart' show AssistantPaneToggle, aiLayoutPreviewEnabled;
 export 'workbench_layout_policy.dart';
@@ -53,23 +57,45 @@ class WorkspacePaneController extends ChangeNotifier {
   bool get hasModalTasks => _tasks.any((task) => task.modal);
   bool get dismissOnCanvasTap => _tasks.lastOrNull?.dismissible ?? false;
   String? get selectedId => _tasks.lastOrNull?.selectionId;
+  bool get hasViewPanel =>
+      _tasks.lastOrNull?.presentation == WorkspacePanePresentation.view;
+  double? get viewContentHeight => _tasks.lastOrNull?.contentHeight;
+
+  void _reportContentHeight(Route<dynamic> route, double height) {
+    if (_disposed) return;
+    final task = _tasks
+        .where((task) => identical(task.route, route))
+        .firstOrNull;
+    if (task == null || task.contentHeight == height) return;
+    task.contentHeight = height;
+    if (identical(task, _tasks.lastOrNull)) notifyListeners();
+  }
 
   Future<T?> show<T>(
     WidgetBuilder builder, {
     String? selectionId,
     bool dismissOnCanvasTap = true,
+    WorkspacePanePresentation presentation = WorkspacePanePresentation.standard,
   }) async {
     final navigator = navigatorKey.currentState;
     if (navigator == null || _disposed) return null;
-    return _showRoute<T>(
-      navigator,
-      MaterialPageRoute<T>(
-        builder: (context) => SkedSurface(
-          child: WorkspaceTaskScope(
-            child: UiCommandFeedbackHost(builder: builder),
-          ),
+    late final MaterialPageRoute<T> route;
+    route = MaterialPageRoute<T>(
+      builder: (context) => WorkspaceTaskScope(
+        child: WorkspaceViewTaskScope(
+          enabled:
+              presentation == WorkspacePanePresentation.view &&
+              WorkbenchChromeMetrics.of(context).desktop,
+          onClose: close,
+          onContentHeight: (height) => _reportContentHeight(route, height),
+          child: SkedSurface(child: UiCommandFeedbackHost(builder: builder)),
         ),
       ),
+    );
+    return _showRoute<T>(
+      navigator,
+      route,
+      presentation: presentation,
       modal: false,
       selectionId: selectionId,
       dismissible: dismissOnCanvasTap,
@@ -97,9 +123,16 @@ class WorkspacePaneController extends ChangeNotifier {
     required bool modal,
     required String? selectionId,
     required bool dismissible,
+    WorkspacePanePresentation presentation = WorkspacePanePresentation.standard,
   }) async {
     if (_disposed || !navigator.mounted) return null;
-    final task = _WorkspaceTaskRoute(route, modal, selectionId, dismissible);
+    final task = _WorkspaceTaskRoute(
+      route,
+      modal,
+      selectionId,
+      dismissible,
+      presentation,
+    );
     _tasks.add(task);
     if (!modal) _activationRevision += 1;
     notifyListeners();
@@ -153,13 +186,16 @@ class WorkspacePaneController extends ChangeNotifier {
 }
 
 class _WorkspaceTaskRoute {
-  const _WorkspaceTaskRoute(
+  _WorkspaceTaskRoute(
     this.route,
     this.modal,
     this.selectionId,
     this.dismissible,
+    this.presentation,
   );
   final Route<dynamic> route;
+  final WorkspacePanePresentation presentation;
+  double? contentHeight;
   final bool modal, dismissible;
   final String? selectionId;
 }
@@ -434,6 +470,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
 
   Widget _detailPane(WorkspaceLayout policy) {
     final controller = widget.controller;
+    final metrics = WorkbenchChromeMetrics.of(context);
+    final viewing = metrics.desktop && controller.hasViewPanel;
+    final compact = viewing && !policy.dockedDetail;
     final interactive = widget.active && policy.detailVisible;
     return Offstage(
       offstage: !policy.detailVisible,
@@ -450,39 +489,78 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           behavior: HitTestBehavior.opaque,
           onPointerDown: (_) => _assistantLast = false,
           child: _PaneSurface(
+            key: const ValueKey('workspace-detail-surface'),
+            compact: compact,
             floating: !policy.dockedDetail,
             role: policy.dockedDetail
                 ? SkedSurfaceRole.frame
                 : SkedSurfaceRole.content,
-            child: Column(
+            child: Stack(
               children: [
-                Padding(
-                  key: const ValueKey('workspace-inspector-header'),
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: IconButton(
-                      key: const ValueKey('workspace-inspector-close'),
-                      tooltip: MaterialLocalizations.of(context)
-                          .closeButtonTooltip,
-                      icon: const Icon(Icons.close),
-                      onPressed: controller.close,
+                WorkspaceViewViewport(
+                  contentHeight: compact
+                      ? controller.viewContentHeight ?? 0
+                      : null,
+                  child: WorkspaceViewLayoutScope(
+                    compact: compact,
+                    child: Column(
+                      children: [
+                        if (!viewing)
+                          Padding(
+                            key: const ValueKey('workspace-inspector-header'),
+                            padding: const EdgeInsets.all(AppSpacing.sm),
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: IconButton(
+                                key: const ValueKey(
+                                  'workspace-inspector-close',
+                                ),
+                                tooltip: MaterialLocalizations.of(context)
+                                    .closeButtonTooltip,
+                                icon: const Icon(Icons.close),
+                                onPressed: controller.close,
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: Semantics(
+                            container: true,
+                            explicitChildNodes: true,
+                            child: Navigator(
+                              key: controller.navigatorKey,
+                              requestFocus: false,
+                              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                                builder: (_) => const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Semantics(
-                    container: true,
-                    explicitChildNodes: true,
-                    child: Navigator(
-                      key: controller.navigatorKey,
-                      requestFocus: false,
-                      onGenerateRoute: (_) => MaterialPageRoute<void>(
-                        builder: (_) => const SizedBox.shrink(),
+                if (policy.detailVisible)
+                  PositionedDirectional(
+                    key: const ValueKey('workspace-detail-resize-position'),
+                    start: 0,
+                    top: 0,
+                    bottom: metrics.desktop ? 0 : null,
+                    height: metrics.desktop ? null : 48,
+                    width: metrics.desktop ? 9 : 48,
+                    child: _PaneResizeHandle(
+                      key: const ValueKey('workspace-detail-resize'),
+                      onActivate: () => _assistantLast = false,
+                      onResize: (dx) => setState(
+                        () => _detailWidth = _resizedPaneWidth(
+                          _detailWidth,
+                          dx,
+                          minimumWidth: AppBreakpoints.minimumDetailPane,
+                          maximumWidth: policy.maximumDetailWidth,
+                          textScale: metrics.textScale,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -547,6 +625,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             assistantActive: _assistantLast,
             pointer: metrics.desktop,
             panelDisplayMode: widget.panelDisplayMode,
+            partialDetailOverlay: metrics.desktop && controller.hasViewPanel,
             minimumCanvas: widget.minimumCanvas,
             preferredDetailWidth: _detailWidth,
             preferredAssistantWidth: _assistant.width,
@@ -556,6 +635,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 widget.resourcesCollapsed ||
                 MediaQuery.sizeOf(context).height < 480,
           );
+          final compactView =
+              policy.detailVisible &&
+              metrics.desktop &&
+              controller.hasViewPanel &&
+              !policy.dockedDetail;
           _layout = policy;
           // A resize may hide a focused task. Do not steal focus merely because
           // an additional task became visible beside an interactive calendar.
@@ -721,9 +805,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                               excluding:
                                   !active ||
                                   !policy.supporting ||
-                                  overlayVisible,
+                                  (overlayVisible && !compactView),
                               child: ExcludeSemantics(
-                                excluding: overlayVisible,
+                                excluding: overlayVisible && !compactView,
                                 child: _PaneSurface(
                                   child:
                                       widget.supporting ??
@@ -737,11 +821,34 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                         // mode change or activation of a different foreground task.
                         PositionedDirectional(
                           key: const ValueKey('workspace-detail-pane'),
-                          end: policy.dockedDetail ? assistantSpace : 0,
-                          top: overlayInset,
-                          bottom: 0,
-                          width: policy.detailWidth,
-                          child: _detailPane(policy),
+                          end: policy.dockedDetail
+                              ? assistantSpace
+                              : (compactView ? 8 : 0),
+                          top: overlayInset + (compactView ? 8 : 0),
+                          width: compactView
+                              ? math.min(
+                                  policy.detailWidth,
+                                  math.max(
+                                    0,
+                                    constraints.maxWidth -
+                                        (policy.resources
+                                            ? policy.resourceWidth + 1
+                                            : 0) -
+                                        16,
+                                  ),
+                                )
+                              : policy.detailWidth,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: math.max(
+                                0,
+                                constraints.maxHeight -
+                                    overlayInset -
+                                    (compactView ? 16 : 0),
+                              ),
+                            ),
+                            child: _detailPane(policy),
+                          ),
                         ),
                         PositionedDirectional(
                           key: const ValueKey('workspace-assistant-pane'),
@@ -751,34 +858,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                           width: policy.assistantWidth,
                           child: _assistantPane(policy, previewEnabled),
                         ),
-                        if (policy.detailVisible)
-                          PositionedDirectional(
-                            key: const ValueKey(
-                              'workspace-detail-resize-position',
-                            ),
-                            end:
-                                (policy.dockedDetail ? assistantSpace : 0) +
-                                policy.detailWidth -
-                                resizeExtent,
-                            top: overlayInset,
-                            bottom: metrics.desktop ? 0 : null,
-                            height: metrics.desktop ? null : 48,
-                            width: resizeExtent,
-                            child: _PaneResizeHandle(
-                              key: const ValueKey('workspace-detail-resize'),
-                              onActivate: () => _assistantLast = false,
-                              onResize: (dx) => setState(
-                                () => _detailWidth = _resizedPaneWidth(
-                                  _detailWidth,
-                                  dx,
-                                  minimumWidth:
-                                      AppBreakpoints.minimumDetailPane,
-                                  maximumWidth: policy.maximumDetailWidth,
-                                  textScale: metrics.textScale,
-                                ),
-                              ),
-                            ),
-                          ),
                         if (policy.assistantVisible)
                           PositionedDirectional(
                             key: const ValueKey(
@@ -819,16 +898,20 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
 
 class _PaneSurface extends StatelessWidget {
   const _PaneSurface({
+    super.key,
     required this.child,
+    this.compact = false,
     this.role = SkedSurfaceRole.frame,
     this.floating = false,
   });
   final Widget child;
   final SkedSurfaceRole role;
   final bool floating;
+  final bool compact;
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
+      borderRadius: compact ? BorderRadius.circular(8) : null,
       boxShadow: floating
           ? [
               BoxShadow(
@@ -839,11 +922,18 @@ class _PaneSurface extends StatelessWidget {
               ),
             ]
           : null,
-      border: BorderDirectional(
-        start: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
+      border: compact
+          ? Border.all(color: Theme.of(context).colorScheme.outlineVariant)
+          : BorderDirectional(
+              start: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
     ),
-    child: SkedSurface(role: role, child: child),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(compact ? 8 : 0),
+      child: SkedSurface(role: role, child: child),
+    ),
   );
 }
 

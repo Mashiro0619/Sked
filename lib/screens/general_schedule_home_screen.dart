@@ -133,6 +133,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   int _resourceNavigationRevision = 0;
   bool _editorSheetOpen = false;
   bool _detailsSheetOpen = false;
+  bool _dayAgendaOpen = false;
   bool _moreOccurrencesSheetOpen = false;
   bool _calendarManagerOpen = false;
   bool _settingsPageOpen = false;
@@ -242,14 +243,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                           ),
                           if (needsWorkspaceMenu(context))
                             const WorkspaceModeMenu(),
-                          if (view != generalViewList)
+                          if (_showDayAgendaEntry(context, view))
                             IconButton(
                               key: const ValueKey('general-day-agenda-toggle'),
                               tooltip: l10n.selectedDayAgenda,
                               onPressed: widget.interactive
-                                  ? () => _pane.show<void>(
-                                      _buildSelectedDayAgenda,
-                                    )
+                                  ? () => _openDayAgenda(context)
                                   : null,
                               icon: const Icon(Icons.view_agenda_outlined),
                             ),
@@ -1048,7 +1047,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               case 'reminders':
                 openReminders?.call();
               case 'agenda':
-                unawaited(_pane.show<void>(_buildSelectedDayAgenda));
+                unawaited(_openDayAgenda(context));
               case 'category':
                 unawaited(_openCalendarManager(context, provider));
               case 'today':
@@ -1103,7 +1102,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               enabled: openReminders != null,
               child: Text(count == 0 ? l.reminder : '${l.reminder} · $count'),
             ),
-            if (view != generalViewList)
+            if (_showDayAgendaEntry(context, view))
               SkedPopupMenuItem<String>(
                 key: const ValueKey('general-day-agenda-toggle'),
                 value: 'agenda',
@@ -1270,13 +1269,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             dividerBefore: true,
             onSelected: openReminders == null ? null : (_) => openReminders(),
           ),
-          if (view != generalViewList)
+          if (_showDayAgendaEntry(context, view))
             WorkbenchOverflowAction(
               id: 'general-day-agenda-toggle',
               label: l.selectedDayAgenda,
               icon: Icons.view_agenda_outlined,
-              onSelected: (_) =>
-                  unawaited(_pane.show<void>(_buildSelectedDayAgenda)),
+              onSelected: (_) => unawaited(_openDayAgenda(context)),
             ),
           if (assistant?.enabled == true)
             WorkbenchOverflowAction(
@@ -1439,11 +1437,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           pane: _pane,
           onOccurrenceTap: (item) => _openDetails(context, provider, item),
         ),
-        if (view != generalViewList)
+        if (_showDayAgendaEntry(context, view))
           IconButton(
             key: const ValueKey('general-day-agenda-toggle'),
             tooltip: l.selectedDayAgenda,
-            onPressed: () => _pane.show<void>(_buildSelectedDayAgenda),
+            onPressed: () => _openDayAgenda(context),
             icon: const Icon(Icons.view_agenda_outlined),
           ),
         const AssistantPaneToggle(),
@@ -1469,6 +1467,24 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     );
   }
 
+  bool _showDayAgendaEntry(BuildContext context, String view) =>
+      view != generalViewList &&
+      !(WorkbenchChromeMetrics.of(context).desktop &&
+          WorkspaceCanvasScope.maybeOf(context)?.supporting == true);
+
+  Future<void> _openDayAgenda(BuildContext context) async {
+    if (_dayAgendaOpen || !widget.interactive) return;
+    _setUiBusyFlag(() => _dayAgendaOpen = true);
+    try {
+      await _pane.show<void>(
+        _buildSelectedDayAgenda,
+        presentation: WorkspacePanePresentation.view,
+      );
+    } finally {
+      _setUiBusyFlag(() => _dayAgendaOpen = false);
+    }
+  }
+
   Widget _buildSelectedDayAgenda(BuildContext context) {
     final provider = context.watch<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
@@ -1477,6 +1493,38 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       startInclusive: date,
       endExclusive: addCalendarDays(date, 1),
     );
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      return WorkspaceViewPanel(
+        key: const ValueKey('general-selected-day-agenda'),
+        title: Text(l10n.selectedDayAgenda),
+        subtitle: Text(_formatDate(date)),
+        headerAction: TextButton.icon(
+          key: const ValueKey('general-day-agenda-add'),
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(l10n.addEvent),
+          onPressed: widget.interactive && !_editorSheetOpen
+              ? () => _openEditor(context, provider, initialDate: date)
+              : null,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final occurrence in occurrences)
+              _GeneralListOccurrenceTile(
+                occurrence: occurrence,
+                compactPanel: true,
+                onTap: () => _openDetails(context, provider, occurrence),
+              ),
+            if (occurrences.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(l10n.noUpcomingEvents),
+              ),
+          ],
+        ),
+      );
+    }
     return SkedSurface(
       key: const ValueKey('general-selected-day-agenda'),
       child: Column(
@@ -1665,6 +1713,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<void>(
         context: context,
         workspacePane: _pane,
+        panePresentation: WorkspacePanePresentation.view,
         workspace: AppMode.general,
         isSessionCurrent:
             (WorkbenchChromeMetrics.compactTouch(context) ||

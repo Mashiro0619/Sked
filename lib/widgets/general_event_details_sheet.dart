@@ -10,6 +10,7 @@ import '../utils/general_schedule_colors.dart';
 import 'expressive_dialog.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
+import 'workspace_view_panel.dart';
 
 class GeneralEventDetailsSheet extends StatefulWidget {
   const GeneralEventDetailsSheet({
@@ -199,6 +200,142 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
               (widget.occurrence.sequence > 0 && widget.onDeleteFuture != null)
         : widget.onDeleteThis != null;
 
+    final secondaryActions = <Widget>[
+      if (widget.onDuplicate != null)
+        _EventIconButton(
+          key: const ValueKey('general-event-duplicate-action'),
+          tooltip: l10n.duplicateEvent,
+          onPressed: _actionTriggered
+              ? null
+              : () => unawaited(_runAction(widget.onDuplicate)),
+          icon: Icons.content_copy_outlined,
+        ),
+      if (event.reminders.isNotEmpty &&
+          !widget.isReminderHandled &&
+          widget.onDismissReminder != null)
+        _EventIconButton(
+          key: const ValueKey('general-event-reminder-action'),
+          tooltip: l10n.markReminderHandled,
+          onPressed: _actionTriggered
+              ? null
+              : () => unawaited(_runAction(widget.onDismissReminder)),
+          icon: Icons.check_circle_outline,
+        ),
+      if (event.reminders.isNotEmpty &&
+          widget.isReminderHandled &&
+          widget.onRestoreReminder != null)
+        _EventIconButton(
+          key: const ValueKey('general-event-reminder-action'),
+          tooltip: l10n.restoreReminder,
+          onPressed: _actionTriggered
+              ? null
+              : () => unawaited(_runAction(widget.onRestoreReminder)),
+          icon: Icons.restore_outlined,
+        ),
+      if (canDelete)
+        _EventIconButton(
+          key: const ValueKey('general-event-delete-action'),
+          tooltip: l10n.delete,
+          color: theme.colorScheme.error,
+          onPressed: _actionTriggered
+              ? null
+              : () => unawaited(_confirmDelete()),
+          icon: Icons.delete_outline,
+        ),
+    ];
+
+    final info = <Widget>[
+      _InfoRow(
+        icon: Icons.access_time,
+        value: _formatOccurrenceTime(widget.occurrence, l10n),
+      ),
+      if (isRepeating)
+        _InfoRow(
+          icon: Icons.repeat,
+          value: _repeatSummary(event.recurrenceRule, l10n),
+        ),
+      if (event.reminders.isNotEmpty)
+        _InfoRow(
+          icon: Icons.notifications_outlined,
+          value: event.reminders
+              .map((item) => _reminderLabel(item.minutesBefore, l10n))
+              .join(', '),
+        ),
+      if (event.location.isNotEmpty)
+        _InfoRow(icon: Icons.location_on_outlined, value: event.location),
+      if (event.notes.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Text(
+          l10n.eventNotes,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withAlpha(180),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(event.notes),
+      ],
+    ];
+    if (WorkspaceViewTaskScope.maybeOf(context)?.enabled == true) {
+      return PopScope<void>(
+        canPop: !_actionTriggered,
+        child: WorkspaceViewPanel(
+          title: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                margin: const EdgeInsets.only(top: 5),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  event.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          subtitle: Text(
+            widget.occurrence.calendar.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: theme.colorScheme.primary),
+          ),
+          toolbar: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              UiCommandBusyIndicator(busy: _actionTriggered),
+              Wrap(
+                key: const ValueKey('general-event-action-bar'),
+                spacing: 4,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (widget.onEdit != null)
+                    FilledButton.tonalIcon(
+                      key: const ValueKey('general-event-edit-action'),
+                      onPressed: _actionTriggered
+                          ? null
+                          : () => unawaited(_runAction(widget.onEdit)),
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: Text(l10n.editEvent),
+                    ),
+                  ...secondaryActions,
+                ],
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: info,
+          ),
+        ),
+      );
+    }
+
     final content = SafeArea(
       top: false,
       child: SingleChildScrollView(
@@ -255,88 +392,14 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            _InfoRow(
-              icon: Icons.access_time,
-              value: _formatOccurrenceTime(widget.occurrence, l10n),
-            ),
-            if (isRepeating)
-              _InfoRow(
-                icon: Icons.repeat,
-                value: _repeatSummary(event.recurrenceRule, l10n),
-              ),
-            if (event.reminders.isNotEmpty)
-              _InfoRow(
-                icon: Icons.notifications_outlined,
-                value: event.reminders
-                    .map((item) => _reminderLabel(item.minutesBefore, l10n))
-                    .join(', '),
-              ),
-            if (event.location.isNotEmpty)
-              _InfoRow(icon: Icons.location_on_outlined, value: event.location),
-            if (event.notes.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                l10n.eventNotes,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withAlpha(180),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(event.notes),
-            ],
+            ...info,
             if (widget.onDuplicate != null ||
                 (event.reminders.isNotEmpty &&
                     (widget.onDismissReminder != null ||
                         widget.onRestoreReminder != null)) ||
                 canDelete) ...[
               const SizedBox(height: 16),
-              _EventActionBar(
-                children: [
-                  if (widget.onDuplicate != null)
-                    _EventIconButton(
-                      key: const ValueKey('general-event-duplicate-action'),
-                      tooltip: l10n.duplicateEvent,
-                      onPressed: _actionTriggered
-                          ? null
-                          : () => unawaited(_runAction(widget.onDuplicate)),
-                      icon: Icons.content_copy_outlined,
-                    ),
-                  if (event.reminders.isNotEmpty &&
-                      !widget.isReminderHandled &&
-                      widget.onDismissReminder != null)
-                    _EventIconButton(
-                      key: const ValueKey('general-event-reminder-action'),
-                      tooltip: l10n.markReminderHandled,
-                      onPressed: _actionTriggered
-                          ? null
-                          : () =>
-                                unawaited(_runAction(widget.onDismissReminder)),
-                      icon: Icons.check_circle_outline,
-                    ),
-                  if (event.reminders.isNotEmpty &&
-                      widget.isReminderHandled &&
-                      widget.onRestoreReminder != null)
-                    _EventIconButton(
-                      key: const ValueKey('general-event-reminder-action'),
-                      tooltip: l10n.restoreReminder,
-                      onPressed: _actionTriggered
-                          ? null
-                          : () =>
-                                unawaited(_runAction(widget.onRestoreReminder)),
-                      icon: Icons.restore_outlined,
-                    ),
-                  if (canDelete)
-                    _EventIconButton(
-                      key: const ValueKey('general-event-delete-action'),
-                      tooltip: l10n.delete,
-                      color: theme.colorScheme.error,
-                      onPressed: _actionTriggered
-                          ? null
-                          : () => unawaited(_confirmDelete()),
-                      icon: Icons.delete_outline,
-                    ),
-                ],
-              ),
+              _EventActionBar(children: [...secondaryActions]),
             ],
           ],
         ),
@@ -368,6 +431,9 @@ class _EventIconButton extends StatelessWidget {
       dimension: WorkbenchChromeMetrics.of(context).iconTarget,
       child: IconButton(
         tooltip: tooltip,
+        style: WorkbenchChromeMetrics.of(context).desktop
+            ? WorkbenchChromeMetrics.of(context).iconStyle
+            : null,
         onPressed: onPressed,
         color: color,
         icon: Icon(icon),

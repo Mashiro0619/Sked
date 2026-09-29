@@ -157,18 +157,21 @@ void main() {
         find.descendant(of: navigator, matching: find.text('February 2026')),
         findsOneWidget,
       );
-      await tester.tap(find.byKey(const ValueKey('general-day-agenda-toggle')));
-      await tester.pumpAndSettle();
-      // The month supporting agenda stays mounted beneath the overlay.
+      expect(
+        find.byKey(const ValueKey('general-day-agenda-toggle')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('workspace-inspector-close')),
+        findsNothing,
+      );
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('workspace-detail-pane')),
-          matching: find.textContaining('Selected day'),
+          of: find.byKey(const ValueKey('workspace-supporting-pane')),
+          matching: find.text('2026-02-28'),
         ),
         findsOneWidget,
       );
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
       p.dispose();
     },

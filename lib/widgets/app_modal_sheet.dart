@@ -29,6 +29,8 @@ Future<T?> showAppModalSheet<T>({
   bool useSafeArea = false,
   RouteSettings? routeSettings,
   WorkspacePaneController? workspacePane,
+  WorkspacePanePresentation panePresentation =
+      WorkspacePanePresentation.standard,
   String? selectionId,
   AppMode? workspace,
   bool Function()? isSessionCurrent,
@@ -66,6 +68,7 @@ Future<T?> showAppModalSheet<T>({
   if (workspacePane != null && !bottomTask) {
     return workspacePane.show<T>(
       content,
+      presentation: panePresentation,
       selectionId: selectionId,
       dismissOnCanvasTap: isDismissible,
     );

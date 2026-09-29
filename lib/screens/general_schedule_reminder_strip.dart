@@ -59,6 +59,7 @@ class _ReminderStripState extends State<_ReminderStrip>
     with WidgetsBindingObserver {
   Timer? _refreshTimer;
   bool _listOpen = false;
+  final Set<String> _handling = {};
   DateTime Function() _now = DateTime.now;
   GeneralReminderTimerFactory _createTimer = _createGeneralReminderTimer;
   bool _isForeground = true;
@@ -153,7 +154,28 @@ class _ReminderStripState extends State<_ReminderStrip>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.provider,
+    builder: (context, _) => _buildContent(context),
+  );
+
+  Future<void> _handleReminder(GeneralEventOccurrence occurrence) async {
+    final key = occurrence.occurrenceKey;
+    if (!_handling.add(key)) return;
+    setState(() {});
+    try {
+      await runUiCommandWithFeedback(
+        context: context,
+        debugLabel: 'Dismiss reminder',
+        command: () => widget.provider.dismissGeneralReminder(occurrence),
+      );
+    } finally {
+      _handling.remove(key);
+      if (mounted) setState(() {});
+    }
+  }
+
+  Widget _buildContent(BuildContext context) {
     final now = _now();
     final reminderFilter = widget.filter.toQuery(
       startInclusive: now.subtract(const Duration(hours: 24)),
@@ -179,6 +201,7 @@ class _ReminderStripState extends State<_ReminderStrip>
                     listMode: true,
                     onOccurrenceTap: widget.onOccurrenceTap,
                   ),
+                  presentation: WorkspacePanePresentation.view,
                 );
               } finally {
                 if (mounted) setState(() => _listOpen = false);
@@ -195,6 +218,58 @@ class _ReminderStripState extends State<_ReminderStrip>
           isLabelVisible: items.isNotEmpty,
           label: Text('${items.length}'),
           child: const Icon(Icons.notifications_outlined),
+        ),
+      );
+    }
+    if (WorkbenchChromeMetrics.of(context).desktop) {
+      final metrics = WorkbenchChromeMetrics.of(context);
+      return WorkspaceViewPanel(
+        key: const ValueKey('general-reminders-list'),
+        title: Text('${l.reminder} · ${items.length}'),
+        contentPadding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(l.noUpcomingEvents),
+              ),
+            for (final item in items)
+              ListTile(
+                key: ValueKey(
+                  'general-reminder-${item.occurrence.occurrenceKey}',
+                ),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                minVerticalPadding: 6,
+                title: Text(
+                  item.occurrence.event.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  '${switch (item.status) {
+                    GeneralReminderStatus.upcoming => l.reminderUpcoming,
+                    GeneralReminderStatus.inProgress => l.reminderInProgress,
+                    GeneralReminderStatus.overdue => l.reminderOverdue,
+                  }} · ${intl.DateFormat.MMMd(l.localeName).add_Hm().format(item.occurrence.start)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () => widget.onOccurrenceTap(item.occurrence),
+                trailing: IconButton(
+                  tooltip: l.markReminderHandled,
+                  style: metrics.iconStyle,
+                  icon: const Icon(Icons.check_circle_outline),
+                  onPressed: _handling.contains(item.occurrence.occurrenceKey)
+                      ? null
+                      : () => unawaited(_handleReminder(item.occurrence)),
+                ),
+              ),
+          ],
         ),
       );
     }

@@ -66,12 +66,14 @@ class _ListCalendarView extends StatelessWidget {
 
 class _GeneralListOccurrenceTile extends StatelessWidget {
   const _GeneralListOccurrenceTile({
+    this.compactPanel = false,
     required this.occurrence,
     required this.onTap,
   });
 
   final GeneralEventOccurrence occurrence;
   final VoidCallback onTap;
+  final bool compactPanel;
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +96,9 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           final inline =
+              !compactPanel &&
               constraints.maxWidth >=
-              600 * WorkbenchChromeMetrics.of(context).textScale;
+                  600 * WorkbenchChromeMetrics.of(context).textScale;
           final title = Text(
             occurrence.event.title,
             maxLines: 2,
@@ -115,8 +118,8 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
                 onTap: onTap,
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 44),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
+                  padding: EdgeInsets.symmetric(
+                    vertical: compactPanel ? 6 : 8,
                     horizontal: 10,
                   ),
                   decoration: BoxDecoration(
@@ -129,7 +132,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: inline ? 132 : 104,
+                        width: inline ? 132 : (compactPanel ? 88 : 104),
                         child: Text(
                           _formatOccurrenceTime(context, occurrence),
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -145,7 +148,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: compactPanel ? 8 : 12),
                       Expanded(
                         child: inline
                             ? title

@@ -74,6 +74,7 @@ class WorkbenchLayoutPolicy {
     WorkspacePanelDisplayMode panelDisplayMode =
         WorkspacePanelDisplayMode.overlay,
     double minimumCanvas = AppBreakpoints.minimumCanvas,
+    bool partialDetailOverlay = false,
     double preferredDetailWidth = AppBreakpoints.detailPane,
     double preferredAssistantWidth = AppBreakpoints.assistantPane,
   }) {
@@ -176,7 +177,10 @@ class WorkbenchLayoutPolicy {
       minimumCanvasWidth: taskSpace > 0 ? dockingCanvas : canvas,
       canvasEndInset: taskSpace + (supporting ? supportingWidth + divider : 0),
       canvasObscured:
-          (detailVisible && !detail && requestedDetail >= contentWidth) ||
+          (detailVisible &&
+              !detail &&
+              !partialDetailOverlay &&
+              requestedDetail >= contentWidth) ||
           (assistantVisible &&
               !assistant &&
               requestedAssistant >= contentWidth),

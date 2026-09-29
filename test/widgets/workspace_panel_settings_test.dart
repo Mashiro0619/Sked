@@ -337,14 +337,17 @@ void main() {
 
           for (final key in [
             'general-reminders-action',
-            'general-day-agenda-toggle',
+            if (view != generalViewMonth) 'general-day-agenda-toggle',
             'general-add-event',
           ]) {
             await t.tap(_key(key));
             await t.pumpAndSettle();
             expect(frame.controller.hasPaneTasks, isTrue, reason: key);
             expectStable();
-            expect(t.getRect(_key('workspace-detail-pane')).top, calendar.top);
+            expect(
+              t.getRect(_key('workspace-detail-pane')).top,
+              calendar.top + (key == 'general-add-event' ? 0 : 8),
+            );
             await t.tap(_key('workspace-inspector-close'));
             await t.pumpAndSettle();
             expect(frame.controller.hasPaneTasks, isFalse, reason: key);
