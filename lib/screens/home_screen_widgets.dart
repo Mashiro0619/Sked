@@ -93,7 +93,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             IconButton(
               key: const ValueKey('student-timetable-picker-button'),
               tooltip: l10n.timetable,
-              onPressed: onOpenTimetablePicker,
+              onPressed:
+                  WorkspaceResourceScope.maybeOf(context)?.open ??
+                  onOpenTimetablePicker,
               icon: const Icon(Icons.view_sidebar_outlined),
             ),
           IconButton(
@@ -170,6 +172,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               icon: const Icon(Icons.settings_outlined),
             ),
           FilledButton.icon(
+            key: const ValueKey('student-add-course'),
             onPressed: onAddCourse,
             icon: const Icon(Icons.add, size: 18),
             label: Text(l10n.addCourse),
@@ -324,92 +327,104 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       tooltip: l10n.settings,
       style: iconButtonStyle,
     );
-    // Snapshots normally arrive normalized from the provider, but keep the
-    // renderer defensive for manually constructed or restored data. Unknown
-    // ids and the protected settings entry must never create a dead More menu.
-    final hidden = hiddenNavigationIds
-        .where(studentToolbarNavigationKnownIds.contains)
-        .where((id) => id != 'settings')
-        .toSet();
-    final order = normalizeToolbarNavigationOrder(
-      navigationOrder,
-      knownIds: studentToolbarNavigationKnownIds,
-      defaultOrder: studentToolbarNavigationDefaultOrder,
+    final mobile = WorkbenchChromeMetrics.compactTouch(
+      context,
+      width: compactWidth ? 0 : null,
     );
-    final canShowMore =
-        hiddenItemsBehavior == toolbarHiddenItemsBehaviorMore &&
-        hidden.isNotEmpty &&
-        !hidden.contains('more');
-    final hiddenActions = <String>{...hidden, if (!canShowMore) 'more'};
+    final showWorkspace = mobile
+        ? needsMobileWorkspaceMenu(context)
+        : needsWorkspaceMenu(context);
     final resourceLayout = WorkspaceCanvasScope.maybeOf(context);
     final timetableInResources =
         resourceLayout?.resources == true &&
         resourceLayout!.resourceWidth > AppBreakpoints.compactResourcePane;
+    final placement = MobileToolbarLayout.resolve(
+      order: navigationOrder,
+      hiddenIds: mobile
+          ? hiddenNavigationIds
+          : hiddenNavigationIds.where((id) => id != 'settings').toList(),
+      hiddenBehavior: hiddenItemsBehavior,
+      defaultOrder: studentToolbarNavigationDefaultOrder,
+      availableIds: {
+        if (!timetableInResources) 'timetable',
+        'week',
+        'view',
+        if (mobile && showWorkspace) 'workspace',
+        if (showSettings) 'settings',
+      },
+    );
     final actionById = <String, Widget>{
       if (!timetableInResources) 'timetable': buildTimetableSelector(),
-      // The surrounding slot supplies the responsive width computed below.
       'week': buildWeekPicker(width: double.infinity),
       'view': viewToggle,
+      'workspace': const WorkspaceModeMenu(),
       if (showSettings) 'settings': settingsAction,
-      if (canShowMore)
-        'more': Builder(
-          builder: (anchor) => SkedPopupMenuButton<String>(
-            key: const ValueKey('student-toolbar-more-button'),
-            icon: const Icon(Icons.more_horiz),
-            tooltip: l10n.more,
-            enabled: interactive,
-            onSelected: (id) {
-              switch (id) {
-                case 'timetable':
-                  onOpenTimetablePicker?.call();
-                case 'week':
-                  onOpenWeekPicker?.call(anchor);
-                case 'today':
-                  onJumpToToday?.call();
-                case 'view':
-                  onViewChanged?.call(
-                    viewMode == _StudentTimetableView.day
-                        ? _StudentTimetableView.week
-                        : _StudentTimetableView.day,
-                  );
-              }
-            },
-            itemBuilder: (context) => [
-              for (final id in order)
-                if (hidden.contains(id) && id != 'settings')
-                  SkedPopupMenuItem<String>(
-                    value: id,
-                    child: Text(switch (id) {
-                      'timetable' => l10n.timetable,
-                      'week' => l10n.weekLabel(week),
-                      'view' => l10n.toolbarNavigationView,
-                      _ => id,
-                    }),
-                  ),
-              if (hidden.contains('week') && onJumpToToday != null)
+      'more': Builder(
+        builder: (anchor) => SkedPopupMenuButton<String>(
+          key: const ValueKey('student-toolbar-more-button'),
+          focusNode: placement.menuIds.contains('settings')
+              ? settingsFocusNode
+              : null,
+          icon: const Icon(Icons.more_horiz),
+          tooltip: l10n.more,
+          enabled: interactive,
+          onSelected: (id) {
+            if (!context.mounted || !interactive) return;
+            switch (id) {
+              case 'timetable':
+                onOpenTimetablePicker?.call();
+              case 'week':
+                onOpenWeekPicker?.call(anchor);
+              case 'today':
+                onJumpToToday?.call();
+              case 'view':
+                onViewChanged?.call(
+                  viewMode == _StudentTimetableView.day
+                      ? _StudentTimetableView.week
+                      : _StudentTimetableView.day,
+                );
+              case 'settings':
+                onOpenSettings?.call();
+              case 'student':
+                selectWorkspace(context, AppMode.student);
+              case 'general':
+                selectWorkspace(context, AppMode.general);
+            }
+          },
+          itemBuilder: (_) => [
+            for (final id in placement.menuIds)
+              if (id == 'workspace')
+                ...workspaceMenuItems<String>(
+                  context,
+                  valueFor: (mode) => mode.value,
+                  keyPrefix: 'student-more-workspace',
+                )
+              else
                 SkedPopupMenuItem<String>(
-                  value: 'today',
-                  child: Text(l10n.today),
+                  key: ValueKey('student-more-$id'),
+                  value: id,
+                  enabled: id != 'settings' || onOpenSettings != null,
+                  child: Text(switch (id) {
+                    'timetable' => l10n.timetable,
+                    'week' => l10n.weekLabel(week),
+                    'view' => l10n.toolbarNavigationView,
+                    'settings' => l10n.settings,
+                    _ => id,
+                  }),
                 ),
-            ],
-          ),
+            if (placement.menuIds.contains('week') && onJumpToToday != null)
+              SkedPopupMenuItem<String>(
+                value: 'today',
+                child: Text(l10n.today),
+              ),
+          ],
         ),
+      ),
     };
-    final orderedIds = <String>[];
-    for (final id in order) {
-      if (!hiddenActions.contains(id) && actionById.containsKey(id)) {
-        orderedIds.add(id);
-      }
-    }
-    if (canShowMore && !orderedIds.contains('more')) {
-      orderedIds.add('more');
-    }
-    // Keep settings reachable even when an older snapshot omitted it.
-    if (showSettings && !orderedIds.contains('settings')) {
-      orderedIds.add('settings');
-    }
+    final orderedIds = placement.toolbarIds;
     return SkedWorkspaceToolbar(
       key: const ValueKey('student-workspace-toolbar'),
+      leading: !mobile && showWorkspace ? const WorkspaceModeMenu() : null,
       actions: [
         if (!WorkbenchChromeMetrics.compactTouch(context) ||
             AssistantPaneScope.of(context)?.enabled == true)
@@ -450,6 +465,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
           // action of a different width cannot make the two disagree.
           const fixedActionWidths = <String, double>{
             'view': 48,
+            'workspace': 48,
             'settings': 48,
             'more': 48,
           };
@@ -554,6 +570,13 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
     return WorkbenchCompactCalendarBar(
       id: 'student',
+      primaryAction: WorkbenchOverflowAction(
+        id: 'student-add-course',
+        label: l.addCourse,
+        icon: Icons.add,
+        dividerBefore: true,
+        onSelected: onAddCourse == null ? null : (_) => onAddCourse!(),
+      ),
       enabled: interactive,
       moreFocusNode: showSettings ? settingsFocusNode : null,
       date: WorkbenchOverflowAction(
@@ -586,13 +609,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         onSelected: onJumpToToday == null ? null : (_) => onJumpToToday!(),
       ),
       actions: [
-        WorkbenchOverflowAction(
-          id: 'student-add-course',
-          label: l.addCourse,
-          icon: Icons.add,
-          dividerBefore: true,
-          onSelected: onAddCourse == null ? null : (_) => onAddCourse!(),
-        ),
         if (!resources)
           WorkbenchOverflowAction(
             id: 'student-timetable-picker-button',
@@ -600,7 +616,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             icon: Icons.view_sidebar_outlined,
             onSelected: onOpenTimetablePicker == null
                 ? null
-                : (_) => onOpenTimetablePicker!(),
+                : (_) =>
+                      (WorkspaceResourceScope.maybeOf(context)?.open ??
+                      onOpenTimetablePicker!)(),
           ),
         for (final mode in _StudentTimetableView.values)
           WorkbenchOverflowAction(
@@ -1833,6 +1851,120 @@ class _EmptyTimetableToolbar extends StatelessWidget {
         layout!.resourceWidth >=
             AppBreakpoints.resourcePane * metrics.textScale;
     final compactTouch = WorkbenchChromeMetrics.compactTouch(context);
+    if (metrics.desktop) {
+      final scope = WorkspaceResourceScope.maybeOf(context);
+      final resourceAction = layout?.resources == true
+          ? null
+          : IconButton(
+              key: const ValueKey('student-empty-resources'),
+              tooltip: l10n.timetable,
+              onPressed: scope?.open,
+              icon: const Icon(Icons.view_sidebar_outlined),
+            );
+      final settings = IconButton(
+        key: const ValueKey('empty-timetable-settings-button'),
+        focusNode: settingsFocusNode,
+        onPressed: onOpenSettings,
+        tooltip: l10n.settings,
+        icon: const Icon(Icons.settings_outlined),
+      );
+      return WorkbenchCommandBar(
+        navigation: [
+          if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
+          ?resourceAction,
+          if (!titleInSidebar) Text(title),
+        ],
+        actions: [if (showSettingsAction) settings],
+        compactBuilder: (context) => Row(
+          children: [
+            ?resourceAction,
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            if (showSettingsAction) settings,
+          ],
+        ),
+      );
+    }
+    if (compactTouch) {
+      final p = context.watch<TimetableProvider>();
+      final placement = MobileToolbarLayout.resolve(
+        order: p.studentToolbarNavigationOrder,
+        hiddenIds: p.studentHiddenToolbarNavigationIds,
+        hiddenBehavior: p.studentToolbarHiddenItemsBehavior,
+        defaultOrder: studentToolbarNavigationDefaultOrder,
+        availableIds: {
+          if (needsMobileWorkspaceMenu(context)) 'workspace',
+          if (showSettingsAction) 'settings',
+        },
+      );
+      final enabled =
+          WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true;
+      return SkedWorkspaceToolbar(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            for (final id in placement.toolbarIds)
+              switch (id) {
+                'workspace' => const WorkspaceModeMenu(),
+                'settings' => IconButton(
+                  key: const ValueKey('empty-timetable-settings-button'),
+                  focusNode: settingsFocusNode,
+                  tooltip: l10n.settings,
+                  onPressed: onOpenSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+                _ => SkedPopupMenuButton<String>(
+                  key: const ValueKey('student-toolbar-more-button'),
+                  focusNode: placement.menuIds.contains('settings')
+                      ? settingsFocusNode
+                      : null,
+                  tooltip: l10n.more,
+                  enabled: enabled,
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (id) {
+                    if (!context.mounted || !enabled) return;
+                    switch (id) {
+                      case 'settings':
+                        onOpenSettings?.call();
+                      case 'student':
+                        selectWorkspace(context, AppMode.student);
+                      case 'general':
+                        selectWorkspace(context, AppMode.general);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    for (final id in placement.menuIds)
+                      if (id == 'workspace')
+                        ...workspaceMenuItems<String>(
+                          context,
+                          valueFor: (mode) => mode.value,
+                          keyPrefix: 'student-more-workspace',
+                        )
+                      else
+                        SkedPopupMenuItem<String>(
+                          key: const ValueKey('student-more-settings'),
+                          value: 'settings',
+                          enabled: onOpenSettings != null,
+                          child: Text(l10n.settings),
+                        ),
+                  ],
+                ),
+              },
+          ],
+        ),
+      );
+    }
     final padding = EdgeInsetsDirectional.fromSTEB(
       12,
       compactTouch ? 0 : 6,
@@ -1865,8 +1997,7 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                       ),
                     ),
             ),
-            if (context.watch<TimetableProvider>().hideHomeWorkspaceNavigation)
-              const WorkspaceModeMenu(),
+            if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
             if (showSettingsAction)
               SizedBox.square(
                 dimension: metrics.desktop ? metrics.iconTarget : 48,

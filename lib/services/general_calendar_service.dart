@@ -186,7 +186,6 @@ class GeneralCalendarService {
     String id,
     bool visible,
   ) {
-    if (id == 'settings') return data;
     final hidden = List<String>.from(data.hiddenToolbarNavigationIds);
     if (visible) {
       hidden.remove(id);

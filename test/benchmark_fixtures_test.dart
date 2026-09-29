@@ -113,6 +113,16 @@ void main() {
                     : (root['data'] as Map<String, dynamic>)['appData'])
                 as Map<String, dynamic>;
         expect(app.remove('includePrereleaseUpdates'), isTrue);
+        // Compare the historical workload after removing only new navigation
+        // preferences and restoring its old AppData schema envelope.
+        app['schemaVersion'] = 3;
+        for (final key in ['studentMode', 'generalMode']) {
+          final mode = app[key] as Map<String, dynamic>;
+          mode['toolbarNavigationOrder'] = key == 'studentMode'
+              ? ['timetable', 'week', 'view', 'settings']
+              : ['category', 'date', 'view', 'settings'];
+          mode['hiddenToolbarNavigationIds'] = [];
+        }
         final general = app['generalMode'] as Map<String, dynamic>;
         expect(general.remove('fitWeekColumnsToWidth'), isTrue);
         general['schemaVersion'] = 4;

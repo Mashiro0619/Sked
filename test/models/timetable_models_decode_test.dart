@@ -318,9 +318,11 @@ void main() {
         'timetable',
         'week',
         'view',
+        'workspace',
         'settings',
+        'more',
       ]);
-      expect(data.hiddenToolbarNavigationIds, isEmpty);
+      expect(data.hiddenToolbarNavigationIds, ['workspace', 'settings']);
       expect(data.toolbarHiddenItemsBehavior, 'remove');
     });
 
@@ -364,9 +366,10 @@ void main() {
         'settings',
         'timetable',
         'week',
+        'workspace',
         'more',
       ]);
-      expect(data.hiddenToolbarNavigationIds, ['week']);
+      expect(data.hiddenToolbarNavigationIds, ['settings', 'week']);
       expect(data.toolbarHiddenItemsBehavior, 'more');
 
       final decoded = StudentModeData.fromJson(
@@ -374,7 +377,7 @@ void main() {
         localeCode: defaultLocaleCode,
       );
       expect(decoded.toolbarNavigationOrder, data.toolbarNavigationOrder);
-      expect(decoded.hiddenToolbarNavigationIds, ['week']);
+      expect(decoded.hiddenToolbarNavigationIds, ['settings', 'week']);
       expect(decoded.toolbarHiddenItemsBehavior, 'more');
     });
 

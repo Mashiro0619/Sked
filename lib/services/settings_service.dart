@@ -139,7 +139,6 @@ class SettingsService {
   ) {
     final current = data.studentMode.hiddenToolbarNavigationIds;
     final hidden = List<String>.from(current);
-    if (id == 'settings') return data;
     if (visible) {
       hidden.remove(id);
     } else if (!hidden.contains(id) &&

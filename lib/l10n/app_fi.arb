@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "Automaattinen",
   "settingsPanelDisplayOverlayDescription": "Näyttää paneelin oikealla kalenterin päällä muuttamatta sen leveyttä.",
   "settingsPanelDisplaySideBySideDescription": "Suosii vierekkäistä näkymää; näyttää päällekkäin vain, jos kalenteri kapenee liikaa.",
-  "settingsPanelDisplayAutomaticDescription": "Näyttää vierekkäin, jos kalenteri säilyy luettavana, muuten päällekkäin."
+  "settingsPanelDisplayAutomaticDescription": "Näyttää vierekkäin, jos kalenteri säilyy luettavana, muuten päällekkäin.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

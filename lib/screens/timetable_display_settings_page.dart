@@ -1,3 +1,4 @@
+import '../utils/mobile_toolbar_layout.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -169,6 +170,13 @@ class _TimetableDisplaySettingsPageState
                         SettingsSectionHeader(
                           title: l10n.toolbarNavigationSection,
                         ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Text(l10n.toolbarNavigationEssentialHint),
+                        ),
                         SettingsChoiceTile<String>(
                           enabled:
                               !WorkbenchChromeMetrics.compactTouch(context) ||
@@ -271,6 +279,7 @@ List<SettingsToolbarNavigationItem> _studentToolbarItems(
     'timetable': l10n.toolbarNavigationTimetable,
     'week': l10n.toolbarNavigationWeek,
     'view': l10n.toolbarNavigationView,
+    'workspace': l10n.settingsSectionWorkspace,
     'settings': l10n.settings,
     'more': l10n.more,
   };
@@ -278,6 +287,7 @@ List<SettingsToolbarNavigationItem> _studentToolbarItems(
     'timetable': Icons.table_chart_outlined,
     'week': Icons.date_range_outlined,
     'view': Icons.view_agenda_outlined,
+    'workspace': Icons.swap_horiz,
     'settings': Icons.settings_outlined,
     'more': Icons.more_horiz_outlined,
   };
@@ -286,6 +296,19 @@ List<SettingsToolbarNavigationItem> _studentToolbarItems(
     ...provider.studentToolbarNavigationOrder,
     if (!provider.studentToolbarNavigationOrder.contains('more')) 'more',
   ];
+  final placement = MobileToolbarLayout.resolve(
+    order: provider.studentToolbarNavigationOrder,
+    hiddenIds: provider.studentHiddenToolbarNavigationIds,
+    hiddenBehavior: provider.studentToolbarHiddenItemsBehavior,
+    defaultOrder: studentToolbarNavigationDefaultOrder,
+    availableIds: {
+      'settings',
+      if (provider.hasMultipleWorkspaces &&
+          provider.hideHomeWorkspaceNavigation)
+        'workspace',
+    },
+    hasFixedMenuItems: false,
+  );
   return [
     for (final id in order)
       if (labels.containsKey(id))
@@ -293,8 +316,9 @@ List<SettingsToolbarNavigationItem> _studentToolbarItems(
           id: id,
           label: labels[id]!,
           icon: icons[id]!,
-          visible: !hidden.contains(id),
-          canHide: id != 'settings',
+          visible:
+              (id == 'more' && placement.moreRequired) || !hidden.contains(id),
+          canHide: id != 'more' || !placement.moreRequired,
         ),
   ];
 }

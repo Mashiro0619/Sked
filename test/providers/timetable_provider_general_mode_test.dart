@@ -49,6 +49,7 @@ void main() {
         'category',
         'date',
         'more',
+        'workspace',
       ]);
       expect(storage.saveCount, 1);
       expect(provider.generalToolbarNavigationOrder, [
@@ -57,6 +58,7 @@ void main() {
         'category',
         'date',
         'more',
+        'workspace',
       ]);
 
       await provider.updateGeneralToolbarNavigationVisibility(
@@ -64,7 +66,11 @@ void main() {
         false,
       );
       expect(storage.saveCount, 2);
-      expect(provider.generalHiddenToolbarNavigationIds, ['category']);
+      expect(provider.generalHiddenToolbarNavigationIds, [
+        'workspace',
+        'settings',
+        'category',
+      ]);
 
       await provider.updateGeneralToolbarHiddenItemsBehavior('more');
       expect(storage.saveCount, 3);
@@ -75,8 +81,11 @@ void main() {
         'category',
         'date',
         'more',
+        'workspace',
       ]);
       expect(storage.data!.generalMode.hiddenToolbarNavigationIds, [
+        'workspace',
+        'settings',
         'category',
       ]);
     },

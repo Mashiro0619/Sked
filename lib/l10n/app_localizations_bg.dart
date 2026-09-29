@@ -3194,4 +3194,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get settingsPanelDisplayAutomaticDescription =>
       'Показва един до друг, ако календарът остава четим, иначе наслагва.';
+
+  @override
+  String get toolbarNavigationEssentialHint =>
+      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
 }

@@ -29,6 +29,11 @@ abstract final class AppBreakpoints {
   static const maximumTaskPaneFraction = .8;
   static const pointerCompactResourcePane = 56.0;
   static const minimumWeekCanvas = 800.0;
+  // Desktop navigation is independent of the selected workspace/view canvas.
+  static const desktopNavigationCanvas = 800.0;
+  static const desktopCompactNavigationCanvas = 360.0;
+  static const desktopCommandContent = 700.0;
+  static const desktopCommandPadding = 24.0;
   static const settingsNavigation = 224.0;
   static const minimumSettingsContent = 520.0;
   static const paneDivider = 1.0;

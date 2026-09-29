@@ -63,7 +63,7 @@ void main() {
   for (final (name, width, collapsed, textScale, hasResources) in [
     ('expanded resources', 1440.0, false, 1.0, true),
     ('collapsed resources', 800.0, true, 1.0, true),
-    ('narrow window', 600.0, false, 1.0, false),
+    ('narrow window', 600.0, false, 1.0, true),
     ('large text', 1920.0, false, 2.0, true),
   ]) {
     testWidgets(

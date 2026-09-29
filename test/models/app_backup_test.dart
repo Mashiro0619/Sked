@@ -74,7 +74,7 @@ void main() {
     expect(envelope['version'], appBackupVersion);
     expect(appBackupVersion, 1);
     expect(nestedAppData['schemaVersion'], appDataCurrentSchemaVersion);
-    expect(appDataCurrentSchemaVersion, 3);
+    expect(appDataCurrentSchemaVersion, 4);
   });
 
   test('migrates v1 AppData inside a version 1 composite backup', () {
@@ -109,7 +109,7 @@ void main() {
 
     expect(decoded.appData.studentMode.themeMode, 'dark');
     expect(decoded.appData.generalMode.themeMode, 'dark');
-    expect(decoded.appData.toJson()['schemaVersion'], 3);
+    expect(decoded.appData.toJson()['schemaVersion'], 4);
   });
 
   test('does not accept the AppData schema version as a backup version', () {

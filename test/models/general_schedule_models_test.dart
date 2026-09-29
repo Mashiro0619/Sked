@@ -495,9 +495,11 @@ void main() {
         'category',
         'date',
         'view',
+        'workspace',
         'settings',
+        'more',
       ]);
-      expect(defaults.hiddenToolbarNavigationIds, isEmpty);
+      expect(defaults.hiddenToolbarNavigationIds, ['workspace', 'settings']);
       expect(defaults.toolbarHiddenItemsBehavior, 'remove');
 
       const data = GeneralScheduleData(
@@ -516,6 +518,7 @@ void main() {
         'category',
         'settings',
         'view',
+        'workspace',
       ]);
       expect(decoded.hiddenToolbarNavigationIds, ['category']);
       expect(decoded.toolbarHiddenItemsBehavior, 'more');

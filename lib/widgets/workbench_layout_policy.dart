@@ -7,11 +7,16 @@ import 'app_layout_tokens.dart';
 
 export '../models/workspace_panel_display_mode.dart';
 
+enum WorkspaceResourcePresentation { hidden, compact, expanded }
+
 /// The base navigation budget never depends on which task is open. A task can
 /// borrow calendar space only according to the user's presentation preference.
 class WorkbenchLayoutPolicy {
   const WorkbenchLayoutPolicy({
     required this.resources,
+    required this.resourcePresentation,
+    required this.canExpandResources,
+    required this.resourcesAutomaticallyCollapsed,
     required this.supporting,
     required this.dockedDetail,
     required this.detailWidth,
@@ -28,6 +33,9 @@ class WorkbenchLayoutPolicy {
     this.canvasObscured = false,
   });
   final bool resources;
+  final WorkspaceResourcePresentation resourcePresentation;
+  final bool canExpandResources;
+  final bool resourcesAutomaticallyCollapsed;
   final bool supporting;
   final bool dockedDetail;
   final double detailWidth;
@@ -71,6 +79,8 @@ class WorkbenchLayoutPolicy {
     bool assistantOpen = false,
     bool assistantActive = false,
     bool pointer = false,
+    double captionWidth = 0,
+    bool shortWindow = false,
     WorkspacePanelDisplayMode panelDisplayMode =
         WorkspacePanelDisplayMode.overlay,
     double minimumCanvas = AppBreakpoints.minimumCanvas,
@@ -81,14 +91,49 @@ class WorkbenchLayoutPolicy {
     final factor = textFactor(textScale);
     final canvas = minimumCanvas * factor;
     final supportingWidth = AppBreakpoints.detailPane * factor;
-    final resourceWidth =
-        (resourcesCollapsed
-            ? (pointer
-                  ? AppBreakpoints.pointerCompactResourcePane
-                  : AppBreakpoints.compactResourcePane)
-            : AppBreakpoints.resourcePane) *
+    final expandedResourceWidth = AppBreakpoints.resourcePane * factor;
+    final compactResourceWidth =
+        (pointer
+            ? AppBreakpoints.pointerCompactResourcePane
+            : AppBreakpoints.compactResourcePane) *
         factor;
-    final resources = width >= canvas + resourceWidth + divider;
+    final navigationCanvas = pointer
+        ? math.max(
+            AppBreakpoints.desktopNavigationCanvas * factor,
+            AppBreakpoints.desktopCommandContent * factor +
+                AppBreakpoints.desktopCommandPadding +
+                captionWidth,
+          )
+        : canvas;
+    final canExpandResources =
+        !shortWindow &&
+        width >= navigationCanvas + expandedResourceWidth + divider;
+    final preferCompact = resourcesCollapsed || shortWindow;
+    final resourcePresentation = pointer
+        ? (!preferCompact && canExpandResources
+              ? WorkspaceResourcePresentation.expanded
+              : width >=
+                    AppBreakpoints.desktopCompactNavigationCanvas * factor +
+                        compactResourceWidth +
+                        divider
+              ? WorkspaceResourcePresentation.compact
+              : WorkspaceResourcePresentation.hidden)
+        : (width >=
+                  canvas +
+                      (preferCompact
+                          ? compactResourceWidth
+                          : expandedResourceWidth) +
+                      divider
+              ? (preferCompact
+                    ? WorkspaceResourcePresentation.compact
+                    : WorkspaceResourcePresentation.expanded)
+              : WorkspaceResourcePresentation.hidden);
+    final resources =
+        resourcePresentation != WorkspaceResourcePresentation.hidden;
+    final resourceWidth =
+        resourcePresentation == WorkspaceResourcePresentation.expanded
+        ? expandedResourceWidth
+        : compactResourceWidth;
     final resourceSpace = resources ? resourceWidth + divider : 0.0;
     final contentWidth = math.max(0.0, width - resourceSpace);
     // Use the entire sidebar-free work area, including any supporting agenda
@@ -163,6 +208,12 @@ class WorkbenchLayoutPolicy {
         contentWidth >= canvas + supportingWidth + divider;
     return WorkbenchLayoutPolicy(
       resources: resources,
+      resourcePresentation: resourcePresentation,
+      canExpandResources: canExpandResources,
+      resourcesAutomaticallyCollapsed:
+          pointer &&
+          !resourcesCollapsed &&
+          resourcePresentation != WorkspaceResourcePresentation.expanded,
       resourceWidth: resourceWidth,
       supporting: supporting,
       supportingWidth: supportingWidth,

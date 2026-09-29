@@ -54,25 +54,28 @@ const maxTimetableWeeks = 100;
 // localized labels and widget implementations.
 const toolbarHiddenItemsBehaviorRemove = 'remove';
 const toolbarHiddenItemsBehaviorMore = 'more';
+const toolbarNavigationDefaultHiddenIds = <String>['workspace', 'settings'];
 const studentToolbarNavigationDefaultOrder = <String>[
   'timetable',
   'week',
   'view',
+  'workspace',
   'settings',
+  'more',
 ];
 const studentToolbarNavigationKnownIds = <String>[
   ...studentToolbarNavigationDefaultOrder,
-  'more',
 ];
 const generalToolbarNavigationDefaultOrder = <String>[
   'category',
   'date',
   'view',
+  'workspace',
   'settings',
+  'more',
 ];
 const generalToolbarNavigationKnownIds = <String>[
   ...generalToolbarNavigationDefaultOrder,
-  'more',
 ];
 
 List<String> normalizeToolbarNavigationOrder(
@@ -92,9 +95,8 @@ List<String> normalizeToolbarNavigationOrder(
       result.add(value);
     }
   }
-  // Keep the documented default order compact. Optional destinations such as
-  // More become part of the persisted order only after a customization (or
-  // when the caller explicitly supplied them).
+  // Legacy migrations pass the old four-item defaults, where More was
+  // optional. Current defaults include every configurable destination.
   final matchesDefault =
       result.length == defaultOrder.length &&
       _sameToolbarNavigationIds(result, defaultOrder);
@@ -125,8 +127,6 @@ List<String> normalizeToolbarHiddenNavigationIds(
   final known = knownIds.toSet();
   final result = <String>[];
   for (final value in values) {
-    // Settings is the recovery entry and must always remain visible.
-    if (value == 'settings') continue;
     if (known.contains(value) && !result.contains(value)) {
       result.add(value);
     }
@@ -159,7 +159,7 @@ List<String> decodeToolbarHiddenNavigationStringList(
   String key, {
   required List<String> knownIds,
 }) {
-  if (!json.containsKey(key)) return const <String>[];
+  if (!json.containsKey(key)) return toolbarNavigationDefaultHiddenIds;
   final value = json[key];
   if (value is! List || value.any((item) => item is! String)) {
     throw const FormatException(

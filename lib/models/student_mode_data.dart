@@ -118,7 +118,7 @@ class StudentModeData {
     this.fitWeekColumnsToWidth = true,
     this.enableWeekSwipeNavigation = true,
     this.toolbarNavigationOrder = studentToolbarNavigationDefaultOrder,
-    this.hiddenToolbarNavigationIds = const <String>[],
+    this.hiddenToolbarNavigationIds = toolbarNavigationDefaultHiddenIds,
     this.toolbarHiddenItemsBehavior = toolbarHiddenItemsBehaviorRemove,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,

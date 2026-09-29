@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_popup_menu.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -178,17 +180,20 @@ Finder _resourcePanel() =>
 Finder _resourceToggle() =>
     find.byKey(const ValueKey('workspace-resource-collapse'));
 Finder _globalSettingsAction() => find.byWidgetPredicate(
-  (widget) => const [
-    ValueKey('workspace-resource-settings'),
-    ValueKey('adaptive-shell-settings-action'),
-    ValueKey('student-settings-button'),
-    ValueKey('general-settings-button'),
-    ValueKey('empty-timetable-settings-button'),
-  ].contains(widget.key),
+  (widget) =>
+      const [
+        ValueKey('workspace-resource-settings'),
+        ValueKey('adaptive-shell-settings-action'),
+        ValueKey('student-settings-button'),
+        ValueKey('general-settings-button'),
+        ValueKey('empty-timetable-settings-button'),
+      ].contains(widget.key) ||
+      (widget is SkedPopupMenuButton && widget.focusNode != null),
 );
 FocusNode _globalSettingsNode(WidgetTester tester) {
   final widget = tester.widget(_globalSettingsAction());
   if (widget is IconButton) return widget.focusNode!;
+  if (widget is SkedPopupMenuButton) return widget.focusNode!;
   if (widget is ListTile) return widget.focusNode!;
   return tester
       .widget<IconButton>(
@@ -503,7 +508,7 @@ void main() {
   });
 
   testWidgets(
-    'hidden navigation removes mode chrome but keeps explicit switching',
+    'hidden navigation removes mode chrome but keeps global settings',
     (tester) async {
       final p = await _resourceShell(tester, hidden: true);
       for (final width in [390.0, 800.0, 1440.0]) {
@@ -650,7 +655,7 @@ void main() {
         await tester.binding.setSurfaceSize(Size(width, 900));
         await tester.pumpAndSettle();
         expect(_globalSettingsNode(tester), same(node));
-        expect(node.hasFocus, isTrue);
+        expect(node.hasFocus, isTrue, reason: 'width=$width');
         expect(tester.takeException(), isNull);
       }
     },
@@ -665,7 +670,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_globalSettingsNode(tester), same(node));
       expect(
-        find.byKey(const ValueKey('student-settings-button')),
+        find.byKey(const ValueKey('student-toolbar-more-button')),
         findsOneWidget,
       );
       await tester.binding.setSurfaceSize(const Size(1440, 900));
@@ -811,7 +816,14 @@ void main() {
         semanticsExcluded: false,
         inputIgnored: false,
       );
-      expect(find.byTooltip('Settings'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('general-toolbar-more-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('general-more-settings')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -1439,7 +1451,7 @@ void main() {
       0,
     );
 
-    await tester.tap(find.byTooltip('Settings'), warnIfMissed: false);
+    await tester.tap(_globalSettingsAction(), warnIfMissed: false);
     await tester.pump();
     expect(settingsCalls, 0);
 
@@ -1456,7 +1468,9 @@ void main() {
           .bottom,
       closeTo(tester.getRect(navigationFinder).top, 0.01),
     );
-    await tester.tap(find.byTooltip('Settings'));
+    await tester.tap(find.byKey(const ValueKey('general-toolbar-more-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('general-more-settings')));
     await tester.pump();
     expect(settingsCalls, 1);
   });

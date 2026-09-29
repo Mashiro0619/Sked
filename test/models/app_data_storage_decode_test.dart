@@ -255,7 +255,7 @@ void main() {
       expect(decoded.privacyPolicyAcceptedAtIso, isNull);
       expect(decoded.ignoredUpdateVersion, isNull);
       expect(decoded.availableUpdateVersion, isNull);
-      expect(reencoded['schemaVersion'], 3);
+      expect(reencoded['schemaVersion'], 4);
       expect(reencoded, isNot(contains('themeMode')));
     });
 
@@ -290,7 +290,7 @@ void main() {
         expect(mode['themeSeedColorValue'], 0xFF00897B);
         expect(mode['colorfulUiColorValues'], {'primary': 0xFF112233});
       }
-      expect(reencoded['schemaVersion'], 3);
+      expect(reencoded['schemaVersion'], 4);
       expect(reencoded, isNot(contains('themeMode')));
       expect(reencoded, isNot(contains('themeColorMode')));
       expect(reencoded, isNot(contains('themeSeedColorValue')));

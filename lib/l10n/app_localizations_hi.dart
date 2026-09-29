@@ -3165,4 +3165,8 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get settingsPanelDisplayAutomaticDescription =>
       'कैलेंडर पढ़ने योग्य चौड़ाई में हो तो साथ-साथ, अन्यथा ऊपर दिखाता है।';
+
+  @override
+  String get toolbarNavigationEssentialHint =>
+      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
 }

@@ -891,7 +891,10 @@ bool _hasDefaultStudentData(StudentModeData data) {
         data.toolbarNavigationOrder,
         studentToolbarNavigationDefaultOrder,
       ) ||
-      data.hiddenToolbarNavigationIds.isNotEmpty ||
+      !listEquals(
+        data.hiddenToolbarNavigationIds,
+        toolbarNavigationDefaultHiddenIds,
+      ) ||
       data.toolbarHiddenItemsBehavior != toolbarHiddenItemsBehaviorRemove ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,
@@ -997,7 +1000,10 @@ bool _hasDefaultGeneralData(GeneralScheduleData data) {
         data.toolbarNavigationOrder,
         generalToolbarNavigationDefaultOrder,
       ) ||
-      data.hiddenToolbarNavigationIds.isNotEmpty ||
+      !listEquals(
+        data.hiddenToolbarNavigationIds,
+        toolbarNavigationDefaultHiddenIds,
+      ) ||
       data.toolbarHiddenItemsBehavior != toolbarHiddenItemsBehaviorRemove ||
       !_hasDefaultModeTheme(
         themeMode: data.themeMode,

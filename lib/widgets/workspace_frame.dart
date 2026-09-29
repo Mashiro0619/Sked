@@ -236,12 +236,52 @@ class WorkspaceCanvasScope extends InheritedWidget {
   @override
   bool updateShouldNotify(WorkspaceCanvasScope oldWidget) =>
       layout.resources != oldWidget.layout.resources ||
+      layout.resourcePresentation != oldWidget.layout.resourcePresentation ||
+      layout.canExpandResources != oldWidget.layout.canExpandResources ||
       layout.supporting != oldWidget.layout.supporting ||
       layout.dockedDetail != oldWidget.layout.dockedDetail ||
       layout.resourceWidth != oldWidget.layout.resourceWidth ||
       layout.dockedAssistant != oldWidget.layout.dockedAssistant ||
       layout.canvasEndInset != oldWidget.layout.canvasEndInset ||
       layout.canvasObscured != oldWidget.layout.canvasObscured;
+}
+
+/// Paint/selection lifetime differs from the runtime save gate.
+class WorkspaceVisibilityScope extends InheritedWidget {
+  const WorkspaceVisibilityScope({
+    super.key,
+    required this.visible,
+    required super.child,
+  });
+  final bool visible;
+  static bool? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<WorkspaceVisibilityScope>()
+      ?.visible;
+  @override
+  bool updateShouldNotify(WorkspaceVisibilityScope oldWidget) =>
+      visible != oldWidget.visible;
+}
+
+/// Local, transient resource presentation; never writes a user preference.
+class WorkspaceResourceScope extends InheritedWidget {
+  const WorkspaceResourceScope({
+    super.key,
+    required this.drawerOpen,
+    required this.canExpandInline,
+    required this.open,
+    required this.close,
+    required super.child,
+  });
+  final bool drawerOpen;
+  final bool canExpandInline;
+  final VoidCallback open;
+  final VoidCallback close;
+  static WorkspaceResourceScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<WorkspaceResourceScope>();
+  @override
+  bool updateShouldNotify(WorkspaceResourceScope oldWidget) =>
+      drawerOpen != oldWidget.drawerOpen ||
+      canExpandInline != oldWidget.canExpandInline;
 }
 
 /// Keeps the visible toolbar reachable when a narrow overlay covers the body.
@@ -324,6 +364,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   final _workspaceFocus = FocusScopeNode(debugLabel: 'Workspace');
   final _stackKey = GlobalKey();
   final _bodyKey = GlobalKey();
+  bool _resourceDrawerOpen = false;
+  final _resourceFocus = FocusScopeNode(debugLabel: 'Workspace resources');
+  FocusNode? _resourceReturnFocus;
+  FocusNode? _pendingResourceFocus;
+  bool _resourceCloseScheduled = false;
   double _detailWidth = AppBreakpoints.detailPane;
   double? _bodyTop;
   bool _geometryScheduled = false;
@@ -339,6 +384,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (WorkspaceVisibilityScope.maybeOf(context) == false) {
+      _resourceDrawerOpen = false;
+    }
     final next = Provider.of<DeveloperUiPreferences?>(context, listen: false);
     if (identical(next, _developerUi)) return;
     _developerUi?.removeListener(_syncAssistantPreference);
@@ -359,7 +407,53 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     setState(() {});
   }
 
-  void _setAssistantOpen(bool visible) => _assistant.setOpen(visible);
+  void _openResources() {
+    if (!mounted || !widget.active || _resourceDrawerOpen) return;
+    _resourceReturnFocus = FocusManager.instance.primaryFocus;
+    setState(() => _resourceDrawerOpen = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _resourceDrawerOpen && widget.active) {
+        _resourceFocus.requestFocus();
+      }
+    });
+  }
+
+  void _closeResources({bool restoreFocus = true}) {
+    if (!_resourceDrawerOpen || !mounted) return;
+    setState(() => _resourceDrawerOpen = false);
+    if (!restoreFocus) return;
+    final previous = _resourceReturnFocus;
+    final owner = ModalRoute.of(context);
+    final activation = widget.controller.activationRevision;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !widget.active ||
+          _resourceDrawerOpen ||
+          owner?.isCurrent == false ||
+          activation != widget.controller.activationRevision) {
+        return;
+      }
+      if (previous?.context?.mounted == true && previous!.canRequestFocus) {
+        previous.requestFocus();
+      } else {
+        _workspaceFocus.requestFocus();
+      }
+    });
+  }
+
+  void _scheduleResourceClose() {
+    if (_resourceCloseScheduled) return;
+    _resourceCloseScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resourceCloseScheduled = false;
+      if (mounted) _closeResources();
+    });
+  }
+
+  void _setAssistantOpen(bool visible) {
+    if (visible) _closeResources(restoreFocus: false);
+    _assistant.setOpen(visible);
+  }
 
   void _toggleAssistant() {
     if (_layout?.assistantVisible == true) {
@@ -427,6 +521,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
 
   void _detailChanged() {
     final controller = widget.controller;
+    if (controller.hasPaneTasks || controller.hasModalTasks) {
+      _closeResources(restoreFocus: false);
+    }
     if (controller.hasPaneTasks &&
         (!_wasDetailOpen ||
             controller.activationRevision != _detailActivation ||
@@ -449,6 +546,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   @override
   void didUpdateWidget(WorkspaceFrame oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if ((WorkspaceVisibilityScope.maybeOf(context) == null && !widget.active) ||
+        oldWidget.contextSnapshot?.resourceId !=
+            widget.contextSnapshot?.resourceId) {
+      _resourceDrawerOpen = false;
+    }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_detailChanged);
       widget.controller.addListener(_detailChanged);
@@ -464,6 +566,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     _assistant.removeListener(_assistantChanged);
     _assistantFocus.dispose();
     _workspaceFocus.dispose();
+    _resourceFocus.dispose();
     if (widget.assistantController == null) _assistant.dispose();
     super.dispose();
   }
@@ -604,6 +707,118 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     );
   }
 
+  void _restoreResourceFocusAfterLayout({required bool settled}) {
+    final focus = _pendingResourceFocus;
+    if (focus == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(_pendingResourceFocus, focus)) return;
+      if (!widget.active || _resourceDrawerOpen) {
+        _pendingResourceFocus = null;
+      } else if (focus.context?.mounted == true && focus.canRequestFocus) {
+        focus.requestFocus();
+        _pendingResourceFocus = null;
+      } else if (settled) {
+        _pendingResourceFocus = null;
+      }
+    });
+  }
+
+  Widget _resourceHost(
+    WorkspaceLayout policy,
+    WorkbenchChromeMetrics metrics,
+    Widget base,
+  ) {
+    final drawer = _resourceDrawerOpen;
+    _resourceFocus.traversalEdgeBehavior = drawer
+        ? TraversalEdgeBehavior.closedLoop
+        : TraversalEdgeBehavior.parentScope;
+    final visible = drawer || policy.resources;
+    final motion = SkedMotionPolicy.of(context);
+    return WorkspaceResourceScope(
+      drawerOpen: drawer,
+      canExpandInline: policy.canExpandResources,
+      open: _openResources,
+      close: () => _closeResources(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final top = drawer && DesktopWindowBridge.instance.available
+              ? metrics.toolbarHeight
+              : 0.0;
+          final width = drawer
+              ? math.min(
+                  AppBreakpoints.resourcePane * metrics.textScale,
+                  constraints.maxWidth,
+                )
+              : policy.resources
+              ? policy.resourceWidth
+              : 0.0;
+          return Stack(
+            children: [
+              ExcludeFocus(
+                excluding: drawer,
+                child: ExcludeSemantics(
+                  excluding: drawer,
+                  child: AbsorbPointer(absorbing: drawer, child: base),
+                ),
+              ),
+              if (drawer)
+                Positioned.fill(
+                  top: top,
+                  child: ModalBarrier(
+                    key: const ValueKey('workspace-resource-scrim'),
+                    color: Colors.black.withValues(alpha: .2),
+                    dismissible: true,
+                    semanticsLabel: MaterialLocalizations.of(context)
+                        .modalBarrierDismissLabel,
+                    onDismiss: () => _closeResources(),
+                  ),
+                ),
+              PositionedDirectional(
+                top: top,
+                bottom: 0,
+                start: 0,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: width),
+                  duration:
+                      drawer || !visible || !motion.spatialAnimationsEnabled
+                      ? Duration.zero
+                      : motion.effects(SkedMotionSpeed.standard),
+                  curve: motion.scheme.standardCurve,
+                  builder: (context, value, child) {
+                    _restoreResourceFocusAfterLayout(
+                      settled: (value - width).abs() < .01,
+                    );
+                    return SizedBox(
+                      key: const ValueKey('workspace-resource-surface'),
+                      width: value,
+                      child: ClipRect(child: child),
+                    );
+                  },
+                  child: Offstage(
+                    offstage: !visible,
+                    child: FocusScope(
+                      node: _resourceFocus,
+                      canRequestFocus: widget.active && visible,
+                      descendantsAreFocusable: widget.active && visible,
+                      child: Semantics(
+                        scopesRoute: drawer,
+                        explicitChildNodes: true,
+                        child: WorkspaceCanvasScope(
+                          layout: policy,
+                          child: widget.resources,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => SafeArea(
     child: AnimatedBuilder(
@@ -624,6 +839,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             assistantOpen: assistantOpen,
             assistantActive: _assistantLast,
             pointer: metrics.desktop,
+            captionWidth: DesktopWindowBridge.instance.available
+                ? metrics.captionWidth
+                : 0,
+            shortWindow: MediaQuery.sizeOf(context).height < 480,
             panelDisplayMode: widget.panelDisplayMode,
             partialDetailOverlay: metrics.desktop && controller.hasViewPanel,
             minimumCanvas: widget.minimumCanvas,
@@ -631,15 +850,23 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             preferredAssistantWidth: _assistant.width,
             // Scaffold shortens the body for the IME. Only an actual short
             // window, not typing in a pane, may compact the navigation.
-            resourcesCollapsed:
-                widget.resourcesCollapsed ||
-                MediaQuery.sizeOf(context).height < 480,
+            resourcesCollapsed: widget.resourcesCollapsed,
           );
           final compactView =
               policy.detailVisible &&
               metrics.desktop &&
               controller.hasViewPanel &&
               !policy.dockedDetail;
+          if (_resourceDrawerOpen &&
+              policy.canExpandResources &&
+              _layout?.canExpandResources != true) {
+            _scheduleResourceClose();
+          }
+          if (_layout?.resources != policy.resources &&
+              !_resourceDrawerOpen &&
+              widget.active) {
+            _pendingResourceFocus = FocusManager.instance.primaryFocus;
+          }
           _layout = policy;
           // A resize may hide a focused task. Do not steal focus merely because
           // an additional task became visible beside an interactive calendar.
@@ -684,6 +911,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               (policy.detailVisible && !policy.dockedDetail) ||
               (policy.assistantVisible && !policy.dockedAssistant);
           Future<void> dismiss() async {
+            if (_resourceDrawerOpen) {
+              _closeResources();
+              return;
+            }
             if (policy.assistantVisible &&
                 (!policy.detailVisible || _assistantLast)) {
               _setAssistantOpen(false);
@@ -698,7 +929,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             visible: policy.assistantVisible,
             onToggle: _toggleAssistant,
             child: PopScope(
-              canPop: !active || (!controller.hasPaneTasks && !assistantOpen),
+              canPop:
+                  !active ||
+                  (!_resourceDrawerOpen &&
+                      !controller.hasPaneTasks &&
+                      !assistantOpen),
               onPopInvokedWithResult: (didPop, _) {
                 if (!didPop && active) unawaited(dismiss());
               },
@@ -723,167 +958,166 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                     autofocus: active,
                     canRequestFocus: active,
                     descendantsAreFocusable: active,
-                    child: Stack(
-                      key: _stackKey,
-                      children: [
-                        Positioned.fill(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              TweenAnimationBuilder<double>(
-                                tween: Tween(end: policy.resourceWidth),
-                                duration: motion.spatialAnimationsEnabled
-                                    ? motion.effects(SkedMotionSpeed.standard)
-                                    : Duration.zero,
-                                curve: motion.scheme.standardCurve,
-                                builder: (context, width, child) => SizedBox(
-                                  key: const ValueKey(
-                                    'workspace-resource-width',
+                    child: _resourceHost(
+                      policy,
+                      metrics,
+                      Stack(
+                        key: _stackKey,
+                        children: [
+                          Positioned.fill(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(end: policy.resourceWidth),
+                                  duration: motion.spatialAnimationsEnabled
+                                      ? motion.effects(SkedMotionSpeed.standard)
+                                      : Duration.zero,
+                                  curve: motion.scheme.standardCurve,
+                                  builder: (context, width, child) => SizedBox(
+                                    key: const ValueKey(
+                                      'workspace-resource-width',
+                                    ),
+                                    width: policy.resources
+                                        ? width.clamp(0.0, resourceBudget)
+                                        : 0,
+                                    child: ClipRect(child: child),
                                   ),
-                                  width: policy.resources
-                                      ? width.clamp(0.0, resourceBudget)
-                                      : 0,
-                                  child: ClipRect(child: child),
                                 ),
-                                child: Offstage(
-                                  offstage: !policy.resources,
+                                SizedBox(
+                                  width: policy.resources ? 1 : 0,
+                                  child: const VerticalDivider(width: 1),
+                                ),
+                                Expanded(
                                   child: ExcludeFocus(
-                                    excluding: !active || !policy.resources,
+                                    excluding: !active,
                                     child: WorkspaceCanvasScope(
                                       layout: policy,
-                                      child: widget.resources,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: policy.resources ? 1 : 0,
-                                child: const VerticalDivider(width: 1),
-                              ),
-                              Expanded(
-                                child: ExcludeFocus(
-                                  excluding: !active,
-                                  child: WorkspaceCanvasScope(
-                                    layout: policy,
-                                    bodyKey: _bodyKey,
-                                    onBodyLayout: _scheduleBodyGeometry,
-                                    child: WorkspaceSelectionScope(
-                                      key: const ValueKey('workspace-canvas'),
-                                      selectedId: controller.selectedId,
-                                      child: GestureDetector(
-                                        behavior: HitTestBehavior.translucent,
-                                        onTap:
-                                            active &&
-                                                policy.detailVisible &&
-                                                controller.dismissOnCanvasTap
-                                            ? () {
-                                                // Activation can change without a frame rebuild.
-                                                if (!policy.assistantVisible ||
-                                                    !_assistantLast) {
-                                                  unawaited(controller.close());
+                                      bodyKey: _bodyKey,
+                                      onBodyLayout: _scheduleBodyGeometry,
+                                      child: WorkspaceSelectionScope(
+                                        key: const ValueKey('workspace-canvas'),
+                                        selectedId: controller.selectedId,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.translucent,
+                                          onTap:
+                                              active &&
+                                                  policy.detailVisible &&
+                                                  controller.dismissOnCanvasTap
+                                              ? () {
+                                                  // Activation can change without a frame rebuild.
+                                                  if (!policy
+                                                          .assistantVisible ||
+                                                      !_assistantLast) {
+                                                    unawaited(
+                                                      controller.close(),
+                                                    );
+                                                  }
                                                 }
-                                              }
-                                            : null,
-                                        child: widget.canvas,
+                                              : null,
+                                          child: widget.canvas,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        PositionedDirectional(
-                          key: const ValueKey('workspace-supporting-pane'),
-                          end: 0,
-                          top: overlayInset,
-                          bottom: 0,
-                          width: policy.supportingWidth,
-                          child: Offstage(
-                            offstage: !policy.supporting,
-                            child: ExcludeFocus(
-                              excluding:
-                                  !active ||
-                                  !policy.supporting ||
-                                  (overlayVisible && !compactView),
-                              child: ExcludeSemantics(
-                                excluding: overlayVisible && !compactView,
-                                child: _PaneSurface(
-                                  child:
-                                      widget.supporting ??
-                                      const SizedBox.shrink(),
-                                ),
-                              ),
+                              ],
                             ),
                           ),
-                        ),
-                        // These keyed slots never change identity on a resize,
-                        // mode change or activation of a different foreground task.
-                        PositionedDirectional(
-                          key: const ValueKey('workspace-detail-pane'),
-                          end: policy.dockedDetail
-                              ? assistantSpace
-                              : (compactView ? 8 : 0),
-                          top: overlayInset + (compactView ? 8 : 0),
-                          width: compactView
-                              ? math.min(
-                                  policy.detailWidth,
-                                  math.max(
-                                    0,
-                                    constraints.maxWidth -
-                                        (policy.resources
-                                            ? policy.resourceWidth + 1
-                                            : 0) -
-                                        16,
-                                  ),
-                                )
-                              : policy.detailWidth,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: math.max(
-                                0,
-                                constraints.maxHeight -
-                                    overlayInset -
-                                    (compactView ? 16 : 0),
-                              ),
-                            ),
-                            child: _detailPane(policy),
-                          ),
-                        ),
-                        PositionedDirectional(
-                          key: const ValueKey('workspace-assistant-pane'),
-                          end: 0,
-                          top: overlayInset,
-                          bottom: 0,
-                          width: policy.assistantWidth,
-                          child: _assistantPane(policy, previewEnabled),
-                        ),
-                        if (policy.assistantVisible)
                           PositionedDirectional(
-                            key: const ValueKey(
-                              'workspace-assistant-resize-position',
-                            ),
-                            end: policy.assistantWidth - resizeExtent,
+                            key: const ValueKey('workspace-supporting-pane'),
+                            end: 0,
                             top: overlayInset,
-                            bottom: metrics.desktop ? 0 : null,
-                            height: metrics.desktop ? null : 48,
-                            width: resizeExtent,
-                            child: _PaneResizeHandle(
-                              key: const ValueKey('workspace-assistant-resize'),
-                              onActivate: () => _assistantLast = true,
-                              onResize: (dx) => _assistant.resize(
-                                _resizedPaneWidth(
-                                  _assistant.width,
-                                  dx,
-                                  minimumWidth:
-                                      AppBreakpoints.minimumAssistantPane,
-                                  maximumWidth: policy.maximumAssistantWidth,
-                                  textScale: metrics.textScale,
+                            bottom: 0,
+                            width: policy.supportingWidth,
+                            child: Offstage(
+                              offstage: !policy.supporting,
+                              child: ExcludeFocus(
+                                excluding:
+                                    !active ||
+                                    !policy.supporting ||
+                                    (overlayVisible && !compactView),
+                                child: ExcludeSemantics(
+                                  excluding: overlayVisible && !compactView,
+                                  child: _PaneSurface(
+                                    child:
+                                        widget.supporting ??
+                                        const SizedBox.shrink(),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                      ],
+                          // These keyed slots never change identity on a resize,
+                          // mode change or activation of a different foreground task.
+                          PositionedDirectional(
+                            key: const ValueKey('workspace-detail-pane'),
+                            end: policy.dockedDetail
+                                ? assistantSpace
+                                : (compactView ? 8 : 0),
+                            top: overlayInset + (compactView ? 8 : 0),
+                            width: compactView
+                                ? math.min(
+                                    policy.detailWidth,
+                                    math.max(
+                                      0,
+                                      constraints.maxWidth -
+                                          (policy.resources
+                                              ? policy.resourceWidth + 1
+                                              : 0) -
+                                          16,
+                                    ),
+                                  )
+                                : policy.detailWidth,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: math.max(
+                                  0,
+                                  constraints.maxHeight -
+                                      overlayInset -
+                                      (compactView ? 16 : 0),
+                                ),
+                              ),
+                              child: _detailPane(policy),
+                            ),
+                          ),
+                          PositionedDirectional(
+                            key: const ValueKey('workspace-assistant-pane'),
+                            end: 0,
+                            top: overlayInset,
+                            bottom: 0,
+                            width: policy.assistantWidth,
+                            child: _assistantPane(policy, previewEnabled),
+                          ),
+                          if (policy.assistantVisible)
+                            PositionedDirectional(
+                              key: const ValueKey(
+                                'workspace-assistant-resize-position',
+                              ),
+                              end: policy.assistantWidth - resizeExtent,
+                              top: overlayInset,
+                              bottom: metrics.desktop ? 0 : null,
+                              height: metrics.desktop ? null : 48,
+                              width: resizeExtent,
+                              child: _PaneResizeHandle(
+                                key: const ValueKey(
+                                  'workspace-assistant-resize',
+                                ),
+                                onActivate: () => _assistantLast = true,
+                                onResize: (dx) => _assistant.resize(
+                                  _resizedPaneWidth(
+                                    _assistant.width,
+                                    dx,
+                                    minimumWidth:
+                                        AppBreakpoints.minimumAssistantPane,
+                                    maximumWidth: policy.maximumAssistantWidth,
+                                    textScale: metrics.textScale,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

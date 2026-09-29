@@ -475,13 +475,19 @@ void main() {
     () {
       for (final scale in [1.0, 1.3, 2.0]) {
         for (final collapsed in [false, true]) {
-          final navigation = (collapsed ? 56 : 224) * scale;
           for (final mode in [
             WorkspacePanelDisplayMode.sideBySide,
             WorkspacePanelDisplayMode.automatic,
           ]) {
             final canvas =
                 (mode == WorkspacePanelDisplayMode.sideBySide ? 360 : 600) *
+                scale;
+            // At the side-by-side threshold the shared desktop policy is
+            // still automatically compact, even with an expanded preference.
+            final navigation =
+                (collapsed || mode == WorkspacePanelDisplayMode.sideBySide
+                    ? 56
+                    : 224) *
                 scale;
             final boundary = navigation + canvas + 360 * scale + 2;
             WorkspaceLayout resolve(double width) => WorkspaceLayout.resolve(

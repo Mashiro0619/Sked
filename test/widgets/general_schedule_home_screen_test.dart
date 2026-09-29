@@ -669,7 +669,7 @@ void main() {
 
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
     expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
-    expect(_visibleDateNavigationLabel(tester), '8/11');
+    expect(_visibleDateNavigationLabel(tester), '2026/8/11');
     expect(
       find.descendant(
         of: dateButton,
@@ -857,7 +857,16 @@ void main() {
           find.byKey(const ValueKey('general-view-switcher')),
         );
         final settings = tester.getRect(
-          find.byKey(const ValueKey('general-settings-button')),
+          find.byKey(
+            ValueKey(
+              find
+                      .byKey(const ValueKey('general-settings-button'))
+                      .evaluate()
+                      .isNotEmpty
+                  ? 'general-settings-button'
+                  : 'general-toolbar-more-button',
+            ),
+          ),
         );
         for (final rect in [calendar, date, view, settings]) {
           expect(rect.height, greaterThanOrEqualTo(48));

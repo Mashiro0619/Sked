@@ -1,3 +1,4 @@
+import '../utils/mobile_toolbar_layout.dart';
 import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -484,6 +485,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             ],
           );
           final showFab =
+              !WorkbenchChromeMetrics.of(context).desktop &&
               width < 600 &&
               snapshot.showAddEventFab &&
               widget.active &&
@@ -1013,16 +1015,24 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     String view,
   ) {
     final l = AppLocalizations.of(context);
-    final navigation = WorkspaceNavigationScope.maybeOf(context);
-    final showWorkspaceMenu = needsWorkspaceMenu(context);
     final assistant = AssistantPaneScope.of(context);
     final hidden = snapshot.hiddenToolbarNavigationIds;
-    // The adaptive menu is not the user-configurable hidden-shortcut menu.
-    // Always retain secondary tasks, but only restore hidden shortcuts when
-    // the user chose More and did not explicitly hide that overflow entry.
-    final revealHidden =
-        snapshot.toolbarHiddenItemsBehavior == toolbarHiddenItemsBehaviorMore &&
-        !hidden.contains('more');
+    final placement = MobileToolbarLayout.resolve(
+      order: snapshot.toolbarNavigationOrder,
+      hiddenIds: hidden,
+      hiddenBehavior: snapshot.toolbarHiddenItemsBehavior,
+      defaultOrder: generalToolbarNavigationDefaultOrder,
+      availableIds: {
+        'category',
+        'date',
+        'view',
+        if (widget.showSettingsAction &&
+            WorkspaceCanvasScope.maybeOf(context)?.resources != true)
+          'settings',
+        if (needsMobileWorkspaceMenu(context)) 'workspace',
+      },
+      hasFixedMenuItems: true,
+    );
     final canNavigate = widget.interactive && !_dateNavigationBusy;
     return _ReminderStrip(
       provider: provider,
@@ -1034,6 +1044,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         key: const ValueKey('general-toolbar-more-button'),
         child: SkedPopupMenuButton<String>(
           key: _toolbarMoreButtonKey,
+          focusNode: placement.menuIds.contains('settings')
+              ? widget.settingsFocusNode
+              : null,
           tooltip: l.more,
           enabled: widget.interactive,
           icon: Badge(
@@ -1089,6 +1102,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 if (assistant?.enabled == true && assistant!.interactive) {
                   (assistant.onToggle ?? assistant.controller.toggle)();
                 }
+              case 'settings':
+                if (widget.settingsEnabled) {
+                  (widget.settingsAction ??
+                      () => _openSettingsPage(context, provider))();
+                }
               case 'student':
                 selectWorkspace(context, AppMode.student);
               case 'general':
@@ -1108,42 +1126,43 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 value: 'agenda',
                 child: Text(l.selectedDayAgenda),
               ),
-            if (!hidden.contains('date') || revealHidden)
+            if (placement.toolbarIds.contains('date') ||
+                placement.menuIds.contains('date'))
               SkedPopupMenuItem<String>(
                 value: 'today',
                 enabled: canNavigate,
                 child: Text(l.today),
               ),
-            for (final id in snapshot.toolbarNavigationOrder)
-              if (revealHidden &&
-                  hidden.contains(id) &&
-                  (id == 'date' || id == 'view'))
+            if (placement.menuIds.isNotEmpty)
+              const SkedPopupMenuDivider<String>(),
+            for (final id in placement.menuIds)
+              if (id == 'workspace')
+                ...workspaceMenuItems<String>(
+                  context,
+                  valueFor: (mode) => mode.value,
+                  keyPrefix: 'general-more-workspace',
+                )
+              else
                 SkedPopupMenuItem<String>(
+                  key: ValueKey(
+                    id == 'category'
+                        ? 'general-calendar-manager-action'
+                        : 'general-more-$id',
+                  ),
                   value: id,
-                  enabled: canNavigate && (id != 'date' || !_datePickerOpen),
-                  child: Text(
-                    id == 'date' ? l.pickDate : l.toolbarNavigationView,
-                  ),
-                ),
-            const SkedPopupMenuDivider<String>(),
-            SkedPopupMenuItem<String>(
-              key: const ValueKey('general-calendar-manager-action'),
-              value: 'category',
-              enabled: !_calendarManagerOpen,
-              child: Text(l.calendars),
-            ),
-            if (showWorkspaceMenu)
-              for (final mode in provider.enabledWorkspaces)
-                CheckedPopupMenuItem<String>(
-                  key: ValueKey('general-more-workspace-${mode.value}'),
-                  value: mode.value,
-                  checked: provider.activeMode == mode,
-                  enabled: navigation?.enabled ?? true,
-                  child: Text(
-                    mode == AppMode.student
-                        ? l.studentTimetable
-                        : l.generalSchedule,
-                  ),
+                  enabled: switch (id) {
+                    'category' => !_calendarManagerOpen,
+                    'settings' => widget.settingsEnabled,
+                    'date' => canNavigate && !_datePickerOpen,
+                    _ => canNavigate,
+                  },
+                  child: Text(switch (id) {
+                    'category' => l.calendars,
+                    'settings' => l.settings,
+                    'date' => l.pickDate,
+                    'view' => l.toolbarNavigationView,
+                    _ => id,
+                  }),
                 ),
             if (assistant?.enabled == true)
               SkedPopupMenuItem<String>(
@@ -1177,6 +1196,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       onOccurrenceTap: (item) => _openDetails(context, provider, item),
       actionBuilder: (context, count, openReminders) => WorkbenchCompactCalendarBar(
         id: 'general',
+        primaryAction: WorkbenchOverflowAction(
+          id: 'general-add-event',
+          label: l.addEvent,
+          icon: Icons.add,
+          dividerBefore: true,
+          onSelected: widget.interactive && !_editorSheetOpen
+              ? (_) => unawaited(_openEditor(context, provider))
+              : null,
+        ),
         enabled: widget.interactive,
         moreFocusNode: widget.showSettingsAction && !resources
             ? widget.settingsFocusNode
@@ -1229,22 +1257,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               : null,
         ),
         actions: [
-          WorkbenchOverflowAction(
-            id: 'general-add-event',
-            label: l.addEvent,
-            icon: Icons.add,
-            dividerBefore: true,
-            onSelected: widget.interactive && !_editorSheetOpen
-                ? (_) => unawaited(_openEditor(context, provider))
-                : null,
-          ),
           if (!resources)
             WorkbenchOverflowAction(
               id: 'general-calendar-selector',
               label: l.calendars,
               icon: Icons.view_sidebar_outlined,
               onSelected: (_) =>
-                  unawaited(_openCalendarManager(context, provider)),
+                  (WorkspaceResourceScope.maybeOf(context)?.open ??
+                  () => unawaited(_openCalendarManager(context, provider)))(),
             ),
           for (final option in _generalViewOptions(l))
             WorkbenchOverflowAction(
@@ -1341,7 +1361,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           IconButton(
             key: const ValueKey('general-calendar-selector'),
             tooltip: l.calendars,
-            onPressed: () => _openCalendarManager(context, provider),
+            onPressed:
+                WorkspaceResourceScope.maybeOf(context)?.open ??
+                () => _openCalendarManager(context, provider),
             icon: const Icon(Icons.view_sidebar_outlined),
           ),
         IconButton(
@@ -1998,24 +2020,20 @@ class _GeneralToolbarLayout extends StatelessWidget {
 
   Widget _compact(BuildContext context) {
     final m = WorkbenchChromeMetrics.of(context);
-    final hidden = hiddenNavigationIds.toSet()..remove('settings');
-    final order = normalizeToolbarNavigationOrder(
-      navigationOrder,
-      knownIds: generalToolbarNavigationKnownIds,
+    final placement = MobileToolbarLayout.resolve(
+      order: navigationOrder,
+      hiddenIds: hiddenNavigationIds,
+      hiddenBehavior: hiddenItemsBehavior,
       defaultOrder: generalToolbarNavigationDefaultOrder,
+      availableIds: {
+        'category',
+        'date',
+        'view',
+        if (showSettingsAction) 'settings',
+        if (needsMobileWorkspaceMenu(context)) 'workspace',
+      },
+      hasFixedMenuItems: true,
     );
-    final managementIds = [
-      for (final id in order)
-        if ((id == 'category' && !hidden.contains(id)) ||
-            (id == 'settings' && showSettingsAction) ||
-            id == 'more')
-          id,
-      if (!order.contains('more')) 'more',
-    ];
-    final dateIds = [
-      for (final id in order)
-        if ((id == 'date' || id == 'view') && !hidden.contains(id)) id,
-    ];
     Widget navigation(bool date) => LayoutBuilder(
       builder: (context, constraints) => _GeneralWorkspaceNavigation(
         view: view,
@@ -2051,15 +2069,12 @@ class _GeneralToolbarLayout extends StatelessWidget {
         icon: const Icon(Icons.settings_outlined),
         tooltip: settingsLabel,
       ),
+      'workspace': const WorkspaceModeMenu(),
       'more': compactMoreButton!,
       'date': navigation(true),
       'view': navigation(false),
     };
-    final ids = [
-      for (final id in order)
-        if (managementIds.contains(id) || dateIds.contains(id)) id,
-      if (!order.contains('more')) 'more',
-    ];
+    final ids = placement.toolbarIds;
     double textWidth(String label, TextStyle? style) {
       final painter = TextPainter(
         text: TextSpan(text: label, style: style),

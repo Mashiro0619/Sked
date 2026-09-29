@@ -9,8 +9,8 @@ import 'package:sked/utils/constants.dart';
 
 void main() {
   group('AppData schemaVersion', () {
-    test('current schema is version 3', () {
-      expect(appDataCurrentSchemaVersion, 3);
+    test('current schema is version 4', () {
+      expect(appDataCurrentSchemaVersion, 4);
     });
 
     test('v1 moves legacy top-level themes into unthemed modes', () {
@@ -29,7 +29,7 @@ void main() {
 
       final migrated = appDataMigrationRunner.run(input);
 
-      expect(migrated['schemaVersion'], 3);
+      expect(migrated['schemaVersion'], 4);
       for (final modeKey in const ['studentMode', 'generalMode']) {
         final mode = migrated[modeKey] as Map<String, dynamic>;
         expect(mode['themeMode'], 'dark');
@@ -76,7 +76,9 @@ void main() {
 
       final student = migrated['studentMode'] as Map<String, dynamic>;
       final general = migrated['generalMode'] as Map<String, dynamic>;
-      expect(student, {'themeMode': 'light'});
+      expect(student['themeMode'], 'light');
+      expect(student.containsKey('themeColorMode'), isFalse);
+      expect(student['hiddenToolbarNavigationIds'], ['workspace', 'settings']);
       expect(general['themeMode'], 'dark');
       expect(general['themeColorMode'], themeColorModeColorful);
       expect(general['themeSeedColorValue'], 0xFF00897B);

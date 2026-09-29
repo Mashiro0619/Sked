@@ -497,7 +497,7 @@ void main() {
             'general-calendar-selector',
             'general-date-title-button',
             'general-view-switcher',
-            'general-settings-button',
+            'general-toolbar-more-button',
             'general-toolbar-more-button',
           ];
           for (final value in controls) {

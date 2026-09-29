@@ -148,10 +148,9 @@ void main() {
   );
 
   testWidgets(
-    'add course, settings and workspace switching remain reachable through More',
+    'direct add course and overflow settings/workspace actions remain reachable',
     (t) async {
       final (p, _) = await _start(t, AppMode.student);
-      await _more(t, AppMode.student);
       await _choose(t, 'student-add-course');
       expect(find.byType(CourseEditorSheet), findsOneWidget);
       await _escape(t);
@@ -371,12 +370,14 @@ void main() {
     'compact General add, categories, agenda and settings remain actionable',
     (t) async {
       final (p, _) = await _start(t, AppMode.general);
-      await _more(t, AppMode.general);
       await _choose(t, 'general-add-event');
       expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
       await _escape(t);
       await _more(t, AppMode.general);
       await _choose(t, 'general-calendar-selector');
+      expect(_key('workspace-resource-scrim'), findsOneWidget);
+      await _choose(t, 'workspace-resource-open');
+      expect(_key('workspace-resource-scrim'), findsNothing);
       expect(
         _key('calendar-manager-tile-${p.generalMode.activeScheduleId}'),
         findsOneWidget,

@@ -284,7 +284,7 @@ void main() {
       of: editor,
       matching: find.byIcon(Icons.drag_indicator),
     );
-    expect(handles, findsNWidgets(5));
+    expect(handles, findsNWidgets(6));
 
     final gesture = await tester.startGesture(
       tester.getCenter(handles.at(0)),

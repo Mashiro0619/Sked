@@ -5675,6 +5675,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uses side by side when the calendar has enough readable space; otherwise overlays.'**
   String get settingsPanelDisplayAutomaticDescription;
+
+  /// No description provided for @toolbarNavigationEssentialHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.'**
+  String get toolbarNavigationEssentialHint;
 }
 
 class _AppLocalizationsDelegate

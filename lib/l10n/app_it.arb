@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "Automatica",
   "settingsPanelDisplayOverlayDescription": "Si sovrappone a destra senza ridimensionare il calendario.",
   "settingsPanelDisplaySideBySideDescription": "Preferisce i pannelli affiancati; li sovrappone solo se il calendario diventa troppo stretto.",
-  "settingsPanelDisplayAutomaticDescription": "Affianca i pannelli se il calendario rimane leggibile, altrimenti li sovrappone."
+  "settingsPanelDisplayAutomaticDescription": "Affianca i pannelli se il calendario rimane leggibile, altrimenti li sovrappone.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../services/desktop_window_bridge.dart';
 import 'desktop_window_modal_observer.dart';
 import 'workbench_chrome_metrics.dart';
+import 'app_layout_tokens.dart';
 
 export 'desktop_window_modal_observer.dart';
 
@@ -286,16 +287,20 @@ class WorkbenchCommandBar extends StatelessWidget {
             child: DesktopDragRegion(
               child: Padding(
                 padding: EdgeInsetsDirectional.only(
-                  start: 12,
-                  end: 12 + (reserve ? m.captionWidth : 0),
+                  start: AppBreakpoints.desktopCommandPadding / 2,
+                  end:
+                      AppBreakpoints.desktopCommandPadding / 2 +
+                      (reserve ? m.captionWidth : 0),
                 ),
                 child: LayoutBuilder(
                   builder: (context, c) {
                     if (compactBuilder != null &&
-                        c.maxWidth < 700 * m.textScale) {
+                        c.maxWidth <
+                            AppBreakpoints.desktopCommandContent *
+                                m.textScale) {
                       return compactBuilder!(context);
                     }
-                    if (c.maxWidth < 700) {
+                    if (c.maxWidth < AppBreakpoints.desktopCommandContent) {
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: row([...navigation, ...actions]),

@@ -13,6 +13,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
     this.onCanceled,
     this.tooltip,
     this.enabled = true,
+    this.focusNode,
     this.icon,
     this.child,
     this.padding = const EdgeInsets.all(8),
@@ -28,6 +29,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   final PopupMenuCanceled? onCanceled;
   final String? tooltip;
   final bool enabled;
+  final FocusNode? focusNode;
   final Widget? icon;
   final Widget? child;
   final EdgeInsetsGeometry padding;
@@ -38,6 +40,27 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final motion = SkedMotionPolicy.of(context);
+    if (focusNode != null) {
+      return _FocusedPopupMenuButton<T>(
+        focusNode: focusNode!,
+        initialValue: initialValue,
+        onOpened: onOpened,
+        onSelected: onSelected,
+        onCanceled: onCanceled,
+        tooltip: tooltip,
+        enabled: enabled,
+        icon: icon,
+        padding: padding,
+        offset: offset,
+        position: position,
+        constraints: constraints,
+        menuPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        clipBehavior: Clip.antiAlias,
+        popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
+        itemBuilder: itemBuilder,
+        child: child,
+      );
+    }
     return PopupMenuButton<T>(
       initialValue: initialValue,
       onOpened: onOpened,
@@ -59,6 +82,59 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   }
 }
 
+// material_ui's PopupMenuButton has no focusNode parameter. Reuse its route
+// implementation and supply the same focusable icon control for the shell.
+class _FocusedPopupMenuButton<T> extends PopupMenuButton<T> {
+  const _FocusedPopupMenuButton({
+    required this.focusNode,
+    required super.itemBuilder,
+    super.initialValue,
+    super.onOpened,
+    super.onSelected,
+    super.onCanceled,
+    super.tooltip,
+    super.enabled,
+    super.icon,
+    super.padding,
+    super.offset,
+    super.position,
+    super.constraints,
+    super.menuPadding,
+    super.clipBehavior,
+    super.popUpAnimationStyle,
+    super.child,
+  });
+  final FocusNode focusNode;
+  @override
+  PopupMenuButtonState<T> createState() => _FocusedPopupMenuButtonState<T>();
+}
+
+class _FocusedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
+  @override
+  Widget build(BuildContext context) {
+    final button = widget as _FocusedPopupMenuButton<T>;
+    if (button.child != null) {
+      return Tooltip(
+        message:
+            button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+        child: InkWell(
+          focusNode: button.focusNode,
+          onTap: button.enabled ? showButtonMenu : null,
+          child: button.child,
+        ),
+      );
+    }
+    return IconButton(
+      focusNode: button.focusNode,
+      padding: button.padding,
+      tooltip:
+          button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+      icon: button.icon ?? const Icon(Icons.more_horiz),
+      onPressed: button.enabled ? showButtonMenu : null,
+    );
+  }
+}
+
 class SkedPopupMenuItem<T> extends PopupMenuItem<T> {
   const SkedPopupMenuItem({
     super.key,
@@ -76,6 +152,43 @@ class SkedPopupMenuItem<T> extends PopupMenuItem<T> {
   @override
   PopupMenuItemState<T, SkedPopupMenuItem<T>> createState() =>
       _SkedPopupMenuItemState<T>();
+}
+
+/// Uses the same InkWell and shape as ordinary menu items, not Material's
+/// rectangular CheckedPopupMenuItem highlight.
+class SkedCheckedPopupMenuItem<T> extends SkedPopupMenuItem<T> {
+  const SkedCheckedPopupMenuItem({
+    super.key,
+    required super.value,
+    required this.checked,
+    super.enabled,
+    required this.label,
+  }) : super(child: const SizedBox.shrink());
+  final bool checked;
+  final String label;
+  @override
+  PopupMenuItemState<T, SkedPopupMenuItem<T>> createState() =>
+      _SkedCheckedMenuState<T>();
+}
+
+class _SkedCheckedMenuState<T> extends _SkedPopupMenuItemState<T> {
+  @override
+  Widget buildChild() {
+    final item = widget as SkedCheckedPopupMenuItem<T>;
+    return Semantics(
+      checked: item.checked,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 20,
+            child: item.checked ? const Icon(Icons.check, size: 20) : null,
+          ),
+          const SizedBox(width: 12),
+          Flexible(child: Text(item.label)),
+        ],
+      ),
+    );
+  }
 }
 
 class _SkedPopupMenuItemState<T>

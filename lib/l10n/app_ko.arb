@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "자동",
   "settingsPanelDisplayOverlayDescription": "달력 크기를 바꾸지 않고 오른쪽에 겹쳐 표시합니다.",
   "settingsPanelDisplaySideBySideDescription": "나란히 표시를 우선하며 달력이 너무 좁아질 때만 겹쳐 표시합니다.",
-  "settingsPanelDisplayAutomaticDescription": "달력을 읽기 충분한 너비가 있으면 나란히, 그렇지 않으면 겹쳐 표시합니다."
+  "settingsPanelDisplayAutomaticDescription": "달력을 읽기 충분한 너비가 있으면 나란히, 그렇지 않으면 겹쳐 표시합니다.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

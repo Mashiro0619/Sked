@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "Tự động",
   "settingsPanelDisplayOverlayDescription": "Phủ bên phải mà không đổi kích thước lịch.",
   "settingsPanelDisplaySideBySideDescription": "Ưu tiên hiển thị song song; chỉ dùng lớp phủ khi lịch quá hẹp.",
-  "settingsPanelDisplayAutomaticDescription": "Hiển thị song song khi lịch còn đủ rộng để đọc; nếu không thì dùng lớp phủ."
+  "settingsPanelDisplayAutomaticDescription": "Hiển thị song song khi lịch còn đủ rộng để đọc; nếu không thì dùng lớp phủ.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

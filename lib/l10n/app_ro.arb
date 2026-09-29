@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "Automat",
   "settingsPanelDisplayOverlayDescription": "Suprapune partea dreaptă fără a redimensiona calendarul.",
   "settingsPanelDisplaySideBySideDescription": "Preferă afișarea alăturată; suprapune doar dacă calendarul devine prea îngust.",
-  "settingsPanelDisplayAutomaticDescription": "Afișează alăturat dacă lățimea calendarului rămâne lizibilă; altfel suprapune."
+  "settingsPanelDisplayAutomaticDescription": "Afișează alăturat dacă lățimea calendarului rămâne lizibilă; altfel suprapune.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

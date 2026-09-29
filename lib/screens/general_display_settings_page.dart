@@ -1,3 +1,4 @@
+import '../utils/mobile_toolbar_layout.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 
 import '../widgets/desktop_window_host.dart';
@@ -288,6 +289,13 @@ class _GeneralDisplaySettingsPageState extends State<GeneralDisplaySettingsPage>
                         SettingsSectionHeader(
                           title: l10n.toolbarNavigationSection,
                         ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Text(l10n.toolbarNavigationEssentialHint),
+                        ),
                         SettingsChoiceTile<Object>(
                           enabled:
                               !WorkbenchChromeMetrics.compactTouch(context) ||
@@ -395,6 +403,7 @@ List<SettingsToolbarNavigationItem> _generalToolbarItems(
     'category': l10n.toolbarNavigationCategory,
     'date': l10n.toolbarNavigationDate,
     'view': l10n.toolbarNavigationView,
+    'workspace': l10n.settingsSectionWorkspace,
     'settings': l10n.settings,
     'more': l10n.more,
   };
@@ -402,6 +411,7 @@ List<SettingsToolbarNavigationItem> _generalToolbarItems(
     'category': Icons.label_outline,
     'date': Icons.calendar_today_outlined,
     'view': Icons.view_agenda_outlined,
+    'workspace': Icons.swap_horiz,
     'settings': Icons.settings_outlined,
     'more': Icons.more_horiz_outlined,
   };
@@ -410,6 +420,19 @@ List<SettingsToolbarNavigationItem> _generalToolbarItems(
     ...provider.generalToolbarNavigationOrder,
     if (!provider.generalToolbarNavigationOrder.contains('more')) 'more',
   ];
+  final placement = MobileToolbarLayout.resolve(
+    order: provider.generalToolbarNavigationOrder,
+    hiddenIds: provider.generalHiddenToolbarNavigationIds,
+    hiddenBehavior: provider.generalToolbarHiddenItemsBehavior,
+    defaultOrder: generalToolbarNavigationDefaultOrder,
+    availableIds: {
+      'settings',
+      if (provider.hasMultipleWorkspaces &&
+          provider.hideHomeWorkspaceNavigation)
+        'workspace',
+    },
+    hasFixedMenuItems: true,
+  );
   return [
     for (final id in order)
       if (labels.containsKey(id))
@@ -417,8 +440,9 @@ List<SettingsToolbarNavigationItem> _generalToolbarItems(
           id: id,
           label: labels[id]!,
           icon: icons[id]!,
-          visible: !hidden.contains(id),
-          canHide: id != 'settings',
+          visible:
+              (id == 'more' && placement.moreRequired) || !hidden.contains(id),
+          canHide: id != 'more' || !placement.moreRequired,
         ),
   ];
 }

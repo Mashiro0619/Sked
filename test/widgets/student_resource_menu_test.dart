@@ -45,6 +45,10 @@ void main() {
               ),
             );
             await t.pumpAndSettle();
+            if (platform == TargetPlatform.windows && scale == 2) {
+              await t.tap(k('workspace-resource-collapse'));
+              await t.pumpAndSettle();
+            }
             final menu = k('student-resource-menu').hitTestable();
             expect(menu, findsOneWidget);
             final metrics = WorkbenchChromeMetrics.of(t.element(menu));

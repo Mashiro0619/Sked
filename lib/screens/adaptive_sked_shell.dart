@@ -1,3 +1,4 @@
+import '../widgets/workspace_frame.dart';
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
@@ -204,6 +205,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             !_navigationToggleInFlight &&
             !_settingsOpen;
         final workspaceStack = WorkspaceNavigationScope(
+          selectedMode: _effectiveMode,
           enabled: compactSettingsEnabled,
           integrated:
               WorkbenchChromeMetrics.of(context).desktop ||
@@ -660,7 +662,10 @@ class _WorkspaceSlotState extends State<_WorkspaceSlot> {
             canRequestFocus: widget.interactive,
             descendantsAreFocusable: widget.interactive,
             descendantsAreTraversable: widget.interactive,
-            child: widget.child,
+            child: WorkspaceVisibilityScope(
+              visible: widget.semanticActive,
+              child: widget.child,
+            ),
           ),
         ),
       ),

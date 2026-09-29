@@ -236,7 +236,7 @@ void main() {
       await t.pumpAndSettle();
       t.view.physicalSize = const Size(640, 320);
       await t.pumpAndSettle();
-      expect(t.getSize(_key('workspace-resource-width')).width, 0);
+      expect(t.getSize(_key('workspace-resource-width')).width, 56);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

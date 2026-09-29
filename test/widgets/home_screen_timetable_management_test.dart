@@ -2658,7 +2658,7 @@ void main() {
       'student-timetable-picker-button',
       'student-view-toggle-button',
       'student-week-picker-button',
-      'student-settings-button',
+      'student-toolbar-more-button',
     ]) {
       final rect = tester.getRect(find.byKey(ValueKey(key)));
       expect(viewport.contains(rect.topLeft), isTrue, reason: key);
@@ -2678,7 +2678,7 @@ void main() {
       findsNothing,
     );
     expect(
-      find.byKey(const ValueKey('student-settings-button')),
+      find.byKey(const ValueKey('student-toolbar-more-button')),
       findsOneWidget,
     );
     final timetablePicker = find.byKey(
@@ -2760,7 +2760,8 @@ void main() {
         final settings = find.byWidgetPredicate(
           (widget) =>
               widget.key == const ValueKey('student-settings-button') ||
-              widget.key == const ValueKey('workspace-resource-settings'),
+              widget.key == const ValueKey('workspace-resource-settings') ||
+              widget.key == const ValueKey('student-toolbar-more-button'),
         );
         final actions = [
           settings,

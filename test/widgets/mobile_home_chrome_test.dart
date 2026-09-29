@@ -130,7 +130,7 @@ void main() {
             'general-calendar-selector',
             'general-date-title-button',
             'general-view-switcher',
-            'general-settings-button',
+            'general-toolbar-more-button',
             'general-toolbar-more-button',
           ]) {
             final item = t.getRect(key(name));
@@ -231,7 +231,7 @@ void main() {
         await t.pumpAndSettle();
         expect(p.timetables, isEmpty);
         final toolbar = t.getRect(key('student-workspace-toolbar'));
-        final settings = t.getRect(key('empty-timetable-settings-button'));
+        final settings = t.getRect(key('student-toolbar-more-button'));
         final title = t.getRect(
           find.descendant(
             of: key('student-workspace-toolbar'),
@@ -374,7 +374,7 @@ void main() {
       final today = DateTime.now();
       expect(semantics.label, contains('${today.year}'));
       expect(semantics.onLongPress, isNotNull);
-      expect(p.generalToolbarNavigationOrder, order);
+      expect(p.generalToolbarNavigationOrder, [...order, 'workspace']);
       expect(p.generalHiddenToolbarNavigationIds, ['view']);
       expect(storage.writes, before);
       expect(t.takeException(), isNull);

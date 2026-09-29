@@ -43,6 +43,7 @@ void main() {
         'view',
         'timetable',
         'week',
+        'workspace',
         'settings',
         'more',
       ]);
@@ -65,7 +66,11 @@ void main() {
         'week',
         false,
       );
-      expect(hidden.studentMode.hiddenToolbarNavigationIds, ['week']);
+      expect(hidden.studentMode.hiddenToolbarNavigationIds, [
+        'workspace',
+        'settings',
+        'week',
+      ]);
 
       expect(
         identical(
@@ -95,17 +100,24 @@ void main() {
         'week',
         true,
       );
-      expect(shown.studentMode.hiddenToolbarNavigationIds, isEmpty);
+      expect(shown.studentMode.hiddenToolbarNavigationIds, [
+        'workspace',
+        'settings',
+      ]);
 
       final normalized = service.updateStudentToolbarNavigationHiddenIds(
         initial,
         const ['settings', 'week', 'week', 'unknown'],
       );
-      expect(normalized.studentMode.hiddenToolbarNavigationIds, ['week']);
+      expect(normalized.studentMode.hiddenToolbarNavigationIds, [
+        'settings',
+        'week',
+      ]);
       expect(
         identical(
           normalized,
           service.updateStudentToolbarNavigationHiddenIds(normalized, const [
+            'settings',
             'week',
           ]),
         ),
@@ -152,6 +164,7 @@ void main() {
         'date',
         'category',
         'view',
+        'workspace',
         'settings',
         'more',
       ]);
@@ -174,7 +187,11 @@ void main() {
         'category',
         false,
       );
-      expect(hidden.hiddenToolbarNavigationIds, ['category']);
+      expect(hidden.hiddenToolbarNavigationIds, [
+        'workspace',
+        'settings',
+        'category',
+      ]);
       expect(
         identical(
           hidden,
@@ -195,17 +212,20 @@ void main() {
         'category',
         true,
       );
-      expect(shown.hiddenToolbarNavigationIds, isEmpty);
+      expect(shown.hiddenToolbarNavigationIds, ['workspace', 'settings']);
 
       final normalized = service.updateToolbarNavigationHiddenIds(
         initial,
         const ['settings', 'date', 'date', 'unknown'],
       );
-      expect(normalized.hiddenToolbarNavigationIds, ['date']);
+      expect(normalized.hiddenToolbarNavigationIds, ['settings', 'date']);
       expect(
         identical(
           normalized,
-          service.updateToolbarNavigationHiddenIds(normalized, const ['date']),
+          service.updateToolbarNavigationHiddenIds(normalized, const [
+            'settings',
+            'date',
+          ]),
         ),
         isTrue,
       );
@@ -256,6 +276,7 @@ void main() {
         'week',
         'timetable',
         'view',
+        'workspace',
         'settings',
         'more',
       ]);
@@ -286,61 +307,74 @@ void main() {
         'unknown',
       ]);
       expect(storage.saveCount, 5);
-      expect(provider.studentHiddenToolbarNavigationIds, ['week']);
+      expect(provider.studentHiddenToolbarNavigationIds, ['week', 'settings']);
 
-      await provider.updateStudentToolbarNavigationHiddenIds(const ['week']);
+      await provider.updateStudentToolbarNavigationHiddenIds(const [
+        'week',
+        'settings',
+      ]);
       expect(storage.saveCount, 5);
     });
 
-    test('general hidden ID updates save once and protect settings', () async {
-      final storage = _MemoryTimetableStorage(
-        buildInitialAppData(buildDefaultPeriodTimes()),
-      );
-      final provider = await loadProvider(storage);
-      addTearDown(provider.dispose);
-      storage.saveCount = 0;
+    test(
+      'general hidden ID updates save once and allow settings in More',
+      () async {
+        final storage = _MemoryTimetableStorage(
+          buildInitialAppData(buildDefaultPeriodTimes()),
+        );
+        final provider = await loadProvider(storage);
+        addTearDown(provider.dispose);
+        storage.saveCount = 0;
 
-      final defaultOrder = provider.generalToolbarNavigationOrder;
-      await provider.updateGeneralToolbarNavigationOrder(defaultOrder);
-      expect(storage.saveCount, 0);
-      await provider.updateGeneralToolbarNavigationOrder(const [
-        'date',
-        'category',
-        'view',
-        'settings',
-        'more',
-      ]);
-      expect(storage.saveCount, 1);
+        final defaultOrder = provider.generalToolbarNavigationOrder;
+        await provider.updateGeneralToolbarNavigationOrder(defaultOrder);
+        expect(storage.saveCount, 0);
+        await provider.updateGeneralToolbarNavigationOrder(const [
+          'date',
+          'category',
+          'view',
+          'settings',
+          'more',
+        ]);
+        expect(storage.saveCount, 1);
 
-      await provider.updateGeneralToolbarNavigationHiddenIds(const [
-        'category',
-        'settings',
-        'category',
-      ]);
-      expect(storage.saveCount, 2);
-      expect(provider.generalHiddenToolbarNavigationIds, ['category']);
+        await provider.updateGeneralToolbarNavigationHiddenIds(const [
+          'category',
+          'settings',
+          'category',
+        ]);
+        expect(storage.saveCount, 2);
+        expect(provider.generalHiddenToolbarNavigationIds, [
+          'category',
+          'settings',
+        ]);
 
-      await provider.updateGeneralToolbarNavigationHiddenIds(const [
-        'category',
-      ]);
-      expect(storage.saveCount, 2);
+        await provider.updateGeneralToolbarNavigationHiddenIds(const [
+          'category',
+          'settings',
+        ]);
+        expect(storage.saveCount, 2);
 
-      await provider.updateGeneralToolbarNavigationVisibility(
-        'settings',
-        false,
-      );
-      expect(storage.saveCount, 2);
-      await provider.updateGeneralToolbarNavigationVisibility('category', true);
-      expect(storage.saveCount, 3);
-      expect(provider.generalHiddenToolbarNavigationIds, isEmpty);
-      await provider.updateGeneralToolbarHiddenItemsBehavior(
-        toolbarHiddenItemsBehaviorMore,
-      );
-      expect(storage.saveCount, 4);
-      await provider.updateGeneralToolbarHiddenItemsBehavior(
-        toolbarHiddenItemsBehaviorMore,
-      );
-      expect(storage.saveCount, 4);
-    });
+        await provider.updateGeneralToolbarNavigationVisibility(
+          'settings',
+          false,
+        );
+        expect(storage.saveCount, 2);
+        await provider.updateGeneralToolbarNavigationVisibility(
+          'category',
+          true,
+        );
+        expect(storage.saveCount, 3);
+        expect(provider.generalHiddenToolbarNavigationIds, ['settings']);
+        await provider.updateGeneralToolbarHiddenItemsBehavior(
+          toolbarHiddenItemsBehaviorMore,
+        );
+        expect(storage.saveCount, 4);
+        await provider.updateGeneralToolbarHiddenItemsBehavior(
+          toolbarHiddenItemsBehaviorMore,
+        );
+        expect(storage.saveCount, 4);
+      },
+    );
   });
 }

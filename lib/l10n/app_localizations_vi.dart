@@ -3171,4 +3171,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get settingsPanelDisplayAutomaticDescription =>
       'Hiển thị song song khi lịch còn đủ rộng để đọc; nếu không thì dùng lớp phủ.';
+
+  @override
+  String get toolbarNavigationEssentialHint =>
+      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
 }

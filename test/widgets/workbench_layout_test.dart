@@ -229,10 +229,12 @@ void main() {
                       final side =
                           (p.resources ? p.resourceWidth + 1 : 0) +
                           p.canvasEndInset;
-                      if (side > 0) {
+                      // Navigation can remain compact below the content
+                      // preference; only docked task reservations promise it.
+                      if (p.canvasEndInset > 0) {
                         expect(
                           width - side,
-                          greaterThanOrEqualTo(p.minimumCanvasWidth),
+                          greaterThanOrEqualTo(p.minimumCanvasWidth - .000001),
                         );
                       }
                       expect(

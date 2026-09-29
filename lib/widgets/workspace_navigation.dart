@@ -23,12 +23,14 @@ class WorkspaceNavigationScope extends InheritedWidget {
   const WorkspaceNavigationScope({
     super.key,
     required this.enabled,
+    this.selectedMode,
     required this.integrated,
     required this.onSelect,
     required this.onToggleResources,
     required super.child,
   });
   final bool enabled;
+  final AppMode? selectedMode;
   final bool integrated;
   final ValueChanged<AppMode> onSelect;
   final VoidCallback onToggleResources;
@@ -36,12 +38,17 @@ class WorkspaceNavigationScope extends InheritedWidget {
       context.dependOnInheritedWidgetOfExactType<WorkspaceNavigationScope>();
   @override
   bool updateShouldNotify(WorkspaceNavigationScope oldWidget) =>
+      selectedMode != oldWidget.selectedMode ||
       enabled != oldWidget.enabled ||
       integrated != oldWidget.integrated ||
       onSelect != oldWidget.onSelect;
 }
 
 void selectWorkspace(BuildContext context, AppMode mode) {
+  if (!context.mounted ||
+      !context.read<TimetableProvider>().isWorkspaceEnabled(mode)) {
+    return;
+  }
   final navigation = WorkspaceNavigationScope.maybeOf(context);
   if (navigation != null) {
     if (navigation.enabled) navigation.onSelect(mode);
@@ -54,6 +61,32 @@ void selectWorkspace(BuildContext context, AppMode mode) {
       command: () => context.read<TimetableProvider>().switchMode(mode),
     ),
   );
+}
+
+bool needsMobileWorkspaceMenu(BuildContext context) {
+  final p = context.watch<TimetableProvider>();
+  return p.hasMultipleWorkspaces && p.hideHomeWorkspaceNavigation;
+}
+
+List<PopupMenuEntry<T>> workspaceMenuItems<T>(
+  BuildContext context, {
+  required T Function(AppMode) valueFor,
+  required String keyPrefix,
+}) {
+  final p = context.read<TimetableProvider>();
+  final scope = WorkspaceNavigationScope.maybeOf(context);
+  final l = AppLocalizations.of(context);
+  final current = scope?.selectedMode ?? p.activeMode;
+  return [
+    for (final mode in p.enabledWorkspaces)
+      SkedCheckedPopupMenuItem<T>(
+        key: ValueKey('$keyPrefix-${mode.value}'),
+        value: valueFor(mode),
+        checked: current == mode,
+        enabled: scope?.enabled ?? true,
+        label: mode == AppMode.student ? l.studentTimetable : l.generalSchedule,
+      ),
+  ];
 }
 
 /// An explicit fallback remains available even when the user hides mode chrome.
@@ -74,28 +107,11 @@ class WorkspaceModeMenu extends StatelessWidget {
             selectWorkspace(context, mode);
           }
         },
-        itemBuilder: (_) => [
-          for (final mode in provider.enabledWorkspaces)
-            SkedPopupMenuItem<AppMode>(
-              value: mode,
-              child: Row(
-                children: [
-                  Icon(
-                    provider.activeMode == mode ? Icons.check : null,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      mode == AppMode.student
-                          ? l10n.studentTimetable
-                          : l10n.generalSchedule,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
+        itemBuilder: (_) => workspaceMenuItems<AppMode>(
+          context,
+          valueFor: (mode) => mode,
+          keyPrefix: 'workspace-menu',
+        ),
       );
     }
     final metrics = WorkbenchChromeMetrics.of(context);
@@ -150,11 +166,20 @@ class WorkspaceResourcePanel extends StatelessWidget {
     final m = WorkbenchChromeMetrics.of(context);
     final l = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
+    final resourceScope = m.desktop
+        ? WorkspaceResourceScope.maybeOf(context)
+        : null;
+    final drawer = resourceScope?.drawerOpen ?? false;
     final collapsed =
+        !drawer &&
         (layout?.resourceWidth ?? AppBreakpoints.resourcePane) <
-        AppBreakpoints.resourcePane *
-            WorkbenchLayoutPolicy.textFactor(m.textScale);
-    final forcedCompact = collapsed && !p.homeWorkspaceNavigationCollapsed;
+            AppBreakpoints.resourcePane *
+                WorkbenchLayoutPolicy.textFactor(m.textScale);
+    final forcedCompact =
+        collapsed &&
+        (resourceScope != null
+            ? !resourceScope.canExpandInline
+            : !p.homeWorkspaceNavigationCollapsed);
     final enabled = scope?.enabled ?? true;
     void toggle() {
       if (scope != null) {
@@ -174,7 +199,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
 
     final showModes =
         p.hasMultipleWorkspaces &&
-        !p.hideHomeWorkspaceNavigation &&
+        (drawer || !p.hideHomeWorkspaceNavigation) &&
         (scope?.integrated ?? true);
     final factor = WorkbenchLayoutPolicy.textFactor(m.textScale);
     final compactWidth =
@@ -219,13 +244,26 @@ class WorkspaceResourcePanel extends StatelessWidget {
                         child: IconButton(
                           key: const ValueKey('workspace-resource-collapse'),
                           style: m.iconStyle,
-                          tooltip: collapsed
+                          tooltip: drawer
+                              ? MaterialLocalizations.of(context)
+                                    .closeButtonTooltip
+                              : collapsed
                               ? l.expandWorkspaceNavigation
                               : l.collapseWorkspaceNavigation,
                           onPressed: enabled
-                              ? (forcedCompact ? onOpenResources : toggle)
+                              ? (drawer
+                                    ? resourceScope!.close
+                                    : forcedCompact
+                                    ? (resourceScope?.open ?? onOpenResources)
+                                    : toggle)
                               : null,
-                          icon: Icon(collapsed ? Icons.menu_open : Icons.menu),
+                          icon: Icon(
+                            drawer
+                                ? Icons.close
+                                : collapsed
+                                ? Icons.menu_open
+                                : Icons.menu,
+                          ),
                         ),
                       ),
                     ),
@@ -346,7 +384,10 @@ class WorkspaceResourcePanel extends StatelessWidget {
                           style: m.iconStyle,
                           tooltip: title,
                           onPressed: enabled
-                              ? (onOpenResources ?? toggle)
+                              ? () {
+                                  resourceScope?.close();
+                                  (onOpenResources ?? toggle)();
+                                }
                               : null,
                           icon: Icon(
                             p.isStudentMode
@@ -408,7 +449,12 @@ class WorkspaceResourcePanel extends StatelessWidget {
                     focusNode: layout?.resources == true
                         ? settingsFocusNode
                         : null,
-                    onTap: enabled ? onSettings : null,
+                    onTap: enabled
+                        ? () {
+                            resourceScope?.close();
+                            onSettings!();
+                          }
+                        : null,
                   ),
                 );
           Widget resources({bool shrinkWrap = false}) => IgnorePointer(
@@ -509,16 +555,19 @@ Future<void> openWorkspaceTransfer(
   BuildContext context,
   AppMode mode, {
   required SettingsTransferDirection direction,
-}) => Navigator.of(context, rootNavigator: true).push<void>(
-  MaterialPageRoute(
-    builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-      value: context.read<TimetableProvider>(),
-      child: SettingsPage(
-        transferDirection: direction,
-        initialDestination: mode == AppMode.student
-            ? SettingsDestination.student
-            : SettingsDestination.general,
+}) {
+  WorkspaceResourceScope.maybeOf(context)?.close();
+  return Navigator.of(context, rootNavigator: true).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+        value: context.read<TimetableProvider>(),
+        child: SettingsPage(
+          transferDirection: direction,
+          initialDestination: mode == AppMode.student
+              ? SettingsDestination.student
+              : SettingsDestination.general,
+        ),
       ),
     ),
-  ),
-);
+  );
+}

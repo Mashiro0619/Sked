@@ -286,7 +286,7 @@ class GeneralScheduleData {
     this.enableLongPressAddEvent = true,
     this.allDayTimelineCollapsed = false,
     this.toolbarNavigationOrder = generalToolbarNavigationDefaultOrder,
-    this.hiddenToolbarNavigationIds = const <String>[],
+    this.hiddenToolbarNavigationIds = toolbarNavigationDefaultHiddenIds,
     this.toolbarHiddenItemsBehavior = toolbarHiddenItemsBehaviorRemove,
     this.themeMode = defaultThemeMode,
     this.themeColorMode = defaultThemeColorMode,

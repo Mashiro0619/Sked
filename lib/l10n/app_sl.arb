@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "Samodejno",
   "settingsPanelDisplayOverlayDescription": "Prekrije desno stran, ne da bi spremenil širino koledarja.",
   "settingsPanelDisplaySideBySideDescription": "Daje prednost prikazu druga ob drugi; prekrije le, če bi koledar postal preozek.",
-  "settingsPanelDisplayAutomaticDescription": "Prikaže drugo ob drugi, če koledar ostane berljiv, sicer s prekrivanjem."
+  "settingsPanelDisplayAutomaticDescription": "Prikaže drugo ob drugi, če koledar ostane berljiv, sicer s prekrivanjem.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

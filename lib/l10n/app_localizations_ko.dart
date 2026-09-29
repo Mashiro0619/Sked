@@ -3110,4 +3110,8 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get settingsPanelDisplayAutomaticDescription =>
       '달력을 읽기 충분한 너비가 있으면 나란히, 그렇지 않으면 겹쳐 표시합니다.';
+
+  @override
+  String get toolbarNavigationEssentialHint =>
+      'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
 }

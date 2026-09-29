@@ -43,6 +43,7 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
     required this.next,
     required this.today,
     required this.actions,
+    this.primaryAction,
     this.enabled = true,
     this.onDateLongPress,
     this.moreFocusNode,
@@ -56,6 +57,7 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
   final WorkbenchOverflowAction next;
   final WorkbenchOverflowAction today;
   final List<WorkbenchOverflowAction> actions;
+  final WorkbenchOverflowAction? primaryAction;
   final bool enabled;
   final VoidCallback? onDateLongPress;
   final FocusNode? moreFocusNode;
@@ -94,7 +96,9 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
     const gap = 4.0;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final available = constraints.maxWidth;
+        final available =
+            constraints.maxWidth -
+            (primaryAction == null ? 0 : m.iconTarget + gap);
         final showDate = available >= iconDateWidth + gap + m.iconTarget;
         final showSteps =
             available >= shortDateWidth + 3 * (m.iconTarget + gap);
@@ -215,6 +219,18 @@ class WorkbenchCompactCalendarBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: gap),
+            if (primaryAction case final action?) ...[
+              IconButton.filled(
+                key: ValueKey(action.id),
+                style: m.iconStyle,
+                tooltip: action.label,
+                onPressed: enabled && action.onSelected != null
+                    ? () => action.onSelected!(context)
+                    : null,
+                icon: Icon(action.icon ?? Icons.add),
+              ),
+              const SizedBox(width: gap),
+            ],
             Builder(
               builder: (anchor) => IconButton(
                 key: ValueKey('$id-desktop-toolbar-more'),

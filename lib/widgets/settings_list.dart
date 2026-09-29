@@ -1690,7 +1690,7 @@ class _SettingsToolbarNavigationEditorState
 
   Widget _buildItemRow(BuildContext context, int index, ColorScheme colors) {
     final item = _items[index];
-    final enabled = item.canHide;
+    final enabled = item.canHide && !widget.busy;
     final foreground = enabled
         ? colors.onSurface
         : colors.onSurface.withValues(alpha: 0.58);

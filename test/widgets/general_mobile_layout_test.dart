@@ -152,7 +152,6 @@ void main() {
               'general-calendar-selector',
               'general-date-title-button',
               'general-view-switcher',
-              'general-settings-button',
               'general-toolbar-more-button',
             ]) {
               expect(t.getCenter(_key(name)).dy, closeTo(row.center.dy, 1));
@@ -421,6 +420,7 @@ void main() {
       final storage = _Storage(mobileLayoutData());
       final p = await workspaceProvider(storage: storage, locale: 'zh');
       addTearDown(p.dispose);
+      await p.updateHideHomeWorkspaceNavigation(true);
       final selected = <AppMode>[];
       await _home(
         t,
@@ -437,7 +437,7 @@ void main() {
       await _more(t);
       expect(_key('general-reminders-action').hitTestable(), findsOneWidget);
       expect(_key('general-day-agenda-toggle'), findsOneWidget);
-      expect(_key('general-calendar-manager-action'), findsOneWidget);
+      expect(_key('general-calendar-manager-action'), findsNothing);
       expect(_key('workspace-actions-general'), findsNothing);
       await t.tap(_key('general-reminders-action'));
       await t.pumpAndSettle();
@@ -532,7 +532,8 @@ void main() {
       addTearDown(p.dispose);
       await _home(t, p);
       expect(_key('workspace-actions-general'), findsNothing);
-      await t.tap(_key('general-settings-button'));
+      await _more(t);
+      await t.tap(_key('general-more-settings'));
       await t.pumpAndSettle();
       await t.ensureVisible(_key('settings-general-display'));
       await t.pumpAndSettle();

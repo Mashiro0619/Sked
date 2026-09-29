@@ -1739,5 +1739,6 @@
   "settingsPanelDisplayAutomatic": "Automática",
   "settingsPanelDisplayOverlayDescription": "Sobrepõe o lado direito sem redimensionar o calendário.",
   "settingsPanelDisplaySideBySideDescription": "Prioriza lado a lado; sobrepõe apenas se o calendário ficar estreito demais.",
-  "settingsPanelDisplayAutomaticDescription": "Exibe lado a lado quando o calendário mantém uma largura legível; caso contrário, sobrepõe."
+  "settingsPanelDisplayAutomaticDescription": "Exibe lado a lado quando o calendário mantém uma largura legível; caso contrário, sobrepõe.",
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
 }

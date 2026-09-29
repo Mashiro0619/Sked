@@ -64,7 +64,7 @@ void main() {
       final migrated = AppData.decodeStorageSnapshot(jsonEncode(old));
       expect(migrated.generalMode.customDateRange, isNull);
       expect(migrated.generalMode.toJson()['schemaVersion'], 5);
-      expect(migrated.toJson()['schemaVersion'], 3);
+      expect(migrated.toJson()['schemaVersion'], 4);
       final range = GeneralDateRange(
         DateTime(2026, 9, 9),
         DateTime(2026, 9, 13),

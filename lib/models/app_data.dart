@@ -1929,7 +1929,9 @@ class AppData {
   };
 
   factory AppData.fromJson(Map<String, dynamic> json) {
-    if (_tryDecodeIntegerVersion(json['schemaVersion']) == 3 &&
+    if ((_tryDecodeIntegerVersion(json['schemaVersion']) ?? 0) >= 3 &&
+        (_tryDecodeIntegerVersion(json['schemaVersion']) ?? 0) <=
+            appDataCurrentSchemaVersion &&
         !AppMode.values.any((mode) => mode.value == json['activeMode'])) {
       throw const FormatException('Stored active workspace is invalid.');
     }
