@@ -10,6 +10,7 @@ class _CalendarManagerPage extends StatefulWidget {
 
 class _CalendarManagerPageState extends State<_CalendarManagerPage>
     with WorkspaceRouteLifecycle<_CalendarManagerPage> {
+  final _addAnchor = GlobalKey();
   var _actionInProgress = false;
   var _nameDialogOpen = false;
   bool get _actionsDisabled => _actionInProgress || _nameDialogOpen;
@@ -19,7 +20,11 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     super.initState();
     if (widget.createOnOpen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_editCalendarName());
+        if (mounted) {
+          unawaited(
+            _editCalendarName(anchorContext: _addAnchor.currentContext),
+          );
+        }
       });
     }
   }
@@ -39,8 +44,11 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
           title: Text(l10n.calendars),
           actions: [
             _CalendarManagerAddAction(
+              key: _addAnchor,
               disabled: _actionsDisabled,
-              onPressed: () => unawaited(_editCalendarName()),
+              onPressed: () => unawaited(
+                _editCalendarName(anchorContext: _addAnchor.currentContext),
+              ),
             ),
             PopupMenuButton<SettingsTransferDirection>(
               tooltip: l10n.importExport,
@@ -95,7 +103,12 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                         ),
                       ),
                     ),
-                    onRename: () => unawaited(_editCalendarName(schedule)),
+                    onRename: (anchor) => unawaited(
+                      _editCalendarName(
+                        schedule: schedule,
+                        anchorContext: anchor,
+                      ),
+                    ),
                     onDelete: () => unawaited(_deleteCalendar(schedule)),
                   );
                 },
@@ -107,7 +120,10 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     );
   }
 
-  Future<void> _editCalendarName([GeneralSchedule? schedule]) async {
+  Future<void> _editCalendarName({
+    GeneralSchedule? schedule,
+    BuildContext? anchorContext,
+  }) async {
     if (_actionsDisabled) return;
     final provider = context.read<TimetableProvider>();
     setState(() => _nameDialogOpen = true);
@@ -115,6 +131,9 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
       await showExpressiveDialog<void>(
         context: context,
         waitForTransitionComplete: true,
+        desktopFloating: SkedDesktopFloatingDialog(
+          anchorContext: anchorContext,
+        ),
         builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
           child: _CalendarNameDialog(provider: provider, schedule: schedule),
@@ -244,8 +263,9 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(requestEditorExit());
       },
-      child: AlertDialog(
+      child: SkedTaskDialog(
         key: const ValueKey('calendar-name-dialog'),
+        closeEnabled: !_busy && !_popped,
         constraints: const BoxConstraints(maxWidth: 440),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         scrollable: true,
@@ -368,6 +388,7 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog> {
 
 class _CalendarManagerAddAction extends StatelessWidget {
   const _CalendarManagerAddAction({
+    super.key,
     required this.disabled,
     required this.onPressed,
   });
@@ -404,7 +425,7 @@ class _CalendarManagerTile extends StatelessWidget {
   final String eventCountLabel;
   final bool disabled;
   final VoidCallback onToggleVisibility;
-  final VoidCallback onRename;
+  final ValueChanged<BuildContext> onRename;
   final VoidCallback onDelete;
 
   @override
@@ -418,12 +439,12 @@ class _CalendarManagerTile extends StatelessWidget {
       enabled: !disabled,
       label: '${schedule.name}, $eventCountLabel',
       hint: l10n.rename,
-      onTap: disabled ? null : onRename,
+      onTap: disabled ? null : () => onRename(context),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           excludeFromSemantics: true,
-          onTap: disabled ? null : onRename,
+          onTap: disabled ? null : () => onRename(context),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: WorkbenchChromeMetrics.of(context).desktop ? 40 : 64,
@@ -534,7 +555,7 @@ class _CalendarManagerTileActions extends StatelessWidget {
   final String renameLabel;
   final String deleteLabel;
   final VoidCallback onToggleVisibility;
-  final VoidCallback onRename;
+  final ValueChanged<BuildContext> onRename;
   final VoidCallback onDelete;
 
   @override
@@ -558,48 +579,51 @@ class _CalendarManagerTileActions extends StatelessWidget {
         ),
         SizedBox.square(
           dimension: WorkbenchChromeMetrics.of(context).iconTarget,
-          child: SkedPopupMenuButton<_CalendarManagerMenuAction>(
-            key: ValueKey('calendar-actions-$scheduleId'),
-            enabled: !disabled,
-            tooltip: moreTooltip,
-            icon: const Icon(Icons.more_vert),
-            onSelected: (action) {
-              switch (action) {
-                case _CalendarManagerMenuAction.rename:
-                  onRename();
-                case _CalendarManagerMenuAction.delete:
-                  onDelete();
-              }
-            },
-            itemBuilder: (context) => [
-              SkedPopupMenuItem<_CalendarManagerMenuAction>(
-                value: _CalendarManagerMenuAction.rename,
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit_outlined),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(renameLabel)),
+          child: Builder(
+            builder: (anchor) =>
+                SkedPopupMenuButton<_CalendarManagerMenuAction>(
+                  key: ValueKey('calendar-actions-$scheduleId'),
+                  enabled: !disabled,
+                  tooltip: moreTooltip,
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (action) {
+                    switch (action) {
+                      case _CalendarManagerMenuAction.rename:
+                        onRename(anchor);
+                      case _CalendarManagerMenuAction.delete:
+                        onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    SkedPopupMenuItem<_CalendarManagerMenuAction>(
+                      value: _CalendarManagerMenuAction.rename,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(renameLabel)),
+                        ],
+                      ),
+                    ),
+                    SkedPopupMenuDivider<_CalendarManagerMenuAction>(),
+                    SkedPopupMenuItem<_CalendarManagerMenuAction>(
+                      value: _CalendarManagerMenuAction.delete,
+                      child: IconTheme.merge(
+                        data: IconThemeData(color: colors.error),
+                        child: DefaultTextStyle.merge(
+                          style: TextStyle(color: colors.error),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.delete_outline),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(deleteLabel)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              SkedPopupMenuDivider<_CalendarManagerMenuAction>(),
-              SkedPopupMenuItem<_CalendarManagerMenuAction>(
-                value: _CalendarManagerMenuAction.delete,
-                child: IconTheme.merge(
-                  data: IconThemeData(color: colors.error),
-                  child: DefaultTextStyle.merge(
-                    style: TextStyle(color: colors.error),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.delete_outline),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(deleteLabel)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ],

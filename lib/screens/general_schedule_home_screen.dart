@@ -34,6 +34,7 @@ import '../widgets/workspace_route_lifecycle.dart';
 import '../widgets/workspace_navigation.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/sked_task_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';

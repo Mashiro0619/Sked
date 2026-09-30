@@ -19,12 +19,14 @@ class TimetableInformationForm extends StatelessWidget {
     this.nameValidator,
     this.weeksInputFormatters,
     this.startDateAnchorKey,
+    this.periodTimeSetAnchorKey,
   });
 
   final TextEditingController nameController;
   final TextEditingController weeksController;
   final String startDateLabel;
   final Key? startDateAnchorKey;
+  final Key? periodTimeSetAnchorKey;
   final String periodTimeSetSummary;
   final bool enabled;
   final VoidCallback? onPickStartDate;
@@ -77,6 +79,7 @@ class TimetableInformationForm extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         _TimetableInformationTile(
+          key: periodTimeSetAnchorKey,
           title: l10n.periodTimeSets,
           summary: periodTimeSetSummary,
           leadingIcon: Icons.schedule_outlined,

@@ -137,6 +137,7 @@ class WorkspaceHarness extends StatefulWidget {
     this.locale = const Locale('en'),
     this.brightness = Brightness.light,
     this.fontFamily,
+    this.seedColor = const Color(0xff6750a4),
   });
   final TimetableProvider provider;
   final Widget? home;
@@ -146,6 +147,7 @@ class WorkspaceHarness extends StatefulWidget {
   final Locale locale;
   final Brightness brightness;
   final String? fontFamily;
+  final Color seedColor;
   @override
   State<WorkspaceHarness> createState() => _WorkspaceHarnessState();
 }
@@ -170,9 +172,10 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
       :locale,
       :brightness,
       :fontFamily,
+      :seedColor,
     ) = widget;
     final base = buildAppTheme(
-      seedColor: const Color(0xff6750a4),
+      seedColor: seedColor,
       brightness: brightness,
       themeColorMode: themeColorModeSingle,
       colorfulUiColorValues: const {},

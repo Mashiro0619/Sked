@@ -8,6 +8,8 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/period_times_page.dart';
 import 'expressive_dialog.dart';
+import 'sked_task_dialog.dart';
+import 'sked_adaptive_picker_dialog.dart';
 import 'ui_command.dart';
 
 /// Selects for the timetable that opened the chooser, not whichever timetable
@@ -16,6 +18,7 @@ import 'ui_command.dart';
 Future<void> selectTimetablePeriodTimeSet(
   BuildContext context, {
   required TimetableProvider provider,
+  BuildContext? anchorContext,
 }) async {
   if (!provider.isWorkspaceEnabled(AppMode.student)) return;
   final timetableId = provider.activeTimetableOrNull?.id;
@@ -29,6 +32,7 @@ Future<void> selectTimetablePeriodTimeSet(
     await showPeriodTimeSetPickerDialog(
       context,
       provider: provider,
+      anchorContext: anchorContext,
       selectedPeriodTimeSetId: provider.activePeriodTimeSetOrNull?.id ?? '',
       commitSelection: (selectedId) async {
         if (!context.mounted ||
@@ -58,11 +62,16 @@ Future<void> selectTimetablePeriodTimeSet(
 Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext context, {
   required TimetableProvider provider,
+  BuildContext? anchorContext,
   required String selectedPeriodTimeSetId,
   Future<void> Function(String id)? commitSelection,
 }) {
-  return showExpressiveDialog<String>(
+  return showSkedAdaptivePickerDialog<String>(
     context: context,
+    routeName: 'period-time-set-picker',
+    anchorContext: anchorContext,
+    preferredWidth: 400,
+    workspace: AppMode.student,
     builder: (dialogContext) {
       var currentSelectedId = selectedPeriodTimeSetId;
       var popped = false;
@@ -198,7 +207,7 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
 
     return PopScope(
       canPop: !blocked,
-      child: AlertDialog(
+      child: SkedTaskDialog(
         constraints: const BoxConstraints(maxWidth: 400),
         insetPadding: EdgeInsets.symmetric(
           horizontal: horizontalInset,

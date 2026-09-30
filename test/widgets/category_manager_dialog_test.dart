@@ -6,16 +6,20 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:sked/widgets/adaptive_collection_scaffold.dart';
+import 'package:sked/widgets/sked_task_dialog.dart';
+import 'package:sked/widgets/sked_floating_surface.dart';
 
 import '../support/workspace_harness.dart';
 
 Finder k(String id) => find.byKey(ValueKey(id));
-Finder get dialogSurface => find.descendant(
-  of: k('calendar-name-dialog'),
-  matching: find.byWidgetPredicate(
-    (widget) => widget is Material && widget.type == MaterialType.card,
-  ),
-);
+Finder get dialogSurface => k('floating-form-surface').evaluate().isNotEmpty
+    ? k('floating-form-surface')
+    : find.descendant(
+        of: k('calendar-name-dialog'),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Material && widget.type == MaterialType.card,
+        ),
+      );
 Finder get saveButton => find.widgetWithText(FilledButton, 'Save');
 Finder get cancelButton => find.widgetWithText(TextButton, 'Cancel');
 
@@ -89,6 +93,97 @@ Future<void> rename(WidgetTester t, String id) async {
 }
 
 void main() {
+  testWidgets(
+    'anchored name form drags without losing draft and blocks background actions',
+    (t) async {
+      viewport(t, const Size(1280, 800));
+      final (p, storage) = await start(t);
+      final row = t.getRect(k('calendar-manager-tile-category-0'));
+      final savedBefore = storage.saves;
+      await rename(t, 'category-0');
+      final original = t.getRect(dialogSurface);
+      expect(original.top, closeTo(row.bottom + 6, 1));
+      expect(
+        ModalRoute.of(t.element(k('calendar-name-dialog')))!.barrierColor,
+        Colors.transparent,
+      );
+      await t.enterText(k('rename-calendar-field'), 'Dragged draft');
+      await t.pump();
+      final dx = original.center.dx > 640 ? -80.0 : 80.0;
+      await t.drag(k('floating-form-drag-handle'), Offset(dx, 80));
+      await t.pumpAndSettle();
+      final moved = t.getRect(dialogSurface);
+      expect(moved.top, greaterThan(original.top));
+      expect(moved.left, closeTo(original.left + dx, 1));
+      final visible = p.generalSchedules.single.isVisible;
+      await t.tap(k('calendar-visibility-category-0'), warnIfMissed: false);
+      await t.pumpAndSettle();
+      expect(p.generalSchedules.single.isVisible, visible);
+      expect(
+        find.widgetWithText(FilledButton, 'Discard and exit'),
+        findsOneWidget,
+      );
+      await t.tap(cancelButton.last);
+      await t.pumpAndSettle();
+      expect(t.getRect(dialogSurface), moved);
+      expect(
+        t.widget<TextField>(k('rename-calendar-field')).controller!.text,
+        'Dragged draft',
+      );
+      storage.saveError = StateError('retry dragged form');
+      await t.tap(saveButton);
+      await t.pumpAndSettle();
+      expect(
+        t.widget<TextField>(k('rename-calendar-field')).controller!.text,
+        'Dragged draft',
+      );
+      expect(t.getRect(dialogSurface).topLeft, moved.topLeft);
+      await t.tap(saveButton);
+      await t.pumpAndSettle();
+      expect(p.generalSchedules.single.name, 'Dragged draft');
+      expect(storage.saves, savedBefore + 2);
+      await rename(t, 'category-0');
+      expect(t.getRect(dialogSurface).topLeft, original.topLeft);
+      await t.tap(k('floating-form-close'));
+      await t.pumpAndSettle();
+      expect(k('calendar-name-dialog'), findsNothing);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'menu rename uses the persistent trigger and dragged form stays inside a small window',
+    (t) async {
+      viewport(t, const Size(1100, 800));
+      await start(t);
+      final trigger = k('calendar-actions-category-0');
+      final anchor = t.getRect(trigger);
+      final triggerFocus = skedFloatingAnchorFocus(t.element(trigger));
+      expect(triggerFocus, isNotNull);
+      await t.tap(trigger);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Rename'));
+      await t.pumpAndSettle();
+      expect(t.getRect(dialogSurface).top, closeTo(anchor.bottom + 6, 1));
+      await t.drag(k('floating-form-drag-handle'), const Offset(-2000, 2000));
+      await t.pumpAndSettle();
+      t.view.physicalSize = const Size(520, 420);
+      await t.pumpAndSettle();
+      final rect = t.getRect(dialogSurface);
+      expect(rect.left, greaterThanOrEqualTo(8));
+      expect(rect.right, lessThanOrEqualTo(512));
+      expect(rect.top, greaterThanOrEqualTo(56));
+      expect(rect.bottom, lessThanOrEqualTo(412));
+      expect(k('floating-form-close').hitTestable(), findsOneWidget);
+      await t.tap(k('floating-form-close'));
+      await t.pumpAndSettle();
+      expect(triggerFocus!.hasFocus, isTrue);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   final platforms = TargetPlatformVariant({
     TargetPlatform.android,
     TargetPlatform.windows,
@@ -116,7 +211,7 @@ void main() {
       final savedBefore = storage.saves;
       final original = p.generalSchedules[20];
       await rename(t, original.id);
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(SkedTaskDialog), findsOneWidget);
       expect(find.byType(BackButton), findsOneWidget);
       expect(t.getSize(dialogSurface).width, lessThanOrEqualTo(440));
       expect(t.widget<FilledButton>(saveButton).onPressed, isNull);
@@ -129,7 +224,7 @@ void main() {
           t.widget<TextField>(k('rename-calendar-field')).controller!.text,
           '  Updated category  ',
         );
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.byType(SkedTaskDialog), findsOneWidget);
         expect(t.takeException(), isNull);
       }
       await t.testTextInput.receiveAction(TextInputAction.done);
@@ -259,6 +354,12 @@ void main() {
       expect(k('rename-calendar-field'), findsOneWidget);
       expect(t.widget<FilledButton>(saveButton).onPressed, isNull);
       expect(t.widget<TextButton>(cancelButton).onPressed, isNull);
+      if (k('floating-form-close').evaluate().isNotEmpty) {
+        expect(
+          t.widget<IconButton>(k('floating-form-close')).onPressed,
+          isNull,
+        );
+      }
       storage.pending!.complete();
       await t.pumpAndSettle();
       expect(k('calendar-name-dialog'), findsNothing);
@@ -280,7 +381,15 @@ void main() {
       await t.pump();
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNWidgets(2));
+      expect(
+        find.byType(AlertDialog),
+        findsNWidgets(
+          Theme.of(t.element(k('calendar-name-dialog'))).platform ==
+                  TargetPlatform.windows
+              ? 1
+              : 2,
+        ),
+      );
       await t.tap(cancelButton.last);
       await t.pumpAndSettle();
       expect(
@@ -293,7 +402,15 @@ void main() {
           .then((_) => finished = true);
       await t.pumpAndSettle();
       expect(finished, isFalse);
-      expect(find.byType(AlertDialog), findsNWidgets(2));
+      expect(
+        find.byType(AlertDialog),
+        findsNWidgets(
+          Theme.of(t.element(k('calendar-name-dialog'))).platform ==
+                  TargetPlatform.windows
+              ? 1
+              : 2,
+        ),
+      );
       await t.tap(find.widgetWithText(FilledButton, 'Discard and exit'));
       await t.pumpAndSettle();
       await disabling;
@@ -323,7 +440,7 @@ void main() {
       await t.tap(add, warnIfMissed: false);
       await t.pumpAndSettle();
       expect(k('add-calendar-field'), findsOneWidget);
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(SkedTaskDialog), findsOneWidget);
       expect(p.generalSchedules, hasLength(1));
       expect(storage.saves, savedBefore);
       await t.tap(cancelButton);

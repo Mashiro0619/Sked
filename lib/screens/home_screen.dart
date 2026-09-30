@@ -37,6 +37,8 @@ import '../widgets/course_details_sheet.dart';
 import '../widgets/course_editor_sheet.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/sked_task_dialog.dart';
+import '../widgets/sked_adaptive_picker_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/sked_expressive_components.dart';
@@ -443,10 +445,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             settingsFocusNode: widget.settingsFocusNode,
                             onOpenTimetablePicker: _timetablePickerOpen
                                 ? null
-                                : () => _showTimetablePicker(
+                                : (anchor) => _showTimetablePicker(
                                     context,
                                     provider,
                                     availableWidth: constraints.maxWidth,
+                                    anchorContext: anchor,
                                   ),
                             onOpenWeekPicker: _weekPickerOpen
                                 ? null
@@ -546,13 +549,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _selectPeriodTimeSet(TimetableProvider provider) async {
+  Future<void> _selectPeriodTimeSet(
+    TimetableProvider provider, {
+    BuildContext? anchorContext,
+  }) async {
     if (_periodTimeSetPickerOpen || _courseEditorOpen || !widget.interactive) {
       return;
     }
     _periodTimeSetPickerOpen = true;
     try {
-      await selectTimetablePeriodTimeSet(context, provider: provider);
+      await selectTimetablePeriodTimeSet(
+        context,
+        provider: provider,
+        anchorContext: anchorContext,
+      );
     } finally {
       _periodTimeSetPickerOpen = false;
     }
@@ -579,11 +589,12 @@ class _HomeScreenState extends State<HomeScreen> {
               title: l10n.timetable,
               // The editor owns its source timetable; background navigation
               // must remain available without retargeting that draft.
-              onOpenResources: widget.interactive
-                  ? () => _showTimetablePicker(
+              onOpenResourcesAt: widget.interactive
+                  ? (anchor) => _showTimetablePicker(
                       context,
                       provider,
                       availableWidth: 560,
+                      anchorContext: anchor,
                     )
                   : null,
               settingsFocusNode: widget.settingsFocusNode,
@@ -599,35 +610,37 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? null
                       : () => _openCreateTimetableDialog(context, provider),
                 ),
-                PopupMenuButton<String>(
-                  key: const ValueKey('student-resource-menu'),
-                  // Popup defaults otherwise override the compact icon theme.
-                  style: WorkbenchChromeMetrics.of(context).iconStyle,
-                  tooltip: l10n.more,
-                  icon: const Icon(Icons.more_horiz),
-                  onSelected: (value) => value == 'periods'
-                      ? _selectPeriodTimeSet(provider)
-                      : openWorkspaceTransfer(
-                          context,
-                          AppMode.student,
-                          direction: value == 'import'
-                              ? SettingsTransferDirection.import
-                              : SettingsTransferDirection.export,
-                        ),
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'periods',
-                      child: Text(l10n.periodTimeSets),
-                    ),
-                    PopupMenuItem(
-                      value: 'import',
-                      child: Text(l10n.importAction),
-                    ),
-                    PopupMenuItem(
-                      value: 'export',
-                      child: Text(l10n.exportAction),
-                    ),
-                  ],
+                Builder(
+                  builder: (anchor) => PopupMenuButton<String>(
+                    key: const ValueKey('student-resource-menu'),
+                    // Popup defaults otherwise override the compact icon theme.
+                    style: WorkbenchChromeMetrics.of(context).iconStyle,
+                    tooltip: l10n.more,
+                    icon: const Icon(Icons.more_horiz),
+                    onSelected: (value) => value == 'periods'
+                        ? _selectPeriodTimeSet(provider, anchorContext: anchor)
+                        : openWorkspaceTransfer(
+                            context,
+                            AppMode.student,
+                            direction: value == 'import'
+                                ? SettingsTransferDirection.import
+                                : SettingsTransferDirection.export,
+                          ),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'periods',
+                        child: Text(l10n.periodTimeSets),
+                      ),
+                      PopupMenuItem(
+                        value: 'import',
+                        child: Text(l10n.importAction),
+                      ),
+                      PopupMenuItem(
+                        value: 'export',
+                        child: Text(l10n.exportAction),
+                      ),
+                    ],
+                  ),
                 ),
               ],
               children: [

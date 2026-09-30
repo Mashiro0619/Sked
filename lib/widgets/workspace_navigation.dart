@@ -148,6 +148,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
     this.headerActions = const [],
     this.onSettings,
     this.onOpenResources,
+    this.onOpenResourcesAt,
     this.settingsFocusNode,
   });
   final String title;
@@ -156,6 +157,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
   final List<Widget> headerActions;
   final VoidCallback? onSettings;
   final VoidCallback? onOpenResources;
+  final ValueChanged<BuildContext>? onOpenResourcesAt;
   final FocusNode? settingsFocusNode;
 
   @override
@@ -241,28 +243,35 @@ class WorkspaceResourcePanel extends StatelessWidget {
                     SizedBox(
                       width: compactWidth,
                       child: Center(
-                        child: IconButton(
-                          key: const ValueKey('workspace-resource-collapse'),
-                          style: m.iconStyle,
-                          tooltip: drawer
-                              ? MaterialLocalizations.of(context)
-                                    .closeButtonTooltip
-                              : collapsed
-                              ? l.expandWorkspaceNavigation
-                              : l.collapseWorkspaceNavigation,
-                          onPressed: enabled
-                              ? (drawer
-                                    ? resourceScope!.close
-                                    : forcedCompact
-                                    ? (resourceScope?.open ?? onOpenResources)
-                                    : toggle)
-                              : null,
-                          icon: Icon(
-                            drawer
-                                ? Icons.close
+                        child: Builder(
+                          builder: (anchor) => IconButton(
+                            key: const ValueKey('workspace-resource-collapse'),
+                            style: m.iconStyle,
+                            tooltip: drawer
+                                ? MaterialLocalizations.of(context)
+                                      .closeButtonTooltip
                                 : collapsed
-                                ? Icons.menu_open
-                                : Icons.menu,
+                                ? l.expandWorkspaceNavigation
+                                : l.collapseWorkspaceNavigation,
+                            onPressed: enabled
+                                ? (drawer
+                                      ? resourceScope!.close
+                                      : forcedCompact
+                                      ? (resourceScope?.open ??
+                                            (onOpenResourcesAt == null
+                                                ? onOpenResources
+                                                : () => onOpenResourcesAt!(
+                                                    anchor,
+                                                  )))
+                                      : toggle)
+                                : null,
+                            icon: Icon(
+                              drawer
+                                  ? Icons.close
+                                  : collapsed
+                                  ? Icons.menu_open
+                                  : Icons.menu,
+                            ),
                           ),
                         ),
                       ),
@@ -379,20 +388,26 @@ class WorkspaceResourcePanel extends StatelessWidget {
                     SizedBox(
                       width: compactWidth,
                       child: Center(
-                        child: IconButton(
-                          key: const ValueKey('workspace-resource-open'),
-                          style: m.iconStyle,
-                          tooltip: title,
-                          onPressed: enabled
-                              ? () {
-                                  resourceScope?.close();
-                                  (onOpenResources ?? toggle)();
-                                }
-                              : null,
-                          icon: Icon(
-                            p.isStudentMode
-                                ? Icons.view_week_outlined
-                                : Icons.category_outlined,
+                        child: Builder(
+                          builder: (anchor) => IconButton(
+                            key: const ValueKey('workspace-resource-open'),
+                            style: m.iconStyle,
+                            tooltip: title,
+                            onPressed: enabled
+                                ? () {
+                                    resourceScope?.close();
+                                    if (onOpenResourcesAt != null) {
+                                      onOpenResourcesAt!(anchor);
+                                    } else {
+                                      (onOpenResources ?? toggle)();
+                                    }
+                                  }
+                                : null,
+                            icon: Icon(
+                              p.isStudentMode
+                                  ? Icons.view_week_outlined
+                                  : Icons.category_outlined,
+                            ),
                           ),
                         ),
                       ),

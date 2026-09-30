@@ -9,13 +9,15 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
+import 'package:sked/widgets/sked_task_dialog.dart';
 
 import '../test/support/workspace_harness.dart';
 
 Finder k(String id) => find.byKey(ValueKey(id));
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  binding.shouldPropagateDevicePointerEvents = true;
   testWidgets('category list and name dialogs with actual fonts', (t) async {
     await DesktopWindowBridge.instance.initialize();
     final output = Directory(
@@ -46,7 +48,7 @@ void main() {
       (
         'desktop-dark',
         const Size(1000, 800),
-        1.3,
+        1.5,
         Brightness.dark,
         TargetPlatform.windows,
         5,
@@ -194,9 +196,116 @@ void main() {
           ),
         );
         await t.pumpAndSettle();
-        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.byType(SkedTaskDialog), findsOneWidget);
         expect(find.byType(BackButton), findsOneWidget);
         await capture('rename');
+        if (platform == TargetPlatform.windows) {
+          final before = t.getRect(k('floating-form-surface'));
+          await t.drag(k('floating-form-drag-handle'), const Offset(50, 50));
+          await t.pumpAndSettle();
+          expect(
+            t.getRect(k('floating-form-surface')).top,
+            greaterThan(before.top),
+          );
+          await capture('rename-dragged');
+        }
+        if (label == 'desktop-single' &&
+            const bool.fromEnvironment('SKED_NATIVE_POINTER_CHECK')) {
+          t.view.resetPhysicalSize();
+          t.view.resetDevicePixelRatio();
+          Future<Map<String, dynamic>> native(
+            String action, {
+            Offset? from,
+            Offset? to,
+            String? filename,
+          }) async {
+            final result = await t.runAsync(
+              () => Process.run('powershell', [
+                '-NoProfile',
+                '-WindowStyle',
+                'Hidden',
+                '-ExecutionPolicy',
+                'Bypass',
+                '-File',
+                File('tool/capture_workbench_window.ps1').absolute.path,
+                '-ProcessId',
+                '$pid',
+                '-Action',
+                action,
+                '-WidthDp',
+                '1280',
+                '-HeightDp',
+                '800',
+                '-CaptionHeightDp',
+                '48',
+                '-CaptionButtonWidthDp',
+                '46',
+                if (from != null) ...[
+                  '-PointXDp',
+                  '${from.dx}',
+                  '-PointYDp',
+                  '${from.dy}',
+                ],
+                if (to != null) ...[
+                  '-EndPointXDp',
+                  '${to.dx}',
+                  '-EndPointYDp',
+                  '${to.dy}',
+                ],
+                if (filename != null) ...[
+                  '-OutputPath',
+                  '${output.absolute.path}/$filename.png',
+                ],
+              ]),
+            );
+            expect(result!.exitCode, 0, reason: '${result.stderr}');
+            return jsonDecode('${result.stdout}'.trim())
+                as Map<String, dynamic>;
+          }
+
+          await native('resize');
+          await t.pumpAndSettle();
+          final before = t.getRect(k('floating-form-surface'));
+          final from = t.getCenter(k('floating-form-drag-handle'));
+          final dx =
+              before.right + 60 <
+                  t.view.physicalSize.width / t.view.devicePixelRatio
+              ? 50.0
+              : -50.0;
+          // Request activation by the verified test PID; retain the helper's
+          // foreground and unobscured-point guards before any native input.
+          await t.runAsync(
+            () => Process.run('powershell', [
+              '-NoProfile',
+              '-WindowStyle',
+              'Hidden',
+              '-Command',
+              '(New-Object -ComObject WScript.Shell).AppActivate($pid)',
+            ]),
+          );
+          final report = await native(
+            'range-drag',
+            from: from,
+            to: from + Offset(dx, 35),
+          );
+          await t.pumpAndSettle();
+          final after = t.getRect(k('floating-form-surface'));
+          expect(after.left - before.left, closeTo(dx, 3));
+          expect(after.top - before.top, closeTo(35, 3));
+          expect(report['movedX'], 0);
+          expect(report['movedY'], 0);
+          await native('capture', filename: 'native-form-drag');
+          await File('${output.path}/native-form-drag.json').writeAsString(
+            jsonEncode({
+              'input': report,
+              'dx': after.left - before.left,
+              'dy': after.top - before.top,
+            }),
+          );
+          t.view.devicePixelRatio = 1;
+          t.view.physicalSize = size;
+          await t.pumpAndSettle();
+        }
         if (label == 'phone-large') {
           t.view.viewInsets = const FakeViewPadding(bottom: 240);
           t.view.padding = const FakeViewPadding(top: 24);

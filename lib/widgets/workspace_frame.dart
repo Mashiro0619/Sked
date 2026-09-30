@@ -20,6 +20,7 @@ import '../services/desktop_window_bridge.dart';
 import 'workbench_chrome_metrics.dart';
 import 'app_layout_tokens.dart';
 import 'workspace_view_panel.dart';
+import 'sked_floating_surface.dart';
 
 export 'workspace_view_panel.dart'
     show WorkspacePanePresentation, WorkspaceViewPanel;
@@ -1199,32 +1200,23 @@ class _PaneSurface extends StatelessWidget {
   final bool floating;
   final bool compact;
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      borderRadius: compact ? BorderRadius.circular(8) : null,
-      boxShadow: floating
-          ? [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.shadow
-                    .withValues(alpha: .14),
-                blurRadius: 16,
-                offset: const Offset(-4, 0),
-              ),
-            ]
-          : null,
-      border: compact
-          ? Border.all(color: Theme.of(context).colorScheme.outlineVariant)
-          : BorderDirectional(
+  Widget build(BuildContext context) => compact
+      ? SkedFloatingSurface(child: child)
+      : DecoratedBox(
+          decoration: BoxDecoration(
+            boxShadow: floating
+                ? SkedFloatingStyle.shadows(Theme.of(context).colorScheme)
+                : null,
+            border: BorderDirectional(
               start: BorderSide(
                 color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(compact ? 8 : 0),
-      child: SkedSurface(role: role, child: child),
-    ),
-  );
+          ),
+          child: ClipRect(
+            child: SkedSurface(role: role, child: child),
+          ),
+        );
 }
 
 class _PaneResizeHandle extends StatelessWidget {

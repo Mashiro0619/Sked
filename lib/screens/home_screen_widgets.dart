@@ -68,7 +68,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final bool interactive;
   final bool showSettings;
   final FocusNode? settingsFocusNode;
-  final VoidCallback? onOpenTimetablePicker;
+  final ValueChanged<BuildContext>? onOpenTimetablePicker;
   final ValueChanged<BuildContext>? onOpenWeekPicker;
   final VoidCallback? onJumpToToday;
   final ValueChanged<_StudentTimetableView>? onViewChanged;
@@ -90,13 +90,17 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         navigation: [
           if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
           if (WorkspaceCanvasScope.maybeOf(context)?.resources != true)
-            IconButton(
-              key: const ValueKey('student-timetable-picker-button'),
-              tooltip: l10n.timetable,
-              onPressed:
-                  WorkspaceResourceScope.maybeOf(context)?.open ??
-                  onOpenTimetablePicker,
-              icon: const Icon(Icons.view_sidebar_outlined),
+            Builder(
+              builder: (anchor) => IconButton(
+                key: const ValueKey('student-timetable-picker-button'),
+                tooltip: l10n.timetable,
+                onPressed:
+                    WorkspaceResourceScope.maybeOf(context)?.open ??
+                    (onOpenTimetablePicker == null
+                        ? null
+                        : () => onOpenTimetablePicker!(anchor)),
+                icon: const Icon(Icons.view_sidebar_outlined),
+              ),
             ),
           IconButton(
             key: const ValueKey('student-previous-week'),
@@ -206,22 +210,26 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       iconSize: 20,
     );
     Widget buildTimetableSelector() {
-      return TextButton(
-        key: const ValueKey('student-timetable-picker-button'),
-        onPressed: interactive ? onOpenTimetablePicker : null,
-        style: TextButton.styleFrom(
-          padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
-          minimumSize: const Size(48, 48),
-          shape: controlShape,
-          alignment: AlignmentDirectional.centerStart,
-          textStyle: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
+      return Builder(
+        builder: (anchor) => TextButton(
+          key: const ValueKey('student-timetable-picker-button'),
+          onPressed: interactive && onOpenTimetablePicker != null
+              ? () => onOpenTimetablePicker!(anchor)
+              : null,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
+            minimumSize: const Size(48, 48),
+            shape: controlShape,
+            alignment: AlignmentDirectional.centerStart,
+            textStyle: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        child: Text(
-          timetable.config.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          child: Text(
+            timetable.config.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       );
     }
@@ -372,7 +380,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             if (!context.mounted || !interactive) return;
             switch (id) {
               case 'timetable':
-                onOpenTimetablePicker?.call();
+                onOpenTimetablePicker?.call(anchor);
               case 'week':
                 onOpenWeekPicker?.call(anchor);
               case 'today':
@@ -616,9 +624,14 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             icon: Icons.view_sidebar_outlined,
             onSelected: onOpenTimetablePicker == null
                 ? null
-                : (_) =>
-                      (WorkspaceResourceScope.maybeOf(context)?.open ??
-                      onOpenTimetablePicker!)(),
+                : (anchor) {
+                    final open = WorkspaceResourceScope.maybeOf(context)?.open;
+                    if (open != null) {
+                      open();
+                    } else {
+                      onOpenTimetablePicker!(anchor);
+                    }
+                  },
           ),
         for (final mode in _StudentTimetableView.values)
           WorkbenchOverflowAction(
@@ -1022,14 +1035,16 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final floating = SkedTaskDialogScope.maybeOf(context) != null;
     final height = math.min(MediaQuery.sizeOf(context).height * 0.72, 640.0);
     return PopScope(
       canPop: !_busy && !_childDialogOpen,
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: height,
+          height: floating ? null : height,
           child: Column(
+            mainAxisSize: floating ? MainAxisSize.min : MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -1039,7 +1054,9 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                     Expanded(
                       child: Text(
                         l10n.multiTimetableSwitch,
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        style: floating
+                            ? Theme.of(context).textTheme.titleMedium
+                            : Theme.of(context).textTheme.headlineSmall,
                       ),
                     ),
                     IconButton(
@@ -1056,13 +1073,15 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                 busy: _busy,
                 semanticsKey: const ValueKey('timetable-picker-busy'),
               ),
-              Expanded(
+              Flexible(
+                fit: floating ? FlexFit.loose : FlexFit.tight,
                 child: ListenableBuilder(
                   listenable: widget.provider,
                   builder: (context, _) {
                     final selectedId =
                         widget.provider.activeTimetableOrNull?.id;
                     return ListView(
+                      shrinkWrap: floating,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
                         for (final item in widget.provider.timetables)

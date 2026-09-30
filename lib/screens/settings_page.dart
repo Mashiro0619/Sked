@@ -266,21 +266,24 @@ class _SettingsPageState extends State<SettingsPage>
               SettingsDestination.studentPreferences,
               subtitle: l.timetableDisplaySettingsDesc,
             ),
-            SettingsConnectedTile(
-              key: const ValueKey('settings-period-times'),
-              title: l.periodTimeSets,
-              value: provider.activePeriodTimeSetOrNull?.name,
-              leading: const Icon(Icons.schedule),
-              trailing: const Icon(Icons.unfold_more, size: 20),
-              onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
-                  ? null
-                  : () => _guardFlow(
-                      _SettingsFlow.periodTimeSetPicker,
-                      () => selectTimetablePeriodTimeSet(
-                        context,
-                        provider: provider,
+            Builder(
+              builder: (anchor) => SettingsConnectedTile(
+                key: const ValueKey('settings-period-times'),
+                title: l.periodTimeSets,
+                value: provider.activePeriodTimeSetOrNull?.name,
+                leading: const Icon(Icons.schedule),
+                trailing: const Icon(Icons.unfold_more, size: 20),
+                onTap: _isFlowOpen(_SettingsFlow.periodTimeSetPicker)
+                    ? null
+                    : () => _guardFlow(
+                        _SettingsFlow.periodTimeSetPicker,
+                        () => selectTimetablePeriodTimeSet(
+                          context,
+                          provider: provider,
+                          anchorContext: anchor,
+                        ),
                       ),
-                    ),
+              ),
             ),
           ]),
         if (provider.isWorkspaceEnabled(AppMode.general))

@@ -1,0 +1,36 @@
+# 桌面轻量浮层：推广与验收
+
+日期：2026-09-30。
+
+## 本次范围
+
+- 查看面板、日期／范围／月份／时间／跳周、原生菜单与下拉菜单共用桌面浮层表面规范。
+- 课表切换、课程星期／周次／节次、节次时间方案及颜色选择接入已有选择器宿主；保留即时选择、草稿确认、编辑／新建和异步保存语义。
+- 分类新建／重命名通过显式桌面配置启用锚定、标题拖动和透明模态，背景不允许交互；取消、关闭、外部点击和 Esc 复用退出守卫。
+- 手机／触控平板继续使用原有 AlertDialog／底部任务，完整编辑器、固定侧栏和危险确认不参与视觉迁移。
+
+## 实现契约
+
+共享表面与标题手柄位于 `lib/widgets/sked_floating_surface.dart`；桌面选择器适配器在 `lib/widgets/sked_adaptive_picker_dialog.dart`，复用 `showSkedPickerTask` 的会话和焦点处理。`SkedTaskDialog` 仅在宿主显式提供 scope 时渲染为紧凑内容，否则将可空样式参数原样交给 Material UI 的 AlertDialog，避免覆盖移动端库默认值。
+
+`showExpressiveDialog` 新增默认关闭的 `desktopFloating` 选项，由 `SkedDesktopFloatingDialog` 提供稳定锚点、首选／最大宽度和标题拖拽开关。短表单初始宽度 360 dp、大字号最多 440 dp；二级选择器保留各自阅读宽度，通过换行和滚动适配大字号，不按字号扩大空白。
+
+短表单首次拖动后不再跟随锚点，窗口变化重新约束可见位置；关闭重开恢复入口定位。默认普通弹窗不订阅新增的路由当前状态，避免嵌套编辑返回时重置 closure 内的选择状态。桌面任务的 builder 状态跨宿主布局变化保留，不重复提交或重置忙碌状态。
+
+## 验证结果
+
+- 502 项相关 widget 回归通过，覆盖桌面浮层、菜单、选择器、课表管理、分类草稿、手机选择器、面板显示和尺寸调整。
+- 最后针对默认参数兼容性及其调用方重跑 93 项测试通过；新增测试对比非浮层 scope 下原生 AlertDialog 与适配组件的默认参数和正文几何。
+- 菜单入口焦点恢复追加回归 45 项通过：关闭动画结束且调用方重新启用按钮后，恢复到稳定的菜单触发按钮，而非已销毁的菜单项。
+- 全项目 `flutter analyze --no-pub`、格式及差异空白检查通过。
+- `integration_test/floating_panel_rollout_visual_test.dart` 的 3 项 Windows 集成测试通过，输出 76 张截图，包括查看面板、分类表单、日期、时间、节次时间方案和菜单。
+- 截图覆盖默认紫色与自定义青绿色、浅／深色、中／英文和 1×／1.5×／2× 字号；查看了代表性表单、日期、时间及大字号深色选择器截图。
+- 原生鼠标验收：DPI 120，确认测试窗口为前台且起止点属于该窗口后发送鼠标输入；面板移动约 50.4 × 35.2 dp，原生窗口移动 0 × 0 px，最大化区域命中仍为 HTMAXBUTTON（9）。前台保护最初拦截了输入；按测试 PID 请求激活后重试通过，未绕过保护。
+
+截图及原生证据保存在本地 `.scratch/floating-panel-rollout/`；原生截图为 `native-form-drag.png`，证据为 `native-form-drag.json`。测试使用独立内存数据，无用户日程读写。Android 截图是 Windows 引擎上的触控布局模拟，不代表 Android 真机验收；macOS／Linux 未做原生窗口验收。
+
+## 复现
+
+`flutter test -d windows --no-pub integration_test/floating_panel_rollout_visual_test.dart --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/floating-panel-rollout --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
+
+原生鼠标步骤需要允许测试窗口获得前台焦点；如果它仍被遮挡或鼠标按键已经按下，测试应失败并保留保护，而不是向其他窗口注入输入。

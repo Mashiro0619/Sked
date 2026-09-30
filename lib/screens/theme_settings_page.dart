@@ -20,6 +20,8 @@ import '../widgets/settings_preview_layout.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/expressive_dialog.dart';
+import '../widgets/sked_task_dialog.dart';
+import '../widgets/sked_adaptive_picker_dialog.dart';
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/settings_list.dart';
@@ -391,32 +393,38 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           }
         },
       ),
-      SettingsConnectedTile(
-        key: const ValueKey('settings-theme-seed'),
-        leading: const Icon(Icons.palette_outlined),
-        title: l.themeColor,
-        value: _formatColorHex(provider.themeSeedColorValue),
-        trailing: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: Color(provider.themeSeedColorValue),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
+      Builder(
+        builder: (anchor) => SettingsConnectedTile(
+          key: const ValueKey('settings-theme-seed'),
+          leading: const Icon(Icons.palette_outlined),
+          title: l.themeColor,
+          value: _formatColorHex(provider.themeSeedColorValue),
+          trailing: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Color(provider.themeSeedColorValue),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
           ),
+          onTap: uiCommandBusy || _overviewColorOpen
+              ? null
+              : () async {
+                  _overviewColorOpen = true;
+                  try {
+                    await _openCustomColorDialog(
+                      context,
+                      provider,
+                      anchorContext: anchor,
+                    );
+                  } finally {
+                    _overviewColorOpen = false;
+                  }
+                },
         ),
-        onTap: uiCommandBusy || _overviewColorOpen
-            ? null
-            : () async {
-                _overviewColorOpen = true;
-                try {
-                  await _openCustomColorDialog(context, provider);
-                } finally {
-                  _overviewColorOpen = false;
-                }
-              },
       ),
     ];
     return PopScope<void>(
@@ -631,8 +639,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                                 colorValue,
                                               ),
                                         ),
-                                    onPickCustomColor: () => unawaited(
-                                      _openCustomColorDialog(context, provider),
+                                    onPickCustomColor: (anchor) => unawaited(
+                                      _openCustomColorDialog(
+                                        context,
+                                        provider,
+                                        anchorContext: anchor,
+                                      ),
                                     ),
                                   )
                                 : _ColorfulThemeSection(
@@ -640,12 +652,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                       'colorful-theme-section',
                                     ),
                                     provider: provider,
-                                    onPickUiColor: (key) {
+                                    onPickUiColor: (key, anchor) {
                                       if (key == colorfulCourseTextColorKey) {
                                         unawaited(
                                           _openCourseTextColorDialog(
                                             context,
                                             provider,
+                                            anchorContext: anchor,
                                           ),
                                         );
                                         return;
@@ -653,6 +666,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                       unawaited(
                                         _openColorValueDialog(
                                           context,
+                                          anchorContext: anchor,
                                           title: _uiColorLabel(context, key),
                                           previewTitle: l10n.themeColorUiColors,
                                           initialColorValue:
@@ -669,10 +683,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         ),
                                       );
                                     },
-                                    onPickGeneralMonthTextColor: (key) {
+                                    onPickGeneralMonthTextColor: (key, anchor) {
                                       unawaited(
                                         _openColorValueDialog(
                                           context,
+                                          anchorContext: anchor,
                                           title: _generalMonthTextColorLabel(
                                             context,
                                             key,
@@ -695,27 +710,30 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         ),
                                       );
                                     },
-                                    onPickCourseColor: (courseName) => unawaited(
-                                      _openColorValueDialog(
-                                        context,
-                                        title: courseName,
-                                        previewTitle:
-                                            l10n.themeColorCourseColors,
-                                        initialColorValue:
-                                            provider
-                                                .courseNameColorValues[courseName] ??
-                                            provider.themeSeedColorValue,
-                                        onApply: (colorValue) =>
-                                            provider.updateCourseNameColorValue(
-                                              courseName,
-                                              colorValue,
-                                            ),
-                                      ),
-                                    ),
-                                    onPickCalendarColor: (schedule) =>
+                                    onPickCourseColor: (courseName, anchor) =>
                                         unawaited(
                                           _openColorValueDialog(
                                             context,
+                                            anchorContext: anchor,
+                                            title: courseName,
+                                            previewTitle:
+                                                l10n.themeColorCourseColors,
+                                            initialColorValue:
+                                                provider
+                                                    .courseNameColorValues[courseName] ??
+                                                provider.themeSeedColorValue,
+                                            onApply: (colorValue) => provider
+                                                .updateCourseNameColorValue(
+                                                  courseName,
+                                                  colorValue,
+                                                ),
+                                          ),
+                                        ),
+                                    onPickCalendarColor: (schedule, anchor) =>
+                                        unawaited(
+                                          _openColorValueDialog(
+                                            context,
+                                            anchorContext: anchor,
                                             title: schedule.name,
                                             previewTitle: l10n.calendars,
                                             initialColorValue:
@@ -765,12 +783,16 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   Future<void> _openCustomColorDialog(
     BuildContext context,
-    WorkspaceThemeTarget provider,
-  ) async {
+    WorkspaceThemeTarget provider, {
+    BuildContext? anchorContext,
+  }) async {
     final l10n = AppLocalizations.of(context);
     var selectedColor = Color(provider.themeSeedColorValue);
-    await showExpressiveDialog<void>(
+    await showSkedAdaptivePickerDialog<void>(
       context: context,
+      routeName: 'theme-color-picker',
+      anchorContext: anchorContext,
+      preferredWidth: 440,
       builder: (context) {
         var popped = false;
         var busy = false;
@@ -858,13 +880,17 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     BuildContext context, {
     required String title,
     required String previewTitle,
+    BuildContext? anchorContext,
     required int initialColorValue,
     required Future<void> Function(int colorValue) onApply,
   }) async {
     final l10n = AppLocalizations.of(context);
     var selectedColor = Color(initialColorValue);
-    await showExpressiveDialog<void>(
+    await showSkedAdaptivePickerDialog<void>(
       context: context,
+      routeName: 'theme-color-picker',
+      anchorContext: anchorContext,
+      preferredWidth: 440,
       builder: (context) {
         var popped = false;
         var busy = false;
@@ -948,8 +974,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   Future<void> _openCourseTextColorDialog(
     BuildContext context,
-    WorkspaceThemeTarget provider,
-  ) async {
+    WorkspaceThemeTarget provider, {
+    BuildContext? anchorContext,
+  }) async {
     final l10n = AppLocalizations.of(context);
     var mode = provider.colorfulCourseTextColorMode;
     var colorValue = _effectiveUiColorValue(
@@ -957,8 +984,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       provider,
       colorfulCourseTextColorKey,
     );
-    await showExpressiveDialog<void>(
+    await showSkedAdaptivePickerDialog<void>(
       context: context,
+      routeName: 'theme-color-picker',
+      anchorContext: anchorContext,
+      preferredWidth: 440,
       builder: (context) {
         var popped = false;
         var busy = false;
@@ -1132,7 +1162,7 @@ class _PersistingThemeDialog extends StatelessWidget {
         child: AbsorbPointer(
           key: const ValueKey('theme-persistence-dialog-pointer-guard'),
           absorbing: blocked,
-          child: AlertDialog(
+          child: SkedTaskDialog(
             title: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1168,7 +1198,7 @@ class _SingleThemeColorSection extends StatelessWidget {
   final WorkspaceThemeTarget provider;
   final bool hasCustomColor;
   final ValueChanged<int> onSelectColor;
-  final VoidCallback onPickCustomColor;
+  final ValueChanged<BuildContext> onPickCustomColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1215,18 +1245,20 @@ class _SingleThemeColorSection extends StatelessWidget {
             ],
           ),
         ),
-        SettingsConnectedTile(
-          leading: const Icon(Icons.colorize_outlined),
-          title: l10n.themeCustomColor,
-          value: hasCustomColor
-              ? _formatColorHex(provider.themeSeedColorValue)
-              : null,
-          semanticSelected: hasCustomColor,
-          trailing: _ThemeColorPreview(
-            colorValue: provider.themeSeedColorValue,
-            selected: hasCustomColor,
+        Builder(
+          builder: (anchor) => SettingsConnectedTile(
+            leading: const Icon(Icons.colorize_outlined),
+            title: l10n.themeCustomColor,
+            value: hasCustomColor
+                ? _formatColorHex(provider.themeSeedColorValue)
+                : null,
+            semanticSelected: hasCustomColor,
+            trailing: _ThemeColorPreview(
+              colorValue: provider.themeSeedColorValue,
+              selected: hasCustomColor,
+            ),
+            onTap: () => onPickCustomColor(anchor),
           ),
-          onTap: onPickCustomColor,
         ),
       ],
     );

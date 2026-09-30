@@ -1,8 +1,8 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'workbench_chrome_metrics.dart';
+import 'sked_floating_surface.dart';
 
 /// Opt-in: ordinary editors and touch tasks retain their existing presentation.
 enum WorkspacePanePresentation { standard, view }
@@ -122,28 +122,12 @@ class WorkspaceViewPanel extends StatelessWidget {
                             Expanded(
                               child: onDragUpdate == null
                                   ? heading
-                                  : MouseRegion(
-                                      cursor: SystemMouseCursors.move,
-                                      child: GestureDetector(
-                                        key: const ValueKey(
-                                          'workspace-view-drag-handle',
-                                        ),
-                                        behavior: HitTestBehavior.opaque,
-                                        dragStartBehavior:
-                                            DragStartBehavior.down,
-                                        onPanUpdate: (details) =>
-                                            onDragUpdate(details.delta),
-                                        child: ConstrainedBox(
-                                          constraints: BoxConstraints(
-                                            minHeight: metrics.iconTarget,
-                                          ),
-                                          child: Align(
-                                            alignment:
-                                                AlignmentDirectional.topStart,
-                                            child: heading,
-                                          ),
-                                        ),
+                                  : SkedFloatingTitleDragHandle(
+                                      key: const ValueKey(
+                                        'workspace-view-drag-handle',
                                       ),
+                                      onUpdate: onDragUpdate,
+                                      child: heading,
                                     ),
                             ),
                             if (inlineAction && headerAction != null) ...[

@@ -17,6 +17,8 @@ import '../previews/sked_preview_support.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
+import 'sked_task_dialog.dart';
+import 'sked_adaptive_picker_dialog.dart';
 import 'ui_command.dart';
 
 part '../previews/course_editor_previews.dart';
@@ -312,6 +314,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
           breakpoint: 520,
           children: [
             _SelectionTile(
+              key: _weekdayAnchor,
               title: l10n.dayOfWeek,
               subtitle: formatDayOfWeekLabel(
                 _selectedDayOfWeek,
@@ -322,6 +325,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
               onTap: _blocked ? null : _pickDayOfWeek,
             ),
             _SelectionTile(
+              key: _weeksAnchor,
               title: l10n.semesterWeeks,
               subtitle: formatSemesterWeeksLabel(
                 _selectedSemesterWeeks,
@@ -350,6 +354,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         ),
         const SizedBox(height: 8),
         _SelectionTile(
+          key: _periodsAnchor,
           title: l10n.linkedPeriods,
           subtitle: _selectedPeriods.isEmpty
               ? l10n.linkedPeriodsUnmatched
@@ -462,6 +467,10 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     }
   }
 
+  final _weekdayAnchor = GlobalKey();
+  final _weeksAnchor = GlobalKey();
+  final _periodsAnchor = GlobalKey();
+
   Future<void> _pickDayOfWeek() async {
     if (_blocked) {
       return;
@@ -469,8 +478,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     _setPickerOpen(true);
     _dismissActiveInputFocus();
     try {
-      final result = await showExpressiveDialog<int>(
+      final result = await showSkedAdaptivePickerDialog<int>(
         context: context,
+        routeName: 'course-DayOfWeek-picker',
+        anchorContext: _weekdayAnchor.currentContext,
+        preferredWidth: 320,
+        workspace: AppMode.student,
         builder: (context) {
           var popped = false;
           void popWith(int day) {
@@ -502,8 +515,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     _dismissActiveInputFocus();
     final draft = {..._selectedSemesterWeeks};
     try {
-      final result = await showExpressiveDialog<List<int>>(
+      final result = await showSkedAdaptivePickerDialog<List<int>>(
         context: context,
+        routeName: 'course-SemesterWeeks-picker',
+        anchorContext: _weeksAnchor.currentContext,
+        preferredWidth: 400,
+        workspace: AppMode.student,
         builder: (context) {
           var popped = false;
           return StatefulBuilder(
@@ -515,7 +532,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                 Navigator.of(context).pop(value);
               }
 
-              return AlertDialog(
+              return SkedTaskDialog(
                 insetPadding: _editorDialogInsetPadding(context),
                 title: Text(l10n.selectSemesterWeeks),
                 content: ExpressiveDialogContent(
@@ -682,8 +699,12 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
     _dismissActiveInputFocus();
     final draft = List<int>.from(_selectedPeriods);
     try {
-      final result = await showExpressiveDialog<List<int>>(
+      final result = await showSkedAdaptivePickerDialog<List<int>>(
         context: context,
+        routeName: 'course-Periods-picker',
+        anchorContext: _periodsAnchor.currentContext,
+        preferredWidth: 360,
+        workspace: AppMode.student,
         builder: (context) {
           var popped = false;
           return StatefulBuilder(
@@ -695,7 +716,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                 Navigator.of(context).pop(value);
               }
 
-              return AlertDialog(
+              return SkedTaskDialog(
                 insetPadding: _editorDialogInsetPadding(context),
                 title: Text(l10n.selectLinkedPeriods),
                 content: ExpressiveDialogContent(
@@ -1063,7 +1084,7 @@ class _WeekdayPickerDialog extends StatelessWidget {
       Localizations.localeOf(context),
     );
 
-    return AlertDialog(
+    return SkedTaskDialog(
       insetPadding: _editorDialogInsetPadding(context),
       title: Text(l10n.selectDayOfWeek),
       titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 10),
@@ -1288,6 +1309,7 @@ class _EditorSection extends StatelessWidget {
 
 class _SelectionTile extends StatelessWidget {
   const _SelectionTile({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,

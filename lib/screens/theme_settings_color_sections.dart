@@ -11,10 +11,10 @@ class _ColorfulThemeSection extends StatelessWidget {
   });
 
   final WorkspaceThemeTarget provider;
-  final ValueChanged<String> onPickUiColor;
-  final ValueChanged<String> onPickGeneralMonthTextColor;
-  final ValueChanged<String> onPickCourseColor;
-  final ValueChanged<GeneralSchedule> onPickCalendarColor;
+  final void Function(String, BuildContext) onPickUiColor;
+  final void Function(String, BuildContext) onPickGeneralMonthTextColor;
+  final void Function(String, BuildContext) onPickCourseColor;
+  final void Function(GeneralSchedule, BuildContext) onPickCalendarColor;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +40,7 @@ class _ColorfulThemeSection extends StatelessWidget {
                 key: ValueKey('theme-ui-color-$key'),
                 title: _uiColorLabel(context, key),
                 colorValue: _effectiveUiColorValue(context, provider, key),
-                onTap: () => onPickUiColor(key),
+                onTap: (anchor) => onPickUiColor(key, anchor),
               ),
           ],
         ),
@@ -65,7 +65,8 @@ class _ColorfulThemeSection extends StatelessWidget {
                         colorValue:
                             provider.courseNameColorValues[courseName] ??
                             provider.themeSeedColorValue,
-                        onTap: () => onPickCourseColor(courseName),
+                        onTap: (anchor) =>
+                            onPickCourseColor(courseName, anchor),
                       ),
                   ],
           ),
@@ -81,7 +82,7 @@ class _ColorfulThemeSection extends StatelessWidget {
                     context,
                     schedule,
                   ).toARGB32(),
-                  onTap: () => onPickCalendarColor(schedule),
+                  onTap: (anchor) => onPickCalendarColor(schedule, anchor),
                 ),
             ],
           ),
@@ -97,7 +98,7 @@ class _ColorfulThemeSection extends StatelessWidget {
                     provider,
                     key,
                   ),
-                  onTap: () => onPickGeneralMonthTextColor(key),
+                  onTap: (anchor) => onPickGeneralMonthTextColor(key, anchor),
                 ),
             ],
           ),
@@ -134,7 +135,7 @@ class _ColorValueTile extends StatelessWidget {
 
   final String title;
   final int colorValue;
-  final VoidCallback onTap;
+  final ValueChanged<BuildContext> onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +154,7 @@ class _ColorValueTile extends StatelessWidget {
           ),
         ),
       ),
-      onTap: onTap,
+      onTap: () => onTap(context),
     );
   }
 }

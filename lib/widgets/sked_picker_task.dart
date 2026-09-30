@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../models/app_mode.dart';
 import '../providers/timetable_provider.dart';
 import 'workbench_chrome_metrics.dart';
+import 'sked_floating_surface.dart';
 
 /// Only compact touch windows opt into a task-specific presentation.
 /// Desktop anchoring and wide-tablet dialogs retain their existing behavior.
@@ -37,7 +38,8 @@ Future<T?> showSkedPickerTask<T>({
 }) async {
   final parent = ModalRoute.of(context);
   final focus =
-      _anchorFocus(anchorContext) ?? FocusManager.instance.primaryFocus;
+      skedFloatingAnchorFocus(anchorContext) ??
+      FocusManager.instance.primaryFocus;
   final provider = Provider.of<TimetableProvider?>(context, listen: false);
   if (workspace != null && provider?.isWorkspaceEnabled(workspace) == false) {
     return null;
@@ -127,24 +129,6 @@ class _PickerTaskRoute<T> extends RawDialogRoute<T> {
       SkedPickerCompactPresentation.anchored => Colors.transparent,
     };
   }
-}
-
-FocusNode? _anchorFocus(BuildContext? anchor) {
-  if (anchor == null || !anchor.mounted) return null;
-  final outer = Focus.maybeOf(anchor, createDependency: false);
-  FocusNode? result;
-  void visit(Element element) {
-    if (result != null) return;
-    final node = Focus.maybeOf(element, createDependency: false);
-    if (node != null && !identical(node, outer) && node.canRequestFocus) {
-      result = node;
-    } else {
-      element.visitChildElements(visit);
-    }
-  }
-
-  anchor.visitChildElements(visit);
-  return result;
 }
 
 class _PickerTaskHost<T> extends StatefulWidget {
@@ -284,12 +268,25 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
           }
         }
       }
+      final content = Padding(
+        padding: EdgeInsets.only(bottom: safeBottom),
+        child: MediaQuery.removePadding(
+          context: context,
+          removeBottom: true,
+          child: Builder(
+            builder: (context) =>
+                widget.builder(context, _finish, () => _ownerAvailable),
+          ),
+        ),
+      );
       return CustomSingleChildLayout(
         delegate: _PickerTaskPosition(
           bounds: bounds,
           anchor: anchor,
           bottomSheet: bottomSheet,
           constrainToAnchor: compactAnchor,
+          desktop: metrics.desktop,
+          rtl: Directionality.of(context) == TextDirection.rtl,
           width: math.min(bounds.width, preferred.width),
         ),
         child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -306,28 +303,20 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
                       : Brightness.dark,
                   systemNavigationBarContrastEnforced: false,
                 ),
-          child: SkedSurface(
-            key: widget.surfaceKey,
-            role: SkedSurfaceRole.content,
-            elevation: 8,
-            clipBehavior: Clip.antiAlias,
-            borderRadius: bottomSheet
-                ? const BorderRadius.vertical(top: Radius.circular(16))
-                : BorderRadius.circular(
-                    compact ? (compactAnchor ? 16 : 24) : 12,
-                  ),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: safeBottom),
-              child: MediaQuery.removePadding(
-                context: context,
-                removeBottom: true,
-                child: Builder(
-                  builder: (context) =>
-                      widget.builder(context, _finish, () => _ownerAvailable),
+          child: metrics.desktop
+              ? SkedFloatingSurface(key: widget.surfaceKey, child: content)
+              : SkedSurface(
+                  key: widget.surfaceKey,
+                  role: SkedSurfaceRole.content,
+                  elevation: 8,
+                  clipBehavior: Clip.antiAlias,
+                  borderRadius: bottomSheet
+                      ? const BorderRadius.vertical(top: Radius.circular(16))
+                      : BorderRadius.circular(
+                          compact ? (compactAnchor ? 16 : 24) : 12,
+                        ),
+                  child: content,
                 ),
-              ),
-            ),
-          ),
         ),
       );
     },
@@ -341,11 +330,13 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
     required this.width,
     required this.bottomSheet,
     required this.constrainToAnchor,
+    required this.desktop,
+    required this.rtl,
   });
   final Rect bounds;
   final Rect? anchor;
   final double width;
-  final bool bottomSheet, constrainToAnchor;
+  final bool bottomSheet, constrainToAnchor, desktop, rtl;
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints(
@@ -365,6 +356,14 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
   Offset getPositionForChild(Size size, Size childSize) {
     if (bottomSheet) {
       return Offset(bounds.left, bounds.bottom - childSize.height);
+    }
+    if (desktop) {
+      return positionSkedFloatingPanel(
+        bounds: bounds,
+        size: childSize,
+        anchor: anchor,
+        rtl: rtl,
+      );
     }
     var x = bounds.center.dx - childSize.width / 2;
     var y = bounds.center.dy - childSize.height / 2;
@@ -393,5 +392,7 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
       anchor != oldDelegate.anchor ||
       width != oldDelegate.width ||
       bottomSheet != oldDelegate.bottomSheet ||
-      constrainToAnchor != oldDelegate.constrainToAnchor;
+      constrainToAnchor != oldDelegate.constrainToAnchor ||
+      desktop != oldDelegate.desktop ||
+      rtl != oldDelegate.rtl;
 }

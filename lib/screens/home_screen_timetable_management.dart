@@ -5,6 +5,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     BuildContext context,
     TimetableProvider provider, {
     required double availableWidth,
+    BuildContext? anchorContext,
   }) async {
     if (_timetablePickerOpen || !mounted) return;
     _setTimetablePickerOpen(true);
@@ -26,7 +27,16 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           return _openCreateTimetableDialog(context, provider);
         },
       );
-      if (availableWidth < 720) {
+      if (WorkbenchChromeMetrics.of(context).desktop) {
+        await showSkedAdaptivePickerDialog<void>(
+          context: context,
+          routeName: 'timetable-picker',
+          anchorContext: anchorContext,
+          preferredWidth: 420,
+          workspace: AppMode.student,
+          builder: (_) => panel,
+        );
+      } else if (availableWidth < 720) {
         await showAppModalSheet<void>(
           context: context,
           maxWidth: appSheetWidthCompact,
@@ -181,6 +191,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
       text: initialConfig.totalWeeks.toString(),
     );
     final startDateAnchor = GlobalKey();
+    final periodTimeSetAnchor = GlobalKey();
     var selectedStartDate = initialConfig.startDate;
     var selectedPeriodTimeSetId = initialConfig.periodTimeSetId;
     var startDatePickerOpen = false;
@@ -344,6 +355,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                             ),
                             form: TimetableInformationForm(
                               startDateAnchorKey: startDateAnchor,
+                              periodTimeSetAnchorKey: periodTimeSetAnchor,
                               nameController: nameController,
                               weeksController: weeksController,
                               startDateLabel: formatDate(selectedStartDate),
@@ -459,6 +471,8 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
                                             await showPeriodTimeSetPickerDialog(
                                               context,
                                               provider: provider,
+                                              anchorContext: periodTimeSetAnchor
+                                                  .currentContext,
                                               selectedPeriodTimeSetId:
                                                   selectedPeriodTimeSetId,
                                             );

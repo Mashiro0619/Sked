@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../theme/sked_surface.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -5,6 +7,12 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'ui_command.dart';
+import 'sked_floating_dialog.dart';
+import 'sked_floating_surface.dart';
+import 'sked_task_dialog.dart';
+import 'workbench_chrome_metrics.dart';
+
+export 'sked_floating_dialog.dart' show SkedDesktopFloatingDialog;
 
 const double expressiveDialogMaxWidth = 520;
 
@@ -15,22 +23,45 @@ Future<T?> showExpressiveDialog<T>({
   bool useRootNavigator = true,
   bool waitForTransitionComplete = false,
   RouteSettings? routeSettings,
+  SkedDesktopFloatingDialog? desktopFloating,
 }) async {
   final animationStyle = SkedMotionPolicy.of(context)
       .routeStyle(AppMotion.dialogAnimationStyle);
   final transitionAnchor = waitForTransitionComplete
       ? GlobalKey(debugLabel: 'expressive-dialog-transition-anchor')
       : null;
+  final floating =
+      desktopFloating != null && WorkbenchChromeMetrics.of(context).desktop;
+  final returnFocus =
+      (floating
+          ? skedFloatingAnchorFocus(desktopFloating.anchorContext)
+          : null) ??
+      FocusManager.instance.primaryFocus;
+  final owner = ModalRoute.of(context);
+  ModalRoute<dynamic>? shownRoute;
   final result = await showDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
+    barrierColor: floating ? Colors.transparent : null,
+    useSafeArea: !floating,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
     animationStyle: animationStyle,
-    builder: (_) {
+    builder: (dialogContext) {
+      // Ordinary dialogs must not subscribe to route-current changes: some
+      // retain selection state in their builder while a nested editor is open.
+      if (floating) shownRoute = ModalRoute.of(dialogContext);
+      final body = floating
+          ? SkedFloatingDialogHost(
+              options: desktopFloating,
+              child: UiCommandFeedbackHost(
+                builder: (_) => SkedStableTaskBody(builder: builder),
+              ),
+            )
+          : UiCommandFeedbackHost(builder: builder);
       final dialog = SkedSurfaceScope(
         role: SkedSurfaceRole.content,
-        child: UiCommandFeedbackHost(builder: builder),
+        child: body,
       );
       return transitionAnchor == null
           ? dialog
@@ -42,6 +73,21 @@ Future<T?> showExpressiveDialog<T>({
   // the actual dialog subtree to unmount instead of guessing a duration.
   while (transitionAnchor?.currentContext != null) {
     await WidgetsBinding.instance.endOfFrame;
+  }
+  if (floating && shownRoute != null) {
+    unawaited(
+      shownRoute!.completed.then((_) async {
+        // The caller re-enables its trigger after its awaited dialog completes.
+        // Wait for that rebuild before checking canRequestFocus.
+        await WidgetsBinding.instance.endOfFrame;
+        if (context.mounted &&
+            (owner?.isCurrent ?? true) &&
+            returnFocus?.context?.mounted == true &&
+            returnFocus!.canRequestFocus) {
+          returnFocus.requestFocus();
+        }
+      }),
+    );
   }
   return result;
 }

@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../utils/constants.dart';
 import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/sked_floating_surface.dart';
 import 'app_motion.dart';
 import 'general_calendar_color_theme.dart';
 import 'sked_expressive_theme.dart';
@@ -58,8 +59,15 @@ ThemeData buildAppTheme({
       : shapes.control;
   final selectedSurface = colorScheme.primary.withValues(alpha: 0.12);
   final menuSurface = SkedSurfaceRole.content.resolve(colorScheme);
-  final menuOutline = colorScheme.outlineVariant.withValues(alpha: 0.72);
-  final menuShape = shapes.menu.copyWith(side: BorderSide(color: menuOutline));
+  final menuOutline = desktop
+      ? SkedFloatingStyle.outline(colorScheme).color
+      : colorScheme.outlineVariant.withValues(alpha: 0.72);
+  final menuShape = desktop
+      ? RoundedRectangleBorder(
+          borderRadius: SkedFloatingStyle.radius,
+          side: BorderSide(color: menuOutline),
+        )
+      : shapes.menu.copyWith(side: BorderSide(color: menuOutline));
   final menuOverlayColor = WidgetStateProperty.resolveWith<Color?>((states) {
     if (states.contains(WidgetState.disabled)) {
       return Colors.transparent;
