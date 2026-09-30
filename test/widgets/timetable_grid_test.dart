@@ -172,6 +172,105 @@ ScrollableState _horizontalScrollState(WidgetTester tester, Key ownerKey) {
 }
 
 void main() {
+  for (final platform in [
+    TargetPlatform.windows,
+    TargetPlatform.macOS,
+    TargetPlatform.linux,
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+  ]) {
+    testWidgets(
+      'time rail centers period numbers and both times on $platform',
+      (tester) async {
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        for (final scale in [1.0, 1.3, 2.0]) {
+          for (final direction in TextDirection.values) {
+            for (final size in [const Size(420, 900), const Size(1440, 900)]) {
+              await tester.binding.setSurfaceSize(size);
+              await tester.pumpWidget(
+                _gridHarness(
+                  platform: platform,
+                  textScale: scale,
+                  textDirection: direction,
+                  timetable: _timetableWithCourses(const []),
+                  periodTimes: const [
+                    CoursePeriodTime(
+                      index: 1,
+                      startMinutes: 480,
+                      endMinutes: 525,
+                    ),
+                    CoursePeriodTime(
+                      index: 10,
+                      startMinutes: 600,
+                      endMinutes: 645,
+                    ),
+                  ],
+                ),
+              );
+              await tester.pumpAndSettle();
+              final rail = find.byKey(const ValueKey('timetable-time-rail'));
+              final bounds = tester.getRect(rail);
+              for (final label in [
+                '1',
+                '08:00',
+                '08:45',
+                '10',
+                '10:00',
+                '10:45',
+              ]) {
+                final text = find.descendant(
+                  of: rail,
+                  matching: find.text(label),
+                );
+                final rect = tester.getRect(text);
+                expect(
+                  rect.center.dx,
+                  closeTo(bounds.center.dx, .01),
+                  reason: '$label / $scale / $direction / $size',
+                );
+                expect(rect.left, greaterThanOrEqualTo(bounds.left));
+                expect(rect.right, lessThanOrEqualTo(bounds.right));
+              }
+              expect(tester.takeException(), isNull);
+            }
+          }
+        }
+      },
+    );
+  }
+  testWidgets(
+    'short desktop period keeps its number centered when times are hidden',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1000, 750));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _gridHarness(
+          platform: TargetPlatform.windows,
+          timetable: _timetableWithCourses(const []),
+          periodTimes: const [
+            CoursePeriodTime(index: 10, startMinutes: 480, endMinutes: 500),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      final rail = find.byKey(const ValueKey('timetable-time-rail'));
+      final number = find.descendant(of: rail, matching: find.text('10'));
+      expect(
+        tester.getRect(number).center.dx,
+        closeTo(tester.getRect(rail).center.dx, .01),
+      );
+      expect(
+        tester.getRect(number).center.dy,
+        closeTo(tester.getRect(rail).center.dy, .01),
+      );
+      expect(
+        find.descendant(of: rail, matching: find.text('08:00')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   group('course typography', () {
     const slots = [
       CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),

@@ -751,7 +751,6 @@ class _TimeRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Stack(
       clipBehavior: Clip.hardEdge,
@@ -773,9 +772,7 @@ class _TimeRail extends StatelessWidget {
                     return ClipRect(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: desktop
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
                             slot.index.toString(),
