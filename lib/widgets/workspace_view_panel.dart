@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -30,17 +31,18 @@ class WorkspaceViewLayoutScope extends InheritedWidget {
   const WorkspaceViewLayoutScope({
     super.key,
     required this.compact,
+    this.onDragUpdate,
     required super.child,
   });
   final bool compact;
+  final ValueChanged<Offset>? onDragUpdate;
+  static WorkspaceViewLayoutScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<WorkspaceViewLayoutScope>();
   static bool compactOf(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<WorkspaceViewLayoutScope>()
-          ?.compact ??
-      false;
+      maybeOf(context)?.compact ?? false;
   @override
   bool updateShouldNotify(WorkspaceViewLayoutScope oldWidget) =>
-      compact != oldWidget.compact;
+      compact != oldWidget.compact || onDragUpdate != oldWidget.onDragUpdate;
 }
 
 /// Shared by desktop viewing tasks and the month view's permanent agenda.
@@ -64,7 +66,9 @@ class WorkspaceViewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = WorkspaceViewTaskScope.maybeOf(context);
     final task = scope?.enabled == true;
-    final compact = task && WorkspaceViewLayoutScope.compactOf(context);
+    final layout = WorkspaceViewLayoutScope.maybeOf(context);
+    final compact = task && layout?.compact == true;
+    final onDragUpdate = compact ? layout?.onDragUpdate : null;
     final theme = Theme.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     return Align(
@@ -115,7 +119,33 @@ class WorkspaceViewPanel extends StatelessWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: heading),
+                            Expanded(
+                              child: onDragUpdate == null
+                                  ? heading
+                                  : MouseRegion(
+                                      cursor: SystemMouseCursors.move,
+                                      child: GestureDetector(
+                                        key: const ValueKey(
+                                          'workspace-view-drag-handle',
+                                        ),
+                                        behavior: HitTestBehavior.opaque,
+                                        dragStartBehavior:
+                                            DragStartBehavior.down,
+                                        onPanUpdate: (details) =>
+                                            onDragUpdate(details.delta),
+                                        child: ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            minHeight: metrics.iconTarget,
+                                          ),
+                                          child: Align(
+                                            alignment:
+                                                AlignmentDirectional.topStart,
+                                            child: heading,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                            ),
                             if (inlineAction && headerAction != null) ...[
                               const SizedBox(width: 8),
                               headerAction!,

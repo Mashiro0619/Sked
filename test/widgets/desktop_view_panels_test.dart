@@ -22,6 +22,52 @@ Finder _agendaText(String text) => find.descendant(
 );
 
 void main() {
+  testWidgets('agenda and reminders remain actionable after dragging', (
+    t,
+  ) async {
+    _viewport(t, const Size(1100, 900));
+    final p = await workspaceProvider(
+      mode: AppMode.general,
+      storage: desktopPanelStorage(count: 3),
+    );
+    addTearDown(p.dispose);
+    await t.pumpWidget(desktopPanelHarness(p));
+    await t.pumpAndSettle();
+    await t.tap(_key('general-day-agenda-toggle'));
+    await t.pumpAndSettle();
+    final agenda = t.getRect(_key('workspace-detail-surface'));
+    await t.drag(_key('workspace-view-drag-handle'), const Offset(-80, 90));
+    await t.pumpAndSettle();
+    final movedAgenda = t.getRect(_key('workspace-detail-surface'));
+    expect(movedAgenda.left, lessThan(agenda.left));
+    expect(movedAgenda.top, greaterThan(agenda.top));
+    await t.tap(_key('general-day-agenda-add'));
+    await t.pumpAndSettle();
+    expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+    expect(_key('workspace-view-drag-handle'), findsNothing);
+    await t.tap(_key('workspace-inspector-close'));
+    await t.pumpAndSettle();
+    expect(t.getRect(_key('workspace-detail-surface')), movedAgenda);
+    await t.tap(_key('workspace-inspector-close'));
+    await t.pumpAndSettle();
+    await t.tap(_key('general-reminders-action'));
+    await t.pumpAndSettle();
+    await t.drag(_key('workspace-view-drag-handle'), const Offset(-100, 120));
+    await t.pumpAndSettle();
+    final movedReminders = t.getRect(_key('workspace-detail-surface'));
+    await t.tap(find.byTooltip('Mark handled').last);
+    await t.pumpAndSettle();
+    expect(find.text('In-app reminder · 2'), findsOneWidget);
+    final updatedReminders = t.getRect(_key('workspace-detail-surface'));
+    expect(updatedReminders.topLeft, movedReminders.topLeft);
+    expect(updatedReminders.height, lessThan(movedReminders.height));
+    await t.sendKeyEvent(LogicalKeyboardKey.escape);
+    await t.pumpAndSettle();
+    expect(_key('workspace-view-drag-handle'), findsNothing);
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox());
+  }, variant: _desktop);
+
   testWidgets(
     'month agenda is permanent; narrow fallback opens once and restores',
     (t) async {
@@ -34,6 +80,7 @@ void main() {
       await t.pumpWidget(desktopPanelHarness(p));
       await t.pumpAndSettle();
       expect(_key('general-day-agenda-toggle'), findsNothing);
+      expect(_key('workspace-view-drag-handle'), findsNothing);
       expect(_key('workspace-inspector-close'), findsNothing);
       expect(_key('general-selected-day-agenda'), findsOneWidget);
       expect(t.getRect(_key('general-day-agenda-add')).bottom, lessThan(180));

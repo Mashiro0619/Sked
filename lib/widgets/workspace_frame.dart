@@ -196,6 +196,8 @@ class _WorkspaceTaskRoute {
   final Route<dynamic> route;
   final WorkspacePanePresentation presentation;
   double? contentHeight;
+  // Logical end/top insets, owned by this route only (never persisted).
+  Offset? floatingOffset;
   final bool modal, dismissible;
   final String? selectionId;
 }
@@ -571,7 +573,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     super.dispose();
   }
 
-  Widget _detailPane(WorkspaceLayout policy) {
+  Widget _detailPane(
+    WorkspaceLayout policy, {
+    ValueChanged<Offset>? onViewDragUpdate,
+  }) {
     final controller = widget.controller;
     final metrics = WorkbenchChromeMetrics.of(context);
     final viewing = metrics.desktop && controller.hasViewPanel;
@@ -606,6 +611,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                       : null,
                   child: WorkspaceViewLayoutScope(
                     compact: compact,
+                    onDragUpdate: onViewDragUpdate,
                     child: Column(
                       children: [
                         if (!viewing)
@@ -893,6 +899,66 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           final overlayInset = math
               .max(captionInset, _bodyTop ?? metrics.toolbarHeight)
               .clamp(0.0, constraints.maxHeight);
+          final viewTask = controller._tasks.lastOrNull;
+          final detailWidth = compactView
+              ? math.min(
+                  policy.detailWidth,
+                  math.max(
+                    0.0,
+                    constraints.maxWidth -
+                        (policy.resources ? policy.resourceWidth + 1 : 0) -
+                        16,
+                  ),
+                )
+              : policy.detailWidth;
+          // Keep full Navigator constraints regardless of the dragged top, so
+          // moving a panel never shrinks its list or loses its scroll position.
+          final detailMaxHeight = math.max(
+            0.0,
+            constraints.maxHeight - overlayInset - (compactView ? 16 : 0),
+          );
+          final viewHeight = (controller.viewContentHeight ?? 0).clamp(
+            0.0,
+            detailMaxHeight,
+          );
+          final maxViewEnd = math.max(
+            8.0,
+            constraints.maxWidth -
+                (policy.resources ? policy.resourceWidth + 1 : 0) -
+                detailWidth -
+                8,
+          );
+          final maxViewTop = math.max(
+            8.0,
+            constraints.maxHeight - overlayInset - viewHeight - 8,
+          );
+          Offset boundedViewOffset(Offset offset) => Offset(
+            offset.dx.clamp(8.0, maxViewEnd),
+            offset.dy.clamp(8.0, maxViewTop),
+          );
+          final viewOffset = boundedViewOffset(
+            viewTask?.floatingOffset ?? const Offset(8, 8),
+          );
+          final rtl = Directionality.of(context) == TextDirection.rtl;
+          void dragView(Offset delta) {
+            if (!mounted ||
+                !widget.active ||
+                !compactView ||
+                !identical(viewTask, controller._tasks.lastOrNull)) {
+              return;
+            }
+            setState(() {
+              // Start from the visible, clamped position after a resize or
+              // content change, not an old off-screen preference.
+              final current = boundedViewOffset(
+                viewTask!.floatingOffset ?? const Offset(8, 8),
+              );
+              viewTask.floatingOffset = boundedViewOffset(
+                current + Offset(rtl ? delta.dx : -delta.dx, delta.dy),
+              );
+            });
+          }
+
           final resizeExtent = metrics.desktop ? 9.0 : 48.0;
           final motion = SkedMotionPolicy.of(context);
           // Reserve only the calendar's bounded inset. The rest of a wide pane
@@ -1054,31 +1120,21 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                             key: const ValueKey('workspace-detail-pane'),
                             end: policy.dockedDetail
                                 ? assistantSpace
-                                : (compactView ? 8 : 0),
-                            top: overlayInset + (compactView ? 8 : 0),
-                            width: compactView
-                                ? math.min(
-                                    policy.detailWidth,
-                                    math.max(
-                                      0,
-                                      constraints.maxWidth -
-                                          (policy.resources
-                                              ? policy.resourceWidth + 1
-                                              : 0) -
-                                          16,
-                                    ),
-                                  )
-                                : policy.detailWidth,
+                                : (compactView ? viewOffset.dx : 0),
+                            top:
+                                overlayInset +
+                                (compactView ? viewOffset.dy : 0),
+                            width: detailWidth,
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
-                                maxHeight: math.max(
-                                  0,
-                                  constraints.maxHeight -
-                                      overlayInset -
-                                      (compactView ? 16 : 0),
-                                ),
+                                maxHeight: detailMaxHeight,
                               ),
-                              child: _detailPane(policy),
+                              child: _detailPane(
+                                policy,
+                                onViewDragUpdate: compactView && active
+                                    ? dragView
+                                    : null,
+                              ),
                             ),
                           ),
                           PositionedDirectional(
