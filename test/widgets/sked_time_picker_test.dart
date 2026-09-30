@@ -84,12 +84,27 @@ Future<void> _confirm(WidgetTester t) async {
 }
 
 String _value(WidgetTester t, String field) =>
-    t.widget<TextField>(_key('sked-time-$field-input')).controller!.text;
+    _key('sked-time-$field-input').evaluate().isNotEmpty
+    ? t.widget<TextField>(_key('sked-time-$field-input')).controller!.text
+    : t
+          .widget<Semantics>(
+            _key('sked-time-${field == 'hour' ? 'hours' : 'minutes'}'),
+          )
+          .properties
+          .value!;
+
+Future<void> _mode(WidgetTester t, {required bool input}) async {
+  if (_key('sked-time-minute-input').evaluate().isNotEmpty != input) {
+    await t.tap(_key('sked-time-input-toggle'));
+    await t.pumpAndSettle();
+  }
+}
 
 FixedExtentScrollController _controller(WidgetTester t, String field) =>
     t.widget<ListWheelScrollView>(_key('sked-time-$field-wheel')).controller!
         as FixedExtentScrollController;
 Future<void> _wheel(WidgetTester t, String field, int rows) async {
+  await _mode(t, input: false);
   final finder = _key('sked-time-$field-wheel');
   final extent = t.widget<ListWheelScrollView>(finder).itemExtent;
   await t.sendEventToBinding(
@@ -103,6 +118,26 @@ Future<void> _wheel(WidgetTester t, String field, int rows) async {
 }
 
 void main() {
+  testWidgets(
+    'desktop input step controls wrap independently without submitting',
+    (t) async {
+      _size(t, const Size(800, 900));
+      final results = <TimeOfDay?>[];
+      await _open(t, results, initial: const TimeOfDay(hour: 23, minute: 59));
+      await t.tap(_key('sked-time-minute-step-1'));
+      await t.pumpAndSettle();
+      expect(_value(t, 'minute'), '00');
+      expect(_value(t, 'hour'), '23');
+      await t.tap(_key('sked-time-hour-step-1'));
+      await t.pumpAndSettle();
+      expect(_value(t, 'hour'), '00');
+      expect(results, isEmpty);
+      await _confirm(t);
+      expect(results, [const TimeOfDay(hour: 0, minute: 0)]);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets('trackpad pan settles a draft and cannot submit while moving', (
     t,
   ) async {
@@ -112,6 +147,7 @@ void main() {
     final staleConfirm = t
         .widget<FilledButton>(_key('sked-time-confirm'))
         .onPressed!;
+    await _mode(t, input: false);
     final point = t.getCenter(_key('sked-time-minute-wheel'));
     final gesture = await t.createGesture(kind: PointerDeviceKind.trackpad);
     await gesture.panZoomStart(point);
@@ -140,6 +176,7 @@ void main() {
       _size(t, const Size(800, 900));
       final results = <TimeOfDay?>[];
       await _open(t, results);
+      await _mode(t, input: false);
       await t.fling(
         _key('sked-time-minute-wheel'),
         const Offset(0, -120),
@@ -166,7 +203,7 @@ void main() {
       final results = <TimeOfDay?>[];
       await _open(t, results);
       expect(_value(t, 'minute'), '07');
-      expect(_key('sked-time-minute-7'), findsOneWidget);
+      expect(_key('sked-time-minute-wheel'), findsNothing);
       for (final invalid in ['', '24', '100', 'x']) {
         await t.enterText(_key('sked-time-hour-input'), invalid);
         await t.pump();
@@ -186,6 +223,7 @@ void main() {
       );
       await t.enterText(_key('sked-time-minute-input'), '58');
       await t.pumpAndSettle();
+      await _mode(t, input: false);
       expect(_key('sked-time-minute-58').hitTestable(), findsOneWidget);
       await t.tap(_key('sked-time-minute-59'));
       await t.pumpAndSettle();
@@ -231,6 +269,7 @@ void main() {
       _size(t, const Size(800, 900));
       final results = <TimeOfDay?>[];
       await _open(t, results);
+      await _mode(t, input: false);
       final minutes = find.descendant(
         of: _key('sked-time-minutes'),
         matching: find.byType(ListWheelScrollView),
@@ -239,8 +278,10 @@ void main() {
       await t.pumpAndSettle();
       expect(_value(t, 'minute'), isNot('07'));
       expect(results, isEmpty);
+      await _mode(t, input: true);
       await t.enterText(_key('sked-time-minute-input'), '22');
       await t.pumpAndSettle();
+      await _mode(t, input: false);
       await t.tap(_key('sked-time-minute-22'));
       await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await t.pumpAndSettle();
@@ -377,6 +418,7 @@ void main() {
         _size(t, const Size(800, 900));
         final results = <TimeOfDay?>[];
         await _open(t, results, initial: initial);
+        await _mode(t, input: false);
         for (final id in ['hours', 'minutes']) {
           final list = find.descendant(
             of: _key('sked-time-$id'),
@@ -395,34 +437,23 @@ void main() {
   }
 
   testWidgets(
-    'columns align, wheels have no scrollbar and taps select the centered row',
+    'desktop input and wheel modes are exclusive and retain the draft',
     (t) async {
       _size(t, const Size(800, 900));
       final results = <TimeOfDay?>[];
       await _open(t, results);
-      for (final (field, id) in [('hour', 'hours'), ('minute', 'minutes')]) {
-        final input = t.getRect(_key('sked-time-$field-input'));
-        final wheel = t.getRect(_key('sked-time-$id'));
-        expect(input.left, wheel.left);
-        expect(input.right, wheel.right);
-        expect(
-          find.descendant(
-            of: _key('sked-time-$id'),
-            matching: find.byType(Scrollbar),
-          ),
-          findsNothing,
-        );
-      }
-      final before = _controller(t, 'minute').offset;
-      await t.tap(_key('sked-time-minute-8'));
+      expect(_key('sked-time-minute-wheel'), findsNothing);
+      await t.enterText(_key('sked-time-minute-input'), '08');
       await t.pumpAndSettle();
+      await _mode(t, input: false);
+      expect(_key('sked-time-minute-input'), findsNothing);
       expect(_value(t, 'minute'), '08');
-      expect(_controller(t, 'minute').offset, greaterThan(before));
-      expect(
-        t.getCenter(_key('sked-time-minute-8')).dy,
-        closeTo(t.getCenter(_key('sked-time-minute-center')).dy, .5),
-      );
+      await _wheel(t, 'minute', 1);
+      await _mode(t, input: true);
+      expect(_value(t, 'minute'), '09');
       expect(results, isEmpty);
+      await _confirm(t);
+      expect(results, [const TimeOfDay(hour: 13, minute: 9)]);
       expect(t.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -435,6 +466,7 @@ void main() {
       _size(t, const Size(800, 900));
       final results = <TimeOfDay?>[];
       await _open(t, results);
+      await _mode(t, input: false);
       final wheel = _key('sked-time-minute-wheel');
       final gesture = await t.startGesture(t.getCenter(wheel), kind: kind);
       await gesture.moveBy(const Offset(0, -30));
@@ -508,7 +540,7 @@ void main() {
       await t.pumpAndSettle();
       await t.sendKeyEvent(LogicalKeyboardKey.pageDown);
       await t.pumpAndSettle();
-      expect(_value(t, 'minute'), '10');
+      expect(_value(t, 'minute'), '08');
       await t.sendKeyEvent(LogicalKeyboardKey.pageUp);
       await t.pumpAndSettle();
       expect(_value(t, 'minute'), '05');
@@ -532,38 +564,26 @@ void main() {
   );
 
   testWidgets(
-    'typing takes the shortest loop, interrupts inertia and preserves invalid text',
+    'invalid text blocks mode switching and confirmation without losing the draft',
     (t) async {
       _size(t, const Size(800, 900));
       final results = <TimeOfDay?>[];
       await _open(t, results, initial: const TimeOfDay(hour: 23, minute: 59));
-      final before = _controller(t, 'minute').selectedItem;
-      await t.enterText(_key('sked-time-minute-input'), '00');
-      await t.pumpAndSettle();
-      expect(_controller(t, 'minute').selectedItem, before + 1);
-      await t.fling(
-        _key('sked-time-minute-wheel'),
-        const Offset(0, -140),
-        1600,
-      );
-      await t.pump(const Duration(milliseconds: 10));
-      await t.enterText(_key('sked-time-minute-input'), '17');
-      await t.pumpAndSettle();
-      expect(_value(t, 'minute'), '17');
-      expect(_controller(t, 'minute').selectedItem % 60, 17);
-      await t.fling(_key('sked-time-minute-wheel'), const Offset(0, 130), 1600);
-      await t.pump(const Duration(milliseconds: 10));
       await t.enterText(_key('sked-time-minute-input'), 'x');
       await t.pumpAndSettle();
       expect(_value(t, 'minute'), 'x');
-      expect(_controller(t, 'minute').selectedItem % 60, 17);
-      expect(_value(t, 'hour'), '23');
+      expect(
+        t.widget<IconButton>(_key('sked-time-input-toggle')).onPressed,
+        isNull,
+      );
       expect(
         t.widget<FilledButton>(_key('sked-time-confirm')).onPressed,
         isNull,
       );
+      await t.enterText(_key('sked-time-minute-input'), '17');
+      await t.pumpAndSettle();
+      await _mode(t, input: false);
       await _wheel(t, 'minute', 1);
-      expect(_value(t, 'minute'), '18');
       await _confirm(t);
       expect(results, [const TimeOfDay(hour: 23, minute: 18)]);
       expect(t.takeException(), isNull);
@@ -578,7 +598,8 @@ void main() {
     await _open(t, <TimeOfDay?>[], disableAnimations: true);
     await t.enterText(_key('sked-time-minute-input'), '59');
     await t.pump();
-    expect(_controller(t, 'minute').selectedItem, -1);
+    await _mode(t, input: false);
+    expect(_controller(t, 'minute').selectedItem % 60, 59);
     expect(
       _controller(t, 'minute').position.isScrollingNotifier.value,
       isFalse,
@@ -599,6 +620,7 @@ void main() {
         <TimeOfDay?>[],
         initial: const TimeOfDay(hour: 0, minute: 59),
       );
+      await _mode(t, input: false);
       final minute = t.getSemantics(_key('sked-time-minutes'));
       expect(minute.value, '59');
       expect(minute.increasedValue, '00');

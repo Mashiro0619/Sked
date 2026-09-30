@@ -70,7 +70,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
     context: context,
     routeName: 'period-time-set-picker',
     anchorContext: anchorContext,
-    preferredWidth: 400,
+    preferredWidth: 360,
     workspace: AppMode.student,
     builder: (dialogContext) {
       var currentSelectedId = selectedPeriodTimeSetId;
@@ -208,6 +208,14 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
     return PopScope(
       canPop: !blocked,
       child: SkedTaskDialog(
+        closeEnabled: !blocked,
+        titleAction: SkedTaskDialogScope.maybeOf(context) == null
+            ? null
+            : IconButton(
+                tooltip: l10n.newItem,
+                onPressed: blocked ? null : onCreate,
+                icon: const Icon(Icons.add),
+              ),
         constraints: const BoxConstraints(maxWidth: 400),
         insetPadding: EdgeInsets.symmetric(
           horizontal: horizontalInset,
@@ -233,24 +241,26 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
         ),
         titleTextStyle: Theme.of(context).textTheme.titleLarge
             ?.copyWith(fontWeight: FontWeight.w700),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            UiCommandBusyIndicator(busy: busy),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                Expanded(child: Text(l10n.selectPeriodTimeSet)),
-                IconButton(
-                  tooltip: l10n.newItem,
-                  onPressed: blocked ? null : onCreate,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-          ],
-        ),
+        title: SkedTaskDialogScope.maybeOf(context) != null
+            ? Text(l10n.selectPeriodTimeSet)
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  UiCommandBusyIndicator(busy: busy),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(child: Text(l10n.selectPeriodTimeSet)),
+                      IconButton(
+                        tooltip: l10n.newItem,
+                        onPressed: blocked ? null : onCreate,
+                        icon: const Icon(Icons.add),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
         content: Center(
           widthFactor: 1,
           heightFactor: 1,
@@ -269,6 +279,33 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 4),
                   itemBuilder: (context, index) {
                     final item = periodTimeSets[index];
+                    if (SkedTaskDialogScope.maybeOf(context) != null) {
+                      return ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                        ),
+                        leading: SizedBox(
+                          width: 20,
+                          child: item.id == selectedPeriodTimeSetId
+                              ? const Icon(Icons.check, size: 18)
+                              : null,
+                        ),
+                        title: Text(item.name),
+                        subtitle: Text(
+                          l10n.schoolWebImportPeriodCount(
+                            item.periodTimes.length,
+                          ),
+                        ),
+                        trailing: IconButton(
+                          tooltip: l10n.editPeriodTimeSet,
+                          onPressed: blocked ? null : () => onEdit(item),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                        ),
+                        enabled: !blocked,
+                        onTap: blocked ? null : () => onSelect(item.id),
+                      );
+                    }
                     return ExpressiveDialogOption(
                       selected: item.id == selectedPeriodTimeSetId,
                       title: Text(item.name),

@@ -30,6 +30,7 @@ Future<T?> showSkedPickerTask<T>({
   required Size Function(BuildContext) preferredSize,
   required SkedPickerTaskBuilder<T> builder,
   BuildContext? anchorContext,
+  SkedFloatingPlacement placement = SkedFloatingPlacement.automatic,
   AppMode? workspace,
   Key? surfaceKey,
   bool Function()? isSessionCurrent,
@@ -78,6 +79,7 @@ Future<T?> showSkedPickerTask<T>({
         isSessionCurrent: sessionAvailable,
         ownerRoute: parent,
         anchorContext: anchorContext,
+        placement: placement,
         provider: provider,
         workspace: workspace,
       ),
@@ -141,6 +143,7 @@ class _PickerTaskHost<T> extends StatefulWidget {
     required this.isSessionCurrent,
     required this.ownerRoute,
     required this.anchorContext,
+    required this.placement,
     required this.provider,
     required this.workspace,
   });
@@ -152,6 +155,7 @@ class _PickerTaskHost<T> extends StatefulWidget {
   final bool Function() isSessionCurrent;
   final ModalRoute<dynamic>? ownerRoute;
   final BuildContext? anchorContext;
+  final SkedFloatingPlacement placement;
   final TimetableProvider? provider;
   final AppMode? workspace;
   @override
@@ -160,6 +164,27 @@ class _PickerTaskHost<T> extends StatefulWidget {
 
 class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
   bool _finished = false;
+  Offset? _manualPosition, _lastPosition;
+  Size _panelSize = Size.zero;
+  Rect _bounds = Rect.zero;
+  void _drag(Offset delta) {
+    if (!mounted || _finished || ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    setState(
+      () => _manualPosition = boundSkedFloatingPosition(
+        boundSkedFloatingPosition(
+              _manualPosition ?? _lastPosition ?? Offset.zero,
+              _panelSize,
+              _bounds,
+            ) +
+            delta,
+        _panelSize,
+        _bounds,
+      ),
+    );
+  }
+
   bool get _ownerAvailable =>
       widget.ownerContext.mounted &&
       widget.isSessionCurrent() &&
@@ -249,6 +274,7 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
         constraints.maxWidth - media.padding.right - margin,
         math.max(top + margin, constraints.maxHeight - bottom - margin),
       );
+      _bounds = bounds;
       Rect? anchor;
       final anchorContext = widget.anchorContext;
       if ((metrics.desktop || compactAnchor) &&
@@ -283,11 +309,19 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
         delegate: _PickerTaskPosition(
           bounds: bounds,
           anchor: anchor,
+          placement: widget.placement,
           bottomSheet: bottomSheet,
           constrainToAnchor: compactAnchor,
           desktop: metrics.desktop,
           rtl: Directionality.of(context) == TextDirection.rtl,
           width: math.min(bounds.width, preferred.width),
+          manualPosition: metrics.desktop
+              ? _manualPosition ?? (anchor == null ? _lastPosition : null)
+              : null,
+          onPosition: (position, size) {
+            _lastPosition = position;
+            _panelSize = size;
+          },
         ),
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: compact && !bottomSheet
@@ -304,7 +338,10 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
                   systemNavigationBarContrastEnforced: false,
                 ),
           child: metrics.desktop
-              ? SkedFloatingSurface(key: widget.surfaceKey, child: content)
+              ? SkedFloatingSurface(
+                  key: widget.surfaceKey,
+                  child: SkedFloatingDragScope(onDrag: _drag, child: content),
+                )
               : SkedSurface(
                   key: widget.surfaceKey,
                   role: SkedSurfaceRole.content,
@@ -327,14 +364,20 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
   const _PickerTaskPosition({
     required this.bounds,
     required this.anchor,
+    required this.placement,
     required this.width,
     required this.bottomSheet,
     required this.constrainToAnchor,
     required this.desktop,
     required this.rtl,
+    required this.manualPosition,
+    required this.onPosition,
   });
   final Rect bounds;
+  final Offset? manualPosition;
+  final void Function(Offset, Size) onPosition;
   final Rect? anchor;
+  final SkedFloatingPlacement placement;
   final double width;
   final bool bottomSheet, constrainToAnchor, desktop, rtl;
   @override
@@ -343,7 +386,9 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
         minWidth: bottomSheet ? bounds.width : width,
         maxWidth: bottomSheet ? bounds.width : width,
         minHeight: 0,
-        maxHeight: constrainToAnchor && anchor != null
+        maxHeight: desktop
+            ? skedFloatingHeightLimit(bounds, anchor, width)
+            : constrainToAnchor && anchor != null
             ? math
                   .max(
                     anchor!.top - bounds.top - 6,
@@ -358,12 +403,17 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
       return Offset(bounds.left, bounds.bottom - childSize.height);
     }
     if (desktop) {
-      return positionSkedFloatingPanel(
-        bounds: bounds,
-        size: childSize,
-        anchor: anchor,
-        rtl: rtl,
-      );
+      final position = manualPosition != null
+          ? boundSkedFloatingPosition(manualPosition!, childSize, bounds)
+          : positionSkedFloatingPanel(
+              bounds: bounds,
+              size: childSize,
+              anchor: anchor,
+              rtl: rtl,
+              placement: placement,
+            );
+      onPosition(position, childSize);
+      return position;
     }
     var x = bounds.center.dx - childSize.width / 2;
     var y = bounds.center.dy - childSize.height / 2;
@@ -388,6 +438,8 @@ class _PickerTaskPosition extends SingleChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_PickerTaskPosition oldDelegate) =>
+      placement != oldDelegate.placement ||
+      manualPosition != oldDelegate.manualPosition ||
       bounds != oldDelegate.bounds ||
       anchor != oldDelegate.anchor ||
       width != oldDelegate.width ||

@@ -1,3 +1,5 @@
+import 'sked_floating_surface.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -1213,7 +1215,7 @@ class _SkedDatePickerState extends State<SkedDatePicker> {
                   child: text,
                 ),
               )
-            : text,
+            : SkedPickerTitle(child: text),
       ),
     );
   }

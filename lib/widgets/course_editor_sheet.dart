@@ -1,3 +1,7 @@
+import 'package:flutter/services.dart';
+
+import 'sked_floating_surface.dart';
+import 'workbench_chrome_metrics.dart';
 import 'sked_time_picker.dart';
 
 import 'dart:convert';
@@ -482,8 +486,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         context: context,
         routeName: 'course-DayOfWeek-picker',
         anchorContext: _weekdayAnchor.currentContext,
-        preferredWidth: 320,
+        preferredWidth: 300,
         workspace: AppMode.student,
+        placement: SkedFloatingPlacement.left,
         builder: (context) {
           var popped = false;
           void popWith(int day) {
@@ -519,13 +524,15 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         context: context,
         routeName: 'course-SemesterWeeks-picker',
         anchorContext: _weeksAnchor.currentContext,
-        preferredWidth: 400,
+        preferredWidth: 340,
         workspace: AppMode.student,
+        placement: SkedFloatingPlacement.left,
         builder: (context) {
           var popped = false;
           return StatefulBuilder(
             builder: (context, setState) {
               final l10n = AppLocalizations.of(context);
+              final desktop = WorkbenchChromeMetrics.of(context).desktop;
               void popWith(List<int>? value) {
                 if (popped) return;
                 popped = true;
@@ -555,6 +562,22 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                               }),
                               child: Text(l10n.selectAll),
                             ),
+                            if (desktop)
+                              for (final parity in [1, 0])
+                                TextButton(
+                                  onPressed: () => setState(() {
+                                    draft
+                                      ..clear()
+                                      ..addAll(
+                                        buildAllSemesterWeeks(
+                                          widget.totalWeeks,
+                                        ).where((week) => week % 2 == parity),
+                                      );
+                                  }),
+                                  child: Text(
+                                    parity == 1 ? '1, 3, 5…' : '2, 4, 6…',
+                                  ),
+                                ),
                             TextButton(
                               onPressed: () => setState(() => draft.clear()),
                               child: Text(l10n.clear),
@@ -562,17 +585,23 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                           ],
                         ),
                       ),
+                      if (desktop)
+                        Text('${draft.length} / ${widget.totalWeeks}'),
                       const SizedBox(height: 8),
                       Flexible(
                         child: GridView.builder(
                           shrinkWrap: true,
                           itemCount: widget.totalWeeks,
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 4,
-                                mainAxisSpacing: 8,
-                                crossAxisSpacing: 8,
-                                mainAxisExtent: 48,
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: desktop ? 5 : 4,
+                                mainAxisSpacing: desktop ? 4 : 8,
+                                crossAxisSpacing: desktop ? 4 : 8,
+                                mainAxisExtent: desktop
+                                    ? 36 *
+                                          WorkbenchChromeMetrics.of(context)
+                                              .textScale
+                                    : 48,
                               ),
                           itemBuilder: (context, index) {
                             final week = index + 1;
@@ -589,10 +618,16 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                                       ? colorScheme.primary.withValues(
                                           alpha: 0.12,
                                         )
+                                      : desktop
+                                      ? Colors.transparent
                                       : colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    desktop ? 6 : 12,
+                                  ),
                                   child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(
+                                      desktop ? 6 : 12,
+                                    ),
                                     onTap: () {
                                       setState(() {
                                         if (selected) {
@@ -703,8 +738,9 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         context: context,
         routeName: 'course-Periods-picker',
         anchorContext: _periodsAnchor.currentContext,
-        preferredWidth: 360,
+        preferredWidth: 320,
         workspace: AppMode.student,
+        placement: SkedFloatingPlacement.left,
         builder: (context) {
           var popped = false;
           return StatefulBuilder(
@@ -721,28 +757,64 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
                 title: Text(l10n.selectLinkedPeriods),
                 content: ExpressiveDialogContent(
                   maxWidth: 360,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final period in widget.periodTimes)
-                        ChoiceChip(
-                          label: Text(l10n.periodNumberLabel(period.index)),
-                          selected: draft.contains(period.index),
-                          onSelected: (_) {
-                            setState(() {
-                              final next = _togglePeriodSelection(
-                                draft,
-                                period.index,
-                              );
-                              draft
-                                ..clear()
-                                ..addAll(next);
-                            });
-                          },
+                  child: WorkbenchChromeMetrics.of(context).desktop
+                      ? ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 360),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (final period in widget.periodTimes)
+                                  CheckboxListTile(
+                                    dense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    title: Text(
+                                      l10n.periodNumberLabel(period.index),
+                                    ),
+                                    subtitle: Text(
+                                      '${_formatTimeOfDay(TimeOfDay(hour: period.startMinutes ~/ 60, minute: period.startMinutes % 60))} – ${_formatTimeOfDay(TimeOfDay(hour: period.endMinutes ~/ 60, minute: period.endMinutes % 60))}',
+                                    ),
+                                    value: draft.contains(period.index),
+                                    onChanged: (_) => setState(() {
+                                      final next = _togglePeriodSelection(
+                                        draft,
+                                        period.index,
+                                      );
+                                      draft
+                                        ..clear()
+                                        ..addAll(next);
+                                    }),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final period in widget.periodTimes)
+                              ChoiceChip(
+                                label: Text(
+                                  l10n.periodNumberLabel(period.index),
+                                ),
+                                selected: draft.contains(period.index),
+                                onSelected: (_) {
+                                  setState(() {
+                                    final next = _togglePeriodSelection(
+                                      draft,
+                                      period.index,
+                                    );
+                                    draft
+                                      ..clear()
+                                      ..addAll(next);
+                                  });
+                                },
+                              ),
+                          ],
                         ),
-                    ],
-                  ),
                 ),
                 actions: [
                   TextButton(
@@ -1084,6 +1156,88 @@ class _WeekdayPickerDialog extends StatelessWidget {
       Localizations.localeOf(context),
     );
 
+    if (SkedTaskDialogScope.maybeOf(context) != null) {
+      return SkedTaskDialog(
+        title: Text(l10n.selectDayOfWeek),
+        content: LayoutBuilder(
+          builder: (context, constraints) {
+            final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+            final columns = (constraints.maxWidth / (36 * scale)).floor().clamp(
+              1,
+              7,
+            );
+            final width = constraints.maxWidth / columns;
+            return Focus(
+              onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
+                final key = event.logicalKey;
+                if (key != LogicalKeyboardKey.arrowLeft &&
+                    key != LogicalKeyboardKey.arrowRight &&
+                    key != LogicalKeyboardKey.arrowUp &&
+                    key != LogicalKeyboardKey.arrowDown) {
+                  return KeyEventResult.ignored;
+                }
+                final rtl = Directionality.of(context) == TextDirection.rtl;
+                final forward =
+                    key == LogicalKeyboardKey.arrowDown ||
+                    key ==
+                        (rtl
+                            ? LogicalKeyboardKey.arrowLeft
+                            : LogicalKeyboardKey.arrowRight);
+                if (forward) {
+                  FocusManager.instance.primaryFocus?.nextFocus();
+                } else {
+                  FocusManager.instance.primaryFocus?.previousFocus();
+                }
+                return KeyEventResult.handled;
+              },
+              child: Wrap(
+                children: [
+                  for (var day = 1; day <= 7; day++)
+                    SizedBox(
+                      width: width,
+                      height: 40 * scale,
+                      child: Tooltip(
+                        message: formatDayOfWeekLabel(
+                          day,
+                          localeCode: localeCode,
+                        ),
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            backgroundColor: day == selectedDay
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : null,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          onPressed: () => onSelect(day),
+                          child: Semantics(
+                            selected: day == selectedDay,
+                            label: formatDayOfWeekLabel(
+                              day,
+                              localeCode: localeCode,
+                            ),
+                            child: ExcludeSemantics(
+                              child: Text(
+                                formatWeekdayShortLabel(
+                                  day,
+                                  localeCode: localeCode,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
     return SkedTaskDialog(
       insetPadding: _editorDialogInsetPadding(context),
       title: Text(l10n.selectDayOfWeek),

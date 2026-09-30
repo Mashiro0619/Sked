@@ -1,3 +1,5 @@
+import 'sked_floating_surface.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -268,15 +270,18 @@ class _SkedWeekPickerState extends State<SkedWeekPicker> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        l.jumpToWeek,
-                        style: compact
-                            ? Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontSize: 18,
-                                height: 1.2,
-                                fontWeight: FontWeight.w500,
-                              )
-                            : Theme.of(context).textTheme.titleMedium,
+                      child: SkedPickerTitle(
+                        child: Text(
+                          l.jumpToWeek,
+                          style: compact
+                              ? Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontSize: 18,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w500,
+                                    )
+                              : Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                     ),
                     IconButton(

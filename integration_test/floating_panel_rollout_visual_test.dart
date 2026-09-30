@@ -1,3 +1,8 @@
+import 'package:sked/widgets/course_editor_sheet.dart';
+import 'package:sked/screens/theme_settings_page.dart';
+import 'package:sked/models/timetable_models.dart';
+import 'package:sked/widgets/sked_floating_surface.dart';
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -21,6 +26,128 @@ void main() {
   categories.main();
   views.main();
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets(
+    'course fields open adjacent redesigned panels with actual fonts',
+    (t) async {
+      final output = Directory(
+        const String.fromEnvironment(
+          'SKED_VISUAL_OUTPUT',
+          defaultValue: '.scratch/floating-v2',
+        ),
+      );
+      await output.create(recursive: true);
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(1366, 900);
+      addTearDown(t.view.reset);
+      for (final locale in ['en', 'zh']) {
+        for (final scale in [1.0, 1.5, 2.0]) {
+          final p = await workspaceProvider(locale: locale);
+          final boundary = GlobalKey();
+          await t.pumpWidget(
+            RepaintBoundary(
+              key: boundary,
+              child: WorkspaceHarness(
+                provider: p,
+                locale: Locale(locale),
+                textScale: scale,
+                brightness: scale == 1.5 ? Brightness.dark : Brightness.light,
+                home: Scaffold(
+                  body: Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(
+                      width: 390,
+                      child: CourseEditorSheet(
+                        periodTimes: buildDefaultPeriodTimes(),
+                        totalWeeks: 19,
+                        dayOfWeek: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await t.pumpAndSettle();
+          final l = AppLocalizations.of(
+            t.element(find.byType(CourseEditorSheet)),
+          );
+          for (final (label, scene) in [
+            (l.dayOfWeek, 'weekday'),
+            (l.semesterWeeks, 'weeks'),
+            (l.linkedPeriods, 'periods'),
+          ]) {
+            final trigger = find.text(label).first;
+            await t.ensureVisible(trigger);
+            await t.tap(trigger);
+            await t.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('sked-picker-drag-handle')),
+              findsOneWidget,
+            );
+            if (scene == 'weekday') {
+              expect(
+                t.getRect(find.byType(SkedFloatingSurface)).right,
+                lessThan(t.getRect(trigger).left),
+              );
+            }
+            Future<void> capture(String suffix) async {
+              expect(t.takeException(), isNull);
+              final image =
+                  await (boundary.currentContext!.findRenderObject()!
+                          as RenderRepaintBoundary)
+                      .toImage(pixelRatio: 1);
+              final bytes = (await image.toByteData(
+                format: ui.ImageByteFormat.png,
+              ))!;
+              await File('${output.path}/$locale-$scale-$scene$suffix.png')
+                  .writeAsBytes(bytes.buffer.asUint8List());
+              image.dispose();
+            }
+
+            await capture('');
+            await t.drag(
+              find.byKey(const ValueKey('sked-picker-drag-handle')),
+              const Offset(-50, 30),
+            );
+            await t.pumpAndSettle();
+            await capture('-dragged');
+            await t.sendKeyEvent(LogicalKeyboardKey.escape);
+            await t.pumpAndSettle();
+          }
+          await t.pumpWidget(
+            RepaintBoundary(
+              key: boundary,
+              child: WorkspaceHarness(
+                provider: p,
+                locale: Locale(locale),
+                textScale: scale,
+                home: const ThemeSettingsPage(),
+              ),
+            ),
+          );
+          await t.pumpAndSettle();
+          final custom = find.text(l.themeCustomColor).first;
+          await t.ensureVisible(custom);
+          await t.tap(custom);
+          await t.pumpAndSettle();
+          expect(t.takeException(), isNull);
+          final image =
+              await (boundary.currentContext!.findRenderObject()!
+                      as RenderRepaintBoundary)
+                  .toImage(pixelRatio: 1);
+          final bytes = (await image.toByteData(
+            format: ui.ImageByteFormat.png,
+          ))!;
+          await File('${output.path}/$locale-$scale-color.png')
+              .writeAsBytes(bytes.buffer.asUint8List());
+          image.dispose();
+          await t.pumpWidget(const SizedBox());
+          await t.pumpAndSettle();
+          p.dispose();
+        }
+      }
+    },
+  );
   testWidgets(
     'desktop floating choices actual-font light dark locale and scale gallery',
     (t) async {

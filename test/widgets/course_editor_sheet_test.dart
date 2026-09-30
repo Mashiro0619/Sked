@@ -61,6 +61,10 @@ Future<void> _pumpEditorHost(
 
 Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
   final wheel = find.byKey(const ValueKey('sked-time-minute-wheel'));
+  if (wheel.evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('sked-time-input-toggle')));
+    await tester.pumpAndSettle();
+  }
   final extent = tester.widget<ListWheelScrollView>(wheel).itemExtent;
   await tester.sendEventToBinding(
     PointerScrollEvent(
@@ -70,6 +74,10 @@ Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
     ),
   );
   await tester.pumpAndSettle();
+  if (find.byKey(const ValueKey('sked-time-minute-input')).evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('sked-time-input-toggle')));
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {

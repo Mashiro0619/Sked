@@ -1,3 +1,5 @@
+import 'sked_floating_surface.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../models/app_mode.dart';
@@ -13,6 +15,7 @@ Future<T?> showSkedAdaptivePickerDialog<T>({
   required String routeName,
   required WidgetBuilder builder,
   BuildContext? anchorContext,
+  SkedFloatingPlacement placement = SkedFloatingPlacement.automatic,
   double preferredWidth = 360,
   AppMode? workspace,
   bool Function()? isSessionCurrent,
@@ -24,12 +27,14 @@ Future<T?> showSkedAdaptivePickerDialog<T>({
     context: context,
     routeName: routeName,
     anchorContext: anchorContext,
+    placement: placement,
     workspace: workspace,
     isSessionCurrent: isSessionCurrent,
     // These dialogs already wrap their text and choices. Keep their existing
     // reading widths instead of multiplying empty space with the text scale.
     preferredSize: (_) => Size(preferredWidth, 600),
     builder: (context, finish, isCurrent) => SkedTaskDialogScope(
+      onClose: () => Navigator.of(context).maybePop(),
       child: UiCommandFeedbackHost(
         builder: (context) => SkedStableTaskBody(builder: builder),
       ),

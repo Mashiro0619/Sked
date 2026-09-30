@@ -39,6 +39,7 @@ class SkedTaskDialog extends StatelessWidget {
   const SkedTaskDialog({
     super.key,
     this.title,
+    this.titleAction,
     this.content,
     this.actions,
     this.scrollable = false,
@@ -50,7 +51,7 @@ class SkedTaskDialog extends StatelessWidget {
     this.actionsPadding,
     this.titleTextStyle,
   });
-  final Widget? title, content;
+  final Widget? title, content, titleAction;
   final List<Widget>? actions;
   final bool scrollable;
   final bool closeEnabled;
@@ -90,6 +91,11 @@ class SkedTaskDialog extends StatelessWidget {
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: bounds.maxHeight * .35),
             child: SingleChildScrollView(
+              physics:
+                  scope.onDragUpdate != null ||
+                      SkedFloatingDragScope.maybeOf(context) != null
+                  ? const NeverScrollableScrollPhysics()
+                  : null,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
                 child: Row(
@@ -97,13 +103,14 @@ class SkedTaskDialog extends StatelessWidget {
                   children: [
                     Expanded(
                       child: scope.onDragUpdate == null
-                          ? heading
+                          ? SkedPickerTitle(child: heading)
                           : SkedFloatingTitleDragHandle(
                               key: const ValueKey('floating-form-drag-handle'),
                               onUpdate: scope.onDragUpdate!,
                               child: heading,
                             ),
                     ),
+                    ?titleAction,
                     if (scope.onClose != null)
                       IconButton(
                         key: const ValueKey('floating-form-close'),

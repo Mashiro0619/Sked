@@ -32,7 +32,7 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
           context: context,
           routeName: 'timetable-picker',
           anchorContext: anchorContext,
-          preferredWidth: 420,
+          preferredWidth: 340,
           workspace: AppMode.student,
           builder: (_) => panel,
         );

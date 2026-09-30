@@ -79,29 +79,121 @@ Offset boundSkedFloatingPosition(Offset position, Size size, Rect bounds) =>
       ),
     );
 
-/// A missing/off-screen anchor or insufficient space on both sides centers the
-/// task instead of covering its trigger with a partially clamped placement.
+enum SkedFloatingPlacement { automatic, left, right, below }
+
 Offset positionSkedFloatingPanel({
   required Rect bounds,
   required Size size,
   Rect? anchor,
   bool rtl = false,
+  SkedFloatingPlacement placement = SkedFloatingPlacement.automatic,
 }) {
-  var position = bounds.center - Offset(size.width / 2, size.height / 2);
-  if (anchor != null &&
-      anchor.overlaps(
+  if (anchor == null ||
+      !anchor.overlaps(
         Rect.fromLTRB(bounds.left, 0, bounds.right, bounds.bottom),
       )) {
-    final below = anchor.bottom + SkedFloatingStyle.anchorGap;
-    final above = anchor.top - SkedFloatingStyle.anchorGap - size.height;
-    final x = rtl ? anchor.right - size.width : anchor.left;
-    if (below + size.height <= bounds.bottom) {
-      position = Offset(x, below);
-    } else if (above >= bounds.top) {
-      position = Offset(x, above);
+    return boundSkedFloatingPosition(
+      bounds.center - Offset(size.width / 2, size.height / 2),
+      size,
+      bounds,
+    );
+  }
+  final effective = placement == SkedFloatingPlacement.automatic
+      ? anchor.bottom <= bounds.top + 64
+            ? SkedFloatingPlacement.below
+            : anchor.center.dx > bounds.left + bounds.width * .72
+            ? SkedFloatingPlacement.left
+            : anchor.center.dx < bounds.left + bounds.width * .24
+            ? SkedFloatingPlacement.right
+            : SkedFloatingPlacement.below
+      : placement;
+  final x = rtl ? anchor.right - size.width : anchor.left;
+  final candidates = <Offset>[
+    Offset(anchor.left - 6 - size.width, anchor.top),
+    Offset(anchor.right + 6, anchor.top),
+    Offset(x, anchor.bottom + 6),
+    Offset(x, anchor.top - 6 - size.height),
+  ];
+  final order = switch (effective) {
+    SkedFloatingPlacement.left => [0, 1, 2, 3],
+    SkedFloatingPlacement.right => [1, 0, 2, 3],
+    _ => [2, 3, 1, 0],
+  };
+  final rooms = [
+    anchor.left - 6 - bounds.left,
+    bounds.right - anchor.right - 6,
+    bounds.bottom - anchor.bottom - 6,
+    anchor.top - 6 - bounds.top,
+  ];
+  for (final side in order) {
+    if (rooms[side] >= (side < 2 ? size.width : size.height)) {
+      return boundSkedFloatingPosition(candidates[side], size, bounds);
     }
   }
-  return boundSkedFloatingPosition(position, size, bounds);
+  // Keep the closest viable attachment, never jump to the window center.
+  var best = order.first;
+  var area = -1.0;
+  for (final side in order) {
+    final available =
+        math.max(0, rooms[side]) * (side < 2 ? bounds.height : bounds.width);
+    if (available > area) {
+      area = available;
+      best = side;
+    }
+  }
+  return boundSkedFloatingPosition(candidates[best], size, bounds);
+}
+
+/// When no horizontal neighbour can hold the reading width, use the larger
+/// vertical space and let the body's existing scroll view absorb overflow.
+/// Keep a minimum usable header/footer budget rather than collapsing to a sliver.
+double skedFloatingHeightLimit(Rect bounds, Rect? anchor, double width) {
+  if (anchor == null ||
+      !anchor.overlaps(
+        Rect.fromLTRB(bounds.left, 0, bounds.right, bounds.bottom),
+      )) {
+    return bounds.height;
+  }
+  if (anchor.left - bounds.left - 6 >= width ||
+      bounds.right - anchor.right - 6 >= width) {
+    return bounds.height;
+  }
+  final vertical = math.max(
+    anchor.top - bounds.top - 6,
+    bounds.bottom - anchor.bottom - 6,
+  );
+  return vertical >= 240 ? math.min(bounds.height, vertical) : bounds.height;
+}
+
+/// Only task titles opt in: controls and body gestures stay outside the handle.
+class SkedFloatingDragScope extends InheritedWidget {
+  const SkedFloatingDragScope({
+    super.key,
+    required this.onDrag,
+    required super.child,
+  });
+  final ValueChanged<Offset> onDrag;
+  static SkedFloatingDragScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SkedFloatingDragScope>();
+  @override
+  bool updateShouldNotify(SkedFloatingDragScope oldWidget) =>
+      onDrag != oldWidget.onDrag;
+}
+
+class SkedPickerTitle extends StatelessWidget {
+  const SkedPickerTitle({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final scope = SkedFloatingDragScope.maybeOf(context);
+    return scope == null
+        ? child
+        : SkedFloatingTitleDragHandle(
+            key: const ValueKey('sked-picker-drag-handle'),
+            onUpdate: scope.onDrag,
+            child: child,
+          );
+  }
 }
 
 /// Resolve the persistent trigger, not a disappearing popup item focus node.

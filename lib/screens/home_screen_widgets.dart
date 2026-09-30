@@ -1052,11 +1052,13 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        l10n.multiTimetableSwitch,
-                        style: floating
-                            ? Theme.of(context).textTheme.titleMedium
-                            : Theme.of(context).textTheme.headlineSmall,
+                      child: SkedPickerTitle(
+                        child: Text(
+                          l10n.multiTimetableSwitch,
+                          style: floating
+                              ? Theme.of(context).textTheme.titleMedium
+                              : Theme.of(context).textTheme.headlineSmall,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -1162,6 +1164,27 @@ class _TimetableDrawerItem extends StatelessWidget {
     final secondaryColor = enabled
         ? (selected ? colors.primary : colors.onSurfaceVariant)
         : colors.onSurface.withValues(alpha: 0.38);
+    if (SkedTaskDialogScope.maybeOf(context) != null) {
+      return ListTile(
+        key: ValueKey('timetable-picker-item-${timetable.id}'),
+        dense: true,
+        selected: selected,
+        enabled: enabled,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        leading: SizedBox(
+          width: 20,
+          child: selected ? const Icon(Icons.check, size: 18) : null,
+        ),
+        title: Text(timetable.config.name),
+        subtitle: Text(selected ? currentLabel : switchLabel),
+        trailing: IconButton(
+          tooltip: editTooltip,
+          onPressed: enabled ? onEdit : null,
+          icon: const Icon(Icons.edit_outlined, size: 18),
+        ),
+        onTap: enabled ? onTap : null,
+      );
+    }
     return Semantics(
       key: ValueKey('timetable-picker-item-${timetable.id}'),
       container: true,

@@ -792,7 +792,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       context: context,
       routeName: 'theme-color-picker',
       anchorContext: anchorContext,
-      preferredWidth: 440,
+      preferredWidth: 340,
       builder: (context) {
         var popped = false;
         var busy = false;
@@ -815,15 +815,17 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _PreviewBanner(
-                        title: l10n.themeColor,
-                        value: _formatColorHex(colorValue),
-                        preview: _ThemeColorPreview(
-                          colorValue: colorValue,
-                          selected: true,
+                      if (SkedTaskDialogScope.maybeOf(context) == null)
+                        _PreviewBanner(
+                          title: l10n.themeColor,
+                          value: _formatColorHex(colorValue),
+                          preview: _ThemeColorPreview(
+                            colorValue: colorValue,
+                            selected: true,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                      if (SkedTaskDialogScope.maybeOf(context) == null)
+                        const SizedBox(height: 16),
                       _SurfacePanel(
                         padding: const EdgeInsets.all(12),
                         child: Center(
@@ -890,7 +892,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       context: context,
       routeName: 'theme-color-picker',
       anchorContext: anchorContext,
-      preferredWidth: 440,
+      preferredWidth: 340,
       builder: (context) {
         var popped = false;
         var busy = false;
@@ -913,15 +915,17 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _PreviewBanner(
-                        title: previewTitle,
-                        value: _formatColorHex(colorValue),
-                        preview: _ThemeColorPreview(
-                          colorValue: colorValue,
-                          selected: true,
+                      if (SkedTaskDialogScope.maybeOf(context) == null)
+                        _PreviewBanner(
+                          title: previewTitle,
+                          value: _formatColorHex(colorValue),
+                          preview: _ThemeColorPreview(
+                            colorValue: colorValue,
+                            selected: true,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                      if (SkedTaskDialogScope.maybeOf(context) == null)
+                        const SizedBox(height: 16),
                       _SurfacePanel(
                         padding: const EdgeInsets.all(12),
                         child: Center(
@@ -988,7 +992,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       context: context,
       routeName: 'theme-color-picker',
       anchorContext: anchorContext,
-      preferredWidth: 440,
+      preferredWidth: 340,
       builder: (context) {
         var popped = false;
         var busy = false;
@@ -1013,17 +1017,19 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _PreviewBanner(
-                        title: l10n.themeColorCourseText,
-                        value: mode == colorfulCourseTextColorModeCustom
-                            ? '$modeLabel - ${_formatColorHex(colorValue)}'
-                            : modeLabel,
-                        preview: _ThemeColorPreview(
-                          colorValue: colorValue,
-                          selected: true,
+                      if (SkedTaskDialogScope.maybeOf(context) == null)
+                        _PreviewBanner(
+                          title: l10n.themeColorCourseText,
+                          value: mode == colorfulCourseTextColorModeCustom
+                              ? '$modeLabel - ${_formatColorHex(colorValue)}'
+                              : modeLabel,
+                          preview: _ThemeColorPreview(
+                            colorValue: colorValue,
+                            selected: true,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                      if (SkedTaskDialogScope.maybeOf(context) == null)
+                        const SizedBox(height: 16),
                       _SurfacePanel(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -1163,6 +1169,7 @@ class _PersistingThemeDialog extends StatelessWidget {
           key: const ValueKey('theme-persistence-dialog-pointer-guard'),
           absorbing: blocked,
           child: SkedTaskDialog(
+            closeEnabled: !blocked,
             title: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1467,6 +1474,7 @@ class _SurfacePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (SkedTaskDialogScope.maybeOf(context) != null) return child;
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(20),
@@ -1794,6 +1802,40 @@ class _CompactColorPickerState extends State<_CompactColorPicker> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (SkedTaskDialogScope.maybeOf(context) != null) ...[
+            Row(
+              children: [
+                Container(width: 24, height: 24, color: color),
+                const SizedBox(width: 8),
+                Text(_formatColorHex(widget.colorValue)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                for (final value in _themeSeedOptions)
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: IconButton(
+                      tooltip: _formatColorHex(value),
+                      onPressed: () => _updateColor(Color(value)),
+                      icon: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Color(value),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           SizedBox(
             width: pickerWidth,
             height: pickerWidth * 0.45,

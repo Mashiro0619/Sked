@@ -12,12 +12,14 @@ class SkedDesktopFloatingDialog {
   const SkedDesktopFloatingDialog({
     this.anchorContext,
     this.preferredWidth = 360,
-    this.maxWidth = 440,
+    this.maxWidth = 360,
     this.draggable = true,
+    this.placement = SkedFloatingPlacement.below,
   });
   final BuildContext? anchorContext;
   final double preferredWidth, maxWidth;
   final bool draggable;
+  final SkedFloatingPlacement placement;
 }
 
 class _FloatingDismissIntent extends Intent {
@@ -111,7 +113,11 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
             delegate: _FloatingDialogPosition(
               bounds: _bounds,
               anchor: anchor,
-              manualPosition: _manualPosition,
+              manualPosition:
+                  _manualPosition ??
+                  (anchor == null && _childSize != Size.zero
+                      ? _visiblePosition
+                      : null),
               width: math.min(
                 _bounds.width,
                 math.min(
@@ -120,6 +126,7 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
                 ),
               ),
               rtl: Directionality.of(context) == TextDirection.rtl,
+              placement: widget.options.placement,
               onLayout: (position, size) {
                 _visiblePosition = position;
                 _childSize = size;
@@ -147,6 +154,7 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
     required this.manualPosition,
     required this.width,
     required this.rtl,
+    required this.placement,
     required this.onLayout,
   });
   final Rect bounds;
@@ -154,13 +162,14 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
   final Offset? manualPosition;
   final double width;
   final bool rtl;
+  final SkedFloatingPlacement placement;
   final void Function(Offset, Size) onLayout;
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints(
         minWidth: width,
         maxWidth: width,
-        maxHeight: bounds.height,
+        maxHeight: skedFloatingHeightLimit(bounds, anchor, width),
       );
   @override
   Offset getPositionForChild(Size size, Size childSize) {
@@ -170,6 +179,7 @@ class _FloatingDialogPosition extends SingleChildLayoutDelegate {
             size: childSize,
             anchor: anchor,
             rtl: rtl,
+            placement: placement,
           )
         : boundSkedFloatingPosition(manualPosition!, childSize, bounds);
     onLayout(position, childSize);

@@ -1,3 +1,5 @@
+import 'sked_floating_surface.dart';
+
 import 'package:flutter/scheduler.dart';
 
 import '../theme/sked_surface.dart';
@@ -86,8 +88,10 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
   bool? _use24;
   bool _finished = false;
   bool _inputMode = false;
+  bool _modeInitialized = false;
+  bool get _desktopTask => WorkbenchChromeMetrics.of(context).desktop;
   bool get _compact => WorkbenchChromeMetrics.compactTouch(context);
-  bool get _wheelsVisible => !_compact || !_inputMode;
+  bool get _wheelsVisible => !(_compact || _desktopTask) || !_inputMode;
   int _hourInputRevision = 0, _minuteInputRevision = 0;
   bool _hourMoving = false, _minuteMoving = false;
   final _hourWheel = GlobalKey<_TimeValueWheelState>();
@@ -125,6 +129,10 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_modeInitialized) {
+      _inputMode = _desktopTask;
+      _modeInitialized = true;
+    }
     if (!_wheelsVisible) {
       _hourMoving = _minuteMoving = false;
     }
@@ -248,7 +256,9 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
       onChanged: (_) => _changed(hour),
       onSubmitted: (_) => hour ? _minuteFocus.requestFocus() : _submit(),
     );
-    if (_compact) return _buildCompact(context, field, rowHeight);
+    if (_compact || _desktopTask) {
+      return _buildCompact(context, field, rowHeight);
+    }
     return Shortcuts(
       shortcuts: const {
         SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
@@ -291,15 +301,23 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text(
-                                m.timePickerDialHelpText,
-                                style: Theme.of(context).textTheme.titleMedium,
+                              SkedPickerTitle(
+                                child: Text(
+                                  m.timePickerDialHelpText,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
                               ),
                               const SizedBox(height: 16),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(child: field(true)),
+                                  Expanded(
+                                    child: _desktopTask
+                                        ? _desktopTimeField(true, field)
+                                        : field(true),
+                                  ),
                                   const SizedBox(
                                     width: 12,
                                     child: Padding(
@@ -310,7 +328,11 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                                       ),
                                     ),
                                   ),
-                                  Expanded(child: field(false)),
+                                  Expanded(
+                                    child: _desktopTask
+                                        ? _desktopTimeField(false, field)
+                                        : field(false),
+                                  ),
                                 ],
                               ),
                               if (_value == null)
@@ -450,6 +472,34 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
     );
   }
 
+  Widget _desktopTimeField(bool hour, Widget Function(bool) field) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      field(hour),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (final step in [-1, 1])
+            IconButton(
+              key: ValueKey('sked-time-${hour ? "hour" : "minute"}-step-$step'),
+              tooltip: step < 0
+                  ? MaterialLocalizations.of(context).previousPageTooltip
+                  : MaterialLocalizations.of(context).nextPageTooltip,
+              onPressed: _current && _value != null
+                  ? () {
+                      final first = hour && !_use24! ? 1 : 0;
+                      final count = hour ? (_use24! ? 24 : 12) : 60;
+                      final current = hour ? _displayHour! : _displayMinute!;
+                      _select(hour, (current - first + step) % count + first);
+                    }
+                  : null,
+              icon: Icon(step < 0 ? Icons.remove : Icons.add),
+            ),
+        ],
+      ),
+    ],
+  );
+
   Widget _buildCompact(
     BuildContext context,
     Widget Function(bool) field,
@@ -502,9 +552,23 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  material.timePickerDialHelpText,
-                                  style: theme.textTheme.titleMedium,
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: SkedPickerTitle(
+                                        child: Text(
+                                          material.timePickerDialHelpText,
+                                          style: theme.textTheme.titleMedium,
+                                        ),
+                                      ),
+                                    ),
+                                    if (_desktopTask)
+                                      IconButton(
+                                        tooltip: material.closeButtonLabel,
+                                        onPressed: _cancel,
+                                        icon: const Icon(Icons.close),
+                                      ),
+                                  ],
                                 ),
                                 const SizedBox(height: 12),
                                 if (_inputMode)
@@ -512,7 +576,11 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Expanded(child: field(true)),
+                                      Expanded(
+                                        child: _desktopTask
+                                            ? _desktopTimeField(true, field)
+                                            : field(true),
+                                      ),
                                       const SizedBox(
                                         width: 16,
                                         child: Padding(
@@ -523,7 +591,11 @@ class _SkedTimePickerState extends State<SkedTimePicker> {
                                           ),
                                         ),
                                       ),
-                                      Expanded(child: field(false)),
+                                      Expanded(
+                                        child: _desktopTask
+                                            ? _desktopTimeField(false, field)
+                                            : field(false),
+                                      ),
                                     ],
                                   )
                                 else ...[
