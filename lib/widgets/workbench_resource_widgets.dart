@@ -85,3 +85,74 @@ class CalendarResourceRow extends StatelessWidget {
     );
   }
 }
+
+/// Resource-row actions are quiet until the row is pointed at or focused.
+/// Opacity preserves the trailing slot and keyboard traversal while hidden.
+class TimetableResourceRow extends StatefulWidget {
+  const TimetableResourceRow({
+    super.key,
+    required this.timetableId,
+    required this.name,
+    required this.selected,
+    required this.onSelected,
+    required this.onEdit,
+  });
+
+  final String timetableId;
+  final String name;
+  final bool selected;
+  final VoidCallback? onSelected;
+  final VoidCallback? onEdit;
+
+  @override
+  State<TimetableResourceRow> createState() => _TimetableResourceRowState();
+}
+
+class _TimetableResourceRowState extends State<TimetableResourceRow> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final showEdit =
+        !WorkbenchChromeMetrics.of(context).desktop ||
+        MediaQuery.accessibleNavigationOf(context) ||
+        _hovered ||
+        _focused;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        includeSemantics: false,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: ListTile(
+          title: Text(widget.name),
+          selected: widget.selected,
+          onTap: widget.onSelected,
+          trailing: Opacity(
+            key: ValueKey(
+              'resource-timetable-edit-visibility-${widget.timetableId}',
+            ),
+            opacity: showEdit ? 1 : 0,
+            child: IgnorePointer(
+              ignoring: !showEdit,
+              child: ExcludeSemantics(
+                excluding: !showEdit,
+                child: IconButton(
+                  key: ValueKey(
+                    'resource-timetable-edit-${widget.timetableId}',
+                  ),
+                  tooltip: AppLocalizations.of(context).editTimetable,
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: widget.onEdit,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

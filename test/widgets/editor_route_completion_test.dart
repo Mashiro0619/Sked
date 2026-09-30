@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -148,6 +149,14 @@ void main() {
         ),
       );
       await t.pumpWidget(WorkspaceHarness(provider: provider));
+      await t.pumpAndSettle();
+      final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(
+        location: t.getCenter(
+          _key('resource-timetable-${provider.activeTimetable.id}'),
+        ),
+      );
+      addTearDown(mouse.removePointer);
       await t.pumpAndSettle();
       await t.tap(find.byTooltip('Edit timetable'));
       await t.pumpAndSettle();

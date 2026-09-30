@@ -5,6 +5,7 @@ import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
+import '../widgets/workbench_resource_widgets.dart';
 import '../widgets/workbench_compact_calendar_bar.dart';
 
 import 'dart:async';
@@ -631,29 +632,26 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
               children: [
                 for (final timetable in provider.timetables)
-                  ListTile(
+                  TimetableResourceRow(
                     key: ValueKey('resource-timetable-${timetable.id}'),
-                    title: Text(timetable.config.name),
+                    timetableId: timetable.id,
+                    name: timetable.config.name,
                     selected:
                         timetable.id == provider.activeTimetableOrNull?.id,
-                    onTap: widget.interactive
+                    onSelected: widget.interactive
                         ? () => _switchTimetableFromPicker(
                             context,
                             provider,
                             timetable,
                           )
                         : null,
-                    trailing: IconButton(
-                      tooltip: l10n.editTimetable,
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: _courseEditorOpen
-                          ? null
-                          : () => _openTimetableItemDialog(
-                              context,
-                              provider,
-                              timetable,
-                            ),
-                    ),
+                    onEdit: _courseEditorOpen
+                        ? null
+                        : () => _openTimetableItemDialog(
+                            context,
+                            provider,
+                            timetable,
+                          ),
                   ),
               ],
             );
