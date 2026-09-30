@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -104,8 +105,19 @@ Widget _gridHarness({
   ValueChanged<TimetableCourseTapInfo>? onCourseTap,
   ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap,
   bool enableLongPressAdd = true,
+  TargetPlatform? platform,
+  Brightness brightness = Brightness.light,
+  String themeColorMode = themeColorModeSingle,
+  Map<String, int> courseColors = const {},
+  int? textColor,
+  ColorScheme? colorScheme,
 }) {
   return MaterialApp(
+    theme: ThemeData(
+      platform: platform,
+      brightness: brightness,
+      colorScheme: colorScheme,
+    ),
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context)
           .copyWith(textScaler: TextScaler.linear(textScale)),
@@ -126,9 +138,12 @@ Widget _gridHarness({
           showGridLines: true,
           onCourseTap: onCourseTap ?? (_) {},
           onEmptySlotTap: enableLongPressAdd ? onEmptySlotTap ?? (_) {} : null,
-          themeColorMode: themeColorModeSingle,
-          courseNameColorValues: const {},
-          colorfulCourseTextColorMode: colorfulCourseTextColorModeAuto,
+          themeColorMode: themeColorMode,
+          courseNameColorValues: courseColors,
+          colorfulCourseTextColorMode: textColor == null
+              ? colorfulCourseTextColorModeAuto
+              : colorfulCourseTextColorModeCustom,
+          colorfulCourseTextColorValue: textColor,
           liveCourseOutlineEnabled: false,
           liveCourseOutlineMode: liveCourseOutlineModeCurrentOrNext,
           liveCourseOutlineColorValue: 0xFF6750A4,
@@ -157,6 +172,532 @@ ScrollableState _horizontalScrollState(WidgetTester tester, Key ownerKey) {
 }
 
 void main() {
+  group('course typography', () {
+    const slots = [
+      CoursePeriodTime(index: 1, startMinutes: 480, endMinutes: 540),
+      CoursePeriodTime(index: 2, startMinutes: 540, endMinutes: 600),
+      CoursePeriodTime(index: 3, startMinutes: 600, endMinutes: 660),
+      CoursePeriodTime(index: 4, startMinutes: 660, endMinutes: 720),
+    ];
+    Finder within(String id, Finder finder) => find.descendant(
+      of: find.byKey(ValueKey('timetable-course-visual-$id')),
+      matching: finder,
+    );
+    for (final platform in TargetPlatform.values.where(
+      (p) => p != TargetPlatform.fuchsia,
+    )) {
+      testWidgets('top-aligned typography follows platform $platform', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(1440, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final desktop = [
+          TargetPlatform.windows,
+          TargetPlatform.macOS,
+          TargetPlatform.linux,
+        ].contains(platform);
+        for (final scale in [1.0, 1.3, 2.0]) {
+          var tapped = false;
+          await tester.pumpWidget(
+            _gridHarness(
+              platform: platform,
+              textScale: scale,
+              periodTimes: slots,
+              visibleWeekdays: [1, 2, 3],
+              onCourseTap: (_) => tapped = true,
+              timetable: _timetableWithCourses([
+                _course(
+                  id: 'type',
+                  weekday: 1,
+                  startMinutes: 480,
+                  endMinutes: 660,
+                  title: '计算方法',
+                  location: '辽河路校区 玉衡 B308(公共机房)',
+                  teacher: '肖莎莎',
+                  periods: [1, 2, 3],
+                ),
+              ]),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final card = tester.getRect(
+            find.byKey(const ValueKey('timetable-course-visual-type')),
+          );
+          final titleFinder = within('type', find.text('计算方法'));
+          final locationFinder = within(
+            'type',
+            find.text('辽河路校区 玉衡 B308(公共机房)'),
+          );
+          final teacherFinder = within('type', find.text('肖莎莎'));
+          final title = tester.widget<Text>(titleFinder);
+          final location = tester.widget<Text>(locationFinder);
+          final teacher = tester.widget<Text>(teacherFinder);
+          expect(
+            tester.getRect(teacherFinder).bottom,
+            lessThan(card.center.dy),
+          );
+          if (desktop) {
+            expect(
+              title.style!.fontSize,
+              greaterThan(location.style!.fontSize!),
+            );
+            expect(title.style!.fontWeight, FontWeight.w600);
+            expect(title.style!.fontSize, 16);
+            expect(location.style!.fontSize, 13);
+            expect(location.style, teacher.style);
+            expect(teacher.style!.fontWeight, FontWeight.w400);
+            expect(location.style!.height, 1.3);
+            expect(tester.getRect(titleFinder).top - card.top, closeTo(12, .1));
+            expect(
+              tester.getRect(titleFinder).left - card.left,
+              closeTo(12, .1),
+            );
+            expect(
+              tester.getRect(locationFinder).left,
+              tester.getRect(titleFinder).left,
+            );
+            expect(
+              tester.getRect(teacherFinder).left,
+              tester.getRect(titleFinder).left,
+            );
+            expect(
+              tester.getRect(locationFinder).top -
+                  tester.getRect(titleFinder).bottom,
+              closeTo(12, .1),
+            );
+            expect(
+              tester.getRect(teacherFinder).top -
+                  tester.getRect(locationFinder).bottom,
+              closeTo(2, .1),
+            );
+          } else {
+            expect(title.style!.height, 1.1);
+            expect(teacher.style!.fontWeight, FontWeight.w600);
+            expect(
+              tester.getRect(locationFinder).top,
+              closeTo(tester.getRect(titleFinder).bottom, .1),
+            );
+          }
+          await tester.tap(
+            find.byKey(const ValueKey('timetable-course-hit-type')),
+          );
+          expect(tapped, isTrue);
+          expect(tester.takeException(), isNull);
+        }
+      });
+    }
+    double contrast(Color a, Color b) {
+      final x = a.computeLuminance();
+      final y = b.computeLuminance();
+      return x > y ? (x + .05) / (y + .05) : (y + .05) / (x + .05);
+    }
+
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'desktop foreground hierarchy retains contrast and custom colors in $brightness',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(1440, 900));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final table = _timetableWithCourses([
+            _course(
+              id: 'contrast',
+              weekday: 1,
+              startMinutes: 480,
+              endMinutes: 600,
+              title: 'Calculus',
+              location: 'Building A101',
+              teacher: 'Teacher',
+            ),
+          ]);
+          for (final colorful in [false, true]) {
+            await tester.pumpWidget(
+              _gridHarness(
+                timetable: table,
+                periodTimes: slots,
+                platform: TargetPlatform.windows,
+                brightness: brightness,
+                themeColorMode: colorful
+                    ? themeColorModeColorful
+                    : themeColorModeSingle,
+                courseColors: const {'Calculus': 0xfff4bb22},
+                textColor: colorful ? 0xff654321 : null,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final cardFinder = find.byKey(
+              const ValueKey('timetable-course-visual-contrast'),
+            );
+            final card = tester.widget<Card>(cardFinder);
+            final title = tester
+                .widget<Text>(within('contrast', find.text('Calculus')))
+                .style!
+                .color!;
+            final metadata = tester
+                .widget<Text>(within('contrast', find.text('Building A101')))
+                .style!
+                .color!;
+            if (colorful) {
+              expect(title, metadata);
+              expect(title.withValues(alpha: 1), const Color(0xff654321));
+            } else {
+              final background = Color.alphaBlend(
+                card.color!,
+                Theme.of(tester.element(cardFinder)).colorScheme.surface,
+              );
+              expect(contrast(title, background), greaterThanOrEqualTo(4.5));
+              expect(contrast(metadata, background), greaterThanOrEqualTo(4.5));
+              expect(
+                contrast(title, background),
+                greaterThan(contrast(metadata, background)),
+              );
+            }
+            expect(tester.takeException(), isNull);
+          }
+        },
+      );
+    }
+    testWidgets(
+      'theme foregrounds remain readable even when custom monochrome colors are low contrast',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1440, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        for (final foreground in [
+          const Color(0xffaaaaaa),
+          const Color(0xff747474),
+        ]) {
+          final scheme = ColorScheme.fromSeed(seedColor: Colors.purple)
+              .copyWith(
+                surface: Colors.white,
+                primaryContainer: Colors.white,
+                secondaryContainer: Colors.white,
+                onSurface: foreground,
+                onSurfaceVariant: foreground,
+              );
+          await tester.pumpWidget(
+            _gridHarness(
+              platform: TargetPlatform.windows,
+              colorScheme: scheme,
+              periodTimes: slots,
+              timetable: _timetableWithCourses([
+                _course(
+                  id: 'custom-theme',
+                  weekday: 1,
+                  startMinutes: 480,
+                  endMinutes: 600,
+                  title: 'Course',
+                  location: 'Location',
+                  teacher: 'Teacher',
+                ),
+              ]),
+            ),
+          );
+          await tester.pumpAndSettle();
+          for (final text in ['Course', 'Location', 'Teacher']) {
+            final color = tester
+                .widget<Text>(within('custom-theme', find.text(text)))
+                .style!
+                .color!;
+            expect(contrast(color, Colors.white), greaterThanOrEqualTo(4.5));
+          }
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
+    testWidgets(
+      'desktop gutters separate adjacent courses without shifting their time hit boundaries',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1440, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          _gridHarness(
+            platform: TargetPlatform.windows,
+            periodTimes: slots,
+            fitVisibleDaysToWidth: true,
+            timetable: _timetableWithCourses([
+              _course(id: 'a', weekday: 1, startMinutes: 480, endMinutes: 540),
+              _course(id: 'b', weekday: 1, startMinutes: 540, endMinutes: 600),
+              _course(id: 'c', weekday: 2, startMinutes: 480, endMinutes: 540),
+            ]),
+          ),
+        );
+        await tester.pumpAndSettle();
+        Rect rect(String prefix, String id) => tester.getRect(
+          find.byKey(ValueKey('timetable-course-$prefix-$id')),
+        );
+        expect(
+          rect('visual', 'c').left - rect('visual', 'a').right,
+          closeTo(8, .01),
+        );
+        expect(
+          rect('visual', 'b').top - rect('visual', 'a').bottom,
+          closeTo(8, .01),
+        );
+        expect(rect('hit', 'b').top, closeTo(rect('hit', 'a').bottom, .01));
+        expect(rect('visual', 'a').top, closeTo(rect('hit', 'a').top, .01));
+        expect(
+          rect('visual', 'b').bottom,
+          closeTo(rect('hit', 'b').bottom, .01),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+    RenderParagraph paragraph(WidgetTester tester, Finder text) =>
+        tester.renderObject<RenderParagraph>(
+          find.descendant(of: text, matching: find.byType(RichText)),
+        );
+    for (final scale in [1.0, 1.3, 2.0]) {
+      testWidgets(
+        'uses available height for every field beyond two lines at $scale',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(1440, 900));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          const title = '物理实验\nPhysics\nLab';
+          const location = '辽河路校区\n玉衡 B112\n理学院物理\n实验室';
+          const teacher = '范玉乔\nTeacher';
+          await tester.pumpWidget(
+            _gridHarness(
+              platform: TargetPlatform.windows,
+              textScale: scale,
+              fitVisibleDaysToWidth: true,
+              periodTimes: slots,
+              timetable: _timetableWithCourses([
+                _course(
+                  id: 'full',
+                  weekday: 1,
+                  startMinutes: 480,
+                  endMinutes: 720,
+                  title: title,
+                  location: location,
+                  teacher: teacher,
+                  periods: [1, 2, 3, 4],
+                ),
+              ]),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final card = tester.getRect(
+            find.byKey(const ValueKey('timetable-course-visual-full')),
+          );
+          for (final value in [title, location, teacher]) {
+            final finder = within('full', find.text(value));
+            final render = paragraph(tester, finder);
+            expect(render.didExceedMaxLines, isFalse, reason: value);
+            final painter = TextPainter(
+              text: render.text,
+              textDirection: render.textDirection,
+              textScaler: render.textScaler,
+              locale: render.locale,
+            )..layout(maxWidth: render.size.width);
+            expect(render.size.height, closeTo(painter.height, .01));
+            painter.dispose();
+            expect(
+              tester.getRect(finder).bottom,
+              lessThanOrEqualTo(card.bottom - 12 + .1),
+            );
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+    testWidgets(
+      'naturally wrapped long locations are fully visible when the card has room',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        for (final direction in TextDirection.values) {
+          const location = '辽河路校区 玉衡 B112(理学院物理实验教学中心，实验课程专用教室)';
+          await tester.pumpWidget(
+            _gridHarness(
+              platform: TargetPlatform.windows,
+              textScale: 1.3,
+              textDirection: direction,
+              fitVisibleDaysToWidth: true,
+              periodTimes: slots,
+              timetable: _timetableWithCourses([
+                _course(
+                  id: 'wrapped',
+                  weekday: 1,
+                  startMinutes: 480,
+                  endMinutes: 720,
+                  title: '物理实验A(下)',
+                  location: location,
+                  teacher: '范玉乔',
+                  periods: [1, 2, 3, 4],
+                ),
+              ]),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final finder = within('wrapped', find.text(location));
+          final render = paragraph(tester, finder);
+          final painter = TextPainter(
+            text: render.text,
+            textDirection: render.textDirection,
+            textScaler: render.textScaler,
+            locale: render.locale,
+          )..layout(maxWidth: render.size.width);
+          expect(painter.computeLineMetrics().length, greaterThan(2));
+          expect(render.didExceedMaxLines, isFalse);
+          expect(render.size.height, closeTo(painter.height, .01));
+          painter.dispose();
+          expect(within('wrapped', find.text('范玉乔')), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
+    testWidgets(
+      'truncates only to the height budget and keeps teacher, expands on taller course',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1440, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        const title = '物理实验A(下)';
+        final location = List.generate(12, (i) => '实验室 $i').join('\n');
+        Future<void> pump(int end) async {
+          await tester.pumpWidget(
+            _gridHarness(
+              platform: TargetPlatform.windows,
+              fitVisibleDaysToWidth: true,
+              periodTimes: slots,
+              timetable: _timetableWithCourses([
+                _course(
+                  id: 'grow',
+                  weekday: 1,
+                  startMinutes: 480,
+                  endMinutes: end,
+                  title: title,
+                  location: location,
+                  teacher: '范玉乔',
+                ),
+              ]),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        await pump(600);
+        final finder = within('grow', find.text(location));
+        final shortParagraph = paragraph(tester, finder);
+        expect(shortParagraph.didExceedMaxLines, isTrue);
+        expect(shortParagraph.maxLines, greaterThan(2));
+        final teacherFinder = within('grow', find.text('范玉乔'));
+        expect(teacherFinder, findsOneWidget);
+        expect(paragraph(tester, teacherFinder).didExceedMaxLines, isFalse);
+        final rect = tester.getRect(
+          find.byKey(const ValueKey('timetable-course-visual-grow')),
+        );
+        expect(
+          tester.getRect(teacherFinder).bottom,
+          lessThanOrEqualTo(rect.bottom - 12 + .1),
+        );
+        // No full extra line should fit in the deliberately truncated field.
+        final extra = TextPainter(
+          text: shortParagraph.text,
+          textDirection: shortParagraph.textDirection,
+          textScaler: shortParagraph.textScaler,
+          locale: shortParagraph.locale,
+          maxLines: shortParagraph.maxLines! + 1,
+          ellipsis: '…',
+        )..layout(maxWidth: shortParagraph.size.width);
+        expect(
+          extra.height - shortParagraph.size.height,
+          greaterThan(
+            rect.bottom - 12 - tester.getRect(teacherFinder).bottom + .01,
+          ),
+        );
+        extra.dispose();
+        await pump(720);
+        expect(paragraph(tester, finder).didExceedMaxLines, isFalse);
+        expect(tester.takeException(), isNull);
+      },
+    );
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'narrow cards, missing fields and conflicts remain bounded in $brightness',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(800, 750));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          for (final scale in [1.0, 1.3, 2.0]) {
+            await tester.pumpWidget(
+              _gridHarness(
+                platform: TargetPlatform.windows,
+                brightness: brightness,
+                textScale: scale,
+                periodTimes: slots,
+                fitVisibleDaysToWidth: true,
+                timetable: _timetableWithCourses([
+                  _course(
+                    id: 'short',
+                    weekday: 1,
+                    startMinutes: 480,
+                    endMinutes: 490,
+                    title: 'Numerical Methods',
+                    location: 'Computer lab B308',
+                    teacher: 'Xiao Shasha',
+                  ),
+                  _course(
+                    id: 'empty',
+                    weekday: 2,
+                    startMinutes: 480,
+                    endMinutes: 600,
+                    title: 'Title only',
+                  ),
+                  _course(
+                    id: 'long',
+                    weekday: 3,
+                    startMinutes: 480,
+                    endMinutes: 600,
+                    title: '很长的课程名称 Long course title ' * 5,
+                    location: 'Campus building B308 Computer Lab ' * 5,
+                    teacher: 'Teacher name ' * 5,
+                  ),
+                  _course(
+                    id: 'conflict1',
+                    weekday: 4,
+                    startMinutes: 480,
+                    endMinutes: 600,
+                    title: 'Conflict one',
+                    location: 'B308',
+                    teacher: 'Teacher',
+                  ),
+                  _course(
+                    id: 'conflict2',
+                    weekday: 4,
+                    startMinutes: 480,
+                    endMinutes: 600,
+                    title: 'Conflict two',
+                  ),
+                ]),
+              ),
+            );
+            await tester.pumpAndSettle();
+            for (final id in ['short', 'empty', 'long', 'conflict1']) {
+              final card = tester.getRect(
+                find.byKey(ValueKey('timetable-course-visual-$id')),
+              );
+              for (final e in within(id, find.byType(Text)).evaluate()) {
+                final r = tester.getRect(find.byWidget(e.widget));
+                expect(r.bottom, lessThanOrEqualTo(card.bottom + .1));
+                expect(r.right, lessThanOrEqualTo(card.right + .1));
+                for (final badge in within(
+                  id,
+                  find.byIcon(Icons.layers_outlined),
+                ).evaluate()) {
+                  expect(
+                    r.overlaps(
+                      tester.getRect(find.byWidget(badge.widget)).inflate(3),
+                    ),
+                    isFalse,
+                  );
+                }
+              }
+            }
+            expect(tester.takeException(), isNull);
+          }
+        },
+      );
+    }
+  });
+
   for (final scenario in [
     (scale: 1.8, size: const Size(430, 776), maxHeight: 120.0),
     (scale: 2.0, size: const Size(1120, 800), maxHeight: 120.0),

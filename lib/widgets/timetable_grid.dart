@@ -322,6 +322,9 @@ class _TimetableGridState extends State<TimetableGrid> {
           periodTimes: slots,
           fitVisibleDaysToWidth: widget.fitVisibleDaysToWidth,
           desktop: WorkbenchChromeMetrics.of(context).desktop,
+          courseSpacing:
+              widget.entries == null ||
+              widget.entries!.every((e) => e.kind == TimetableEntryKind.course),
         );
         final baseHeaderHeight = WorkbenchChromeMetrics.of(context).desktop
             ? 60.0
@@ -846,6 +849,7 @@ class _TimetableMetrics {
     required List<CoursePeriodTime> periodTimes,
     required bool fitVisibleDaysToWidth,
     required bool desktop,
+    required bool courseSpacing,
   }) {
     final safeWidth = width.isFinite && width > 0 ? width : 980.0;
     final timeLabelTextStyle = textTheme.titleSmall?.copyWith(
@@ -900,14 +904,14 @@ class _TimetableMetrics {
       dayColumnWidth: dayColumnWidth,
       daysContentWidth: daysContentWidth,
       courseGap: desktop
-          ? 3.0
+          ? (courseSpacing ? 4.0 : 3.0)
           : dayColumnWidth < 72
           ? 2.0
           : compact
           ? 4.0
           : 6.0,
       courseVerticalGap: desktop
-          ? 3.0
+          ? (courseSpacing ? 8.0 : 3.0)
           : dayColumnWidth < 72
           ? 2.0
           : compact
@@ -1459,84 +1463,122 @@ class _CourseCard extends StatelessWidget {
                               ? 0.96
                               : 0.92,
                         );
+                final desktopCourse =
+                    WorkbenchChromeMetrics.of(context).desktop &&
+                    layout.entry?.kind != TimetableEntryKind.generalEvent;
+                // Colorful mode keeps its shared automatic/custom text color.
+                // Theme-derived monochrome cards can use a stronger hierarchy.
+                final foregrounds =
+                    desktopCourse && themeColorMode != themeColorModeColorful
+                    ? _desktopCourseForegrounds(
+                        _isInactiveForCurrentWeek
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.onSurface,
+                        Color.alphaBlend(color, colorScheme.surface),
+                      )
+                    : (title: textColor, metadata: textColor);
                 final titleStyle =
                     (compact ? textTheme.titleSmall : textTheme.titleMedium)
                         ?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          height: 1.1,
-                          color: textColor,
+                          fontWeight: desktopCourse
+                              ? FontWeight.w600
+                              : FontWeight.w700,
+                          height: desktopCourse ? 1.2 : 1.1,
+                          color: foregrounds.title,
                         );
-                final bodyStyle =
-                    (compact ? textTheme.bodySmall : textTheme.bodyMedium)
-                        ?.copyWith(height: 1.1, color: textColor);
-                final teacherStyle =
-                    (compact ? textTheme.labelSmall : textTheme.labelMedium)
-                        ?.copyWith(
-                          height: 1.1,
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        );
+                final bodyStyle = desktopCourse
+                    ? textTheme.bodySmall?.copyWith(
+                        fontSize: compact ? 12 : 13,
+                        height: 1.3,
+                        color: foregrounds.metadata,
+                        fontWeight: FontWeight.w400,
+                      )
+                    : (compact ? textTheme.bodySmall : textTheme.bodyMedium)
+                          ?.copyWith(height: 1.1, color: textColor);
+                final teacherStyle = desktopCourse
+                    ? bodyStyle
+                    : (compact ? textTheme.labelSmall : textTheme.labelMedium)
+                          ?.copyWith(
+                            height: 1.1,
+                            color: textColor,
+                            fontWeight: FontWeight.w600,
+                          );
                 return Stack(
                   children: [
-                    Positioned.fill(
-                      child: ClipRect(
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.only(
-                            end: layout.isFullConflict && cardHeight >= 24
-                                ? 22
-                                : 0,
-                          ),
-                          child: OverflowBox(
-                            alignment: AlignmentDirectional.topStart,
-                            minWidth: constraints.maxWidth,
-                            maxWidth: constraints.maxWidth,
-                            minHeight: 0,
-                            maxHeight: double.infinity,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_title.isNotEmpty)
-                                  Text(
-                                    _title,
-                                    softWrap: true,
-                                    overflow:
-                                        WorkbenchChromeMetrics.of(context)
-                                            .desktop
-                                        ? TextOverflow.ellipsis
-                                        : TextOverflow.visible,
-                                    maxLines:
-                                        WorkbenchChromeMetrics.of(context)
-                                            .desktop
-                                        ? (constraints.maxHeight >
-                                                  MediaQuery.textScalerOf(
-                                                    context,
-                                                  ).scale(44)
-                                              ? 2
-                                              : 1)
-                                        : null,
-                                    style: titleStyle,
-                                  ),
-                                if (_location.isNotEmpty)
-                                  Text(
-                                    _location,
-                                    softWrap: true,
-                                    overflow: TextOverflow.visible,
-                                    style: bodyStyle,
-                                  ),
-                                if (_teacher.isNotEmpty)
-                                  Text(
-                                    _teacher,
-                                    softWrap: true,
-                                    overflow: TextOverflow.visible,
-                                    style: teacherStyle,
-                                  ),
-                              ],
+                    if (desktopCourse)
+                      Positioned.fill(
+                        child: _DesktopCourseTypography(
+                          title: _title,
+                          location: _location,
+                          teacher: _teacher,
+                          titleStyle: titleStyle,
+                          metadataStyle: bodyStyle,
+                          reserveConflict:
+                              layout.isFullConflict &&
+                              cardHeight >= 24 &&
+                              width >= 32,
+                        ),
+                      )
+                    else
+                      Positioned.fill(
+                        child: ClipRect(
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.only(
+                              end: layout.isFullConflict && cardHeight >= 24
+                                  ? 22
+                                  : 0,
+                            ),
+                            child: OverflowBox(
+                              alignment: AlignmentDirectional.topStart,
+                              minWidth: constraints.maxWidth,
+                              maxWidth: constraints.maxWidth,
+                              minHeight: 0,
+                              maxHeight: double.infinity,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_title.isNotEmpty)
+                                    Text(
+                                      _title,
+                                      softWrap: true,
+                                      overflow:
+                                          WorkbenchChromeMetrics.of(context)
+                                              .desktop
+                                          ? TextOverflow.ellipsis
+                                          : TextOverflow.visible,
+                                      maxLines:
+                                          WorkbenchChromeMetrics.of(context)
+                                              .desktop
+                                          ? (constraints.maxHeight >
+                                                    MediaQuery.textScalerOf(
+                                                      context,
+                                                    ).scale(44)
+                                                ? 2
+                                                : 1)
+                                          : null,
+                                      style: titleStyle,
+                                    ),
+                                  if (_location.isNotEmpty)
+                                    Text(
+                                      _location,
+                                      softWrap: true,
+                                      overflow: TextOverflow.visible,
+                                      style: bodyStyle,
+                                    ),
+                                  if (_teacher.isNotEmpty)
+                                    Text(
+                                      _teacher,
+                                      softWrap: true,
+                                      overflow: TextOverflow.visible,
+                                      style: teacherStyle,
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
                     if (layout.isFullConflict &&
                         cardHeight >= 24 &&
                         width >= 32)
@@ -1566,6 +1608,182 @@ class _CourseCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Soften secondary text only while it remains readable on the actual fill.
+/// User-specified colorful course text bypasses this theme-only hierarchy.
+({Color title, Color metadata}) _desktopCourseForegrounds(
+  Color preferred,
+  Color background,
+) {
+  double contrast(Color foreground) {
+    final a = Color.alphaBlend(foreground, background).computeLuminance();
+    final b = background.computeLuminance();
+    return (math.max(a, b) + .05) / (math.min(a, b) + .05);
+  }
+
+  final title = contrast(preferred) >= 4.5
+      ? preferred
+      : contrast(Colors.black) >= contrast(Colors.white)
+      ? Colors.black
+      : Colors.white;
+  var amount = .24;
+  var metadata = Color.lerp(title, background, amount)!;
+  // Do not turn secondary text into an inaccessible low-opacity grey.
+  for (var i = 0; i < 8 && contrast(metadata) < 4.5; i++) {
+    amount /= 2;
+    metadata = Color.lerp(title, background, amount)!;
+  }
+  return (title: title, metadata: contrast(metadata) >= 4.5 ? metadata : title);
+}
+
+/// A top-aligned hierarchy; spacing yields to readable text in short cards.
+/// Kept separate so touch typography and timetable geometry stay unchanged.
+class _DesktopCourseTypography extends StatelessWidget {
+  const _DesktopCourseTypography({
+    required this.title,
+    required this.location,
+    required this.teacher,
+    required this.titleStyle,
+    required this.metadataStyle,
+    required this.reserveConflict,
+  });
+  final String title;
+  final String location;
+  final String teacher;
+  final TextStyle? titleStyle;
+  final TextStyle? metadataStyle;
+  final bool reserveConflict;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final base = DefaultTextStyle.of(context).style;
+      final fields = <({String value, TextStyle style, double gap})>[
+        if (title.isNotEmpty)
+          (value: title, style: base.merge(titleStyle), gap: 0),
+        if (location.isNotEmpty)
+          (
+            value: location,
+            style: base.merge(metadataStyle),
+            gap: title.isEmpty ? 0 : 12,
+          ),
+        if (teacher.isNotEmpty)
+          (
+            value: teacher,
+            style: base.merge(metadataStyle),
+            gap: location.isNotEmpty
+                ? 2
+                : title.isNotEmpty
+                ? 12
+                : 0,
+          ),
+      ];
+      if (fields.isEmpty) return const SizedBox.shrink();
+      final scaler = MediaQuery.textScalerOf(context);
+      final direction = Directionality.of(context);
+      final locale = Localizations.maybeLocaleOf(context);
+      final badgeInset = reserveConflict ? 22.0 : 0.0;
+      final width = math.max(0.0, constraints.maxWidth - badgeInset);
+      ({double height, int lines}) measure(int i, double maxWidth, int? lines) {
+        final painter = TextPainter(
+          text: TextSpan(text: fields[i].value, style: fields[i].style),
+          textDirection: direction,
+          textScaler: scaler,
+          locale: locale,
+          maxLines: lines,
+          ellipsis: lines == null ? null : '…',
+        )..layout(maxWidth: maxWidth);
+        final result = (
+          height: painter.height,
+          lines: painter.computeLineMetrics().length,
+        );
+        painter.dispose();
+        return result;
+      }
+
+      // Preserve the reference spacing if at least one line per field fits.
+      // Long content determines its own line count, not the spacing mode.
+      const extraInset = 6.0;
+      final preferredWidth = math.max(0.0, width - extraInset * 2);
+      final preferredHeight = List.generate(
+        fields.length,
+        (i) => measure(i, preferredWidth, 1).height + fields[i].gap,
+      ).fold(extraInset * 2, (sum, value) => sum + value);
+      final spacious =
+          width > extraInset * 2 && preferredHeight <= constraints.maxHeight;
+      final inset = spacious ? extraInset : 0.0;
+      final textWidth = math.max(0.0, width - inset * 2);
+      final minimumHeights = [
+        for (var i = 0; i < fields.length; i++) measure(i, textWidth, 1).height,
+      ];
+      var remaining = math.max(0.0, constraints.maxHeight - inset * 2);
+      final children = <Widget>[];
+      for (var i = 0; i < fields.length && remaining > 0; i++) {
+        final gap = spacious ? fields[i].gap : 0.0;
+        final oneLine = minimumHeights[i];
+        if (i > 0 && gap + oneLine > remaining) break;
+        // A long title/location must not consume the teacher's last line.
+        var reserved = 0.0;
+        for (var j = i + 1; j < fields.length; j++) {
+          reserved += minimumHeights[j] + (spacious ? fields[j].gap : 0);
+        }
+        final budget = math.min(
+          remaining - gap,
+          math.max(oneLine, remaining - gap - reserved),
+        );
+        final full = measure(i, textWidth, null);
+        var lines = math.max(1, full.lines);
+        var height = full.height;
+        if (height > budget) {
+          // Find the largest whole-line layout that fits the real pixel budget.
+          // Measuring candidates also handles explicit newlines and font fallback.
+          var lower = 1;
+          var upper = lines;
+          while (lower < upper) {
+            final candidate = (lower + upper + 1) ~/ 2;
+            if (measure(i, textWidth, candidate).height <= budget) {
+              lower = candidate;
+            } else {
+              upper = candidate - 1;
+            }
+          }
+          lines = lower;
+          height = math.min(measure(i, textWidth, lines).height, budget);
+        }
+        if (gap > 0) children.add(SizedBox(height: gap));
+        children.add(
+          SizedBox(
+            height: height,
+            child: ClipRect(
+              child: Text(
+                fields[i].value,
+                style: fields[i].style,
+                textScaler: scaler,
+                locale: locale,
+                softWrap: true,
+                maxLines: lines,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        );
+        remaining -= height + gap;
+      }
+      return Padding(
+        padding: EdgeInsetsDirectional.fromSTEB(
+          inset,
+          inset,
+          inset + badgeInset,
+          inset,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children,
+        ),
+      );
+    },
+  );
 }
 
 class _CourseHitTarget extends StatelessWidget {
