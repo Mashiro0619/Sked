@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_task_dialog.dart';
+import 'package:flutter/services.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 
 import 'dart:async';
@@ -184,6 +186,56 @@ Future<void> _chooseAppearance(
 }
 
 void main() {
+  testWidgets(
+    'desktop course text color mode uses the shared dropdown and cancels without saving',
+    (t) async {
+      _setTestViewport(t, const Size(1440, 1000));
+      final storage = _BlockingTimetableStorage(
+        buildInitialAppData(buildDefaultPeriodTimes())
+            .copyWith(themeColorMode: themeColorModeColorful),
+      );
+      final p = await _createProvider(storage);
+      addTearDown(p.dispose);
+      await t.pumpWidget(_ThemeSettingsHost(provider: p));
+      await t.pumpAndSettle();
+      final entry = find.byKey(
+        const ValueKey('theme-ui-color-$colorfulCourseTextColorKey'),
+      );
+      await t.ensureVisible(entry);
+      await t.tap(entry);
+      await t.pumpAndSettle();
+      final dropdown = find.descendant(
+        of: find.byType(SkedTaskDialog),
+        matching: find.byType(SkedDropdownMenu<String>),
+      );
+      expect(dropdown, findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+      final before = storage.saveCount;
+      await t.tap(dropdown);
+      await t.pumpAndSettle();
+      final custom = find
+          .ancestor(
+            of: find.text('Custom color').last,
+            matching: find.byType(MenuItemButton),
+          )
+          .first;
+      expect(custom, findsOneWidget);
+      await t.tap(custom);
+      await t.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('course-text-color-picker')),
+        findsOneWidget,
+      );
+      expect(storage.saveCount, before);
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.pumpAndSettle();
+      expect(storage.saveCount, before);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets(
     'wide appearance compares readable controls with a local preview',
     (tester) async {

@@ -136,7 +136,8 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (WorkbenchChromeMetrics.compactTouch(context))
+        if (WorkbenchChromeMetrics.of(context).desktop ||
+            WorkbenchChromeMetrics.compactTouch(context))
           SkedDropdownMenu<CourseReminderBehavior>(
             key: const ValueKey('course-reminder-behavior'),
             initialSelection: widget.behavior,

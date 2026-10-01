@@ -209,7 +209,9 @@ class _AppearanceChoiceField extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
-            child: WorkbenchChromeMetrics.compactTouch(context)
+            child:
+                (WorkbenchChromeMetrics.of(context).desktop ||
+                    WorkbenchChromeMetrics.compactTouch(context))
                 ? SkedDropdownMenu<String>(
                     key: choiceListKey,
                     initialSelection: selected.first,

@@ -63,11 +63,12 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   TimetableProvider? _provider;
   Object? _dataSession;
   String? _workspaces;
-  bool _compact = false, _ownerCurrent = true, _acceptSelection = false;
+  bool _compact = false, _desktop = false;
+  bool _ownerCurrent = true, _acceptSelection = false;
   int _generation = 0;
   bool _restoreTriggerFocus = true;
 
-  bool get _managedMenu => _compact || widget.fieldBuilder != null;
+  bool get _managedMenu => _compact || _desktop || widget.fieldBuilder != null;
 
   bool get _sessionCurrent =>
       _ownerCurrent &&
@@ -82,6 +83,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _compact = WorkbenchChromeMetrics.compactTouch(context);
+    _desktop = WorkbenchChromeMetrics.of(context).desktop;
     _ownerCurrent = ModalRoute.isCurrentOf(context) ?? true;
     final provider = Provider.of<TimetableProvider?>(context, listen: false);
     if (!identical(provider, _provider)) {

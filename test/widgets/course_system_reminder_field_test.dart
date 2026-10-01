@@ -1,3 +1,6 @@
+import 'package:flutter/services.dart';
+import 'package:sked/widgets/sked_dropdown_menu.dart';
+
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +26,145 @@ class _Gateway extends MemoryAgendaNotificationGateway {
 }
 
 void main() {
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'desktop reminder uses styled menu and preserves drafts at scale $scale',
+      (t) async {
+        t.view.devicePixelRatio = 1;
+        t.view.physicalSize = const Size(1000, 900);
+        addTearDown(t.view.reset);
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        final minutes = TextEditingController(text: '25');
+        addTearDown(minutes.dispose);
+        final gateway = _Gateway();
+        final service = AgendaNotificationService(
+          enabled: true,
+          gateway: gateway,
+          runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+        );
+        addTearDown(service.dispose);
+        var behavior = CourseReminderBehavior.inherit;
+        var changes = 0;
+        final enabled = ValueNotifier(true);
+        addTearDown(enabled.dispose);
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            textScale: scale,
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topRight,
+                child: SizedBox(
+                  width: 340,
+                  child: SingleChildScrollView(
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: enabled,
+                      builder: (context, isEnabled, _) => StatefulBuilder(
+                        builder: (context, refresh) =>
+                            CourseSystemReminderField(
+                              behavior: behavior,
+                              enabled: isEnabled,
+                              minutesController: minutes,
+                              notificationService: service,
+                              onChanged: (value) => refresh(() {
+                                behavior = value;
+                                changes++;
+                              }),
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+        final field = find.byKey(const ValueKey('course-reminder-behavior'));
+        expect(
+          t.widget(field),
+          isA<SkedDropdownMenu<CourseReminderBehavior>>(),
+        );
+        expect(
+          find.byType(DropdownButtonFormField<CourseReminderBehavior>),
+          findsNothing,
+        );
+        await t.tap(field);
+        await t.pumpAndSettle();
+        final selected = t.widget<MenuItemButton>(
+          find
+              .ancestor(
+                of: find
+                    .text(
+                      t
+                          .widget<SkedDropdownMenu<CourseReminderBehavior>>(
+                            field,
+                          )
+                          .dropdownMenuEntries
+                          .first
+                          .label,
+                    )
+                    .last,
+                matching: find.byType(MenuItemButton),
+              )
+              .first,
+        );
+        expect(selected.trailingIcon, isA<Icon>());
+        final colors = Theme.of(t.element(field)).colorScheme;
+        expect(
+          selected.style!.backgroundColor!.resolve({}),
+          colors.primary.withValues(alpha: .12),
+        );
+        final custom = find
+            .ancestor(
+              of: find.text('Custom').last,
+              matching: find.byType(MenuItemButton),
+            )
+            .first;
+        expect(custom.hitTestable(), findsOneWidget);
+        expect(t.getRect(custom).right, lessThanOrEqualTo(1000));
+        await t.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.pumpAndSettle();
+        expect(changes, 0);
+        expect(minutes.text, '25');
+        await t.tap(field);
+        await t.pumpAndSettle();
+        await t.tap(custom);
+        await t.pumpAndSettle();
+        expect(behavior, CourseReminderBehavior.custom);
+        expect(changes, 1);
+        expect(
+          find.byKey(const ValueKey('course-reminder-custom-minutes')),
+          findsOneWidget,
+        );
+        expect(minutes.text, '25');
+        await t.tap(field);
+        await t.pumpAndSettle();
+        final stale = t
+            .widget<MenuItemButton>(
+              find
+                  .ancestor(
+                    of: find.text('No reminder').last,
+                    matching: find.byType(MenuItemButton),
+                  )
+                  .first,
+            )
+            .onPressed!;
+        enabled.value = false;
+        await t.pumpAndSettle();
+        stale();
+        await t.pumpAndSettle();
+        expect(changes, 1);
+        expect(find.byType(MenuItemButton), findsNothing);
+        expect(gateway.scheduled, isEmpty);
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox());
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
   testWidgets(
     'system reminder describes defaults, master switch and permission failures without scheduling',
     (tester) async {
