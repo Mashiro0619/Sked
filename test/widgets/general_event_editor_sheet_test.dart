@@ -90,6 +90,12 @@ void _expectInputFocusDismissed(WidgetTester tester, FocusNode previousFocus) {
 
 Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
   final wheel = find.byKey(const ValueKey('sked-time-minute-wheel'));
+  final input = find.byKey(const ValueKey('sked-time-minute-input'));
+  final returnToInput = input.evaluate().isNotEmpty;
+  if (wheel.evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('sked-time-input-toggle')));
+    await tester.pumpAndSettle();
+  }
   final extent = tester.widget<ListWheelScrollView>(wheel).itemExtent;
   await tester.sendEventToBinding(
     PointerScrollEvent(
@@ -99,6 +105,10 @@ Future<void> _scrollTimeMinute(WidgetTester tester, int rows) async {
     ),
   );
   await tester.pumpAndSettle();
+  if (returnToInput && input.evaluate().isEmpty) {
+    await tester.tap(find.byKey(const ValueKey('sked-time-input-toggle')));
+    await tester.pumpAndSettle();
+  }
 }
 
 Future<void> _pickEventTimeDraft(

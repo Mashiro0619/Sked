@@ -19,9 +19,14 @@ Future<T?> showSkedAdaptivePickerDialog<T>({
   double preferredWidth = 360,
   AppMode? workspace,
   bool Function()? isSessionCurrent,
+  bool waitForTransitionComplete = false,
 }) {
   if (!WorkbenchChromeMetrics.of(context).desktop) {
-    return showExpressiveDialog<T>(context: context, builder: builder);
+    return showExpressiveDialog<T>(
+      context: context,
+      builder: builder,
+      waitForTransitionComplete: waitForTransitionComplete,
+    );
   }
   return showSkedPickerTask<T>(
     context: context,
@@ -30,13 +35,21 @@ Future<T?> showSkedAdaptivePickerDialog<T>({
     placement: placement,
     workspace: workspace,
     isSessionCurrent: isSessionCurrent,
+    waitForTransitionComplete: waitForTransitionComplete,
     // These dialogs already wrap their text and choices. Keep their existing
     // reading widths instead of multiplying empty space with the text scale.
     preferredSize: (_) => Size(preferredWidth, 600),
-    builder: (context, finish, isCurrent) => SkedTaskDialogScope(
-      onClose: () => Navigator.of(context).maybePop(),
-      child: UiCommandFeedbackHost(
-        builder: (context) => SkedStableTaskBody(builder: builder),
+    builder: (context, finish, isCurrent) => Focus(
+      // A previously restored trigger can otherwise win focus when opening
+      // another secondary task immediately after its predecessor retires.
+      autofocus: waitForTransitionComplete,
+      skipTraversal: true,
+      includeSemantics: false,
+      child: SkedTaskDialogScope(
+        onClose: () => Navigator.of(context).maybePop(),
+        child: UiCommandFeedbackHost(
+          builder: (context) => SkedStableTaskBody(builder: builder),
+        ),
       ),
     ),
   );

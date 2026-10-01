@@ -24,6 +24,8 @@ typedef SkedPickerTaskBuilder<T> = Widget Function(
 
 /// A single, adaptive picker route with owner/session validity and focus restore.
 /// Content owns its draft and validation; resize and IME changes only reposition it.
+/// Opt into [waitForTransitionComplete] when the caller must keep its re-entry
+/// guard until the exiting route is removed, not just until its result is popped.
 Future<T?> showSkedPickerTask<T>({
   required BuildContext context,
   required String routeName,
@@ -34,6 +36,7 @@ Future<T?> showSkedPickerTask<T>({
   AppMode? workspace,
   Key? surfaceKey,
   bool Function()? isSessionCurrent,
+  bool waitForTransitionComplete = false,
   SkedPickerCompactPresentation compactPresentation =
       SkedPickerCompactPresentation.bottomSheet,
 }) async {
@@ -86,15 +89,18 @@ Future<T?> showSkedPickerTask<T>({
     ),
   );
   final result = await navigator.push(route);
+  if (waitForTransitionComplete) await route.completed;
   if (context.mounted &&
       sessionAvailable() &&
       (parent?.isActive ?? true) &&
       (workspace == null || provider?.isWorkspaceEnabled(workspace) != false)) {
     unawaited(
-      route.completed.then((_) {
+      route.completed.then((_) async {
+        // An awaiting editor re-enables its field after this task completes.
+        if (waitForTransitionComplete) await WidgetsBinding.instance.endOfFrame;
         if (context.mounted &&
             sessionAvailable() &&
-            (parent?.isActive ?? true) &&
+            (parent?.isCurrent ?? true) &&
             focus?.context?.mounted == true &&
             focus!.canRequestFocus) {
           focus.requestFocus();

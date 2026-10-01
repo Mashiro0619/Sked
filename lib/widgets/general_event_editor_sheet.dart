@@ -18,6 +18,10 @@ import '../utils/general_schedule_colors.dart';
 import 'app_modal_sheet.dart';
 import 'expressive_dialog.dart';
 import 'sked_dropdown_menu.dart';
+import 'sked_adaptive_picker_dialog.dart';
+import 'sked_task_dialog.dart';
+import 'sked_floating_surface.dart';
+import 'workbench_chrome_metrics.dart';
 import 'ui_command.dart';
 
 class GeneralEventEditorResult {
@@ -655,7 +659,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                               ),
                               onTap: _blocked
                                   ? null
-                                  : () => unawaited(_openRecurrenceDialog()),
+                                  : (anchor) => unawaited(
+                                      _openRecurrenceDialog(anchor),
+                                    ),
                             ),
                             const SizedBox(height: 8),
                             _EventOptionField(
@@ -665,7 +671,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                               value: _reminderSummary(_reminders, l10n),
                               onTap: _blocked
                                   ? null
-                                  : () => unawaited(_openReminderDialog()),
+                                  : (anchor) =>
+                                        unawaited(_openReminderDialog(anchor)),
                             ),
                           ],
                         ),
@@ -726,14 +733,27 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     );
   }
 
-  Future<void> _openRecurrenceDialog() async {
+  Future<void> _openRecurrenceDialog(BuildContext anchorContext) async {
     if (_blocked) return;
+    final sourceId = widget.initialEvent?.id;
+    final sourceCalendar = _calendarId;
+    bool sessionCurrent() =>
+        mounted &&
+        !_hasPopped &&
+        widget.initialEvent?.id == sourceId &&
+        _calendarId == sourceCalendar;
     setState(() => _selectionDialogOpen = true);
     _dismissActiveInputFocus();
     _RecurrenceDialogValue? result;
     try {
-      result = await showExpressiveDialog<_RecurrenceDialogValue>(
+      result = await showSkedAdaptivePickerDialog<_RecurrenceDialogValue>(
         context: context,
+        routeName: 'general-recurrence-picker',
+        anchorContext: anchorContext,
+        placement: SkedFloatingPlacement.left,
+        preferredWidth: 360,
+        workspace: AppMode.general,
+        isSessionCurrent: sessionCurrent,
         waitForTransitionComplete: true,
         builder: (_) => _RecurrencePickerDialog(
           initialValue: _RecurrenceDialogValue(
@@ -753,7 +773,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         _selectionDialogOpen = false;
       }
     }
-    if (!mounted) return;
+    if (!sessionCurrent()) return;
     final selected = result;
     if (selected == null) return;
     setState(() {
@@ -765,14 +785,27 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     });
   }
 
-  Future<void> _openReminderDialog() async {
+  Future<void> _openReminderDialog(BuildContext anchorContext) async {
     if (_blocked) return;
+    final sourceId = widget.initialEvent?.id;
+    final sourceCalendar = _calendarId;
+    bool sessionCurrent() =>
+        mounted &&
+        !_hasPopped &&
+        widget.initialEvent?.id == sourceId &&
+        _calendarId == sourceCalendar;
     setState(() => _selectionDialogOpen = true);
     _dismissActiveInputFocus();
     List<int>? result;
     try {
-      result = await showExpressiveDialog<List<int>>(
+      result = await showSkedAdaptivePickerDialog<List<int>>(
         context: context,
+        routeName: 'general-reminder-picker',
+        anchorContext: anchorContext,
+        placement: SkedFloatingPlacement.left,
+        preferredWidth: 320,
+        workspace: AppMode.general,
+        isSessionCurrent: sessionCurrent,
         waitForTransitionComplete: true,
         builder: (_) => _ReminderPickerDialog(initialReminders: _reminders),
       );
@@ -783,7 +816,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         _selectionDialogOpen = false;
       }
     }
-    if (!mounted || result == null) return;
+    if (!sessionCurrent() || result == null) return;
     setState(() => _reminders = result!);
   }
 
@@ -866,7 +899,7 @@ class _EventOptionField extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final VoidCallback? onTap;
+  final ValueChanged<BuildContext>? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -885,14 +918,14 @@ class _EventOptionField extends StatelessWidget {
       enabled: enabled,
       label: label,
       value: value,
-      onTap: onTap,
+      onTap: onTap == null ? null : () => onTap!(context),
       child: ExcludeSemantics(
         child: Material(
           color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: onTap,
+            onTap: onTap == null ? null : () => onTap!(context),
             borderRadius: BorderRadius.circular(16),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 56),
@@ -975,6 +1008,98 @@ class _EventOptionField extends StatelessWidget {
   }
 }
 
+/// Desktop option cells use measured text widths, a single selection surface,
+/// and one keyboard/semantics target. This is not the touch dialog list.
+class _DesktopEventChoice extends StatelessWidget {
+  const _DesktopEventChoice({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback? onPressed;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      selected: selected,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 36),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          foregroundColor: selected ? colors.primary : colors.onSurface,
+          backgroundColor: selected
+              ? colors.primary.withValues(alpha: .12)
+              : Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(label)),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: selected ? const Icon(Icons.check, size: 16) : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopEventChoiceGrid extends StatelessWidget {
+  const _DesktopEventChoiceGrid({
+    required this.maxColumns,
+    required this.choices,
+  });
+  final int maxColumns;
+  final List<_DesktopEventChoice> choices;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final metrics = WorkbenchChromeMetrics.of(context);
+      var minimumWidth = 80.0;
+      for (final choice in choices) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: choice.label,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout();
+        final width =
+            painter.width + 38; // padding, gap and the stable check slot
+        if (width > minimumWidth) minimumWidth = width;
+        painter.dispose();
+      }
+      const gap = 4.0;
+      final columns = metrics.textScale > 1.3 || constraints.maxWidth < 280
+          ? 1
+          : ((constraints.maxWidth + gap) / (minimumWidth + gap)).floor().clamp(
+              1,
+              maxColumns,
+            );
+      final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+      return FocusTraversalGroup(
+        child: Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final choice in choices) SizedBox(width: width, child: choice),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 class _RecurrenceDialogValue {
   const _RecurrenceDialogValue({
     required this.recurrence,
@@ -1041,8 +1166,93 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
     super.dispose();
   }
 
+  Widget _desktopPanel(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return PopScope(
+      canPop: !_blocked,
+      child: SkedTaskDialog(
+        key: const ValueKey('general-recurrence-panel'),
+        title: Text(l.eventRecurrence),
+        closeEnabled: !_blocked,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: SingleChildScrollView(
+            key: const ValueKey('general-recurrence-body'),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _DesktopEventChoiceGrid(
+                    maxColumns: 3,
+                    choices: [
+                      for (final option in GeneralEventRecurrence.values)
+                        _DesktopEventChoice(
+                          key: ValueKey(
+                            'general-recurrence-choice-${option.name}',
+                          ),
+                          label: _recurrenceOptionLabel(option, l),
+                          selected: _recurrence == option,
+                          onPressed: _blocked
+                              ? null
+                              : () => setState(() => _recurrence = option),
+                        ),
+                    ],
+                  ),
+                  if (_recurrence != GeneralEventRecurrence.none) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    ExcludeFocus(
+                      excluding: _blocked,
+                      child: AbsorbPointer(
+                        absorbing: _blocked,
+                        child: _RepeatOptions(
+                          recurrence: _recurrence,
+                          interval: _interval,
+                          intervalController: _intervalController,
+                          customUnit: _unit,
+                          untilDate: _untilDate,
+                          repeatCountController: _repeatCountController,
+                          onIntervalChanged: (value) =>
+                              setState(() => _interval = value),
+                          onUnitChanged: (value) =>
+                              setState(() => _unit = value),
+                          onPickUntil: _blocked ? null : _pickUntilDate,
+                          onClearUntil: () {
+                            if (!_blocked) setState(() => _untilDate = null);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('general-recurrence-cancel'),
+            onPressed: _blocked ? null : () => _popOnce(),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('general-recurrence-confirm'),
+            onPressed: _blocked ? null : _submit,
+            child: Text(l.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (SkedTaskDialogScope.maybeOf(context) != null) {
+      return _desktopPanel(context);
+    }
     final l10n = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     final contentMaxHeight = _eventDialogContentMaxHeight(mediaQuery);
@@ -1168,7 +1378,7 @@ class _RecurrencePickerDialogState extends State<_RecurrencePickerDialog> {
   }
 
   void _popOnce([_RecurrenceDialogValue? value]) {
-    if (_hasPopped) return;
+    if (_blocked) return;
     setState(() => _hasPopped = true);
     Navigator.of(context).pop(value);
   }
@@ -1193,8 +1403,80 @@ class _ReminderPickerDialogState extends State<_ReminderPickerDialog> {
     _reminders = widget.initialReminders.toSet();
   }
 
+  Widget _desktopPanel(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    // Keep imported/non-preset reminders visible and editable without adding a
+    // new custom-time feature or silently dropping them on confirmation.
+    final options = {..._reminderOptions, ...widget.initialReminders}.toList()
+      ..sort();
+    return PopScope(
+      canPop: !_hasPopped,
+      child: SkedTaskDialog(
+        key: const ValueKey('general-reminder-panel'),
+        title: Text(l.reminder),
+        closeEnabled: !_hasPopped,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: SingleChildScrollView(
+            key: const ValueKey('general-reminder-body'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _DesktopEventChoice(
+                  key: const ValueKey('general-reminder-none'),
+                  label: l.none,
+                  selected: _reminders.isEmpty,
+                  onPressed: _hasPopped
+                      ? null
+                      : () => setState(_reminders.clear),
+                ),
+                const SizedBox(height: 8),
+                _DesktopEventChoiceGrid(
+                  maxColumns: 2,
+                  choices: [
+                    for (final minutes in options)
+                      _DesktopEventChoice(
+                        key: ValueKey('general-reminder-choice-$minutes'),
+                        label: _reminderLabel(minutes, l),
+                        selected: _reminders.contains(minutes),
+                        onPressed: _hasPopped
+                            ? null
+                            : () => setState(() {
+                                if (!_reminders.add(minutes)) {
+                                  _reminders.remove(minutes);
+                                }
+                              }),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('general-reminder-cancel'),
+            onPressed: _hasPopped ? null : () => _popOnce(),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('general-reminder-confirm'),
+            onPressed: _hasPopped
+                ? null
+                : () => _popOnce(_reminders.toList()..sort()),
+            child: Text(l.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (SkedTaskDialogScope.maybeOf(context) != null) {
+      return _desktopPanel(context);
+    }
     final l10n = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
     return PopScope(
@@ -1572,6 +1854,7 @@ class _RepeatOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final desktop = SkedTaskDialogScope.maybeOf(context) != null;
     final endDateButton = Row(
       children: [
         Expanded(
@@ -1580,6 +1863,19 @@ class _RepeatOptions extends StatelessWidget {
               onPressed: onPickUntil == null
                   ? null
                   : () => onPickUntil!(anchorContext),
+              style: desktop
+                  ? FilledButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    )
+                  : null,
               icon: const Icon(Icons.event_repeat_outlined),
               label: Text(
                 untilDate == null
@@ -1604,7 +1900,10 @@ class _RepeatOptions extends StatelessWidget {
       children: [
         if (recurrence == GeneralEventRecurrence.custom)
           _ResponsiveFormRow(
-            breakpoint: 420,
+            breakpoint:
+                desktop && WorkbenchChromeMetrics.of(context).textScale <= 1.3
+                ? 320
+                : 420,
             children: [
               _RecurrenceIntervalStepper(
                 value: interval,
@@ -1647,7 +1946,8 @@ class _RepeatOptions extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: l10n.recurrenceRepeatCount,
                 hintText: l10n.recurrenceNoLimit,
-                prefixIcon: const Icon(Icons.numbers),
+                prefixIcon: desktop ? null : const Icon(Icons.numbers),
+                isDense: desktop,
               ),
               validator: (value) {
                 final text = value?.trim() ?? '';
@@ -1758,11 +2058,13 @@ class _RecurrenceIntervalStepperState
     String destinationLabel(int destination) =>
         l10n.repeatsEvery(destination, unitLabel);
 
-    ButtonStyle actionStyle() => IconButton.styleFrom(
-      minimumSize: const Size.square(48),
-      tapTargetSize: MaterialTapTargetSize.padded,
-      shape: shapes.compact,
-    );
+    ButtonStyle actionStyle() => SkedTaskDialogScope.maybeOf(context) != null
+        ? WorkbenchChromeMetrics.of(context).iconStyle
+        : IconButton.styleFrom(
+            minimumSize: const Size.square(48),
+            tapTargetSize: MaterialTapTargetSize.padded,
+            shape: shapes.compact,
+          );
 
     return FormField<int>(
       key: const ValueKey('recurrence-interval-stepper'),
@@ -2077,7 +2379,9 @@ String _recurrenceSummary({
     GeneralEventRecurrence.weekly => l10n.repeatsWeekly,
     GeneralEventRecurrence.monthly => l10n.repeatsMonthly,
     GeneralEventRecurrence.custom => l10n.repeatsEvery(
-      interval.clamp(1, 30).toInt(),
+      interval
+          .clamp(_minimumRecurrenceInterval, _maximumRecurrenceInterval)
+          .toInt(),
       _recurrenceUnitLabel(unit, l10n),
     ),
     GeneralEventRecurrence.none => l10n.recurrenceNone,
