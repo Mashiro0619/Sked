@@ -170,6 +170,9 @@ void main() {
     await tester.pumpAndSettle();
     await preferences.setAssistantVisible(true);
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('assistant-draft')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('assistant-draft')), findsOneWidget);
     await tester.enterText(
       find.byKey(const ValueKey('assistant-draft')),

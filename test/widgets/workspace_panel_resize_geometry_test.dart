@@ -70,8 +70,7 @@ void main() {
               ),
             );
             await t.pumpAndSettle();
-            await t.tap(_key('assistant-toggle'));
-            await t.pumpAndSettle();
+            expect(find.byType(AssistantPreviewPane), findsNothing);
             final toolbarKey = workspace == AppMode.general
                 ? 'general-workspace-toolbar'
                 : 'student-workspace-toolbar';

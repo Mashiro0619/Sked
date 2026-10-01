@@ -329,6 +329,9 @@ void main() {
       expect(prefs.assistantVisible, isTrue);
       await tester.pageBack();
       await tester.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('assistant-draft')),
@@ -406,6 +409,9 @@ void main() {
       expect(prefs.assistantVisible, isFalse);
       expect(find.byKey(const ValueKey('assistant-toggle')), findsNothing);
       expect(await prefs.setAssistantVisible(true), isTrue);
+      await tester.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsOneWidget);
       expect(

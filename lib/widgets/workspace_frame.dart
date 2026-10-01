@@ -382,7 +382,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   String? _selection;
   WorkspaceLayout? _layout;
   DeveloperUiPreferences? _developerUi;
-  bool? _lastAssistantPreference;
 
   @override
   void didChangeDependencies() {
@@ -394,18 +393,17 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     if (identical(next, _developerUi)) return;
     _developerUi?.removeListener(_syncAssistantPreference);
     _developerUi = next;
-    _lastAssistantPreference = null;
     next?.addListener(_syncAssistantPreference);
     _syncAssistantPreference();
   }
 
   void _syncAssistantPreference() {
     if (!mounted) return;
-    final enabled = _developerUi?.assistantVisible;
-    if (enabled != null && enabled != _lastAssistantPreference) {
-      _lastAssistantPreference = enabled;
-      // Saving unrelated preferences must not reopen a temporarily closed pane.
-      _assistant.setOpen(enabled);
+    // This persisted value enables the entry; it is not an open-state restore.
+    // Loading/enabling it must never cover the calendar or steal focus.
+    // Only an explicit toolbar action opens the session-local panel.
+    if (_developerUi?.assistantVisible == false) {
+      _assistant.setOpen(false);
     }
     setState(() {});
   }

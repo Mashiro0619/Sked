@@ -50,8 +50,7 @@ void main() {
           ),
         );
         await t.pumpAndSettle();
-        await t.tap(_key('assistant-toggle'));
-        await t.pumpAndSettle();
+        expect(find.byType(AssistantPreviewPane), findsNothing);
         final sidebar = t.getRect(_key('workspace-resource-width'));
         final canvas = t.getRect(_key('workspace-canvas-viewport'));
         final maximum = (1920 - sidebar.width - 1) * .8;
@@ -130,6 +129,9 @@ void main() {
               developerUiPreferences: preferences,
             ),
           );
+          await t.pumpAndSettle();
+          expect(find.byType(AssistantPreviewPane), findsNothing);
+          await t.tap(_key('assistant-toggle'));
           await t.pumpAndSettle();
           final sidebar = t.getRect(_key('workspace-resource-width'));
           final canvas = t.getRect(_key('workspace-canvas-viewport'));
@@ -321,8 +323,6 @@ void main() {
               developerUiPreferences: preferences,
             ),
           );
-          await t.pumpAndSettle();
-          await t.tap(_key('assistant-toggle'));
           await t.pumpAndSettle();
           expect(find.byType(AssistantPreviewPane), findsNothing);
           final sidebar = t.getRect(_key('workspace-resource-width'));

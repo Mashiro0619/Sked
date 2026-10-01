@@ -989,8 +989,6 @@ void main() {
           dense: true,
           size: const Size(1920, 1000),
         );
-        await t.tap(_key('assistant-toggle'));
-        await t.pumpAndSettle();
         final sidebar = t.getRect(_key('workspace-resource-width'));
         final toolbar = t.getRect(_key('general-workspace-toolbar'));
         final calendar = t.getRect(_key('workspace-canvas-viewport'));
