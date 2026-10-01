@@ -3185,4 +3185,11 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get toolbarNavigationEssentialHint =>
       'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.';
+
+  @override
+  String get reminderEnded => 'Ended';
+
+  @override
+  String get reminderAutoCloseHint =>
+      'Closes after 10 seconds. Interact to keep open.';
 }

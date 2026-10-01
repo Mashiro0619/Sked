@@ -67,8 +67,10 @@ class GeneralScheduleHomeScreen extends StatefulWidget {
     this.settingsAction,
     this.settingsFocusNode,
     this.scaffoldKey,
+    this.reminderStartupSession,
   });
 
+  final GeneralReminderStartupSession? reminderStartupSession;
   final bool embedded;
   final bool active;
   final bool interactive;
@@ -125,6 +127,67 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     _rangeController?.dispose();
     _pane.dispose();
     super.dispose();
+  }
+
+  bool _startupReminderScheduled = false;
+  void _scheduleStartupReminders(TimetableProvider provider) {
+    final session = widget.reminderStartupSession;
+    if (session == null ||
+        session._checked ||
+        _startupReminderScheduled ||
+        !provider.isLoaded) {
+      return;
+    }
+    _startupReminderScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startupReminderScheduled = false;
+      if (!mounted || session._checked) return;
+      // A startup preview is not a recurring prompt: inactive workspaces,
+      // touch layouts, empty lists and busy startup routes consume the attempt.
+      session._checked = true;
+      final owner = ModalRoute.of(context);
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (!WorkbenchChromeMetrics.of(context).desktop ||
+          !widget.active ||
+          !widget.interactive ||
+          !provider.isWorkspaceEnabled(AppMode.general) ||
+          (lifecycle != null && lifecycle != AppLifecycleState.resumed) ||
+          owner?.isCurrent == false ||
+          _pane.isOpen ||
+          _editorSheetOpen ||
+          _detailsSheetOpen ||
+          _datePickerOpen ||
+          _settingsPageOpen ||
+          _calendarManagerOpen ||
+          _pane.navigatorKey.currentState == null) {
+        return;
+      }
+      final now =
+          GeneralReminderTimeScope.maybeOf(context)?.now() ?? DateTime.now();
+      if (provider.generalReminderItems(now: now).isEmpty) return;
+      final dataSession = provider.dataSessionToken;
+      unawaited(
+        _pane.show<void>(
+          (_) => _ReminderStrip(
+            provider: provider,
+            filter: const _GeneralOccurrenceFilter(query: '', colorValue: null),
+            active: true,
+            pane: _pane,
+            listMode: true,
+            autoClose: true,
+            isOwnerActive: () =>
+                mounted &&
+                widget.active &&
+                widget.interactive &&
+                owner?.isCurrent != false &&
+                identical(dataSession, provider.dataSessionToken),
+            onOccurrenceTap: (item) => _openDetails(context, provider, item),
+          ),
+          selectionId: 'general-reminders',
+          presentation: WorkspacePanePresentation.view,
+        ),
+      );
+    });
   }
 
   String? _view;
@@ -193,6 +256,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     );
     final provider = context.read<TimetableProvider>();
     _observeRangeSession(provider);
+    _scheduleStartupReminders(provider);
     final selectedDate = snapshot.selectedDate;
     final baseView = normalizeGeneralView(_view ?? snapshot.defaultView);
     final view = baseView == generalViewWeek && snapshot.customDateRange != null

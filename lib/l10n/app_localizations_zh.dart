@@ -2981,6 +2981,12 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get toolbarNavigationEssentialHint =>
       '关闭“设置”或“工作区”的工具栏显示会将其移入“更多”，不会移除入口。“更多”包含必要入口时不能隐藏。工作区切换仅在底部导航隐藏且启用多个工作区时显示。';
+
+  @override
+  String get reminderEnded => '已结束';
+
+  @override
+  String get reminderAutoCloseHint => '10 秒后自动收起，操作面板可保持打开。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5961,4 +5967,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get toolbarNavigationEssentialHint =>
       '關閉「設定」或「工作區」的工具列顯示會將其移入「更多」，不會移除入口。「更多」包含必要入口時不能隱藏。工作區切換僅在底部導覽隱藏且啟用多個工作區時顯示。';
+
+  @override
+  String get reminderEnded => '已結束';
+
+  @override
+  String get reminderAutoCloseHint => '10 秒後自動收起，操作面板可保持開啟。';
 }

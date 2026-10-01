@@ -142,11 +142,7 @@ class GeneralOccurrenceService {
         items.add(GeneralReminderItem(occurrence: occurrence, status: status));
       }
     }
-    return items..sort((a, b) {
-      final statusCompare = a.status.index.compareTo(b.status.index);
-      if (statusCompare != 0) return statusCompare;
-      return a.occurrence.start.compareTo(b.occurrence.start);
-    });
+    return items..sort(compareGeneralReminderItems);
   }
 }
 
@@ -158,4 +154,32 @@ Duration boundedGeneralReminderLookback(Duration requested) {
     return maximumGeneralReminderLookback;
   }
   return requested;
+}
+
+/// Reading order is explicit, not coupled to the status enum declaration order.
+/// Ended means the scheduled end has passed, not that the task is incomplete.
+int compareGeneralReminderItems(GeneralReminderItem a, GeneralReminderItem b) {
+  int rank(GeneralReminderStatus status) => switch (status) {
+    GeneralReminderStatus.inProgress => 0,
+    GeneralReminderStatus.upcoming => 1,
+    GeneralReminderStatus.overdue => 2,
+  };
+  final status = rank(a.status).compareTo(rank(b.status));
+  if (status != 0) return status;
+  final time = switch (a.status) {
+    GeneralReminderStatus.inProgress => a.occurrence.end.compareTo(
+      b.occurrence.end,
+    ),
+    GeneralReminderStatus.upcoming => a.occurrence.start.compareTo(
+      b.occurrence.start,
+    ),
+    GeneralReminderStatus.overdue => b.occurrence.end.compareTo(
+      a.occurrence.end,
+    ),
+  };
+  if (time != 0) return time;
+  final title = a.occurrence.event.title.compareTo(b.occurrence.event.title);
+  return title != 0
+      ? title
+      : a.occurrence.occurrenceKey.compareTo(b.occurrence.occurrenceKey);
 }

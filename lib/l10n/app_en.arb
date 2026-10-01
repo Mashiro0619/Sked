@@ -2215,5 +2215,9 @@
   "settingsPanelDisplayOverlayDescription": "Overlays the right side without resizing the calendar.",
   "settingsPanelDisplaySideBySideDescription": "Prefers side by side; uses an overlay only when the calendar would be too narrow.",
   "settingsPanelDisplayAutomaticDescription": "Uses side by side when the calendar has enough readable space; otherwise overlays.",
-  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled."
+  "toolbarNavigationEssentialHint": "Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.",
+  "reminderEnded": "Ended",
+  "@reminderEnded": {},
+  "reminderAutoCloseHint": "Closes after 10 seconds. Interact to keep open.",
+  "@reminderAutoCloseHint": {}
 }

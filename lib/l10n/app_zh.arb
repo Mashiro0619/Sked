@@ -2199,5 +2199,9 @@
   "settingsPanelDisplayOverlayDescription": "覆盖日历右侧，不改变日历布局。",
   "settingsPanelDisplaySideBySideDescription": "优先并排，日历可变窄；极窄时使用浮层。",
   "settingsPanelDisplayAutomaticDescription": "日历达到可读宽度时并排，否则使用浮层。",
-  "toolbarNavigationEssentialHint": "关闭“设置”或“工作区”的工具栏显示会将其移入“更多”，不会移除入口。“更多”包含必要入口时不能隐藏。工作区切换仅在底部导航隐藏且启用多个工作区时显示。"
+  "toolbarNavigationEssentialHint": "关闭“设置”或“工作区”的工具栏显示会将其移入“更多”，不会移除入口。“更多”包含必要入口时不能隐藏。工作区切换仅在底部导航隐藏且启用多个工作区时显示。",
+  "reminderEnded": "已结束",
+  "@reminderEnded": {},
+  "reminderAutoCloseHint": "10 秒后自动收起，操作面板可保持打开。",
+  "@reminderAutoCloseHint": {}
 }

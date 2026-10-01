@@ -5681,6 +5681,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turning off Settings or Workspace in the toolbar moves it to More, rather than removing it. More cannot be hidden while it contains essential actions. Workspace switching appears only when bottom navigation is hidden and multiple workspaces are enabled.'**
   String get toolbarNavigationEssentialHint;
+
+  /// No description provided for @reminderEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get reminderEnded;
+
+  /// No description provided for @reminderAutoCloseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Closes after 10 seconds. Interact to keep open.'**
+  String get reminderAutoCloseHint;
 }
 
 class _AppLocalizationsDelegate

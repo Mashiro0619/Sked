@@ -50,6 +50,52 @@ void main() {
     );
   }
 
+  test(
+    'reminders use explicit urgency groups, relevant time and stable ties',
+    () {
+      final now = DateTime(2026, 10, 1, 12);
+      GeneralEvent sample(
+        String id,
+        String title,
+        int startHour,
+        int endHour,
+      ) => buildEvent(
+        id: id,
+        title: title,
+        start: DateTime(2026, 10, 1, startHour),
+        duration: Duration(hours: endHour - startHour),
+        reminders: const [GeneralEventReminder(minutesBefore: 1440)],
+      );
+      final events = [
+        sample('future-late', 'Later', 15, 16),
+        sample('ended-old', 'Old', 7, 8),
+        sample('current-late', 'Late end', 9, 14),
+        sample('tie-b', 'Same', 13, 14),
+        sample('ended-new', 'Recent', 10, 11),
+        sample('current-soon', 'Soon end', 11, 13),
+        sample('tie-a', 'Same', 13, 14),
+        sample('future-alpha', 'Alpha', 13, 14),
+      ];
+      const expected = [
+        'current-soon',
+        'current-late',
+        'future-alpha',
+        'tie-a',
+        'tie-b',
+        'future-late',
+        'ended-new',
+        'ended-old',
+      ];
+      for (final ordered in [events, events.reversed.toList()]) {
+        final result = service.reminderItems(
+          buildData(events: ordered),
+          now: now,
+        );
+        expect(result.map((item) => item.occurrence.event.id), expected);
+      }
+    },
+  );
+
   group('GeneralOccurrenceService.occurrencesForQuery', () {
     test('filters by query.colorValue', () {
       final data = buildData(

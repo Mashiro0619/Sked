@@ -53,6 +53,7 @@ class AdaptiveSkedShell extends StatefulWidget {
 
 class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     with UiCommandRunner<AdaptiveSkedShell> {
+  late final GeneralReminderStartupSession _reminderStartup;
   bool _settingsOpen = false;
   bool _modeSwitchInFlight = false;
   bool _navigationToggleInFlight = false;
@@ -77,6 +78,11 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   void initState() {
     super.initState();
     _committedMode = widget.activeMode;
+    _reminderStartup = GeneralReminderStartupSession(
+      eligible:
+          widget.activeMode == AppMode.general &&
+          widget.provider.isWorkspaceEnabled(AppMode.general),
+    );
   }
 
   @override
@@ -243,6 +249,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                 ? const SizedBox.shrink()
                 : GeneralScheduleHomeScreen(
                     key: const ValueKey('general-home'),
+                    reminderStartupSession: _reminderStartup,
                     embedded: true,
                     active: active,
                     interactive: interactive,
