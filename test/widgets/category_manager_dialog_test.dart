@@ -531,4 +531,66 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
+  for (final fail in [false, true]) {
+    testWidgets(
+      'pending deletion rejects workspace exit and replacement; failure=$fail',
+      (t) async {
+        viewport(t, const Size(1280, 800));
+        final (p, storage) = await start(t, count: 2);
+        final backup = await p.exportAppDataJson();
+        final originalSession = p.dataSessionToken;
+        final savesBefore = storage.saves;
+        await t.tap(k('calendar-actions-category-0'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Delete'));
+        await t.pumpAndSettle();
+        final submit = find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Delete'),
+        );
+        final gate = Completer<void>();
+        storage.pending = gate;
+        if (fail) {
+          storage.saveError = StateError('Expected review delete failure');
+        }
+        await t.tap(submit);
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 100));
+        expect(storage.saves, savesBefore + 1);
+        await t.tap(submit);
+        await t.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.pump();
+        await p.setWorkspaceEnabled(AppMode.general, false);
+        await expectLater(
+          p.importAppDataJson(backup, mode: AppImportMode.replaceAll),
+          throwsA(isA<WorkspaceChangeCancelledException>()),
+        );
+        expect(storage.saves, savesBefore + 1);
+        expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+        expect(p.dataSessionToken, same(originalSession));
+        expect(find.byType(AlertDialog), findsOneWidget);
+        gate.complete();
+        await t.pumpAndSettle();
+        expect(
+          storage.data.generalMode.schedules.any((s) => s.id == 'category-0'),
+          fail,
+        );
+        expect(p.generalSchedules.any((s) => s.id == 'category-0'), fail);
+        expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+        if (fail) {
+          expect(find.byType(AlertDialog), findsOneWidget);
+          await t.tap(k('ui-command-failure-dismiss'));
+          await t.pumpAndSettle();
+          storage.pending = null;
+          await t.tap(submit);
+          await t.pumpAndSettle();
+          expect(p.generalSchedules.any((s) => s.id == 'category-0'), isFalse);
+        }
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox());
+      },
+      variant: platforms,
+    );
+  }
 }

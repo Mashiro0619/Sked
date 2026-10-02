@@ -134,6 +134,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
 
   @override
   void dispose() {
+    _calendarTaskLifetime?.invalidate();
     _rangeController?.dispose();
     _pane.dispose();
     super.dispose();
@@ -211,6 +212,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   bool _dayAgendaOpen = false;
   bool _moreOccurrencesSheetOpen = false;
   bool _calendarManagerOpen = false;
+  _CalendarTaskLifetime? _calendarTaskLifetime;
   bool _settingsPageOpen = false;
   bool _allDayCollapseUpdateInProgress = false;
   DateTime? _dateNavigationTarget;
@@ -236,6 +238,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   @override
   void didUpdateWidget(GeneralScheduleHomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.active || !widget.interactive) {
+      _calendarTaskLifetime?.invalidate();
+    }
     if (!oldWidget.active && widget.active) _resumeCustomFocus();
   }
 
@@ -2001,10 +2006,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext? anchorContext,
     SkedFloatingPlacement placement = SkedFloatingPlacement.below,
   }) async {
-    if (_calendarManagerOpen || !widget.interactive) return;
+    if (_calendarManagerOpen || !widget.active || !widget.interactive) return;
+    final lifetime = _CalendarTaskLifetime();
+    _calendarTaskLifetime = lifetime;
     _setUiBusyFlag(() => _calendarManagerOpen = true);
     final dataSession = provider.dataSessionToken;
     bool ownerActive() =>
+        lifetime.isActive &&
         mounted &&
         widget.active &&
         widget.interactive &&
@@ -2019,6 +2027,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             anchorContext: anchorContext,
             placement: placement,
             isOwnerActive: ownerActive,
+            lifetime: lifetime,
           );
         } else {
           final direction =
@@ -2037,6 +2046,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                   child: _CalendarTaskGuard(
                     provider: provider,
                     isOwnerActive: ownerActive,
+                    lifetime: lifetime,
                     child: const _CalendarManagerPage(desktopPanel: true),
                   ),
                 ),
@@ -2062,6 +2072,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         );
       }
     } finally {
+      lifetime.invalidate();
+      if (identical(_calendarTaskLifetime, lifetime)) {
+        _calendarTaskLifetime = null;
+      }
+      lifetime.dispose();
       _setUiBusyFlag(() => _calendarManagerOpen = false);
     }
   }

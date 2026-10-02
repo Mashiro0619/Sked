@@ -49,6 +49,7 @@ Widget categoryManagerHarness(
   TextDirection direction = TextDirection.ltr,
   Brightness brightness = Brightness.light,
   bool active = true,
+  bool interactive = true,
 }) => WorkspaceHarness(
   provider: p,
   locale: Locale(locale),
@@ -56,5 +57,5 @@ Widget categoryManagerHarness(
   textDirection: direction,
   brightness: brightness,
   seedColor: Color(p.generalMode.themeSeedColorValue),
-  home: GeneralScheduleHomeScreen(active: active),
+  home: GeneralScheduleHomeScreen(active: active, interactive: interactive),
 );

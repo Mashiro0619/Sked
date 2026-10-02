@@ -683,4 +683,221 @@ void main() {
     },
     variant: desktop,
   );
+  for (final locale in ['en', 'zh']) {
+    for (final direction in TextDirection.values) {
+      testWidgets(
+        'short large-text header keeps add, close and transfer reachable $locale $direction',
+        (t) async {
+          final p = await mount(t, open: false);
+          await t.pumpWidget(
+            categoryManagerHarness(
+              p,
+              locale: locale,
+              scale: 2,
+              direction: direction,
+            ),
+          );
+          await t.pumpAndSettle();
+          await t.tap(k('workspace-resource-open'));
+          await t.pumpAndSettle();
+          t.view.physicalSize = const Size(700, 320);
+          await t.pumpAndSettle();
+          final add = find.descendant(
+            of: panel,
+            matching: find.widgetWithText(
+              TextButton,
+              locale == 'en' ? 'Add category' : '添加分类',
+            ),
+          );
+          expect(add.hitTestable(), findsOneWidget);
+          expect(
+            within(panel, 'floating-form-close').hitTestable(),
+            findsOneWidget,
+          );
+          expect(k('category-manager-import').hitTestable(), findsOneWidget);
+          expect(k('category-manager-export').hitTestable(), findsOneWidget);
+          final position = t.getTopLeft(k('floating-form-surface'));
+          await t.tap(add);
+          await t.pumpAndSettle();
+          expect(k('add-calendar-field'), findsOneWidget);
+          await t.sendKeyEvent(LogicalKeyboardKey.escape);
+          await t.pumpAndSettle();
+          expect(t.getTopLeft(k('floating-form-surface')), position);
+          expect(add.hitTestable(), findsOneWidget);
+          await finish(t);
+        },
+        variant: desktop,
+      );
+    }
+  }
+
+  for (final invalidation in ['hidden', 'noninteractive', 'disposed']) {
+    for (final task in [
+      'manager',
+      'color',
+      'discard',
+      'delete',
+      'direct-create',
+    ]) {
+      testWidgets(
+        'owner $invalidation retires $task and child routes without data notification',
+        (t) async {
+          final p = await mount(t, open: task != 'direct-create');
+          switch (task) {
+            case 'color':
+              await t.tap(k('calendar-color-category-1'));
+            case 'discard':
+              await t.tap(k('calendar-name-category-1'));
+            case 'delete':
+              await t.tap(k('calendar-actions-category-1'));
+              await t.pumpAndSettle();
+              await t.tap(find.text('Delete'));
+            case 'direct-create':
+              await t.tap(k('general-resource-add'));
+          }
+          await t.pumpAndSettle();
+          if (task == 'discard') {
+            await t.enterText(k('rename-calendar-field'), 'Unsaved draft');
+            await t.pump();
+            await t.sendKeyEvent(LogicalKeyboardKey.escape);
+            await t.pumpAndSettle();
+            expect(find.byType(AlertDialog), findsOneWidget);
+          }
+          final ownedRoutes = {
+            for (final finder in [
+              panel,
+              color,
+              k('calendar-name-dialog'),
+              find.byType(AlertDialog),
+            ])
+              for (final element in finder.evaluate()) ModalRoute.of(element)!,
+          };
+          final data = p.appData;
+          await t.pumpWidget(
+            invalidation == 'disposed'
+                ? WorkspaceHarness(provider: p, home: const SizedBox())
+                : categoryManagerHarness(
+                    p,
+                    active: invalidation != 'hidden',
+                    interactive: invalidation != 'noninteractive',
+                  ),
+          );
+          await t.pumpAndSettle();
+          expect(panel, findsNothing);
+          expect(color, findsNothing);
+          expect(k('calendar-name-dialog'), findsNothing);
+          expect(find.byType(AlertDialog), findsNothing);
+          expect(p.appData, same(data));
+          expect(ownedRoutes.every((route) => !route.isActive), isTrue);
+          // The Navigator also owns a non-dismissible barrier for its base page.
+          expect(
+            find.byWidgetPredicate((w) => w is ModalBarrier && w.dismissible),
+            findsNothing,
+          );
+          await t.pumpWidget(categoryManagerHarness(p));
+          await t.pumpAndSettle();
+          await t.tap(k('workspace-resource-open'));
+          await t.pumpAndSettle();
+          expect(panel, findsOneWidget);
+          await finish(t);
+        },
+        variant: desktop,
+      );
+    }
+  }
+
+  testWidgets(
+    'owner invalidation only retires its own routes beneath an unrelated root dialog',
+    (t) async {
+      final p = await mount(t);
+      await t.tap(k('calendar-name-category-1'));
+      await t.pumpAndSettle();
+      await t.enterText(k('rename-calendar-field'), 'Unsaved draft');
+      await t.pump();
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.pumpAndSettle();
+      final other = showDialog<void>(
+        context: t.element(panel),
+        builder: (_) => const AlertDialog(
+          key: ValueKey('unrelated-dialog'),
+          title: Text('Another task'),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.pumpWidget(categoryManagerHarness(p, active: false));
+      await t.pumpAndSettle();
+      expect(k('unrelated-dialog'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(panel, findsNothing);
+      expect(k('calendar-name-dialog'), findsNothing);
+      Navigator.of(t.element(k('unrelated-dialog'))).pop();
+      await t.pumpAndSettle();
+      await other;
+      await finish(t);
+    },
+    variant: desktop,
+  );
+
+  testWidgets(
+    'late save from an invalidated owner cannot close the reopened management session',
+    (t) async {
+      final storage = GateStorage(categoryManagerStorage().data);
+      final p = await mount(t, storage: storage);
+      await t.tap(k('calendar-name-category-1'));
+      await t.pumpAndSettle();
+      await t.enterText(k('rename-calendar-field'), 'Saved original operation');
+      await t.pump();
+      final gate = Completer<void>();
+      storage.gate = gate;
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await t.tap(textIn(k('calendar-name-dialog'), 'Save'));
+      await t.pump();
+      await t.pumpWidget(categoryManagerHarness(p, active: false));
+      await t.pumpAndSettle();
+      expect(panel, findsNothing);
+      expect(k('calendar-name-dialog'), findsNothing);
+      await t.pumpWidget(categoryManagerHarness(p));
+      await t.pumpAndSettle();
+      await t.tap(k('workspace-resource-open'));
+      await t.pumpAndSettle();
+      final reopened = t.element(panel);
+      gate.complete();
+      await t.pumpAndSettle();
+      expect(t.element(panel), same(reopened));
+      expect(p.generalSchedules[1].name, 'Saved original operation');
+      await finish(t);
+    },
+    variant: desktop,
+  );
+  for (final width in [320.0, 400.0, 700.0]) {
+    for (final height in [240.0, 280.0]) {
+      testWidgets(
+        'very short manager retains reachable title actions at $width x $height',
+        (t) async {
+          await mount(t, scale: 2);
+          t.view.physicalSize = Size(width, height);
+          await t.pumpAndSettle();
+          expect(t.takeException(), isNull);
+          final add = find.descendant(
+            of: panel,
+            matching: find.widgetWithText(TextButton, 'Add category'),
+          );
+          await t.ensureVisible(add);
+          await t.pumpAndSettle();
+          expect(add.hitTestable(), findsOneWidget);
+          final close = within(panel, 'floating-form-close');
+          await t.ensureVisible(close);
+          await t.pumpAndSettle();
+          expect(close.hitTestable(), findsOneWidget);
+          await t.tap(close);
+          await t.pumpAndSettle();
+          expect(panel, findsNothing);
+          await finish(t);
+        },
+        variant: desktop,
+      );
+    }
+  }
 }

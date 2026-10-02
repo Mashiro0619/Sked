@@ -107,6 +107,28 @@ void main() {
           await capture('dragged');
           t.view.physicalSize = const Size(850, 620);
           await capture('resized');
+          t.view.physicalSize = const Size(700, 320);
+          await t.pumpAndSettle();
+          expect(
+            find
+                .descendant(
+                  of: k('category-manager-panel'),
+                  matching: find.widgetWithText(
+                    TextButton,
+                    locale == 'en' ? 'Add category' : '添加分类',
+                  ),
+                )
+                .hitTestable(),
+            findsOneWidget,
+          );
+          expect(
+            inside(
+              k('category-manager-panel'),
+              'floating-form-close',
+            ).hitTestable(),
+            findsOneWidget,
+          );
+          await capture('short-header');
           await t.pumpWidget(const SizedBox());
           await t.pumpAndSettle();
           p.dispose();

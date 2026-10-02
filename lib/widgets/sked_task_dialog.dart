@@ -95,11 +95,25 @@ class SkedTaskDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: bounds.maxHeight * .35),
+            constraints: BoxConstraints(
+              // A wrapped title action is essential chrome, not list content.
+              // Let the header take its measured height before compressing the
+              // body. Reserve the footer, body padding and a small viewport.
+              maxHeight: titleBottom == null
+                  ? bounds.maxHeight * .35
+                  : (bounds.maxHeight -
+                            (actions?.isNotEmpty == true
+                                ? bounds.maxHeight * .3
+                                : 0) -
+                            (content != null ? 32 : 0) -
+                            1)
+                        .clamp(0.0, double.infinity),
+            ),
             child: SingleChildScrollView(
               physics:
-                  scope.onDragUpdate != null ||
-                      SkedFloatingDragScope.maybeOf(context) != null
+                  titleBottom == null &&
+                      (scope.onDragUpdate != null ||
+                          SkedFloatingDragScope.maybeOf(context) != null)
                   ? const NeverScrollableScrollPhysics()
                   : null,
               child: Padding(
