@@ -131,6 +131,21 @@ mixin _TimetableProviderGeneral on _TimetableProviderBase {
     await _saveAndNotify();
   }
 
+  Future<void> updateGeneralScheduleColor(
+    String scheduleId,
+    int colorValue,
+  ) async {
+    requireWorkspaceEnabled(AppMode.general);
+    final next = _calendarService.updateScheduleColor(
+      _appData.generalMode,
+      scheduleId,
+      colorValue,
+    );
+    if (identical(next, _appData.generalMode)) return;
+    _appData = _appData.copyWith(generalMode: next);
+    await _saveAndNotify();
+  }
+
   Future<void> updateGeneralScheduleVisibility(
     String scheduleId,
     bool isVisible,

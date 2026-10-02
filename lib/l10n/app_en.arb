@@ -2221,5 +2221,15 @@
   "reminderAutoCloseHint": "Closes after 10 seconds. Interact to keep open.",
   "@reminderAutoCloseHint": {},
   "showReminderIndependently": "Open independently",
-  "@showReminderIndependently": {}
+  "@showReminderIndependently": {},
+  "categoryManagerTitle": "Manage categories",
+  "categoryHidden": "Hidden",
+  "categoryShowOnCalendar": "Show on calendar",
+  "categoryHideOnCalendar": "Hide from calendar",
+  "categoryEditColor": "Change category color",
+  "categoryThemePalette": "Theme palette",
+  "categoryCustomColor": "Custom",
+  "categoryHexInvalid": "Enter a six-digit hex color.",
+  "categoryColorSlot": "Theme color {number}",
+  "@categoryColorSlot": {"placeholders": {"number": {"type": "int"}}}
 }

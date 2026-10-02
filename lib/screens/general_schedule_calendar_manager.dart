@@ -1,7 +1,11 @@
 part of 'general_schedule_home_screen.dart';
 
 class _CalendarManagerPage extends StatefulWidget {
-  const _CalendarManagerPage({this.createOnOpen = false});
+  const _CalendarManagerPage({
+    this.createOnOpen = false,
+    this.desktopPanel = false,
+  });
+  final bool desktopPanel;
   final bool createOnOpen;
 
   @override
@@ -12,8 +16,8 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     with WorkspaceRouteLifecycle<_CalendarManagerPage> {
   final _addAnchor = GlobalKey();
   var _actionInProgress = false;
-  var _nameDialogOpen = false;
-  bool get _actionsDisabled => _actionInProgress || _nameDialogOpen;
+  var _childTaskOpen = false;
+  bool get _actionsDisabled => _actionInProgress || _childTaskOpen;
 
   @override
   void initState() {
@@ -37,6 +41,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   Widget build(BuildContext context) {
     final provider = context.watch<TimetableProvider>();
     final l10n = AppLocalizations.of(context);
+    if (widget.desktopPanel) return _buildDesktop(context, provider);
     return PopScope(
       canPop: !_actionsDisabled,
       child: Scaffold(
@@ -120,27 +125,175 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     );
   }
 
+  Widget _buildDesktop(BuildContext context, TimetableProvider provider) {
+    final l = AppLocalizations.of(context);
+    final metrics = WorkbenchChromeMetrics.of(context);
+    return PopScope(
+      canPop: !_actionsDisabled,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final inline = constraints.maxWidth >= 440 * metrics.textScale;
+          final add = TextButton.icon(
+            key: _addAnchor,
+            autofocus: true,
+            onPressed: _actionsDisabled
+                ? null
+                : () => unawaited(
+                    _editCalendarName(anchorContext: _addAnchor.currentContext),
+                  ),
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l.addCalendar),
+          );
+          return SkedTaskDialog(
+            key: const ValueKey('category-manager-panel'),
+            desktopContentOwnsScroll: true,
+            title: Text(
+              '${l.categoryManagerTitle} · ${provider.generalSchedules.length}',
+            ),
+            titleAction: inline ? add : null,
+            titleBottom: inline
+                ? null
+                : Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: add,
+                  ),
+            closeEnabled: !_actionsDisabled,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                UiCommandBusyIndicator(busy: _actionInProgress),
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 400),
+                    child: ListView.separated(
+                      key: const PageStorageKey('calendar-manager-list'),
+                      shrinkWrap: true,
+                      primary: false,
+                      padding: EdgeInsets.zero,
+                      itemCount: provider.generalSchedules.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final schedule = provider.generalSchedules[index];
+                        return _DesktopCalendarManagerRow(
+                          schedule: schedule,
+                          disabled: _actionsDisabled,
+                          onName: (anchor) => unawaited(
+                            _editCalendarName(
+                              schedule: schedule,
+                              anchorContext: anchor,
+                            ),
+                          ),
+                          onColor: (anchor) => unawaited(
+                            _editCalendarColor(schedule.id, anchor),
+                          ),
+                          onVisibility: () => unawaited(
+                            _runCalendarAction(
+                              debugLabel: 'Update calendar visibility',
+                              action: () async {
+                                final latest = provider.generalSchedules
+                                    .where((item) => item.id == schedule.id)
+                                    .firstOrNull;
+                                if (latest != null) {
+                                  await provider
+                                      .updateGeneralScheduleVisibility(
+                                        latest.id,
+                                        !latest.isVisible,
+                                      );
+                                }
+                              },
+                            ),
+                          ),
+                          onDelete: () => unawaited(_deleteCalendar(schedule)),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              for (final direction in SettingsTransferDirection.values)
+                TextButton.icon(
+                  key: ValueKey('category-manager-${direction.name}'),
+                  onPressed: _actionsDisabled
+                      ? null
+                      : () {
+                          if (_CalendarTaskScope.isCurrent(context)) {
+                            completeEditorRoute(context, direction);
+                          }
+                        },
+                  icon: Icon(
+                    direction == SettingsTransferDirection.import
+                        ? Icons.file_download_outlined
+                        : Icons.file_upload_outlined,
+                    size: 18,
+                  ),
+                  label: Text(
+                    direction == SettingsTransferDirection.import
+                        ? l.importAction
+                        : l.exportAction,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _editCalendarColor(String id, BuildContext anchor) async {
+    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) return;
+    final provider = context.read<TimetableProvider>();
+    final schedule = provider.generalSchedules
+        .where((item) => item.id == id)
+        .firstOrNull;
+    if (schedule == null) return;
+    setState(() => _childTaskOpen = true);
+    try {
+      await showSkedAdaptivePickerDialog<void>(
+        context: context,
+        routeName: 'category-color-picker',
+        preferredWidth: 340,
+        anchorContext: anchor,
+        workspace: AppMode.general,
+        waitForTransitionComplete: true,
+        isSessionCurrent: () =>
+            mounted &&
+            _CalendarTaskScope.isCurrent(context) &&
+            provider.generalSchedules.any((item) => item.id == id),
+        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+          value: provider,
+          child: _CalendarTaskGuard(
+            provider: provider,
+            scheduleId: id,
+            isOwnerActive: () =>
+                mounted && _CalendarTaskScope.isCurrent(context),
+            child: _CalendarColorDialog(provider: provider, schedule: schedule),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _childTaskOpen = false);
+    }
+  }
+
   Future<void> _editCalendarName({
     GeneralSchedule? schedule,
     BuildContext? anchorContext,
   }) async {
-    if (_actionsDisabled) return;
+    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) return;
     final provider = context.read<TimetableProvider>();
-    setState(() => _nameDialogOpen = true);
+    setState(() => _childTaskOpen = true);
     try {
-      await showExpressiveDialog<void>(
-        context: context,
-        waitForTransitionComplete: true,
-        desktopFloating: SkedDesktopFloatingDialog(
-          anchorContext: anchorContext,
-        ),
-        builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-          value: provider,
-          child: _CalendarNameDialog(provider: provider, schedule: schedule),
-        ),
+      await _showCalendarNameTask(
+        context,
+        provider,
+        schedule: schedule,
+        anchorContext: anchorContext,
+        isOwnerActive: () => mounted && _CalendarTaskScope.isCurrent(context),
       );
     } finally {
-      if (mounted) setState(() => _nameDialogOpen = false);
+      if (mounted) setState(() => _childTaskOpen = false);
     }
   }
 
@@ -148,7 +301,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     required String debugLabel,
     required Future<void> Function() action,
   }) async {
-    if (_actionsDisabled) {
+    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) {
       return;
     }
     setState(() => _actionInProgress = true);
@@ -168,17 +321,22 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   }
 
   Future<void> _deleteCalendar(GeneralSchedule schedule) async {
-    await _runCalendarAction(
-      debugLabel: 'Delete general calendar',
-      action: () async {
-        final provider = context.read<TimetableProvider>();
-        await showExpressiveDialog<void>(
-          context: context,
-          builder: (_) =>
-              _DeleteCalendarDialog(provider: provider, schedule: schedule),
-        );
-      },
-    );
+    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) return;
+    final provider = context.read<TimetableProvider>();
+    setState(() => _childTaskOpen = true);
+    try {
+      await showExpressiveDialog<void>(
+        context: context,
+        waitForTransitionComplete: true,
+        builder: (_) => _CalendarTaskGuard(
+          provider: provider,
+          isOwnerActive: () => mounted && _CalendarTaskScope.isCurrent(context),
+          child: _DeleteCalendarDialog(provider: provider, schedule: schedule),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _childTaskOpen = false);
+    }
   }
 }
 
@@ -217,10 +375,18 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
   }
 
   @override
+  Widget guardDiscardConfirmation(Widget dialog) => _CalendarTaskGuard(
+    provider: widget.provider,
+    scheduleId: widget.schedule?.id,
+    isOwnerActive: () => mounted && _CalendarTaskScope.isCurrent(context),
+    child: dialog,
+  );
+
+  @override
   void closeEditor() {
     if (_popped || !mounted) return;
     setState(() => _popped = true);
-    Navigator.of(context).pop();
+    completeEditorRoute(context);
   }
 
   @override
@@ -231,7 +397,12 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
 
   Future<void> _save() async {
     final name = _controller.text.trim();
-    if (_busy || _popped || !_canSave) return;
+    if (_busy ||
+        _popped ||
+        !_canSave ||
+        !_CalendarTaskScope.isCurrent(context)) {
+      return;
+    }
     FocusScope.of(context).unfocus();
     setState(() => _busy = true);
     final saved = await runUiCommandWithFeedback(
@@ -246,7 +417,7 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
             )
           : widget.provider.renameGeneralSchedule(widget.schedule!.id, name),
     );
-    if (!mounted) return;
+    if (!mounted || !_CalendarTaskScope.isCurrent(context)) return;
     if (saved) {
       closeEditor();
     } else {
@@ -332,17 +503,24 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog> {
   var _popped = false;
 
   Future<void> _delete() async {
-    if (_busy || _popped) return;
+    if (_busy ||
+        _popped ||
+        !_CalendarTaskScope.isCurrent(context) ||
+        !widget.provider.generalSchedules.any(
+          (item) => item.id == widget.schedule.id,
+        )) {
+      return;
+    }
     setState(() => _busy = true);
     final deleted = await runUiCommandWithFeedback(
       context: context,
       debugLabel: 'Delete general calendar',
       command: () => widget.provider.deleteGeneralSchedule(widget.schedule.id),
     );
-    if (!mounted) return;
+    if (!mounted || !_CalendarTaskScope.isCurrent(context)) return;
     if (deleted) {
       _popped = true;
-      Navigator.of(context).pop();
+      completeEditorRoute(context);
     } else {
       setState(() => _busy = false);
     }
@@ -369,7 +547,7 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog> {
                 ? null
                 : () {
                     _popped = true;
-                    Navigator.of(context).pop();
+                    completeEditorRoute(context);
                   },
             child: Text(l10n.cancel),
           ),
@@ -632,3 +810,422 @@ class _CalendarManagerTileActions extends StatelessWidget {
 }
 
 enum _CalendarManagerMenuAction { rename, delete }
+
+Future<void> _showCalendarNameTask(
+  BuildContext context,
+  TimetableProvider provider, {
+  GeneralSchedule? schedule,
+  BuildContext? anchorContext,
+  SkedFloatingPlacement placement = SkedFloatingPlacement.below,
+  bool Function()? isOwnerActive,
+}) => showExpressiveDialog<void>(
+  context: context,
+  waitForTransitionComplete: true,
+  desktopFloating: SkedDesktopFloatingDialog(
+    anchorContext: anchorContext,
+    placement: placement,
+  ),
+  builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+    value: provider,
+    child: _CalendarTaskGuard(
+      provider: provider,
+      scheduleId: schedule?.id,
+      isOwnerActive:
+          isOwnerActive ??
+          () => context.mounted && _CalendarTaskScope.isCurrent(context),
+      child: _CalendarNameDialog(provider: provider, schedule: schedule),
+    ),
+  ),
+);
+
+/// Own exactly this route. Child tasks get their own guard and never pop a newer
+/// root route when a data replacement or workspace invalidation settles.
+class _CalendarTaskGuard extends StatefulWidget {
+  const _CalendarTaskGuard({
+    required this.provider,
+    required this.child,
+    this.scheduleId,
+    this.isOwnerActive,
+  });
+  final TimetableProvider provider;
+  final String? scheduleId;
+  final bool Function()? isOwnerActive;
+  final Widget child;
+  @override
+  State<_CalendarTaskGuard> createState() => _CalendarTaskGuardState();
+}
+
+class _CalendarTaskGuardState extends State<_CalendarTaskGuard> {
+  late final Object _session = widget.provider.dataSessionToken;
+  ModalRoute<dynamic>? _route;
+  bool _scheduled = false, _invalidated = false;
+  bool _valid() {
+    final valid =
+        mounted &&
+        !_invalidated &&
+        identical(_session, widget.provider.dataSessionToken) &&
+        widget.provider.isWorkspaceEnabled(AppMode.general) &&
+        widget.isOwnerActive?.call() != false &&
+        (widget.scheduleId == null ||
+            widget.provider.generalSchedules.any(
+              (item) => item.id == widget.scheduleId,
+            ));
+    if (!valid) _invalidated = true;
+    return valid;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.provider.addListener(_check);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of(context);
+    _check();
+  }
+
+  @override
+  void didUpdateWidget(_CalendarTaskGuard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _check();
+  }
+
+  void _check() {
+    if (_scheduled || !mounted) return;
+    _scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduled = false;
+      if (!mounted || _valid()) return;
+      final route = _route;
+      if (route?.isActive == true) route!.navigator?.removeRoute(route);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      _CalendarTaskScope(isCurrentCallback: _valid, child: widget.child);
+  @override
+  void dispose() {
+    widget.provider.removeListener(_check);
+    super.dispose();
+  }
+}
+
+class _CalendarTaskScope extends InheritedWidget {
+  const _CalendarTaskScope({
+    required this.isCurrentCallback,
+    required super.child,
+  });
+  final bool Function() isCurrentCallback;
+  static bool isCurrent(BuildContext context) =>
+      context.mounted &&
+      (context
+              .getInheritedWidgetOfExactType<_CalendarTaskScope>()
+              ?.isCurrentCallback() ??
+          true);
+  @override
+  bool updateShouldNotify(_CalendarTaskScope oldWidget) => false;
+}
+
+class _DesktopCalendarManagerRow extends StatelessWidget {
+  const _DesktopCalendarManagerRow({
+    required this.schedule,
+    required this.disabled,
+    required this.onName,
+    required this.onColor,
+    required this.onVisibility,
+    required this.onDelete,
+  });
+  final GeneralSchedule schedule;
+  final bool disabled;
+  final ValueChanged<BuildContext> onName, onColor;
+  final VoidCallback onVisibility, onDelete;
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final color = effectiveGeneralCalendarColor(context, schedule);
+    return Padding(
+      key: ValueKey('calendar-manager-tile-${schedule.id}'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Builder(
+            builder: (anchor) => IconButton(
+              key: ValueKey('calendar-color-${schedule.id}'),
+              tooltip: l.categoryEditColor,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              onPressed: disabled ? null : () => onColor(anchor),
+              icon: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Builder(
+              builder: (anchor) => Tooltip(
+                message: l.rename,
+                child: InkWell(
+                  key: ValueKey('calendar-name-${schedule.id}'),
+                  onTap: disabled ? null : () => onName(anchor),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 6,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          schedule.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          [
+                            l.generalScheduleEventCount(schedule.events.length),
+                            if (!schedule.isVisible) l.categoryHidden,
+                          ].join(' · '),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Tooltip(
+            message: schedule.isVisible
+                ? l.categoryHideOnCalendar
+                : l.categoryShowOnCalendar,
+            child: Switch(
+              key: ValueKey('calendar-visibility-${schedule.id}'),
+              value: schedule.isVisible,
+              onChanged: disabled ? null : (_) => onVisibility(),
+            ),
+          ),
+          Builder(
+            builder: (anchor) =>
+                SkedPopupMenuButton<_CalendarManagerMenuAction>(
+                  key: ValueKey('calendar-actions-${schedule.id}'),
+                  enabled: !disabled,
+                  tooltip: l.more,
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (value) {
+                    if (value == _CalendarManagerMenuAction.rename) {
+                      onName(anchor);
+                    } else {
+                      onDelete();
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    SkedPopupMenuItem(
+                      value: _CalendarManagerMenuAction.rename,
+                      child: Text(l.rename),
+                    ),
+                    const SkedPopupMenuDivider<_CalendarManagerMenuAction>(),
+                    SkedPopupMenuItem(
+                      value: _CalendarManagerMenuAction.delete,
+                      child: Text(
+                        l.delete,
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
+                    ),
+                  ],
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarColorDialog extends StatefulWidget {
+  const _CalendarColorDialog({required this.provider, required this.schedule});
+  final TimetableProvider provider;
+  final GeneralSchedule schedule;
+  @override
+  State<_CalendarColorDialog> createState() => _CalendarColorDialogState();
+}
+
+class _CalendarColorDialogState extends State<_CalendarColorDialog>
+    with WorkspaceRouteLifecycle<_CalendarColorDialog> {
+  late int _selected = widget.schedule.colorValue;
+  bool _busy = false, _popped = false, _validHex = true;
+  int _inputRevision = 0;
+  bool get _blocked => _busy || _popped;
+  @override
+  AppMode get routeWorkspace => AppMode.general;
+  @override
+  Future<bool> prepareWorkspaceDisable() async => !_busy;
+  void _close() {
+    if (_blocked) return;
+    _popped = true;
+    completeEditorRoute(context);
+  }
+
+  Future<void> _save() async {
+    if (_blocked || !_validHex || !_CalendarTaskScope.isCurrent(context)) {
+      return;
+    }
+    // Untouched theme slots must not turn into resolved RGB just by confirming.
+    if (_selected == widget.schedule.colorValue) {
+      _close();
+      return;
+    }
+    setState(() => _busy = true);
+    final saved = await runUiCommandWithFeedback(
+      context: context,
+      debugLabel: 'Update category color',
+      command: () => widget.provider.updateGeneralScheduleColor(
+        widget.schedule.id,
+        _selected,
+      ),
+    );
+    if (!mounted || !_CalendarTaskScope.isCurrent(context)) return;
+    setState(() => _busy = false);
+    if (saved) _close();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final latest = context
+        .watch<TimetableProvider>()
+        .generalSchedules
+        .where((item) => item.id == widget.schedule.id)
+        .firstOrNull;
+    final resolved = effectiveGeneralCalendarColorValue(context, _selected);
+    final slot = generalCalendarSlotColorValues.contains(
+      normalizeGeneralCalendarColorValue(_selected),
+    );
+    return PopScope(
+      canPop: !_blocked,
+      child: SkedTaskDialog(
+        key: const ValueKey('category-color-dialog'),
+        closeEnabled: !_blocked,
+        title: Tooltip(
+          message: latest?.name ?? widget.schedule.name,
+          child: Text(
+            latest?.name ?? widget.schedule.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        content: AbsorbPointer(
+          absorbing: _blocked,
+          child: ExcludeFocus(
+            excluding: _blocked,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                UiCommandBusyIndicator(busy: _busy),
+                Row(
+                  children: [
+                    Container(width: 24, height: 24, color: resolved),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        slot ? l.categoryThemePalette : l.categoryCustomColor,
+                      ),
+                    ),
+                    Text(formatSkedColorHex(resolved.toARGB32())),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    for (
+                      var i = 0;
+                      i < generalCalendarSlotColorValues.length;
+                      i++
+                    )
+                      IconButton(
+                        key: ValueKey('category-color-slot-$i'),
+                        tooltip: l.categoryColorSlot(i + 1),
+                        isSelected:
+                            normalizeGeneralCalendarColorValue(_selected) ==
+                            generalCalendarSlotColorValues[i],
+                        onPressed: () => setState(() {
+                          _selected = generalCalendarSlotColorValues[i];
+                          _validHex = true;
+                          _inputRevision++;
+                        }),
+                        icon: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: effectiveGeneralCalendarColorValue(
+                              context,
+                              generalCalendarSlotColorValues[i],
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              width: 2,
+                              color:
+                                  normalizeGeneralCalendarColorValue(
+                                        _selected,
+                                      ) ==
+                                      generalCalendarSlotColorValues[i]
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Colors.transparent,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: SkedCompactColorPicker(
+                    colorValue: resolved.toARGB32(),
+                    showPreview: false,
+                    paletteValues: const [],
+                    resetToken: _inputRevision,
+                    invalidHexMessage: l.categoryHexInvalid,
+                    onValidityChanged: (value) {
+                      if (_validHex != value) setState(() => _validHex = value);
+                    },
+                    onColorChanged: (value) =>
+                        setState(() => _selected = value),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _blocked ? null : _close,
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('category-color-save'),
+            onPressed: _blocked || !_validHex ? null : _save,
+            child: Text(l.save),
+          ),
+        ],
+      ),
+    );
+  }
+}

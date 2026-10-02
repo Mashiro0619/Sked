@@ -1055,4 +1055,47 @@ void main() {
       },
     );
   });
+  test('category color update patches the latest schedule, preserving fields and events', () {
+    final data = buildData(
+      schedules: [
+        const GeneralSchedule(id: 'other', name: 'Other', events: []),
+        GeneralSchedule(
+          id: 'cal',
+          name: 'Renamed',
+          events: [buildEvent()],
+          isVisible: false,
+        ),
+      ],
+    ).normalized();
+    final updated = service.updateScheduleColor(
+      data,
+      'cal',
+      generalCalendarColorSlot3Value,
+    );
+    final before = data.schedules.last;
+    final schedule = updated.schedules.last;
+    expect(schedule.colorValue, generalCalendarColorSlot3Value);
+    expect(
+      schedule.copyWith(colorValue: before.colorValue).toJson(),
+      before.toJson(),
+    );
+    expect(updated.schedules.first.toJson(), data.schedules.first.toJson());
+    expect(updated.schedules.map((s) => s.id), data.schedules.map((s) => s.id));
+    expect(updated.activeScheduleId, data.activeScheduleId);
+  });
+  test('category color update ignores missing IDs and unchanged raw slots', () {
+    final data = buildData();
+    expect(
+      service.updateScheduleColor(data, 'missing', 0xff123456),
+      same(data),
+    );
+    expect(
+      service.updateScheduleColor(
+        data,
+        'cal',
+        data.schedules.single.colorValue,
+      ),
+      same(data),
+    );
+  });
 }

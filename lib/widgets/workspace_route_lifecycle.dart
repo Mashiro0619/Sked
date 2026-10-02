@@ -47,7 +47,10 @@ mixin WorkspaceRouteLifecycle<T extends StatefulWidget> on State<T> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final route = ModalRoute.of(context);
-      if (route != null && !route.isFirst && route.navigator != null) {
+      if (route != null &&
+          route.isActive &&
+          !route.isFirst &&
+          route.navigator != null) {
         route.navigator!.removeRoute(route);
       }
     });

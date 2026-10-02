@@ -38,6 +38,10 @@ Future<T?> showExpressiveDialog<T>({
           : null) ??
       FocusManager.instance.primaryFocus;
   final owner = ModalRoute.of(context);
+  final anchorRenderObject =
+      floating && desktopFloating.anchorContext?.mounted == true
+      ? desktopFloating.anchorContext!.findRenderObject()
+      : null;
   ModalRoute<dynamic>? shownRoute;
   final result = await showDialog<T>(
     context: context,
@@ -54,6 +58,9 @@ Future<T?> showExpressiveDialog<T>({
       final body = floating
           ? SkedFloatingDialogHost(
               options: desktopFloating,
+              anchorBox: anchorRenderObject is RenderBox
+                  ? anchorRenderObject
+                  : null,
               child: UiCommandFeedbackHost(
                 builder: (_) => SkedStableTaskBody(builder: builder),
               ),

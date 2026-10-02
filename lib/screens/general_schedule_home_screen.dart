@@ -40,6 +40,8 @@ import '../widgets/workspace_navigation.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_task_dialog.dart';
+import '../widgets/sked_adaptive_picker_dialog.dart';
+import '../widgets/sked_compact_color_picker.dart';
 import '../widgets/sked_floating_surface.dart';
 import '../widgets/reminder_detail_session_controller.dart';
 import '../widgets/expressive_motion.dart';
@@ -995,7 +997,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       canvas: workspace,
       resources: WorkspaceResourcePanel(
         title: l10n.calendars,
-        onOpenResources: () => _openCalendarManager(context, provider),
+        onOpenResourcesAt: (anchor) => _openCalendarManager(
+          context,
+          provider,
+          anchorContext: anchor,
+          placement: SkedFloatingPlacement.right,
+        ),
         settingsFocusNode: widget.settingsFocusNode,
         onSettings: widget.showSettingsAction && widget.settingsEnabled
             ? widget.settingsAction ??
@@ -1003,13 +1010,21 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
             : null,
 
         headerActions: [
-          IconButton(
-            key: const ValueKey('general-resource-add'),
-            tooltip: l10n.newCalendar,
-            onPressed: widget.interactive
-                ? () => _openCalendarManager(context, provider, create: true)
-                : null,
-            icon: const Icon(Icons.add),
+          Builder(
+            builder: (anchor) => IconButton(
+              key: const ValueKey('general-resource-add'),
+              tooltip: l10n.newCalendar,
+              onPressed: widget.interactive
+                  ? () => _openCalendarManager(
+                      context,
+                      provider,
+                      create: true,
+                      anchorContext: anchor,
+                      placement: SkedFloatingPlacement.right,
+                    )
+                  : null,
+              icon: const Icon(Icons.add),
+            ),
           ),
         ],
         children: [
@@ -1147,7 +1162,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               case 'agenda':
                 unawaited(_openDayAgenda(context));
               case 'category':
-                unawaited(_openCalendarManager(context, provider));
+                unawaited(
+                  _openCalendarManager(
+                    context,
+                    provider,
+                    anchorContext: _toolbarMoreButtonKey.currentContext,
+                  ),
+                );
               case 'today':
                 unawaited(_goToToday(provider));
               case 'date':
@@ -1352,9 +1373,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               id: 'general-calendar-selector',
               label: l.calendars,
               icon: Icons.view_sidebar_outlined,
-              onSelected: (_) =>
+              onSelected: (anchor) =>
                   (WorkspaceResourceScope.maybeOf(context)?.open ??
-                  () => unawaited(_openCalendarManager(context, provider)))(),
+                  () => unawaited(
+                    _openCalendarManager(
+                      context,
+                      provider,
+                      anchorContext: anchor,
+                    ),
+                  ))(),
             ),
           for (final option in _generalViewOptions(l))
             WorkbenchOverflowAction(
@@ -1448,13 +1475,19 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       navigation: [
         if (needsWorkspaceMenu(context)) const WorkspaceModeMenu(),
         if (!resources)
-          IconButton(
-            key: const ValueKey('general-calendar-selector'),
-            tooltip: l.calendars,
-            onPressed:
-                WorkspaceResourceScope.maybeOf(context)?.open ??
-                () => _openCalendarManager(context, provider),
-            icon: const Icon(Icons.view_sidebar_outlined),
+          Builder(
+            builder: (anchor) => IconButton(
+              key: const ValueKey('general-calendar-selector'),
+              tooltip: l.calendars,
+              onPressed:
+                  WorkspaceResourceScope.maybeOf(context)?.open ??
+                  () => _openCalendarManager(
+                    context,
+                    provider,
+                    anchorContext: anchor,
+                  ),
+              icon: const Icon(Icons.view_sidebar_outlined),
+            ),
           ),
         IconButton(
           key: const ValueKey('general-previous-period'),
@@ -1965,20 +1998,69 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext context,
     TimetableProvider provider, {
     bool create = false,
+    BuildContext? anchorContext,
+    SkedFloatingPlacement placement = SkedFloatingPlacement.below,
   }) async {
     if (_calendarManagerOpen || !widget.interactive) return;
     _setUiBusyFlag(() => _calendarManagerOpen = true);
+    final dataSession = provider.dataSessionToken;
+    bool ownerActive() =>
+        mounted &&
+        widget.active &&
+        widget.interactive &&
+        identical(dataSession, provider.dataSessionToken) &&
+        provider.isWorkspaceEnabled(AppMode.general);
     try {
-      await Navigator.of(context, rootNavigator: true).push<void>(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-            value: provider,
-            child: UiCommandFeedbackHost(
-              builder: (_) => _CalendarManagerPage(createOnOpen: create),
+      if (WorkbenchChromeMetrics.of(context).desktop) {
+        if (create) {
+          await _showCalendarNameTask(
+            context,
+            provider,
+            anchorContext: anchorContext,
+            placement: placement,
+            isOwnerActive: ownerActive,
+          );
+        } else {
+          final direction =
+              await showExpressiveDialog<SettingsTransferDirection>(
+                context: context,
+                waitForTransitionComplete: true,
+                routeSettings: const RouteSettings(name: 'category-manager'),
+                desktopFloating: SkedDesktopFloatingDialog(
+                  anchorContext: anchorContext,
+                  preferredWidth: 440,
+                  maxWidth: 520,
+                  placement: placement,
+                ),
+                builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+                  value: provider,
+                  child: _CalendarTaskGuard(
+                    provider: provider,
+                    isOwnerActive: ownerActive,
+                    child: const _CalendarManagerPage(desktopPanel: true),
+                  ),
+                ),
+              );
+          if (direction != null && ownerActive() && context.mounted) {
+            await openWorkspaceTransfer(
+              context,
+              AppMode.general,
+              direction: direction,
+            );
+          }
+        }
+      } else {
+        await Navigator.of(context, rootNavigator: true).push<void>(
+          MaterialPageRoute(
+            builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+              value: provider,
+              child: UiCommandFeedbackHost(
+                builder: (_) => _CalendarManagerPage(createOnOpen: create),
+              ),
             ),
           ),
-        ),
-      );
+        );
+      }
     } finally {
       _setUiBusyFlag(() => _calendarManagerOpen = false);
     }

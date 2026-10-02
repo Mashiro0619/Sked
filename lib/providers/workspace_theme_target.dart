@@ -30,6 +30,8 @@ class WorkspaceThemeTarget {
       source.updateColorfulUiColorValue(key, value, workspace: activeMode);
   Future<void> updateCourseNameColorValue(String name, int value) =>
       source.updateCourseNameColorValue(name, value);
+  Future<void> updateGeneralScheduleColor(String id, int value) =>
+      source.updateGeneralScheduleColor(id, value);
   Future<void> updateGeneralSchedule(GeneralSchedule value) =>
       source.updateGeneralSchedule(value);
   Future<void> updateColorfulCourseTextSettings({

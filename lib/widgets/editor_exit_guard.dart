@@ -67,6 +67,10 @@ mixin EditorExitGuard<T extends StatefulWidget> on State<T> {
     );
   }
 
+  /// Owners with a data/target lifetime can retire their nested confirmation
+  /// together with the editor. The default retains ordinary dialog behavior.
+  Widget guardDiscardConfirmation(Widget dialog) => dialog;
+
   Future<bool> confirmDiscardDraft() async {
     if (!mounted || exitBlocked || _askingToDiscard) return false;
     if (!hasUnsavedDraft) return true;
@@ -75,19 +79,21 @@ mixin EditorExitGuard<T extends StatefulWidget> on State<T> {
       final l = AppLocalizations.of(context);
       return await showDialog<bool>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text(l.periodTimesUnsavedExitTitle),
-              content: Text(l.unsavedChangesMessage),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l.discardChangesAndExit),
-                ),
-              ],
+            builder: (context) => guardDiscardConfirmation(
+              AlertDialog(
+                title: Text(l.periodTimesUnsavedExitTitle),
+                content: Text(l.unsavedChangesMessage),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(l.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(l.discardChangesAndExit),
+                  ),
+                ],
+              ),
             ),
           ) ==
           true;

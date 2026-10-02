@@ -70,6 +70,9 @@ void main() {
       await t.tap(time);
       await t.pumpAndSettle();
       expect(find.byType(SkedTimePicker), findsOneWidget);
+      // Desktop opens in input mode; switch to the wheel before exercising it.
+      await t.tap(find.byKey(const ValueKey('sked-time-input-toggle')));
+      await t.pumpAndSettle();
       final background = t
           .stateList<ScrollableState>(
             find.descendant(

@@ -40,9 +40,11 @@ class SkedTaskDialog extends StatelessWidget {
     super.key,
     this.title,
     this.titleAction,
+    this.titleBottom,
     this.content,
     this.actions,
     this.scrollable = false,
+    this.desktopContentOwnsScroll = false,
     this.closeEnabled = true,
     this.constraints,
     this.insetPadding,
@@ -51,9 +53,13 @@ class SkedTaskDialog extends StatelessWidget {
     this.actionsPadding,
     this.titleTextStyle,
   });
-  final Widget? title, content, titleAction;
+  final Widget? title, content, titleAction, titleBottom;
   final List<Widget>? actions;
   final bool scrollable;
+
+  /// Pass bounded space to a desktop list instead of nesting scroll views.
+  /// Touch AlertDialog behavior is unaffected.
+  final bool desktopContentOwnsScroll;
   final bool closeEnabled;
   final BoxConstraints? constraints;
   final EdgeInsets? insetPadding;
@@ -98,28 +104,40 @@ class SkedTaskDialog extends StatelessWidget {
                   : null,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: scope.onDragUpdate == null
-                          ? SkedPickerTitle(child: heading)
-                          : SkedFloatingTitleDragHandle(
-                              key: const ValueKey('floating-form-drag-handle'),
-                              onUpdate: scope.onDragUpdate!,
-                              child: heading,
-                            ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: scope.onDragUpdate == null
+                              ? SkedPickerTitle(child: heading)
+                              : SkedFloatingTitleDragHandle(
+                                  key: const ValueKey(
+                                    'floating-form-drag-handle',
+                                  ),
+                                  onUpdate: scope.onDragUpdate!,
+                                  child: heading,
+                                ),
+                        ),
+                        ?titleAction,
+                        if (scope.onClose != null)
+                          IconButton(
+                            key: const ValueKey('floating-form-close'),
+                            tooltip: MaterialLocalizations.of(context)
+                                .closeButtonTooltip,
+                            style: metrics.iconStyle,
+                            onPressed: closeEnabled ? scope.onClose : null,
+                            icon: const Icon(Icons.close),
+                          ),
+                      ],
                     ),
-                    ?titleAction,
-                    if (scope.onClose != null)
-                      IconButton(
-                        key: const ValueKey('floating-form-close'),
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
-                        style: metrics.iconStyle,
-                        onPressed: closeEnabled ? scope.onClose : null,
-                        icon: const Icon(Icons.close),
-                      ),
+                    if (titleBottom != null) ...[
+                      const SizedBox(height: 6),
+                      titleBottom!,
+                    ],
                   ],
                 ),
               ),
@@ -129,10 +147,12 @@ class SkedTaskDialog extends StatelessWidget {
           if (content != null)
             Flexible(
               fit: FlexFit.loose,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
-                child: content!,
-              ),
+              child: desktopContentOwnsScroll
+                  ? Padding(padding: const EdgeInsets.all(12), child: content!)
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(12),
+                      child: content!,
+                    ),
             ),
           if (actions?.isNotEmpty == true)
             ConstrainedBox(

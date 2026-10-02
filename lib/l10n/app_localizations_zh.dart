@@ -2990,6 +2990,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get showReminderIndependently => '独立显示';
+
+  @override
+  String get categoryManagerTitle => '分类管理';
+
+  @override
+  String get categoryHidden => '已隐藏';
+
+  @override
+  String get categoryShowOnCalendar => '在日历中显示';
+
+  @override
+  String get categoryHideOnCalendar => '在日历中隐藏';
+
+  @override
+  String get categoryEditColor => '修改分类颜色';
+
+  @override
+  String get categoryThemePalette => '主题配色';
+
+  @override
+  String get categoryCustomColor => '自定义';
+
+  @override
+  String get categoryHexInvalid => '请输入六位十六进制颜色。';
+
+  @override
+  String categoryColorSlot(int number) {
+    return '主题颜色 $number';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5979,4 +6008,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get showReminderIndependently => '獨立顯示';
+
+  @override
+  String get categoryManagerTitle => '分類管理';
+
+  @override
+  String get categoryHidden => '已隱藏';
+
+  @override
+  String get categoryShowOnCalendar => '在行事曆中顯示';
+
+  @override
+  String get categoryHideOnCalendar => '在行事曆中隱藏';
+
+  @override
+  String get categoryEditColor => '修改分類顏色';
+
+  @override
+  String get categoryThemePalette => '主題配色';
+
+  @override
+  String get categoryCustomColor => '自訂';
+
+  @override
+  String get categoryHexInvalid => '請輸入六位十六進位顏色。';
+
+  @override
+  String categoryColorSlot(int number) {
+    return '主題顏色 $number';
+  }
 }

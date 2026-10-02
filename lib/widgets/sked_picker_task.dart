@@ -41,6 +41,11 @@ Future<T?> showSkedPickerTask<T>({
       SkedPickerCompactPresentation.bottomSheet,
 }) async {
   final parent = ModalRoute.of(context);
+  // Capture while the trigger is active. A closing/reflowing parent can leave
+  // its Element mounted but inactive; never query that Element during layout.
+  final anchorRenderObject = anchorContext?.mounted == true
+      ? anchorContext!.findRenderObject()
+      : null;
   final focus =
       skedFloatingAnchorFocus(anchorContext) ??
       FocusManager.instance.primaryFocus;
@@ -81,7 +86,7 @@ Future<T?> showSkedPickerTask<T>({
         ownerContext: context,
         isSessionCurrent: sessionAvailable,
         ownerRoute: parent,
-        anchorContext: anchorContext,
+        anchorBox: anchorRenderObject is RenderBox ? anchorRenderObject : null,
         placement: placement,
         provider: provider,
         workspace: workspace,
@@ -148,7 +153,7 @@ class _PickerTaskHost<T> extends StatefulWidget {
     required this.ownerContext,
     required this.isSessionCurrent,
     required this.ownerRoute,
-    required this.anchorContext,
+    required this.anchorBox,
     required this.placement,
     required this.provider,
     required this.workspace,
@@ -160,7 +165,7 @@ class _PickerTaskHost<T> extends StatefulWidget {
   final BuildContext ownerContext;
   final bool Function() isSessionCurrent;
   final ModalRoute<dynamic>? ownerRoute;
-  final BuildContext? anchorContext;
+  final RenderBox? anchorBox;
   final SkedFloatingPlacement placement;
   final TimetableProvider? provider;
   final AppMode? workspace;
@@ -282,10 +287,8 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
       );
       _bounds = bounds;
       Rect? anchor;
-      final anchorContext = widget.anchorContext;
-      if ((metrics.desktop || compactAnchor) &&
-          anchorContext?.mounted == true) {
-        final render = anchorContext!.findRenderObject();
+      if (metrics.desktop || compactAnchor) {
+        final render = widget.anchorBox;
         if (render is RenderBox && render.attached && render.hasSize) {
           final rect = render.localToGlobal(Offset.zero) & render.size;
           if (rect.overlaps(Offset.zero & media.size)) anchor = rect;

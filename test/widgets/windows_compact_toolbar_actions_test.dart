@@ -382,8 +382,9 @@ void main() {
         _key('calendar-manager-tile-${p.generalMode.activeScheduleId}'),
         findsOneWidget,
       );
-      await t.tap(find.byType(BackButton).hitTestable().first);
-      await t.pumpAndSettle();
+      expect(_key('category-manager-panel'), findsOneWidget);
+      await _escape(t);
+      expect(_key('category-manager-panel'), findsNothing);
       await _more(t, AppMode.general);
       await _choose(t, 'general-day-agenda-toggle');
       expect(_key('workspace-inspector'), findsOneWidget);

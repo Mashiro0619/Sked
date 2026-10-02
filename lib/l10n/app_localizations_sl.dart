@@ -3188,4 +3188,33 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get showReminderIndependently => 'Open independently';
+
+  @override
+  String get categoryManagerTitle => 'Manage categories';
+
+  @override
+  String get categoryHidden => 'Hidden';
+
+  @override
+  String get categoryShowOnCalendar => 'Show on calendar';
+
+  @override
+  String get categoryHideOnCalendar => 'Hide from calendar';
+
+  @override
+  String get categoryEditColor => 'Change category color';
+
+  @override
+  String get categoryThemePalette => 'Theme palette';
+
+  @override
+  String get categoryCustomColor => 'Custom';
+
+  @override
+  String get categoryHexInvalid => 'Enter a six-digit hex color.';
+
+  @override
+  String categoryColorSlot(int number) {
+    return 'Theme color $number';
+  }
 }

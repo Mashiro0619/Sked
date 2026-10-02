@@ -5699,6 +5699,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open independently'**
   String get showReminderIndependently;
+
+  /// No description provided for @categoryManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage categories'**
+  String get categoryManagerTitle;
+
+  /// No description provided for @categoryHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get categoryHidden;
+
+  /// No description provided for @categoryShowOnCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on calendar'**
+  String get categoryShowOnCalendar;
+
+  /// No description provided for @categoryHideOnCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from calendar'**
+  String get categoryHideOnCalendar;
+
+  /// No description provided for @categoryEditColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Change category color'**
+  String get categoryEditColor;
+
+  /// No description provided for @categoryThemePalette.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme palette'**
+  String get categoryThemePalette;
+
+  /// No description provided for @categoryCustomColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get categoryCustomColor;
+
+  /// No description provided for @categoryHexInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a six-digit hex color.'**
+  String get categoryHexInvalid;
+
+  /// No description provided for @categoryColorSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme color {number}'**
+  String categoryColorSlot(int number);
 }
 
 class _AppLocalizationsDelegate

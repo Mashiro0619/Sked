@@ -30,9 +30,11 @@ class SkedFloatingDialogHost extends StatefulWidget {
   const SkedFloatingDialogHost({
     super.key,
     required this.options,
+    this.anchorBox,
     required this.child,
   });
   final SkedDesktopFloatingDialog options;
+  final RenderBox? anchorBox;
   final Widget child;
   @override
   State<SkedFloatingDialogHost> createState() => _SkedFloatingDialogHostState();
@@ -84,9 +86,7 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
         ),
       );
       Rect? anchor;
-      final anchorBox = widget.options.anchorContext?.mounted == true
-          ? widget.options.anchorContext!.findRenderObject()
-          : null;
+      final anchorBox = widget.anchorBox;
       final layoutBox = _layoutKey.currentContext?.findRenderObject();
       if (anchorBox is RenderBox && anchorBox.attached && anchorBox.hasSize) {
         final origin = layoutBox is RenderBox && layoutBox.attached

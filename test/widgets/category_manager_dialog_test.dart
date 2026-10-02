@@ -13,13 +13,17 @@ import '../support/workspace_harness.dart';
 
 Finder k(String id) => find.byKey(ValueKey(id));
 Finder get dialogSurface => k('floating-form-surface').evaluate().isNotEmpty
-    ? k('floating-form-surface')
+    ? k('floating-form-surface').last
     : find.descendant(
         of: k('calendar-name-dialog'),
         matching: find.byWidgetPredicate(
           (widget) => widget is Material && widget.type == MaterialType.card,
         ),
       );
+bool get desktopManager => k('category-manager-panel').evaluate().isNotEmpty;
+Finder get addButton => desktopManager
+    ? find.widgetWithText(TextButton, 'Add category')
+    : find.byTooltip('Add category');
 Finder get saveButton => find.widgetWithText(FilledButton, 'Save');
 Finder get cancelButton => find.widgetWithText(TextButton, 'Cancel');
 
@@ -98,7 +102,7 @@ void main() {
     (t) async {
       viewport(t, const Size(1280, 800));
       final (p, storage) = await start(t);
-      final row = t.getRect(k('calendar-manager-tile-category-0'));
+      final row = t.getRect(k('calendar-name-category-0'));
       final savedBefore = storage.saves;
       await rename(t, 'category-0');
       final original = t.getRect(dialogSurface);
@@ -110,7 +114,7 @@ void main() {
       await t.enterText(k('rename-calendar-field'), 'Dragged draft');
       await t.pump();
       final dx = original.center.dx > 640 ? -80.0 : 80.0;
-      await t.drag(k('floating-form-drag-handle'), Offset(dx, 80));
+      await t.drag(k('floating-form-drag-handle').last, Offset(dx, 80));
       await t.pumpAndSettle();
       final moved = t.getRect(dialogSurface);
       expect(moved.top, greaterThan(original.top));
@@ -144,7 +148,7 @@ void main() {
       expect(storage.saves, savedBefore + 2);
       await rename(t, 'category-0');
       expect(t.getRect(dialogSurface).topLeft, original.topLeft);
-      await t.tap(k('floating-form-close'));
+      await t.tap(k('floating-form-close').last);
       await t.pumpAndSettle();
       expect(k('calendar-name-dialog'), findsNothing);
       expect(t.takeException(), isNull);
@@ -166,7 +170,10 @@ void main() {
       await t.tap(find.text('Rename'));
       await t.pumpAndSettle();
       expect(t.getRect(dialogSurface).top, closeTo(anchor.bottom + 6, 1));
-      await t.drag(k('floating-form-drag-handle'), const Offset(-2000, 2000));
+      await t.drag(
+        k('floating-form-drag-handle').last,
+        const Offset(-2000, 2000),
+      );
       await t.pumpAndSettle();
       t.view.physicalSize = const Size(520, 420);
       await t.pumpAndSettle();
@@ -175,8 +182,8 @@ void main() {
       expect(rect.right, lessThanOrEqualTo(512));
       expect(rect.top, greaterThanOrEqualTo(56));
       expect(rect.bottom, lessThanOrEqualTo(412));
-      expect(k('floating-form-close').hitTestable(), findsOneWidget);
-      await t.tap(k('floating-form-close'));
+      expect(k('floating-form-close').last.hitTestable(), findsOneWidget);
+      await t.tap(k('floating-form-close').last);
       await t.pumpAndSettle();
       expect(triggerFocus!.hasFocus, isTrue);
       expect(t.takeException(), isNull);
@@ -195,7 +202,10 @@ void main() {
       viewport(t, const Size(1280, 800));
       final (p, storage) = await start(t, count: 40);
       expect(find.byType(AdaptiveCollectionScaffold), findsNothing);
-      expect(find.byType(BackButton), findsOneWidget);
+      expect(
+        find.byType(BackButton),
+        desktopManager ? findsNothing : findsOneWidget,
+      );
       final list = find.byKey(const PageStorageKey('calendar-manager-list'));
       final scrollable = find.descendant(
         of: list,
@@ -211,8 +221,14 @@ void main() {
       final savedBefore = storage.saves;
       final original = p.generalSchedules[20];
       await rename(t, original.id);
-      expect(find.byType(SkedTaskDialog), findsOneWidget);
-      expect(find.byType(BackButton), findsOneWidget);
+      expect(
+        find.byType(SkedTaskDialog),
+        desktopManager ? findsNWidgets(2) : findsOneWidget,
+      );
+      expect(
+        find.byType(BackButton),
+        desktopManager ? findsNothing : findsOneWidget,
+      );
       expect(t.getSize(dialogSurface).width, lessThanOrEqualTo(440));
       expect(t.widget<FilledButton>(saveButton).onPressed, isNull);
       await t.enterText(k('rename-calendar-field'), '  Updated category  ');
@@ -224,13 +240,19 @@ void main() {
           t.widget<TextField>(k('rename-calendar-field')).controller!.text,
           '  Updated category  ',
         );
-        expect(find.byType(SkedTaskDialog), findsOneWidget);
+        expect(
+          find.byType(SkedTaskDialog),
+          desktopManager ? findsNWidgets(2) : findsOneWidget,
+        );
         expect(t.takeException(), isNull);
       }
       await t.testTextInput.receiveAction(TextInputAction.done);
       await t.pumpAndSettle();
       expect(k('calendar-name-dialog'), findsNothing);
-      expect(find.byType(BackButton), findsOneWidget);
+      expect(
+        find.byType(BackButton),
+        desktopManager ? findsNothing : findsOneWidget,
+      );
       expect(p.generalSchedules[20].name, 'Updated category');
       expect(p.generalSchedules[20].id, original.id);
       expect(p.generalSchedules[20].isVisible, original.isVisible);
@@ -243,7 +265,9 @@ void main() {
         k('calendar-manager-tile-category-20').hitTestable(),
         findsOneWidget,
       );
-      await t.tap(find.byType(BackButton));
+      await t.tap(
+        desktopManager ? k('floating-form-close') : find.byType(BackButton),
+      );
       await t.pumpAndSettle();
       expect(list, findsNothing);
       expect(t.takeException(), isNull);
@@ -258,7 +282,7 @@ void main() {
       final (p, storage) = await start(t);
       final savedBefore = storage.saves;
       final original = p.generalSchedules.single.id;
-      await t.tap(find.byTooltip('Add category'));
+      await t.tap(addButton);
       await t.pumpAndSettle();
       expect(t.widget<FilledButton>(saveButton).onPressed, isNull);
       expect(p.generalSchedules, hasLength(1));
@@ -266,7 +290,7 @@ void main() {
       await t.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
       expect(storage.saves, savedBefore);
-      await t.tap(find.byTooltip('Add category'));
+      await t.tap(addButton);
       await t.pumpAndSettle();
       await t.enterText(k('add-calendar-field'), 'Abandoned draft');
       await t.pump();
@@ -276,7 +300,7 @@ void main() {
       await t.pumpAndSettle();
       expect(p.generalSchedules.single.id, original);
       expect(storage.saves, savedBefore);
-      await t.tap(find.byTooltip('Add category'));
+      await t.tap(addButton);
       await t.pumpAndSettle();
       await t.enterText(k('add-calendar-field'), '   ');
       await t.pump();
@@ -289,7 +313,13 @@ void main() {
       expect(p.generalSchedules, hasLength(2));
       expect(p.generalSchedules.last.name, 'Confirmed category');
       expect(storage.saves, savedBefore + 1);
-      expect(find.text('Confirmed category'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: k('calendar-manager-tile-${p.generalSchedules.last.id}'),
+          matching: find.text('Confirmed category'),
+        ),
+        findsOneWidget,
+      );
       expect(t.takeException(), isNull);
     },
     variant: platforms,
@@ -301,7 +331,7 @@ void main() {
       viewport(t, const Size(1100, 800));
       final (p, storage) = await start(t);
       final savedBefore = storage.saves;
-      await t.tap(find.byTooltip('Add category'));
+      await t.tap(addButton);
       await t.pumpAndSettle();
       await t.enterText(k('add-calendar-field'), 'Retry category');
       await t.pump();
@@ -356,7 +386,7 @@ void main() {
       expect(t.widget<TextButton>(cancelButton).onPressed, isNull);
       if (k('floating-form-close').evaluate().isNotEmpty) {
         expect(
-          t.widget<IconButton>(k('floating-form-close')).onPressed,
+          t.widget<IconButton>(k('floating-form-close').last).onPressed,
           isNull,
         );
       }
@@ -433,14 +463,17 @@ void main() {
       viewport(t, const Size(1440, 900));
       final (p, storage) = await start(t);
       final savedBefore = storage.saves;
-      await t.tap(find.byType(BackButton));
+      await t.tap(k('floating-form-close'));
       await t.pumpAndSettle();
       final add = k('general-resource-add');
       await t.tap(add);
       await t.tap(add, warnIfMissed: false);
       await t.pumpAndSettle();
       expect(k('add-calendar-field'), findsOneWidget);
-      expect(find.byType(SkedTaskDialog), findsOneWidget);
+      expect(
+        find.byType(SkedTaskDialog),
+        desktopManager ? findsNWidgets(2) : findsOneWidget,
+      );
       expect(p.generalSchedules, hasLength(1));
       expect(storage.saves, savedBefore);
       await t.tap(cancelButton);
@@ -448,7 +481,7 @@ void main() {
       expect(k('calendar-name-dialog'), findsNothing);
       expect(
         find.byKey(const PageStorageKey('calendar-manager-list')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(p.generalSchedules, hasLength(1));
       expect(storage.saves, savedBefore);

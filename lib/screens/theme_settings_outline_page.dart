@@ -308,7 +308,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                                         top: 12,
                                                       ),
                                                   child: Center(
-                                                    child: _CompactColorPicker(
+                                                    child: SkedCompactColorPicker(
                                                       colorValue:
                                                           _customColorValue,
                                                       onColorChanged:

@@ -2207,5 +2207,14 @@
   "reminderAutoCloseHint": "10 秒後自動收起，操作面板可保持開啟。",
   "@reminderAutoCloseHint": {},
   "showReminderIndependently": "獨立顯示",
-  "@showReminderIndependently": {}
+  "@showReminderIndependently": {},
+  "categoryManagerTitle": "分類管理",
+  "categoryHidden": "已隱藏",
+  "categoryShowOnCalendar": "在行事曆中顯示",
+  "categoryHideOnCalendar": "在行事曆中隱藏",
+  "categoryEditColor": "修改分類顏色",
+  "categoryThemePalette": "主題配色",
+  "categoryCustomColor": "自訂",
+  "categoryHexInvalid": "請輸入六位十六進位顏色。",
+  "categoryColorSlot": "主題顏色 {number}"
 }

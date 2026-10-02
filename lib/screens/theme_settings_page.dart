@@ -8,7 +8,9 @@ import 'dart:convert';
 import '../widgets/adaptive_navigation_scope.dart';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
+import '../widgets/sked_compact_color_picker.dart';
+
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -30,24 +32,7 @@ import '../widgets/ui_command.dart';
 part 'theme_settings_color_sections.dart';
 part 'theme_settings_outline_page.dart';
 
-const _themeSeedOptions = <int>[
-  0xFF6750A4,
-  0xFF5E35B1,
-  0xFF3949AB,
-  0xFF1E88E5,
-  0xFF00897B,
-  0xFF2E7D32,
-  0xFF7CB342,
-  0xFFF9A825,
-  0xFFEF6C00,
-  0xFFF4511E,
-  0xFFD32F2F,
-  0xFFD81B60,
-  0xFFC2185B,
-  0xFF6D4C41,
-  0xFF455A64,
-  0xFF546E7A,
-];
+const _themeSeedOptions = skedColorPresets;
 
 bool _isPresetThemeColor(int colorValue) =>
     _themeSeedOptions.contains(colorValue);
@@ -743,11 +728,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                                   context,
                                                   schedule,
                                                 ).toARGB32(),
-                                            onApply: (colorValue) =>
-                                                provider.updateGeneralSchedule(
-                                                  schedule.copyWith(
-                                                    colorValue: colorValue,
-                                                  ),
+                                            onApply: (colorValue) => provider
+                                                .updateGeneralScheduleColor(
+                                                  schedule.id,
+                                                  colorValue,
                                                 ),
                                           ),
                                         ),
@@ -831,7 +815,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                       _SurfacePanel(
                         padding: const EdgeInsets.all(12),
                         child: Center(
-                          child: _CompactColorPicker(
+                          child: SkedCompactColorPicker(
                             colorValue: colorValue,
                             onColorChanged: (updatedColorValue) => setState(() {
                               selectedColor = Color(updatedColorValue);
@@ -931,7 +915,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                       _SurfacePanel(
                         padding: const EdgeInsets.all(12),
                         child: Center(
-                          child: _CompactColorPicker(
+                          child: SkedCompactColorPicker(
                             colorValue: colorValue,
                             onColorChanged: (updatedColorValue) => setState(() {
                               selectedColor = Color(updatedColorValue);
@@ -1078,7 +1062,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         ),
                                         padding: const EdgeInsets.only(top: 12),
                                         child: Center(
-                                          child: _CompactColorPicker(
+                                          child: SkedCompactColorPicker(
                                             colorValue: colorValue,
                                             onColorChanged:
                                                 (updatedColorValue) =>
@@ -1712,183 +1696,6 @@ class _OutlineColorPreview extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         shape: BoxShape.circle,
         border: Border.all(color: color, width: borderWidth),
-      ),
-    );
-  }
-}
-
-class _CompactColorPicker extends StatefulWidget {
-  const _CompactColorPicker({
-    required this.colorValue,
-    required this.onColorChanged,
-  });
-
-  final int colorValue;
-  final ValueChanged<int> onColorChanged;
-
-  @override
-  State<_CompactColorPicker> createState() => _CompactColorPickerState();
-}
-
-class _CompactColorPickerState extends State<_CompactColorPicker> {
-  static const double _maxPickerWidth = 300;
-  static const double _minPickerWidth = 160;
-
-  late final TextEditingController _hexController;
-  int? _syncedHexValue;
-
-  @override
-  void initState() {
-    super.initState();
-    _hexController = TextEditingController();
-    _syncHexField(widget.colorValue);
-  }
-
-  @override
-  void didUpdateWidget(covariant _CompactColorPicker oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.colorValue != _syncedHexValue) {
-      _syncHexField(widget.colorValue);
-    }
-  }
-
-  @override
-  void dispose() {
-    _hexController.dispose();
-    super.dispose();
-  }
-
-  void _updateColor(Color color) {
-    final colorValue = color.toARGB32();
-    _syncHexField(colorValue);
-    widget.onColorChanged(colorValue);
-  }
-
-  void _syncHexField(int colorValue) {
-    final text = _formatColorHex(colorValue);
-    _syncedHexValue = colorValue;
-    if (_hexController.text == text) {
-      return;
-    }
-    _hexController.value = TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-
-  void _handleHexChanged(String value) {
-    final hex = value.replaceAll('#', '').trim();
-    if (hex.length != 6) {
-      return;
-    }
-    final rgb = int.tryParse(hex, radix: 16);
-    if (rgb == null) {
-      return;
-    }
-    final colorValue = 0xFF000000 | rgb;
-    _syncedHexValue = colorValue;
-    widget.onColorChanged(colorValue);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Color(widget.colorValue);
-    final hsvColor = HSVColor.fromColor(color);
-    final mediaQuery = MediaQuery.of(context);
-    final availableWidth =
-        mediaQuery.size.width - mediaQuery.viewPadding.horizontal - 128;
-    final pickerWidth = availableWidth.clamp(_minPickerWidth, _maxPickerWidth);
-    final showHexLabel = pickerWidth >= 220;
-    return SizedBox(
-      width: pickerWidth,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (SkedTaskDialogScope.maybeOf(context) != null) ...[
-            Row(
-              children: [
-                Container(width: 24, height: 24, color: color),
-                const SizedBox(width: 8),
-                Text(_formatColorHex(widget.colorValue)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                for (final value in _themeSeedOptions)
-                  SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: IconButton(
-                      tooltip: _formatColorHex(value),
-                      onPressed: () => _updateColor(Color(value)),
-                      icon: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Color(value),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          SizedBox(
-            width: pickerWidth,
-            height: pickerWidth * 0.45,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: ColorPickerArea(
-                hsvColor,
-                (updatedHsvColor) => _updateColor(updatedHsvColor.toColor()),
-                PaletteType.hsvWithHue,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: pickerWidth,
-            height: 40,
-            child: ColorPickerSlider(
-              TrackType.hue,
-              hsvColor,
-              (updatedHsvColor) => _updateColor(updatedHsvColor.toColor()),
-              displayThumbColor: true,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: [
-                if (showHexLabel) ...[
-                  Text('Hex', style: Theme.of(context).textTheme.bodyMedium),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: TextField(
-                    key: const ValueKey('compact-color-picker-hex-field'),
-                    controller: _hexController,
-                    maxLength: 7,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      counterText: '',
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 8,
-                      ),
-                    ),
-                    onChanged: _handleHexChanged,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

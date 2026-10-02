@@ -187,7 +187,10 @@ void main() {
           }
         }
 
-        expect(find.byType(BackButton), findsOneWidget);
+        expect(
+          find.byType(BackButton),
+          platform == TargetPlatform.windows ? findsNothing : findsOneWidget,
+        );
         await capture('list');
         await t.tap(
           find.descendant(
@@ -196,15 +199,26 @@ void main() {
           ),
         );
         await t.pumpAndSettle();
-        expect(find.byType(SkedTaskDialog), findsOneWidget);
-        expect(find.byType(BackButton), findsOneWidget);
+        expect(
+          find.byType(SkedTaskDialog),
+          platform == TargetPlatform.windows
+              ? findsNWidgets(2)
+              : findsOneWidget,
+        );
+        expect(
+          find.byType(BackButton),
+          platform == TargetPlatform.windows ? findsNothing : findsOneWidget,
+        );
         await capture('rename');
         if (platform == TargetPlatform.windows) {
-          final before = t.getRect(k('floating-form-surface'));
-          await t.drag(k('floating-form-drag-handle'), const Offset(50, 50));
+          final before = t.getRect(k('floating-form-surface').last);
+          await t.drag(
+            k('floating-form-drag-handle').last,
+            const Offset(50, 50),
+          );
           await t.pumpAndSettle();
           expect(
-            t.getRect(k('floating-form-surface')).top,
+            t.getRect(k('floating-form-surface').last).top,
             greaterThan(before.top),
           );
           await capture('rename-dragged');
@@ -265,8 +279,8 @@ void main() {
 
           await native('resize');
           await t.pumpAndSettle();
-          final before = t.getRect(k('floating-form-surface'));
-          final from = t.getCenter(k('floating-form-drag-handle'));
+          final before = t.getRect(k('floating-form-surface').last);
+          final from = t.getCenter(k('floating-form-drag-handle').last);
           final dx =
               before.right + 60 <
                   t.view.physicalSize.width / t.view.devicePixelRatio
@@ -289,7 +303,7 @@ void main() {
             to: from + Offset(dx, 35),
           );
           await t.pumpAndSettle();
-          final after = t.getRect(k('floating-form-surface'));
+          final after = t.getRect(k('floating-form-surface').last);
           expect(after.left - before.left, closeTo(dx, 3));
           expect(after.top - before.top, closeTo(35, 3));
           expect(report['movedX'], 0);
@@ -317,7 +331,11 @@ void main() {
         }
         await t.tap(find.widgetWithText(TextButton, '取消'));
         await t.pumpAndSettle();
-        await t.tap(find.byTooltip('添加分类'));
+        await t.tap(
+          platform == TargetPlatform.windows
+              ? find.widgetWithText(TextButton, '添加分类').hitTestable()
+              : find.byTooltip('添加分类'),
+        );
         await t.pumpAndSettle();
         expect(k('add-calendar-field'), findsOneWidget);
         expect(p.generalSchedules, hasLength(count));

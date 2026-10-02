@@ -66,6 +66,24 @@ class GeneralCalendarService {
     return data.withSchedule(schedule);
   }
 
+  GeneralScheduleData updateScheduleColor(
+    GeneralScheduleData data,
+    String scheduleId,
+    int colorValue,
+  ) {
+    final existing = _scheduleById(data, scheduleId);
+    if (existing == null || existing.colorValue == colorValue) return data;
+    return data.copyWith(
+      schedules: [
+        for (final schedule in data.schedules)
+          if (schedule.id == scheduleId)
+            schedule.copyWith(colorValue: colorValue)
+          else
+            schedule,
+      ],
+    );
+  }
+
   GeneralScheduleData updateScheduleVisibility(
     GeneralScheduleData data,
     String scheduleId,
