@@ -253,7 +253,7 @@ class _ReminderStripState extends State<_ReminderStrip>
       return _ReminderAutoDismiss(
         enabled: widget.autoClose,
         isOwnerActive: widget.isOwnerActive ?? () => widget.active,
-        builder: (context, automatic) => _ReminderDetailsBinding(
+        builder: (context, automatic) => _EventListDetailsBinding(
           builder: (context, host, source) => WorkspaceViewPanel(
             bodyViewportKey: source.bodyKey,
             key: const ValueKey('general-reminders-list'),
@@ -305,13 +305,18 @@ class _ReminderStripState extends State<_ReminderStrip>
                   ),
                   for (final item in groups[i].items)
                     host.row(
-                      item,
+                      item.occurrence,
                       source: source,
-                      handling: _handling.contains(
-                        item.occurrence.occurrenceKey,
+                      builder: (activate) => _ReminderSummaryRow(
+                        item: item,
+                        busy: _handling.contains(item.occurrence.occurrenceKey),
+                        onOpen: (_) => activate(),
+                        onHandle: () {
+                          if (host.session.blocked) return;
+                          host.session.dismissPreview();
+                          unawaited(_handleReminder(item.occurrence));
+                        },
                       ),
-                      onHandle: () =>
-                          unawaited(_handleReminder(item.occurrence)),
                     ),
                 ],
               ],

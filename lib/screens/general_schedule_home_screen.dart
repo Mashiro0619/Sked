@@ -54,7 +54,7 @@ import 'settings_page.dart';
 
 part 'general_schedule_list_view.dart';
 part 'general_schedule_reminder_strip.dart';
-part 'general_reminder_details_host.dart';
+part 'general_event_list_details_host.dart';
 part 'general_schedule_timeline_view.dart';
 part 'general_schedule_timeline_components.dart';
 part 'general_schedule_calendar_manager.dart';
@@ -586,7 +586,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         },
       ),
     );
-    return _ReminderDetailsHost(
+    return _EventListDetailsHost(
       provider: provider,
       pane: _pane,
       isOwnerActive: () => mounted && widget.active && widget.interactive,
@@ -1611,34 +1611,45 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       endExclusive: addCalendarDays(date, 1),
     );
     if (WorkbenchChromeMetrics.of(context).desktop) {
-      return WorkspaceViewPanel(
-        key: const ValueKey('general-selected-day-agenda'),
-        title: Text(l10n.selectedDayAgenda),
-        subtitle: Text(_formatDate(date)),
-        headerAction: TextButton.icon(
-          key: const ValueKey('general-day-agenda-add'),
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(l10n.addEvent),
-          onPressed: widget.interactive && !_editorSheetOpen
-              ? () => _openEditor(context, provider, initialDate: date)
-              : null,
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final occurrence in occurrences)
-              _GeneralListOccurrenceTile(
-                occurrence: occurrence,
-                compactPanel: true,
-                onTap: () => _openDetails(context, provider, occurrence),
-              ),
-            if (occurrences.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(l10n.noUpcomingEvents),
-              ),
-          ],
+      return _EventListDetailsBinding(
+        contextToken: date,
+        builder: (context, host, source) => WorkspaceViewPanel(
+          bodyViewportKey: source.bodyKey,
+          key: const ValueKey('general-selected-day-agenda'),
+          title: Text(l10n.selectedDayAgenda),
+          subtitle: Text(_formatDate(date)),
+          headerAction: TextButton.icon(
+            key: const ValueKey('general-day-agenda-add'),
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l10n.addEvent),
+            onPressed: widget.interactive && !_editorSheetOpen
+                ? () => _openEditor(context, provider, initialDate: date)
+                : null,
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final occurrence in occurrences)
+                host.row(
+                  occurrence,
+                  source: source,
+                  builder: (activate) => KeyedSubtree(
+                    key: ValueKey('general-agenda-${occurrence.occurrenceKey}'),
+                    child: _GeneralListOccurrenceTile(
+                      occurrence: occurrence,
+                      compactPanel: true,
+                      onTap: activate,
+                    ),
+                  ),
+                ),
+              if (occurrences.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(l10n.noUpcomingEvents),
+                ),
+            ],
+          ),
         ),
       );
     }

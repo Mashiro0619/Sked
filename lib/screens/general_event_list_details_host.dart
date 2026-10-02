@@ -1,9 +1,9 @@
 part of 'general_schedule_home_screen.dart';
 
 /// Workspace-owned detail. Promotion retains the same content, but its lifetime
-/// and input no longer belong to the source reminder list.
-class _ReminderDetailsHost extends StatefulWidget {
-  const _ReminderDetailsHost({
+/// and input no longer belong to its agenda or reminder source list.
+class _EventListDetailsHost extends StatefulWidget {
+  const _EventListDetailsHost({
     required this.provider,
     required this.pane,
     required this.isOwnerActive,
@@ -18,17 +18,21 @@ class _ReminderDetailsHost extends StatefulWidget {
   final bool Function() canEdit;
   final Widget child;
   @override
-  State<_ReminderDetailsHost> createState() => _ReminderDetailsHostState();
+  State<_EventListDetailsHost> createState() => _EventListDetailsHostState();
 }
 
-class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
+class _EventListDetailsHostState extends State<_EventListDetailsHost>
     with WidgetsBindingObserver {
   late final ReminderDetailSessionController session;
   final _portal = OverlayPortalController();
-  _ReminderDetailsBindingState? _source;
+  _EventListDetailsBindingState? _source;
+  // Entry identity can change without changing the selected content session.
+  String? _sourceKey;
+  final Map<String, _EventListDetailsBindingState> _rowSources = {};
+  int _nextSourceId = 0;
   GlobalKey? get bodyKey => _source?.bodyKey;
   final _overlayKey = GlobalKey();
-  final _focus = FocusScopeNode(debugLabel: 'Reminder detail');
+  final _focus = FocusScopeNode(debugLabel: 'Event list detail');
   Map<String, GlobalKey> get _anchors => _source?.anchors ?? const {};
   final Map<String, GeneralEventOccurrence> _occurrences = {};
   ModalRoute<dynamic>? _ownerRoute, _childRoute;
@@ -37,7 +41,7 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
   _ReminderAutoDismissState? _autoDismiss;
   Rect _panel = Rect.zero, _bounds = Rect.zero;
   bool _foreground = true, _scheduled = false, _pointerInDetail = false;
-  bool _syncing = false, _listScrolling = false, _scrollSuppressed = false;
+  bool _syncing = false;
   int? _focusRevision;
   FocusNode? _returnFocus;
   Offset _overlayOrigin = Offset.zero;
@@ -79,7 +83,7 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
   }
 
   @override
-  void didUpdateWidget(_ReminderDetailsHost oldWidget) {
+  void didUpdateWidget(_EventListDetailsHost oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.provider, widget.provider)) {
       oldWidget.provider.removeListener(_providerChanged);
@@ -110,6 +114,10 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
 
   void _changed() {
     if (!mounted) return;
+    if (session.mode == ReminderDetailMode.preview) {
+      final source = _rowSources[session.selectedKey];
+      if (source != null) _useSource(source, session.selectedKey!);
+    }
     // Busy/child-route hooks can run while a nested route is building.
     if (WidgetsBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
@@ -122,6 +130,9 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
   void _syncPortal() {
     if (!mounted || _syncing) return;
     _syncing = true;
+    _rowSources.removeWhere(
+      (key, source) => source.anchors[key]?.currentContext == null,
+    );
     _validate();
     if (session.visible) {
       if (!_portal.isShowing) _portal.show();
@@ -131,6 +142,9 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
       _independentPosition = null;
       _independentHeightLimit = null;
     }
+    _occurrences.removeWhere(
+      (key, _) => !_rowSources.containsKey(key) && key != session.selectedKey,
+    );
     _autoDismiss?.setSecondaryHover(_pointerInDetail && session.visible);
     setState(() {});
     _syncing = false;
@@ -162,7 +176,7 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
       _occurrences[session.selectedKey!] = current;
     }
     if (session.mode == ReminderDetailMode.preview &&
-        (!_canPreview || _anchorRect(session.selectedKey) == null)) {
+        (!_canPreview || _anchorRect() == null)) {
       session.dismissPreview();
     }
   }
@@ -185,45 +199,80 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
     ).where((item) => item.start.isAtSameMomentAs(snapshot.start)).firstOrNull;
   }
 
-  bool get _canPreview =>
+  bool _canUseSource(_EventListDetailsBindingState source) =>
       _canInteract &&
-      _source?.mounted == true &&
-      _source!.route?.isCurrent == true &&
-      _source!.visible;
+      source.mounted &&
+      source.route?.isCurrent == true &&
+      source.visible &&
+      _globalRect(source.bodyKey)?.isEmpty == false;
 
-  void attachSource(_ReminderDetailsBindingState source) {
-    if (identical(_source, source) ||
-        (_source != null && source.route?.isCurrent != true)) {
-      return;
-    }
+  bool get _canPreview => _source != null && _canUseSource(_source!);
+
+  void _useSource(_EventListDetailsBindingState source, String key) {
+    _sourceKey = key;
+    if (identical(_source, source)) return;
+    _autoDismiss?.setSecondaryHover(false);
     _source = source;
-    _listScrolling = _scrollSuppressed = false;
     _autoDismiss = source.context
         .findAncestorStateOfType<_ReminderAutoDismissState>();
-    _scheduleSync();
   }
 
-  void detachSource(_ReminderDetailsBindingState source) {
-    if (!identical(_source, source)) return;
-    _source = null;
-    _autoDismiss = null;
-    _scheduleSync();
-  }
-
-  void sourceScroll(ScrollNotification notification) {
-    if (notification is ScrollStartNotification) {
-      _listScrolling = true;
-      _scrollSuppressed = true;
-      session.dismissPreview();
-    } else if (notification is ScrollEndNotification) {
-      _listScrolling = false;
+  void detachSource(_EventListDetailsBindingState source) {
+    _rowSources.removeWhere((_, value) => identical(value, source));
+    if (source.hoveredKey case final key?) session.leaveRow(key);
+    if (identical(_source, source)) {
+      _source = null;
+      _sourceKey = null;
+      _autoDismiss = null;
     }
     _scheduleSync();
   }
 
-  void sourcePointerSignal() {
-    _scrollSuppressed = true;
-    session.dismissPreview();
+  void sourceContextChanged(_EventListDetailsBindingState source) {
+    // A multi-day occurrence may keep the same row on a different agenda date.
+    // Cancel only this source's preview/candidate, not another list's timers.
+    source.hoveredKey = null;
+    source.scrollSuppressed = true;
+    session.invalidateHoverRows(source.anchors.keys.toSet());
+    _scheduleSync();
+  }
+
+  void sourceScroll(
+    _EventListDetailsBindingState source,
+    ScrollNotification notification,
+  ) {
+    if (notification is ScrollStartNotification) {
+      source.scrolling = true;
+      sourcePointerSignal(source);
+    } else if (notification is ScrollEndNotification) {
+      source.scrolling = false;
+    }
+    _scheduleSync();
+  }
+
+  void sourcePointerSignal(_EventListDetailsBindingState source) {
+    source.scrollSuppressed = true;
+    if (identical(_source, source)) {
+      session.dismissPreview();
+    } else if (source.hoveredKey case final key?) {
+      session.leaveRow(key);
+    }
+  }
+
+  void _activate(_EventListDetailsBindingState source, String key) {
+    if (!_canUseSource(source) || session.blocked) return;
+    // Identical events in agenda and reminders keep one element and scroll.
+    final sameEvent =
+        session.visible &&
+        _occurrences[session.selectedKey]?.occurrenceKey ==
+            _occurrences[key]?.occurrenceKey;
+    final returnFocus = skedFloatingAnchorFocus(
+      source.anchors[key]?.currentContext,
+    );
+    _useSource(source, key);
+    if (detach(sameEvent ? session.selectedKey : key) && returnFocus != null) {
+      _returnFocus = returnFocus;
+    }
   }
 
   void _retire() {
@@ -280,9 +329,13 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
     if (!_canInteract || session.blocked) return false;
     final selected = key ?? session.selectedKey;
     if (selected == null) return false;
-    _returnFocus =
-        skedFloatingAnchorFocus(_anchors[selected]?.currentContext) ??
-        FocusManager.instance.primaryFocus;
+    // Actions in an already independent detail must not replace the last
+    // explicitly activated entry with one of the detail's own controls.
+    if (!session.independent) {
+      _returnFocus =
+          skedFloatingAnchorFocus(_anchors[_sourceKey]?.currentContext) ??
+          FocusManager.instance.primaryFocus;
+    }
     if (session.independent && !_panel.isEmpty) {
       _independentPosition = _panel.topLeft;
     } else if (selected != session.selectedKey) {
@@ -346,26 +399,33 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
   Rect? _globalRect(GlobalKey? key) {
     final element = key?.currentContext;
     final box = element is RenderObjectElement ? element.renderObject : null;
+    for (
+      RenderObject? ancestor = box;
+      ancestor != null;
+      ancestor = ancestor.parent
+    ) {
+      if (ancestor is RenderOffstage && ancestor.offstage) return null;
+    }
     return box is RenderBox && box.attached && box.hasSize
         ? box.localToGlobal(Offset.zero) & box.size
         : null;
   }
 
-  Rect? _anchorRect(String? key) {
-    final anchor = _globalRect(_anchors[key]);
+  Rect? _anchorRect() {
+    final anchor = _globalRect(_anchors[_sourceKey]);
     final body = _globalRect(bodyKey);
     if (anchor == null || body == null || !anchor.overlaps(body)) return null;
     return anchor.intersect(body).shift(-_overlayOrigin);
   }
 
   Widget row(
-    GeneralReminderItem item, {
-    required _ReminderDetailsBindingState source,
-    required bool handling,
-    required VoidCallback onHandle,
+    GeneralEventOccurrence occurrence, {
+    required _EventListDetailsBindingState source,
+    required Widget Function(VoidCallback activate) builder,
   }) {
-    final key = item.occurrence.occurrenceKey;
-    _occurrences[key] = item.occurrence;
+    final key = '${source.id}:${occurrence.occurrenceKey}';
+    _occurrences[key] = occurrence;
+    _rowSources[key] = source;
     final anchor = source.anchors.putIfAbsent(
       key,
       () => GlobalKey(debugLabel: key),
@@ -373,38 +433,33 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
     return MouseRegion(
       key: anchor,
       onEnter: (event) {
-        if (event.kind == PointerDeviceKind.mouse &&
-            _canPreview &&
-            !_listScrolling &&
-            !_scrollSuppressed) {
+        if (event.kind != PointerDeviceKind.mouse) return;
+        source.hoveredKey = key;
+        if (_canUseSource(source) &&
+            !source.scrolling &&
+            !source.scrollSuppressed) {
           session.enterRow(key);
         }
       },
       onHover: (event) {
-        // Layout-induced enter events after a scroll must not reopen a preview
-        // underneath a stationary pointer. A real mouse move can arm it again.
-        if (_scrollSuppressed &&
+        // Do not reopen under a stationary pointer after list scrolling.
+        if (source.scrollSuppressed &&
             event.kind == PointerDeviceKind.mouse &&
             event.delta != Offset.zero &&
-            !_listScrolling &&
-            _canPreview) {
-          _scrollSuppressed = false;
+            !source.scrolling &&
+            _canUseSource(source)) {
+          source.scrollSuppressed = false;
+          source.hoveredKey = key;
           session.enterRow(key);
         }
       },
       onExit: (event) {
-        if (event.kind == PointerDeviceKind.mouse) session.leaveRow(key);
+        if (event.kind == PointerDeviceKind.mouse) {
+          if (source.hoveredKey == key) source.hoveredKey = null;
+          session.leaveRow(key);
+        }
       },
-      child: _ReminderSummaryRow(
-        item: item,
-        busy: handling,
-        onOpen: (_) => detach(key),
-        onHandle: () {
-          if (session.blocked) return;
-          session.dismissPreview();
-          onHandle();
-        },
-      ),
+      child: builder(() => _activate(source, key)),
     );
   }
 
@@ -421,7 +476,7 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
   }
 
   bool _inBridge(Offset point) {
-    final a = _anchorRect(session.selectedKey);
+    final a = _anchorRect();
     if (a == null || _panel.isEmpty) return false;
     // A narrow cross-axis overlap corridor, not a bounding box covering other rows.
     Rect bridge;
@@ -587,7 +642,7 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
               8,
         ),
       );
-      final anchor = _anchorRect(session.selectedKey);
+      final anchor = _anchorRect();
       final width = math.min(_bounds.width, 360 * metrics.textScale);
       final anchoredHeight = skedFloatingHeightLimit(_bounds, anchor, width);
       if (session.independent) _independentHeightLimit ??= anchoredHeight;
@@ -690,7 +745,7 @@ class _ReminderDetailsHostState extends State<_ReminderDetailsHost>
     overlayLocation: OverlayChildLocation.rootOverlay,
     controller: _portal,
     overlayChildBuilder: _overlay,
-    child: _ReminderDetailsScope(host: this, child: widget.child),
+    child: _EventListDetailsScope(host: this, child: widget.child),
   );
   @override
   void dispose() {
@@ -775,54 +830,69 @@ class _ReminderDetailPosition extends SingleChildLayoutDelegate {
   bool shouldRelayout(_ReminderDetailPosition oldDelegate) => true;
 }
 
-/// Bind a reminder route to the workspace host, without owning its detail.
-class _ReminderDetailsScope extends InheritedWidget {
-  const _ReminderDetailsScope({required this.host, required super.child});
-  final _ReminderDetailsHostState host;
-  static _ReminderDetailsHostState of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_ReminderDetailsScope>()!.host;
+/// Bind an agenda/reminder list without owning the shared detail lifetime.
+class _EventListDetailsScope extends InheritedWidget {
+  const _EventListDetailsScope({required this.host, required super.child});
+  final _EventListDetailsHostState host;
+  static _EventListDetailsHostState of(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_EventListDetailsScope>()!
+      .host;
   @override
-  bool updateShouldNotify(_ReminderDetailsScope oldWidget) =>
+  bool updateShouldNotify(_EventListDetailsScope oldWidget) =>
       host != oldWidget.host;
 }
 
-class _ReminderDetailsBinding extends StatefulWidget {
-  const _ReminderDetailsBinding({required this.builder});
+class _EventListDetailsBinding extends StatefulWidget {
+  const _EventListDetailsBinding({required this.builder, this.contextToken});
+  final Object? contextToken;
   final Widget Function(
     BuildContext,
-    _ReminderDetailsHostState,
-    _ReminderDetailsBindingState,
+    _EventListDetailsHostState,
+    _EventListDetailsBindingState,
   )
   builder;
   @override
-  State<_ReminderDetailsBinding> createState() =>
-      _ReminderDetailsBindingState();
+  State<_EventListDetailsBinding> createState() =>
+      _EventListDetailsBindingState();
 }
 
-class _ReminderDetailsBindingState extends State<_ReminderDetailsBinding> {
-  final bodyKey = GlobalKey(debugLabel: 'reminder-list-body');
+class _EventListDetailsBindingState extends State<_EventListDetailsBinding> {
+  final bodyKey = GlobalKey(debugLabel: 'event-list-body');
+  int? _id;
+  int get id => _id!;
+  bool scrolling = false, scrollSuppressed = false;
+  String? hoveredKey;
   // Routes can coexist during exit/enter animations. Never share row keys
   // between them, even though both bind to the same workspace detail.
   final Map<String, GlobalKey> anchors = {};
-  late _ReminderDetailsHostState host;
+  late _EventListDetailsHostState host;
   ModalRoute<dynamic>? route;
   bool visible = true;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    host = _ReminderDetailsScope.of(context);
+    host = _EventListDetailsScope.of(context);
     route = ModalRoute.of(context);
     visible = TickerMode.valuesOf(context).enabled;
-    host.attachSource(this);
+    _id ??= host._nextSourceId++;
+    host._scheduleSync();
+  }
+
+  @override
+  void didUpdateWidget(_EventListDetailsBinding oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.contextToken != oldWidget.contextToken) {
+      host.sourceContextChanged(this);
+    }
     host._scheduleSync();
   }
 
   @override
   Widget build(BuildContext context) => Listener(
-    onPointerSignal: (_) => host.sourcePointerSignal(),
+    onPointerSignal: (_) => host.sourcePointerSignal(this),
     child: NotificationListener<ScrollNotification>(
       onNotification: (notification) {
-        host.sourceScroll(notification);
+        host.sourceScroll(this, notification);
         return false;
       },
       child: widget.builder(context, host, this),

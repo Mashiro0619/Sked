@@ -1595,9 +1595,25 @@ class _MonthAgendaPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!WorkbenchChromeMetrics.of(context).desktop) {
+      return _buildPanel(context);
+    }
+    return _EventListDetailsBinding(
+      contextToken: normalizeDateOnly(date),
+      builder: (context, host, source) =>
+          _buildPanel(context, host: host, source: source),
+    );
+  }
+
+  Widget _buildPanel(
+    BuildContext context, {
+    _EventListDetailsHostState? host,
+    _EventListDetailsBindingState? source,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Material(
+      key: const ValueKey('general-month-agenda'),
       color: colorScheme.surface,
       shape: Border.all(
         color: colorScheme.outlineVariant.withValues(alpha: .55),
@@ -1613,20 +1629,38 @@ class _MonthAgendaPanel extends StatelessWidget {
           ),
           const Divider(height: 1),
           Expanded(
-            child: occurrences.isEmpty
-                ? _MonthAgendaEmptyState(filtered: filtered)
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-                    itemCount: occurrences.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 4),
-                    itemBuilder: (context, index) {
-                      final occurrence = occurrences[index];
-                      return _MonthAgendaTile(
-                        occurrence: occurrence,
-                        onTap: () => onOccurrenceTap(occurrence),
-                      );
-                    },
-                  ),
+            child: SizedBox(
+              key: source?.bodyKey,
+              child: occurrences.isEmpty
+                  ? _MonthAgendaEmptyState(filtered: filtered)
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+                      itemCount: occurrences.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        final occurrence = occurrences[index];
+                        if (host != null && source != null) {
+                          return host.row(
+                            occurrence,
+                            source: source,
+                            builder: (activate) => KeyedSubtree(
+                              key: ValueKey(
+                                'general-agenda-${occurrence.occurrenceKey}',
+                              ),
+                              child: _MonthAgendaTile(
+                                occurrence: occurrence,
+                                onTap: activate,
+                              ),
+                            ),
+                          );
+                        }
+                        return _MonthAgendaTile(
+                          occurrence: occurrence,
+                          onTap: () => onOccurrenceTap(occurrence),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

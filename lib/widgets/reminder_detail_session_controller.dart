@@ -134,6 +134,26 @@ class ReminderDetailSessionController extends ChangeNotifier {
     return true;
   }
 
+  /// Retire a changed list context without affecting an independent window or
+  /// the open timer belonging to a candidate in another list.
+  void invalidateHoverRows(Set<String> keys) {
+    final hoveredWasRemoved = keys.contains(_hovered);
+    if (hoveredWasRemoved) _hovered = null;
+    if (keys.contains(_suppressed)) _suppressed = null;
+    if (keys.contains(_candidate)) _cancelCandidate();
+    if (mode == ReminderDetailMode.preview && keys.contains(selectedKey)) {
+      _closeTimer?.cancel();
+      mode = ReminderDetailMode.hidden;
+      selectedKey = null;
+      manualPosition = null;
+      _inPanel = false;
+      revision++;
+      notifyListeners();
+    } else if (hoveredWasRemoved) {
+      _scheduleClose();
+    }
+  }
+
   void dismissPreview() {
     _cancelCandidate();
     if (mode == ReminderDetailMode.preview) close(explicit: false);

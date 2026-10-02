@@ -108,4 +108,65 @@ void main() {
     await t.pump(const Duration(milliseconds: 300));
     expect(c.selectedKey, 'new');
   });
+  testWidgets(
+    'source invalidation cancels its preview but preserves another source pending timer',
+    (t) async {
+      final c = ReminderDetailSessionController();
+      addTearDown(c.dispose);
+      c.enterRow('agenda:a');
+      await t.pump(const Duration(milliseconds: 300));
+      c.leaveRow('agenda:a');
+      c.enterRow('reminder:b');
+      await t.pump(const Duration(milliseconds: 150));
+      c.invalidateHoverRows({'agenda:a'});
+      expect(c.mode, ReminderDetailMode.hidden);
+      await t.pump(const Duration(milliseconds: 149));
+      expect(c.visible, isFalse);
+      await t.pump(const Duration(milliseconds: 1));
+      expect(c.selectedKey, 'reminder:b');
+      expect(c.mode, ReminderDetailMode.preview);
+      c.close();
+    },
+  );
+  testWidgets(
+    'invalidating a candidate source preserves the hovered preview and independent busy state',
+    (t) async {
+      final c = ReminderDetailSessionController();
+      addTearDown(c.dispose);
+      c.enterRow('reminder:a');
+      await t.pump(const Duration(milliseconds: 300));
+      c.enterPanel();
+      c.enterRow('agenda:b');
+      await t.pump(const Duration(milliseconds: 150));
+      c.invalidateHoverRows({'agenda:b'});
+      await t.pump(const Duration(milliseconds: 400));
+      expect(c.selectedKey, 'reminder:a');
+      c.detach();
+      c.moveTo(const Offset(20, 30));
+      c.setBusy(true);
+      final version = c.revision;
+      c.invalidateHoverRows({'reminder:a'});
+      await t.pump(const Duration(milliseconds: 400));
+      expect(c.mode, ReminderDetailMode.independent);
+      expect(c.revision, version);
+      expect(c.manualPosition, const Offset(20, 30));
+      expect(c.busy, isTrue);
+    },
+  );
+  testWidgets(
+    'unrelated context changes do not restart the preview exit delay',
+    (t) async {
+      final c = ReminderDetailSessionController();
+      addTearDown(c.dispose);
+      c.enterRow('reminder:a');
+      await t.pump(const Duration(milliseconds: 300));
+      c.leaveRow('reminder:a');
+      await t.pump(const Duration(milliseconds: 100));
+      c.invalidateHoverRows({'agenda:b'});
+      await t.pump(const Duration(milliseconds: 99));
+      expect(c.visible, isTrue);
+      await t.pump(const Duration(milliseconds: 1));
+      expect(c.visible, isFalse);
+    },
+  );
 }

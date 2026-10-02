@@ -123,7 +123,10 @@ void main() {
       await t.pumpAndSettle();
       expect(_key('workspace-inspector-header'), findsNothing);
       expect(_key('workspace-inspector-close'), findsOneWidget);
-      expect(t.getSize(_key('workspace-detail-surface')).height, lessThan(450));
+      expect(
+        t.getSize(_key('workspace-companion-view-surface')).height,
+        lessThan(450),
+      );
       expect(
         find.descendant(
           of: _key('general-event-action-bar'),
@@ -198,7 +201,7 @@ void main() {
   );
 
   testWidgets(
-    'docked details restore permanent agenda and add uses its selected date',
+    'independent details keep permanent agenda even with docked task preference',
     (t) async {
       _viewport(t);
       final p = await workspaceProvider(
@@ -213,9 +216,10 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(_agendaText('Review session'));
       await t.pumpAndSettle();
-      expect(_key('general-selected-day-agenda'), findsNothing);
-      expect(_key('general-day-agenda-toggle'), findsOneWidget);
-      expect(t.getRect(_key('workspace-detail-surface')).bottom, 900);
+      expect(_key('general-selected-day-agenda'), findsOneWidget);
+      expect(_key('general-day-agenda-toggle'), findsNothing);
+      expect(_key('workspace-companion-view-surface'), findsOneWidget);
+      expect(_key('workspace-detail-surface'), findsNothing);
       await t.tap(_key('workspace-inspector-close'));
       await t.pumpAndSettle();
       expect(_key('general-selected-day-agenda'), findsOneWidget);
