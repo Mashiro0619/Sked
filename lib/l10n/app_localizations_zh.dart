@@ -2987,6 +2987,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reminderAutoCloseHint => '10 秒后自动收起，操作面板可保持打开。';
+
+  @override
+  String get showReminderIndependently => '独立显示';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -5973,4 +5976,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get reminderAutoCloseHint => '10 秒後自動收起，操作面板可保持開啟。';
+
+  @override
+  String get showReminderIndependently => '獨立顯示';
 }

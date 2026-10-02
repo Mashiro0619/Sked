@@ -3178,4 +3178,7 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get reminderAutoCloseHint =>
       'Closes after 10 seconds. Interact to keep open.';
+
+  @override
+  String get showReminderIndependently => 'Open independently';
 }

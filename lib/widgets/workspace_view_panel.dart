@@ -13,9 +13,11 @@ class WorkspaceViewTaskScope extends InheritedWidget {
     required this.enabled,
     required this.onClose,
     required this.onContentHeight,
+    this.showClose = true,
     required super.child,
   });
   final bool enabled;
+  final bool showClose;
   final VoidCallback onClose;
   final ValueChanged<double> onContentHeight;
   static WorkspaceViewTaskScope? maybeOf(BuildContext context) =>
@@ -23,6 +25,7 @@ class WorkspaceViewTaskScope extends InheritedWidget {
   @override
   bool updateShouldNotify(WorkspaceViewTaskScope oldWidget) =>
       enabled != oldWidget.enabled ||
+      showClose != oldWidget.showClose ||
       onClose != oldWidget.onClose ||
       onContentHeight != oldWidget.onContentHeight;
 }
@@ -55,11 +58,13 @@ class WorkspaceViewPanel extends StatelessWidget {
     this.subtitle,
     this.headerAction,
     this.toolbar,
+    this.bodyViewportKey,
     this.contentPadding = const EdgeInsets.fromLTRB(12, 10, 12, 12),
   });
   final Widget title;
   final Widget? subtitle, headerAction, toolbar;
   final Widget child;
+  final Key? bodyViewportKey;
   final EdgeInsetsGeometry contentPadding;
 
   @override
@@ -72,6 +77,10 @@ class WorkspaceViewPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     return Align(
+      // Navigator-backed panels are clipped by WorkspaceViewViewport. An
+      // adjacent portal instead receives loose constraints and must size
+      // its surface to this same content, not fill an empty window-height card.
+      heightFactor: compact ? 1 : null,
       alignment: Alignment.topCenter,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -134,7 +143,7 @@ class WorkspaceViewPanel extends StatelessWidget {
                               const SizedBox(width: 8),
                               headerAction!,
                             ],
-                            if (task) ...[
+                            if (task && scope!.showClose) ...[
                               const SizedBox(width: 4),
                               IconButton(
                                 key: const ValueKey(
@@ -143,7 +152,7 @@ class WorkspaceViewPanel extends StatelessWidget {
                                 tooltip: MaterialLocalizations.of(context)
                                     .closeButtonTooltip,
                                 style: metrics.iconStyle,
-                                onPressed: scope!.onClose,
+                                onPressed: scope.onClose,
                                 icon: const Icon(Icons.close),
                               ),
                             ],
@@ -168,10 +177,13 @@ class WorkspaceViewPanel extends StatelessWidget {
               const Divider(height: 1),
               Flexible(
                 fit: compact ? FlexFit.loose : FlexFit.tight,
-                child: SingleChildScrollView(
-                  key: const ValueKey('workspace-view-body'),
-                  padding: contentPadding,
-                  child: child,
+                child: SizedBox(
+                  key: bodyViewportKey,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('workspace-view-body'),
+                    padding: contentPadding,
+                    child: child,
+                  ),
                 ),
               ),
             ],

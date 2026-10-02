@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
+import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../support/desktop_panel_harness.dart';
@@ -273,10 +274,19 @@ void main() {
           ),
         );
         await t.pumpAndSettle();
-        final header = t.getRect(_key('workspace-view-header'));
-        await t.drag(_key('workspace-view-body'), const Offset(0, -200));
+        final detail = find.byType(GeneralEventDetailsSheet);
+        final headerFinder = find.descendant(
+          of: detail,
+          matching: _key('workspace-view-header'),
+        );
+        final header = t.getRect(headerFinder);
+        expect(_key('general-reminders-list'), findsOneWidget);
+        await t.drag(
+          find.descendant(of: detail, matching: _key('workspace-view-body')),
+          const Offset(0, -200),
+        );
         await t.pumpAndSettle();
-        expect(t.getRect(_key('workspace-view-header')), header);
+        expect(t.getRect(headerFinder), header);
         expect(
           t.getRect(_key('workspace-detail-surface')).bottom,
           lessThanOrEqualTo(892),

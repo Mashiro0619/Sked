@@ -8,6 +8,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
+import 'package:sked/widgets/general_event_details_sheet.dart';
 
 import '../test/support/reminder_summary_harness.dart';
 import '../test/support/workspace_harness.dart';
@@ -75,6 +76,27 @@ void main() {
           await t.drag(k('workspace-view-drag-handle'), const Offset(-80, 25));
           await t.pumpAndSettle();
           await capture('grouped');
+          final reminderElement = t.element(k('general-reminders-list'));
+          final reminderRect = t.getRect(k('general-reminders-list'));
+          await t.tap(
+            find.descendant(
+              of: k('general-reminders-list'),
+              matching: find.text(locale == 'zh' ? '学习小组' : 'Study group'),
+            ),
+          );
+          await t.pumpAndSettle();
+          expect(t.element(k('general-reminders-list')), same(reminderElement));
+          expect(t.getRect(k('general-reminders-list')), reminderRect);
+          expect(find.byType(GeneralEventDetailsSheet), findsOneWidget);
+          await capture('companion-detail');
+          await t.tap(
+            find.descendant(
+              of: find.byType(GeneralEventDetailsSheet),
+              matching: k('workspace-inspector-close'),
+            ),
+          );
+          await t.pumpAndSettle();
+          expect(t.element(k('general-reminders-list')), same(reminderElement));
           if (scale == 2) {
             t.view.physicalSize = const Size(920, 620);
             await t.pumpAndSettle();

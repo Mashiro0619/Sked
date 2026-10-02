@@ -16,6 +16,11 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
+
+import '../widgets/workspace_view_panel.dart';
+
 import 'package:intl/intl.dart' as intl;
 import 'package:lunar/lunar.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +40,8 @@ import '../widgets/workspace_navigation.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/sked_task_dialog.dart';
+import '../widgets/sked_floating_surface.dart';
+import '../widgets/reminder_detail_session_controller.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/general_event_details_sheet.dart';
 import '../widgets/general_event_editor_sheet.dart';
@@ -47,6 +54,7 @@ import 'settings_page.dart';
 
 part 'general_schedule_list_view.dart';
 part 'general_schedule_reminder_strip.dart';
+part 'general_reminder_details_host.dart';
 part 'general_schedule_timeline_view.dart';
 part 'general_schedule_timeline_components.dart';
 part 'general_schedule_calendar_manager.dart';
@@ -578,7 +586,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         },
       ),
     );
-    return _wrapStandalone(body);
+    return _ReminderDetailsHost(
+      provider: provider,
+      pane: _pane,
+      isOwnerActive: () => mounted && widget.active && widget.interactive,
+      onEdit: (item) => _openEditor(context, provider, event: item.event),
+      canEdit: () => !_editorSheetOpen,
+      child: _wrapStandalone(body),
+    );
   }
 
   GeneralDateRange _effectiveRange(TimetableProvider provider) {
@@ -1105,6 +1120,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       active: widget.active && widget.interactive,
       pane: _pane,
       onOccurrenceTap: (item) => _openDetails(context, provider, item),
+      isOwnerActive: () =>
+          mounted &&
+          widget.active &&
+          widget.interactive &&
+          ModalRoute.of(context)?.isCurrent != false,
       actionBuilder: (context, count, openReminders) => KeyedSubtree(
         key: const ValueKey('general-toolbar-more-button'),
         child: SkedPopupMenuButton<String>(
@@ -1259,6 +1279,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       active: widget.active && widget.interactive,
       pane: _pane,
       onOccurrenceTap: (item) => _openDetails(context, provider, item),
+      isOwnerActive: () =>
+          mounted &&
+          widget.active &&
+          widget.interactive &&
+          ModalRoute.of(context)?.isCurrent != false,
       actionBuilder: (context, count, openReminders) => WorkbenchCompactCalendarBar(
         id: 'general',
         primaryAction: WorkbenchOverflowAction(
@@ -1523,6 +1548,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           active: widget.active,
           pane: _pane,
           onOccurrenceTap: (item) => _openDetails(context, provider, item),
+          isOwnerActive: () =>
+              mounted &&
+              widget.active &&
+              widget.interactive &&
+              ModalRoute.of(context)?.isCurrent != false,
         ),
         if (_showDayAgendaEntry(context, view))
           IconButton(
@@ -1815,55 +1845,66 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isDismissible: canDismiss,
         enableDrag: false,
         maxWidth: appSheetWidthCompact,
-        builder: (sheetContext) => GeneralEventDetailsSheet(
-          occurrence: occurrence,
-          isReminderHandled: provider.isGeneralReminderHandled(occurrence),
-          onEdit: () {
-            Navigator.of(sheetContext).pop();
-            return _openEditor(context, provider, event: occurrence.event);
-          },
-          onDismissReminder: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            final message = AppLocalizations.of(context).reminderHandled;
-            await provider.dismissGeneralReminder(occurrence);
-            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-            if (mounted) {
-              messenger.showSnackBar(SnackBar(content: Text(message)));
+        builder: (sheetContext) {
+          final detailRoute = ModalRoute.of(sheetContext);
+          void closeDetails() {
+            // Async data invalidation may already have retired this detail.
+            // Never let its completion pop the summary or a newer route.
+            if (detailRoute?.isCurrent == true) {
+              detailRoute!.navigator?.pop();
             }
-          },
-          onRestoreReminder: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            final message = AppLocalizations.of(context).reminderRestored;
-            await provider.restoreGeneralReminder(occurrence);
-            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-            if (mounted) {
-              messenger.showSnackBar(SnackBar(content: Text(message)));
-            }
-          },
-          onDuplicate: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            final message = AppLocalizations.of(context).eventDuplicated;
-            await provider.duplicateGeneralOccurrence(occurrence);
-            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-            if (mounted) {
-              messenger.showSnackBar(SnackBar(content: Text(message)));
-            }
-          },
-          onDeleteThis: () async {
-            await provider.deleteGeneralOccurrence(occurrence);
-            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-          },
-          onDeleteFuture: occurrence.event.recurrenceRule.isRepeating
-              ? () async {
-                  await provider.deleteFutureGeneralOccurrences(occurrence);
-                  if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                }
-              : null,
-          onDeleteAll: () async {
-            await provider.deleteGeneralEvent(occurrence.event.id);
-            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-          },
-        ),
+          }
+
+          return GeneralEventDetailsSheet(
+            occurrence: occurrence,
+            isReminderHandled: provider.isGeneralReminderHandled(occurrence),
+            onEdit: () {
+              closeDetails();
+              return _openEditor(context, provider, event: occurrence.event);
+            },
+            onDismissReminder: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final message = AppLocalizations.of(context).reminderHandled;
+              await provider.dismissGeneralReminder(occurrence);
+              closeDetails();
+              if (mounted) {
+                messenger.showSnackBar(SnackBar(content: Text(message)));
+              }
+            },
+            onRestoreReminder: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final message = AppLocalizations.of(context).reminderRestored;
+              await provider.restoreGeneralReminder(occurrence);
+              closeDetails();
+              if (mounted) {
+                messenger.showSnackBar(SnackBar(content: Text(message)));
+              }
+            },
+            onDuplicate: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final message = AppLocalizations.of(context).eventDuplicated;
+              await provider.duplicateGeneralOccurrence(occurrence);
+              closeDetails();
+              if (mounted) {
+                messenger.showSnackBar(SnackBar(content: Text(message)));
+              }
+            },
+            onDeleteThis: () async {
+              await provider.deleteGeneralOccurrence(occurrence);
+              closeDetails();
+            },
+            onDeleteFuture: occurrence.event.recurrenceRule.isRepeating
+                ? () async {
+                    await provider.deleteFutureGeneralOccurrences(occurrence);
+                    closeDetails();
+                  }
+                : null,
+            onDeleteAll: () async {
+              await provider.deleteGeneralEvent(occurrence.event.id);
+              closeDetails();
+            },
+          );
+        },
       );
     } finally {
       _setUiBusyFlag(() => _detailsSheetOpen = false);

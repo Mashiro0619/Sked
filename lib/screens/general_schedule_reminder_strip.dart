@@ -214,6 +214,7 @@ class _ReminderStripState extends State<_ReminderStrip>
                     pane: widget.pane,
                     listMode: true,
                     onOccurrenceTap: widget.onOccurrenceTap,
+                    isOwnerActive: widget.isOwnerActive,
                   ),
                   selectionId: 'general-reminders',
                   presentation: WorkspacePanePresentation.view,
@@ -252,63 +253,69 @@ class _ReminderStripState extends State<_ReminderStrip>
       return _ReminderAutoDismiss(
         enabled: widget.autoClose,
         isOwnerActive: widget.isOwnerActive ?? () => widget.active,
-        builder: (context, automatic) => WorkspaceViewPanel(
-          key: const ValueKey('general-reminders-list'),
-          title: Text('${l.reminder} · ${items.length}'),
-          subtitle: automatic ? Text(l.reminderAutoCloseHint) : null,
-          contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(l.noUpcomingEvents),
-                ),
-              for (var i = 0; i < groups.length; i++) ...[
-                if (i > 0)
+        builder: (context, automatic) => _ReminderDetailsBinding(
+          builder: (context, host, source) => WorkspaceViewPanel(
+            bodyViewportKey: source.bodyKey,
+            key: const ValueKey('general-reminders-list'),
+            title: Text('${l.reminder} · ${items.length}'),
+            subtitle: automatic ? Text(l.reminderAutoCloseHint) : null,
+            contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (items.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Divider(height: 1, color: colors.outlineVariant),
+                    padding: const EdgeInsets.all(12),
+                    child: Text(l.noUpcomingEvents),
                   ),
-                Padding(
-                  key: ValueKey(
-                    'general-reminder-group-${groups[i].status.name}',
-                  ),
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _reminderStatusIcon(groups[i].status),
-                        size: 16,
-                        color: _reminderStatusColor(groups[i].status, colors),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          '${_reminderStatusLabel(groups[i].status, l)} · ${groups[i].items.length}',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: _reminderStatusColor(
-                                  groups[i].status,
-                                  colors,
-                                ),
-                              ),
+                for (var i = 0; i < groups.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Divider(height: 1, color: colors.outlineVariant),
+                    ),
+                  Padding(
+                    key: ValueKey(
+                      'general-reminder-group-${groups[i].status.name}',
+                    ),
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _reminderStatusIcon(groups[i].status),
+                          size: 16,
+                          color: _reminderStatusColor(groups[i].status, colors),
                         ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${_reminderStatusLabel(groups[i].status, l)} · ${groups[i].items.length}',
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: _reminderStatusColor(
+                                    groups[i].status,
+                                    colors,
+                                  ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (final item in groups[i].items)
+                    host.row(
+                      item,
+                      source: source,
+                      handling: _handling.contains(
+                        item.occurrence.occurrenceKey,
                       ),
-                    ],
-                  ),
-                ),
-                for (final item in groups[i].items)
-                  _ReminderSummaryRow(
-                    item: item,
-                    busy: _handling.contains(item.occurrence.occurrenceKey),
-                    onOpen: () => widget.onOccurrenceTap(item.occurrence),
-                    onHandle: () => unawaited(_handleReminder(item.occurrence)),
-                  ),
+                      onHandle: () =>
+                          unawaited(_handleReminder(item.occurrence)),
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );
@@ -389,7 +396,8 @@ class _ReminderSummaryRow extends StatelessWidget {
   });
   final GeneralReminderItem item;
   final bool busy;
-  final VoidCallback onOpen, onHandle;
+  final ValueChanged<BuildContext> onOpen;
+  final VoidCallback onHandle;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -451,7 +459,7 @@ class _ReminderSummaryRow extends StatelessWidget {
           ],
         ),
       ),
-      onTap: onOpen,
+      onTap: () => onOpen(context),
       trailing: IconButton(
         tooltip: l.markReminderHandled,
         style: WorkbenchChromeMetrics.of(context).iconStyle,
@@ -489,6 +497,17 @@ class _ReminderAutoDismissState extends State<_ReminderAutoDismiss>
   Duration _remaining = const Duration(seconds: 10);
   late bool _automatic = widget.enabled;
   bool _hovering = false;
+  bool _secondaryHover = false;
+  void setSecondaryHover(bool value) {
+    if (_secondaryHover == value) return;
+    _secondaryHover = value;
+    if (value) {
+      _pause();
+    } else {
+      _resume();
+    }
+  }
+
   bool _foreground = true;
   bool _visible = true;
   DateTime Function() _now = DateTime.now;
@@ -531,6 +550,7 @@ class _ReminderAutoDismissState extends State<_ReminderAutoDismiss>
   void _resume() {
     if (!_automatic ||
         _hovering ||
+        _secondaryHover ||
         !_foreground ||
         !_visible ||
         _route?.isCurrent != true ||
@@ -546,6 +566,7 @@ class _ReminderAutoDismissState extends State<_ReminderAutoDismiss>
       // Never close whatever a controller now calls "top": this exact route
       // must still own focus/input, with no newer root dialog or child task.
       if (!_hovering &&
+          !_secondaryHover &&
           _foreground &&
           _visible &&
           _route?.isCurrent == true &&

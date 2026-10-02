@@ -24,9 +24,21 @@ class GeneralEventDetailsSheet extends StatefulWidget {
     this.onDeleteThis,
     this.onDeleteFuture,
     this.onDeleteAll,
+    this.onBeforeAction,
+    this.canEdit,
+    this.onBusyChanged,
+    this.onChildRouteChanged,
+    this.headerAction,
   });
 
   final GeneralEventOccurrence occurrence;
+
+  /// Optional host promotion/validity guard, before any busy state or write.
+  final bool Function()? onBeforeAction;
+  final bool Function()? canEdit;
+  final ValueChanged<bool>? onBusyChanged;
+  final ValueChanged<ModalRoute<dynamic>?>? onChildRouteChanged;
+  final Widget? headerAction;
   final FutureOr<void> Function()? onEdit;
   final FutureOr<void> Function()? onDuplicate;
   final bool isReminderHandled;
@@ -43,19 +55,31 @@ class GeneralEventDetailsSheet extends StatefulWidget {
 
 class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
   var _actionTriggered = false;
+  void _setBusy(bool value) {
+    setState(() => _actionTriggered = value);
+    widget.onBusyChanged?.call(value);
+  }
+
+  void _edit() {
+    // The background may already own another editor. Refuse before promotion,
+    // busy state or dismissal, including callbacks invoked before a rebuild.
+    if (widget.canEdit?.call() == false) return;
+    unawaited(_runAction(widget.onEdit));
+  }
 
   Future<void> _runAction(FutureOr<void> Function()? action) async {
     if (_actionTriggered || action == null) {
       return;
     }
-    setState(() => _actionTriggered = true);
+    if (widget.onBeforeAction?.call() == false) return;
+    _setBusy(true);
     final succeeded = await runUiCommandWithFeedback(
       context: context,
       debugLabel: 'Run general event action',
       command: () async => action(),
     );
     if (!succeeded && mounted) {
-      setState(() => _actionTriggered = false);
+      _setBusy(false);
     }
   }
 
@@ -63,8 +87,10 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     if (_actionTriggered) {
       return;
     }
-    setState(() => _actionTriggered = true);
+    if (widget.onBeforeAction?.call() == false) return;
+    _setBusy(true);
     final choice = await _showDeleteDialog();
+    if (mounted) widget.onChildRouteChanged?.call(null);
     if (!mounted) {
       return;
     }
@@ -75,7 +101,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       null => null,
     };
     if (action == null) {
-      setState(() => _actionTriggered = false);
+      _setBusy(false);
       return;
     }
     final succeeded = await runUiCommandWithFeedback(
@@ -84,7 +110,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       command: () async => action(),
     );
     if (!succeeded && mounted) {
-      setState(() => _actionTriggered = false);
+      _setBusy(false);
     }
   }
 
@@ -95,6 +121,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       context: context,
       waitForTransitionComplete: true,
       builder: (dialogContext) {
+        widget.onChildRouteChanged?.call(ModalRoute.of(dialogContext));
         final l10n = AppLocalizations.of(dialogContext);
         var popped = false;
         void popWith([_DeleteEventAction? action]) {
@@ -279,6 +306,7 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       return PopScope<void>(
         canPop: !_actionTriggered,
         child: WorkspaceViewPanel(
+          headerAction: widget.headerAction,
           title: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -317,9 +345,10 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   if (widget.onEdit != null)
                     FilledButton.tonalIcon(
                       key: const ValueKey('general-event-edit-action'),
-                      onPressed: _actionTriggered
+                      onPressed:
+                          _actionTriggered || widget.canEdit?.call() == false
                           ? null
-                          : () => unawaited(_runAction(widget.onEdit)),
+                          : _edit,
                       icon: const Icon(Icons.edit_outlined, size: 18),
                       label: Text(l10n.editEvent),
                     ),
@@ -384,9 +413,10 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   _EventIconButton(
                     key: const ValueKey('general-event-edit-action'),
                     tooltip: l10n.editEvent,
-                    onPressed: _actionTriggered
+                    onPressed:
+                        _actionTriggered || widget.canEdit?.call() == false
                         ? null
-                        : () => unawaited(_runAction(widget.onEdit)),
+                        : _edit,
                     icon: Icons.edit_outlined,
                   ),
               ],

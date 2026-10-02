@@ -2219,5 +2219,7 @@
   "reminderEnded": "Ended",
   "@reminderEnded": {},
   "reminderAutoCloseHint": "Closes after 10 seconds. Interact to keep open.",
-  "@reminderAutoCloseHint": {}
+  "@reminderAutoCloseHint": {},
+  "showReminderIndependently": "Open independently",
+  "@showReminderIndependently": {}
 }

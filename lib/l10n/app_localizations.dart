@@ -5693,6 +5693,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Closes after 10 seconds. Interact to keep open.'**
   String get reminderAutoCloseHint;
+
+  /// No description provided for @showReminderIndependently.
+  ///
+  /// In en, this message translates to:
+  /// **'Open independently'**
+  String get showReminderIndependently;
 }
 
 class _AppLocalizationsDelegate

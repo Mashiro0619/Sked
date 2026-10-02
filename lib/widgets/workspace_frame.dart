@@ -48,6 +48,21 @@ class WorkspacePaneController extends ChangeNotifier {
   final navigatorKey = GlobalKey<NavigatorState>();
   final focusScope = FocusScopeNode(debugLabel: 'Workspace inspector');
   final List<_WorkspaceTaskRoute> _tasks = [];
+  final List<bool Function()> _priorityDismissHandlers = [];
+
+  /// True means a secondary task consumed the request, including guard refusal.
+  VoidCallback registerPriorityDismiss(bool Function() handler) {
+    _priorityDismissHandlers.add(handler);
+    return () => _priorityDismissHandlers.remove(handler);
+  }
+
+  bool dismissPriorityTask() {
+    for (final handler in _priorityDismissHandlers.reversed.toList()) {
+      if (handler()) return true;
+    }
+    return false;
+  }
+
   bool _closing = false;
   int _activationRevision = 0;
   int get activationRevision => _activationRevision;
@@ -154,6 +169,8 @@ class WorkspacePaneController extends ChangeNotifier {
   }
 
   Future<void> close() async {
+    // Explicit list/task close owns this route, not an attached preview.
+    // Ambient Escape/canvas requests run priority handlers at the frame.
     if (_closing) return;
     // Never pop a picker or confirmation stacked above the requested task.
     final route = _tasks.lastOrNull?.route;
@@ -169,6 +186,7 @@ class WorkspacePaneController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _priorityDismissHandlers.clear();
     final modalRoutes = [
       for (final task in _tasks)
         if (task.modal) task.route,
@@ -976,6 +994,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
               (policy.detailVisible && !policy.dockedDetail) ||
               (policy.assistantVisible && !policy.dockedAssistant);
           Future<void> dismiss() async {
+            if (controller.dismissPriorityTask()) return;
             if (_resourceDrawerOpen) {
               _closeResources();
               return;
@@ -1074,6 +1093,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                                                   if (!policy
                                                           .assistantVisible ||
                                                       !_assistantLast) {
+                                                    if (controller
+                                                        .dismissPriorityTask()) {
+                                                      return;
+                                                    }
                                                     unawaited(
                                                       controller.close(),
                                                     );

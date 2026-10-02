@@ -2205,5 +2205,7 @@
   "reminderEnded": "已結束",
   "@reminderEnded": {},
   "reminderAutoCloseHint": "10 秒後自動收起，操作面板可保持開啟。",
-  "@reminderAutoCloseHint": {}
+  "@reminderAutoCloseHint": {},
+  "showReminderIndependently": "獨立顯示",
+  "@showReminderIndependently": {}
 }
