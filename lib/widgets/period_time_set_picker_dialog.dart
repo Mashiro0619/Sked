@@ -8,6 +8,7 @@ import '../models/timetable_models.dart';
 import '../providers/timetable_provider.dart';
 import '../screens/period_times_page.dart';
 import 'expressive_dialog.dart';
+import 'editor_exit_guard.dart';
 import 'sked_task_dialog.dart';
 import 'sked_adaptive_picker_dialog.dart';
 import 'ui_command.dart';
@@ -65,111 +66,141 @@ Future<String?> showPeriodTimeSetPickerDialog(
   BuildContext? anchorContext,
   required String selectedPeriodTimeSetId,
   Future<void> Function(String id)? commitSelection,
-}) {
-  return showSkedAdaptivePickerDialog<String>(
-    context: context,
-    routeName: 'period-time-set-picker',
-    anchorContext: anchorContext,
-    preferredWidth: 360,
-    workspace: AppMode.student,
-    builder: (dialogContext) {
-      var currentSelectedId = selectedPeriodTimeSetId;
-      var popped = false;
-      var busy = false;
+}) async {
+  var writing = false;
+  final session = provider.dataSessionToken;
+  bool isCurrent() =>
+      context.mounted &&
+      identical(session, provider.dataSessionToken) &&
+      provider.isWorkspaceEnabled(AppMode.student);
+  if (!isCurrent()) return null;
+  final unregister = provider.registerWorkspaceExitGuard(
+    AppMode.student,
+    () async => !writing,
+  );
+  try {
+    return await showSkedAdaptivePickerDialog<String>(
+      context: context,
+      routeName: 'period-time-set-picker',
+      anchorContext: anchorContext,
+      preferredWidth: 360,
+      workspace: AppMode.student,
+      isSessionCurrent: isCurrent,
+      waitForTransitionComplete: true,
+      builder: (dialogContext) {
+        var currentSelectedId = selectedPeriodTimeSetId;
+        var popped = false;
+        var busy = false;
 
-      Future<void> openPeriodTimePage(String periodTimeSetId) async {
-        await Navigator.of(dialogContext).push(
-          MaterialPageRoute(
-            builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
-              value: provider,
-              child: PeriodTimesPage(periodTimeSetId: periodTimeSetId),
+        Future<void> openPeriodTimePage(String periodTimeSetId) async {
+          await Navigator.of(dialogContext).push(
+            MaterialPageRoute(
+              builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
+                value: provider,
+                child: PeriodTimesPage(periodTimeSetId: periodTimeSetId),
+              ),
             ),
-          ),
-        );
-      }
+          );
+        }
 
-      return StatefulBuilder(
-        builder: (dialogContext, refreshDialog) {
-          Future<void> runBusy({
-            required String debugLabel,
-            required Future<void> Function() action,
-          }) async {
-            if (busy || popped) return;
-            refreshDialog(() => busy = true);
-            try {
-              await runUiCommandWithFeedback(
-                context: dialogContext,
-                debugLabel: debugLabel,
-                command: action,
-              );
-            } finally {
-              if (dialogContext.mounted) {
-                refreshDialog(() => busy = false);
+        return StatefulBuilder(
+          builder: (dialogContext, refreshDialog) {
+            Future<void> runBusy({
+              required String debugLabel,
+              required Future<void> Function() action,
+            }) async {
+              if (busy || popped || !isCurrent()) return;
+              refreshDialog(() => busy = true);
+              try {
+                await runUiCommandWithFeedback(
+                  context: dialogContext,
+                  debugLabel: debugLabel,
+                  command: action,
+                );
+              } finally {
+                if (dialogContext.mounted) {
+                  refreshDialog(() => busy = false);
+                }
               }
             }
-          }
 
-          void popOnce([String? result]) {
-            if (popped) return;
-            popped = true;
-            Navigator.of(dialogContext).pop(result);
-          }
+            void popOnce([String? result]) {
+              if (popped) return;
+              popped = true;
+              completeEditorRoute(dialogContext, result);
+            }
 
-          return PeriodTimeSetPickerDialogView(
-            periodTimeSets: provider.periodTimeSets,
-            selectedPeriodTimeSetId: currentSelectedId,
-            busy: busy,
-            blocked: busy || popped,
-            onCreate: () {
-              unawaited(
-                runBusy(
-                  debugLabel: 'Create period time set',
-                  action: () async {
-                    final created = await provider.addPeriodTimeSet();
-                    if (!dialogContext.mounted || popped) return;
-                    currentSelectedId = created.id;
-                    await openPeriodTimePage(created.id);
-                  },
-                ),
-              );
-            },
-            onEdit: (item) {
-              unawaited(
-                runBusy(
-                  debugLabel: 'Edit period time set',
-                  action: () async {
-                    await openPeriodTimePage(item.id);
-                    final stillExists =
-                        provider.periodTimeSetForId(item.id) != null;
-                    if (!stillExists && currentSelectedId == item.id) {
-                      currentSelectedId =
-                          provider.activePeriodTimeSetOrNull?.id ?? '';
-                    }
-                  },
-                ),
-              );
-            },
-            onSelect: (id) {
-              if (commitSelection == null) {
-                popOnce(id);
-                return;
-              }
-              unawaited(
-                runBusy(
-                  debugLabel: 'Assign period time set',
-                  action: () async {
-                    await commitSelection(id);
-                    if (dialogContext.mounted) popOnce(id);
-                  },
-                ),
-              );
-            },
-            onCancel: popOnce,
-          );
-        },
-      );
-    },
-  );
+            return PeriodTimeSetPickerDialogView(
+              periodTimeSets: provider.periodTimeSets,
+              selectedPeriodTimeSetId: currentSelectedId,
+              busy: busy,
+              blocked: busy || popped,
+              onCreate: () {
+                unawaited(
+                  runBusy(
+                    debugLabel: 'Create period time set',
+                    action: () async {
+                      writing = true;
+                      late final PeriodTimeSet created;
+                      try {
+                        created = await provider.addPeriodTimeSet();
+                      } finally {
+                        writing = false;
+                      }
+                      if (!dialogContext.mounted || popped || !isCurrent()) {
+                        return;
+                      }
+                      currentSelectedId = created.id;
+                      await openPeriodTimePage(created.id);
+                    },
+                  ),
+                );
+              },
+              onEdit: (item) {
+                unawaited(
+                  runBusy(
+                    debugLabel: 'Edit period time set',
+                    action: () async {
+                      await openPeriodTimePage(item.id);
+                      final stillExists =
+                          provider.periodTimeSetForId(item.id) != null;
+                      if (!stillExists && currentSelectedId == item.id) {
+                        currentSelectedId =
+                            provider.activePeriodTimeSetOrNull?.id ?? '';
+                      }
+                    },
+                  ),
+                );
+              },
+              onSelect: (id) {
+                if (commitSelection == null) {
+                  popOnce(id);
+                  return;
+                }
+                unawaited(
+                  runBusy(
+                    debugLabel: 'Assign period time set',
+                    action: () async {
+                      writing = true;
+                      try {
+                        await commitSelection(id);
+                      } finally {
+                        writing = false;
+                      }
+                      if (dialogContext.mounted && isCurrent()) popOnce(id);
+                    },
+                  ),
+                );
+              },
+              onCancel: popOnce,
+            );
+          },
+        );
+      },
+    );
+  } finally {
+    unregister();
+  }
 }
 
 /// The presentation layer shared by the live picker route and widget previews.
