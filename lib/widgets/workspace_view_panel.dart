@@ -1,8 +1,9 @@
+import 'sked_panel_header.dart';
+
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'workbench_chrome_metrics.dart';
-import 'sked_floating_surface.dart';
 
 /// Opt-in: ordinary editors and touch tasks retain their existing presentation.
 enum WorkspacePanePresentation { standard, view }
@@ -121,55 +122,18 @@ class WorkspaceViewPanel extends StatelessWidget {
                   child: Padding(
                     key: const ValueKey('workspace-view-header'),
                     padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: onDragUpdate == null
-                                  ? heading
-                                  : SkedFloatingTitleDragHandle(
-                                      key: const ValueKey(
-                                        'workspace-view-drag-handle',
-                                      ),
-                                      onUpdate: onDragUpdate,
-                                      child: heading,
-                                    ),
-                            ),
-                            if (inlineAction && headerAction != null) ...[
-                              const SizedBox(width: 8),
-                              headerAction!,
-                            ],
-                            if (task && scope!.showClose) ...[
-                              const SizedBox(width: 4),
-                              IconButton(
-                                key: const ValueKey(
-                                  'workspace-inspector-close',
-                                ),
-                                tooltip: MaterialLocalizations.of(context)
-                                    .closeButtonTooltip,
-                                style: metrics.iconStyle,
-                                onPressed: scope.onClose,
-                                icon: const Icon(Icons.close),
-                              ),
-                            ],
-                          ],
-                        ),
-                        if (!inlineAction && headerAction != null) ...[
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: headerAction!,
-                          ),
-                        ],
-                        if (toolbar != null) ...[
-                          const SizedBox(height: 8),
-                          toolbar!,
-                        ],
-                      ],
+                    child: SkedPanelHeader(
+                      title: heading,
+                      action: headerAction,
+                      inlineAction: inlineAction,
+                      actionGap: 8,
+                      closeGap: 4,
+                      onDrag: onDragUpdate,
+                      dragKey: const ValueKey('workspace-view-drag-handle'),
+                      showClose: task && scope!.showClose,
+                      onClose: scope?.onClose,
+                      closeKey: const ValueKey('workspace-inspector-close'),
+                      toolbar: toolbar,
                     ),
                   ),
                 ),

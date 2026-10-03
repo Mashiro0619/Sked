@@ -1,7 +1,8 @@
+import 'sked_panel_header.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_floating_surface.dart';
-import 'workbench_chrome_metrics.dart';
 
 /// Dialog builders sometimes hold transactional state outside StatefulBuilder.
 /// Keep that closure alive across host/viewport rebuilds, just like a route page.
@@ -83,7 +84,6 @@ class SkedTaskDialog extends StatelessWidget {
         titleTextStyle: titleTextStyle,
       );
     }
-    final metrics = WorkbenchChromeMetrics.of(context);
     final heading = DefaultTextStyle.merge(
       style: Theme.of(context).textTheme.titleMedium!
           .copyWith(fontWeight: FontWeight.w600),
@@ -118,41 +118,21 @@ class SkedTaskDialog extends StatelessWidget {
                   : null,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: scope.onDragUpdate == null
-                              ? SkedPickerTitle(child: heading)
-                              : SkedFloatingTitleDragHandle(
-                                  key: const ValueKey(
-                                    'floating-form-drag-handle',
-                                  ),
-                                  onUpdate: scope.onDragUpdate!,
-                                  child: heading,
-                                ),
-                        ),
-                        ?titleAction,
-                        if (scope.onClose != null)
-                          IconButton(
-                            key: const ValueKey('floating-form-close'),
-                            tooltip: MaterialLocalizations.of(context)
-                                .closeButtonTooltip,
-                            style: metrics.iconStyle,
-                            onPressed: closeEnabled ? scope.onClose : null,
-                            icon: const Icon(Icons.close),
-                          ),
-                      ],
-                    ),
-                    if (titleBottom != null) ...[
-                      const SizedBox(height: 6),
-                      titleBottom!,
-                    ],
-                  ],
+                child: SkedPanelHeader(
+                  title: heading,
+                  action: titleAction,
+                  bottom: titleBottom,
+                  bottomGap: 6,
+                  onDrag:
+                      scope.onDragUpdate ??
+                      SkedFloatingDragScope.maybeOf(context)?.onDrag,
+                  dragKey: scope.onDragUpdate != null
+                      ? const ValueKey('floating-form-drag-handle')
+                      : null,
+                  showClose: scope.onClose != null,
+                  closeEnabled: closeEnabled,
+                  onClose: scope.onClose,
+                  closeKey: const ValueKey('floating-form-close'),
                 ),
               ),
             ),
