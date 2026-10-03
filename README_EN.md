@@ -15,8 +15,8 @@ A timetable and schedule app
 </div>
 
 <p align="center">
-  <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="100" align="middle"></a>
-  <a href="https://apps.microsoft.com/detail/9nwrr6zp6k6t"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" height="70" align="middle"></a>
+  <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="258" align="middle"></a>
+  <a href="https://apps.microsoft.com/detail/9nwrr6zp6k6t"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" width="256" align="middle"></a>
 </p>
 
 Sked is a Flutter app for student timetables and everyday schedules. Courses are organized by semester, week, and period, while ordinary events are available in day, week, month, and list views. You can switch between the two modes at any time.
