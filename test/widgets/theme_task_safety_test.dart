@@ -11,6 +11,22 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/theme_task_harness.dart';
 
 void main() {
+  testWidgets('reselecting custom mode cannot authorize invalid Hex', (
+    t,
+  ) async {
+    await mountThemeTask(t, kind: 'course');
+    final field = themeTaskKey('compact-color-picker-hex-field');
+    await t.enterText(field, '#oops');
+    await t.pumpAndSettle();
+    expect(t.widget<FilledButton>(themeApply('course')).onPressed, isNull);
+    await t.tap(find.text('Custom color').last);
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(MenuItemButton, 'Custom color'));
+    await t.pumpAndSettle();
+    expect(t.widget<TextField>(field).decoration!.errorText, isNotNull);
+    expect(t.widget<FilledButton>(themeApply('course')).onPressed, isNull);
+  }, variant: TargetPlatformVariant({TargetPlatform.windows}));
+
   for (final kind in ['seed', 'value', 'course']) {
     for (final fail in [false, true]) {
       testWidgets(

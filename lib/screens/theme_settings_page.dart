@@ -1118,12 +1118,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 ],
                                 selected: {mode},
                                 onSelectionChanged: (selection) {
-                                  if (selection.isEmpty) {
+                                  if (selection.isEmpty ||
+                                      selection.first == mode) {
                                     return;
                                   }
                                   setState(() {
                                     mode = selection.first;
-                                    draft.validHex = true;
+                                    draft.select(draft.value);
                                   });
                                 },
                               ),
@@ -1147,6 +1148,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                           child: Center(
                                             child: SkedCompactColorPicker(
                                               colorValue: colorValue,
+                                              resetToken: draft.inputRevision,
                                               invalidHexMessage:
                                                   l10n.colorHexInvalid,
                                               onValidityChanged: (valid) =>
