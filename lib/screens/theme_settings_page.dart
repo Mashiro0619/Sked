@@ -268,6 +268,47 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   late AppMode? _targetMode = widget.initialWorkspace;
   var _outlineSettingsPageOpen = false;
   var _overviewColorOpen = false;
+  final _colorTasks = <_ThemeColorTask>{};
+
+  @override
+  void dispose() {
+    for (final task in _colorTasks.toList()) {
+      task.invalidate();
+    }
+    super.dispose();
+  }
+
+  Future<void> _showGuardedColorDialog({
+    required BuildContext context,
+    required WorkspaceThemeTarget target,
+    required WidgetBuilder builder,
+    BuildContext? anchorContext,
+    bool Function()? targetExists,
+  }) async {
+    final task = _ThemeColorTask(target, targetExists: targetExists);
+    _colorTasks.add(task);
+    try {
+      await showSkedAdaptivePickerDialog<void>(
+        context: context,
+        routeName: 'theme-color-picker',
+        anchorContext: anchorContext,
+        preferredWidth: 340,
+        workspace: target.activeMode,
+        isSessionCurrent: () => mounted && task.isCurrent,
+        waitForTransitionComplete: true,
+        builder: (context) {
+          task.route = ModalRoute.of(context);
+          return _ThemeColorTaskScope(
+            task: task,
+            child: Builder(builder: builder),
+          );
+        },
+      );
+    } finally {
+      _colorTasks.remove(task);
+      task.dispose();
+    }
+  }
 
   @override
   void didUpdateWidget(covariant ThemeSettingsPage oldWidget) {
@@ -653,6 +694,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                       unawaited(
                                         _openColorValueDialog(
                                           context,
+                                          target: provider,
                                           anchorContext: anchor,
                                           title: _uiColorLabel(context, key),
                                           previewTitle: l10n.themeColorUiColors,
@@ -674,6 +716,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                       unawaited(
                                         _openColorValueDialog(
                                           context,
+                                          target: provider,
                                           anchorContext: anchor,
                                           title: _generalMonthTextColorLabel(
                                             context,
@@ -701,6 +744,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         unawaited(
                                           _openColorValueDialog(
                                             context,
+                                            target: provider,
                                             anchorContext: anchor,
                                             title: courseName,
                                             previewTitle:
@@ -720,7 +764,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         unawaited(
                                           _openColorValueDialog(
                                             context,
+                                            target: provider,
                                             anchorContext: anchor,
+                                            targetExists: () =>
+                                                provider.generalSchedules.any(
+                                                  (item) =>
+                                                      item.id == schedule.id,
+                                                ),
                                             title: schedule.name,
                                             previewTitle: l10n.calendars,
                                             initialColorValue:
@@ -774,12 +824,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }) async {
     final l10n = AppLocalizations.of(context);
     var selectedColor = Color(provider.themeSeedColorValue);
-    await showSkedAdaptivePickerDialog<void>(
+    await _showGuardedColorDialog(
       context: context,
-      routeName: 'theme-color-picker',
+      target: provider,
       anchorContext: anchorContext,
-      preferredWidth: 340,
       builder: (context) {
+        final task = _ThemeColorTaskScope.of(context);
         var popped = false;
         var busy = false;
         var validHex = true;
@@ -840,9 +890,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                   onPressed: (busy || popped || !validHex)
                       ? null
                       : () async {
-                          if (busy || popped || !validHex) return;
+                          if (busy || popped || !validHex || !task.isCurrent) {
+                            return;
+                          }
                           final submittedColorValue = colorValue;
                           FocusScope.of(context).unfocus();
+                          task.busy = true;
                           setState(() => busy = true);
                           final saved = await runUiCommandWithFeedback(
                             context: context,
@@ -851,7 +904,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               submittedColorValue,
                             ),
                           );
-                          if (!context.mounted) return;
+                          task.busy = false;
+                          if (!context.mounted || !task.isCurrent) return;
                           if (saved) {
                             popOnce();
                           } else {
@@ -870,6 +924,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
 
   Future<void> _openColorValueDialog(
     BuildContext context, {
+    required WorkspaceThemeTarget target,
+    bool Function()? targetExists,
     required String title,
     required String previewTitle,
     BuildContext? anchorContext,
@@ -878,12 +934,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }) async {
     final l10n = AppLocalizations.of(context);
     var selectedColor = Color(initialColorValue);
-    await showSkedAdaptivePickerDialog<void>(
+    await _showGuardedColorDialog(
       context: context,
-      routeName: 'theme-color-picker',
+      target: target,
+      targetExists: targetExists,
       anchorContext: anchorContext,
-      preferredWidth: 340,
       builder: (context) {
+        final task = _ThemeColorTaskScope.of(context);
         var popped = false;
         var busy = false;
         var validHex = true;
@@ -944,16 +1001,20 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                   onPressed: (busy || popped || !validHex)
                       ? null
                       : () async {
-                          if (busy || popped || !validHex) return;
+                          if (busy || popped || !validHex || !task.isCurrent) {
+                            return;
+                          }
                           final submittedColorValue = colorValue;
                           FocusScope.of(context).unfocus();
+                          task.busy = true;
                           setState(() => busy = true);
                           final saved = await runUiCommandWithFeedback(
                             context: context,
                             debugLabel: 'Update theme color value',
                             command: () => onApply(submittedColorValue),
                           );
-                          if (!context.mounted) return;
+                          task.busy = false;
+                          if (!context.mounted || !task.isCurrent) return;
                           if (saved) {
                             popOnce();
                           } else {
@@ -982,12 +1043,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       provider,
       colorfulCourseTextColorKey,
     );
-    await showSkedAdaptivePickerDialog<void>(
+    await _showGuardedColorDialog(
       context: context,
-      routeName: 'theme-color-picker',
+      target: provider,
       anchorContext: anchorContext,
-      preferredWidth: 340,
       builder: (context) {
+        final task = _ThemeColorTaskScope.of(context);
         var popped = false;
         var busy = false;
         var validHex = true;
@@ -1114,7 +1175,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               !validHex))
                       ? null
                       : () async {
-                          if (busy ||
+                          if (!task.isCurrent ||
+                              busy ||
                               popped ||
                               (mode == colorfulCourseTextColorModeCustom &&
                                   !validHex)) {
@@ -1123,6 +1185,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           final submittedMode = mode;
                           final submittedColorValue = colorValue;
                           FocusScope.of(context).unfocus();
+                          task.busy = true;
                           setState(() => busy = true);
                           final saved = await runUiCommandWithFeedback(
                             context: context,
@@ -1133,7 +1196,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                   customColorValue: submittedColorValue,
                                 ),
                           );
-                          if (!context.mounted) return;
+                          task.busy = false;
+                          if (!context.mounted || !task.isCurrent) return;
                           if (saved) {
                             popOnce();
                           } else {
@@ -1149,6 +1213,77 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       },
     );
   }
+}
+
+/// Local protection for the existing theme workflows. Kept separate from UI
+/// so a later shared-session migration can preserve these safety contracts.
+class _ThemeColorTask {
+  _ThemeColorTask(this.target, {this.targetExists})
+    : _dataSession = target.source.dataSessionToken {
+    target.source.addListener(_check);
+    _unregister = target.source.registerWorkspaceExitGuard(
+      target.activeMode,
+      () async => !busy,
+    );
+  }
+  final WorkspaceThemeTarget target;
+  final bool Function()? targetExists;
+  final Object _dataSession;
+  late final VoidCallback _unregister;
+  ModalRoute<dynamic>? route;
+  bool busy = false;
+  bool _invalidated = false;
+  bool _disposed = false;
+  bool _scheduled = false;
+  bool get isCurrent {
+    if (_disposed || _invalidated) return false;
+    if (!identical(_dataSession, target.source.dataSessionToken) ||
+        !target.source.isWorkspaceEnabled(target.activeMode) ||
+        targetExists?.call() == false) {
+      invalidate();
+      return false;
+    }
+    return true;
+  }
+
+  void _check() {
+    if (!isCurrent) _scheduleRemoval();
+  }
+
+  void invalidate() {
+    if (_disposed || _invalidated) return;
+    _invalidated = true;
+    _scheduleRemoval();
+  }
+
+  void _scheduleRemoval() {
+    if (_scheduled || _disposed) return;
+    _scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduled = false;
+      if (_disposed) return;
+      final owned = route;
+      if (owned?.isActive == true) owned!.navigator?.removeRoute(owned);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    target.source.removeListener(_check);
+    _unregister();
+  }
+}
+
+class _ThemeColorTaskScope extends InheritedWidget {
+  const _ThemeColorTaskScope({required this.task, required super.child});
+  final _ThemeColorTask task;
+  static _ThemeColorTask of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_ThemeColorTaskScope>()!.task;
+  @override
+  bool updateShouldNotify(_ThemeColorTaskScope oldWidget) =>
+      task != oldWidget.task;
 }
 
 class _PersistingThemeDialog extends StatelessWidget {
