@@ -13,9 +13,13 @@ class _CalendarManagerPage extends StatefulWidget {
 }
 
 class _CalendarManagerPageState extends State<_CalendarManagerPage>
-    with WorkspaceRouteLifecycle<_CalendarManagerPage> {
+    with
+        WorkspaceRouteLifecycle<_CalendarManagerPage>,
+        SkedTaskSubmissionHost<_CalendarManagerPage> {
+  @override
+  AppMode get submissionWorkspace => AppMode.general;
   final _addAnchor = GlobalKey();
-  var _actionInProgress = false;
+  bool get _actionInProgress => taskSubmission.busy;
   var _childTaskOpen = false;
   bool get _actionsDisabled => _actionInProgress || _childTaskOpen;
 
@@ -296,20 +300,11 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
-    setState(() => _actionInProgress = true);
-    try {
-      await runUiCommandWithFeedback(
-        context: context,
-        debugLabel: debugLabel,
-        command: action,
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _actionInProgress = false);
-      } else {
-        _actionInProgress = false;
-      }
-    }
+    await taskSubmission.run(
+      context: context,
+      debugLabel: debugLabel,
+      command: action,
+    );
   }
 
   Future<void> _deleteCalendar(GeneralSchedule schedule) async {
@@ -352,11 +347,15 @@ class _CalendarNameDialog extends StatefulWidget {
 }
 
 class _CalendarNameDialogState extends State<_CalendarNameDialog>
-    with EditorExitGuard<_CalendarNameDialog> {
+    with
+        SkedTaskSubmissionHost<_CalendarNameDialog>,
+        EditorExitGuard<_CalendarNameDialog> {
+  @override
+  AppMode get submissionWorkspace => AppMode.general;
   late final TextEditingController _controller = TextEditingController(
     text: widget.schedule?.name ?? '',
   );
-  var _busy = false;
+  bool get _busy => taskSubmission.busy;
   var _popped = false;
   bool get _canSave {
     final name = _controller.text.trim();
@@ -414,8 +413,7 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
       return;
     }
     FocusScope.of(context).unfocus();
-    setState(() => _busy = true);
-    final saved = await runUiCommandWithFeedback(
+    final saved = await taskSubmission.run(
       context: context,
       debugLabel: widget.schedule == null
           ? 'Add general calendar'
@@ -430,8 +428,6 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
     if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     if (saved) {
       closeEditor();
-    } else {
-      setState(() => _busy = false);
     }
   }
 
@@ -509,12 +505,16 @@ class _DeleteCalendarDialog extends StatefulWidget {
 }
 
 class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
-    with WorkspaceRouteLifecycle<_DeleteCalendarDialog> {
+    with
+        WorkspaceRouteLifecycle<_DeleteCalendarDialog>,
+        SkedTaskSubmissionHost<_DeleteCalendarDialog> {
+  @override
+  AppMode get submissionWorkspace => AppMode.general;
   @override
   AppMode get routeWorkspace => AppMode.general;
   @override
   Future<bool> prepareWorkspaceDisable() async => !_busy;
-  var _busy = false;
+  bool get _busy => taskSubmission.busy;
   var _popped = false;
 
   Future<void> _delete() async {
@@ -526,8 +526,7 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
         )) {
       return;
     }
-    setState(() => _busy = true);
-    final deleted = await runUiCommandWithFeedback(
+    final deleted = await taskSubmission.run(
       context: context,
       debugLabel: 'Delete general calendar',
       command: () => widget.provider.deleteGeneralSchedule(widget.schedule.id),
@@ -536,8 +535,6 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
     if (deleted) {
       _popped = true;
       completeEditorRoute(context);
-    } else {
-      setState(() => _busy = false);
     }
   }
 
@@ -1014,9 +1011,14 @@ class _CalendarColorDialog extends StatefulWidget {
 }
 
 class _CalendarColorDialogState extends State<_CalendarColorDialog>
-    with WorkspaceRouteLifecycle<_CalendarColorDialog> {
+    with
+        WorkspaceRouteLifecycle<_CalendarColorDialog>,
+        SkedTaskSubmissionHost<_CalendarColorDialog> {
+  @override
+  AppMode get submissionWorkspace => AppMode.general;
   late int _selected = widget.schedule.colorValue;
-  bool _busy = false, _popped = false, _validHex = true;
+  bool get _busy => taskSubmission.busy;
+  bool _popped = false, _validHex = true;
   int _inputRevision = 0;
   bool get _blocked => _busy || _popped;
   @override
@@ -1038,8 +1040,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
       _close();
       return;
     }
-    setState(() => _busy = true);
-    final saved = await runUiCommandWithFeedback(
+    final saved = await taskSubmission.run(
       context: context,
       debugLabel: 'Update category color',
       command: () => widget.provider.updateGeneralScheduleColor(
@@ -1048,7 +1049,6 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
       ),
     );
     if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
-    setState(() => _busy = false);
     if (saved) _close();
   }
 

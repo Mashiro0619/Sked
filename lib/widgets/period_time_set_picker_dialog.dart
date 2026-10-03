@@ -1,3 +1,6 @@
+import 'sked_task_session.dart';
+import 'sked_task_submission_controller.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -24,40 +27,23 @@ Future<void> selectTimetablePeriodTimeSet(
   if (!provider.isWorkspaceEnabled(AppMode.student)) return;
   final timetableId = provider.activeTimetableOrNull?.id;
   final dataSession = provider.dataSessionToken;
-  var committing = false;
-  final unregister = provider.registerWorkspaceExitGuard(
-    AppMode.student,
-    () async => !committing,
+  await showPeriodTimeSetPickerDialog(
+    context,
+    provider: provider,
+    anchorContext: anchorContext,
+    selectedPeriodTimeSetId: provider.activePeriodTimeSetOrNull?.id ?? '',
+    commitSelection: (selectedId) async {
+      if (!context.mounted ||
+          !identical(dataSession, provider.dataSessionToken) ||
+          !provider.isWorkspaceEnabled(AppMode.student) ||
+          timetableId == null ||
+          !provider.timetables.any((table) => table.id == timetableId) ||
+          provider.periodTimeSetForId(selectedId) == null) {
+        return;
+      }
+      await provider.assignPeriodTimeSetToTimetable(timetableId, selectedId);
+    },
   );
-  try {
-    await showPeriodTimeSetPickerDialog(
-      context,
-      provider: provider,
-      anchorContext: anchorContext,
-      selectedPeriodTimeSetId: provider.activePeriodTimeSetOrNull?.id ?? '',
-      commitSelection: (selectedId) async {
-        if (!context.mounted ||
-            !identical(dataSession, provider.dataSessionToken) ||
-            !provider.isWorkspaceEnabled(AppMode.student) ||
-            timetableId == null ||
-            !provider.timetables.any((table) => table.id == timetableId) ||
-            provider.periodTimeSetForId(selectedId) == null) {
-          return;
-        }
-        committing = true;
-        try {
-          await provider.assignPeriodTimeSetToTimetable(
-            timetableId,
-            selectedId,
-          );
-        } finally {
-          committing = false;
-        }
-      },
-    );
-  } finally {
-    unregister();
-  }
 }
 
 Future<String?> showPeriodTimeSetPickerDialog(
@@ -67,17 +53,19 @@ Future<String?> showPeriodTimeSetPickerDialog(
   required String selectedPeriodTimeSetId,
   Future<void> Function(String id)? commitSelection,
 }) async {
-  var writing = false;
-  final session = provider.dataSessionToken;
-  bool isCurrent() =>
-      context.mounted &&
-      identical(session, provider.dataSessionToken) &&
-      provider.isWorkspaceEnabled(AppMode.student);
-  if (!isCurrent()) return null;
-  final unregister = provider.registerWorkspaceExitGuard(
-    AppMode.student,
-    () async => !writing,
+  final session = SkedTaskSession(
+    provider: provider,
+    workspace: AppMode.student,
+    ownerRoute: ModalRoute.of(context),
+    isOwnerActive: () => context.mounted,
   );
+  final submission = SkedTaskSubmissionController(session: session);
+  bool isCurrent() => session.isCurrent;
+  if (!isCurrent()) {
+    submission.dispose();
+    session.dispose();
+    return null;
+  }
   try {
     return await showSkedAdaptivePickerDialog<String>(
       context: context,
@@ -85,6 +73,7 @@ Future<String?> showPeriodTimeSetPickerDialog(
       anchorContext: anchorContext,
       preferredWidth: 360,
       workspace: AppMode.student,
+      session: session,
       isSessionCurrent: isCurrent,
       waitForTransitionComplete: true,
       builder: (dialogContext) {
@@ -140,14 +129,18 @@ Future<String?> showPeriodTimeSetPickerDialog(
                   runBusy(
                     debugLabel: 'Create period time set',
                     action: () async {
-                      writing = true;
                       late final PeriodTimeSet created;
-                      try {
-                        created = await provider.addPeriodTimeSet();
-                      } finally {
-                        writing = false;
-                      }
-                      if (!dialogContext.mounted || popped || !isCurrent()) {
+                      final saved = await submission.run(
+                        context: dialogContext,
+                        debugLabel: 'Create period time set',
+                        command: () async {
+                          created = await provider.addPeriodTimeSet();
+                        },
+                      );
+                      if (!saved ||
+                          !dialogContext.mounted ||
+                          popped ||
+                          !isCurrent()) {
                         return;
                       }
                       currentSelectedId = created.id;
@@ -181,12 +174,12 @@ Future<String?> showPeriodTimeSetPickerDialog(
                   runBusy(
                     debugLabel: 'Assign period time set',
                     action: () async {
-                      writing = true;
-                      try {
-                        await commitSelection(id);
-                      } finally {
-                        writing = false;
-                      }
+                      final saved = await submission.run(
+                        context: dialogContext,
+                        debugLabel: 'Assign period time set',
+                        command: () => commitSelection(id),
+                      );
+                      if (!saved) return;
                       if (dialogContext.mounted && isCurrent()) popOnce(id);
                     },
                   ),
@@ -199,7 +192,8 @@ Future<String?> showPeriodTimeSetPickerDialog(
       },
     );
   } finally {
-    unregister();
+    submission.dispose();
+    session.dispose();
   }
 }
 

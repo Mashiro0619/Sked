@@ -1,3 +1,8 @@
+import 'package:provider/provider.dart';
+
+import '../providers/timetable_provider.dart';
+import '../models/app_mode.dart';
+
 import 'package:material_ui/material_ui.dart';
 
 import 'sked_task_session.dart';
@@ -51,6 +56,42 @@ class SkedTaskSubmissionController extends ChangeNotifier {
     _disposed = true;
     _unregister?.call();
     _unregister = null;
+    super.dispose();
+  }
+}
+
+/// State adapter for tasks that already own their draft and PopScope policy.
+/// Multiple mutations in the same state share exactly one submission gate.
+mixin SkedTaskSubmissionHost<T extends StatefulWidget> on State<T> {
+  AppMode get submissionWorkspace;
+  SkedTaskSubmissionController? _taskSubmission;
+  SkedTaskSession? _ownedSubmissionSession;
+  SkedTaskSubmissionController get taskSubmission => _taskSubmission!;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_taskSubmission != null) return;
+    final inherited = SkedTaskSessionScope.maybeOf(context)?.session;
+    final session =
+        inherited ??
+        (_ownedSubmissionSession = SkedTaskSession(
+          provider: Provider.of<TimetableProvider?>(context, listen: false),
+          workspace: submissionWorkspace,
+          isOwnerActive: () => mounted,
+        ));
+    _taskSubmission = SkedTaskSubmissionController(session: session)
+      ..addListener(_submissionChanged);
+  }
+
+  void _submissionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _taskSubmission?.removeListener(_submissionChanged);
+    _taskSubmission?.dispose();
+    _ownedSubmissionSession?.dispose();
     super.dispose();
   }
 }
