@@ -1,12 +1,14 @@
 # 文档截图 / Documentation screenshots
 
-## 当前大屏快照
+## 已收录大屏快照（待更新）
+
+> **截图待更新**：截至 2026-10-04，README 的手机和大屏图库均未更新到最新界面。大屏图仍来自下面记录的 2026-09-29 修订，不包含后续浮动面板、分类管理和选择器调整。本次仅更新说明，不替换图片或改写原采集清单。
 
 - 版本：`2.3.0-rc.1+15`；UI 来源修订：`c55a661`；采集日期：2026-09-29。
 - 每种语言 8 张，共 16 张，位于 `zh/*-desktop.jpg` 和 `en/*-desktop.jpg`。
 - README 的「平板 / 桌面」共用这些 **Windows 大屏渲染图**，不另放平板图片，也不将它们标为 Android 平板实机截图。触控设备的实际导航和窗口按钮可能不同。
 - **Android 手机原有 16 张图片本次未更新**，可能与 RC.1 的工具栏、菜单有所不同；它们不在本次 [manifest.json](manifest.json) 中。
-- 图片由 Windows 原生 Flutter 渲染器运行当前生产组件后，通过 `RepaintBoundary.toImage` 输出，不是设计稿、Web 仿制图或带合成设备边框的图片。窗口按钮来自应用自身组件；不包含操作系统桌面或阴影。
+- 图片由 Windows 原生 Flutter 渲染器运行采集修订的生产组件后，通过 `RepaintBoundary.toImage` 输出，不是设计稿、Web 仿制图或带合成设备边框的图片。窗口按钮来自应用自身组件；不包含操作系统桌面或阴影。
 - 独立内存数据与模拟通知网关，不读取用户存档、不发系统提醒。双语示例使用 2026-09-28 当周，月视图展示 2026 年 10 月；运行时“今天”高亮仍取决于系统日期。
 - 桌面截图仅证明所展示界面的渲染结果，不代替 Android 真机、触控、通知、安装包或商店验收，也不代表 RC 已发布。
 
@@ -53,7 +55,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Export failed.' }
 
 ## English notes
 
-The Tablet / Desktop galleries share eight Windows-rendered views per language (16 new images total). These use real production Flutter widgets on Windows with isolated in-memory sample data and no notification delivery. They are not Android tablet device captures. Existing Android phone images are intentionally unchanged and excluded from this manifest; their toolbar/menu may differ from RC.1.
+As of October 4, 2026, both README galleries are awaiting an update to the latest UI. The Tablet / Desktop galleries still share eight Windows-rendered views per language (16 images total), captured on September 29, 2026 at revision `c55a661`; they do not show the subsequent floating-panel, category-management and picker changes. They use real production Flutter widgets from that revision, isolated in-memory sample data and no notification delivery, and are not Android tablet device captures. Existing Android phone images are also outdated and excluded from this manifest. This documentation update does not replace image assets or alter capture provenance.
 
 All desktop captures use the same 1440 × 900 viewport, a light theme, and 1× pixel and text scale. Event dates are fixed, but today's highlight follows the runtime clock.
 

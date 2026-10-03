@@ -15,9 +15,8 @@
 </div>
 
 <p align="center">
-  <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked">
-    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="100">
-  </a>
+  <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="100" align="middle"></a>
+  <a href="https://apps.microsoft.com/detail/9nwrr6zp6k6t"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取" height="70" align="middle"></a>
 </p>
 
 Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期、周次和节次管理学校课程，也可以用来记录日常安排。两种模式可以随时切换。
@@ -26,7 +25,7 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 
 ### Android 手机
 
-> **截图待更新：**以下手机截图尚未更新到最新版，部分工具栏、菜单与弹窗可能与当前版本不同。
+> **截图待更新**：以下手机截图尚未更新到最新版，部分工具栏、菜单与弹窗可能与当前版本不同。
 
 <p align="center">
   <a href="docs/screenshots/zh/student-week.jpg"><img src="docs/screenshots/zh/student-week.jpg" width="200" alt="Android 手机上的学生课表周视图" title="学生课表 · 周视图"></a>
@@ -40,6 +39,8 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 </p>
 
 ### 平板 / 桌面
+
+> **截图待更新**：以下大屏截图采集于 2026-09-29，尚未更新到最新版；浮动面板、分类管理及部分选择器可能与当前版本不同。这些图片为 Windows 渲染图，并非 Android 平板实机截图。详见[截图说明](docs/screenshots/README.md)。
 
 <p align="center">
   <a href="docs/screenshots/zh/student-week-desktop.jpg"><img src="docs/screenshots/zh/student-week-desktop.jpg" width="400" alt="课表周视图" title="课表周视图"></a>

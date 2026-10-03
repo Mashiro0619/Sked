@@ -44,7 +44,7 @@ Sked combines a purpose-built student timetable model and a general calendar mod
 
 ## Evidence on Hand
 
-- The repository contains the complete Flutter application, localization files, data and recovery tests, and representative screenshots under `docs/screenshots/`.
+- The repository contains the complete Flutter application, localization files, data and recovery tests, and historical screenshots under `docs/screenshots/`; both phone and desktop README galleries are marked as awaiting updates and are not the source of truth for the latest UI.
 - `README.md` documents the current feature set, local-first data handling, Google Play distribution, import behavior, and privacy boundaries.
 - Existing app icon assets are under `assets/`; their third-party attribution is recorded in `NOTICE`.
 - No user research, usage analytics, performance claims, testimonials, or commercial claims are present and none should be fabricated for the interface.
