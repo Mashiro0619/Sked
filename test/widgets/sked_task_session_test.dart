@@ -1,3 +1,6 @@
+import 'package:sked/widgets/expressive_dialog.dart';
+import 'package:sked/widgets/app_modal_sheet.dart';
+import 'package:sked/widgets/sked_task_route.dart';
 import 'package:sked/widgets/sked_adaptive_picker_dialog.dart';
 import 'package:sked/widgets/sked_task_dialog.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -151,4 +154,78 @@ void main() {
       TargetPlatform.android,
     }),
   );
+  for (final host in ['dialog', 'sheet']) {
+    testWidgets(
+      '$host only retires its session beneath unrelated routes',
+      (t) async {
+        final p = await workspaceProvider(mode: AppMode.general);
+        addTearDown(p.dispose);
+        final session = SkedTaskSession();
+        addTearDown(session.dispose);
+        final results = <String?>[];
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () async {
+                    Widget body(BuildContext context) => const SizedBox(
+                      key: ValueKey('owned-task'),
+                      width: 300,
+                      height: 200,
+                      child: Text('Owned task'),
+                    );
+                    results.add(
+                      host == 'dialog'
+                          ? await showExpressiveDialog<String>(
+                              context: context,
+                              session: session,
+                              builder: body,
+                            )
+                          : await showAppModalSheet<String>(
+                              context: context,
+                              session: session,
+                              workspace: AppMode.general,
+                              builder: body,
+                            ),
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+        await t.tap(find.text('Open'));
+        await t.pumpAndSettle();
+        final ownContext = t.element(find.byKey(const ValueKey('owned-task')));
+        final extra = showDialog<void>(
+          context: ownContext,
+          builder: (_) => const AlertDialog(
+            key: ValueKey('unrelated'),
+            title: Text('Unrelated'),
+          ),
+        );
+        await t.pumpAndSettle();
+        session.invalidate();
+        await t.pumpAndSettle();
+        expect(find.byKey(const ValueKey('owned-task')), findsNothing);
+        expect(find.byKey(const ValueKey('unrelated')), findsOneWidget);
+        expect(results, [null]);
+        completeSkedTaskRoute(
+          t.element(find.byKey(const ValueKey('unrelated'))),
+        );
+        await extra;
+        await t.pumpAndSettle();
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox());
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      }),
+    );
+  }
 }

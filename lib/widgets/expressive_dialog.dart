@@ -1,3 +1,5 @@
+import 'sked_task_session.dart';
+
 import 'dart:async';
 
 import '../theme/sked_surface.dart';
@@ -24,7 +26,9 @@ Future<T?> showExpressiveDialog<T>({
   bool waitForTransitionComplete = false,
   RouteSettings? routeSettings,
   SkedDesktopFloatingDialog? desktopFloating,
+  SkedTaskSession? session,
 }) async {
+  if (session?.isCurrent == false) return null;
   final animationStyle = SkedMotionPolicy.of(context)
       .routeStyle(AppMotion.dialogAnimationStyle);
   final transitionAnchor = waitForTransitionComplete
@@ -68,7 +72,9 @@ Future<T?> showExpressiveDialog<T>({
           : UiCommandFeedbackHost(builder: builder);
       final dialog = SkedSurfaceScope(
         role: SkedSurfaceRole.content,
-        child: body,
+        child: session == null
+            ? body
+            : SkedTaskRouteGuard(parent: session, child: body),
       );
       return transitionAnchor == null
           ? dialog
@@ -87,7 +93,8 @@ Future<T?> showExpressiveDialog<T>({
         // The caller re-enables its trigger after its awaited dialog completes.
         // Wait for that rebuild before checking canRequestFocus.
         await WidgetsBinding.instance.endOfFrame;
-        if (context.mounted &&
+        if (session?.isCurrent != false &&
+            context.mounted &&
             (owner?.isCurrent ?? true) &&
             returnFocus?.context?.mounted == true &&
             returnFocus!.canRequestFocus) {
@@ -96,7 +103,7 @@ Future<T?> showExpressiveDialog<T>({
       }),
     );
   }
-  return result;
+  return session?.isCurrent == false ? null : result;
 }
 
 class ExpressiveDialogContent extends StatelessWidget {

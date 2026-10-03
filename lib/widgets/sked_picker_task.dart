@@ -1,3 +1,4 @@
+import 'sked_task_route.dart';
 import 'sked_task_session.dart';
 import '../theme/sked_surface.dart';
 
@@ -203,13 +204,8 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
   void _finish(T? value) {
     if (!mounted || _finished) return;
     _finished = true;
-    final route = ModalRoute.of(context)!;
     final result = _ownerAvailable ? value : null;
-    if (route.isCurrent) {
-      Navigator.of(context).pop(result);
-    } else if (route.isActive) {
-      route.navigator?.removeRoute(route, result);
-    }
+    completeSkedTaskRoute(context, result);
   }
 
   @override

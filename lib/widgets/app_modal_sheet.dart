@@ -1,3 +1,4 @@
+import 'sked_task_session.dart';
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
@@ -34,6 +35,7 @@ Future<T?> showAppModalSheet<T>({
   String? selectionId,
   AppMode? workspace,
   bool Function()? isSessionCurrent,
+  SkedTaskSession? session,
 }) async {
   final compact = WorkbenchChromeMetrics.compactTouch(context);
   // An editor opened from a phone details task must stay above that modal
@@ -41,37 +43,36 @@ Future<T?> showAppModalSheet<T>({
   final bottomTask = compact || workspacePane?.hasModalTasks == true;
   final provider = Provider.of<TimetableProvider?>(context, listen: false);
   final ownerRoute = ModalRoute.of(context);
-  final dataSession = provider?.dataSessionToken;
-  final boundary = provider?.appData.workspaceReminderNotBefore[workspace];
   final focus = FocusManager.instance.primaryFocus;
-  var invalidated = false;
-  bool isCurrent() {
-    invalidated =
-        invalidated ||
-        !context.mounted ||
-        !(ownerRoute?.isActive ?? true) ||
-        !identical(dataSession, provider?.dataSessionToken) ||
-        boundary != provider?.appData.workspaceReminderNotBefore[workspace] ||
-        (workspace != null &&
-            provider?.isWorkspaceEnabled(workspace) == false) ||
-        isSessionCurrent?.call() == false;
-    return !invalidated;
-  }
-
-  if (!isCurrent()) return null;
-  Widget content(BuildContext sheetContext) => _AppTaskSession(
+  final taskSession = SkedTaskSession(
     provider: provider,
+    workspace: workspace,
+    parent: session ?? SkedTaskSessionScope.maybeOf(context)?.session,
     ownerRoute: ownerRoute,
-    isCurrent: isCurrent,
+    isOwnerActive: () => context.mounted,
+    isTargetCurrent: isSessionCurrent,
+  );
+  bool isCurrent() => taskSession.isCurrent;
+  if (!isCurrent()) {
+    taskSession.dispose();
+    return null;
+  }
+  Widget content(BuildContext sheetContext) => SkedTaskRouteGuard(
+    parent: taskSession,
     child: Builder(builder: builder),
   );
   if (workspacePane != null && !bottomTask) {
-    return workspacePane.show<T>(
-      content,
-      presentation: panePresentation,
-      selectionId: selectionId,
-      dismissOnCanvasTap: isDismissible,
-    );
+    try {
+      final result = await workspacePane.show<T>(
+        content,
+        presentation: panePresentation,
+        selectionId: selectionId,
+        dismissOnCanvasTap: isDismissible,
+      );
+      return isCurrent() ? result : null;
+    } finally {
+      taskSession.dispose();
+    }
   }
 
   final navigator = Navigator.of(
@@ -131,80 +132,35 @@ Future<T?> showAppModalSheet<T>({
             );
     },
   );
-  final result = await (workspacePane == null
-      ? navigator.push<T>(route)
-      : workspacePane.showModal<T>(
-          navigator,
-          route,
-          selectionId: selectionId,
-          dismissible: isDismissible,
-        ));
+  T? result;
+  try {
+    result = await (workspacePane == null
+        ? navigator.push<T>(route)
+        : workspacePane.showModal<T>(
+            navigator,
+            route,
+            selectionId: selectionId,
+            dismissible: isDismissible,
+          ));
+  } catch (_) {
+    taskSession.dispose();
+    rethrow;
+  }
   unawaited(
     route.completed.then((_) {
-      if (isCurrent() &&
-          (ownerRoute?.isCurrent ?? true) &&
-          focus?.context?.mounted == true &&
-          focus!.canRequestFocus) {
-        focus.requestFocus();
+      try {
+        if (isCurrent() &&
+            (ownerRoute?.isCurrent ?? true) &&
+            focus?.context?.mounted == true &&
+            focus!.canRequestFocus) {
+          focus.requestFocus();
+        }
+      } finally {
+        taskSession.dispose();
       }
     }),
   );
   return isCurrent() ? result : null;
-}
-
-/// A modal route can outlive its home widget or its backing data. Invalidation
-/// retires this exact route; a nested date/time picker observes its owner close.
-class _AppTaskSession extends StatefulWidget {
-  const _AppTaskSession({
-    required this.provider,
-    required this.ownerRoute,
-    required this.isCurrent,
-    required this.child,
-  });
-  final TimetableProvider? provider;
-  final ModalRoute<dynamic>? ownerRoute;
-  final bool Function() isCurrent;
-  final Widget child;
-  @override
-  State<_AppTaskSession> createState() => _AppTaskSessionState();
-}
-
-class _AppTaskSessionState extends State<_AppTaskSession> {
-  bool _retiring = false;
-  @override
-  void initState() {
-    super.initState();
-    widget.provider?.addListener(_check);
-    final weak = WeakReference(this);
-    unawaited(widget.ownerRoute?.completed.then((_) => weak.target?._check()));
-    _check();
-  }
-
-  void _check() {
-    if (!mounted || _retiring || widget.isCurrent()) return;
-    _retiring = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final route = ModalRoute.of(context);
-      if (route?.isActive == true) route!.navigator?.removeRoute(route);
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
-  @override
-  void dispose() {
-    widget.provider?.removeListener(_check);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    _check();
-    return ExcludeFocus(
-      excluding: _retiring,
-      child: AbsorbPointer(absorbing: _retiring, child: widget.child),
-    );
-  }
 }
 
 class _AppBottomSheetScope extends InheritedWidget {

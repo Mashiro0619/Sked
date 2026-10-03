@@ -185,3 +185,4 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 - 节次方案创建和异步分配写入期间同样拒绝停用／替换；写入结束进入子编辑后仍由编辑器自己的草稿守卫决定退出。选择器完成时只关闭自己的路由，失效结果不再进入子编辑。
 - 分类任务已迁移到 `SkedTaskSession`／`SkedTaskSessionScope`／`SkedTaskRouteGuard`：会话只管理数据、父任务和目标有效性，失效不可逆；用户退出仍由原草稿／忙碌守卫决定，路由清理只处理自己的任务。
 - 选择器共用任务会话及自有路由守卫；桌面与触控的自适应选择器都接收工作区和会话有效性。外部传入会话不由选择器销毁，每次打开的子会话在路由完成与焦点恢复之后释放；原动画和布局保持不变。
+- 普通弹窗可显式接入共享会话，普通编辑任务沿用原 sheet／pane 宿主但统一有效性与清理；自有路由完成抽为 `completeSkedTaskRoute`，`completeEditorRoute` 保留兼容入口。调用方传入的父会话不由宿主销毁。
