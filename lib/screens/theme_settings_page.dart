@@ -1,3 +1,5 @@
+import '../widgets/sked_task_session.dart';
+import '../widgets/sked_task_submission_controller.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/sked_dropdown_menu.dart';
@@ -268,7 +270,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   late AppMode? _targetMode = widget.initialWorkspace;
   var _outlineSettingsPageOpen = false;
   var _overviewColorOpen = false;
-  final _colorTasks = <_ThemeColorTask>{};
+  final _colorTasks = <SkedTaskSession>{};
 
   @override
   void dispose() {
@@ -281,11 +283,19 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   Future<void> _showGuardedColorDialog({
     required BuildContext context,
     required WorkspaceThemeTarget target,
-    required WidgetBuilder builder,
+    required Widget Function(BuildContext, SkedTaskSubmissionController)
+    builder,
     BuildContext? anchorContext,
     bool Function()? targetExists,
   }) async {
-    final task = _ThemeColorTask(target, targetExists: targetExists);
+    final task = SkedTaskSession(
+      provider: target.source,
+      workspace: target.activeMode,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => mounted,
+      isTargetCurrent: targetExists,
+    );
+    final submission = SkedTaskSubmissionController(session: task);
     _colorTasks.add(task);
     try {
       await showSkedAdaptivePickerDialog<void>(
@@ -294,18 +304,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         anchorContext: anchorContext,
         preferredWidth: 340,
         workspace: target.activeMode,
+        session: task,
         isSessionCurrent: () => mounted && task.isCurrent,
         waitForTransitionComplete: true,
-        builder: (context) {
-          task.route = ModalRoute.of(context);
-          return _ThemeColorTaskScope(
-            task: task,
-            child: Builder(builder: builder),
-          );
-        },
+        builder: (context) => builder(context, submission),
       );
     } finally {
       _colorTasks.remove(task);
+      submission.dispose();
       task.dispose();
     }
   }
@@ -828,10 +834,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       context: context,
       target: provider,
       anchorContext: anchorContext,
-      builder: (context) {
-        final task = _ThemeColorTaskScope.of(context);
+      builder: (context, submission) {
         var popped = false;
-        var busy = false;
         var validHex = true;
         void popOnce() {
           if (popped) return;
@@ -839,84 +843,90 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           completeEditorRoute(context);
         }
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final colorValue = selectedColor.toARGB32();
-            return _PersistingThemeDialog(
-              busy: busy,
-              popped: popped,
-              title: Text(l10n.themeCustomColor),
-              content: SingleChildScrollView(
-                child: ExpressiveDialogContent(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (SkedTaskDialogScope.maybeOf(context) == null)
-                        _PreviewBanner(
-                          title: l10n.themeColor,
-                          value: _formatColorHex(colorValue),
-                          preview: _ThemeColorPreview(
-                            colorValue: colorValue,
-                            selected: true,
+        return ListenableBuilder(
+          listenable: submission,
+          builder: (context, _) => StatefulBuilder(
+            builder: (context, setState) {
+              final colorValue = selectedColor.toARGB32();
+              return _PersistingThemeDialog(
+                busy: submission.busy,
+                popped: popped,
+                title: Text(l10n.themeCustomColor),
+                content: SingleChildScrollView(
+                  child: ExpressiveDialogContent(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (SkedTaskDialogScope.maybeOf(context) == null)
+                          _PreviewBanner(
+                            title: l10n.themeColor,
+                            value: _formatColorHex(colorValue),
+                            preview: _ThemeColorPreview(
+                              colorValue: colorValue,
+                              selected: true,
+                            ),
+                          ),
+                        if (SkedTaskDialogScope.maybeOf(context) == null)
+                          const SizedBox(height: 16),
+                        _SurfacePanel(
+                          padding: const EdgeInsets.all(12),
+                          child: Center(
+                            child: SkedCompactColorPicker(
+                              colorValue: colorValue,
+                              invalidHexMessage: l10n.colorHexInvalid,
+                              onValidityChanged: (valid) =>
+                                  setState(() => validHex = valid),
+                              onColorChanged: (updatedColorValue) =>
+                                  setState(() {
+                                    selectedColor = Color(updatedColorValue);
+                                  }),
+                            ),
                           ),
                         ),
-                      if (SkedTaskDialogScope.maybeOf(context) == null)
-                        const SizedBox(height: 16),
-                      _SurfacePanel(
-                        padding: const EdgeInsets.all(12),
-                        child: Center(
-                          child: SkedCompactColorPicker(
-                            colorValue: colorValue,
-                            invalidHexMessage: l10n.colorHexInvalid,
-                            onValidityChanged: (valid) =>
-                                setState(() => validHex = valid),
-                            onColorChanged: (updatedColorValue) => setState(() {
-                              selectedColor = Color(updatedColorValue);
-                            }),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: (busy || popped) ? null : popOnce,
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: (busy || popped || !validHex)
-                      ? null
-                      : () async {
-                          if (busy || popped || !validHex || !task.isCurrent) {
-                            return;
-                          }
-                          final submittedColorValue = colorValue;
-                          FocusScope.of(context).unfocus();
-                          task.busy = true;
-                          setState(() => busy = true);
-                          final saved = await runUiCommandWithFeedback(
-                            context: context,
-                            debugLabel: 'Update custom theme seed color',
-                            command: () => provider.updateThemeSeedColorValue(
-                              submittedColorValue,
-                            ),
-                          );
-                          task.busy = false;
-                          if (!context.mounted || !task.isCurrent) return;
-                          if (saved) {
-                            popOnce();
-                          } else {
-                            setState(() => busy = false);
-                          }
-                        },
-                  child: Text(l10n.themeApplyCustomColor),
-                ),
-              ],
-            );
-          },
+                actions: [
+                  TextButton(
+                    onPressed: (submission.busy || popped) ? null : popOnce,
+                    child: Text(l10n.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: (submission.busy || popped || !validHex)
+                        ? null
+                        : () async {
+                            if (submission.busy ||
+                                popped ||
+                                !validHex ||
+                                !submission.isCurrent) {
+                              return;
+                            }
+                            final submittedColorValue = colorValue;
+                            FocusScope.of(context).unfocus();
+                            final saved = await submission.run(
+                              context: context,
+                              debugLabel: 'Update custom theme seed color',
+                              command: () => provider.updateThemeSeedColorValue(
+                                submittedColorValue,
+                              ),
+                            );
+                            if (!context.mounted || !submission.isCurrent) {
+                              return;
+                            }
+                            if (saved) {
+                              popOnce();
+                            } else {
+                              setState(() {});
+                            }
+                          },
+                    child: Text(l10n.themeApplyCustomColor),
+                  ),
+                ],
+              );
+            },
+          ),
         );
       },
     );
@@ -939,10 +949,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       target: target,
       targetExists: targetExists,
       anchorContext: anchorContext,
-      builder: (context) {
-        final task = _ThemeColorTaskScope.of(context);
+      builder: (context, submission) {
         var popped = false;
-        var busy = false;
         var validHex = true;
         void popOnce() {
           if (popped) return;
@@ -950,82 +958,88 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           completeEditorRoute(context);
         }
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final colorValue = selectedColor.toARGB32();
-            return _PersistingThemeDialog(
-              busy: busy,
-              popped: popped,
-              title: Text(title),
-              content: SingleChildScrollView(
-                child: ExpressiveDialogContent(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (SkedTaskDialogScope.maybeOf(context) == null)
-                        _PreviewBanner(
-                          title: previewTitle,
-                          value: _formatColorHex(colorValue),
-                          preview: _ThemeColorPreview(
-                            colorValue: colorValue,
-                            selected: true,
+        return ListenableBuilder(
+          listenable: submission,
+          builder: (context, _) => StatefulBuilder(
+            builder: (context, setState) {
+              final colorValue = selectedColor.toARGB32();
+              return _PersistingThemeDialog(
+                busy: submission.busy,
+                popped: popped,
+                title: Text(title),
+                content: SingleChildScrollView(
+                  child: ExpressiveDialogContent(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (SkedTaskDialogScope.maybeOf(context) == null)
+                          _PreviewBanner(
+                            title: previewTitle,
+                            value: _formatColorHex(colorValue),
+                            preview: _ThemeColorPreview(
+                              colorValue: colorValue,
+                              selected: true,
+                            ),
+                          ),
+                        if (SkedTaskDialogScope.maybeOf(context) == null)
+                          const SizedBox(height: 16),
+                        _SurfacePanel(
+                          padding: const EdgeInsets.all(12),
+                          child: Center(
+                            child: SkedCompactColorPicker(
+                              colorValue: colorValue,
+                              invalidHexMessage: l10n.colorHexInvalid,
+                              onValidityChanged: (valid) =>
+                                  setState(() => validHex = valid),
+                              onColorChanged: (updatedColorValue) =>
+                                  setState(() {
+                                    selectedColor = Color(updatedColorValue);
+                                  }),
+                            ),
                           ),
                         ),
-                      if (SkedTaskDialogScope.maybeOf(context) == null)
-                        const SizedBox(height: 16),
-                      _SurfacePanel(
-                        padding: const EdgeInsets.all(12),
-                        child: Center(
-                          child: SkedCompactColorPicker(
-                            colorValue: colorValue,
-                            invalidHexMessage: l10n.colorHexInvalid,
-                            onValidityChanged: (valid) =>
-                                setState(() => validHex = valid),
-                            onColorChanged: (updatedColorValue) => setState(() {
-                              selectedColor = Color(updatedColorValue);
-                            }),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: (busy || popped) ? null : popOnce,
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: (busy || popped || !validHex)
-                      ? null
-                      : () async {
-                          if (busy || popped || !validHex || !task.isCurrent) {
-                            return;
-                          }
-                          final submittedColorValue = colorValue;
-                          FocusScope.of(context).unfocus();
-                          task.busy = true;
-                          setState(() => busy = true);
-                          final saved = await runUiCommandWithFeedback(
-                            context: context,
-                            debugLabel: 'Update theme color value',
-                            command: () => onApply(submittedColorValue),
-                          );
-                          task.busy = false;
-                          if (!context.mounted || !task.isCurrent) return;
-                          if (saved) {
-                            popOnce();
-                          } else {
-                            setState(() => busy = false);
-                          }
-                        },
-                  child: Text(l10n.themeApplySettings),
-                ),
-              ],
-            );
-          },
+                actions: [
+                  TextButton(
+                    onPressed: (submission.busy || popped) ? null : popOnce,
+                    child: Text(l10n.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: (submission.busy || popped || !validHex)
+                        ? null
+                        : () async {
+                            if (submission.busy ||
+                                popped ||
+                                !validHex ||
+                                !submission.isCurrent) {
+                              return;
+                            }
+                            final submittedColorValue = colorValue;
+                            FocusScope.of(context).unfocus();
+                            final saved = await submission.run(
+                              context: context,
+                              debugLabel: 'Update theme color value',
+                              command: () => onApply(submittedColorValue),
+                            );
+                            if (!context.mounted || !submission.isCurrent) {
+                              return;
+                            }
+                            if (saved) {
+                              popOnce();
+                            } else {
+                              setState(() {});
+                            }
+                          },
+                    child: Text(l10n.themeApplySettings),
+                  ),
+                ],
+              );
+            },
+          ),
         );
       },
     );
@@ -1047,10 +1061,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       context: context,
       target: provider,
       anchorContext: anchorContext,
-      builder: (context) {
-        final task = _ThemeColorTaskScope.of(context);
+      builder: (context, submission) {
         var popped = false;
-        var busy = false;
         var validHex = true;
         void popOnce() {
           if (popped) return;
@@ -1058,232 +1070,168 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           completeEditorRoute(context);
         }
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final modeLabel = mode == colorfulCourseTextColorModeCustom
-                ? l10n.themeColorCourseTextCustom
-                : l10n.themeColorCourseTextAuto;
-            return _PersistingThemeDialog(
-              busy: busy,
-              popped: popped,
-              title: Text(l10n.themeColorCourseText),
-              content: SingleChildScrollView(
-                child: ExpressiveDialogContent(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (SkedTaskDialogScope.maybeOf(context) == null)
-                        _PreviewBanner(
-                          title: l10n.themeColorCourseText,
-                          value: mode == colorfulCourseTextColorModeCustom
-                              ? '$modeLabel - ${_formatColorHex(colorValue)}'
-                              : modeLabel,
-                          preview: _ThemeColorPreview(
-                            colorValue: colorValue,
-                            selected: true,
+        return ListenableBuilder(
+          listenable: submission,
+          builder: (context, _) => StatefulBuilder(
+            builder: (context, setState) {
+              final modeLabel = mode == colorfulCourseTextColorModeCustom
+                  ? l10n.themeColorCourseTextCustom
+                  : l10n.themeColorCourseTextAuto;
+              return _PersistingThemeDialog(
+                busy: submission.busy,
+                popped: popped,
+                title: Text(l10n.themeColorCourseText),
+                content: SingleChildScrollView(
+                  child: ExpressiveDialogContent(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (SkedTaskDialogScope.maybeOf(context) == null)
+                          _PreviewBanner(
+                            title: l10n.themeColorCourseText,
+                            value: mode == colorfulCourseTextColorModeCustom
+                                ? '$modeLabel - ${_formatColorHex(colorValue)}'
+                                : modeLabel,
+                            preview: _ThemeColorPreview(
+                              colorValue: colorValue,
+                              selected: true,
+                            ),
                           ),
-                        ),
-                      if (SkedTaskDialogScope.maybeOf(context) == null)
-                        const SizedBox(height: 16),
-                      _SurfacePanel(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.themeColorCourseText,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 12),
-                            _AppearanceChoiceField(
-                              segments: [
-                                _SegmentOption(
-                                  value: colorfulCourseTextColorModeAuto,
-                                  label: l10n.themeColorCourseTextAuto,
-                                ),
-                                _SegmentOption(
-                                  value: colorfulCourseTextColorModeCustom,
-                                  label: l10n.themeColorCourseTextCustom,
-                                ),
-                              ],
-                              selected: {mode},
-                              onSelectionChanged: (selection) {
-                                if (selection.isEmpty) {
-                                  return;
-                                }
-                                setState(() {
-                                  mode = selection.first;
-                                  validHex = true;
-                                });
-                              },
-                            ),
-                            SkedAnimatedSize(
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeInOut,
-                              alignment: Alignment.topCenter,
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 180),
-                                switchInCurve: Curves.easeOut,
-                                switchOutCurve: Curves.easeIn,
-                                child: mode == colorfulCourseTextColorModeCustom
-                                    ? Padding(
-                                        key: const ValueKey(
-                                          'course-text-color-picker',
-                                        ),
-                                        padding: const EdgeInsets.only(top: 12),
-                                        child: Center(
-                                          child: SkedCompactColorPicker(
-                                            colorValue: colorValue,
-                                            invalidHexMessage:
-                                                l10n.colorHexInvalid,
-                                            onValidityChanged: (valid) =>
-                                                setState(
-                                                  () => validHex = valid,
-                                                ),
-                                            onColorChanged:
-                                                (updatedColorValue) =>
-                                                    setState(() {
-                                                      colorValue =
-                                                          updatedColorValue;
-                                                    }),
+                        if (SkedTaskDialogScope.maybeOf(context) == null)
+                          const SizedBox(height: 16),
+                        _SurfacePanel(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.themeColorCourseText,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 12),
+                              _AppearanceChoiceField(
+                                segments: [
+                                  _SegmentOption(
+                                    value: colorfulCourseTextColorModeAuto,
+                                    label: l10n.themeColorCourseTextAuto,
+                                  ),
+                                  _SegmentOption(
+                                    value: colorfulCourseTextColorModeCustom,
+                                    label: l10n.themeColorCourseTextCustom,
+                                  ),
+                                ],
+                                selected: {mode},
+                                onSelectionChanged: (selection) {
+                                  if (selection.isEmpty) {
+                                    return;
+                                  }
+                                  setState(() {
+                                    mode = selection.first;
+                                    validHex = true;
+                                  });
+                                },
+                              ),
+                              SkedAnimatedSize(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeInOut,
+                                alignment: Alignment.topCenter,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 180),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
+                                  child:
+                                      mode == colorfulCourseTextColorModeCustom
+                                      ? Padding(
+                                          key: const ValueKey(
+                                            'course-text-color-picker',
+                                          ),
+                                          padding: const EdgeInsets.only(
+                                            top: 12,
+                                          ),
+                                          child: Center(
+                                            child: SkedCompactColorPicker(
+                                              colorValue: colorValue,
+                                              invalidHexMessage:
+                                                  l10n.colorHexInvalid,
+                                              onValidityChanged: (valid) =>
+                                                  setState(
+                                                    () => validHex = valid,
+                                                  ),
+                                              onColorChanged:
+                                                  (updatedColorValue) =>
+                                                      setState(() {
+                                                        colorValue =
+                                                            updatedColorValue;
+                                                      }),
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(
+                                          key: ValueKey(
+                                            'course-text-color-auto',
                                           ),
                                         ),
-                                      )
-                                    : const SizedBox.shrink(
-                                        key: ValueKey('course-text-color-auto'),
-                                      ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: (busy || popped) ? null : popOnce,
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed:
-                      (busy ||
-                          popped ||
-                          (mode == colorfulCourseTextColorModeCustom &&
-                              !validHex))
-                      ? null
-                      : () async {
-                          if (!task.isCurrent ||
-                              busy ||
-                              popped ||
-                              (mode == colorfulCourseTextColorModeCustom &&
-                                  !validHex)) {
-                            return;
-                          }
-                          final submittedMode = mode;
-                          final submittedColorValue = colorValue;
-                          FocusScope.of(context).unfocus();
-                          task.busy = true;
-                          setState(() => busy = true);
-                          final saved = await runUiCommandWithFeedback(
-                            context: context,
-                            debugLabel: 'Update course text color settings',
-                            command: () =>
-                                provider.updateColorfulCourseTextSettings(
-                                  mode: submittedMode,
-                                  customColorValue: submittedColorValue,
-                                ),
-                          );
-                          task.busy = false;
-                          if (!context.mounted || !task.isCurrent) return;
-                          if (saved) {
-                            popOnce();
-                          } else {
-                            setState(() => busy = false);
-                          }
-                        },
-                  child: Text(l10n.themeApplySettings),
-                ),
-              ],
-            );
-          },
+                actions: [
+                  TextButton(
+                    onPressed: (submission.busy || popped) ? null : popOnce,
+                    child: Text(l10n.cancel),
+                  ),
+                  FilledButton(
+                    onPressed:
+                        (submission.busy ||
+                            popped ||
+                            (mode == colorfulCourseTextColorModeCustom &&
+                                !validHex))
+                        ? null
+                        : () async {
+                            if (!submission.isCurrent ||
+                                submission.busy ||
+                                popped ||
+                                (mode == colorfulCourseTextColorModeCustom &&
+                                    !validHex)) {
+                              return;
+                            }
+                            final submittedMode = mode;
+                            final submittedColorValue = colorValue;
+                            FocusScope.of(context).unfocus();
+                            final saved = await submission.run(
+                              context: context,
+                              debugLabel: 'Update course text color settings',
+                              command: () =>
+                                  provider.updateColorfulCourseTextSettings(
+                                    mode: submittedMode,
+                                    customColorValue: submittedColorValue,
+                                  ),
+                            );
+                            if (!context.mounted || !submission.isCurrent) {
+                              return;
+                            }
+                            if (saved) {
+                              popOnce();
+                            } else {
+                              setState(() {});
+                            }
+                          },
+                    child: Text(l10n.themeApplySettings),
+                  ),
+                ],
+              );
+            },
+          ),
         );
       },
     );
   }
-}
-
-/// Local protection for the existing theme workflows. Kept separate from UI
-/// so a later shared-session migration can preserve these safety contracts.
-class _ThemeColorTask {
-  _ThemeColorTask(this.target, {this.targetExists})
-    : _dataSession = target.source.dataSessionToken {
-    target.source.addListener(_check);
-    _unregister = target.source.registerWorkspaceExitGuard(
-      target.activeMode,
-      () async => !busy,
-    );
-  }
-  final WorkspaceThemeTarget target;
-  final bool Function()? targetExists;
-  final Object _dataSession;
-  late final VoidCallback _unregister;
-  ModalRoute<dynamic>? route;
-  bool busy = false;
-  bool _invalidated = false;
-  bool _disposed = false;
-  bool _scheduled = false;
-  bool get isCurrent {
-    if (_disposed || _invalidated) return false;
-    if (!identical(_dataSession, target.source.dataSessionToken) ||
-        !target.source.isWorkspaceEnabled(target.activeMode) ||
-        targetExists?.call() == false) {
-      invalidate();
-      return false;
-    }
-    return true;
-  }
-
-  void _check() {
-    if (!isCurrent) _scheduleRemoval();
-  }
-
-  void invalidate() {
-    if (_disposed || _invalidated) return;
-    _invalidated = true;
-    _scheduleRemoval();
-  }
-
-  void _scheduleRemoval() {
-    if (_scheduled || _disposed) return;
-    _scheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scheduled = false;
-      if (_disposed) return;
-      final owned = route;
-      if (owned?.isActive == true) owned!.navigator?.removeRoute(owned);
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
-  void dispose() {
-    if (_disposed) return;
-    _disposed = true;
-    target.source.removeListener(_check);
-    _unregister();
-  }
-}
-
-class _ThemeColorTaskScope extends InheritedWidget {
-  const _ThemeColorTaskScope({required this.task, required super.child});
-  final _ThemeColorTask task;
-  static _ThemeColorTask of(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<_ThemeColorTaskScope>()!.task;
-  @override
-  bool updateShouldNotify(_ThemeColorTaskScope oldWidget) =>
-      task != oldWidget.task;
 }
 
 class _PersistingThemeDialog extends StatelessWidget {
