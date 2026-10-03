@@ -15,8 +15,8 @@
 </div>
 
 <p align="center">
-  <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="100" align="middle"></a>
-  <a href="https://apps.microsoft.com/detail/9nwrr6zp6k6t"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取" height="70" align="middle"></a>
+  <a href="https://play.google.com/store/apps/details?id=com.mashiro.sked"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="258" height="100" align="middle"></a>
+  <a href="https://apps.microsoft.com/detail/9nwrr6zp6k6t"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" alt="从 Microsoft Store 获取" width="256" height="70" align="middle"></a>
 </p>
 
 Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期、周次和节次管理学校课程，也可以用来记录日常安排。两种模式可以随时切换。
