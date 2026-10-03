@@ -785,7 +785,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         void popOnce() {
           if (popped) return;
           popped = true;
-          Navigator.of(context).pop();
+          completeEditorRoute(context);
         }
 
         return StatefulBuilder(
@@ -885,7 +885,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         void popOnce() {
           if (popped) return;
           popped = true;
-          Navigator.of(context).pop();
+          completeEditorRoute(context);
         }
 
         return StatefulBuilder(
@@ -985,7 +985,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
         void popOnce() {
           if (popped) return;
           popped = true;
-          Navigator.of(context).pop();
+          completeEditorRoute(context);
         }
 
         return StatefulBuilder(

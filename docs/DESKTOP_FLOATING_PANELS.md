@@ -176,3 +176,7 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 `flutter test -d windows --no-pub integration_test/floating_panel_rollout_visual_test.dart --dart-define=SKED_VISUAL_OUTPUT=D:/Project/Flutter/sked/.scratch/floating-panel-rollout --dart-define=SKED_NATIVE_POINTER_CHECK=true --reporter expanded`
 
 原生鼠标步骤需要允许测试窗口获得前台焦点；如果它仍被遮挡或鼠标按键已经按下，测试应失败并保留保护，而不是向其他窗口注入输入。
+
+## 任务行为统一（2026-10-03）
+
+- 主题种子色、普通颜色值和课程文字颜色保存完成后仅完成自己拥有的路由，不关闭后来打开的其他根级任务；失败保留原任务并支持重试。对应回归：`theme_task_safety_test.dart`。
