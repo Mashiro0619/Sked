@@ -992,6 +992,7 @@ class _DesktopCalendarManagerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final metrics = WorkbenchChromeMetrics.of(context);
     final color = effectiveGeneralCalendarColor(context, schedule);
     return Padding(
       key: ValueKey('calendar-manager-tile-${schedule.id}'),
@@ -1055,14 +1056,29 @@ class _DesktopCalendarManagerRow extends StatelessWidget {
               ),
             ),
           ),
-          Tooltip(
-            message: schedule.isVisible
-                ? l.categoryHideOnCalendar
-                : l.categoryShowOnCalendar,
-            child: Switch(
-              key: ValueKey('calendar-visibility-${schedule.id}'),
-              value: schedule.isVisible,
-              onChanged: disabled ? null : (_) => onVisibility(),
+          MergeSemantics(
+            child: Semantics(
+              toggled: schedule.isVisible,
+              child: IconButton(
+                key: ValueKey('calendar-visibility-${schedule.id}'),
+                tooltip: schedule.isVisible
+                    ? l.categoryHideOnCalendar
+                    : l.categoryShowOnCalendar,
+                onPressed: disabled ? null : onVisibility,
+                style: IconButton.styleFrom(
+                  minimumSize: Size.square(metrics.commandHeight),
+                  maximumSize: Size.square(metrics.commandHeight),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: const EdgeInsets.all(8),
+                  foregroundColor: theme.colorScheme.onSurfaceVariant,
+                ),
+                icon: Icon(
+                  schedule.isVisible
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 18,
+                ),
+              ),
             ),
           ),
           Builder(

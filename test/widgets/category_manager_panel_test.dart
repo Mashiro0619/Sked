@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -901,6 +902,83 @@ void main() {
     }
   }
   testWidgets(
+    'visibility uses an unfilled icon with a compact target, state text and keyboard semantics',
+    (t) async {
+      final semantics = t.ensureSemantics();
+      try {
+        final p = await mount(t);
+        final visible = k('calendar-visibility-category-1');
+        final hidden = k('calendar-visibility-category-2');
+        expect(
+          find.descendant(of: panel, matching: find.byType(Switch)),
+          findsNothing,
+        );
+        expect(t.getSize(visible), const Size(36, 36));
+        expect(
+          find.descendant(
+            of: visible,
+            matching: find.byIcon(Icons.visibility_outlined),
+          ),
+          findsOneWidget,
+        );
+        expect(t.widget<IconButton>(visible).tooltip, 'Hide from calendar');
+        expect(t.widget<IconButton>(hidden).tooltip, 'Show on calendar');
+        expect(
+          find.descendant(
+            of: hidden,
+            matching: find.byIcon(Icons.visibility_off_outlined),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          t.getSemantics(visible).getSemanticsData().flagsCollection.isToggled,
+          Tristate.isTrue,
+        );
+        expect(
+          t.getSemantics(hidden).getSemanticsData().flagsCollection.isToggled,
+          Tristate.isFalse,
+        );
+        final button = t.widget<IconButton>(visible);
+        expect(button.style?.backgroundColor?.resolve({}), isNull);
+        final focus = skedFloatingAnchorFocus(t.element(visible))!;
+        focus.requestFocus();
+        await t.pump();
+        await t.sendKeyEvent(LogicalKeyboardKey.space);
+        await t.pumpAndSettle();
+        expect(p.generalSchedules[1].isVisible, isFalse);
+        expect(
+          find.descendant(
+            of: k('calendar-manager-tile-category-1'),
+            matching: find.textContaining('Hidden'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: visible,
+            matching: find.byIcon(Icons.visibility_off_outlined),
+          ),
+          findsOneWidget,
+        );
+        await t.tap(hidden);
+        await t.pumpAndSettle();
+        expect(p.generalSchedules[2].isVisible, isTrue);
+        expect(
+          find.descendant(
+            of: k('calendar-manager-tile-category-2'),
+            matching: find.textContaining('Hidden'),
+          ),
+          findsNothing,
+        );
+        await finish(t);
+      } finally {
+        semantics.dispose();
+      }
+    },
+    variant: desktop,
+  );
+
+  testWidgets(
     'slow visibility save shows no progress bar and keeps mutation and exit guards',
     (t) async {
       final storage = GateStorage(categoryManagerStorage().data);
@@ -932,7 +1010,7 @@ void main() {
         findsNothing,
       );
       expect(t.getRect(k('floating-form-surface')), surfaceBefore);
-      expect(t.widget<Switch>(button).onChanged, isNull);
+      expect(t.widget<IconButton>(button).onPressed, isNull);
       await t.tap(button);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.tapAt(const Offset(1200, 850));
@@ -944,7 +1022,7 @@ void main() {
       gate.complete();
       await t.pumpAndSettle();
       expect(p.generalSchedules[1].isVisible, isFalse);
-      expect(t.widget<Switch>(button).onChanged, isNotNull);
+      expect(t.widget<IconButton>(button).onPressed, isNotNull);
       expect(
         find.descendant(
           of: panel,

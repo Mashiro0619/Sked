@@ -110,7 +110,9 @@ void main() {
               findsNothing,
             );
             expect(
-              t.widget<Switch>(k('calendar-visibility-category-1')).onChanged,
+              t
+                  .widget<IconButton>(k('calendar-visibility-category-1'))
+                  .onPressed,
               isNull,
             );
             await capture('visibility-saving');
