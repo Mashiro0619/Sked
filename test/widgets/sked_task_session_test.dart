@@ -1,3 +1,5 @@
+import 'package:sked/widgets/sked_adaptive_picker_dialog.dart';
+import 'package:sked/widgets/sked_task_dialog.dart';
 import 'package:sked/providers/timetable_provider.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -94,4 +96,59 @@ void main() {
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
   });
+  testWidgets(
+    'adaptive picker propagates session invalidation on desktop and touch',
+    (t) async {
+      final p = await workspaceProvider(mode: AppMode.general);
+      addTearDown(p.dispose);
+      final session = SkedTaskSession();
+      addTearDown(session.dispose);
+      final results = <String?>[];
+      await t.pumpWidget(
+        WorkspaceHarness(
+          provider: p,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  results.add(
+                    await showSkedAdaptivePickerDialog<String>(
+                      context: context,
+                      routeName: 'session-test',
+                      workspace: AppMode.general,
+                      session: session,
+                      waitForTransitionComplete: true,
+                      builder: (_) => const SkedTaskDialog(
+                        key: ValueKey('session-picker'),
+                        title: Text('Picker'),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.text('Open'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('session-picker')), findsOneWidget);
+      session.invalidate();
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('session-picker')), findsNothing);
+      expect(results, [null]);
+      await t.tap(find.text('Open'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('session-picker')), findsNothing);
+      expect(results, [null, null]);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.windows,
+      TargetPlatform.android,
+    }),
+  );
 }

@@ -1,3 +1,4 @@
+import 'sked_task_session.dart';
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
@@ -36,6 +37,7 @@ Future<T?> showSkedPickerTask<T>({
   AppMode? workspace,
   Key? surfaceKey,
   bool Function()? isSessionCurrent,
+  SkedTaskSession? session,
   bool waitForTransitionComplete = false,
   SkedPickerCompactPresentation compactPresentation =
       SkedPickerCompactPresentation.bottomSheet,
@@ -53,21 +55,19 @@ Future<T?> showSkedPickerTask<T>({
   if (workspace != null && provider?.isWorkspaceEnabled(workspace) == false) {
     return null;
   }
-  final dataSession = provider?.dataSessionToken;
-  final resumeBoundary =
-      provider?.appData.workspaceReminderNotBefore[workspace];
-  var sessionInvalidated = false;
-  bool sessionAvailable() {
-    sessionInvalidated =
-        sessionInvalidated ||
-        !identical(dataSession, provider?.dataSessionToken) ||
-        resumeBoundary !=
-            provider?.appData.workspaceReminderNotBefore[workspace] ||
-        isSessionCurrent?.call() == false;
-    return !sessionInvalidated;
+  final taskSession = SkedTaskSession(
+    provider: provider,
+    workspace: workspace,
+    parent: session ?? SkedTaskSessionScope.maybeOf(context)?.session,
+    ownerRoute: parent,
+    isOwnerActive: () => context.mounted,
+    isTargetCurrent: isSessionCurrent,
+  );
+  bool sessionAvailable() => taskSession.isCurrent;
+  if (!sessionAvailable()) {
+    taskSession.dispose();
+    return null;
   }
-
-  if (!sessionAvailable()) return null;
   final navigator = Navigator.of(context, rootNavigator: true);
   final themes = InheritedTheme.capture(from: context, to: navigator.context);
   final route = _PickerTaskRoute<T>(
@@ -78,43 +78,52 @@ Future<T?> showSkedPickerTask<T>({
     transitionDuration: const Duration(milliseconds: 120),
     traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
     pageBuilder: (routeContext, animation, secondaryAnimation) => themes.wrap(
-      _PickerTaskHost<T>(
-        builder: builder,
-        preferredSize: preferredSize,
-        compactPresentation: compactPresentation,
-        surfaceKey: surfaceKey,
-        ownerContext: context,
-        isSessionCurrent: sessionAvailable,
-        ownerRoute: parent,
-        anchorBox: anchorRenderObject is RenderBox ? anchorRenderObject : null,
-        placement: placement,
-        provider: provider,
-        workspace: workspace,
+      SkedTaskRouteGuard(
+        parent: taskSession,
+        child: Builder(
+          builder: (guardContext) => _PickerTaskHost<T>(
+            builder: builder,
+            preferredSize: preferredSize,
+            compactPresentation: compactPresentation,
+            surfaceKey: surfaceKey,
+            session: SkedTaskSessionScope.maybeOf(guardContext)!.session,
+            anchorBox: anchorRenderObject is RenderBox
+                ? anchorRenderObject
+                : null,
+            placement: placement,
+          ),
+        ),
       ),
     ),
   );
-  final result = await navigator.push(route);
+  T? result;
+  try {
+    result = await navigator.push(route);
+  } catch (_) {
+    taskSession.dispose();
+    rethrow;
+  }
   if (waitForTransitionComplete) await route.completed;
-  if (context.mounted &&
-      sessionAvailable() &&
-      (parent?.isActive ?? true) &&
-      (workspace == null || provider?.isWorkspaceEnabled(workspace) != false)) {
-    unawaited(
-      route.completed.then((_) async {
-        // An awaiting editor re-enables its field after this task completes.
+  final current =
+      context.mounted && sessionAvailable() && (parent?.isActive ?? true);
+  unawaited(
+    route.completed.then((_) async {
+      try {
         if (waitForTransitionComplete) await WidgetsBinding.instance.endOfFrame;
-        if (context.mounted &&
+        if (current &&
+            context.mounted &&
             sessionAvailable() &&
             (parent?.isCurrent ?? true) &&
             focus?.context?.mounted == true &&
             focus!.canRequestFocus) {
           focus.requestFocus();
         }
-      }),
-    );
-    return result;
-  }
-  return null;
+      } finally {
+        taskSession.dispose();
+      }
+    }),
+  );
+  return current ? result : null;
 }
 
 /// The barrier follows the same window policy as the content without replacing
@@ -150,25 +159,18 @@ class _PickerTaskHost<T> extends StatefulWidget {
     required this.preferredSize,
     required this.compactPresentation,
     required this.surfaceKey,
-    required this.ownerContext,
-    required this.isSessionCurrent,
-    required this.ownerRoute,
+    required this.session,
     required this.anchorBox,
     required this.placement,
-    required this.provider,
-    required this.workspace,
   });
   final SkedPickerTaskBuilder<T> builder;
   final Size Function(BuildContext) preferredSize;
   final SkedPickerCompactPresentation compactPresentation;
   final Key? surfaceKey;
-  final BuildContext ownerContext;
-  final bool Function() isSessionCurrent;
-  final ModalRoute<dynamic>? ownerRoute;
+  final SkedTaskSession session;
   final RenderBox? anchorBox;
   final SkedFloatingPlacement placement;
-  final TimetableProvider? provider;
-  final AppMode? workspace;
+
   @override
   State<_PickerTaskHost<T>> createState() => _PickerTaskHostState<T>();
 }
@@ -196,40 +198,7 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
     );
   }
 
-  bool get _ownerAvailable =>
-      widget.ownerContext.mounted &&
-      widget.isSessionCurrent() &&
-      (widget.ownerRoute?.isActive ?? true) &&
-      (widget.workspace == null ||
-          widget.provider?.isWorkspaceEnabled(widget.workspace!) != false);
-  @override
-  void initState() {
-    super.initState();
-    widget.provider?.addListener(_checkOwner);
-    final owner = widget.ownerRoute;
-    if (owner != null) {
-      // A home route can outlive hundreds of picker sessions. Do not retain
-      // each disposed picker until that route eventually completes.
-      final host = WeakReference(this);
-      unawaited(
-        owner.completed.then((_) {
-          final state = host.target;
-          if (state?.mounted == true) state!._finish(null);
-        }),
-      );
-    }
-  }
-
-  void _checkOwner() {
-    // Evaluate immediately so a transient invalidation cannot revive this task.
-    // Check again after the owner's widgets have observed the same notification.
-    if (_finished) return;
-    final available = _ownerAvailable;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && (!available || !_ownerAvailable)) _finish(null);
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
+  bool get _ownerAvailable => widget.session.isCurrent;
 
   void _finish(T? value) {
     if (!mounted || _finished) return;
@@ -241,12 +210,6 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
     } else if (route.isActive) {
       route.navigator?.removeRoute(route, result);
     }
-  }
-
-  @override
-  void dispose() {
-    widget.provider?.removeListener(_checkOwner);
-    super.dispose();
   }
 
   @override

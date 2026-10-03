@@ -442,7 +442,10 @@ void main() {
       valid = false;
       choose();
       await t.pumpAndSettle();
-      expect(results, [null]);
+      // Shared sessions retire the invalid route immediately; no second exit
+      // action is needed, and subsequent Escape must not deliver another result.
+      expect(find.byType(SkedWeekPicker), findsNothing);
+      expect(results, [null, null]);
       await t.sendKeyEvent(LogicalKeyboardKey.escape);
       await t.pumpAndSettle();
       expect(results, [null, null]);

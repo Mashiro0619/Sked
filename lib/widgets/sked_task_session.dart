@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../models/app_mode.dart';
@@ -10,6 +12,7 @@ class SkedTaskSession extends ChangeNotifier {
     this.provider,
     this.workspace,
     this.parent,
+    this.ownerRoute,
     this.isOwnerActive,
     this.isTargetCurrent,
   }) : _dataSession = provider?.dataSessionToken,
@@ -17,11 +20,14 @@ class SkedTaskSession extends ChangeNotifier {
            provider?.appData.workspaceReminderNotBefore[workspace] {
     provider?.addListener(check);
     parent?.addListener(check);
+    final weak = WeakReference(this);
+    unawaited(ownerRoute?.completed.then((_) => weak.target?.check()));
     check();
   }
   final TimetableProvider? provider;
   final AppMode? workspace;
   final SkedTaskSession? parent;
+  final ModalRoute<dynamic>? ownerRoute;
   final bool Function()? isOwnerActive;
   final bool Function()? isTargetCurrent;
   final Object? _dataSession;
@@ -31,7 +37,8 @@ class SkedTaskSession extends ChangeNotifier {
 
   bool get isCurrent {
     if (_disposed || _invalidated) return false;
-    if (parent?.isCurrent == false ||
+    if (ownerRoute?.isActive == false ||
+        parent?.isCurrent == false ||
         !identical(_dataSession, provider?.dataSessionToken) ||
         _resumeBoundary !=
             provider?.appData.workspaceReminderNotBefore[workspace] ||
