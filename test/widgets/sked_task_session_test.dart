@@ -12,6 +12,68 @@ import 'package:sked/widgets/sked_task_session.dart';
 import '../support/workspace_harness.dart';
 
 void main() {
+  for (final waitForTransition in [false, true]) {
+    testWidgets(
+      'adaptive picker retires with owner and preserves newer route; wait=$waitForTransition',
+      (t) async {
+        final p = await workspaceProvider();
+        addTearDown(p.dispose);
+        late BuildContext home;
+        await t.pumpWidget(
+          WorkspaceHarness(
+            provider: p,
+            home: Builder(
+              builder: (c) {
+                home = c;
+                return const SizedBox();
+              },
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+        late BuildContext owner;
+        final route = MaterialPageRoute<void>(
+          builder: (c) {
+            owner = c;
+            return const Scaffold(body: Text('Owner'));
+          },
+        );
+        Navigator.of(home).push(route);
+        await t.pumpAndSettle();
+        final results = <String?>[];
+        final picker = showSkedAdaptivePickerDialog<String>(
+          context: owner,
+          routeName: 'owner-retirement',
+          waitForTransitionComplete: waitForTransition,
+          builder: (_) => const SkedTaskDialog(title: Text('Child picker')),
+        ).then(results.add);
+        await t.pumpAndSettle();
+        final childRoute = ModalRoute.of(t.element(find.text('Child picker')))!;
+        final newer = showDialog<void>(
+          context: home,
+          builder: (_) => const AlertDialog(title: Text('Newer task')),
+        );
+        await t.pumpAndSettle();
+        Navigator.of(home).removeRoute(route);
+        await t.pumpAndSettle();
+        await picker;
+        expect(childRoute.isActive, isFalse);
+        expect(find.text('Child picker'), findsNothing);
+        expect(find.text('Newer task'), findsOneWidget);
+        expect(results, [null]);
+        completeSkedTaskRoute(t.element(find.text('Newer task')));
+        await newer;
+        await t.pumpAndSettle();
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox());
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.windows,
+      }),
+    );
+  }
+
   test('session invalidation propagates once and cannot revive', () {
     var valid = true;
     final parent = SkedTaskSession(isTargetCurrent: () => valid);

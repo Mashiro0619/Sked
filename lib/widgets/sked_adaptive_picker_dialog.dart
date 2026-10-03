@@ -25,30 +25,31 @@ Future<T?> showSkedAdaptivePickerDialog<T>({
   bool Function()? isSessionCurrent,
   SkedTaskSession? session,
   bool waitForTransitionComplete = false,
-}) {
+}) async {
   if (!WorkbenchChromeMetrics.of(context).desktop) {
     final provider = Provider.of<TimetableProvider?>(context, listen: false);
     final parentSession =
         session ?? SkedTaskSessionScope.maybeOf(context)?.session;
-    final owner = ModalRoute.of(context);
-    if ((workspace != null &&
-            provider?.isWorkspaceEnabled(workspace) == false) ||
-        parentSession?.isCurrent == false ||
-        isSessionCurrent?.call() == false) {
-      return Future<T?>.value();
-    }
-    return showExpressiveDialog<T>(
-      context: context,
-      builder: (_) => SkedTaskRouteGuard(
-        provider: provider,
-        workspace: workspace,
-        parent: parentSession,
-        isOwnerActive: () => context.mounted && (owner?.isActive ?? true),
-        isTargetCurrent: isSessionCurrent,
-        child: SkedStableTaskBody(builder: builder),
-      ),
-      waitForTransitionComplete: waitForTransitionComplete,
+    final task = SkedTaskSession(
+      provider: provider,
+      workspace: workspace,
+      parent: parentSession,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => context.mounted,
+      isTargetCurrent: isSessionCurrent,
     );
+    try {
+      if (!task.isCurrent) return null;
+      final result = await showExpressiveDialog<T>(
+        context: context,
+        session: task,
+        builder: (_) => SkedStableTaskBody(builder: builder),
+        waitForTransitionComplete: waitForTransitionComplete,
+      );
+      return task.isCurrent ? result : null;
+    } finally {
+      task.dispose();
+    }
   }
   return showSkedPickerTask<T>(
     context: context,

@@ -222,3 +222,8 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 | `8c05e13` | refactor(分类操作): 复用显隐按钮与管理菜单 |
 | `dd4d199` | fix(浮层标题): 保留选择器拖动手柄标识与交互回归 |
 | `bbb0bab` | test(主题颜色): 补充正常错误与保存状态的桌面截图回归 |
+
+### 后续审查修复
+
+- 课程文字颜色重复选择当前模式不再重置 Hex 有效性；实际切换模式时同步颜色输入与草稿，避免错误仍显示却允许保存。回归：`theme_task_safety_test.dart`。
+- 自适应选择器的触控分支同样创建绑定父路由的会话：父路由被外部移除时主动撤销自己的选择器，并拒绝失效结果，不依赖后续数据通知。覆盖 Android／Windows、有无退出动画等待，以及上方无关弹窗保留；回归：`sked_task_session_test.dart`。
