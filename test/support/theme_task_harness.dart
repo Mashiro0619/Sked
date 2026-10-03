@@ -25,6 +25,9 @@ Finder themeTaskKey(String value) => find.byKey(ValueKey(value));
 Future<(TimetableProvider, ThemeTaskStorage)> mountThemeTask(
   WidgetTester t, {
   String kind = 'seed',
+  GlobalKey? captureKey,
+  double textScale = 1,
+  Brightness brightness = Brightness.light,
 }) async {
   t.view.devicePixelRatio = 1;
   t.view.physicalSize = const Size(1440, 1000);
@@ -58,7 +61,15 @@ Future<(TimetableProvider, ThemeTaskStorage)> mountThemeTask(
     p.dispose();
   });
   await t.pumpWidget(
-    WorkspaceHarness(provider: p, home: const ThemeSettingsPage()),
+    RepaintBoundary(
+      key: captureKey,
+      child: WorkspaceHarness(
+        provider: p,
+        home: const ThemeSettingsPage(),
+        textScale: textScale,
+        brightness: brightness,
+      ),
+    ),
   );
   await t.pumpAndSettle();
   final entry = kind == 'seed'
