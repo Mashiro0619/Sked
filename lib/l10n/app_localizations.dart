@@ -5742,11 +5742,11 @@ abstract class AppLocalizations {
   /// **'Custom'**
   String get categoryCustomColor;
 
-  /// No description provided for @categoryHexInvalid.
+  /// No description provided for @colorHexInvalid.
   ///
   /// In en, this message translates to:
   /// **'Enter a six-digit hex color.'**
-  String get categoryHexInvalid;
+  String get colorHexInvalid;
 
   /// No description provided for @categoryColorSlot.
   ///

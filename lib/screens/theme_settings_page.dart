@@ -782,6 +782,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       builder: (context) {
         var popped = false;
         var busy = false;
+        var validHex = true;
         void popOnce() {
           if (popped) return;
           popped = true;
@@ -817,6 +818,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         child: Center(
                           child: SkedCompactColorPicker(
                             colorValue: colorValue,
+                            invalidHexMessage: l10n.colorHexInvalid,
+                            onValidityChanged: (valid) =>
+                                setState(() => validHex = valid),
                             onColorChanged: (updatedColorValue) => setState(() {
                               selectedColor = Color(updatedColorValue);
                             }),
@@ -833,10 +837,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                   child: Text(l10n.cancel),
                 ),
                 FilledButton(
-                  onPressed: (busy || popped)
+                  onPressed: (busy || popped || !validHex)
                       ? null
                       : () async {
-                          if (busy || popped) return;
+                          if (busy || popped || !validHex) return;
                           final submittedColorValue = colorValue;
                           FocusScope.of(context).unfocus();
                           setState(() => busy = true);
@@ -882,6 +886,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       builder: (context) {
         var popped = false;
         var busy = false;
+        var validHex = true;
         void popOnce() {
           if (popped) return;
           popped = true;
@@ -917,6 +922,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         child: Center(
                           child: SkedCompactColorPicker(
                             colorValue: colorValue,
+                            invalidHexMessage: l10n.colorHexInvalid,
+                            onValidityChanged: (valid) =>
+                                setState(() => validHex = valid),
                             onColorChanged: (updatedColorValue) => setState(() {
                               selectedColor = Color(updatedColorValue);
                             }),
@@ -933,10 +941,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                   child: Text(l10n.cancel),
                 ),
                 FilledButton(
-                  onPressed: (busy || popped)
+                  onPressed: (busy || popped || !validHex)
                       ? null
                       : () async {
-                          if (busy || popped) return;
+                          if (busy || popped || !validHex) return;
                           final submittedColorValue = colorValue;
                           FocusScope.of(context).unfocus();
                           setState(() => busy = true);
@@ -982,6 +990,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       builder: (context) {
         var popped = false;
         var busy = false;
+        var validHex = true;
         void popOnce() {
           if (popped) return;
           popped = true;
@@ -1044,6 +1053,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                 }
                                 setState(() {
                                   mode = selection.first;
+                                  validHex = true;
                                 });
                               },
                             ),
@@ -1064,6 +1074,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                         child: Center(
                                           child: SkedCompactColorPicker(
                                             colorValue: colorValue,
+                                            invalidHexMessage:
+                                                l10n.colorHexInvalid,
+                                            onValidityChanged: (valid) =>
+                                                setState(
+                                                  () => validHex = valid,
+                                                ),
                                             onColorChanged:
                                                 (updatedColorValue) =>
                                                     setState(() {
@@ -1091,10 +1107,19 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                   child: Text(l10n.cancel),
                 ),
                 FilledButton(
-                  onPressed: (busy || popped)
+                  onPressed:
+                      (busy ||
+                          popped ||
+                          (mode == colorfulCourseTextColorModeCustom &&
+                              !validHex))
                       ? null
                       : () async {
-                          if (busy || popped) return;
+                          if (busy ||
+                              popped ||
+                              (mode == colorfulCourseTextColorModeCustom &&
+                                  !validHex)) {
+                            return;
+                          }
                           final submittedMode = mode;
                           final submittedColorValue = colorValue;
                           FocusScope.of(context).unfocus();

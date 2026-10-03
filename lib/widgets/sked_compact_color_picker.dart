@@ -102,9 +102,7 @@ class _SkedCompactColorPickerState extends State<SkedCompactColorPicker> {
   }
 
   void _handleHexChanged(String value) {
-    final hex = widget.invalidHexMessage == null
-        ? value.replaceAll('#', '').trim()
-        : value.trim().replaceFirst(RegExp(r'^#'), '');
+    final hex = value.trim().replaceFirst(RegExp(r'^#'), '');
     final valid = RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex);
     if (_valid != valid) setState(() => _valid = valid);
     widget.onValidityChanged?.call(valid);
@@ -198,7 +196,8 @@ class _SkedCompactColorPickerState extends State<SkedCompactColorPicker> {
                   child: TextField(
                     key: const ValueKey('compact-color-picker-hex-field'),
                     controller: _hexController,
-                    maxLength: 7,
+                    // Do not truncate pasted invalid text into a valid color.
+                    // Validation accepts surrounding whitespace without a length filter.
                     decoration: InputDecoration(
                       errorText: _valid ? null : widget.invalidHexMessage,
                       isDense: true,

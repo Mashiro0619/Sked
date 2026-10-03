@@ -3188,7 +3188,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get categoryCustomColor => 'Custom';
 
   @override
-  String get categoryHexInvalid => 'Enter a six-digit hex color.';
+  String get colorHexInvalid => 'Enter a six-digit hex color.';
 
   @override
   String categoryColorSlot(int number) {

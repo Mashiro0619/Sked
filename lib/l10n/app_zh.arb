@@ -2213,6 +2213,6 @@
   "categoryEditColor": "修改分类颜色",
   "categoryThemePalette": "主题配色",
   "categoryCustomColor": "自定义",
-  "categoryHexInvalid": "请输入六位十六进制颜色。",
+  "colorHexInvalid": "请输入六位十六进制颜色。",
   "categoryColorSlot": "主题颜色 {number}"
 }

@@ -2229,7 +2229,7 @@
   "categoryEditColor": "Change category color",
   "categoryThemePalette": "Theme palette",
   "categoryCustomColor": "Custom",
-  "categoryHexInvalid": "Enter a six-digit hex color.",
+  "colorHexInvalid": "Enter a six-digit hex color.",
   "categoryColorSlot": "Theme color {number}",
   "@categoryColorSlot": {"placeholders": {"number": {"type": "int"}}}
 }

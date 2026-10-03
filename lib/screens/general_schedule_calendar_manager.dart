@@ -1262,7 +1262,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
                     showPreview: false,
                     paletteValues: const [],
                     resetToken: _inputRevision,
-                    invalidHexMessage: l.categoryHexInvalid,
+                    invalidHexMessage: l.colorHexInvalid,
                     onValidityChanged: (value) {
                       if (_validHex != value) setState(() => _validHex = value);
                     },

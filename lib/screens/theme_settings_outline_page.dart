@@ -20,6 +20,8 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   late String _outlineMode;
   late double _outlineWidth;
   var _hasPopped = false;
+  bool _validHex = true;
+  bool get _canApply => _followTheme || _validHex;
 
   bool get _blocked => uiCommandBusy || _hasPopped;
 
@@ -56,7 +58,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   }
 
   Future<void> _apply() async {
-    if (_blocked) return;
+    if (_blocked || !_canApply) return;
     FocusScope.of(context).unfocus();
     final provider = context.read<TimetableProvider>();
     final saved = await runUiCommand(
@@ -192,6 +194,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                               !value &&
                                               !_customColorInitialized;
                                           _followTheme = value;
+                                          _validHex = true;
                                           if (initializingCustomColor) {
                                             _customColorValue =
                                                 _derivedThemeColorValue;
@@ -309,6 +312,13 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                                       ),
                                                   child: Center(
                                                     child: SkedCompactColorPicker(
+                                                      invalidHexMessage:
+                                                          l10n.colorHexInvalid,
+                                                      onValidityChanged:
+                                                          (valid) => setState(
+                                                            () => _validHex =
+                                                                valid,
+                                                          ),
                                                       colorValue:
                                                           _customColorValue,
                                                       onColorChanged:
@@ -342,7 +352,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
           bottomNavigationBar: _OutlineSettingsActions(
             busy: _blocked,
             onCancel: _cancel,
-            onApply: () => unawaited(_apply()),
+            onApply: _canApply ? () => unawaited(_apply()) : null,
           ),
         ),
       ),
@@ -359,7 +369,7 @@ class _OutlineSettingsActions extends StatelessWidget {
 
   final bool busy;
   final VoidCallback onCancel;
-  final VoidCallback onApply;
+  final VoidCallback? onApply;
 
   @override
   Widget build(BuildContext context) {

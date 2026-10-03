@@ -3013,7 +3013,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryCustomColor => '自定义';
 
   @override
-  String get categoryHexInvalid => '请输入六位十六进制颜色。';
+  String get colorHexInvalid => '请输入六位十六进制颜色。';
 
   @override
   String categoryColorSlot(int number) {
@@ -6031,7 +6031,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get categoryCustomColor => '自訂';
 
   @override
-  String get categoryHexInvalid => '請輸入六位十六進位顏色。';
+  String get colorHexInvalid => '請輸入六位十六進位顏色。';
 
   @override
   String categoryColorSlot(int number) {

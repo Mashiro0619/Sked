@@ -180,3 +180,4 @@ Windows 实际字体截图由 `integration_test/category_manager_panel_visual_te
 ## 任务行为统一（2026-10-03）
 
 - 主题种子色、普通颜色值和课程文字颜色保存完成后仅完成自己拥有的路由，不关闭后来打开的其他根级任务；失败保留原任务并支持重试。对应回归：`theme_task_safety_test.dart`。
+- 所有颜色编辑入口统一使用 `colorHexInvalid` 和有效性门禁：Hex 接受六位 RGB、可选单个前导 # 与首尾空白；禁止将超长输入截成有效值。非法输入不得提交，重新选色可修正；分类主题槽的原始值保持不变。

@@ -2215,6 +2215,6 @@
   "categoryEditColor": "修改分類顏色",
   "categoryThemePalette": "主題配色",
   "categoryCustomColor": "自訂",
-  "categoryHexInvalid": "請輸入六位十六進位顏色。",
+  "colorHexInvalid": "請輸入六位十六進位顏色。",
   "categoryColorSlot": "主題顏色 {number}"
 }
