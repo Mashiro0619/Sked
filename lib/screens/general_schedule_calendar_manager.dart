@@ -208,7 +208,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                   onPressed: _actionsDisabled
                       ? null
                       : () {
-                          if (_CalendarTaskScope.isCurrent(context)) {
+                          if (SkedTaskSessionScope.isCurrent(context)) {
                             completeEditorRoute(context, direction);
                           }
                         },
@@ -232,13 +232,13 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   }
 
   Future<void> _editCalendarColor(String id, BuildContext anchor) async {
-    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) return;
+    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) return;
     final provider = context.read<TimetableProvider>();
     final schedule = provider.generalSchedules
         .where((item) => item.id == id)
         .firstOrNull;
     if (schedule == null) return;
-    final owner = _CalendarTaskScope.maybeOf(context);
+    final owner = SkedTaskSessionScope.maybeOf(context);
     setState(() => _childTaskOpen = true);
     try {
       await showSkedAdaptivePickerDialog<void>(
@@ -250,15 +250,17 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
         waitForTransitionComplete: true,
         isSessionCurrent: () =>
             mounted &&
-            owner?.isCurrentCallback() != false &&
+            owner?.session.isCurrent != false &&
             provider.generalSchedules.any((item) => item.id == id),
         builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
-          child: _CalendarTaskGuard(
+          child: SkedTaskRouteGuard(
+            workspace: AppMode.general,
             provider: provider,
-            scheduleId: id,
-            isOwnerActive: () => mounted && owner?.isCurrentCallback() != false,
-            lifetime: owner?.lifetime,
+            isTargetCurrent: () =>
+                provider.generalSchedules.any((item) => item.id == id),
+            isOwnerActive: () => mounted && owner?.session.isCurrent != false,
+            parent: owner?.session,
             child: _CalendarColorDialog(provider: provider, schedule: schedule),
           ),
         ),
@@ -272,7 +274,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     GeneralSchedule? schedule,
     BuildContext? anchorContext,
   }) async {
-    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) return;
+    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) return;
     final provider = context.read<TimetableProvider>();
     setState(() => _childTaskOpen = true);
     try {
@@ -291,7 +293,7 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
     required String debugLabel,
     required Future<void> Function() action,
   }) async {
-    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) {
+    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
     setState(() => _actionInProgress = true);
@@ -311,9 +313,9 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
   }
 
   Future<void> _deleteCalendar(GeneralSchedule schedule) async {
-    if (_actionsDisabled || !_CalendarTaskScope.isCurrent(context)) return;
+    if (_actionsDisabled || !SkedTaskSessionScope.isCurrent(context)) return;
     final provider = context.read<TimetableProvider>();
-    final owner = _CalendarTaskScope.maybeOf(context);
+    final owner = SkedTaskSessionScope.maybeOf(context);
     setState(() => _childTaskOpen = true);
     try {
       await showExpressiveDialog<void>(
@@ -321,10 +323,11 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
         waitForTransitionComplete: true,
         builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
           value: provider,
-          child: _CalendarTaskGuard(
+          child: SkedTaskRouteGuard(
+            workspace: AppMode.general,
             provider: provider,
-            isOwnerActive: () => mounted && owner?.isCurrentCallback() != false,
-            lifetime: owner?.lifetime,
+            isOwnerActive: () => mounted && owner?.session.isCurrent != false,
+            parent: owner?.session,
             child: _DeleteCalendarDialog(
               provider: provider,
               schedule: schedule,
@@ -374,12 +377,17 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
 
   @override
   Widget guardDiscardConfirmation(Widget dialog) {
-    final owner = _CalendarTaskScope.maybeOf(context);
-    return _CalendarTaskGuard(
+    final owner = SkedTaskSessionScope.maybeOf(context);
+    return SkedTaskRouteGuard(
+      workspace: AppMode.general,
       provider: widget.provider,
-      scheduleId: widget.schedule?.id,
-      isOwnerActive: () => mounted && owner?.isCurrentCallback() != false,
-      lifetime: owner?.lifetime,
+      isTargetCurrent: () =>
+          widget.schedule == null ||
+          widget.provider.generalSchedules.any(
+            (item) => item.id == widget.schedule!.id,
+          ),
+      isOwnerActive: () => mounted && owner?.session.isCurrent != false,
+      parent: owner?.session,
       child: dialog,
     );
   }
@@ -402,7 +410,7 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
     if (_busy ||
         _popped ||
         !_canSave ||
-        !_CalendarTaskScope.isCurrent(context)) {
+        !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
     FocusScope.of(context).unfocus();
@@ -419,7 +427,7 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
             )
           : widget.provider.renameGeneralSchedule(widget.schedule!.id, name),
     );
-    if (!mounted || !_CalendarTaskScope.isCurrent(context)) return;
+    if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     if (saved) {
       closeEditor();
     } else {
@@ -512,7 +520,7 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
   Future<void> _delete() async {
     if (_busy ||
         _popped ||
-        !_CalendarTaskScope.isCurrent(context) ||
+        !SkedTaskSessionScope.isCurrent(context) ||
         !widget.provider.generalSchedules.any(
           (item) => item.id == widget.schedule.id,
         )) {
@@ -524,7 +532,7 @@ class _DeleteCalendarDialogState extends State<_DeleteCalendarDialog>
       debugLabel: 'Delete general calendar',
       command: () => widget.provider.deleteGeneralSchedule(widget.schedule.id),
     );
-    if (!mounted || !_CalendarTaskScope.isCurrent(context)) return;
+    if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     if (deleted) {
       _popped = true;
       completeEditorRoute(context);
@@ -825,11 +833,11 @@ Future<void> _showCalendarNameTask(
   BuildContext? anchorContext,
   SkedFloatingPlacement placement = SkedFloatingPlacement.below,
   bool Function()? isOwnerActive,
-  _CalendarTaskLifetime? lifetime,
+  SkedTaskSession? lifetime,
 }) {
   // Capture the scope while the owner is active, not via ancestor lookups after
   // a parent route has been removed but its exit transition is still mounted.
-  final owner = _CalendarTaskScope.maybeOf(context);
+  final owner = SkedTaskSessionScope.maybeOf(context);
   return showExpressiveDialog<void>(
     context: context,
     waitForTransitionComplete: true,
@@ -839,140 +847,20 @@ Future<void> _showCalendarNameTask(
     ),
     builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
       value: provider,
-      child: _CalendarTaskGuard(
+      child: SkedTaskRouteGuard(
+        workspace: AppMode.general,
         provider: provider,
-        scheduleId: schedule?.id,
-        lifetime: lifetime ?? owner?.lifetime,
+        isTargetCurrent: () =>
+            schedule == null ||
+            provider.generalSchedules.any((item) => item.id == schedule.id),
+        parent: lifetime ?? owner?.session,
         isOwnerActive:
             isOwnerActive ??
-            () => context.mounted && owner?.isCurrentCallback() != false,
+            () => context.mounted && owner?.session.isCurrent != false,
         child: _CalendarNameDialog(provider: provider, schedule: schedule),
       ),
     ),
   );
-}
-
-/// One open management/create session; invalidation is irreversible even if the
-/// workspace becomes active again before the next frame. Every child shares it.
-class _CalendarTaskLifetime extends ChangeNotifier {
-  bool _active = true;
-  bool get isActive => _active;
-
-  void invalidate() {
-    if (!_active) return;
-    _active = false;
-    notifyListeners();
-  }
-}
-
-/// Own exactly this route. Child tasks get their own guard and never pop a newer
-/// root route when a data replacement or workspace invalidation settles.
-class _CalendarTaskGuard extends StatefulWidget {
-  const _CalendarTaskGuard({
-    required this.provider,
-    required this.child,
-    this.scheduleId,
-    this.isOwnerActive,
-    this.lifetime,
-  });
-  final TimetableProvider provider;
-  final String? scheduleId;
-  final bool Function()? isOwnerActive;
-  final _CalendarTaskLifetime? lifetime;
-  final Widget child;
-  @override
-  State<_CalendarTaskGuard> createState() => _CalendarTaskGuardState();
-}
-
-class _CalendarTaskGuardState extends State<_CalendarTaskGuard> {
-  late final Object _session = widget.provider.dataSessionToken;
-  ModalRoute<dynamic>? _route;
-  bool _scheduled = false, _invalidated = false;
-  bool _valid() {
-    final valid =
-        mounted &&
-        !_invalidated &&
-        widget.lifetime?.isActive != false &&
-        (_route?.isActive ?? true) &&
-        identical(_session, widget.provider.dataSessionToken) &&
-        widget.provider.isWorkspaceEnabled(AppMode.general) &&
-        widget.isOwnerActive?.call() != false &&
-        (widget.scheduleId == null ||
-            widget.provider.generalSchedules.any(
-              (item) => item.id == widget.scheduleId,
-            ));
-    if (!valid) _invalidated = true;
-    return valid;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    widget.provider.addListener(_check);
-    widget.lifetime?.addListener(_check);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _route = ModalRoute.of(context);
-    _check();
-  }
-
-  @override
-  void didUpdateWidget(_CalendarTaskGuard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.lifetime != widget.lifetime) {
-      oldWidget.lifetime?.removeListener(_check);
-      widget.lifetime?.addListener(_check);
-    }
-    _check();
-  }
-
-  void _check() {
-    if (_scheduled || !mounted) return;
-    _scheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scheduled = false;
-      if (!mounted || _valid()) return;
-      final route = _route;
-      if (route?.isActive == true) route!.navigator?.removeRoute(route);
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
-  @override
-  Widget build(BuildContext context) => _CalendarTaskScope(
-    isCurrentCallback: _valid,
-    lifetime: widget.lifetime,
-    child: widget.child,
-  );
-  @override
-  void dispose() {
-    widget.provider.removeListener(_check);
-    widget.lifetime?.removeListener(_check);
-    super.dispose();
-  }
-}
-
-class _CalendarTaskScope extends InheritedWidget {
-  const _CalendarTaskScope({
-    required this.isCurrentCallback,
-    required this.lifetime,
-    required super.child,
-  });
-  final bool Function() isCurrentCallback;
-  final _CalendarTaskLifetime? lifetime;
-  static _CalendarTaskScope? maybeOf(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<_CalendarTaskScope>();
-  static bool isCurrent(BuildContext context) =>
-      context.mounted &&
-      (context
-              .getInheritedWidgetOfExactType<_CalendarTaskScope>()
-              ?.isCurrentCallback() ??
-          true);
-  @override
-  bool updateShouldNotify(_CalendarTaskScope oldWidget) => false;
 }
 
 class _DesktopCalendarManagerRow extends StatelessWidget {
@@ -1142,7 +1030,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
   }
 
   Future<void> _save() async {
-    if (_blocked || !_validHex || !_CalendarTaskScope.isCurrent(context)) {
+    if (_blocked || !_validHex || !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
     // Untouched theme slots must not turn into resolved RGB just by confirming.
@@ -1159,7 +1047,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
         _selected,
       ),
     );
-    if (!mounted || !_CalendarTaskScope.isCurrent(context)) return;
+    if (!mounted || !SkedTaskSessionScope.isCurrent(context)) return;
     setState(() => _busy = false);
     if (saved) _close();
   }

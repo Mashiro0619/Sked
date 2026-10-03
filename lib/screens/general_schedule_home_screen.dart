@@ -1,3 +1,4 @@
+import '../widgets/sked_task_session.dart';
 import '../utils/mobile_toolbar_layout.dart';
 import '../theme/sked_surface.dart';
 
@@ -212,7 +213,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   bool _dayAgendaOpen = false;
   bool _moreOccurrencesSheetOpen = false;
   bool _calendarManagerOpen = false;
-  _CalendarTaskLifetime? _calendarTaskLifetime;
+  SkedTaskSession? _calendarTaskLifetime;
   bool _settingsPageOpen = false;
   bool _allDayCollapseUpdateInProgress = false;
   DateTime? _dateNavigationTarget;
@@ -2007,12 +2008,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     SkedFloatingPlacement placement = SkedFloatingPlacement.below,
   }) async {
     if (_calendarManagerOpen || !widget.active || !widget.interactive) return;
-    final lifetime = _CalendarTaskLifetime();
+    final lifetime = SkedTaskSession(
+      provider: provider,
+      workspace: AppMode.general,
+    );
     _calendarTaskLifetime = lifetime;
     _setUiBusyFlag(() => _calendarManagerOpen = true);
     final dataSession = provider.dataSessionToken;
     bool ownerActive() =>
-        lifetime.isActive &&
+        lifetime.isCurrent &&
         mounted &&
         widget.active &&
         widget.interactive &&
@@ -2043,10 +2047,11 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 ),
                 builder: (_) => ChangeNotifierProvider<TimetableProvider>.value(
                   value: provider,
-                  child: _CalendarTaskGuard(
+                  child: SkedTaskRouteGuard(
+                    workspace: AppMode.general,
                     provider: provider,
                     isOwnerActive: ownerActive,
-                    lifetime: lifetime,
+                    parent: lifetime,
                     child: const _CalendarManagerPage(desktopPanel: true),
                   ),
                 ),
