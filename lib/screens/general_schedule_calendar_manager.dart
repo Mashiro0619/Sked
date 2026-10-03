@@ -158,58 +158,48 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
                     child: add,
                   ),
             closeEnabled: !_actionsDisabled,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                UiCommandBusyIndicator(busy: _actionInProgress),
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 400),
-                    child: ListView.separated(
-                      key: const PageStorageKey('calendar-manager-list'),
-                      shrinkWrap: true,
-                      primary: false,
-                      padding: EdgeInsets.zero,
-                      itemCount: provider.generalSchedules.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final schedule = provider.generalSchedules[index];
-                        return _DesktopCalendarManagerRow(
-                          schedule: schedule,
-                          disabled: _actionsDisabled,
-                          onName: (anchor) => unawaited(
-                            _editCalendarName(
-                              schedule: schedule,
-                              anchorContext: anchor,
-                            ),
-                          ),
-                          onColor: (anchor) => unawaited(
-                            _editCalendarColor(schedule.id, anchor),
-                          ),
-                          onVisibility: () => unawaited(
-                            _runCalendarAction(
-                              debugLabel: 'Update calendar visibility',
-                              action: () async {
-                                final latest = provider.generalSchedules
-                                    .where((item) => item.id == schedule.id)
-                                    .firstOrNull;
-                                if (latest != null) {
-                                  await provider
-                                      .updateGeneralScheduleVisibility(
-                                        latest.id,
-                                        !latest.isVisible,
-                                      );
-                                }
-                              },
-                            ),
-                          ),
-                          onDelete: () => unawaited(_deleteCalendar(schedule)),
-                        );
-                      },
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 400),
+              child: ListView.separated(
+                key: const PageStorageKey('calendar-manager-list'),
+                shrinkWrap: true,
+                primary: false,
+                padding: EdgeInsets.zero,
+                itemCount: provider.generalSchedules.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final schedule = provider.generalSchedules[index];
+                  return _DesktopCalendarManagerRow(
+                    schedule: schedule,
+                    disabled: _actionsDisabled,
+                    onName: (anchor) => unawaited(
+                      _editCalendarName(
+                        schedule: schedule,
+                        anchorContext: anchor,
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                    onColor: (anchor) =>
+                        unawaited(_editCalendarColor(schedule.id, anchor)),
+                    onVisibility: () => unawaited(
+                      _runCalendarAction(
+                        debugLabel: 'Update calendar visibility',
+                        action: () async {
+                          final latest = provider.generalSchedules
+                              .where((item) => item.id == schedule.id)
+                              .firstOrNull;
+                          if (latest != null) {
+                            await provider.updateGeneralScheduleVisibility(
+                              latest.id,
+                              !latest.isVisible,
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    onDelete: () => unawaited(_deleteCalendar(schedule)),
+                  );
+                },
+              ),
             ),
             actions: [
               for (final direction in SettingsTransferDirection.values)

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -15,6 +16,17 @@ import '../test/support/workspace_harness.dart';
 Finder k(String id) => find.byKey(ValueKey(id));
 Finder inside(Finder parent, String key) =>
     find.descendant(of: parent, matching: k(key));
+
+class _VisibilitySaveStorage extends WorkspaceMemoryStorage {
+  _VisibilitySaveStorage(super.data);
+  Completer<void>? pending;
+  @override
+  Future<void> save(AppData data) async {
+    await pending?.future;
+    await super.save(data);
+  }
+}
+
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('category management and color panels Windows font screenshots', (
@@ -34,13 +46,16 @@ void main() {
         for (final rtl in [false, true]) {
           t.view.devicePixelRatio = 1;
           t.view.physicalSize = const Size(1440, 900);
-          final p = await workspaceProvider(
-            mode: AppMode.general,
-            storage: categoryManagerStorage(
+          final storage = _VisibilitySaveStorage(
+            categoryManagerStorage(
               locale: locale,
               count: scale == 2 ? 16 : 4,
               longNames: scale == 2,
-            ),
+            ).data,
+          );
+          final p = await workspaceProvider(
+            mode: AppMode.general,
+            storage: storage,
           );
           if (scale == 2) await p.updateThemeSeedColorValue(0xff008577);
           final key = GlobalKey();
@@ -81,6 +96,29 @@ void main() {
 
           expect(k('category-manager-panel'), findsOneWidget);
           await capture('manager');
+          final save = Completer<void>();
+          storage.pending = save;
+          try {
+            await t.tap(k('calendar-visibility-category-1'));
+            await t.pump();
+            await t.pump(const Duration(seconds: 1));
+            expect(
+              find.descendant(
+                of: k('category-manager-panel'),
+                matching: find.byType(LinearProgressIndicator),
+              ),
+              findsNothing,
+            );
+            expect(
+              t.widget<Switch>(k('calendar-visibility-category-1')).onChanged,
+              isNull,
+            );
+            await capture('visibility-saving');
+          } finally {
+            save.complete();
+            storage.pending = null;
+            await t.pumpAndSettle();
+          }
           await t.tap(k('calendar-color-category-1'));
           await t.pumpAndSettle();
           expect(k('category-color-dialog'), findsOneWidget);

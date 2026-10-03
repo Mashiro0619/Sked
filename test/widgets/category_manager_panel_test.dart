@@ -900,4 +900,60 @@ void main() {
       );
     }
   }
+  testWidgets(
+    'slow visibility save shows no progress bar and keeps mutation and exit guards',
+    (t) async {
+      final storage = GateStorage(categoryManagerStorage().data);
+      final p = await mount(t, storage: storage);
+      final surfaceBefore = t.getRect(k('floating-form-surface'));
+      final gate = Completer<void>();
+      storage.gate = gate;
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      final writesBefore = storage.writes;
+      final button = k('calendar-visibility-category-1');
+      await t.tap(button);
+      await t.pump();
+      await t.pump(const Duration(seconds: 1));
+      expect(storage.writes, writesBefore + 1);
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byType(LinearProgressIndicator),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsNothing,
+      );
+      expect(t.getRect(k('floating-form-surface')), surfaceBefore);
+      expect(t.widget<Switch>(button).onChanged, isNull);
+      await t.tap(button);
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.tapAt(const Offset(1200, 850));
+      await t.pump();
+      await p.setWorkspaceEnabled(AppMode.general, false);
+      expect(p.isWorkspaceEnabled(AppMode.general), isTrue);
+      expect(panel, findsOneWidget);
+      expect(storage.writes, writesBefore + 1);
+      gate.complete();
+      await t.pumpAndSettle();
+      expect(p.generalSchedules[1].isVisible, isFalse);
+      expect(t.widget<Switch>(button).onChanged, isNotNull);
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byType(LinearProgressIndicator),
+        ),
+        findsNothing,
+      );
+      await finish(t);
+    },
+    variant: desktop,
+  );
 }
