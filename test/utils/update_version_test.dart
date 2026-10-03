@@ -2,6 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/utils/update_version.dart';
 
 void main() {
+  test('RC.2 upgrades RC.1 but remains below the final release', () {
+    expect(
+      compareUpdateVersions('2.3.0-rc.2+16', '2.3.0-rc.1+15'),
+      greaterThan(0),
+    );
+    expect(compareUpdateVersions('2.3.0-rc.2+16', '2.3.0'), lessThan(0));
+    expect(normalizeUpdateVersion('v2.3.0-rc.2+16'), '2.3.0-rc.2');
+    expect(isPrereleaseUpdateVersion('v2.3.0-rc.2+16'), isTrue);
+  });
   test(
     'normalization retains prereleases but ignores tag prefix and build',
     () {

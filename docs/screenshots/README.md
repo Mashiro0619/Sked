@@ -34,8 +34,11 @@
 ~~~powershell
 flutter pub get
 $revision = git rev-parse --short HEAD
-# 与 pubspec.yaml 的 version 保持一致 / Match pubspec.yaml.
-$version = '2.3.0-rc.1+15'
+# 读取实际版本；上方历史快照及 manifest 不随升版修改。
+# Read the current version without rewriting historical capture provenance.
+$versionLine = Select-String -LiteralPath 'pubspec.yaml' -Pattern '^version:\s*(\S+)\s*$'
+if (@($versionLine).Count -ne 1) { throw 'Expected one version in pubspec.yaml.' }
+$version = $versionLine.Matches[0].Groups[1].Value
 $capture = Join-Path (Get-Location) '.scratch/docs-desktop'
 flutter test integration_test/documentation_screenshots_test.dart -d windows `
   --dart-define="SKED_VISUAL_OUTPUT=$capture" `

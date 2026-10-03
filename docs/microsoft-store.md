@@ -38,7 +38,7 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 4. 从生成的 MSIX 中读取 `AppxManifest.xml`，核对名称、Publisher、显示发布者、版本、架构、应用 ID 和通知激活器，拒绝带本地签名的提交包。
 5. 在 `build/microsoft-store/` 输出独立命名的商店提交文件。
 
-按当前版本运行 Store 构建时，预期输出为 `build/microsoft-store/sked-v2.3.0-rc.1-store-x64.msix`；这里说明命名规则，不代表已生成、安装或验收该包。这是供 Partner Center 使用的未签名提交包，不是可以直接双击侧载的受信任安装包。
+按当前版本运行 Store 构建时，预期输出为 `build/microsoft-store/sked-v2.3.0-rc.2-store-x64.msix`；这里说明命名规则，不代表已生成、安装或验收该包。这是供 Partner Center 使用的未签名提交包，不是可以直接双击侧载的受信任安装包。
 
 **不要把上次的构建目录直接拿来切换渠道。** 脚本的 Store、Unsigned 和签名模式均会重新编译正确渠道。普通便携 ZIP 仍需先运行不带商店标记的 `flutter build windows --release`，再打包完整 Release 目录。
 
@@ -50,7 +50,8 @@ pwsh -NoProfile -File tool/build_msix.ps1 -Store
 | --- | --- |
 | `2.3.0-alpha.1+14` | `2.3.14.0` |
 | `2.3.0-rc.1+15` | `2.3.15.0` |
-| `2.3.0+16` | `2.3.16.0` |
+| `2.3.0-rc.2+16` | `2.3.16.0` |
+| `2.3.0+17`（后续正式版示例，未预留） | `2.3.17.0` |
 
 构建号必须明确填写、为正整数并持续递增，不要在 Alpha、RC 或正式版之间重置；各数字段须在 0–65535 内，主版本不能为零。补丁版本变化同样需要递增构建号，因为 Store 包版本第三段不使用 SemVer patch。上传前还须核对后台既有版本，不能把本地规则当成后台已接受的证明。
 
