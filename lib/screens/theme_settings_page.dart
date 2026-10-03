@@ -1,3 +1,4 @@
+import '../widgets/sked_color_draft.dart';
 import '../widgets/sked_task_session.dart';
 import '../widgets/sked_task_submission_controller.dart';
 import '../widgets/desktop_window_host.dart';
@@ -38,11 +39,6 @@ const _themeSeedOptions = skedColorPresets;
 
 bool _isPresetThemeColor(int colorValue) =>
     _themeSeedOptions.contains(colorValue);
-
-String _formatColorHex(int colorValue) {
-  final rgb = colorValue & 0x00FFFFFF;
-  return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
-}
 
 String _formatOutlineWidthNumber(double width) {
   return width.toStringAsFixed(width % 1 == 0 ? 0 : 1);
@@ -432,7 +428,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           key: const ValueKey('settings-theme-seed'),
           leading: const Icon(Icons.palette_outlined),
           title: l.themeColor,
-          value: _formatColorHex(provider.themeSeedColorValue),
+          value: formatSkedColorHex(provider.themeSeedColorValue),
           trailing: Container(
             width: 24,
             height: 24,
@@ -829,14 +825,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     BuildContext? anchorContext,
   }) async {
     final l10n = AppLocalizations.of(context);
-    var selectedColor = Color(provider.themeSeedColorValue);
+    final draft = SkedColorDraft(provider.themeSeedColorValue);
     await _showGuardedColorDialog(
       context: context,
       target: provider,
       anchorContext: anchorContext,
       builder: (context, submission) {
         var popped = false;
-        var validHex = true;
+
         void popOnce() {
           if (popped) return;
           popped = true;
@@ -847,7 +843,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           listenable: submission,
           builder: (context, _) => StatefulBuilder(
             builder: (context, setState) {
-              final colorValue = selectedColor.toARGB32();
+              final colorValue = draft.value;
               return _PersistingThemeDialog(
                 busy: submission.busy,
                 popped: popped,
@@ -861,7 +857,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         if (SkedTaskDialogScope.maybeOf(context) == null)
                           _PreviewBanner(
                             title: l10n.themeColor,
-                            value: _formatColorHex(colorValue),
+                            value: formatSkedColorHex(colorValue),
                             preview: _ThemeColorPreview(
                               colorValue: colorValue,
                               selected: true,
@@ -876,10 +872,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               colorValue: colorValue,
                               invalidHexMessage: l10n.colorHexInvalid,
                               onValidityChanged: (valid) =>
-                                  setState(() => validHex = valid),
+                                  setState(() => draft.setValidity(valid)),
                               onColorChanged: (updatedColorValue) =>
                                   setState(() {
-                                    selectedColor = Color(updatedColorValue);
+                                    draft.select(updatedColorValue);
                                   }),
                             ),
                           ),
@@ -894,12 +890,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                     child: Text(l10n.cancel),
                   ),
                   FilledButton(
-                    onPressed: (submission.busy || popped || !validHex)
+                    onPressed: (submission.busy || popped || !draft.validHex)
                         ? null
                         : () async {
                             if (submission.busy ||
                                 popped ||
-                                !validHex ||
+                                !draft.validHex ||
                                 !submission.isCurrent) {
                               return;
                             }
@@ -943,7 +939,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
     required Future<void> Function(int colorValue) onApply,
   }) async {
     final l10n = AppLocalizations.of(context);
-    var selectedColor = Color(initialColorValue);
+    final draft = SkedColorDraft(initialColorValue);
     await _showGuardedColorDialog(
       context: context,
       target: target,
@@ -951,7 +947,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       anchorContext: anchorContext,
       builder: (context, submission) {
         var popped = false;
-        var validHex = true;
+
         void popOnce() {
           if (popped) return;
           popped = true;
@@ -962,7 +958,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           listenable: submission,
           builder: (context, _) => StatefulBuilder(
             builder: (context, setState) {
-              final colorValue = selectedColor.toARGB32();
+              final colorValue = draft.value;
               return _PersistingThemeDialog(
                 busy: submission.busy,
                 popped: popped,
@@ -976,7 +972,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         if (SkedTaskDialogScope.maybeOf(context) == null)
                           _PreviewBanner(
                             title: previewTitle,
-                            value: _formatColorHex(colorValue),
+                            value: formatSkedColorHex(colorValue),
                             preview: _ThemeColorPreview(
                               colorValue: colorValue,
                               selected: true,
@@ -991,10 +987,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                               colorValue: colorValue,
                               invalidHexMessage: l10n.colorHexInvalid,
                               onValidityChanged: (valid) =>
-                                  setState(() => validHex = valid),
+                                  setState(() => draft.setValidity(valid)),
                               onColorChanged: (updatedColorValue) =>
                                   setState(() {
-                                    selectedColor = Color(updatedColorValue);
+                                    draft.select(updatedColorValue);
                                   }),
                             ),
                           ),
@@ -1009,12 +1005,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                     child: Text(l10n.cancel),
                   ),
                   FilledButton(
-                    onPressed: (submission.busy || popped || !validHex)
+                    onPressed: (submission.busy || popped || !draft.validHex)
                         ? null
                         : () async {
                             if (submission.busy ||
                                 popped ||
-                                !validHex ||
+                                !draft.validHex ||
                                 !submission.isCurrent) {
                               return;
                             }
@@ -1052,10 +1048,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
   }) async {
     final l10n = AppLocalizations.of(context);
     var mode = provider.colorfulCourseTextColorMode;
-    var colorValue = _effectiveUiColorValue(
-      context,
-      provider,
-      colorfulCourseTextColorKey,
+    final draft = SkedColorDraft(
+      _effectiveUiColorValue(context, provider, colorfulCourseTextColorKey),
     );
     await _showGuardedColorDialog(
       context: context,
@@ -1063,7 +1057,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
       anchorContext: anchorContext,
       builder: (context, submission) {
         var popped = false;
-        var validHex = true;
+
         void popOnce() {
           if (popped) return;
           popped = true;
@@ -1074,6 +1068,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
           listenable: submission,
           builder: (context, _) => StatefulBuilder(
             builder: (context, setState) {
+              final colorValue = draft.value;
               final modeLabel = mode == colorfulCourseTextColorModeCustom
                   ? l10n.themeColorCourseTextCustom
                   : l10n.themeColorCourseTextAuto;
@@ -1091,7 +1086,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                           _PreviewBanner(
                             title: l10n.themeColorCourseText,
                             value: mode == colorfulCourseTextColorModeCustom
-                                ? '$modeLabel - ${_formatColorHex(colorValue)}'
+                                ? '$modeLabel - ${formatSkedColorHex(colorValue)}'
                                 : modeLabel,
                             preview: _ThemeColorPreview(
                               colorValue: colorValue,
@@ -1128,7 +1123,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                   }
                                   setState(() {
                                     mode = selection.first;
-                                    validHex = true;
+                                    draft.validHex = true;
                                   });
                                 },
                               ),
@@ -1156,13 +1151,16 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                                                   l10n.colorHexInvalid,
                                               onValidityChanged: (valid) =>
                                                   setState(
-                                                    () => validHex = valid,
+                                                    () => draft.setValidity(
+                                                      valid,
+                                                    ),
                                                   ),
                                               onColorChanged:
                                                   (updatedColorValue) =>
                                                       setState(() {
-                                                        colorValue =
-                                                            updatedColorValue;
+                                                        draft.select(
+                                                          updatedColorValue,
+                                                        );
                                                       }),
                                             ),
                                           ),
@@ -1191,14 +1189,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage>
                         (submission.busy ||
                             popped ||
                             (mode == colorfulCourseTextColorModeCustom &&
-                                !validHex))
+                                !draft.validHex))
                         ? null
                         : () async {
                             if (!submission.isCurrent ||
                                 submission.busy ||
                                 popped ||
                                 (mode == colorfulCourseTextColorModeCustom &&
-                                    !validHex)) {
+                                    !draft.validHex)) {
                               return;
                             }
                             final submittedMode = mode;
@@ -1315,7 +1313,7 @@ class _SingleThemeColorSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _formatColorHex(provider.themeSeedColorValue),
+                formatSkedColorHex(provider.themeSeedColorValue),
                 textAlign: TextAlign.end,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1334,7 +1332,7 @@ class _SingleThemeColorSection extends StatelessWidget {
                     for (final colorValue in _themeSeedOptions)
                       _ThemeColorOption(
                         key: ValueKey(
-                          'theme-seed-color-${_formatColorHex(colorValue)}',
+                          'theme-seed-color-${formatSkedColorHex(colorValue)}',
                         ),
                         colorValue: colorValue,
                         selected: provider.themeSeedColorValue == colorValue,
@@ -1351,7 +1349,7 @@ class _SingleThemeColorSection extends StatelessWidget {
             leading: const Icon(Icons.colorize_outlined),
             title: l10n.themeCustomColor,
             value: hasCustomColor
-                ? _formatColorHex(provider.themeSeedColorValue)
+                ? formatSkedColorHex(provider.themeSeedColorValue)
                 : null,
             semanticSelected: hasCustomColor,
             trailing: _ThemeColorPreview(
@@ -1456,7 +1454,7 @@ class _OutlineSettingsCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 _SummaryValueRow(
                   label: l10n.liveCourseOutlineEffectiveColor,
-                  value: Text(_formatColorHex(effectiveOutlineColorValue)),
+                  value: Text(formatSkedColorHex(effectiveOutlineColorValue)),
                 ),
                 const SizedBox(height: 10),
                 _SummaryValueRow(
@@ -1638,7 +1636,7 @@ class _ThemeColorPreview extends StatelessWidget {
           : null,
     );
     return Semantics(
-      label: _formatColorHex(colorValue),
+      label: formatSkedColorHex(colorValue),
       selected: onTap == null ? null : selected,
       button: onTap != null,
       onTap: onTap,
@@ -1758,7 +1756,7 @@ class _ColorValueRow extends StatelessWidget {
               children: [
                 preview,
                 Text(
-                  _formatColorHex(colorValue),
+                  formatSkedColorHex(colorValue),
                   textAlign: TextAlign.end,
                   style: textTheme.bodyMedium,
                 ),

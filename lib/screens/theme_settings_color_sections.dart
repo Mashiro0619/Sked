@@ -142,7 +142,7 @@ class _ColorValueTile extends StatelessWidget {
     return SettingsConnectedTile(
       leading: const Icon(Icons.palette_outlined),
       title: title,
-      value: _formatColorHex(colorValue),
+      value: formatSkedColorHex(colorValue),
       trailing: Container(
         width: 24,
         height: 24,

@@ -1016,10 +1016,11 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
         SkedTaskSubmissionHost<_CalendarColorDialog> {
   @override
   AppMode get submissionWorkspace => AppMode.general;
-  late int _selected = widget.schedule.colorValue;
+  late final _colorDraft = SkedColorDraft(widget.schedule.colorValue);
+  int get _selected => _colorDraft.value;
   bool get _busy => taskSubmission.busy;
-  bool _popped = false, _validHex = true;
-  int _inputRevision = 0;
+  bool _popped = false;
+  bool get _validHex => _colorDraft.validHex;
   bool get _blocked => _busy || _popped;
   @override
   AppMode get routeWorkspace => AppMode.general;
@@ -1036,7 +1037,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
       return;
     }
     // Untouched theme slots must not turn into resolved RGB just by confirming.
-    if (_selected == widget.schedule.colorValue) {
+    if (!_colorDraft.changed) {
       _close();
       return;
     }
@@ -1115,9 +1116,7 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
                             normalizeGeneralCalendarColorValue(_selected) ==
                             generalCalendarSlotColorValues[i],
                         onPressed: () => setState(() {
-                          _selected = generalCalendarSlotColorValues[i];
-                          _validHex = true;
-                          _inputRevision++;
+                          _colorDraft.select(generalCalendarSlotColorValues[i]);
                         }),
                         icon: Container(
                           width: 24,
@@ -1149,13 +1148,15 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
                     colorValue: resolved.toARGB32(),
                     showPreview: false,
                     paletteValues: const [],
-                    resetToken: _inputRevision,
+                    resetToken: _colorDraft.inputRevision,
                     invalidHexMessage: l.colorHexInvalid,
                     onValidityChanged: (value) {
-                      if (_validHex != value) setState(() => _validHex = value);
+                      if (_validHex != value) {
+                        setState(() => _colorDraft.setValidity(value));
+                      }
                     },
                     onColorChanged: (value) =>
-                        setState(() => _selected = value),
+                        setState(() => _colorDraft.select(value)),
                   ),
                 ),
               ],

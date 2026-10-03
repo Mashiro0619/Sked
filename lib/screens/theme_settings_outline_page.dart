@@ -15,12 +15,15 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
   late final int _derivedThemeColorValue;
   late bool _enabled;
   late bool _followTheme;
-  late int _customColorValue;
+  late final SkedColorDraft _colorDraft;
+  int get _customColorValue => _colorDraft.value;
+  set _customColorValue(int value) => _colorDraft.select(value);
   late bool _customColorInitialized;
   late String _outlineMode;
   late double _outlineWidth;
   var _hasPopped = false;
-  bool _validHex = true;
+  bool get _validHex => _colorDraft.validHex;
+  set _validHex(bool valid) => _colorDraft.setValidity(valid);
   bool get _canApply => _followTheme || _validHex;
 
   bool get _blocked => uiCommandBusy || _hasPopped;
@@ -50,7 +53,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
     );
     _enabled = provider.liveCourseOutlineEnabled;
     _followTheme = provider.liveCourseOutlineFollowTheme;
-    _customColorValue = provider.liveCourseOutlineColorValue;
+    _colorDraft = SkedColorDraft(provider.liveCourseOutlineColorValue);
     _customColorInitialized = provider.liveCourseOutlineCustomColorInitialized;
     _outlineMode = provider.liveCourseOutlineMode;
     _outlineWidth = provider.liveCourseOutlineWidth;
@@ -150,7 +153,7 @@ class _ThemeSettingsOutlinePageState extends State<_ThemeSettingsOutlinePage>
                                 _PreviewBanner(
                                   title: l10n.liveCourseOutlineEffectiveColor,
                                   value:
-                                      '${_formatColorHex(effectiveColorValue)} - ${l10n.liveCourseOutlineWidth} ${_formatOutlineWidthValue(context, _outlineWidth)}',
+                                      '${formatSkedColorHex(effectiveColorValue)} - ${l10n.liveCourseOutlineWidth} ${_formatOutlineWidthValue(context, _outlineWidth)}',
                                   preview: _OutlineColorPreview(
                                     colorValue: effectiveColorValue,
                                     borderWidth: _outlineWidth,

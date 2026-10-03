@@ -1,3 +1,5 @@
+import 'sked_color_draft.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
@@ -102,12 +104,11 @@ class _SkedCompactColorPickerState extends State<SkedCompactColorPicker> {
   }
 
   void _handleHexChanged(String value) {
-    final hex = value.trim().replaceFirst(RegExp(r'^#'), '');
-    final valid = RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex);
+    final colorValue = SkedColorDraft.parseHex(value);
+    final valid = colorValue != null;
     if (_valid != valid) setState(() => _valid = valid);
     widget.onValidityChanged?.call(valid);
-    if (!valid) return;
-    final colorValue = 0xFF000000 | int.parse(hex, radix: 16);
+    if (colorValue == null) return;
     _syncedHexValue = colorValue;
     widget.onColorChanged(colorValue);
   }
