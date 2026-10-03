@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/widgets/sked_floating_surface.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/timetable_provider.dart';
@@ -49,7 +51,7 @@ Future<(TimetableProvider, _Storage)> _fixture() async {
 void main() {
   for (final width in [393.0, 1280.0]) {
     testWidgets(
-      'period set entry uses the existing dialog at $width, not a manager page',
+      'period set entry uses the adaptive picker at $width, not a manager page',
       (t) async {
         _viewport(t, Size(width, 900));
         final p = await workspaceProvider();
@@ -61,7 +63,20 @@ void main() {
         await t.pumpAndSettle();
         await _open(t, 'settings-period-times');
         expect(find.byType(PeriodTimeSetPickerDialogView), findsOneWidget);
-        expect(find.byType(AlertDialog), findsOneWidget);
+        final view = find.byType(PeriodTimeSetPickerDialogView);
+        final route = ModalRoute.of(t.element(view))!;
+        expect(route, isNot(isA<PageRoute<dynamic>>()));
+        if (defaultTargetPlatform == TargetPlatform.windows) {
+          expect(find.byType(AlertDialog), findsNothing);
+          expect(find.byType(SkedFloatingSurface), findsOneWidget);
+          expect(_key('sked-picker-drag-handle'), findsOneWidget);
+          expect(route.barrierColor, Colors.transparent);
+        } else {
+          expect(find.byType(AlertDialog), findsOneWidget);
+          expect(find.byType(SkedFloatingSurface), findsNothing);
+          expect(_key('sked-picker-drag-handle'), findsNothing);
+          expect(route.barrierColor, isNot(Colors.transparent));
+        }
         expect(find.byType(PeriodTimeSetManagerPage), findsNothing);
         final picker = t.widget<PeriodTimeSetPickerDialogView>(
           find.byType(PeriodTimeSetPickerDialogView),
@@ -73,7 +88,10 @@ void main() {
         expect(_key('settings-period-times').hitTestable(), findsOneWidget);
         expect(t.takeException(), isNull);
       },
-      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+      variant: TargetPlatformVariant({
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      }),
     );
   }
 

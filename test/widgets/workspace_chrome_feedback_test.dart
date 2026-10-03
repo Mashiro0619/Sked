@@ -277,8 +277,20 @@ void main() {
         _key('calendar-manager-tile-${p.generalMode.activeScheduleId}'),
         findsOneWidget,
       );
-      await t.tap(find.byType(BackButton).hitTestable().first);
+      final manager = _key('category-manager-panel');
+      expect(manager, findsOneWidget);
+      final route = ModalRoute.of(t.element(manager))!;
+      expect(route, isNot(isA<PageRoute<dynamic>>()));
+      expect(route.barrierColor, Colors.transparent);
+      final close = find.descendant(
+        of: manager,
+        matching: _key('floating-form-close'),
+      );
+      expect(close.hitTestable(), findsOneWidget);
+      await t.tap(close);
       await t.pumpAndSettle();
+      expect(manager, findsNothing);
+      expect(_key('workspace-resource-open').hitTestable(), findsOneWidget);
       await t.tap(_key('workspace-resource-settings'));
       await t.pumpAndSettle();
       await t.ensureVisible(_key('settings-general-transfer'));
