@@ -128,7 +128,7 @@ class SkedTaskDialog extends StatelessWidget {
                       SkedFloatingDragScope.maybeOf(context)?.onDrag,
                   dragKey: scope.onDragUpdate != null
                       ? const ValueKey('floating-form-drag-handle')
-                      : null,
+                      : const ValueKey('sked-picker-drag-handle'),
                   showClose: scope.onClose != null,
                   closeEnabled: closeEnabled,
                   onClose: scope.onClose,

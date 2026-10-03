@@ -1,8 +1,39 @@
+import 'package:sked/widgets/sked_floating_surface.dart';
+import 'package:sked/widgets/sked_task_dialog.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/sked_panel_header.dart';
 
 void main() {
+  testWidgets('task header preserves inherited picker drag handle', (t) async {
+    var drags = 0;
+    await t.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 320,
+              height: 300,
+              child: SkedFloatingDragScope(
+                onDrag: (_) => drags++,
+                child: const SkedTaskDialogScope(
+                  child: SkedTaskDialog(
+                    title: Text('Picker'),
+                    content: Text('Content'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final handle = find.byKey(const ValueKey('sked-picker-drag-handle'));
+    expect(handle, findsOneWidget);
+    await t.drag(handle, const Offset(40, 20));
+    expect(drags, greaterThan(0));
+    expect(t.takeException(), isNull);
+  });
   testWidgets(
     'header drag excludes action buttons; wrapped action and close remain interactive',
     (t) async {
