@@ -1,3 +1,5 @@
+import 'sked_floating_position_controller.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
@@ -42,25 +44,12 @@ class SkedFloatingDialogHost extends StatefulWidget {
 
 class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
   final _layoutKey = GlobalKey();
-  Offset? _manualPosition;
-  Offset _visiblePosition = Offset.zero;
-  Size _childSize = Size.zero;
+  final _position = SkedFloatingPositionController();
   Rect _bounds = Rect.zero;
 
   void _drag(Offset delta) {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-    setState(() {
-      final current = boundSkedFloatingPosition(
-        _manualPosition ?? _visiblePosition,
-        _childSize,
-        _bounds,
-      );
-      _manualPosition = boundSkedFloatingPosition(
-        current + delta,
-        _childSize,
-        _bounds,
-      );
-    });
+    setState(() => _position.drag(delta, _bounds));
   }
 
   @override
@@ -113,11 +102,9 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
             delegate: _FloatingDialogPosition(
               bounds: _bounds,
               anchor: anchor,
-              manualPosition:
-                  _manualPosition ??
-                  (anchor == null && _childSize != Size.zero
-                      ? _visiblePosition
-                      : null),
+              manualPosition: _position.positionOverride(
+                hasAnchor: anchor != null,
+              ),
               width: math.min(
                 _bounds.width,
                 math.min(
@@ -127,10 +114,7 @@ class _SkedFloatingDialogHostState extends State<SkedFloatingDialogHost> {
               ),
               rtl: Directionality.of(context) == TextDirection.rtl,
               placement: widget.options.placement,
-              onLayout: (position, size) {
-                _visiblePosition = position;
-                _childSize = size;
-              },
+              onLayout: _position.recordLayout,
             ),
             child: SkedFloatingSurface(
               key: const ValueKey('floating-form-surface'),

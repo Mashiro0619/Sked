@@ -1,3 +1,4 @@
+import 'sked_floating_position_controller.dart';
 import 'sked_task_route.dart';
 import 'sked_task_session.dart';
 import '../theme/sked_surface.dart';
@@ -178,25 +179,13 @@ class _PickerTaskHost<T> extends StatefulWidget {
 
 class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
   bool _finished = false;
-  Offset? _manualPosition, _lastPosition;
-  Size _panelSize = Size.zero;
+  final _position = SkedFloatingPositionController();
   Rect _bounds = Rect.zero;
   void _drag(Offset delta) {
     if (!mounted || _finished || ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
-    setState(
-      () => _manualPosition = boundSkedFloatingPosition(
-        boundSkedFloatingPosition(
-              _manualPosition ?? _lastPosition ?? Offset.zero,
-              _panelSize,
-              _bounds,
-            ) +
-            delta,
-        _panelSize,
-        _bounds,
-      ),
-    );
+    setState(() => _position.drag(delta, _bounds));
   }
 
   bool get _ownerAvailable => widget.session.isCurrent;
@@ -284,12 +273,9 @@ class _PickerTaskHostState<T> extends State<_PickerTaskHost<T>> {
           rtl: Directionality.of(context) == TextDirection.rtl,
           width: math.min(bounds.width, preferred.width),
           manualPosition: metrics.desktop
-              ? _manualPosition ?? (anchor == null ? _lastPosition : null)
+              ? _position.positionOverride(hasAnchor: anchor != null)
               : null,
-          onPosition: (position, size) {
-            _lastPosition = position;
-            _panelSize = size;
-          },
+          onPosition: _position.recordLayout,
         ),
         child: AnnotatedRegion<SystemUiOverlayStyle>(
           value: compact && !bottomSheet

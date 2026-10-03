@@ -680,6 +680,7 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
                 rtl: Directionality.of(context) == TextDirection.rtl,
                 onLayout: (position, size) {
                   _panel = position & size;
+                  session.position.recordLayout(position, size);
                   if (session.independent && _independentPosition == null) {
                     _independentPosition = position;
                   }
@@ -712,18 +713,15 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
                           onDragUpdate: !session.independent
                               ? null
                               : (delta) {
+                                  // Independent mode and busy policy belong to
+                                  // the session; the controller only clamps geometry.
+                                  if (session.blocked) return;
+                                  session.position.recordLayout(
+                                    _panel.topLeft,
+                                    _panel.size,
+                                  );
                                   session.moveTo(
-                                    boundSkedFloatingPosition(
-                                      boundSkedFloatingPosition(
-                                            session.manualPosition ??
-                                                _panel.topLeft,
-                                            _panel.size,
-                                            _bounds,
-                                          ) +
-                                          delta,
-                                      _panel.size,
-                                      _bounds,
-                                    ),
+                                    session.position.drag(delta, _bounds),
                                   );
                                 },
                           child: _details(context),

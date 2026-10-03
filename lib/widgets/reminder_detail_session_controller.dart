@@ -1,3 +1,5 @@
+import 'sked_floating_position_controller.dart';
+
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
@@ -14,7 +16,8 @@ class ReminderDetailSessionController extends ChangeNotifier {
   String? selectedKey;
   int revision = 0;
   bool busy = false, childTask = false;
-  Offset? manualPosition;
+  final position = SkedFloatingPositionController();
+  Offset? get manualPosition => position.manualPosition;
   String? _hovered, _candidate, _suppressed;
   bool _inPanel = false;
   Timer? _openTimer, _closeTimer;
@@ -108,7 +111,7 @@ class ReminderDetailSessionController extends ChangeNotifier {
 
   void moveTo(Offset value) {
     if (!independent || blocked) return;
-    manualPosition = value;
+    position.manualPosition = value;
     notifyListeners();
   }
 
@@ -127,7 +130,7 @@ class ReminderDetailSessionController extends ChangeNotifier {
     _closeTimer?.cancel();
     mode = ReminderDetailMode.hidden;
     selectedKey = null;
-    manualPosition = null;
+    position.reset();
     busy = childTask = _inPanel = false;
     revision++;
     notifyListeners();
@@ -145,7 +148,7 @@ class ReminderDetailSessionController extends ChangeNotifier {
       _closeTimer?.cancel();
       mode = ReminderDetailMode.hidden;
       selectedKey = null;
-      manualPosition = null;
+      position.reset();
       _inPanel = false;
       revision++;
       notifyListeners();
