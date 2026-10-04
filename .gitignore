@@ -90,10 +90,11 @@ Sked_backup_restore_recovery_*/
 /flutter test --no-pub test/
 /codex-clipboard-*
 
-# Local release acceptance records are not user-facing release notes.
+# Local release checklists and acceptance records are not user-facing notes.
 # Keep shared test plans and published release notes versioned.
 /docs/internal/
 /docs/releases/*-acceptance.md
+/docs/releases/*-checklist.md
 
 # Distribution packages belong in ignored build output or release assets.
 *.exe
