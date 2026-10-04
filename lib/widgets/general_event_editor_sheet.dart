@@ -1752,24 +1752,30 @@ class _DateTimeRow extends StatelessWidget {
               runSpacing: 4,
               children: [
                 Builder(
-                  builder: (anchor) => TextButton.icon(
-                    style: style,
-                    onPressed: onPickDate == null
-                        ? null
-                        : () => onPickDate!(anchor),
-                    icon: const Icon(Icons.calendar_today_outlined, size: 18),
-                    label: Text(_fmtDate(date)),
+                  builder: (anchor) => Tooltip(
+                    message: l10n.pickDate,
+                    child: TextButton.icon(
+                      style: style,
+                      onPressed: onPickDate == null
+                          ? null
+                          : () => onPickDate!(anchor),
+                      icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                      label: Text(_fmtDate(date)),
+                    ),
                   ),
                 ),
                 if (showTime)
                   Builder(
-                    builder: (anchor) => TextButton.icon(
-                      style: style,
-                      onPressed: onPickTime == null
-                          ? null
-                          : () => onPickTime!(anchor),
-                      icon: const Icon(Icons.access_time, size: 18),
-                      label: Text(time.format(context)),
+                    builder: (anchor) => Tooltip(
+                      message: l10n.pickTime,
+                      child: TextButton.icon(
+                        style: style,
+                        onPressed: onPickTime == null
+                            ? null
+                            : () => onPickTime!(anchor),
+                        icon: const Icon(Icons.access_time, size: 18),
+                        label: Text(time.format(context)),
+                      ),
                     ),
                   ),
               ],
