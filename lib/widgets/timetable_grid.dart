@@ -48,8 +48,11 @@ class TimetableEmptySlotTapInfo {
     required this.startMinutes,
     required this.endMinutes,
     required this.periods,
+    this.anchorRect,
   });
 
+  /// Bounds of the selected period, captured before opening an editor.
+  final Rect? anchorRect;
   final int weekday;
   final int startMinutes;
   final int endMinutes;
@@ -526,13 +529,14 @@ class _TimetableGridState extends State<TimetableGrid> {
                                             onLongPressAt:
                                                 widget.onEmptySlotTap == null
                                                 ? null
-                                                : (localPosition) {
+                                                : (localPosition, anchor) {
                                                     final matchedPeriod = layout
                                                         .slotForY(
                                                           localPosition.dy,
                                                         );
                                                     widget.onEmptySlotTap!(
                                                       TimetableEmptySlotTapInfo(
+                                                        anchorRect: anchor,
                                                         weekday: weekday,
                                                         startMinutes:
                                                             matchedPeriod
@@ -639,7 +643,7 @@ class _DayColumn extends StatelessWidget {
   final String liveCourseOutlineMode;
   final Color outlineColor;
   final double outlineWidth;
-  final ValueChanged<Offset>? onLongPressAt;
+  final void Function(Offset position, Rect anchor)? onLongPressAt;
   final ValueChanged<CourseLayout> onLayoutTap;
 
   @override
@@ -659,77 +663,89 @@ class _DayColumn extends StatelessWidget {
       decoration: BoxDecoration(
         border: BorderDirectional(start: BorderSide(color: borderColor)),
       ),
-      child: GestureDetector(
-        key: ValueKey('timetable-day-column-long-press-$weekday'),
-        behavior: HitTestBehavior.opaque,
-        onLongPressStart: onLongPressAt == null
-            ? null
-            : (details) {
-                final y = details.localPosition.dy;
-                for (final geometry in geometries) {
-                  if (y >= geometry.hitTop &&
-                      y < geometry.hitTop + geometry.hitHeight) {
-                    // Course hit targets own their long-press interaction.
-                    return;
+      child: Builder(
+        builder: (hitContext) => GestureDetector(
+          key: ValueKey('timetable-day-column-long-press-$weekday'),
+          behavior: HitTestBehavior.opaque,
+          onLongPressStart: onLongPressAt == null
+              ? null
+              : (details) {
+                  final y = details.localPosition.dy;
+                  for (final geometry in geometries) {
+                    if (y >= geometry.hitTop &&
+                        y < geometry.hitTop + geometry.hitHeight) {
+                      // Course hit targets own their long-press interaction.
+                      return;
+                    }
                   }
-                }
-                onLongPressAt!(details.localPosition);
-              },
-        child: Material(
-          color: Colors.transparent,
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
-            children: [
-              if (showGridLines)
-                for (final slot in slots)
-                  Positioned(
-                    top: verticalLayout.slotTop(slot),
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: verticalLayout.slotHeight(slot),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: colors.outlineVariant.withValues(
-                              alpha: 0.18,
+                  final slot = verticalLayout.slotForY(y);
+                  final origin = details.globalPosition - details.localPosition;
+                  onLongPressAt!(
+                    details.localPosition,
+                    Rect.fromLTWH(
+                      origin.dx,
+                      origin.dy + verticalLayout.slotTop(slot),
+                      (hitContext.findRenderObject()! as RenderBox).size.width,
+                      verticalLayout.slotHeight(slot),
+                    ),
+                  );
+                },
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                if (showGridLines)
+                  for (final slot in slots)
+                    Positioned(
+                      top: verticalLayout.slotTop(slot),
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        height: verticalLayout.slotHeight(slot),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: colors.outlineVariant.withValues(
+                                alpha: 0.18,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              for (final geometry in geometries)
-                _CourseCard(
-                  geometry: geometry,
-                  metrics: metrics,
-                  themeColorMode: themeColorMode,
-                  courseNameColorValues: courseNameColorValues,
-                  colorfulTextColor: colorfulTextColor,
-                  liveCourseOutlineMode: liveCourseOutlineMode,
-                  outlineColor: outlineColor,
-                  outlineWidth: outlineWidth,
-                ),
-              for (final geometry in geometries)
-                _CourseHitTarget(
-                  geometry: geometry,
-                  metrics: metrics,
-                  onTap: () => onLayoutTap(geometry.layout),
-                  onLongPress: () => onLayoutTap(geometry.layout),
-                  useVisualBounds:
-                      hasDenseHitTargets &&
-                      geometry.hitHeight < _minimumCourseHitExtent,
-                  includeSemantics:
-                      geometry.hitHeight >= _minimumCourseHitExtent,
-                ),
-              for (final geometry in geometries)
-                if (geometry.hitHeight < _minimumCourseHitExtent)
-                  _CourseSemanticTarget(
+                for (final geometry in geometries)
+                  _CourseCard(
                     geometry: geometry,
-                    totalHeight: verticalLayout.totalHeight,
-                    onTap: () => onLayoutTap(geometry.layout),
+                    metrics: metrics,
+                    themeColorMode: themeColorMode,
+                    courseNameColorValues: courseNameColorValues,
+                    colorfulTextColor: colorfulTextColor,
+                    liveCourseOutlineMode: liveCourseOutlineMode,
+                    outlineColor: outlineColor,
+                    outlineWidth: outlineWidth,
                   ),
-            ],
+                for (final geometry in geometries)
+                  _CourseHitTarget(
+                    geometry: geometry,
+                    metrics: metrics,
+                    onTap: () => onLayoutTap(geometry.layout),
+                    onLongPress: () => onLayoutTap(geometry.layout),
+                    useVisualBounds:
+                        hasDenseHitTargets &&
+                        geometry.hitHeight < _minimumCourseHitExtent,
+                    includeSemantics:
+                        geometry.hitHeight >= _minimumCourseHitExtent,
+                  ),
+                for (final geometry in geometries)
+                  if (geometry.hitHeight < _minimumCourseHitExtent)
+                    _CourseSemanticTarget(
+                      geometry: geometry,
+                      totalHeight: verticalLayout.totalHeight,
+                      onTap: () => onLayoutTap(geometry.layout),
+                    ),
+              ],
+            ),
           ),
         ),
       ),

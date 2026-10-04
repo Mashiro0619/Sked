@@ -114,7 +114,13 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await showAppModalSheet<CourseEditorResult>(
         context: context,
         workspacePane: _pane,
-        editor: editor ?? _pane.takeEditorEntry(),
+        editor:
+            editor ??
+            (emptySlot?.anchorRect != null
+                ? WorkspaceEditorConfiguration(
+                    anchorRect: emptySlot!.anchorRect,
+                  )
+                : _pane.takeEditorEntry()),
         workspace: AppMode.student,
         isSessionCurrent: () => provider.timetables.any(
           (item) =>

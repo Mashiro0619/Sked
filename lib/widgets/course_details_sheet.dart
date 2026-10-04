@@ -228,15 +228,24 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                                 icon: const Icon(Icons.visibility_outlined),
                               ),
                             if (widget.onEditConflictCourse != null)
-                              IconButton(
-                                tooltip: l10n.editThisCourse,
-                                onPressed: _actionInProgress
-                                    ? null
-                                    : () => _runAction(
-                                        () =>
-                                            widget.onEditConflictCourse!(item),
-                                      ),
-                                icon: const Icon(Icons.edit_outlined),
+                              Builder(
+                                builder: (anchor) => IconButton(
+                                  tooltip: l10n.editThisCourse,
+                                  onPressed: _actionInProgress
+                                      ? null
+                                      : () {
+                                          widget.onEditAnchor?.call(anchor);
+                                          unawaited(
+                                            _runAction(
+                                              () =>
+                                                  widget.onEditConflictCourse!(
+                                                    item,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                  icon: const Icon(Icons.edit_outlined),
+                                ),
                               ),
                           ],
                         ),

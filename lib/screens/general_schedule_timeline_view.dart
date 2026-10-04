@@ -53,7 +53,7 @@ class _WeekCalendarView extends StatefulWidget {
   final int syncRevision;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onPageSettled;
-  final ValueChanged<DateTime>? onEmptySlotTap;
+  final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
@@ -345,7 +345,7 @@ class _WeekTimelinePage extends StatelessWidget {
   final ValueChanged<DateTime> onDaySelected;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<DateTime>? onEmptySlotTap;
+  final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
@@ -413,7 +413,7 @@ class _DayCalendarView extends StatefulWidget {
   final int syncRevision;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<DateTime> onPageSettled;
-  final ValueChanged<DateTime>? onEmptySlotTap;
+  final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
@@ -823,7 +823,7 @@ class _DayTimelinePage extends StatelessWidget {
   final DateTime date;
   final TimetableProvider provider;
   final _GeneralOccurrenceFilter filter;
-  final ValueChanged<DateTime>? onEmptySlotTap;
+  final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
@@ -1107,7 +1107,7 @@ class _CalendarTimeline extends StatelessWidget {
   final bool fitWeekColumnsToWidth;
   final int? customDayMinWidth;
   final ValueChanged<DateTime>? onDaySelected;
-  final ValueChanged<DateTime>? onEmptySlotTap;
+  final void Function(DateTime date, Rect? anchor)? onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
   final ValueChanged<List<GeneralEventOccurrence>> onMoreOccurrencesTap;
   final _AllDayCollapsedGroupTap onAllDayCollapsedGroupTap;
@@ -1345,6 +1345,16 @@ class _CalendarTimeline extends StatelessWidget {
                                                 minutes ~/ 60,
                                                 minutes % 60,
                                               ),
+                                              Rect.fromLTWH(
+                                                details.globalPosition.dx -
+                                                    details.localPosition.dx,
+                                                details.globalPosition.dy -
+                                                    details.localPosition.dy +
+                                                    (minutes - startMinutes) *
+                                                        minuteHeight,
+                                                metrics.dayWidth,
+                                                gridMinutes * minuteHeight,
+                                              ),
                                             );
                                           },
                                     onLongPressStart:
@@ -1377,6 +1387,16 @@ class _CalendarTimeline extends StatelessWidget {
                                                 day.day,
                                                 minutes ~/ 60,
                                                 minutes % 60,
+                                              ),
+                                              Rect.fromLTWH(
+                                                details.globalPosition.dx -
+                                                    details.localPosition.dx,
+                                                details.globalPosition.dy -
+                                                    details.localPosition.dy +
+                                                    (minutes - startMinutes) *
+                                                        minuteHeight,
+                                                metrics.dayWidth,
+                                                gridMinutes * minuteHeight,
                                               ),
                                             );
                                           },

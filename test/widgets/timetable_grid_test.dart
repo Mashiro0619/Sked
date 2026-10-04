@@ -1609,6 +1609,14 @@ void main() {
     expect(emptySlots, hasLength(1));
     expect(emptySlots.single.weekday, DateTime.monday);
     expect(emptySlots.single.periods, const [1]);
+    final column = tester.getRect(
+      find.byKey(const ValueKey('timetable-day-column-long-press-1')),
+    );
+    final anchor = emptySlots.single.anchorRect!;
+    expect(anchor.left, column.left);
+    expect(anchor.width, column.width);
+    expect(anchor.height, greaterThan(1));
+    expect(column.contains(anchor.center), isTrue);
   });
 
   testWidgets('short visual still exposes complete course semantics', (

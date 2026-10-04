@@ -100,7 +100,7 @@ class _MonthCalendarView extends StatefulWidget {
   final _GeneralOccurrenceFilter filter;
   final bool active;
   final ValueChanged<DateTime> onDaySelected;
-  final ValueChanged<DateTime> onEmptySlotTap;
+  final void Function(DateTime date, Rect? anchor) onEmptySlotTap;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
   @override
@@ -259,7 +259,10 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
           date: selectedDate,
           occurrences: selectedOccurrences,
           filtered: widget.filter.isActive,
-          onAddEvent: () => widget.onEmptySlotTap(selectedDate),
+          onAddEvent: (anchor) => widget.onEmptySlotTap(
+            selectedDate,
+            WorkspaceEditorConfiguration(anchorContext: anchor).initialAnchor,
+          ),
           onOccurrenceTap: widget.onOccurrenceTap,
         );
 
@@ -327,7 +330,11 @@ class _MonthCalendarViewState extends State<_MonthCalendarView> {
                       count: selectedOccurrences.length,
                       filtered: widget.filter.isActive,
                       compact: true,
-                      onAddEvent: () => widget.onEmptySlotTap(selectedDate),
+                      onAddEvent: (anchor) => widget.onEmptySlotTap(
+                        selectedDate,
+                        WorkspaceEditorConfiguration(anchorContext: anchor)
+                            .initialAnchor,
+                      ),
                     ),
                   ),
                   if (selectedOccurrences.isEmpty)
@@ -1531,7 +1538,7 @@ class _MonthAgendaHeader extends StatelessWidget {
   final DateTime date;
   final int count;
   final bool filtered, compact;
-  final VoidCallback onAddEvent;
+  final ValueChanged<BuildContext> onAddEvent;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1567,10 +1574,13 @@ class _MonthAgendaHeader extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: l.addEvent,
-            onPressed: onAddEvent,
+          Builder(
+            builder: (anchor) => IconButton(
+              key: const ValueKey('general-month-agenda-add'),
+              icon: const Icon(Icons.add),
+              tooltip: l.addEvent,
+              onPressed: () => onAddEvent(anchor),
+            ),
           ),
         ],
       ),
@@ -1590,7 +1600,7 @@ class _MonthAgendaPanel extends StatelessWidget {
   final DateTime date;
   final List<GeneralEventOccurrence> occurrences;
   final bool filtered;
-  final VoidCallback onAddEvent;
+  final ValueChanged<BuildContext> onAddEvent;
   final ValueChanged<GeneralEventOccurrence> onOccurrenceTap;
 
   @override

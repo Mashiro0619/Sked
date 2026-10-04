@@ -463,9 +463,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                               onDaySelected: selectDate,
                               onPageSettled: settleDate,
                               onEmptySlotTap: longPressAddEnabled
-                                  ? (date) => _openEditor(
+                                  ? (date, anchor) => _openEditor(
                                       context,
                                       provider,
+                                      editor: WorkspaceEditorConfiguration(
+                                        anchorRect: anchor,
+                                      ),
                                       initialDate: date,
                                     )
                                   : null,
@@ -507,10 +510,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                               filter: filter,
                               active: pagerActive,
                               onDaySelected: selectDate,
-                              onEmptySlotTap: (date) => _openEditor(
+                              onEmptySlotTap: (date, anchor) => _openEditor(
                                 context,
                                 provider,
                                 initialDate: date,
+                                editor: WorkspaceEditorConfiguration(
+                                  anchorRect: anchor,
+                                ),
                               ),
                               onOccurrenceTap: (occurrence) =>
                                   _openDetails(context, provider, occurrence),
@@ -528,9 +534,12 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                               onDaySelected: selectDate,
                               onPageSettled: settleDate,
                               onEmptySlotTap: longPressAddEnabled
-                                  ? (date) => _openEditor(
+                                  ? (date, anchor) => _openEditor(
                                       context,
                                       provider,
+                                      editor: WorkspaceEditorConfiguration(
+                                        anchorRect: anchor,
+                                      ),
                                       initialDate: date,
                                     )
                                   : null,
