@@ -1669,9 +1669,9 @@ class _DateTimeRange extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [start, const SizedBox(height: 4), end],
+      return WorkspaceEditorFieldsRow(
+        minimumWidth: 240,
+        children: [start, end],
       );
     }
     final colors = Theme.of(context).colorScheme;

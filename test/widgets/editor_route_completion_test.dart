@@ -340,6 +340,8 @@ void main() {
     'docked schedule toolbar reminder survives completion of a background save',
     (t) async {
       _viewport(t);
+      // Leave room for the wider editor and the minimum side-by-side canvas.
+      t.view.physicalSize = const Size(1440, 900);
       final storage = _DelayedStorage(
         buildInitialAppData(buildDefaultPeriodTimes())
             .copyWith(activeMode: AppMode.general),
@@ -361,6 +363,7 @@ void main() {
         find.descendant(of: editor, matching: find.byType(TextFormField)).first,
         'Saved without closing reminders',
       );
+      expect(_key('workspace-editor-barrier'), findsNothing);
       final initialSaves = storage.saves;
       final gate = storage.pending = Completer<void>();
       addTearDown(() {

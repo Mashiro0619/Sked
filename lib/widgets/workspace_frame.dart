@@ -263,7 +263,7 @@ class _WorkspaceTaskRoute {
   final WorkspacePanePresentation presentation;
   final WorkspaceEditorConfiguration? editor;
   final position = SkedFloatingPositionController();
-  double editorWidth = 480;
+  double editorWidth = 600;
   double? contentHeight;
   // Logical end/top insets, owned by this route only (never persisted).
   Offset? floatingOffset;

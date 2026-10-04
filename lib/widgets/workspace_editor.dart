@@ -129,8 +129,13 @@ class WorkspaceEditorScaffold extends StatelessWidget {
                             ? Row(
                                 children: [
                                   ?leading,
-                                  const Spacer(),
-                                  Flexible(child: trailing),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: AlignmentDirectional.centerEnd,
+                                      heightFactor: 1,
+                                      child: trailing,
+                                    ),
+                                  ),
                                 ],
                               )
                             : Wrap(
