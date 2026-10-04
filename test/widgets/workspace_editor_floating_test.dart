@@ -1,3 +1,4 @@
+import 'package:sked/widgets/workspace_editor_form.dart';
 import 'package:sked/widgets/workspace_editor.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
 import 'package:sked/widgets/assistant_pane.dart';
@@ -159,10 +160,13 @@ void main() {
       await t.tap(find.descendant(of: editor, matching: find.text('More')));
       await t.pumpAndSettle();
       final teacher = find.descendant(
-        of: editor,
-        matching: find.byWidgetPredicate(
-          (w) => w is TextField && w.decoration?.labelText == 'Teacher',
+        of: find.descendant(
+          of: editor,
+          matching: find.byWidgetPredicate(
+            (w) => w is WorkspaceEditorField && w.label == 'Teacher',
+          ),
         ),
+        matching: find.byType(TextField),
       );
       await t.ensureVisible(teacher);
       await t.pumpAndSettle();
@@ -260,11 +264,13 @@ void main() {
       await t.tap(find.descendant(of: editor, matching: find.text('More')));
       await t.pumpAndSettle();
       final notes = find.descendant(
-        of: editor,
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is TextField && widget.decoration?.labelText == 'Notes',
+        of: find.descendant(
+          of: editor,
+          matching: find.byWidgetPredicate(
+            (w) => w is WorkspaceEditorField && w.label == 'Notes',
+          ),
         ),
+        matching: find.byType(TextField),
       );
       await t.ensureVisible(notes);
       await t.pumpAndSettle();

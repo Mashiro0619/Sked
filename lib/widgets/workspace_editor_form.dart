@@ -8,7 +8,7 @@ class WorkspaceEditorField extends StatelessWidget {
     required this.label,
     required this.child,
     this.minimumControlWidth = 180,
-    this.labelWidth = 104,
+    this.labelWidth = 96,
   });
   final String label;
   final Widget child;
@@ -40,7 +40,7 @@ class WorkspaceEditorField extends StatelessWidget {
             width: horizontal
                 ? bounds.maxWidth - labelExtent - 12
                 : bounds.maxWidth,
-            child: child,
+            child: Semantics(label: label, child: child),
           ),
         ],
       );
@@ -56,26 +56,33 @@ class WorkspaceEditorValue extends StatelessWidget {
     required this.value,
     required this.onPressed,
     this.icon,
+    this.tonal = false,
   });
   final String label, value;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final bool tonal;
   @override
   Widget build(BuildContext context) => Semantics(
     label: label,
     value: value,
     button: true,
     enabled: onPressed != null,
-    child: OutlinedButton(
+    child: TextButton(
       onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
+      style: TextButton.styleFrom(
         minimumSize: const Size(0, 36),
         visualDensity: VisualDensity.standard,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         foregroundColor: Theme.of(context).colorScheme.onSurface,
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        disabledForegroundColor: Theme.of(context).colorScheme.onSurface
+            .withValues(alpha: .38),
+        backgroundColor: tonal
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  .withValues(alpha: .45)
+            : Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       child: ExcludeSemantics(
         child: Row(
@@ -84,11 +91,15 @@ class WorkspaceEditorValue extends StatelessWidget {
               Icon(icon, size: 16),
               const SizedBox(width: 8),
             ],
-            Expanded(
-              child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+            Flexible(child: Text(value)),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 16,
+              color: onPressed == null
+                  ? null
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.expand_more, size: 16),
           ],
         ),
       ),
@@ -102,7 +113,9 @@ class WorkspaceEditorFormSection extends StatelessWidget {
     this.title,
     this.action,
     required this.child,
+    this.divider = false,
   });
+  final bool divider;
   final String? title;
   final Widget? action;
   final Widget child;
@@ -112,10 +125,10 @@ class WorkspaceEditorFormSection extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Divider(height: 1),
+        if (divider) const Divider(height: 1),
         if (title != null || action != null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Wrap(
               alignment: WrapAlignment.spaceBetween,
               spacing: 12,
@@ -128,69 +141,100 @@ class WorkspaceEditorFormSection extends StatelessWidget {
               ],
             ),
           )
-        else
-          const SizedBox(height: 12),
+        else if (divider)
+          const SizedBox(height: 4),
         child,
       ],
     ),
   );
 }
 
+TextStyle workspaceEditorTitleStyle(BuildContext context) =>
+    Theme.of(context).textTheme.titleLarge!
+        .copyWith(fontSize: 22, fontWeight: FontWeight.w600, height: 1.25);
+
 InputDecoration workspaceEditorInputDecoration(
   BuildContext context,
   String label, {
   bool headline = false,
   String? hintText,
-}) => InputDecoration(
-  labelText: label,
-  hintText: hintText,
-  floatingLabelBehavior: FloatingLabelBehavior.never,
-  labelStyle: headline ? Theme.of(context).textTheme.titleLarge : null,
-  constraints: const BoxConstraints(minHeight: 36),
-  filled: false,
-  isDense: true,
-  contentPadding: EdgeInsets.symmetric(
-    horizontal: headline ? 0 : 10,
-    vertical: 10,
-  ),
-  border: headline
-      ? const UnderlineInputBorder()
-      : OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-  focusedBorder: headline
-      ? UnderlineInputBorder(
-          borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
-          ),
-        )
-      : OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
-          ),
-        ),
-  errorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(4),
-    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-  ),
-  focusedErrorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(4),
-    borderSide: BorderSide(
-      color: Theme.of(context).colorScheme.error,
-      width: 2,
+  bool metadata = false,
+}) {
+  final colors = Theme.of(context).colorScheme;
+  final border = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(6),
+    borderSide: BorderSide.none,
+  );
+  return InputDecoration(
+    hintText: headline || metadata ? (hintText ?? label) : hintText,
+    hintStyle: headline
+        ? workspaceEditorTitleStyle(context)
+              .copyWith(color: colors.onSurfaceVariant)
+        : null,
+    floatingLabelBehavior: FloatingLabelBehavior.never,
+    constraints: const BoxConstraints(minHeight: 36),
+    filled: !headline,
+    fillColor: metadata
+        ? Colors.transparent
+        : colors.surfaceContainerHighest.withValues(alpha: .35),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(
+      horizontal: headline ? 0 : 10,
+      vertical: headline ? 8 : 10,
     ),
-  ),
-  enabledBorder: headline
-      ? UnderlineInputBorder(
-          borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        )
-      : OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
+    border: border,
+    enabledBorder: border,
+    disabledBorder: border,
+    focusedBorder: border.copyWith(
+      borderSide: BorderSide(color: colors.primary),
+    ),
+    errorBorder: border.copyWith(borderSide: BorderSide(color: colors.error)),
+    focusedErrorBorder: border.copyWith(
+      borderSide: BorderSide(color: colors.error, width: 2),
+    ),
+  );
+}
+
+/// Limit decoration overrides to this editor's dropdown trigger. Menus keep
+/// their original routing, keyboard behavior and selected-value semantics.
+class WorkspaceEditorDropdownStyle extends StatelessWidget {
+  const WorkspaceEditorDropdownStyle({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(6),
+      borderSide: BorderSide.none,
+    );
+    return Theme(
+      data: theme.copyWith(
+        dropdownMenuTheme: theme.dropdownMenuTheme.copyWith(
+          inputDecorationTheme: InputDecorationThemeData(
+            filled: true,
+            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: .35,
+            ),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 8,
+            ),
+            constraints: const BoxConstraints(minHeight: 36),
+            border: border,
+            enabledBorder: border,
+            disabledBorder: border,
+            focusedBorder: border.copyWith(
+              borderSide: BorderSide(color: theme.colorScheme.primary),
+            ),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 36,
+            ),
           ),
         ),
-);
+      ),
+      child: child,
+    );
+  }
+}

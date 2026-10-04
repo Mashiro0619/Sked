@@ -44,6 +44,19 @@ void main() {
               .first;
           final input = t.widget<TextField>(title);
           expect(input.decoration!.prefixIcon, isNull);
+          expect(input.decoration!.labelText, isNull);
+          expect(input.decoration!.enabledBorder!.borderSide, BorderSide.none);
+          expect(input.style!.fontSize, 22);
+          final sections = t
+              .widgetList<WorkspaceEditorFormSection>(
+                find.descendant(
+                  of: editor,
+                  matching: find.byType(WorkspaceEditorFormSection),
+                ),
+              )
+              .toList();
+          expect(sections.where((section) => section.divider), hasLength(1));
+          expect(sections.last.divider, isTrue);
           expect(
             input.decoration!.floatingLabelBehavior,
             FloatingLabelBehavior.never,
@@ -64,6 +77,15 @@ void main() {
               find.byElementPredicate((value) => identical(value, element)),
             );
             expect(rect.height, greaterThanOrEqualTo(36));
+            expect(
+              find.descendant(
+                of: find.byElementPredicate(
+                  (value) => identical(value, element),
+                ),
+                matching: find.byType(OutlinedButton),
+              ),
+              findsNothing,
+            );
           }
           Finder field(String label) => find.descendant(
             of: editor,

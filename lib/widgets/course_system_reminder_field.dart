@@ -188,7 +188,7 @@ class _CourseSystemReminderFieldState extends State<CourseSystemReminderField>
                   label: l.courseSystemReminder,
                   child: Semantics(
                     label: l.courseSystemReminder,
-                    child: modePicker,
+                    child: WorkspaceEditorDropdownStyle(child: modePicker),
                   ),
                 )
               : modePicker)

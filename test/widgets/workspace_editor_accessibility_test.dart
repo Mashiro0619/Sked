@@ -45,10 +45,13 @@ void main() {
           await t.pumpAndSettle();
           final label = mode == AppMode.general ? 'Notes' : 'Teacher';
           final input = find.descendant(
-            of: more,
-            matching: find.byWidgetPredicate(
-              (w) => w is TextField && w.decoration?.labelText == label,
+            of: find.descendant(
+              of: more,
+              matching: find.byWidgetPredicate(
+                (w) => w is WorkspaceEditorField && w.label == label,
+              ),
             ),
+            matching: find.byType(TextField),
           );
           expect(
             find.ancestor(

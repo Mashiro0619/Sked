@@ -616,39 +616,48 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   Widget _buildDesktopFields(AppLocalizations l10n) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      TextFormField(
-        key: const ValueKey('event-desktop-title'),
-        controller: _titleController,
-        style: Theme.of(context).textTheme.titleLarge,
-        decoration: workspaceEditorInputDecoration(
-          context,
-          l10n.eventTitle,
-          headline: true,
+      Semantics(
+        label: l10n.eventTitle,
+        child: TextFormField(
+          key: const ValueKey('event-desktop-title'),
+          controller: _titleController,
+          style: workspaceEditorTitleStyle(context),
+          decoration: workspaceEditorInputDecoration(
+            context,
+            l10n.eventTitle,
+            headline: true,
+          ),
+          validator: (value) => value == null || value.trim().isEmpty
+              ? l10n.eventTitleRequired
+              : null,
         ),
-        validator: (value) => value == null || value.trim().isEmpty
-            ? l10n.eventTitleRequired
-            : null,
       ),
       const SizedBox(height: 12),
       WorkspaceEditorFieldsRow(
-        minimumWidth: 240,
+        minimumWidth: 220,
         children: [
-          WorkspaceEditorField(
+          Semantics(
             label: l10n.place,
-            labelWidth: 64,
-            minimumControlWidth: 152,
             child: TextFormField(
               controller: _locationController,
-              decoration: workspaceEditorInputDecoration(context, l10n.place),
+              decoration:
+                  workspaceEditorInputDecoration(
+                    context,
+                    l10n.place,
+                    metadata: true,
+                  ).copyWith(
+                    prefixIcon: const Icon(
+                      Icons.location_on_outlined,
+                      size: 18,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 36,
+                    ),
+                  ),
             ),
           ),
-          if (_showCalendarPicker)
-            WorkspaceEditorField(
-              label: l10n.calendar,
-              labelWidth: 64,
-              minimumControlWidth: 152,
-              child: _buildCalendarField(l10n),
-            ),
+          if (_showCalendarPicker) _buildCalendarField(l10n),
         ],
       ),
       WorkspaceEditorFormSection(
@@ -666,6 +675,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
         ),
       ),
       WorkspaceEditorFormSection(
+        divider: true,
         child: _EditorSection(
           icon: Icons.more_horiz,
           title: l10n.more,
@@ -817,7 +827,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       },
     );
     return WorkspaceEditorScope.maybeOf(context)?.enabled == true
-        ? Semantics(label: l10n.calendar, child: picker)
+        ? WorkspaceEditorDropdownStyle(
+            child: Semantics(label: l10n.calendar, child: picker),
+          )
         : picker;
   }
 
@@ -1781,6 +1793,7 @@ class _DateTimeRow extends StatelessWidget {
                     message: l10n.pickDate,
                     child: WorkspaceEditorValue(
                       label: '$label · ${l10n.pickDate}',
+                      tonal: true,
                       value: _fmtDate(date),
                       icon: Icons.calendar_today_outlined,
                       onPressed: onPickDate == null
@@ -1795,6 +1808,7 @@ class _DateTimeRow extends StatelessWidget {
                       message: l10n.pickTime,
                       child: WorkspaceEditorValue(
                         label: '$label · ${l10n.pickTime}',
+                        tonal: true,
                         value: time.format(context),
                         onPressed: onPickTime == null
                             ? null

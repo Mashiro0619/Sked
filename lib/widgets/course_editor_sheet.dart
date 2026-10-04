@@ -345,28 +345,43 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   Widget _buildDesktopFields(AppLocalizations l10n) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      TextField(
-        key: const ValueKey('course-desktop-title'),
-        controller: _nameController,
-        enabled: !_blocked,
-        style: Theme.of(context).textTheme.titleLarge,
-        decoration: workspaceEditorInputDecoration(
-          context,
-          l10n.courseName,
-          headline: true,
+      Semantics(
+        label: l10n.courseName,
+        child: TextField(
+          key: const ValueKey('course-desktop-title'),
+          controller: _nameController,
+          enabled: !_blocked,
+          style: workspaceEditorTitleStyle(context),
+          decoration: workspaceEditorInputDecoration(
+            context,
+            l10n.courseName,
+            headline: true,
+          ),
         ),
       ),
       const SizedBox(height: 12),
-      WorkspaceEditorField(
+      Semantics(
         label: l10n.location,
         child: TextField(
           controller: _locationController,
           enabled: !_blocked,
-          decoration: workspaceEditorInputDecoration(context, l10n.location),
+          decoration:
+              workspaceEditorInputDecoration(
+                context,
+                l10n.location,
+                metadata: true,
+              ).copyWith(
+                prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 36,
+                ),
+              ),
         ),
       ),
       WorkspaceEditorFormSection(child: _buildScheduleFields(l10n)),
       WorkspaceEditorFormSection(
+        divider: true,
         child: _EditorSection(
           key: const ValueKey('course-details-section'),
           controller: _detailsExpansion,
@@ -1622,7 +1637,7 @@ class _SelectionTile extends StatelessWidget {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorField(
         label: title,
-        labelWidth: compactLabel ? 76 : 104,
+        labelWidth: compactLabel ? 76 : 96,
         minimumControlWidth: 132,
         child: WorkspaceEditorValue(
           label: title,
@@ -1743,7 +1758,7 @@ class _CourseTimeRange extends StatelessWidget {
     if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
       return WorkspaceEditorField(
         label: AppLocalizations.of(context).time,
-        labelWidth: 104,
+        labelWidth: 96,
         child: Row(
           children: [
             Expanded(
@@ -1752,6 +1767,7 @@ class _CourseTimeRange extends StatelessWidget {
                   message: startLabel,
                   child: WorkspaceEditorValue(
                     key: const ValueKey('course-start-time-action'),
+                    tonal: true,
                     label: startLabel,
                     value: startValue,
                     onPressed: enabled && onPickStart != null
@@ -1771,6 +1787,7 @@ class _CourseTimeRange extends StatelessWidget {
                   message: endLabel,
                   child: WorkspaceEditorValue(
                     key: const ValueKey('course-end-time-action'),
+                    tonal: true,
                     label: endLabel,
                     value: endValue,
                     onPressed: enabled && onPickEnd != null
