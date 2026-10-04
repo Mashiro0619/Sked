@@ -46,7 +46,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
     expect(_key('workspace-view-drag-handle'), findsNothing);
-    await t.tap(_key('workspace-inspector-close'));
+    await t.tap(_key('workspace-editor-close'));
     await t.pumpAndSettle();
     expect(t.getRect(_key('workspace-detail-surface')), movedAgenda);
     await t.tap(_key('workspace-inspector-close'));
@@ -109,7 +109,7 @@ void main() {
   );
 
   testWidgets(
-    'desktop details have one header, grouped actions and full-height editor',
+    'desktop details have one header and open a bounded floating editor',
     (t) async {
       _viewport(t);
       final p = await workspaceProvider(
@@ -152,7 +152,11 @@ void main() {
       await t.tap(_key('general-event-edit-action'));
       await t.pumpAndSettle();
       expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
-      expect(t.getRect(_key('workspace-detail-surface')).bottom, 900);
+      final bounds = t.getRect(_key('workspace-detail-surface'));
+      expect(bounds.bottom, lessThanOrEqualTo(892));
+      expect(bounds.height, lessThanOrEqualTo(720));
+      expect(_key('workspace-editor-drag'), findsOneWidget);
+      expect(_key('workspace-editor-barrier'), findsOneWidget);
       expect(p.selectedGeneralDate, DateTime(2026, 9, 28));
       expect(t.takeException(), isNull);
       await t.pumpWidget(const SizedBox());

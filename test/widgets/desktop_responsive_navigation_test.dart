@@ -336,7 +336,7 @@ void main() {
 
   for (final mode in AppMode.values) {
     testWidgets(
-      'direct compact add and drawer Escape preserve $mode editor draft',
+      'compact editor blocks the drawer and discard cancellation retains $mode draft',
       (t) async {
         final (p, _) = await mount(t, width: 660);
         if (mode != AppMode.student) await switchTo(t, AppMode.student, mode);
@@ -355,12 +355,17 @@ void main() {
             .first;
         await t.enterText(field, 'Preserved draft');
         final controller = t.widget<TextField>(field).controller!;
-        await t.tap(toggle);
-        await t.pumpAndSettle();
-        expect(scrim, findsOneWidget);
-        await t.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.tapAt(t.getCenter(toggle));
         await t.pumpAndSettle();
         expect(scrim, findsNothing);
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await t.tap(find.widgetWithText(TextButton, 'Cancel').last);
+        await t.pumpAndSettle();
+        await t.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await t.tap(find.widgetWithText(TextButton, 'Cancel').last);
+        await t.pumpAndSettle();
         expect(editor, findsOneWidget);
         expect(t.widget<TextField>(field).controller, same(controller));
         expect(controller.text, 'Preserved draft');

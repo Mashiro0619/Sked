@@ -399,11 +399,11 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+      expect(detail, findsNothing);
       expect(
-        t.widget<FilledButton>(inside('general-event-edit-action')).onPressed,
-        isNull,
+        t.element(find.byType(GeneralEventDetailsSheet, skipOffstage: false)),
+        same(element),
       );
-      expect(t.element(detail), same(element));
       await t.tap(
         find.descendant(
           of: find.byType(GeneralEventEditorSheet),

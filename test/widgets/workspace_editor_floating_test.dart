@@ -60,8 +60,9 @@ void main() {
           focus!.visitAncestorElements((ancestor) {
             if (identical(ancestor, element) ||
                 ancestor.widget.key ==
-                    const ValueKey('workspace-detail-resize'))
+                    const ValueKey('workspace-detail-resize')) {
               inEditor = true;
+            }
             return !inEditor;
           });
           expect(

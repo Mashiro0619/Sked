@@ -97,9 +97,12 @@ void main() {
   testWidgets(
     'course draft keeps its timetable when the visible picker changes selection',
     (tester) async {
-      _viewport(tester, const Size(1000, 900));
+      _viewport(tester, const Size(1920, 1080));
       final p = await workspaceProvider();
       addTearDown(p.dispose);
+      await p.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
       final original = p.activeTimetable;
       await p.addTimetable(original.config.copyWith(name: 'Another timetable'));
       final other = p.activeTimetable;
@@ -149,9 +152,12 @@ void main() {
     testWidgets(
       'existing course ${delete ? 'delete' : 'update'} stays bound after changing timetable',
       (tester) async {
-        _viewport(tester, const Size(1000, 900));
+        _viewport(tester, const Size(1920, 1080));
         final p = await workspaceProvider();
         addTearDown(p.dispose);
+        await p.updateWorkspacePanelDisplayMode(
+          WorkspacePanelDisplayMode.sideBySide,
+        );
         final original = p.activeTimetable;
         final course = original.courses.first;
         await p.addTimetable(original.config.copyWith(name: 'Other table'));
@@ -220,7 +226,7 @@ void main() {
 
   for (final dirty in [false, true]) {
     testWidgets(
-      'removing the original timetable keeps its editor and rejects save (dirty: $dirty)',
+      'removing the original timetable retires its editor without a stale write (dirty: $dirty)',
       (tester) async {
         _viewport(tester, const Size(1000, 900));
         final p = await workspaceProvider();
@@ -232,33 +238,22 @@ void main() {
         await p.switchTimetable(original.id);
         await tester.pumpWidget(WorkspaceHarness(provider: p));
         await tester.pumpAndSettle();
-        final l = await _openExistingCourseEditor(tester, course);
+        await _openExistingCourseEditor(tester, course);
         final editor = find.byType(CourseEditorSheet);
-        final editorState = tester.state(editor);
         final title = find
             .descendant(of: editor, matching: find.byType(TextField))
             .first;
         if (dirty) await tester.enterText(title, 'Retained draft');
         await p.deleteTimetable(original.id);
         await tester.pumpAndSettle();
-        expect(editor, findsOneWidget);
-        expect(tester.state(editor), same(editorState));
+        expect(editor, findsNothing);
         expect(find.byType(AlertDialog), findsNothing);
         expect(
           find.byType(CourseDetailsSheet, skipOffstage: false),
           findsNothing,
         );
         final before = p.appData.toJson();
-        await tester.tap(
-          find.descendant(of: editor, matching: find.text(l.save)).last,
-        );
-        await tester.pumpAndSettle();
-        expect(tester.state(editor), same(editorState));
-        expect(find.text(l.saveFailedRetry), findsOneWidget);
-        expect(
-          tester.widget<TextField>(title).controller!.text,
-          dirty ? 'Retained draft' : course.name,
-        );
+        await tester.pump(const Duration(seconds: 1));
         expect(p.appData.toJson(), before);
         expect(p.activeTimetable.id, other.id);
         expect(p.activeTimetable.courses, other.courses);
@@ -327,6 +322,9 @@ void main() {
     _viewport(tester, const Size(1920, 1080));
     final p = await workspaceProvider();
     addTearDown(p.dispose);
+    await p.updateWorkspacePanelDisplayMode(
+      WorkspacePanelDisplayMode.sideBySide,
+    );
     final original = p.activeTimetable;
     final source = p.exportSelectedTimetablesJson([original.id]);
     await tester.pumpWidget(WorkspaceHarness(provider: p));
