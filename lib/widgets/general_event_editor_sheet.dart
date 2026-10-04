@@ -1,3 +1,4 @@
+import 'workspace_editor.dart';
 import 'sked_task_session.dart';
 import 'sked_time_picker.dart';
 
@@ -210,7 +211,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
     // Keep low-frequency fields discoverable on Android portrait and with
     // accessibility text scaling; wider layouts start compact when empty.
     _detailsSectionExpanded =
-        hasDetails || textScale > 1.3 || mediaQuery.size.height < 560;
+        hasDetails ||
+        (WorkspaceEditorScope.maybeOf(context)?.enabled != true &&
+            (textScale > 1.3 || mediaQuery.size.height < 560));
     _sectionsInitialized = true;
   }
 
@@ -290,7 +293,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                     .expansionAnimationStyle
                     ?.duration ??
                 const Duration(milliseconds: 200);
-      _timeExpansion.expand();
+      final inlineTime = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+      if (!inlineTime) _timeExpansion.expand();
       _timeErrorReveal?.cancel();
       // Start after the first expanded frame, then measure the final transform.
       // Measuring during expansion scrolls short with accessibility text sizes.
@@ -303,7 +307,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
           if (!mounted ||
               _blocked ||
               !_hasInvalidTimeRange ||
-              !_timeExpansion.isExpanded) {
+              (!inlineTime && !_timeExpansion.isExpanded)) {
             return;
           }
           final errorContext = _timeErrorKey.currentContext;
@@ -366,6 +370,42 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 
   Future<void> _delete() async {
     if (_blocked) return;
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      final l = AppLocalizations.of(context);
+      setState(() => _selectionDialogOpen = true);
+      bool? confirmed;
+      try {
+        confirmed = await showExpressiveDialog<bool>(
+          context: context,
+          session: _editorSession,
+          waitForTransitionComplete: true,
+          builder: (dialogContext) => AlertDialog(
+            key: const ValueKey('editor-delete-confirmation'),
+            title: Text(l.deleteEventTitle),
+            content: Text(l.deleteEventConfirmation),
+            actions: [
+              TextButton(
+                onPressed: () => completeEditorRoute(dialogContext, false),
+                child: Text(l.cancel),
+              ),
+              FilledButton(
+                onPressed: () => completeEditorRoute(dialogContext, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                  foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+                ),
+                child: Text(l.delete),
+              ),
+            ],
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _selectionDialogOpen = false);
+      }
+      if (!mounted || confirmed != true || _editorSession?.isCurrent == false) {
+        return;
+      }
+    }
     final result = const GeneralEventEditorResult(delete: true);
     final delete = widget.onDelete;
     if (delete == null) {
@@ -418,6 +458,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 
   @override
   Widget build(BuildContext context) {
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final mediaQuery = MediaQuery.of(context);
@@ -447,7 +488,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
           contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           title: Text(_isEditing ? l10n.editEvent : l10n.addEvent),
           leading: _isEditing
-              ? OutlinedButton.icon(
+              ? (desktop ? TextButton.icon : OutlinedButton.icon)(
                   onPressed: _blocked ? null : () => unawaited(_delete()),
                   icon: const Icon(Icons.delete_outline),
                   label: Text(l10n.delete),
@@ -471,8 +512,12 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              UiCommandBusyIndicator(busy: _actionInProgress),
-              const SizedBox(height: 8),
+              if (desktop) ...[
+                if (_actionInProgress) const UiCommandBusyIndicator(busy: true),
+              ] else ...[
+                UiCommandBusyIndicator(busy: _actionInProgress),
+                const SizedBox(height: 8),
+              ],
               FocusScope(
                 canRequestFocus: !_blocked,
                 child: AbsorbPointer(
@@ -495,42 +540,83 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                         },
                       ),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _locationController,
-                        decoration: InputDecoration(
-                          labelText: l10n.place,
-                          prefixIcon: const Icon(Icons.location_on_outlined),
-                        ),
-                      ),
-                      if (_showCalendarPicker) ...[
-                        const SizedBox(height: 8),
-                        SkedDropdownMenu<String>(
-                          initialSelection: _calendarId,
-                          label: Text(l10n.calendar),
-                          leadingIcon: const Icon(
-                            Icons.calendar_month_outlined,
-                          ),
-                          expandedInsets: EdgeInsets.zero,
-                          dropdownMenuEntries: [
-                            for (final calendar in _calendarOptions)
-                              DropdownMenuEntry(
-                                value: calendar.id,
-                                label: calendar.name,
-                                labelWidget: _CalendarDropdownItem(
-                                  calendar: calendar,
+                      if (desktop)
+                        WorkspaceEditorFieldsRow(
+                          children: [
+                            TextFormField(
+                              controller: _locationController,
+                              decoration: InputDecoration(
+                                labelText: l10n.place,
+                                prefixIcon: const Icon(
+                                  Icons.location_on_outlined,
                                 ),
                               ),
+                            ),
+                            if (_showCalendarPicker)
+                              SkedDropdownMenu<String>(
+                                initialSelection: _calendarId,
+                                label: Text(l10n.calendar),
+                                leadingIcon: const Icon(
+                                  Icons.calendar_month_outlined,
+                                ),
+                                expandedInsets: EdgeInsets.zero,
+                                dropdownMenuEntries: [
+                                  for (final calendar in _calendarOptions)
+                                    DropdownMenuEntry(
+                                      value: calendar.id,
+                                      label: calendar.name,
+                                      labelWidget: _CalendarDropdownItem(
+                                        calendar: calendar,
+                                      ),
+                                    ),
+                                ],
+                                onSelected: (value) {
+                                  if (value != null) {
+                                    setState(() => _calendarId = value);
+                                  }
+                                },
+                              ),
                           ],
-                          onSelected: (value) {
-                            if (value != null) {
-                              setState(() => _calendarId = value);
-                            }
-                          },
+                        )
+                      else ...[
+                        TextFormField(
+                          controller: _locationController,
+                          decoration: InputDecoration(
+                            labelText: l10n.place,
+                            prefixIcon: const Icon(Icons.location_on_outlined),
+                          ),
                         ),
+                        if (_showCalendarPicker) ...[
+                          const SizedBox(height: 8),
+                          SkedDropdownMenu<String>(
+                            initialSelection: _calendarId,
+                            label: Text(l10n.calendar),
+                            leadingIcon: const Icon(
+                              Icons.calendar_month_outlined,
+                            ),
+                            expandedInsets: EdgeInsets.zero,
+                            dropdownMenuEntries: [
+                              for (final calendar in _calendarOptions)
+                                DropdownMenuEntry(
+                                  value: calendar.id,
+                                  label: calendar.name,
+                                  labelWidget: _CalendarDropdownItem(
+                                    calendar: calendar,
+                                  ),
+                                ),
+                            ],
+                            onSelected: (value) {
+                              if (value != null) {
+                                setState(() => _calendarId = value);
+                              }
+                            },
+                          ),
+                        ],
                       ],
                       const SizedBox(height: 8),
                       _EditorSection(
                         controller: _timeExpansion,
+                        desktopExpanded: true,
                         icon: Icons.schedule_outlined,
                         title: '${l10n.eventDate} · ${l10n.eventTime}',
                         initiallyExpanded: _timeSectionExpanded,
@@ -649,6 +735,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                       _EditorSection(
                         icon: Icons.tune_outlined,
                         title: '${l10n.eventRecurrence} · ${l10n.reminder}',
+                        desktopExpanded: true,
                         initiallyExpanded: _optionsSectionExpanded,
                         onExpansionChanged: (expanded) =>
                             setState(() => _optionsSectionExpanded = expanded),
@@ -691,7 +778,9 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
                       const SizedBox(height: 8),
                       _EditorSection(
                         icon: Icons.more_horiz,
-                        title: '${l10n.eventNotes} · ${l10n.eventColor}',
+                        title: desktop
+                            ? l10n.more
+                            : '${l10n.eventNotes} · ${l10n.eventColor}',
                         initiallyExpanded: _detailsSectionExpanded,
                         onExpansionChanged: (expanded) =>
                             setState(() => _detailsSectionExpanded = expanded),
@@ -855,6 +944,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 class _EditorSection extends StatelessWidget {
   const _EditorSection({
     this.controller,
+    this.desktopExpanded = false,
     required this.icon,
     required this.title,
     required this.initiallyExpanded,
@@ -863,6 +953,7 @@ class _EditorSection extends StatelessWidget {
     required this.child,
   });
 
+  final bool desktopExpanded;
   final IconData icon;
   final String title;
   final bool initiallyExpanded;
@@ -873,7 +964,11 @@ class _EditorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shape = skedShapeSchemeOf(context).field;
+    final desktop = WorkspaceEditorScope.maybeOf(context)?.enabled == true;
+    if (desktop && desktopExpanded) return child;
+    final shape = desktop
+        ? const RoundedRectangleBorder()
+        : skedShapeSchemeOf(context).field;
     return Material(
       color: Colors.transparent,
       shape: shape,
@@ -884,10 +979,15 @@ class _EditorSection extends StatelessWidget {
         maintainState: true,
         enabled: enabled,
         onExpansionChanged: enabled ? onExpansionChanged : null,
-        leading: Icon(icon),
+        leading: desktop ? null : Icon(icon),
+        minTileHeight: desktop ? 36 : null,
         title: Text(title),
-        tilePadding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
-        childrenPadding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+        tilePadding: desktop
+            ? EdgeInsets.zero
+            : const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
+        childrenPadding: desktop
+            ? EdgeInsets.zero
+            : const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
         shape: shape,
         collapsedShape: shape,
         backgroundColor: Colors.transparent,
@@ -914,6 +1014,13 @@ class _EventOptionField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return WorkspaceEditorSelection(
+        label: label,
+        value: value,
+        onTap: onTap == null ? null : () => onTap!(context),
+      );
+    }
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final enabled = onTap != null;
@@ -1561,6 +1668,12 @@ class _DateTimeRange extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [start, const SizedBox(height: 4), end],
+      );
+    }
     final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1616,6 +1729,61 @@ class _DateTimeRow extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      final style = TextButton.styleFrom(
+        minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        foregroundColor: colors.onSurface,
+      );
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                Builder(
+                  builder: (anchor) => TextButton.icon(
+                    style: style,
+                    onPressed: onPickDate == null
+                        ? null
+                        : () => onPickDate!(anchor),
+                    icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                    label: Text(_fmtDate(date)),
+                  ),
+                ),
+                if (showTime)
+                  Builder(
+                    builder: (anchor) => TextButton.icon(
+                      style: style,
+                      onPressed: onPickTime == null
+                          ? null
+                          : () => onPickTime!(anchor),
+                      icon: const Icon(Icons.access_time, size: 18),
+                      label: Text(time.format(context)),
+                    ),
+                  ),
+              ],
+            ),
+            if (errorText != null)
+              Text(
+                errorText!,
+                key: errorKey,
+                style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
+              ),
+          ],
+        ),
+      );
+    }
     final value = showTime
         ? '${_fmtDate(date)} ${time.format(context)}'
         : _fmtDate(date);
@@ -1763,6 +1931,14 @@ class _EventSwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (WorkspaceEditorScope.maybeOf(context)?.enabled == true) {
+      return Row(
+        children: [
+          Expanded(child: Text(title)),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      );
+    }
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Material(

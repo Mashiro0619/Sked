@@ -1,3 +1,4 @@
+import 'package:sked/widgets/workspace_editor.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,6 +10,102 @@ import '../support/workspace_harness.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
 void main() {
+  testWidgets(
+    'inline desktop time validation does not invoke a detached expansion controller',
+    (t) async {
+      final p = await workspaceProvider(mode: AppMode.general);
+      addTearDown(p.dispose);
+      t.view.physicalSize = const Size(1000, 900);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      await t.pumpWidget(
+        WorkspaceHarness(
+          provider: p,
+          home: Scaffold(
+            body: SizedBox(
+              width: 480,
+              child: WorkspaceEditorScope(
+                enabled: true,
+                floating: true,
+                onHeight: (_) {},
+                child: GeneralEventEditorSheet(
+                  initialEvent: GeneralEvent(
+                    id: 'invalid',
+                    calendarId: 'work',
+                    title: 'Invalid time',
+                    startDateTimeIso: '2026-10-04T11:00:00.000',
+                    endDateTimeIso: '2026-10-04T10:00:00.000',
+                  ),
+                  calendars: const [
+                    GeneralSchedule(id: 'work', name: 'Work', events: []),
+                  ],
+                  activeCalendarId: 'work',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.widgetWithText(FilledButton, 'Save'));
+      await t.pumpAndSettle();
+      expect(find.byType(GeneralEventEditorSheet), findsOneWidget);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+      await t.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'desktop event exposes common options and keeps nested picker draft local',
+    (t) async {
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(1440, 1000);
+      addTearDown(t.view.reset);
+      final p = await workspaceProvider(mode: AppMode.general);
+      addTearDown(p.dispose);
+      await t.pumpWidget(WorkspaceHarness(provider: p));
+      await t.pumpAndSettle();
+      await t.tap(key('general-add-event'));
+      await t.pumpAndSettle();
+      final editor = find.byType(GeneralEventEditorSheet);
+      final element = t.element(editor);
+      expect(key('event-recurrence-field').hitTestable(), findsOneWidget);
+      expect(key('event-reminder-field').hitTestable(), findsOneWidget);
+      expect(
+        find.descendant(of: editor, matching: find.byType(ExpansionTile)),
+        findsOneWidget,
+      );
+      final pos = t.getTopLeft(key('workspace-editor-drag'));
+      await t.tap(key('event-recurrence-field'));
+      await t.pumpAndSettle();
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await t.pumpAndSettle();
+      expect(t.element(editor), same(element));
+      expect(t.getTopLeft(key('workspace-editor-drag')), pos);
+      await t.tap(find.descendant(of: editor, matching: find.text('More')));
+      await t.pumpAndSettle();
+      final notes = find.descendant(
+        of: editor,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField && widget.decoration?.labelText == 'Notes',
+        ),
+      );
+      await t.ensureVisible(notes);
+      await t.pumpAndSettle();
+      expect(notes.hitTestable(), findsOneWidget);
+      await t.enterText(notes, 'Expanded notes draft');
+      await t.pumpAndSettle();
+      expect(find.text('Expanded notes draft'), findsOneWidget);
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+      await t.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   for (final dragged in [false, true]) {
     testWidgets(
       'automatic editor docking preserves draft; manually dragged=$dragged',

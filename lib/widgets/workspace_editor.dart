@@ -180,3 +180,90 @@ class _EditorSizeRender extends RenderProxyBox {
     });
   }
 }
+
+/// Stable wrap layout: resizing changes widths without moving fields to a new tree.
+class WorkspaceEditorFieldsRow extends StatelessWidget {
+  const WorkspaceEditorFieldsRow({
+    super.key,
+    required this.children,
+    this.minimumWidth = 180,
+  });
+  final List<Widget> children;
+  final double minimumWidth;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) {
+      final columns =
+          bounds.maxWidth >=
+              minimumWidth *
+                      MediaQuery.textScalerOf(context).scale(1) *
+                      children.length +
+                  12 * (children.length - 1)
+          ? children.length
+          : 1;
+      final width = (bounds.maxWidth - 12 * (columns - 1)) / columns;
+      return Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        children: [
+          for (var i = 0; i < children.length; i++)
+            SizedBox(key: ValueKey(i), width: width, child: children[i]),
+        ],
+      );
+    },
+  );
+}
+
+class WorkspaceEditorSelection extends StatelessWidget {
+  const WorkspaceEditorSelection({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+  final String label, value;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      value: value,
+      enabled: onTap != null,
+      child: TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 36),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          foregroundColor: colors.onSurface,
+          alignment: AlignmentDirectional.centerStart,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        child: ExcludeSemantics(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(color: colors.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(value, style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
