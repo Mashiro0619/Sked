@@ -23,6 +23,7 @@ import 'workspace_view_panel.dart';
 import 'sked_floating_surface.dart';
 import 'sked_floating_position_controller.dart';
 import 'workspace_editor.dart';
+import 'desktop_window_drag_guard.dart';
 
 export 'workspace_view_panel.dart'
     show WorkspacePanePresentation, WorkspaceViewPanel;
@@ -1237,6 +1238,14 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                         Stack(
                           key: _stackKey,
                           children: [
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: DesktopEditorWindowGuard(
+                                  active: floatingEditor && active,
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
                             Positioned.fill(
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,

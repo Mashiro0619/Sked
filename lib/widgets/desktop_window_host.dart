@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../services/desktop_window_bridge.dart';
 import 'desktop_window_modal_observer.dart';
+import 'desktop_window_drag_guard.dart';
 import 'workbench_chrome_metrics.dart';
 import 'app_layout_tokens.dart';
 
@@ -21,19 +22,24 @@ class DesktopDragRegion extends StatelessWidget {
   Widget build(BuildContext context) {
     final bridge = DesktopWindowBridge.instance;
     if (!bridge.available) return child;
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanStart: (_) => unawaited(bridge.command('startDrag')),
-            onDoubleTap: () => unawaited(bridge.command('toggleMaximize')),
-            onSecondaryTap: () => unawaited(bridge.command('systemMenu')),
+    return DesktopRegisteredDragArea(
+      controller: DesktopWindowDragScope.maybeOf(context),
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          Positioned.fill(
+            child: DesktopDragBlank(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanStart: (_) => unawaited(bridge.command('startDrag')),
+                onDoubleTap: () => unawaited(bridge.command('toggleMaximize')),
+                onSecondaryTap: () => unawaited(bridge.command('systemMenu')),
+              ),
+            ),
           ),
-        ),
-        child,
-      ],
+          child,
+        ],
+      ),
     );
   }
 }
@@ -90,7 +96,7 @@ class WorkbenchAppBar extends AppBar {
 
 /// Pages supply commands; this host owns native controls and the shared divider,
 /// never a second empty title bar. Geometry is sent to Win32 in logical pixels.
-class DesktopWindowHost extends StatelessWidget {
+class DesktopWindowHost extends StatefulWidget {
   const DesktopWindowHost({
     super.key,
     required this.child,
@@ -99,123 +105,152 @@ class DesktopWindowHost extends StatelessWidget {
   final Widget child;
   final DesktopWindowModalObserver modalObserver;
   @override
+  State<DesktopWindowHost> createState() => _DesktopWindowHostState();
+}
+
+class _DesktopWindowHostState extends State<DesktopWindowHost> {
+  final _dragController = DesktopWindowDragController();
+  @override
+  void dispose() {
+    _dragController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final child = widget.child;
+    final modalObserver = widget.modalObserver;
     final bridge = DesktopWindowBridge.instance;
     final metrics = WorkbenchChromeMetrics.of(context);
     if (!metrics.desktop) return child;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return Theme(
-      data: theme.copyWith(
-        appBarTheme: theme.appBarTheme.copyWith(
-          toolbarHeight: metrics.toolbarHeight,
-          backgroundColor: SkedSurfaceRole.frame.resolve(colors),
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
+    return DesktopWindowDragScope(
+      controller: _dragController,
+      child: Theme(
+        data: theme.copyWith(
+          appBarTheme: theme.appBarTheme.copyWith(
+            toolbarHeight: metrics.toolbarHeight,
+            backgroundColor: SkedSurfaceRole.frame.resolve(colors),
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+            shape: Border(bottom: BorderSide(color: colors.outlineVariant)),
+          ),
         ),
-      ),
-      child: !bridge.available
-          ? child
-          : AnimatedBuilder(
-              animation: Listenable.merge([bridge, modalObserver]),
-              builder: (context, _) => LayoutBuilder(
-                builder: (context, constraints) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    unawaited(
-                      bridge.configureChrome(
-                        width: constraints.maxWidth,
-                        height: metrics.toolbarHeight,
-                        buttonWidth: metrics.captionButtonWidth,
-                      ),
+        child: !bridge.available
+            ? child
+            : AnimatedBuilder(
+                animation: Listenable.merge([bridge, modalObserver]),
+                builder: (context, _) => LayoutBuilder(
+                  builder: (context, constraints) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      unawaited(
+                        bridge.configureChrome(
+                          width: constraints.maxWidth,
+                          height: metrics.toolbarHeight,
+                          buttonWidth: metrics.captionButtonWidth,
+                        ),
+                      );
+                    });
+                    final l = AppLocalizations.of(context);
+                    return Stack(
+                      children: [
+                        Positioned.fill(child: child),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: metrics.toolbarHeight,
+                          child: DesktopEditorCaptionProtection(
+                            key: const ValueKey(
+                              'desktop-editor-caption-protection',
+                            ),
+                            controller: _dragController,
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          width: metrics.captionWidth,
+                          height: metrics.toolbarHeight,
+                          child: Material(
+                            color: SkedSurfaceRole.frame.resolve(colors),
+                            child: Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Row(
+                                children: [
+                                  _CaptionButton(
+                                    label: l.minimizeWindow,
+                                    icon: Icons.remove,
+                                    height: metrics.toolbarHeight,
+                                    width: metrics.captionButtonWidth,
+                                    onPressed: () => bridge.command('minimize'),
+                                  ),
+                                  _CaptionButton(
+                                    label: bridge.maximized
+                                        ? l.restoreWindow
+                                        : l.maximizeWindow,
+                                    nativeHover: bridge.maximizeHovered,
+                                    icon: bridge.maximized
+                                        ? Icons.filter_none
+                                        : Icons.crop_square,
+                                    height: metrics.toolbarHeight,
+                                    width: metrics.captionButtonWidth,
+                                    onPressed: () =>
+                                        bridge.command('toggleMaximize'),
+                                  ),
+                                  _CaptionButton(
+                                    label: l.closeWindow,
+                                    icon: Icons.close,
+                                    close: true,
+                                    height: metrics.toolbarHeight,
+                                    width: metrics.captionButtonWidth,
+                                    onPressed: bridge.closing
+                                        ? null
+                                        : bridge.requestClose,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          key: const ValueKey('desktop-window-divider'),
+                          top: metrics.toolbarHeight - 1,
+                          left: 0,
+                          right: 0,
+                          height: 1,
+                          child: IgnorePointer(
+                            child: ColoredBox(color: colors.outlineVariant),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: metrics.toolbarHeight,
+                          child: IgnorePointer(
+                            child: ExcludeSemantics(
+                              child: ClipPath(
+                                clipper: _ChromeScrimClipper(
+                                  metrics.captionWidth,
+                                ),
+                                child: ColoredBox(
+                                  key: const ValueKey(
+                                    'desktop-window-modal-scrim',
+                                  ),
+                                  color: modalObserver.scrimColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     );
-                  });
-                  final l = AppLocalizations.of(context);
-                  return Stack(
-                    children: [
-                      Positioned.fill(child: child),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        width: metrics.captionWidth,
-                        height: metrics.toolbarHeight,
-                        child: Material(
-                          color: SkedSurfaceRole.frame.resolve(colors),
-                          child: Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Row(
-                              children: [
-                                _CaptionButton(
-                                  label: l.minimizeWindow,
-                                  icon: Icons.remove,
-                                  height: metrics.toolbarHeight,
-                                  width: metrics.captionButtonWidth,
-                                  onPressed: () => bridge.command('minimize'),
-                                ),
-                                _CaptionButton(
-                                  label: bridge.maximized
-                                      ? l.restoreWindow
-                                      : l.maximizeWindow,
-                                  nativeHover: bridge.maximizeHovered,
-                                  icon: bridge.maximized
-                                      ? Icons.filter_none
-                                      : Icons.crop_square,
-                                  height: metrics.toolbarHeight,
-                                  width: metrics.captionButtonWidth,
-                                  onPressed: () =>
-                                      bridge.command('toggleMaximize'),
-                                ),
-                                _CaptionButton(
-                                  label: l.closeWindow,
-                                  icon: Icons.close,
-                                  close: true,
-                                  height: metrics.toolbarHeight,
-                                  width: metrics.captionButtonWidth,
-                                  onPressed: bridge.closing
-                                      ? null
-                                      : bridge.requestClose,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        key: const ValueKey('desktop-window-divider'),
-                        top: metrics.toolbarHeight - 1,
-                        left: 0,
-                        right: 0,
-                        height: 1,
-                        child: IgnorePointer(
-                          child: ColoredBox(color: colors.outlineVariant),
-                        ),
-                      ),
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: metrics.toolbarHeight,
-                        child: IgnorePointer(
-                          child: ExcludeSemantics(
-                            child: ClipPath(
-                              clipper: _ChromeScrimClipper(
-                                metrics.captionWidth,
-                              ),
-                              child: ColoredBox(
-                                key: const ValueKey(
-                                  'desktop-window-modal-scrim',
-                                ),
-                                color: modalObserver.scrimColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                  },
+                ),
               ),
-            ),
+      ),
     );
   }
 }
