@@ -36,7 +36,7 @@ Future<void> _choose(WidgetTester t, String key, String label) async {
 void main() {
   for (final mode in AppMode.values) {
     testWidgets(
-      'real $mode editor and AI expand to four fifths without losing drafts',
+      'real $mode editor uses its width limit while AI keeps its independent width',
       (t) async {
         _viewport(t, const Size(1920, 1000));
         final provider = await workspaceProvider(mode: mode);
@@ -73,11 +73,27 @@ void main() {
         await t.pumpAndSettle();
         expect(
           t.getSize(_key('workspace-detail-pane')).width,
-          closeTo(maximum, .01),
+          closeTo(680, .01),
         );
-        expect(t.getSize(editor).width, closeTo(maximum, .01));
+        expect(t.getSize(editor).width, closeTo(680, .01));
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
         expect(t.getRect(_key('workspace-canvas-viewport')), canvas);
+        expect(t.state(editor), same(state));
+        expect(
+          t.widget<TextField>(field).controller!.text,
+          'Resizable editor draft',
+        );
+        expect(_key('assistant-toggle').hitTestable(), findsNothing);
+        await t.tap(_key('workspace-editor-close'));
+        await t.pumpAndSettle();
+        await t.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(FilledButton),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(editor, findsNothing);
         await t.tap(_key('assistant-toggle'));
         await t.pumpAndSettle();
         await t.enterText(_key('assistant-draft'), 'Resizable AI draft');
@@ -98,12 +114,7 @@ void main() {
         );
         await t.tap(_key('assistant-toggle'));
         await t.pumpAndSettle();
-        expect(t.state(editor), same(state));
-        expect(
-          t.widget<TextField>(field).controller!.text,
-          'Resizable editor draft',
-        );
-        expect(t.getSize(editor).width, closeTo(maximum, .01));
+        expect(editor, findsNothing);
         expect(t.takeException(), isNull);
         await t.pumpWidget(const SizedBox.shrink());
       },
@@ -177,6 +188,9 @@ void main() {
       _viewport(t);
       final provider = await workspaceProvider();
       addTearDown(provider.dispose);
+      await provider.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
       final original = provider.activeTimetable;
       await provider.addTimetable(
         original.config.copyWith(name: 'Another timetable'),
@@ -332,7 +346,10 @@ void main() {
             expect(t.getRect(_key('workspace-resource-width')), sidebar);
             expect(t.getRect(_key('workspace-canvas-viewport')), calendar);
             expect(provider.homeWorkspaceNavigationCollapsed, collapsed);
-            expect(_key('assistant-toggle').hitTestable(), findsOneWidget);
+            expect(
+              _key('assistant-toggle').hitTestable(),
+              frame.controller.floatingEditor ? findsNothing : findsOneWidget,
+            );
           }
 
           for (final key in [
@@ -346,9 +363,15 @@ void main() {
             expectStable();
             expect(
               t.getRect(_key('workspace-detail-pane')).top,
-              calendar.top + (key == 'general-add-event' ? 0 : 8),
+              greaterThanOrEqualTo(calendar.top + 8),
             );
-            await t.tap(_key('workspace-inspector-close'));
+            await t.tap(
+              _key(
+                frame.controller.hasEditorPanel
+                    ? 'workspace-editor-close'
+                    : 'workspace-inspector-close',
+              ),
+            );
             await t.pumpAndSettle();
             expect(frame.controller.hasPaneTasks, isFalse, reason: key);
             expectStable();
@@ -390,8 +413,14 @@ void main() {
         expect(frame.controller.hasPaneTasks, isTrue);
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
         expect(t.getRect(_key('workspace-canvas-viewport')), calendar);
-        expect(t.getRect(_key('workspace-detail-pane')).top, toolbar.bottom);
-        expect(t.getRect(_key('workspace-detail-resize')).top, toolbar.bottom);
+        expect(
+          t.getRect(_key('workspace-detail-pane')).top,
+          toolbar.bottom + (frame.controller.floatingEditor ? 8 : 0),
+        );
+        expect(
+          t.getRect(_key('workspace-detail-resize')).top,
+          toolbar.bottom + (frame.controller.floatingEditor ? 8 : 0),
+        );
         expect(t.getRect(_key('timetable-day-header').first), dayHeader);
         await provider.updateWorkspacePanelDisplayMode(
           WorkspacePanelDisplayMode.sideBySide,
@@ -404,8 +433,14 @@ void main() {
           WorkspacePanelDisplayMode.sideBySide,
         );
         expect(t.getRect(_key('workspace-resource-width')), sidebar);
-        expect(t.getRect(_key('workspace-detail-pane')).top, toolbar.bottom);
-        expect(t.getRect(_key('workspace-detail-resize')).top, toolbar.bottom);
+        expect(
+          t.getRect(_key('workspace-detail-pane')).top,
+          toolbar.bottom + (frame.controller.floatingEditor ? 8 : 0),
+        );
+        expect(
+          t.getRect(_key('workspace-detail-resize')).top,
+          toolbar.bottom + (frame.controller.floatingEditor ? 8 : 0),
+        );
         expect(
           t.getRect(_key('timetable-day-header').first).top,
           dayHeader.top,
@@ -416,7 +451,7 @@ void main() {
             lessThan(calendar.width),
           );
         }
-        await t.tap(_key('workspace-inspector-close'));
+        await t.tap(_key('workspace-editor-close'));
         await t.pumpAndSettle();
         expect(frame.controller.hasPaneTasks, isFalse);
         expect(t.takeException(), isNull);

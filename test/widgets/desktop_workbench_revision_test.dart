@@ -353,9 +353,21 @@ void main() {
       );
       tester.view.physicalSize = const Size(1920, 1080);
       await tester.pumpAndSettle();
-      // Overlay mode keeps the editor foreground even after widening.
+      // A modal editor cannot be covered by the assistant. Closing the editor
+      // restores the previously open assistant without losing its draft.
       expect(find.byType(AssistantPreviewPane), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      expect(
+        find.byKey(const ValueKey('assistant-toggle')).hitTestable(),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const ValueKey('workspace-editor-close')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(FilledButton),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(
         tester
@@ -388,10 +400,9 @@ void main() {
             .text,
         'Local draft, not sent',
       );
-      expect(find.byType(GeneralEventEditorSheet), findsNothing);
       expect(
-        tester.state(find.byType(GeneralEventEditorSheet, skipOffstage: false)),
-        same(state),
+        find.byType(GeneralEventEditorSheet, skipOffstage: false),
+        findsNothing,
       );
       await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
       await tester.pumpAndSettle();
@@ -422,8 +433,8 @@ void main() {
         'Local draft, not sent',
       );
       expect(
-        tester.state(find.byType(GeneralEventEditorSheet, skipOffstage: false)),
-        same(state),
+        find.byType(GeneralEventEditorSheet, skipOffstage: false),
+        findsNothing,
       );
       expect(tester.takeException(), isNull);
     },

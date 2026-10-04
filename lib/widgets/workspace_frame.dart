@@ -957,36 +957,41 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                   controller.hasEditorPanel
               ? controller._tasks.lastOrNull
               : null;
-          final assistantOpen =
-              previewEnabled && _assistant.isOpen && editingTask == null;
           final metrics = WorkbenchChromeMetrics.of(context);
-          final policy = WorkspaceLayout.resolve(
-            constraints.maxWidth,
-            metrics.textScale,
-            detailOpen: controller.hasPaneTasks,
-            hasSupporting: widget.supporting != null,
-            assistantOpen: assistantOpen,
-            assistantActive: _assistantLast,
-            pointer: metrics.desktop,
-            captionWidth: DesktopWindowBridge.instance.available
-                ? metrics.captionWidth
-                : 0,
-            shortWindow: MediaQuery.sizeOf(context).height < 480,
-            panelDisplayMode: editingTask?.position.detached == true
-                ? WorkspacePanelDisplayMode.overlay
-                : widget.panelDisplayMode,
-            partialDetailOverlay:
-                metrics.desktop &&
-                (controller.hasViewPanel || controller.hasEditorPanel),
-            minimumCanvas: widget.minimumCanvas,
-            preferredDetailWidth: editingTask == null
-                ? _detailWidth
-                : editingTask.editorWidth / metrics.textScale,
-            preferredAssistantWidth: _assistant.width,
-            // Scaffold shortens the body for the IME. Only an actual short
-            // window, not typing in a pane, may compact the navigation.
-            resourcesCollapsed: widget.resourcesCollapsed,
-          );
+          WorkspaceLayout resolveLayout(bool assistantOpen) =>
+              WorkspaceLayout.resolve(
+                constraints.maxWidth,
+                metrics.textScale,
+                detailOpen: controller.hasPaneTasks,
+                hasSupporting: widget.supporting != null,
+                assistantOpen: assistantOpen,
+                assistantActive: _assistantLast,
+                pointer: metrics.desktop,
+                captionWidth: DesktopWindowBridge.instance.available
+                    ? metrics.captionWidth
+                    : 0,
+                shortWindow: MediaQuery.sizeOf(context).height < 480,
+                panelDisplayMode: editingTask?.position.detached == true
+                    ? WorkspacePanelDisplayMode.overlay
+                    : widget.panelDisplayMode,
+                partialDetailOverlay:
+                    metrics.desktop &&
+                    (controller.hasViewPanel || controller.hasEditorPanel),
+                minimumCanvas: widget.minimumCanvas,
+                preferredDetailWidth: editingTask == null
+                    ? _detailWidth
+                    : editingTask.editorWidth / metrics.textScale,
+                preferredAssistantWidth: _assistant.width,
+                // Scaffold shortens the body for the IME. Only an actual short
+                // window, not typing in a pane, may compact the navigation.
+                resourcesCollapsed: widget.resourcesCollapsed,
+              );
+          final editorLayout = resolveLayout(false);
+          final assistantOpen =
+              previewEnabled &&
+              _assistant.isOpen &&
+              (editingTask == null || editorLayout.dockedDetail);
+          final policy = assistantOpen ? resolveLayout(true) : editorLayout;
           final floatingEditor =
               editingTask != null &&
               policy.detailVisible &&

@@ -1,4 +1,6 @@
 import 'package:sked/widgets/workspace_editor.dart';
+import 'package:sked/services/developer_ui_preferences.dart';
+import 'package:sked/widgets/assistant_pane.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +12,130 @@ import '../support/workspace_harness.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
 void main() {
+  for (final mode in AppMode.values) {
+    testWidgets(
+      'outside-dismiss disabled still blocks navigation and keeps focus inside $mode editor',
+      (t) async {
+        t.view.devicePixelRatio = 1;
+        t.view.physicalSize = const Size(1440, 1000);
+        addTearDown(t.view.reset);
+        final p = await workspaceProvider(mode: mode);
+        addTearDown(p.dispose);
+        if (mode == AppMode.general) {
+          await p.updateGeneralDisplaySettings(
+            closeEventPopupOnOutsideTap: false,
+          );
+        } else {
+          await p.updateCloseCoursePopupOnOutsideTap(false);
+        }
+        await t.pumpWidget(WorkspaceHarness(provider: p));
+        await t.pumpAndSettle();
+        final trigger = key(
+          mode == AppMode.general ? 'general-add-event' : 'student-add-course',
+        );
+        await t.tap(trigger);
+        await t.pumpAndSettle();
+        final editor = find.byType(
+          mode == AppMode.general ? GeneralEventEditorSheet : CourseEditorSheet,
+        );
+        final element = t.element(editor);
+        final field = find
+            .descendant(of: editor, matching: find.byType(EditableText))
+            .first;
+        await t.enterText(field, 'Modal draft');
+        final targetMode = mode == AppMode.general ? 'student' : 'general';
+        await t.tapAt(t.getCenter(key('workspace-resource-mode-$targetMode')));
+        await t.pumpAndSettle();
+        await t.tapAt(const Offset(620, 910));
+        await t.pumpAndSettle();
+        expect(p.activeMode, mode);
+        expect(t.element(editor), same(element));
+        expect(find.byType(AlertDialog), findsNothing);
+        for (var i = 0; i < 24; i++) {
+          await t.sendKeyEvent(LogicalKeyboardKey.tab);
+          await t.pump();
+          final focus = FocusManager.instance.primaryFocus?.context;
+          expect(focus, isNotNull);
+          var inEditor = identical(focus, element);
+          focus!.visitAncestorElements((ancestor) {
+            if (identical(ancestor, element) ||
+                ancestor.widget.key ==
+                    const ValueKey('workspace-detail-resize'))
+              inEditor = true;
+            return !inEditor;
+          });
+          expect(
+            inEditor,
+            isTrue,
+            reason:
+                'Tab $i: ${FocusManager.instance.primaryFocus}\n${focus.widget}',
+          );
+        }
+        await t.sendKeyEvent(LogicalKeyboardKey.escape);
+        await t.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await t.tap(find.widgetWithText(TextButton, 'Cancel').last);
+        await t.pumpAndSettle();
+        expect(t.element(editor), same(element));
+        expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox());
+        await t.pumpAndSettle();
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
+  testWidgets(
+    'docked editor keeps the assistant available; floating editor suspends it',
+    (t) async {
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(1920, 1100);
+      addTearDown(t.view.reset);
+      final p = await workspaceProvider(mode: AppMode.general);
+      addTearDown(p.dispose);
+      await p.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
+      final prefs = DeveloperUiPreferences.memory(visible: true);
+      addTearDown(prefs.dispose);
+      await t.pumpWidget(
+        WorkspaceHarness(provider: p, developerUiPreferences: prefs),
+      );
+      await t.pumpAndSettle();
+      await t.tap(key('general-add-event'));
+      await t.pumpAndSettle();
+      final editor = find.byType(GeneralEventEditorSheet);
+      final element = t.element(editor);
+      await t.tap(key('assistant-toggle'));
+      await t.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsOneWidget);
+      expect(editor, findsOneWidget);
+      expect(key('workspace-editor-barrier'), findsNothing);
+      await t.enterText(key('assistant-draft'), 'Assistant draft');
+      await p.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.overlay,
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsNothing);
+      expect(key('workspace-editor-barrier'), findsOneWidget);
+      expect(t.element(editor), same(element));
+      await p.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
+      await t.pumpAndSettle();
+      expect(find.byType(AssistantPreviewPane), findsOneWidget);
+      expect(
+        t.widget<TextField>(key('assistant-draft')).controller!.text,
+        'Assistant draft',
+      );
+      expect(t.element(editor), same(element));
+      expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox());
+      await t.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   testWidgets(
     'desktop course reveals schedule directly and preserves text across field wrapping',
     (t) async {
