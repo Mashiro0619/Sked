@@ -57,6 +57,8 @@ extension _HomeScreenCourseActions on _HomeScreenState {
           weekday: info.course.dayOfWeek,
           conflictKey: info.conflictKey,
           isFullConflict: info.isFullConflict,
+          onEditAnchor: (anchor) => _pane.editorEntry =
+              WorkspaceEditorConfiguration(anchorContext: anchor),
           onEdit: () => edit(info.course),
           onMissing: () {
             if (sheetContext.mounted) {
@@ -91,6 +93,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
     BuildContext context,
     TimetableProvider provider, {
     CourseItem? course,
+    WorkspaceEditorConfiguration? editor,
     String? timetableId,
     int? weekday,
     TimetableEmptySlotTapInfo? emptySlot,
@@ -111,17 +114,14 @@ extension _HomeScreenCourseActions on _HomeScreenState {
       await showAppModalSheet<CourseEditorResult>(
         context: context,
         workspacePane: _pane,
+        editor: editor ?? _pane.takeEditorEntry(),
         workspace: AppMode.student,
-        isSessionCurrent:
-            (WorkbenchChromeMetrics.compactTouch(context) ||
-                _pane.hasModalTasks)
-            ? () => provider.timetables.any(
-                (item) =>
-                    item.id == timetable.id &&
-                    (course == null ||
-                        item.courses.any((value) => value.id == course.id)),
-              )
-            : null,
+        isSessionCurrent: () => provider.timetables.any(
+          (item) =>
+              item.id == timetable.id &&
+              (course == null ||
+                  item.courses.any((value) => value.id == course.id)),
+        ),
         selectionId: course == null ? null : 'course:${course.id}',
         isDismissible: canDismiss,
         enableDrag: false,

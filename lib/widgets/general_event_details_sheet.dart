@@ -17,6 +17,7 @@ class GeneralEventDetailsSheet extends StatefulWidget {
     super.key,
     required this.occurrence,
     this.onEdit,
+    this.onEditAnchor,
     this.onDuplicate,
     this.isReminderHandled = false,
     this.onDismissReminder,
@@ -39,6 +40,7 @@ class GeneralEventDetailsSheet extends StatefulWidget {
   final ValueChanged<bool>? onBusyChanged;
   final ValueChanged<ModalRoute<dynamic>?>? onChildRouteChanged;
   final Widget? headerAction;
+  final ValueChanged<BuildContext>? onEditAnchor;
   final FutureOr<void> Function()? onEdit;
   final FutureOr<void> Function()? onDuplicate;
   final bool isReminderHandled;
@@ -60,10 +62,11 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     widget.onBusyChanged?.call(value);
   }
 
-  void _edit() {
+  void _edit(BuildContext anchor) {
     // The background may already own another editor. Refuse before promotion,
     // busy state or dismissal, including callbacks invoked before a rebuild.
     if (widget.canEdit?.call() == false) return;
+    widget.onEditAnchor?.call(anchor);
     unawaited(_runAction(widget.onEdit));
   }
 
@@ -343,14 +346,16 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   if (widget.onEdit != null)
-                    FilledButton.tonalIcon(
-                      key: const ValueKey('general-event-edit-action'),
-                      onPressed:
-                          _actionTriggered || widget.canEdit?.call() == false
-                          ? null
-                          : _edit,
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: Text(l10n.editEvent),
+                    Builder(
+                      builder: (anchor) => FilledButton.tonalIcon(
+                        key: const ValueKey('general-event-edit-action'),
+                        onPressed:
+                            _actionTriggered || widget.canEdit?.call() == false
+                            ? null
+                            : () => _edit(anchor),
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: Text(l10n.editEvent),
+                      ),
                     ),
                   ...secondaryActions,
                 ],
@@ -410,14 +415,16 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
                   ),
                 ),
                 if (widget.onEdit != null)
-                  _EventIconButton(
-                    key: const ValueKey('general-event-edit-action'),
-                    tooltip: l10n.editEvent,
-                    onPressed:
-                        _actionTriggered || widget.canEdit?.call() == false
-                        ? null
-                        : _edit,
-                    icon: Icons.edit_outlined,
+                  Builder(
+                    builder: (anchor) => _EventIconButton(
+                      key: const ValueKey('general-event-edit-action'),
+                      tooltip: l10n.editEvent,
+                      onPressed:
+                          _actionTriggered || widget.canEdit?.call() == false
+                          ? null
+                          : () => _edit(anchor),
+                      icon: Icons.edit_outlined,
+                    ),
                   ),
               ],
             ),

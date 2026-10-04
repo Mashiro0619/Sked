@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'workbench_chrome_metrics.dart';
 
 /// Opt-in: ordinary editors and touch tasks retain their existing presentation.
-enum WorkspacePanePresentation { standard, view }
+enum WorkspacePanePresentation { standard, view, editor }
 
 class WorkspaceViewTaskScope extends InheritedWidget {
   const WorkspaceViewTaskScope({

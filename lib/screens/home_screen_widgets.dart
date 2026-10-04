@@ -73,7 +73,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
   final VoidCallback? onJumpToToday;
   final ValueChanged<_StudentTimetableView>? onViewChanged;
   final VoidCallback? onOpenSettings;
-  final VoidCallback? onAddCourse;
+  final ValueChanged<BuildContext>? onAddCourse;
   final ValueChanged<int>? onStep;
   final bool showAddLabel;
 
@@ -175,11 +175,15 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               onPressed: onOpenSettings,
               icon: const Icon(Icons.settings_outlined),
             ),
-          FilledButton.icon(
-            key: const ValueKey('student-add-course'),
-            onPressed: onAddCourse,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(l10n.addCourse),
+          Builder(
+            builder: (anchor) => FilledButton.icon(
+              key: const ValueKey('student-add-course'),
+              onPressed: onAddCourse == null
+                  ? null
+                  : () => onAddCourse!(anchor),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.addCourse),
+            ),
           ),
         ],
       );
@@ -438,18 +442,24 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             AssistantPaneScope.of(context)?.enabled == true)
           const AssistantPaneToggle(),
         if (onAddCourse != null)
-          Tooltip(
-            message: l10n.addCourse,
-            child: showAddLabel
-                ? FilledButton.icon(
-                    onPressed: onAddCourse,
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.addCourse),
-                  )
-                : IconButton.filled(
-                    onPressed: onAddCourse,
-                    icon: const Icon(Icons.add),
-                  ),
+          Builder(
+            builder: (anchor) => Tooltip(
+              message: l10n.addCourse,
+              child: showAddLabel
+                  ? FilledButton.icon(
+                      onPressed: onAddCourse == null
+                          ? null
+                          : () => onAddCourse!(anchor),
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.addCourse),
+                    )
+                  : IconButton.filled(
+                      onPressed: onAddCourse == null
+                          ? null
+                          : () => onAddCourse!(anchor),
+                      icon: const Icon(Icons.add),
+                    ),
+            ),
           ),
       ],
       padding: EdgeInsets.symmetric(
@@ -583,7 +593,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         label: l.addCourse,
         icon: Icons.add,
         dividerBefore: true,
-        onSelected: onAddCourse == null ? null : (_) => onAddCourse!(),
+        onSelected: onAddCourse,
       ),
       enabled: interactive,
       moreFocusNode: showSettings ? settingsFocusNode : null,

@@ -57,6 +57,7 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
   bool get _canInteract =>
       mounted &&
       _foreground &&
+      !widget.pane.floatingEditor &&
       _validData &&
       widget.isOwnerActive() &&
       _ownerRoute?.isCurrent == true &&
@@ -590,6 +591,8 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
                   AppLocalizations.of(context).showReminderIndependently,
                 ),
               ),
+        onEditAnchor: (anchor) => widget.pane.editorEntry =
+            WorkspaceEditorConfiguration(anchorContext: anchor),
         onEdit: () async {
           final latest = currentOccurrence();
           if (latest == null) return;
@@ -623,119 +626,132 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
     );
   }
 
-  Widget _overlay(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final media = MediaQuery.of(context);
-      final metrics = WorkbenchChromeMetrics.of(context);
-      final render = _overlayKey.currentContext?.findRenderObject();
-      _overlayOrigin = render is RenderBox && render.attached
-          ? render.localToGlobal(Offset.zero)
-          : Offset.zero;
-      _bounds = Rect.fromLTRB(
-        media.padding.left + 8,
-        media.padding.top + metrics.toolbarHeight + 8,
-        constraints.maxWidth - media.padding.right - 8,
-        math.max(
-          media.padding.top + metrics.toolbarHeight + 8,
-          constraints.maxHeight -
-              math.max(media.padding.bottom, media.viewInsets.bottom) -
-              8,
-        ),
-      );
-      final anchor = _anchorRect();
-      final width = math.min(_bounds.width, 360 * metrics.textScale);
-      final anchoredHeight = skedFloatingHeightLimit(_bounds, anchor, width);
-      if (session.independent) _independentHeightLimit ??= anchoredHeight;
-      final heightLimit = session.independent
-          ? math.min(_bounds.height, _independentHeightLimit!)
-          : anchoredHeight;
-      _lastHeightLimit = heightLimit;
-      // Local tooltips share a full-size render-ancestor overlay. The detail
-      // remains content-sized and the empty background does not hit-test.
-      return Overlay.wrap(
-        clipBehavior: Clip.none,
-        child: Stack(
-          key: _overlayKey,
-          children: [
-            Positioned.fill(
-              child: _ReminderHitRegion(
-                accepts: (point) => !session.independent && _inBridge(point),
-                child: MouseRegion(
-                  onEnter: (_) => _enterDetail(),
-                  onExit: (_) => _leaveDetail(),
-                  child: const SizedBox.expand(),
-                ),
-              ),
+  Widget _overlay(BuildContext context) => Offstage(
+    offstage: widget.pane.floatingEditor,
+    child: ExcludeFocus(
+      excluding: widget.pane.floatingEditor,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final media = MediaQuery.of(context);
+          final metrics = WorkbenchChromeMetrics.of(context);
+          final render = _overlayKey.currentContext?.findRenderObject();
+          _overlayOrigin = render is RenderBox && render.attached
+              ? render.localToGlobal(Offset.zero)
+              : Offset.zero;
+          _bounds = Rect.fromLTRB(
+            media.padding.left + 8,
+            media.padding.top + metrics.toolbarHeight + 8,
+            constraints.maxWidth - media.padding.right - 8,
+            math.max(
+              media.padding.top + metrics.toolbarHeight + 8,
+              constraints.maxHeight -
+                  math.max(media.padding.bottom, media.viewInsets.bottom) -
+                  8,
             ),
-            CustomSingleChildLayout(
-              delegate: _ReminderDetailPosition(
-                bounds: _bounds,
-                anchor: anchor,
-                width: width,
-                heightLimit: heightLimit,
-                manual:
-                    session.manualPosition ??
-                    (session.independent ? _independentPosition : null),
-                lastPosition: _panel.isEmpty ? null : _panel.topLeft,
-                rtl: Directionality.of(context) == TextDirection.rtl,
-                onLayout: (position, size) {
-                  _panel = position & size;
-                  session.position.recordLayout(position, size);
-                  if (session.independent && _independentPosition == null) {
-                    _independentPosition = position;
-                  }
-                },
-              ),
-              child: Listener(
-                onPointerDown: (_) {
-                  // Clicking/dragging the independent window activates it even
-                  // when the target is plain text, not a focusable control.
-                  if (session.independent && _canInteract) {
-                    _focus.requestFocus();
-                  }
-                },
-                child: MouseRegion(
-                  onEnter: (_) => _enterDetail(),
-                  onExit: (_) => _leaveDetail(),
-                  child: FocusScope(
-                    node: _focus,
-                    canRequestFocus: true,
-                    onKeyEvent: _handleKey,
-                    child: SkedFloatingSurface(
-                      key: const ValueKey('workspace-companion-view-surface'),
-                      child: WorkspaceViewTaskScope(
-                        enabled: true,
-                        onClose: dismiss,
-                        showClose: session.independent,
-                        onContentHeight: (_) {},
-                        child: WorkspaceViewLayoutScope(
-                          compact: true,
-                          onDragUpdate: !session.independent
-                              ? null
-                              : (delta) {
-                                  // Independent mode and busy policy belong to
-                                  // the session; the controller only clamps geometry.
-                                  if (session.blocked) return;
-                                  session.position.recordLayout(
-                                    _panel.topLeft,
-                                    _panel.size,
-                                  );
-                                  session.moveTo(
-                                    session.position.drag(delta, _bounds),
-                                  );
-                                },
-                          child: _details(context),
+          );
+          final anchor = _anchorRect();
+          final width = math.min(_bounds.width, 360 * metrics.textScale);
+          final anchoredHeight = skedFloatingHeightLimit(
+            _bounds,
+            anchor,
+            width,
+          );
+          if (session.independent) _independentHeightLimit ??= anchoredHeight;
+          final heightLimit = session.independent
+              ? math.min(_bounds.height, _independentHeightLimit!)
+              : anchoredHeight;
+          _lastHeightLimit = heightLimit;
+          // Local tooltips share a full-size render-ancestor overlay. The detail
+          // remains content-sized and the empty background does not hit-test.
+          return Overlay.wrap(
+            clipBehavior: Clip.none,
+            child: Stack(
+              key: _overlayKey,
+              children: [
+                Positioned.fill(
+                  child: _ReminderHitRegion(
+                    accepts: (point) =>
+                        !session.independent && _inBridge(point),
+                    child: MouseRegion(
+                      onEnter: (_) => _enterDetail(),
+                      onExit: (_) => _leaveDetail(),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+                CustomSingleChildLayout(
+                  delegate: _ReminderDetailPosition(
+                    bounds: _bounds,
+                    anchor: anchor,
+                    width: width,
+                    heightLimit: heightLimit,
+                    manual:
+                        session.manualPosition ??
+                        (session.independent ? _independentPosition : null),
+                    lastPosition: _panel.isEmpty ? null : _panel.topLeft,
+                    rtl: Directionality.of(context) == TextDirection.rtl,
+                    onLayout: (position, size) {
+                      _panel = position & size;
+                      session.position.recordLayout(position, size);
+                      if (session.independent && _independentPosition == null) {
+                        _independentPosition = position;
+                      }
+                    },
+                  ),
+                  child: Listener(
+                    onPointerDown: (_) {
+                      // Clicking/dragging the independent window activates it even
+                      // when the target is plain text, not a focusable control.
+                      if (session.independent && _canInteract) {
+                        _focus.requestFocus();
+                      }
+                    },
+                    child: MouseRegion(
+                      onEnter: (_) => _enterDetail(),
+                      onExit: (_) => _leaveDetail(),
+                      child: FocusScope(
+                        node: _focus,
+                        canRequestFocus: true,
+                        onKeyEvent: _handleKey,
+                        child: SkedFloatingSurface(
+                          key: const ValueKey(
+                            'workspace-companion-view-surface',
+                          ),
+                          child: WorkspaceViewTaskScope(
+                            enabled: true,
+                            onClose: dismiss,
+                            showClose: session.independent,
+                            onContentHeight: (_) {},
+                            child: WorkspaceViewLayoutScope(
+                              compact: true,
+                              onDragUpdate: !session.independent
+                                  ? null
+                                  : (delta) {
+                                      // Independent mode and busy policy belong to
+                                      // the session; the controller only clamps geometry.
+                                      if (session.blocked) return;
+                                      session.position.recordLayout(
+                                        _panel.topLeft,
+                                        _panel.size,
+                                      );
+                                      session.moveTo(
+                                        session.position.drag(delta, _bounds),
+                                      );
+                                    },
+                              child: _details(context),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      );
-    },
+          );
+        },
+      ),
+    ),
   );
 
   @override

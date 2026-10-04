@@ -1322,7 +1322,13 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           icon: Icons.add,
           dividerBefore: true,
           onSelected: widget.interactive && !_editorSheetOpen
-              ? (_) => unawaited(_openEditor(context, provider))
+              ? (anchor) => unawaited(
+                  _openEditor(
+                    context,
+                    provider,
+                    editor: WorkspaceEditorConfiguration(anchorContext: anchor),
+                  ),
+                )
               : null,
         ),
         enabled: widget.interactive,
@@ -1614,13 +1620,19 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 () => _openSettingsPage(context, provider),
             icon: const Icon(Icons.settings_outlined),
           ),
-        FilledButton.icon(
-          key: const ValueKey('general-add-event'),
-          onPressed: widget.interactive && !_editorSheetOpen
-              ? () => _openEditor(context, provider)
-              : null,
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(l.addEvent),
+        Builder(
+          builder: (anchor) => FilledButton.icon(
+            key: const ValueKey('general-add-event'),
+            onPressed: widget.interactive && !_editorSheetOpen
+                ? () => _openEditor(
+                    context,
+                    provider,
+                    editor: WorkspaceEditorConfiguration(anchorContext: anchor),
+                  )
+                : null,
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l.addEvent),
+          ),
         ),
       ],
     );
@@ -1660,13 +1672,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           key: const ValueKey('general-selected-day-agenda'),
           title: Text(l10n.selectedDayAgenda),
           subtitle: Text(_formatDate(date)),
-          headerAction: TextButton.icon(
-            key: const ValueKey('general-day-agenda-add'),
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(l10n.addEvent),
-            onPressed: widget.interactive && !_editorSheetOpen
-                ? () => _openEditor(context, provider, initialDate: date)
-                : null,
+          headerAction: Builder(
+            builder: (anchor) => TextButton.icon(
+              key: const ValueKey('general-day-agenda-add'),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.addEvent),
+              onPressed: widget.interactive && !_editorSheetOpen
+                  ? () => _openEditor(
+                      context,
+                      provider,
+                      initialDate: date,
+                      editor: WorkspaceEditorConfiguration(
+                        anchorContext: anchor,
+                      ),
+                    )
+                  : null,
+            ),
           ),
           contentPadding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
           child: Column(
@@ -1815,6 +1836,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     BuildContext context,
     TimetableProvider provider, {
     DateTime? initialDate,
+    WorkspaceEditorConfiguration? editor,
     GeneralEvent? event,
   }) async {
     if (_editorSheetOpen || !widget.interactive) {
@@ -1829,17 +1851,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       await showAppModalSheet<GeneralEventEditorResult>(
         context: context,
         workspacePane: _pane,
+        editor: editor ?? _pane.takeEditorEntry(),
         workspace: AppMode.general,
-        isSessionCurrent:
-            (WorkbenchChromeMetrics.compactTouch(context) ||
-                _pane.hasModalTasks)
-            ? () => provider.generalSchedules.any(
-                (calendar) =>
-                    calendar.id == calendarId &&
-                    (event == null ||
-                        calendar.events.any((item) => item.id == event.id)),
-              )
-            : null,
+        isSessionCurrent: () => provider.generalSchedules.any(
+          (calendar) =>
+              calendar.id == calendarId &&
+              (event == null ||
+                  calendar.events.any((item) => item.id == event.id)),
+        ),
         selectionId: event == null
             ? null
             : _pane.selectedId ?? 'event:${event.id}',

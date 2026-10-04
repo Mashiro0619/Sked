@@ -1,4 +1,6 @@
 import 'sked_task_session.dart';
+import 'workspace_editor.dart';
+export 'workspace_editor.dart' show WorkspaceEditorConfiguration;
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
@@ -32,6 +34,7 @@ Future<T?> showAppModalSheet<T>({
   WorkspacePaneController? workspacePane,
   WorkspacePanePresentation panePresentation =
       WorkspacePanePresentation.standard,
+  WorkspaceEditorConfiguration? editor,
   String? selectionId,
   AppMode? workspace,
   bool Function()? isSessionCurrent,
@@ -65,10 +68,22 @@ Future<T?> showAppModalSheet<T>({
     try {
       final result = await workspacePane.show<T>(
         content,
-        presentation: panePresentation,
+        presentation: editor == null
+            ? panePresentation
+            : WorkspacePanePresentation.editor,
+        editor: editor,
         selectionId: selectionId,
         dismissOnCanvasTap: isDismissible,
       );
+      if (editor != null &&
+          isCurrent() &&
+          (ownerRoute?.isCurrent ?? true) &&
+          focus?.context?.mounted == true &&
+          focus!.canRequestFocus &&
+          (workspacePane.focusScope.hasFocus ||
+              FocusManager.instance.primaryFocus?.context?.mounted != true)) {
+        focus.requestFocus();
+      }
       return isCurrent() ? result : null;
     } finally {
       taskSession.dispose();
@@ -178,6 +193,8 @@ class AppSheetScaffold extends StatelessWidget {
     required this.title,
     required this.child,
     this.leading,
+    this.onClose,
+    this.closeEnabled = true,
     this.actions = const [],
     this.footer,
     this.subtitle,
@@ -190,6 +207,8 @@ class AppSheetScaffold extends StatelessWidget {
   final Widget? subtitle;
   final Widget child;
   final Widget? leading;
+  final VoidCallback? onClose;
+  final bool closeEnabled;
   final List<Widget> actions;
 
   /// A custom fixed footer that replaces the standard leading/actions layout.
@@ -205,6 +224,17 @@ class AppSheetScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.viewInsetsOf(context);
+    final editor = WorkspaceEditorScope.maybeOf(context);
+    if (editor?.enabled == true && onClose != null) {
+      return WorkspaceEditorScaffold(
+        title: title,
+        onClose: onClose!,
+        closeEnabled: closeEnabled,
+        actions: actions,
+        leading: leading,
+        child: child,
+      );
+    }
     final inTaskPane = WorkspaceTaskScope.contains(context);
     final keyboardHandled =
         inTaskPane || _AppBottomSheetScope.contains(context);

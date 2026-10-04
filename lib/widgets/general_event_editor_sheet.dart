@@ -1,3 +1,4 @@
+import 'sked_task_session.dart';
 import 'sked_time_picker.dart';
 
 import 'dart:convert';
@@ -93,6 +94,13 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
 
   bool get _isEditing => widget.initialEvent != null;
   bool get _showCalendarPicker => _calendarOptions.length > 1;
+  SkedTaskSession? _editorSession;
+
+  @override
+  Widget guardDiscardConfirmation(Widget dialog) => _editorSession == null
+      ? dialog
+      : SkedTaskRouteGuard(parent: _editorSession, child: dialog);
+
   @override
   String get draftFingerprint => jsonEncode([
     _titleController.text,
@@ -193,6 +201,7 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _editorSession ??= SkedTaskSessionScope.maybeOf(context)?.session;
     if (_sectionsInitialized) return;
     final mediaQuery = MediaQuery.of(context);
     final textScale = mediaQuery.textScaler.scale(16) / 16;
@@ -430,6 +439,8 @@ class _GeneralEventEditorSheetState extends State<GeneralEventEditorSheet>
       child: Form(
         key: _formKey,
         child: AppSheetScaffold(
+          onClose: () => unawaited(requestEditorExit()),
+          closeEnabled: !_blocked,
           // Android portrait keyboards and short windows need nearly the
           // whole viewport so the fixed action bar does not cover the form.
           heightFactor: sheetHeightFactor,

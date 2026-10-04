@@ -421,7 +421,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           _StudentWorkspaceToolbar(
                             onAddCourse: inlineAdd && addVisible
-                                ? () => _openEditor(context, provider)
+                                ? (anchor) => _openEditor(
+                                    context,
+                                    provider,
+                                    editor: WorkspaceEditorConfiguration(
+                                      anchorContext: anchor,
+                                    ),
+                                  )
                                 : null,
                             showAddLabel: constraints.maxWidth >= 760,
                             timetable: timetable,

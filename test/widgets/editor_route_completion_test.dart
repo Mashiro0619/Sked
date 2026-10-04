@@ -337,7 +337,7 @@ void main() {
   }
 
   testWidgets(
-    'real schedule toolbar reminder survives completion of a background save',
+    'docked schedule toolbar reminder survives completion of a background save',
     (t) async {
       _viewport(t);
       final storage = _DelayedStorage(
@@ -349,6 +349,9 @@ void main() {
         storage: storage,
       );
       addTearDown(provider.dispose);
+      await provider.updateWorkspacePanelDisplayMode(
+        WorkspacePanelDisplayMode.sideBySide,
+      );
       await t.pumpWidget(WorkspaceHarness(provider: provider));
       await t.pumpAndSettle();
       await t.tap(_key('general-add-event'));

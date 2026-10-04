@@ -267,7 +267,7 @@ void main() {
   );
 
   testWidgets(
-    'existing editor rejects detail edit without closing either, then allows retry',
+    'floating editor suspends detail without destroying it, then allows retry',
     (t) async {
       await mount(t);
       final detailElement = t.element(details);
@@ -277,14 +277,16 @@ void main() {
       await t.tap(k('general-add-event'));
       await t.pumpAndSettle();
       final originalEditor = t.element(editor);
-      expect(
-        t.widget<FilledButton>(inside('general-event-edit-action')).onPressed,
-        isNull,
+      expect(details, findsNothing);
+      final suspended = find.byType(
+        GeneralEventDetailsSheet,
+        skipOffstage: false,
       );
+      expect(t.element(suspended), same(detailElement));
       // A callback retained from before the rebuild must also reject safely.
       oldActivate();
       await t.pumpAndSettle();
-      expect(t.element(details), same(detailElement));
+      expect(t.element(suspended), same(detailElement));
       expect(t.element(editor), same(originalEditor));
       expect(t.widget<GeneralEventEditorSheet>(editor).initialEvent, isNull);
       await t.tap(find.descendant(of: editor, matching: find.text('Cancel')));

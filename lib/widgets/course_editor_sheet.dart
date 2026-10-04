@@ -1,3 +1,5 @@
+import 'sked_task_session.dart';
+
 import 'package:flutter/services.dart';
 
 import 'sked_floating_surface.dart';
@@ -89,6 +91,18 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
   final _detailsExpansion = ExpansibleController();
   final _reminderMinutesFocus = FocusNode();
   bool _reminderMinutesInvalid = false;
+
+  SkedTaskSession? _editorSession;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _editorSession ??= SkedTaskSessionScope.maybeOf(context)?.session;
+  }
+
+  @override
+  Widget guardDiscardConfirmation(Widget dialog) => _editorSession == null
+      ? dialog
+      : SkedTaskRouteGuard(parent: _editorSession, child: dialog);
 
   @override
   String get draftFingerprint => jsonEncode([
@@ -216,6 +230,8 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
         if (!didPop && !_blocked) unawaited(requestEditorExit());
       },
       child: AppSheetScaffold(
+        onClose: () => unawaited(requestEditorExit()),
+        closeEnabled: !_blocked,
         // Short Android windows and the IME need enough room for both the
         // fixed action area and a useful scrollable form viewport.
         heightFactor: sheetHeightFactor,
@@ -959,6 +975,7 @@ class _CourseEditorSheetState extends State<CourseEditorSheet>
       final confirmed = await showExpressiveDialog<bool>(
         context: context,
         barrierDismissible: false,
+        session: _editorSession,
         builder: (_) =>
             _DeleteCourseConfirmationDialog(onDelete: widget.onDelete),
       );

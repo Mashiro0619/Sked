@@ -26,6 +26,7 @@ class CourseDetailsSheet extends StatefulWidget {
     required this.conflictKey,
     required this.isFullConflict,
     required this.onEdit,
+    this.onEditAnchor,
     this.onSelectDisplayedCourse,
     this.onEditConflictCourse,
     this.onMissing,
@@ -37,6 +38,7 @@ class CourseDetailsSheet extends StatefulWidget {
   final int weekday;
   final String? conflictKey;
   final bool isFullConflict;
+  final ValueChanged<BuildContext>? onEditAnchor;
   final FutureOr<void> Function() onEdit;
   final FutureOr<void> Function(CourseItem)? onSelectDisplayedCourse;
   final FutureOr<void> Function(CourseItem)? onEditConflictCourse;
@@ -132,12 +134,17 @@ class _CourseDetailsSheetState extends State<CourseDetailsSheet> {
                           style: theme.textTheme.headlineSmall,
                         ),
                       ),
-                      IconButton(
-                        tooltip: l10n.editCourseTooltip,
-                        onPressed: _actionInProgress
-                            ? null
-                            : () => _runAction(widget.onEdit),
-                        icon: const Icon(Icons.edit),
+                      Builder(
+                        builder: (anchor) => IconButton(
+                          tooltip: l10n.editCourseTooltip,
+                          onPressed: _actionInProgress
+                              ? null
+                              : () {
+                                  widget.onEditAnchor?.call(anchor);
+                                  unawaited(_runAction(widget.onEdit));
+                                },
+                          icon: const Icon(Icons.edit),
+                        ),
                       ),
                     ],
                   ),
